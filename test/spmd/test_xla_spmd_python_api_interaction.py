@@ -124,11 +124,14 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
     del os.environ["XLA_USE_SPMD"]
     self.assertFalse(xr.is_spmd())
 
-    # initialize tensors for non-SPMD
+    # unittest process can persist XLA_USE_SPMD from other test suites,
+    # so t may be on a SPMD or non-SPMD device. If this test is run independently
+    # outside unittest, then it lives on a non-SPMD device.
     t = torch.ones(2, 2).to(xm.xla_device())
-    self.assertTrue(torch_xla._XLAC._get_xla_sharding_type(t) is None)
-    torch_xla._XLAC._xla_force_spmd_config()
-    self.assertTrue(torch_xla._XLAC._get_xla_sharding_type(t) is not None)
+
+    # Should enable SPMD without crashing.
+    xr.use_spmd()
+    self.assertTrue("SPMD" in torch_xla._XLAC._xla_get_device_hw_type(t))
     self.assertTrue(xr.is_spmd())
 
 

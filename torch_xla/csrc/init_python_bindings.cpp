@@ -1147,7 +1147,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_tensor_id",
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
   m.def("_xla_get_spmd_config_is_locked", []() { return GetLockSpmdConfig(); });
-  m.def("_xla_force_spmd_config", []() {
+  m.def("_xla_force_spmd_device", []() {
     // It is actually more easier to force SPMD mode than blocking if there is
     // non-SPMD initialized tensors, for the 3rd-party solution integration. For
     // instance, HuggingFace trainer pre-loads embeddings table and the training
@@ -1155,10 +1155,6 @@ void InitXlaModuleBindings(py::module m) {
     // allows the users to call `xr.use_spmd()` more freely, given that the
     // earlier they call, the smaller the one-time overhead of replicating
     // non-SPMD backed tensors.
-    if (!UseVirtualDevice()) {
-      putenv("XLA_USE_SPMD=1");
-    }
-
     torch::lazy::BackendDevice backend_device = bridge::GetCurrentDevice();
     std::vector<XLATensorPtr> xtensors =
         XLAGraphExecutor::Get()->GetLiveTensors(&backend_device);
@@ -1166,14 +1162,24 @@ void InitXlaModuleBindings(py::module m) {
       XlaDeviceType xla_device_type =
           static_cast<XlaDeviceType>(xtensor->GetDevice().type());
       if (xla_device_type != XlaDeviceType::SPMD) {
+        // Internally this moves the device data to the host and then copy
+        // to the SPMD virtual device. The original data should be destroyed
+        // in the transition, after creating a detached host-side copy.
         // TODO(yeounoh) this can be further optimized via CopyToDevice.
         at::Tensor tensor = xtensor->ToTensor(false);
-        xtensor->SetXlaData(
-            TensorToXlaData(tensor, ParseDeviceString("SPMD:0")));
+        torch::lazy::BackendDevice device = ParseDeviceString("SPMD:0");
+        xtensor->SetXlaData(TensorToXlaData(tensor, device));
+        // TODO(yeounoh) allow tensor data's device to be mutable.
       }
     }
   });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
+  m.def("_xla_get_device_hw_type", [](const at::Tensor& tensor) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+    XlaDeviceType xla_device_type =
+        static_cast<XlaDeviceType>(xtensor->GetDevice().type());
+    return DeviceType(xla_device_type).toString();
+  });
   m.def("_xla_get_devices", []() {
     if (UseVirtualDevice()) {
       // Under SPMD context, there is only one virtual devices from user

@@ -248,7 +248,7 @@ def use_spmd():
         "Replicating tensors already initialized on non-virtual XLA device for SPMD. "
         "Please set SPMD mode before initializting non-virtual XLA device. "
         "Call use_spmd() in the beginning of the program.")
-    torch_xla._XLAC._xla_force_spmd_config()
+    torch_xla._XLAC._xla_force_spmd_device()
 
   # TODO(yeounoh) replace this when we fully deprecate the flag.
   os.environ["XLA_USE_SPMD"] = "1"
