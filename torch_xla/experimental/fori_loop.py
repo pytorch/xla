@@ -13,21 +13,11 @@ from torch._higher_order_ops.while_loop import while_loop_op
 
 
 def fori_loop(lower, upper, body_fun, init_val):
-
-  # device = xm.xla_device()
-  # upper_placeholder = torch.ones(1, dtype=torch.int32, device=device)
-  # upper_placeholder[0] = upper
-
-  # lower_placeholder = torch.ones(1, dtype=torch.int32, device=device)
-  # lower_placeholder[0] = lower
-
   # example data:
   # init_val = torch.tensor([0], dtype=torch.int32, device=device)
   # lower = torch.tensor([0], dtype=torch.int32, device=device)
   # upper = torch.tensor([10], dtype=torch.int32, device=device)
   limit_range = upper - lower
-
-  # iterator = lower_placeholder
 
   def cond_fn(init, limit_range):
     return limit_range[0] >= init[0]
@@ -35,12 +25,6 @@ def fori_loop(lower, upper, body_fun, init_val):
   def body_fn(init, limit_range):
     one_value = torch.ones(1, dtype=torch.int32, device=device)
     return (body_fun(init, one_value), limit_range.clone())
-
-  def body_fn(operands): # iterator, init_val):
-    # iterator[0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
-    # return body_fun(iterator, init_val)
-    operands[0][0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
-    return body_fun(operands[0], operands[1])
 
   return while_loop(cond_fn, body_fn, (init_val, limit_range))
 
