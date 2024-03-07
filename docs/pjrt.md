@@ -28,8 +28,6 @@ _New features in PyTorch/XLA r2.0_:
 * New `xm.rendezvous` implementation that scales to thousands of TPU cores
 * [experimental] `torch.distributed` support for TPU v2 and v3, including
   `pjrt://` `init_method`
-* [experimental] Single-host GPU support in PJRT. Multi-host support coming
-  soon!
 
 ## TL;DR
 
@@ -192,8 +190,6 @@ for more information.
 
 ### GPU
 
-*Warning: GPU support is still highly experimental!*
-
 ### Single-node GPU training
 
 To use GPUs with PJRT, simply set `PJRT_DEVICE=CUDA` and configure
@@ -226,7 +222,7 @@ PJRT_DEVICE=CUDA torchrun \
 - `--nnodes`: how many GPU machines to be used.
 - `--node_rank`: the index of the current GPU machines. The value can be 0, 1, ..., ${NUMBER_GPU_VM}-1.
 - `--nproc_per_node`: the number of GPU devices to be used on the current machine.
-- `--rdzv_endpoint`: the endpoint of the GPU machine with node_rank==0, in the form <host>:<port>. The `host` will be the internal IP address. The port can be any available port on the machine.
+- `--rdzv_endpoint`: the endpoint of the GPU machine with node_rank==0, in the form `host:port`. The `host` will be the internal IP address. The `port` can be any available port on the machine. For single-node training/inference, this parameter can be omitted.
 
 For example, if you want to train on 2 GPU machines: machine_0 and machine_1, on the first GPU machine machine_0, run
 
@@ -235,7 +231,7 @@ For example, if you want to train on 2 GPU machines: machine_0 and machine_1, on
 --nnodes=2 \
 --node_rank=0 \
 --nproc_per_node=4 \
---rdzv_endpoint="<MACHINE_0_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+--rdzv_endpoint="<MACHINE_0_INTERNAL_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 ```
 
 On the second GPU machine, run
@@ -245,7 +241,7 @@ On the second GPU machine, run
 --nnodes=2 \
 --node_rank=1 \
 --nproc_per_node=4 \
---rdzv_endpoint="<MACHINE_0_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+--rdzv_endpoint="<MACHINE_0_INTERNAL_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 ```
 
 the difference between the 2 commands above are `--node_rank` and potentially `--nproc_per_node` if you want to use different number of GPU devices on each machine. All the rest are identical. For more information about `torchrun`, please refer to this [page](https://pytorch.org/docs/stable/elastic/run.html).

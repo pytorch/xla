@@ -385,7 +385,7 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
   metrics::TimedSection timed(TransferFromDeviceMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferFromDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
-  std::vector<xla::PjRtFuture<tsl::Status>> futures;
+  std::vector<xla::PjRtFuture<absl::Status>> futures;
   futures.reserve(handles.size());
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
@@ -403,7 +403,7 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
     total_size += literal.size_bytes();
   }
   for (auto& future : futures) {
-    tsl::Status status = future.Await();
+    absl::Status status = future.Await();
     XLA_CHECK_OK(status);
   }
   InboundDataMetric()->AddSample(total_size);

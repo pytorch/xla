@@ -8,7 +8,7 @@ from torch.distributed._tensor import DeviceMesh, Shard
 import torch_xla
 import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
-from torch_xla.distributed.spmd import xla_distribute_tensor
+from torch_xla.distributed.spmd import xla_distribute_tensor, xla_distribute_module
 
 import unittest
 
@@ -46,6 +46,38 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
       if requires_grad:
         self.assertTrue(dist_tensor.global_tensor.requires_grad)
         self.assertTrue(dist_tensor.is_leaf)
+
+  def test_xla_distribute_module(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+
+    device_count = xr.global_runtime_device_count()
+    device_mesh = DeviceMesh("xla", list(range(device_count)))
+
+    def shard_params(mod_name, mod, mesh):
+      shard_spec = [Shard(0)]
+      # annoate fc1 and fc2
+      if isinstance(mod, nn.Linear):
+        for name, param in mod.named_parameters():
+          dist_param = xla_distribute_tensor(param, mesh, shard_spec)
+
+    sharded_model = xla_distribute_module(model, device_mesh, shard_params)
+    self.assertTrue(
+        torch_xla._XLAC._get_xla_sharding_spec(sharded_model.fc1.weight) != "")
+    self.assertTrue(
+        torch_xla._XLAC._get_xla_sharding_spec(sharded_model.fc2.weight) != "")
+
+    sharded_model.train()
+    optimizer = optim.SGD(model.parameters(), lr=0.1)
+    data = torch.randn(128, 128).to(xm.xla_device())
+    target = torch.zeros(128).to(xm.xla_device())
+    loss_fn = nn.CrossEntropyLoss()
+    for i in range(3):
+      optimizer.zero_grad()
+      output = model(data)
+      loss = loss_fn(output, target)
+      loss.backward()
+      optimizer.step()
+      xm.mark_step()
 
   def test_optimizer_step_with_sharding(self):
     # Use simple linear model to test model parameter sharding

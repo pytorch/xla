@@ -1,4 +1,6 @@
 #!/bin/bash
+set -xue
+
 # TODO: merge with other run_tests
 python3 test/test_operations.py -v
 python3 test/pjrt/test_runtime_tpu.py

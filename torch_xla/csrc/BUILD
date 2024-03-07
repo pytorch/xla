@@ -149,7 +149,6 @@ ptxla_cc_library(
         "@xla//xla/client/lib:svd",
         "@xla//xla/stream_executor:dnn",
         "@tsl//tsl/platform:errors",
-        "@tsl//tsl/lib/gtl:inlined_vector",
         "@tsl//tsl/profiler/lib:traceme",
         "@tsl//tsl/profiler/lib:traceme_encode",
         "@tsl//tsl/platform:tensor_float_32_utils",
