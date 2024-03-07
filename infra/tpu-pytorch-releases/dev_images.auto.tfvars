@@ -2,6 +2,7 @@ dev_images = [
   {
     accelerator = "tpu"
     extra_tags  = ["tpu"]
+    python_version = "3.10"
   },
   {
     accelerator  = "cuda"
