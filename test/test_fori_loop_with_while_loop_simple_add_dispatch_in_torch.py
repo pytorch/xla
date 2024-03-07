@@ -14,8 +14,8 @@ import torch_xla.core.xla_builder as xb
 
 def _fake_while_loop(cond_fn, body_fn, operands):
   # operands need to be more than one here
-  while cond_fn(*operands): # [0], operands[1]):
-    operands = body_fn(*operands) # [0], operands[1])
+  while cond_fn(*operands):
+    operands = body_fn(*operands)
   return operands
 
 
@@ -61,16 +61,14 @@ class WhileLoopTest(unittest.TestCase):
 
     device = xm.xla_device()
 
-    # TODO(@manfei): init and limit_value has to be torch.tensor.
+    # TODO(@manfei): lower, upper and init_val has to be torch.tensor.
     init_val = torch.tensor([0], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
     upper = torch.tensor([10], dtype=torch.int32, device=device)
-    # one_val = torch.tensor([1], dtype=torch.int32, device=device)
 
     def body_fun(init_val):
       return torch.add(init_val, init_val)
     res = fori_loop(lower, upper, body_fun, init_val)
-    # res = fori_loop(lower, upper, torch.add, init_val)
     print("result: ", res)
     # fori_loop(cond_fn, body_fn, (init, limit_value))
     # expected = _fake_fori_loop(cond_fn, body_fn, (init, limit_value))
