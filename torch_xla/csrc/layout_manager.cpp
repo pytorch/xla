@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "absl/strings/str_split.h"
+#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
@@ -186,8 +187,7 @@ xla::Shape MakeArrayShapeFromDimensions(
   }
 
   bool tpu_layout_env = runtime::sys_util::GetEnvBool("XLA_TPU_LAYOUT", true);
-  if (tpu_layout_env && dimensions.size() > 1 &&
-      hw_type == XlaDeviceType::TPU) {
+  if (tpu_layout_env && dimensions.size() > 1 && CheckTpuDevice(hw_type)) {
     return MakeTpuShape(dimensions, dynamic_dimensions, type);
   }
   return MakeTorchTensorLayout(dimensions, dynamic_dimensions, type);
