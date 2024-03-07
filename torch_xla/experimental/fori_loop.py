@@ -27,7 +27,7 @@ def fori_loop(lower, upper, body_fun, init_val):
   # upper = torch.tensor([10], dtype=torch.int32, device=device)
   limit_range = upper - lower
 
-  iterator = lower_placeholder
+  # iterator = lower_placeholder
 
   def cond_fn(init, limit_range):
     return limit_range[0] >= init[0]
