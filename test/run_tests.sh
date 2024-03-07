@@ -63,6 +63,20 @@ function run_test {
   fi
 }
 
+function run_device_detection_test {
+  echo "Running in PjRt runtime: $@"
+  current_device=$PJRT_DEVICE
+  current_num_gpu_devices=$GPU_NUM_DEVICES
+
+  unset PJRT_DEVICE
+  unset GPU_NUM_DEVICES
+
+  run_coverage $@
+
+  export GPU_NUM_DEVICES=$current_num_gpu_devices
+  export PJRT_DEVICE=$current_device
+}
+
 function run_test_without_functionalization {
   echo "Running with XLA_DISABLE_FUNCTIONALIZATION: $@"
   XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
@@ -219,7 +233,7 @@ function run_xla_op_tests3 {
   run_torchrun "$CDIR/pjrt/test_torchrun.py"
   run_test "$CDIR/test_persistent_cache.py"
   run_test "$CDIR/test_devices.py"
-  run_coverage "$CDIR/test_gpu_device_detection.py"
+  run_device_detection_test "$CDIR/test_gpu_device_detection.py"
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
 }
