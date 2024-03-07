@@ -297,7 +297,7 @@ cc_library(
       "@xla//xla/backends/profiler/plugin:profiler_c_api_hdrs",
       "@xla//xla/backends/profiler/plugin:plugin_tracer",
       "@xla//xla/pjrt/c:pjrt_c_api_profiler_extension_hdrs",
-      "@com_google_absl//absl/status",
+      "@xla//xla:status",
       "@tsl//tsl/profiler/lib:profiler_factory",
       "@tsl//tsl/profiler/rpc:profiler_server_impl",
       "@tsl//tsl/profiler/rpc/client:capture_profile",
