@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/status/status.h"
+#include "xla/status.h"
 #include "xla/pjrt/c/pjrt_c_api.h"
 
 namespace torch_xla {
@@ -23,7 +23,7 @@ class ProfilerServer {
   std::unique_ptr<Impl> impl_;
 };
 
-absl::Status Trace(
+xla::Status Trace(
     const char* service_addr, const char* logdir, int duration_ms,
     int num_tracing_attempts,
     const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
