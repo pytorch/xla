@@ -64,8 +64,7 @@ class WhileLoopTest(unittest.TestCase):
     init_val = torch.tensor([0], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
     upper = torch.tensor([10], dtype=torch.int32, device=device)
-    # init = torch.tensor([0], dtype=torch.int32, device=device)
-    # limit_value = torch.tensor([10], dtype=torch.int32, device=device)
+
     # def body_fun(a, b):
     #   return torch.add(a, b)
     res = fori_loop(lower, upper, torch.add, init_val)

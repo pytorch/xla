@@ -18,6 +18,7 @@ def fori_loop(lower, upper, body_fun, init_val):
   # lower = torch.tensor([0], dtype=torch.int32, device=device)
   # upper = torch.tensor([10], dtype=torch.int32, device=device)
   limit_range = upper - lower
+  device = xm.xla_device()
 
   def cond_fn(init, limit_range):
     return limit_range[0] >= init[0]
