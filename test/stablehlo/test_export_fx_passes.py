@@ -21,7 +21,7 @@ class ExportFxPassTest(unittest.TestCase):
     dynamic_shapes = ([{0: Dim("bs")}, None, None],)
     m = wrap_func_as_nn_module(torch.ops.aten.select.int)
     ep = export(m, args, dynamic_shapes=dynamic_shapes)
-    out1 = ep(*args)
+    out1 = ep.module()(*args)
     decompose_dynamic_shape_select(ep.graph_module)
     ep.graph_module.recompile()
     self.assertTrue('aten.view' in ep.graph_module.code)
@@ -29,7 +29,7 @@ class ExportFxPassTest(unittest.TestCase):
     ep.graph_module.recompile()
     self.assertTrue('aten.view' not in ep.graph_module.code)
     self.assertTrue('xla.dynamic_view' in ep.graph_module.code)
-    out2 = ep(*args)
+    out2 = ep.module()(*args)
     self.assertTrue(torch.allclose(out1, out2))
 
   def test_no_op_slice_removal(self):
@@ -44,12 +44,12 @@ class ExportFxPassTest(unittest.TestCase):
     args = (torch.rand((10, 197, 768)),)
     dynamic_shapes = ({0: Dim("bs")},)
     ep = export(m, args, dynamic_shapes=dynamic_shapes)
-    out1 = ep(*args)
+    out1 = ep.module()(*args)
     self.assertTrue('aten.slice' in ep.graph_module.code)
     ep.graph_module.graph = remove_no_op_slice(ep.graph_module)
     ep.graph_module.recompile()
     self.assertTrue('aten.slice' not in ep.graph_module.code)
-    out2 = ep(*args)
+    out2 = ep.module()(*args)
     self.assertTrue(torch.allclose(out1, out2))
 
   def test_dynamic_view(self):
@@ -68,11 +68,29 @@ class ExportFxPassTest(unittest.TestCase):
     args = (torch.rand((10, 3, 224, 224)),)
     dynamic_shapes = ({0: Dim("bs")},)
     ep = export(m, args, dynamic_shapes=dynamic_shapes)
-    out1 = ep(*args)
+    out1 = ep.module()(*args)
     replace_dynamic_view_with_xla_op(ep.graph_module)
     ep.graph_module.recompile()
     self.assertTrue('xla.dynamic_view' in ep.graph_module.code)
-    out2 = ep(*args)
+    out2 = ep.module()(*args)
+    self.assertTrue(torch.allclose(out1, out2))
+  
+  def test_dynamic_view_non_bs(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x):
+        return x.view(x.shape[0], x.shape[1]*x.shape[2], x.shape[3])
+
+    m = M()
+    args = (torch.rand((1, 3, 2, 16)),)
+    dynamic_shapes = ({1: Dim("bs")},)
+    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    out1 = ep.module()(*args)
+    replace_dynamic_view_with_xla_op(ep.graph_module)
+    ep.graph_module.recompile()
+    self.assertTrue('xla.dynamic_view' in ep.graph_module.code)
+    out2 = ep.module()(*args)
     self.assertTrue(torch.allclose(out1, out2))
 
   def test_dynamic_view_multiplier(self):
@@ -91,13 +109,13 @@ class ExportFxPassTest(unittest.TestCase):
     args = (torch.rand((10, 3, 224, 224)),)
     dynamic_shapes = ({0: Dim("bs")},)
     ep = export(m, args, dynamic_shapes=dynamic_shapes)
-    out1 = ep(*args)
+    out1 = ep.module()(*args)
     replace_dynamic_view_with_xla_op(ep.graph_module)
     print(ep)
     ep.graph_module.recompile()
     print(ep.graph_module.code)
     self.assertTrue('xla.dynamic_view' in ep.graph_module.code)
-    out2 = ep(*args)
+    out2 = ep.module()(*args)
     self.assertTrue(torch.allclose(out1, out2))
 
   def test_dynamic_expand(self):
@@ -116,11 +134,11 @@ class ExportFxPassTest(unittest.TestCase):
         },
     )
     ep = export(m, args, dynamic_shapes=dynamic_shapes)
-    out1 = ep(*args)
+    out1 = ep.module()(*args)
     replace_dynamic_expand_with_xla_op(ep.graph_module)
     ep.graph_module.recompile()
     self.assertTrue('xla.dynamic_expand' in ep.graph_module.code)
-    out2 = ep(*args)
+    out2 = ep.module()(*args)
     self.assertTrue(torch.allclose(out1, out2))
 
   def test_layer_norm_decomp(self):
@@ -143,7 +161,7 @@ class ExportFxPassTest(unittest.TestCase):
     decompose_dynamic_native_layer_norm(ep.graph_module)
     ep.graph_module.recompile()
     self.assertFalse('aten.native_layer_norm' in ep.graph_module.code)
-    after_decomp_out_2 = ep(*args)
+    after_decomp_out_2 = ep.module()(*args)
     self.assertTrue(torch.allclose(before_decomp_out, after_decomp_out_2, atol=1e-6))
     
 

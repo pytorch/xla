@@ -387,6 +387,33 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(
             np.allclose(out1.detach().numpy(), tf_out[0].numpy(), atol=1e-05))
 
+  def test_dynamic_view_non_bs(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x):
+        return x.view(x.shape[0], x.shape[1]*x.shape[2], x.shape[3])
+
+    m = M().eval()
+    args = (torch.rand((1, 3, 2, 16)),)
+    dynamic_shapes = ({1: Dim("bs")},)
+    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    out1 = ep.module()(*args)
+    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_text = shlo_module.get_stablehlo_text()
+    self.assertTrue(
+        re.search(
+            r"%arg.: tensor<1x\?x2x16xf32>.*->.*tensor<1x\?x16xf32>",
+            shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        tf_out = load_save_model_and_inference(tempdir, args)
+        self.assertTrue(
+            np.allclose(out1.detach().numpy(), tf_out[0].numpy(), atol=1e-05))
+
   def test_dynamic_view_multiplier(self):
 
     class M(torch.nn.Module):

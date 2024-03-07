@@ -116,12 +116,15 @@ def replace_dynamic_view_with_xla_op(gm: GraphModule):
         if not isinstance(node, int):
           sym_sizes.append((dim, node))
       if len(sym_sizes) != 0:
+        # View only has one dim is sym size.
         assert len(sym_sizes) == 1
         new_args = list(n.args)
         # Convert Immutable List to regular list for modification.
         new_args[1] = list(new_args[1])
         # Assume sym size is at batch dim.
-        target_dim = 0
+        # target_dim = 0
+        # support other dim as well
+        target_dim = sym_sizes[0][0]
         dynamic_src = new_args[1][target_dim]
         # Check mul between sym_size and view.
         mul_scaler = 1
@@ -132,17 +135,17 @@ def replace_dynamic_view_with_xla_op(gm: GraphModule):
           assert isinstance(dynamic_src.args[0], int) or isinstance(
               dynamic_src.args[1], int)
           mul_node = dynamic_src
-          if isinstance(dynamic_src.args[1], int):
-            mul_scaler = dynamic_src.args[1]
-            sym_size_node = dynamic_src.args[0]
+          if isinstance(mul_node.args[1], int):
+            mul_scaler = mul_node.args[1]
+            sym_size_node = mul_node.args[0]
           else:
-            mul_scaler = dynamic_src.args[0]
-            sym_size_node = dynamic_src.args[1]
+            mul_scaler = mul_node.args[0]
+            sym_size_node = mul_node.args[1]
         else:
           assert dynamic_src.target == torch.ops.aten.sym_size.int
         sym_size_src = sym_size_node.args[0]
         sym_size_dim = sym_size_node.args[1]
-        n.args = tuple(new_args) + (sym_size_src, sym_size_dim, 0,
+        n.args = tuple(new_args) + (sym_size_src, sym_size_dim, target_dim,
                                     int(mul_scaler))
         # Replace with real func
         n.target = torch.ops.xla.dynamic_view
