@@ -697,24 +697,88 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   // This function actually operates on the tensor's storage. Since XLA does not
   // expose the actual storage, we use the originally allocated tensor.
   const at::Tensor& base = bridge::GetXlaTensor(self)->Base();
-  const at::Tensor& tensor = base.defined() ? base : self;
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(tensor);
-  auto xsize = XlaHelpers::I64List(size);
-  auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
-                                    storage_offset.value_or(0))) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
-                                                      storage_offset);
+  at::Tensor tensor = base.defined() ? base : self;
+
+  auto dim = size.size();
+  auto itemsize = tensor.dtype().itemsize();
+  int64_t storage_size =
+      at::detail::computeStorageNbytes(size, stride, itemsize);
+
+  XLA_CHECK(tensor.numel() * itemsize >= storage_size)
+      << "as_strided: storage not big enough for size " << size << ": "
+      << storage_size << " (needed) vs " << tensor.numel() << " (actual).";
+
+  if (dim == 0 && tensor.numel() > 0) {
+    // If there's no specified dimension, return the first element of the
+    // storage. This behavior is consistent with eager.
+    return select_copy(view_copy_symint(tensor, {tensor.numel()}), 0, 0);
   }
-  // Sets the base tensor as tensor.
-  // Even though this function copies (without aliasing) tensor, it's still
-  // treated as a view function in the functionalization layer.
-  return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
-      tensor_methods::as_strided(self_tensor, std::move(xsize),
-                                 std::move(xstride),
-                                 XlaHelpers::I64Optional(storage_offset)),
-      tensor));
+
+  if (storage_size == 0) {
+    // Return an empty tensor, if no storage is actually needed.
+    return empty_symint(c10::fromIntArrayRefSlow(size), tensor.scalar_type(),
+                        /* layout= */ c10::nullopt, tensor.device(),
+                        /* pin_memory= */ c10::nullopt,
+                        /*  memory_format= */ c10::nullopt);
+  }
+
+  // At this point, the following is true:
+  XLA_CHECK(storage_size > 0);
+  XLA_CHECK(tensor.numel() > 0);
+  XLA_CHECK(dim > 0);
+
+  // Index tensor for gathering the needed elements into contiguous data.
+  //
+  // PyTorch/XLA, by default, assumes dense and contiguous data. However, when
+  // specifying strides, that might not be the case.
+  //
+  // Therefore, we gather the elements selected by following the size, stride,
+  // and storage offset, materializing it into contiguous elements.
+  //
+  // In order to accomplish that, we create an index tensor. Specifically, we
+  // create an n-dimensional tensor (n is the number of dimensions of the
+  // output) of indices. Each element represent the at which position of the
+  // flattened tensor the desired element is in.
+
+  // Example: arange(13).as_strided((2, 2, 2), (3, 4, 5))
+  //
+  // Start with a 1-element n-dimensional tensor, initialized with 0:
+  //
+  //     [[[0]]]
+  //
+  std::vector<int64_t> view_shape(dim, 1);
+  auto index_tensor =
+      at::tensor({storage_offset.value_or(self.storage_offset())},
+                 at::TensorOptions().dtype(at::kLong))
+          .view(view_shape);
+
+  // Then, add to the index_tensor the offset value introduced for each possible
+  // index of that corresponding dimension.
+  //
+  //   - Iteration i=0:
+  //        [[[0]]] + [[[0 * 3]], [[1 * 3]]]
+  //        = [[[0 * 3]], [[1 * 3]]]
+  //        = [[[0]], [[3]]]
+  //
+  //   - Iteration i=1:
+  //        [[[0]], [[3]]] + [[[0 * 4], [1 * 4]]]
+  //        = [[[0 + 0 * 4], [0 + 1 * 4]], [[3 + 0 * 4], [3 + 1 * 4]]]
+  //        = [[[0], [4]], [[3], [7]]]
+  //
+  //   - Iteration i=2:
+  //        [[[0], [4]], [[3], [7]]] + [[[0 * 5, 1 * 5]]]
+  //        =[[[0 + 0 * 5, 0 + 1 * 5], [4 + 0 * 5, 4 + 1 * 5]],
+  //          [[3 + 0 * 5, 3 + 1 * 5], [7 + 0 * 5, 7 + 1 * 5]]]
+  //        =[[[0, 5], [4, 9]], [[3, 8], [7, 12]]]
+  for (int i = 0; i < dim; i++) {
+    auto vshape = view_shape;
+    vshape[i] = size[i];
+    index_tensor =
+        index_tensor.add((at::arange(size[i]) * stride[i]).view(vshape));
+  }
+
+  // Finally, index the tensor with the computed indices.
+  return take(tensor, index_tensor.to(tensor.device()));
 }
 
 at::Tensor XLANativeFunctions::as_strided_scatter(
@@ -3216,7 +3280,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
   // our XLA lowering.
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU) {
+  if (!CheckTpuDevice(hw_type)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         ATEN_OP(upsample_bilinear2d_backward)>::call(grad_output, output_size,
@@ -3271,7 +3335,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
   // our XLA lowering.
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU && hw_type != XlaDeviceType::NEURON) {
+  if (!CheckTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         ATEN_OP(upsample_nearest2d_backward)>::call(grad_output, output_size,

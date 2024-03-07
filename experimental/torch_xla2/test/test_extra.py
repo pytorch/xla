@@ -24,6 +24,21 @@ class ExtraTest(unittest.TestCase):
 
     self.assertTrue(torch.allclose(tensor.j2t(res._elem), expect))
 
+  def test_jax_jit(self):
+
+    # functions that acts on torch tensor
+    def f(a, b):
+      return torch.sin(a) + torch.cos(b)
+    
+    fjitted = extra.jax_jit(f)
+    a = torch.rand((10, 10))
+    b = torch.rand((10, 10))
+    aj = tensor.move_to_device(a)
+    bj = tensor.move_to_device(b)
+    res = f(a, b)
+    res2 = fjitted(aj, bj)
+    self.assertTrue(torch.allclose(res, tensor.j2t(res2._elem)))
+
 
 if __name__ == '__main__':
   unittest.main()

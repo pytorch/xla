@@ -168,3 +168,7 @@ class XLAShardedTensor(torch.Tensor):
       rs = tree_map(wrap,
                     func(*tree_map(unwrap, args), **tree_map(unwrap, kwargs)))
     return rs
+
+  @classmethod
+  def __torch_function__(cls, func, types, args=(), kwargs=None):
+    return super().__torch_function__(func, types, args, kwargs)

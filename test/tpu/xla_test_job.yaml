@@ -47,7 +47,7 @@ spec:
       pip install rich
 
       cd /src/pytorch/xla
-      test/run_tests.sh
+      test/tpu/run_tests.sh
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm

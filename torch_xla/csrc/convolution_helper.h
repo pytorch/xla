@@ -2,9 +2,9 @@
 #define XLA_TORCH_XLA_CSRC_CONVOLUTION_HELPER_H_
 
 #include <string>
+#include <string_view>
 
 #include "tsl/lib/gtl/inlined_vector.h"
-#include "tsl/platform/stringpiece.h"
 #include "xla/client/xla_builder.h"
 #include "xla/xla_data.pb.h"
 
@@ -233,8 +233,8 @@ inline int GetTensorSpatialDimIndex(int num_dims, TensorFormat format,
 
 // The V2 version computes the same outputs with arbitrary dilation rate and
 // supports explicit padding.
-absl::Status ConvBackpropComputeDimensionsV2(
-    tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
+tsl::Status ConvBackpropComputeDimensionsV2(
+    std::string_view label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations,
     const std::vector<tsl::int32>& strides, Padding padding,
@@ -245,14 +245,14 @@ absl::Status ConvBackpropComputeDimensionsV2(
 // https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h
 
 // Wrapper for ConvGeneralDilated with checking dims.
-absl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
-    tsl::StringPiece type_string, const xla::Shape& input_shape,
+tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
+    std::string_view type_string, const xla::Shape& input_shape,
     xla::XlaOp filter, xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     xla::XlaOp* input_sizes = nullptr);
 
 // Wrapper for ConvGeneralDilated with checking dims.
-absl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
-    tsl::StringPiece type_string, xla::XlaOp activations,
+tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
+    std::string_view type_string, xla::XlaOp activations,
     const xla::Shape& filter_shape, xla::XlaOp gradients,
     const ConvOpAttrs& attrs);
 

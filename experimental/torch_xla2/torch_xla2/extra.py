@@ -20,6 +20,13 @@ def call_torch(torch_function, *args, **kwargs):
     return tensor.unwrap(res)
 
 
+def jax_jit(torch_function, kwargs_for_jax_jit=None):
+    kwargs_for_jax_jit = kwargs_for_jax_jit or {}
+    jax_func = functools.partial(call_torch, torch_function)
+    jitted = jax.jit(jax_func, **kwargs_for_jax_jit)
+    return functools.partial(call_jax, jitted)
+
+
 def fori_loop(lower, upper, body_fn, init_val, *, unroll=None):
     """Torch fori_loop mimicking jax behavior.
 

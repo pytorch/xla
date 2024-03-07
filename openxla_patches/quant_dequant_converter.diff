@@ -72,7 +72,7 @@ index 5e5e32652..d246383bd 100644
 +    //.getElementType();
 +  }
 +
-+  auto is_signed = storage_type.cast<mlir::IntegerType>().isSigned();
++  auto is_signed = storage_type.cast<mlir::IntegerType>().isSignless();
 +
 +  if (quantization_dimension != -1) {
 +    return mlir::quant::UniformQuantizedPerAxisType::get(
