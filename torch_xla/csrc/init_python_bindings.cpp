@@ -903,7 +903,7 @@ class PyLoweringContext {
     computation = ConsumeValue(lowering_ctx.BuildXla());
 
     // warp inputs of cond/body_computation
-    if (GetNameString() == "condctx") || (GetNameString() == "bodyctx") {
+    if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
       std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
       std::vector<size_t> buffer_donor_indices;
       xla::ProgramShape program_shape =
