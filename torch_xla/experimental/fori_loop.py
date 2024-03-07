@@ -29,7 +29,7 @@ def fori_loop(lower, upper, body_fun, init_val):
     lower = torch.add(lower, one_value)
     return (lower.clone(), upper.clone(), body_fun(init, one_value))
 
-  return while_loop(cond_fn, body_fn, (init_val, limit_range))
+  return while_loop(cond_fn, body_fn, (lower, upper, init))
 
 
 @while_loop_op.py_impl(DispatchKey.XLA)
