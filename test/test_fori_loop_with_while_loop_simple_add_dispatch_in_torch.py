@@ -18,12 +18,10 @@ def _fake_while_loop(cond_fn, body_fn, operands):
     operands = body_fn(*operands)
   return operands
 
-def _fake_fori_loop(lower, upper, body_fun, init_val):
+def _fake_fori_loop(lower, upper, body_fun, *init_val):
   # operands need to be more than one here
   for i in range(upper - lower):
-    body_fun(init_val)
-  while cond_fn(*operands):
-    operands = body_fn(*operands)
+    operands = body_fun(*init_val)
   return operands
 
 class WhileLoopTest(unittest.TestCase):
@@ -83,8 +81,8 @@ class WhileLoopTest(unittest.TestCase):
     # print("lower: ", lower)
     # print("upper: ", upper)
     # fori_loop(cond_fn, body_fn, (init, limit_value))
-    # expected = _fake_fori_loop(cond_fn, body_fn, (init, limit_value))
-    # self.assertEqual(expected, res)
+    expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
+    self.assertEqual(expected, res)
 
 
 if __name__ == '__main__':
