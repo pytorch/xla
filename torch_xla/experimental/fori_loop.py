@@ -22,7 +22,7 @@ def fori_loop(lower, upper, body_fun, init_val): # *init_val):
   # one_value_original = torch.tensor([1], dtype=torch.int32, device=device)
 
   def cond_fn(upper, lower, init_val):
-    init_val_compy = init_val.clone()
+    # init_val_compy = init_val.clone()
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     lower = torch.add(lower, one_value)
     lower = torch.sub(lower, one_value)

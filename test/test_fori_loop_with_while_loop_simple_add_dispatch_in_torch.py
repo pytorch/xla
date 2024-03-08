@@ -18,6 +18,13 @@ def _fake_while_loop(cond_fn, body_fn, operands):
     operands = body_fn(*operands)
   return operands
 
+def _fake_fori_loop(lower, upper, body_fun, init_val):
+  # operands need to be more than one here
+  for i in range(upper - lower):
+    body_fun(init_val)
+  while cond_fn(*operands):
+    operands = body_fn(*operands)
+  return operands
 
 class WhileLoopTest(unittest.TestCase):
 
@@ -69,10 +76,8 @@ class WhileLoopTest(unittest.TestCase):
     init_val_list = (init_val, one_value)
 
     def body_fun(a, b):
-      # a = torch.add(a, b)
-      # print("aaaaaaa: ", a)
-      return torch.add(a, b) # torch.add(init_val, init_val)# 1)# torch.sin(init_val) # init_val)
-    res = fori_loop(lower, upper, body_fun, init_val) # fori_loop(lower, upper, body_fun, *init_val_list) # init_val)
+      return torch.add(a, b)
+    res = fori_loop(lower, upper, body_fun, init_val)
     print("result: ", res)
     # print("lower[0] <= upper[0]: ", lower[0] <= upper[0])
     # print("lower: ", lower)
