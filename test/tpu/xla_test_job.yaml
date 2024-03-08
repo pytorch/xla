@@ -47,6 +47,7 @@ spec:
       pip install rich
 
       cd /src/pytorch/xla
+      set
       test/tpu/run_tests.sh
     volumeMounts:
     - mountPath: /dev/shm
