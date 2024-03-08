@@ -10,6 +10,8 @@ jobs:
     runs-on: v4-runner-set
     steps:
       - name: Checkout and Setup PyTorch Repo
+        env:
+          _GLIBCXX_USE_CXX11_ABI: 0
         run: |
           git clone --recursive https://github.com/pytorch/pytorch
           cd pytorch/
