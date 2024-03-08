@@ -20,25 +20,44 @@ def fori_loop(lower, upper, body_fun, *init_val):
   # limit_range = upper - lower
   device = xm.xla_device()
   # one_value = torch.tensor([0], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
+  # lower, upper
+  limit_value = upper
+  init = lower
 
-  def cond_fn(lower, upper, *init_val):
-    one_value = torch.tensor([1], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
-    one_value_2 = torch.tensor([0], dtype=torch.int32, device=device)
-    lower = torch.add(lower, one_value)
-    lower = torch.add(lower, one_value_2)
-    # init_val = init_val.clone()
-    # print("lower: ",lower)
-    return lower[0] <= upper[0]
+  # device = xm.xla_device()
+  def cond_fn(init, limit_value, *init_val):
+    return limit_value[0] >= init[0]
+
+  def body_fn(init, limit_value, *init_val):
+    one_value = torch.ones(1, dtype=torch.int32, device=device)
+    return (torch.add(init, one_value), limit_value.clone(), body_fun(*init_val))
+
+    # TODO(@manfei): init and limit_value has to be torch.tensor.
+    # init = torch.tensor([0], dtype=torch.int32, device=device)
+    # limit_value = torch.tensor([10], dtype=torch.int32, device=device)
+  res = while_loop(cond_fn, body_fn, (init, limit_value, *init_val))
+    # expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
+    # self.assertEqual(expected, res)
+  return res
+
+  # def cond_fn(lower, upper, *init_val):
+  #   one_value = torch.tensor([1], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
+  #   one_value_2 = torch.tensor([0], dtype=torch.int32, device=device)
+  #   lower = torch.add(lower, one_value)
+  #   lower = torch.add(lower, one_value_2)
+  #   # init_val = init_val.clone()
+  #   # print("lower: ",lower)
+  #   return lower[0] <= upper[0]
   
-  def body_fn(lower, upper, *init_val):
-    # one_value = torch.tensor([0], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
-    # lower = torch.add(lower, one_value)
-    init_val_local = body_fun(*init_val)
-    return (lower.clone(), upper.clone(), init_val_local, init_val[1])
+  # def body_fn(lower, upper, *init_val):
+  #   # one_value = torch.tensor([0], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
+  #   # lower = torch.add(lower, one_value)
+  #   init_val_local = body_fun(*init_val)
+  #   return (lower.clone(), upper.clone(), init_val_local, init_val[1])
 
-  a = while_loop(cond_fn, body_fn, (lower, upper, *init_val))
-  # print("result: finall: ", a)
-  return a # while_loop(cond_fn, body_fn, (lower, upper, init_val))
+  # a = while_loop(cond_fn, body_fn, (lower, upper, *init_val))
+  # # print("result: finall: ", a)
+  # return a # while_loop(cond_fn, body_fn, (lower, upper, init_val))
 
 
 @while_loop_op.py_impl(DispatchKey.XLA)
