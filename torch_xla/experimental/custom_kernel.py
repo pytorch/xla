@@ -1,7 +1,7 @@
 import torch
 import torch_xla
 
-from typing import List
+from typing import List, Callable
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
@@ -56,3 +56,5 @@ def _extract_backend_config(
       if op.name == "stablehlo.custom_call":
         return op.backend_config.value
   return None
+
+def make_kernel_from_pallas(forward: Callable)
