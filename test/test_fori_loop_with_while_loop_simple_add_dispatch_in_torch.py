@@ -72,12 +72,12 @@ class WhileLoopTest(unittest.TestCase):
     init_val = torch.tensor([1], dtype=torch.int32, device=device)
     lower = torch.tensor([1], dtype=torch.int32, device=device)
     upper = torch.tensor([10], dtype=torch.int32, device=device)
-    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    one_value = torch.tensor(1, dtype=torch.int32, device=device)
     init_val_list = (init_val, one_value)
 
     def body_fun(a, b):
       return torch.add(a, b)
-    res = fori_loop(lower, upper, body_fun, init_val)
+    res = fori_loop(lower, upper, body_fun, init_val_list) # init_val)
     print("result: ", res)
     # print("lower[0] <= upper[0]: ", lower[0] <= upper[0])
     # print("lower: ", lower)
