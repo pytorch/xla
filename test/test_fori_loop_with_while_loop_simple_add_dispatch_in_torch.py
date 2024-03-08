@@ -72,6 +72,7 @@ class WhileLoopTest(unittest.TestCase):
 
   def test_fori_loop_tpu_addition(self):
 
+    xm.mark_step()
     device = xm.xla_device()
 
     # TODO(@manfei): lower, upper and init_val has to be torch.tensor.
