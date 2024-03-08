@@ -7,6 +7,7 @@
 #include <ATen/native/CPUFallback.h>
 #include <ATen/native/TypeProperties.h>
 #include <ATen/ops/expand_copy.h>
+#include <c10/core/Contiguity.h>
 #include <torch/csrc/lazy/core/shape_inference.h>
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
@@ -699,6 +700,22 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   const at::Tensor& base = bridge::GetXlaTensor(self)->Base();
   at::Tensor tensor = base.defined() ? base : self;
 
+  // Fast path: PyTorch/XLA implementation for as_strided works only with
+  // non-overlapping and dense tensors.
+  if (c10::_compute_non_overlapping_and_dense(size, stride)) {
+    // Sets the base tensor as tensor.
+    // Even though this function copies (without aliasing) tensor, it's still
+    // treated as a view function in the functionalization layer.
+    return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
+        tensor_methods::as_strided(bridge::GetXlaTensor(tensor),
+                                   XlaHelpers::I64List(size),
+                                   XlaHelpers::I64List(stride),
+                                   XlaHelpers::I64Optional(storage_offset)),
+        tensor));
+  }
+
+  // Slow path: decompose as_strided into indexing (we use take, though) operations.
+  // We pre-compute the index on CPU, so as to avoid runtime overhead.
   auto dim = size.size();
   auto itemsize = tensor.dtype().itemsize();
   int64_t storage_size =
