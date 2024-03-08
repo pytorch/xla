@@ -26,7 +26,7 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
   (a, b) = init_val
   print("a: ", a)
   print("b: ", b)
-  for i in range((upper - lower)[0]):
+  for i in range((upper - lower + 1)[0]):
     a = body_fun(a, b)
   return a
 
