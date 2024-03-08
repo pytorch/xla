@@ -19,6 +19,8 @@ def fori_loop(lower, upper, body_fun, init_val): # *init_val):
   init = lower
   iterator = lower
 
+  one_value_original = torch.tensor([1], dtype=torch.int32, device=device)
+
   def cond_fn(upper, lower, init_val):
     init_val_compy = init_val.clone()
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
@@ -27,7 +29,7 @@ def fori_loop(lower, upper, body_fun, init_val): # *init_val):
     return lower[0] <= upper[0]
 
   def body_fn(upper, lower, init_val):
-    return (upper, torch.add(lower, 1), body_fun(lower, init_val))
+    return (upper, torch.add(lower, 1), body_fun(one_value_original, init_val)) # body_fun(lower, init_val))
 
   res = while_loop(cond_fn, body_fn, (upper, lower, init_val))
   print("upper: ", upper)
