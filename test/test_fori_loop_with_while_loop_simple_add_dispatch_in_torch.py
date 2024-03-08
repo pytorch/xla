@@ -55,7 +55,6 @@ class WhileLoopTest(unittest.TestCase):
     limit_value = torch.tensor([10], dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
-    print("while_loop example: ", res)
     self.assertEqual(expected, res)
 
   def test_fori_loop_tpu_addition(self):
@@ -70,9 +69,9 @@ class WhileLoopTest(unittest.TestCase):
     init_val_list = (init_val, one_value)
 
     def body_fun(a, b):
-      a = torch.add(a, b)
+      # a = torch.add(a, b)
       # print("aaaaaaa: ", a)
-      return a # torch.add(init_val, init_val)# 1)# torch.sin(init_val) # init_val)
+      return torch.add(a, b) # torch.add(init_val, init_val)# 1)# torch.sin(init_val) # init_val)
     res = fori_loop(lower, upper, body_fun, *init_val_list) # init_val)
     print("result: ", res)
     print("lower: ", lower)
