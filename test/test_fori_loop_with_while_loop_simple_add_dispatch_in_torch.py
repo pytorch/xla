@@ -69,9 +69,9 @@ class WhileLoopTest(unittest.TestCase):
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     init_val_list = (init_val, one_value)
 
-    def body_fun(init_val):
-      a = torch.add(init_val, init_val)
-      print("aaaaaaa: ", a)
+    def body_fun(a, b):
+      a = torch.add(a, b)
+      # print("aaaaaaa: ", a)
       return a # torch.add(init_val, init_val)# 1)# torch.sin(init_val) # init_val)
     res = fori_loop(lower, upper, body_fun, *init_val_list) # init_val)
     print("result: ", res)
