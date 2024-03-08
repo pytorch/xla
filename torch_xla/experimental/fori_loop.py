@@ -13,192 +13,24 @@ from torch._higher_order_ops.while_loop import while_loop_op
 
 
 def fori_loop(lower, upper, body_fun, init_val): # *init_val):
-  # def new_cond(pred, token, x):
-  #   return pred
-  # token, pred = cond(token, x)
-  # while new_cond(pred, token, x):
-  #   token, x = body(token, x)
-  #   token, pred = cond(token, x)
 
-
-  # example data:
-  # init_val = torch.tensor([0], dtype=torch.int32, device=device)
-  # lower = torch.tensor([0], dtype=torch.int32, device=device)
-  # upper = torch.tensor([10], dtype=torch.int32, device=device)
-  # limit_range = upper - lower
   device = xm.xla_device()
-  # one_value = torch.tensor([0], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
-  # lower, upper
   limit_value = upper
   init = lower
   iterator = lower
 
-  # device = xm.xla_device()
-
-  ### might be current JAX logic:
-  # # def new_cond(pred, token, x):
-  # #   return pred
-  # # token, pred = cond(token, x)
-  # # while new_cond(pred, token, x):
-  # #   token, x = body(token, x)
-  # #   token, pred = cond(token, x)
-
-  # # fori_loop(lower, upper, body_fun, *init_val):
-  # def new_cond(pred, iterator, init_val): # cond_fn
-  #   pred = (iterator <= limit_value)
-  #   return pred
-  
-  # def cond(iterator, init_val):
-  #   return iterator, init_val
-  
-  # def body_fn(pred, iterator, init_val): # (pred, token, init_val):
-  #   iterator, x = body_fun(iterator, init_val) # token, x = body(token, x)
-  #   iterator, pred = cond(iterator, init_val) # token, pred = cond(token, x)
-  #   return pred, iterator, init_val
-
-  ### earlist fori_loop logic:
-  # def fori_loop(lower, upper, body_fun, init_val):
-  # """Loop from `lower` to `upper` by reduction to `while_loop`.
-
-  # Arguments:
-  #   lower: loop index lower bound (inclusive)
-  #   upper: loop index upper bound (exclusive)
-  #   body_fun: function of type (int, T) -> T, where T is the type of `init_val`
-  #   init_val: initial loop value, of type T
-
-  # Returns:
-  #   Loop value from the final iteration, of type T.
-  # """
-  # # state: (upper limit, index, loop value)
-  # # The `lt` and `add` functions are added to the namespace programmatically.
-  # _, _, result = _while_loop(
-  #     lambda (upper, i, _): lt(i, upper),
-  #     lambda (upper, i, x): (upper, add(i, 1), body_fun(i, x)),
-  #     (upper, lower, init_val))
-  # return result
-
-  # def cond_fun(upper, i, _):
-  #   return i <= upper # lt(i, upper)
-
-  # def body_fun(upper, i, x):
-  #   return (upper, add(i, 1), body_fun(i, x))
-
-  # init_val:
-  #   (upper, lower, init_val)
-
-  ### earlist while_loop logic:
-  #def _while_loop(cond_fun, body_fun, init_val):
-  # init_val = recursive_pack(init_val)
-  # # TODO(mattjj,dougalm): raise to Shaped, should error if higher than shaped.
-  # # (should also check that output is at least as low as input.)
-  # pval = _abstractify(init_val)
-  # body_fun2 = lambda x: recursive_pack(body_fun(x))
-  # cond_jaxpr, _, cond_consts = pe.trace_unwrapped_to_jaxpr(cond_fun, (pval,))
-  # body_jaxpr, pvout, body_consts = pe.trace_unwrapped_to_jaxpr(body_fun2, (pval,))
-  # abs_out, _ = pvout
-  # return while_p.bind(init_val, abs_out=abs_out,
-  #                     cond_jaxpr=cond_jaxpr, cond_consts=cond_consts,
-  #                     body_jaxpr=body_jaxpr, body_consts=body_consts)
-
-  #def while_loop_translation_rule(
-  #   c, init_val, abs_out, cond_jaxpr, cond_consts, body_jaxpr, body_consts):
-  # shape = c.GetShape(init_val)
-  # cond_computation = xla.jaxpr_computation(cond_jaxpr, cond_consts, (), shape)
-  # body_computation = xla.jaxpr_computation(body_jaxpr, body_consts, (), shape)
-  # return c.While(cond_computation, body_computation, init_val)
-
-
-  #def recursive_pack(x):
-  # if type(x) is tuple:
-  #   return core.pack(map(recursive_pack, x))
-  # else:
-  #   return x
-
-  #def _abstractify(x):
-  # # abstractify wrapper used internally for primitives like _while_loop
-  # if isinstance(x, core.Tracer):
-  #   # TODO(mattjj): check that it's at least ShapedArray
-  #   return pe.PartialVal((x.aval, core.unit))
-  # else:
-  #   return pe.PartialVal((xla.abstractify(x), core.unit))
-
-
-  # def cond_fun(upper, i, _):
-  #   return i <= upper # lt(i, upper)
-
-  # def body_fun(upper, i, x):
-  #   return (upper, add(i, 1), body_fun(i, x))
-
-  # init_val:
-  #   (upper, lower, init_val)
-  def cond_fn(upper, lower, init_val): # (upper, i, _):
+  def cond_fn(upper, lower, init_val):
     init_val_compy = init_val.clone()
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     lower = torch.add(lower, one_value)
-    return lower[0] <= upper[0] # i <= upper # lt(i, upper)
-    # one_value = torch.tensor([1], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
-    # one_value_2 = torch.tensor([1], dtype=torch.int32, device=device)
-    # # torch.add(one_value, one_value_2)
-    # a = torch.add(init_val[0], one_value[0])
-    # b = torch.add(init_val[0], one_value_2[0])
-    # # c = (a[0] >= b[0]) and init_val[0] and init_val[1] # (limit_value[0] <= init[0])
-    # # c = (a[0] >= b[0]) and init_val[0] and init_val[1]
-    # return (limit_value[0] <= init[0]) and init_val[0] and init_val[1]
+    lower = torch.sub(lower, one_value)
+    return lower[0] <= upper[0]
 
-  def body_fn(upper, lower, init_val): # (upper, i, x):
-    return (upper, torch.add(lower, 1), body_fun(lower, init_val)) # (upper, add(i, 1), body_fun(i, x))
-    # one_value = torch.ones(1, dtype=torch.int32, device=device)
-    # return (torch.add(init, one_value), limit_value.clone(), body_fun(*init_val), init_val[1])
+  def body_fn(upper, lower, init_val):
+    return (upper, torch.add(lower, 1), body_fun(lower, init_val))
 
-    # TODO(@manfei): init and limit_value has to be torch.tensor.
-    # init = torch.tensor([0], dtype=torch.int32, device=device)
-    # limit_value = torch.tensor([10], dtype=torch.int32, device=device)
-  res = while_loop(cond_fn, body_fn, (upper, lower, init_val)) # (init, limit_value, *init_val))
-  # expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
-  # self.assertEqual(expected, res)
+  res = while_loop(cond_fn, body_fn, (upper, lower, init_val))
   return res
-
-  # def cond_fn(init, limit_value, *init_val):
-  #   one_value = torch.tensor([1], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
-  #   one_value_2 = torch.tensor([1], dtype=torch.int32, device=device)
-  #   # torch.add(one_value, one_value_2)
-  #   a = torch.add(init_val[0], one_value[0])
-  #   b = torch.add(init_val[0], one_value_2[0])
-  #   # c = (a[0] >= b[0]) and init_val[0] and init_val[1] # (limit_value[0] <= init[0])
-  #   # c = (a[0] >= b[0]) and init_val[0] and init_val[1]
-  #   return (limit_value[0] <= init[0]) and init_val[0] and init_val[1]
-
-  # def body_fn(init, limit_value, *init_val):
-  #   one_value = torch.ones(1, dtype=torch.int32, device=device)
-  #   return (torch.add(init, one_value), limit_value.clone(), body_fun(*init_val), init_val[1])
-
-  #   # TODO(@manfei): init and limit_value has to be torch.tensor.
-  #   # init = torch.tensor([0], dtype=torch.int32, device=device)
-  #   # limit_value = torch.tensor([10], dtype=torch.int32, device=device)
-  # res = while_loop(cond_fn, body_fn, (init, limit_value, *init_val))
-  # # expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
-  # # self.assertEqual(expected, res)
-  # return res
-
-  # def cond_fn(lower, upper, *init_val):
-  #   one_value = torch.tensor([1], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
-  #   one_value_2 = torch.tensor([0], dtype=torch.int32, device=device)
-  #   lower = torch.add(lower, one_value)
-  #   lower = torch.add(lower, one_value_2)
-  #   # init_val = init_val.clone()
-  #   # print("lower: ",lower)
-  #   return lower[0] <= upper[0]
-  
-  # def body_fn(lower, upper, *init_val):
-  #   # one_value = torch.tensor([0], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
-  #   # lower = torch.add(lower, one_value)
-  #   init_val_local = body_fun(*init_val)
-  #   return (lower.clone(), upper.clone(), init_val_local, init_val[1])
-
-  # a = while_loop(cond_fn, body_fn, (lower, upper, *init_val))
-  # # print("result: finall: ", a)
-  # return a # while_loop(cond_fn, body_fn, (lower, upper, init_val))
-
 
 @while_loop_op.py_impl(DispatchKey.XLA)
 def while_loop(cond_fn, body_fn, operands):
