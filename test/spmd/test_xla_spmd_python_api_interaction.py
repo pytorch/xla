@@ -134,6 +134,10 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue("SPMD" in torch_xla._XLAC._xla_get_device_hw_type(t))
     self.assertTrue(xr.is_spmd())
 
+    # execute replicated
+    self.assertTrue(
+        "{replicated}" in torch_xla._XLAC._get_xla_tensors_hlo([t + t]))
+
 
 class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
 
