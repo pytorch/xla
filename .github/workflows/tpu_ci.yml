@@ -34,7 +34,6 @@ jobs:
         run: |
           pip install fsspec
           pip install rich
-          pip install -U --pre jaxlib==0.4.25.dev20240213 -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-          pip install -U --pre jax==0.4.25.dev20240213 -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
+          pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
           cd pytorch/xla
           test/tpu/run_tests.sh
