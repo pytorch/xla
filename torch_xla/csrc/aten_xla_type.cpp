@@ -714,8 +714,9 @@ at::Tensor XLANativeFunctions::as_strided_copy(
         tensor));
   }
 
-  // Slow path: decompose as_strided into indexing (we use take, though) operations.
-  // We pre-compute the index on CPU, so as to avoid runtime overhead.
+  // Slow path: decompose as_strided into indexing (we use take, though)
+  // operations. We pre-compute the index on CPU, so as to avoid runtime
+  // overhead.
   auto dim = size.size();
   auto itemsize = tensor.dtype().itemsize();
   int64_t storage_size =
