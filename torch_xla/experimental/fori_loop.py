@@ -27,7 +27,7 @@ def fori_loop(lower, upper, body_fun, *init_val):
   # device = xm.xla_device()
   def cond_fn(init, limit_value, *init_val):
     one_value = torch.tensor([1], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
-    one_value_2 = torch.tensor([0], dtype=torch.int32, device=device)
+    one_value_2 = torch.tensor([1], dtype=torch.int32, device=device)
     torch.add(one_value, one_value_2)
     a = torch.add(init_val[0], one_value)
     b = torch.add(init_val[0], one_value_2)
