@@ -135,7 +135,7 @@ def fori_loop(lower, upper, body_fun, init_val): # *init_val):
     init_val_compy = init_val.clone()
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     lower = torch.add(lower, one_value)
-    return lower <= upper # i <= upper # lt(i, upper)
+    return lower[0] <= upper[0] # i <= upper # lt(i, upper)
     # one_value = torch.tensor([1], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
     # one_value_2 = torch.tensor([1], dtype=torch.int32, device=device)
     # # torch.add(one_value, one_value_2)
