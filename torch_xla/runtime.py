@@ -245,9 +245,10 @@ def use_spmd():
   if torch_xla._XLAC._xla_get_spmd_config_is_locked(
   ) and not xu.check_env_flag("XLA_USE_SPMD"):
     warnings.warn(
-        "Replicating tensors already initialized on non-virtual XLA device for SPMD. "
-        "Please set SPMD mode before initializting non-virtual XLA device. "
-        "Call use_spmd() in the beginning of the program.")
+        "Replicating tensors already initialized on non-virtual XLA device for SPMD "
+        "to force SPMD mode. This is one-time overhead to setup, and to minimize such, "
+        "please set SPMD mode before initializting tensors "
+        "(i.e., call use_spmd() in the beginning of the program).")
     torch_xla._XLAC._xla_force_spmd_device()
 
   # TODO(yeounoh) replace this when we fully deprecate the flag.

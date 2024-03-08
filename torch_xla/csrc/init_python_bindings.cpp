@@ -1173,7 +1173,7 @@ void InitXlaModuleBindings(py::module m) {
       }
     }
     if (!UseVirtualDevice()) {
-      XLA_CHECK(UseVirtualDevice(/*flip_spmd_config=*/true));
+      XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
     }
   });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
