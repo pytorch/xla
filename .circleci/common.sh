@@ -105,6 +105,8 @@ function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
   python setup.py install
+  # Need to uncomment the line below.
+  # Currently it fails upstream XLA CI.
   # pip install plugins/cuda -v
   popd
 }
