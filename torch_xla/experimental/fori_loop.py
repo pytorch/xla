@@ -26,11 +26,14 @@ def fori_loop(lower, upper, body_fun, *init_val):
 
   # device = xm.xla_device()
   def cond_fn(init, limit_value, *init_val):
+    one_value = torch.tensor([1], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
+    one_value_2 = torch.tensor([0], dtype=torch.int32, device=device)
+    torch.add(one_value, one_value_2)
     return limit_value[0] >= init[0]
 
   def body_fn(init, limit_value, *init_val):
     one_value = torch.ones(1, dtype=torch.int32, device=device)
-    return (torch.add(init, one_value), limit_value.clone(), body_fun(*init_val))
+    return (torch.add(init, one_value), limit_value.clone(), body_fun(*init_val), init_val[1])
 
     # TODO(@manfei): init and limit_value has to be torch.tensor.
     # init = torch.tensor([0], dtype=torch.int32, device=device)
