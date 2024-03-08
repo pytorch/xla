@@ -31,7 +31,7 @@ def fori_loop(lower, upper, body_fun, *init_val): # *init_val):
 
   def body_fn(upper, lower, *init_val):
     # one_value_original = torch.tensor(1, dtype=torch.int32, device=device)
-    return (upper, torch.add(lower, 1), body_fun(*init_val)) # body_fun(one_value_original, init_val)) # body_fun(lower, init_val))
+    return (upper, torch.add(lower, 1), body_fun(*init_val), init_val[1]) # body_fun(one_value_original, init_val)) # body_fun(lower, init_val))
 
   res = while_loop(cond_fn, body_fn, (upper, lower, *init_val))
   print("upper: ", upper)
