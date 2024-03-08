@@ -21,7 +21,9 @@ def tpu_custom_call_(output: torch.Tensor, inputs: List[torch.Tensor],
   # Do nothing for non-xla tensor.
   return
 
-def _extract_backend_config(module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> str | None:
+
+def _extract_backend_config(
+    module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> str | None:
   """
   This algorithm intends to extract the backend config from the compiler IR like the following,
   and it is designed to traverse any generic MLIR module.
@@ -48,7 +50,8 @@ def _extract_backend_config(module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") ->
   Basically, what we are looking for is a two level of operations, and the tpu_custom_call operation in the inner level. It will return None if the payload is not found.
   """
   for operation in module.body.operations:
-    assert len(operation.body.blocks) == 1, "The passing module is not compatible."
+    assert len(
+        operation.body.blocks) == 1, "The passing module is not compatible."
     for op in operation.body.blocks[0].operations:
       if op.name == "stablehlo.custom_call":
         return op.backend_config.value

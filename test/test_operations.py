@@ -1963,9 +1963,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     @jax.jit
     def add_vectors(x: jax.Array, y: jax.Array) -> jax.Array:
-      return pl.pallas_call(add_vectors_kernel,
-                            out_shape=jax.ShapeDtypeStruct(x.shape, x.dtype)
-                            )(x, y)
+      return pl.pallas_call(
+          add_vectors_kernel, out_shape=jax.ShapeDtypeStruct(x.shape,
+                                                             x.dtype))(x, y)
 
     import torch_xla.experimental.custom_kernel as custom_kernel
 
