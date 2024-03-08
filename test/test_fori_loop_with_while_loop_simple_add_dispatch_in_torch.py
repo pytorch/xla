@@ -22,6 +22,7 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
   # operands need to be more than one here
   # print("upper - lower: ", upper - lower)
   print("init_val: ", init_val)
+  print("type init_val: ", type(init_val))
   for i in range((upper - lower)[0]):
     init_val[0] = body_fun(*init_val)
   return init_val[0]
