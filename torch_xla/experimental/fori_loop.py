@@ -37,7 +37,7 @@ def fori_loop(lower, upper, body_fun, *init_val):
     return (lower.clone(), upper.clone(), init_val_local, init_val[1])
 
   a = while_loop(cond_fn, body_fn, (lower, upper, *init_val))
-  print("result: finall: ", a)
+  # print("result: finall: ", a)
   return a # while_loop(cond_fn, body_fn, (lower, upper, init_val))
 
 
