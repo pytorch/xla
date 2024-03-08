@@ -41,8 +41,6 @@ spec:
     - bash
     - -cxe
     - |
-      # TODO: new TPUCI please remove this short term hack for `RuntimeError: operator torchvision::nms does not exist`
-      pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121
       pip install expecttest==0.1.6
       pip install rich
 
