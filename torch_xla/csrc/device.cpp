@@ -12,6 +12,7 @@ namespace {
 // This is set when any device is initialized, so to prevent using non-virtual
 // device and virtual device together.
 static bool spmd_config_is_locked = false;
+static bool use_virtual_device = false;
 
 }  // namespace
 
@@ -81,9 +82,12 @@ bool ShouldUseVirtualDevice() {
   return use_virtual_device;
 }
 
-bool UseVirtualDevice() {
+bool UseVirtualDevice(bool force_spmd) {
   spmd_config_is_locked = true;
-  static bool use_virtual_device = ShouldUseVirtualDevice();
+  use_virtual_device = ShouldUseVirtualDevice();
+  if (force_spmd) {
+    use_virtual_device = true;
+  }
   return use_virtual_device;
 }
 

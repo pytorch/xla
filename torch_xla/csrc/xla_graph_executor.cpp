@@ -1304,7 +1304,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     lowering_ctx.AddResult(root);
   }
   // Always execute sharded when running in SPMD mode
-  bool is_sharded = (coll.device == GetVirtualDevice());
+  bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
   // Annotate HLO sharding selectively in the compuation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
 
