@@ -33,8 +33,8 @@ def fori_loop(lower, upper, body_fun, *init_val):
   def body_fn(lower, upper, *init_val):
     # one_value = torch.tensor([0], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
     # lower = torch.add(lower, one_value)
-    *init_val_local = body_fun(*init_val)
-    return (lower.clone(), upper.clone(), *init_val_local)
+    init_val_local = body_fun(*init_val)
+    return (lower.clone(), upper.clone(), init_val_local, init_val[1])
 
   a = while_loop(cond_fn, body_fn, (lower, upper, *init_val))
   print("result: finall: ", a)
