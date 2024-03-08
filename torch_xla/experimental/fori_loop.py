@@ -30,6 +30,8 @@ def fori_loop(lower, upper, body_fun, init_val): # *init_val):
     return (upper, torch.add(lower, 1), body_fun(lower, init_val))
 
   res = while_loop(cond_fn, body_fn, (upper, lower, init_val))
+  print("upper: ", upper)
+  print("lower: ", lower)
   return res
 
 @while_loop_op.py_impl(DispatchKey.XLA)
