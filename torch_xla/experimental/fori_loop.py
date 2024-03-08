@@ -31,7 +31,8 @@ def fori_loop(lower, upper, body_fun, *init_val):
     torch.add(one_value, one_value_2)
     a = torch.add(init_val[0], one_value)
     b = torch.add(init_val[0], one_value_2)
-    return limit_value[0] >= init[0] & a==b
+    # c = limit_value[0] >= init[0] & a==b
+    return limit_value[0] >= init[0] and a==b
 
   def body_fn(init, limit_value, *init_val):
     one_value = torch.ones(1, dtype=torch.int32, device=device)
