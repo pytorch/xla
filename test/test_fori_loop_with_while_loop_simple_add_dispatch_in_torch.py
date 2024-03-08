@@ -28,6 +28,7 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
   print("b: ", b)
   for i in range((upper - lower + 1)[0]):
     a = body_fun(a, b)
+    print("a: ", a)
   return a
 
 class WhileLoopTest(unittest.TestCase):
