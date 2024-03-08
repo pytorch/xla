@@ -18,15 +18,5 @@
         "./bazel-out/_coverage/_coverage_report.dat"
     ],
     "python.formatting.provider": "yapf",
-    "editor.formatOnSave": true,
-    "files.associations": {
-      ".*/BUILD": "starlark",
-      ".*/METADATA": "starlark",
-      ".*/WORKSPACE": "starlark",
-      "*.gss": "css",
-      "array": "cpp",
-      "string": "cpp",
-      "string_view": "cpp",
-      "vector": "cpp"
-    }
+    "editor.formatOnSave": true
 }
