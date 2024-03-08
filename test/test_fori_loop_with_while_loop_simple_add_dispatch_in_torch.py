@@ -20,6 +20,7 @@ def _fake_while_loop(cond_fn, body_fn, operands):
 
 def _fake_fori_loop(lower, upper, body_fun, *init_val):
   # operands need to be more than one here
+  print("upper - lower: ", upper - lower)
   for i in range(upper - lower):
     operands = body_fun(*init_val)
   return operands
