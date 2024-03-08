@@ -1950,6 +1950,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     compiled_add_one_pallas(output, [x], payload)
     self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
 
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_extract_add_payload(self):
     import jax
     import jax.numpy as jnp
