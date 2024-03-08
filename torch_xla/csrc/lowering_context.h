@@ -34,6 +34,10 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   xla::XlaBuilder* builder() { return &builder_; }
 
+  void set_name_string(const std::string& name) { name_ = name; }
+
+  const std::string& get_name_string() { return name_; }
+
   StackFrameIndexBuilder* stack_frame_index_builder() {
     return stack_frame_index_builder_.get();
   }
@@ -121,6 +125,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
       parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
+  std::string name_;
 
   std::shared_ptr<StackFrameIndexBuilder> stack_frame_index_builder_;
 };  // namespace torch_xla
