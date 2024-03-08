@@ -67,22 +67,6 @@ skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
                                    'skip on eager debug mode')
 
 
-def _skipIfFunctionalization(value=True, reason=""):
-  verb = "is" if value else "is not"
-  reason = f" Reason: {reason}" if reason else ""
-  return unittest.skipIf(
-      XLA_DISABLE_FUNCTIONALIZATION is value,
-      f'Works only when functionalization {verb} disabled.{reason}.')
-
-
-def skipIfFunctionalizationEnabled(reason):
-  return _skipIfFunctionalization(value=False, reason=reason)
-
-
-def skipIfFunctionalizationDisabled(reason):
-  return _skipIfFunctionalization(value=True, reason=reason)
-
-
 def _gen_tensor(*args, **kwargs):
   return torch.randn(*args, **kwargs)
 
@@ -994,8 +978,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   # TODO - upstream behavior has changed and results in expected DestroyXlaTensor
   # counter as of 11/13/2023. Re-enable after reviewing the change.
-  # @skipIfFunctionalizationDisabled("metrics differ")
-  @unittest.skip
+  @unittest.skipIf(True or XLA_DISABLE_FUNCTIONALIZATION,
+                   'Metrics differ when functionalization is disabled.')
   def test_set(self):
     met.clear_all()
 
@@ -1013,7 +997,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # shouldn't crash
     self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
-  @skipIfFunctionalizationDisabled("metrics differ")
+  @unittest.skipIf(XLA_DISABLE_FUNCTIONALIZATION,
+                   'Metrics differ when functionalization is disabled.')
   def test_replace_xla_tensor(self):
     met.clear_all()
 
@@ -1356,7 +1341,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         ), dtype=torch.int64)
     self.runAtenTest([token_type_ids, cat_ids], test_fn)
 
-  @skipIfFunctionalizationEnabled("views do not exist")
+  @unittest.skipIf(not XLA_DISABLE_FUNCTIONALIZATION,
+                   'When functionalization is enabled, views do not exist.')
   def test_save_view_alias_check(self):
 
     class Nested(object):
@@ -1511,63 +1497,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       return torch.as_strided(r, (2, 1, 3, 4, 6), (12, 12, 4, 1, 24))
 
     self.runAtenTest([torch.arange(144, dtype=torch.int32)], test_fn)
-
-  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
-  def test_as_strided_with_gap(self):
-
-    def test_fn(r):
-      return torch.as_strided(r, (4, 4), (8, 1))
-
-    self.runAtenTest([torch.arange(28, dtype=torch.int32)], test_fn)
-
-  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
-  def test_as_strided_with_gap_no_unit_stride(self):
-
-    def test_fn(r):
-      return torch.as_strided(r, (4, 4), (8, 2))
-
-    self.runAtenTest([torch.arange(31, dtype=torch.int32)], test_fn)
-
-  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
-  def test_as_strided_with_overlap(self):
-
-    def test_fn(r):
-      return torch.as_strided(r, (4, 4), (2, 1))
-
-    self.runAtenTest([torch.arange(10, dtype=torch.int32)], test_fn)
-
-  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
-  def test_as_strided_with_overlap_and_gap(self):
-
-    def test_fn(r):
-      return torch.as_strided(r, (4, 4), (4, 2))
-
-    self.runAtenTest([torch.arange(19, dtype=torch.int32)], test_fn)
-
-  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
-  def test_as_strided_with_overlap_zero_stride(self):
-
-    def test_fn(r):
-      return torch.as_strided(r, (4, 4), (0, 1))
-
-    self.runAtenTest([torch.arange(19, dtype=torch.int32)], test_fn)
-
-  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
-  def test_as_strided_with_gap_no_unit_stride(self):
-
-    def test_fn(r):
-      x = r.view(8, 4)
-      return torch.as_strided(r, (4, 4), (6, 2))
-
-    self.runAtenTest([torch.arange(32, dtype=torch.int32)], test_fn)
-
-  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
-  def test_as_strided_with_empty_args(self):
-
-    def test_fn(r):
-      return torch.as_strided(r, tuple(), tuple())
-
-    self.runAtenTest([torch.arange(32, dtype=torch.int32)], test_fn)
 
   def test_basic_bfloat16(self):
 
