@@ -29,7 +29,6 @@ jobs:
       - name: Run Tests
         env:
           PJRT_DEVICE: TPU
-        # TODO: figure out how to update the JAX version automatically when the libtpu version is updated.
         # Jax is needed for pallas tests.
         run: |
           pip install fsspec
