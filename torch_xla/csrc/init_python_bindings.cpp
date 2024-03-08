@@ -1172,6 +1172,9 @@ void InitXlaModuleBindings(py::module m) {
         // TODO(yeounoh) allow tensor data's device to be mutable.
       }
     }
+    if (!UseVirtualDevice()) {
+      XLA_CHECK(UseVirtualDevice(/*flip_spmd_config=*/true));
+    }
   });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
   m.def("_xla_get_device_hw_type", [](const at::Tensor& tensor) {

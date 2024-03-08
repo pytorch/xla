@@ -81,11 +81,16 @@ bool ShouldUseVirtualDevice() {
   return use_virtual_device;
 }
 
-bool UseVirtualDevice() {
+bool UseVirtualDevice(bool flip_spmd_config) {
   spmd_config_is_locked = true;
   static bool use_virtual_device = ShouldUseVirtualDevice();
+  if (flip_spmd_config) {
+    use_virtual_device = !use_virtual_device;
+  }
   return use_virtual_device;
 }
+
+void ResetVirtualDevice(bool use_spmd) {}
 
 bool GetLockSpmdConfig() { return spmd_config_is_locked; }
 
