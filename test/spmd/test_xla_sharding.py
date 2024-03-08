@@ -617,6 +617,11 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         '%custom-call.7 = f32[2,2]{1,0} custom-call(f32[2,2]{1,0} %add.6), custom_call_target="Sharding", sharding=',
         hlo)
 
+  # avoid calling xr.addressable_device_count here otherwise it will init the test
+  # in non-spmd mode.
+  @unittest.skipIf(xr.device_type() == 'CPU',
+                   "sharding will be the same for both tensors on single device"
+                  )
   def test_shard_hashing(self):
     xt1 = torch.ones(2, 2).to(xm.xla_device())
     xt2 = torch.ones(2, 2).to(xm.xla_device())
