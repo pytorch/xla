@@ -1950,6 +1950,31 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     compiled_add_one_pallas(output, [x], payload)
     self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
 
+  def test_tpu_custom_call_pallas_extract_add_payload(self):
+    import jax
+    import jax.numpy as jnp
+    import jax._src.pallas.mosaic.pallas_call_registration
+
+    from jax.experimental import pallas as pl
+
+    def add_vectors_kernel(x_ref, y_ref, o_ref):
+      x, y = x_ref[...], y_ref[...]
+      o_ref[...] = x + y
+
+    @jax.jit
+    def add_vectors(x: jax.Array, y: jax.Array) -> jax.Array:
+      return pl.pallas_call(add_vectors_kernel,
+                            out_shape=jax.ShapeDtypeStruct(x.shape, x.dtype)
+                            )(x, y)
+
+    import torch_xla.experimental.custom_kernel as custom_kernel
+
+    ir = jax.jit(add_vectors).lower(jnp.arange(8), jnp.arange(8)).compiler_ir()
+    payload = custom_kernel._extract_backend_config(ir)
+    # The payload being generated could vary each time. We just want to make sure
+    # the most important fields are present.
+    self.assertIn("custom_call_config", payload)
+
 
 class MNISTComparator(nn.Module):
 
