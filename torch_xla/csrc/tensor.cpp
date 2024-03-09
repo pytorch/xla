@@ -297,6 +297,7 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
     data()->view = nullptr;
     data()->tensor_data = c10::nullopt;
   }
+  data()->is_cloned = false;
 }
 
 void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
@@ -319,6 +320,7 @@ void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
     std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
     XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
   }
+  data()->is_cloned = false;
 }
 
 void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
@@ -335,6 +337,7 @@ void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
              << (ir_value ? ir_value->ToString() : "empty node");
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
+  data()->is_cloned = false;
 }
 
 torch::lazy::Value XLATensor::GetIrValue() const {

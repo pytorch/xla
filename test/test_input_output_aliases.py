@@ -24,6 +24,18 @@ class InputOutputAliasesTest(unittest.TestCase):
 
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
 
+  def test_aliasing_with_cloned(self):
+    xla_device = xm.xla_device()
+    t1 = torch.randn(4, 2, 2).to(xla_device)
+    # t1_cloned share the same storage as t1
+    t1_cloned = torch.clone(t1)
+    t1 += 1
+    xm.mark_step()
+    # t1's storage will be alised with the ouput, need to make sure t1_cloned
+    # got a new buffer and is still valid.
+    torch.allclose(t1 - 1, t1_cloned)
+    self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
+
 
 if __name__ == '__main__':
   test = unittest.main()
