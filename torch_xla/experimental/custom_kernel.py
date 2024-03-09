@@ -97,8 +97,6 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
         assert False, f"Unsupported argument type: {type(arg)}"
 
     ir = jax.jit(kernel).lower(*jax_args).compiler_ir()
-    jax.config.update("jax_platform_name", "cpu")
-
     payload = _extract_backend_config(ir)
     output_shape, output_dtype = output_shape_dtype_fn(*args)
     output = torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device())
