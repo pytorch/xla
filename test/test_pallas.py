@@ -135,6 +135,34 @@ class PallasTest(unittest.TestCase):
     # the most important fields are present.
     self.assertIn("custom_call_config", payload)
 
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_tpu_custom_call_pallas_wrap_add_payload(self):
+    import jax
+    import jax.numpy as jnp
+    import jax._src.pallas.mosaic.pallas_call_registration
+
+    from jax.experimental import pallas as pl
+
+    def add_vectors_kernel(x_ref, y_ref, o_ref):
+      x, y = x_ref[...], y_ref[...]
+      o_ref[...] = x + y
+
+    @jax.jit
+    def add_vectors(x: jax.Array, y: jax.Array) -> jax.Array:
+      return pl.pallas_call(
+          add_vectors_kernel, out_shape=jax.ShapeDtypeStruct(x.shape,
+                                                             x.dtype))(x, y)
+
+    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    pt_kernel = make_kernel_from_pallas(add_vectors, lambda x, y: (x.shape, x.dtype))
+
+    x = torch.arange(8, dtype=torch.int).to("xla")
+    y = torch.arange(8, dtype=torch.int).to("xla")
+    expected_output = x + y
+    output = pt_kernel(x, y)
+    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
