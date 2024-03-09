@@ -129,6 +129,8 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
                                int quant_min, int quant_max,
                                const std::string& dtype, int axis);
 
+XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& input, const XLATensorPtr& weight);
+
 //////////////////////////////////////////////////////////////////////////////
 // ATEN operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
