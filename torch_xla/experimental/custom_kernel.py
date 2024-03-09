@@ -65,11 +65,13 @@ def _extract_backend_config(
 
 def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
   if dtype == torch.float32:
-    return jnp.bfloat16
+    return jnp.float32
   elif dtype == torch.float64:
     return jnp.float64
   elif dtype == torch.float16:
     return jnp.float16
+  elif dtype == torch.bfloat16:
+    return jnp.bfloat16
   elif dtype == torch.int32:
     return jnp.int32
   elif dtype == torch.int64:
