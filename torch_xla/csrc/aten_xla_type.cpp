@@ -1122,11 +1122,17 @@ at::Tensor XLANativeFunctions::div(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
                                    const at::Tensor& tensor) {
+  std::cout << "aten_xla_type " << self.scalar_type() << std::endl;
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_CHECK_EQ(self.dim(), 1)
       << "dot: Expected 1-D argument self, but got " << self.dim() << "-D";
   XLA_CHECK_EQ(tensor.dim(), 1)
       << "dot: Expected 1-D argument tensor, but got " << tensor.dim() << "-D";
+  if (self.scalar_type() == at::ScalarType::Long &&
+      tensor.scalar_type() == at::ScalarType::Long) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(dot)>::call(
+        self, tensor);
+  }
   return bridge::AtenFromXlaTensor(tensor_methods::matmul(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
