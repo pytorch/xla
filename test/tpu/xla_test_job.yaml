@@ -41,7 +41,7 @@ spec:
     - bash
     - -cxe
     - |
-      pip install "git+https://github.com/pytorch/vision.git@$(cat /src/pytorch/xla/.github/ci_commit_pins/vision.txt)"
+      pip install "git+https://github.com/pytorch/vision.git@$(cat /src/pytorch/.github/ci_commit_pins/vision.txt)"
       pip install expecttest==0.1.6
       pip install rich
 
