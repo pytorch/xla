@@ -155,6 +155,8 @@ def _maybe_move_tensors_to_device(tensors: tuple,
       moved_tensors.append(tensor)
       continue
 
+    assert target_device is not None, "Moving tensors to None device not supported"
+
     if dynamo_debug:
       print("Moving Tensor {} to device {}".format(tensor, target_device))
 
