@@ -155,9 +155,11 @@ class PallasTest(unittest.TestCase):
                                                              x.dtype))(x, y)
 
     from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
-    pt_kernel = make_kernel_from_pallas(add_vectors, lambda x, y: (x.shape, x.dtype))
+    pt_kernel = make_kernel_from_pallas(add_vectors, lambda x, y:
+                                        (x.shape, x.dtype))
 
-    dtypes = [torch.float32, torch.float]  # TODO: torch.float64, torch.bfloat16, torch.float16 don't work.
+    dtypes = [torch.float32, torch.float
+             ]  # TODO: torch.float64, torch.bfloat16, torch.float16 don't work.
     for i in range(len(dtypes)):
       x = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
       y = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
@@ -165,7 +167,9 @@ class PallasTest(unittest.TestCase):
       output = pt_kernel(x, y)
       self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
 
-    dtypes = [torch.int32, torch.int]  # TODO: torch.int64, torch.int16, torch.int8, torch.uint8 don't work.
+    dtypes = [
+        torch.int32, torch.int
+    ]  # TODO: torch.int64, torch.int16, torch.int8, torch.uint8 don't work.
     for i in range(len(dtypes)):
       x = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
       y = torch.arange(i + 1, dtype=dtypes[i]).to("xla")

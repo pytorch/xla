@@ -63,6 +63,7 @@ def _extract_backend_config(
         return op.backend_config.value
   return None
 
+
 def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
   if dtype == torch.float32:
     return jnp.float32
@@ -85,6 +86,7 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
   else:
     raise ValueError(f"Unsupported dtype: {dtype}")
 
+
 def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   # TODO: Maybe we can cache the payload for the same input.
   def wrapped_kernel(kernel: Callable, output_shape_dtype_fn: Callable, *args):
@@ -92,7 +94,8 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
     for i, arg in enumerate(args):
       if torch.is_tensor(arg):
         # ShapedArray doesn't have any storage and thus is very suitable for generating the payload.
-        jax_meta_tensor = jax.core.ShapedArray(arg.shape, convert_torch_dtype_to_jax(arg.dtype))
+        jax_meta_tensor = jax.core.ShapedArray(
+            arg.shape, convert_torch_dtype_to_jax(arg.dtype))
         jax_args.append(jax_meta_tensor)
       else:
         # TODO: We can support more types here.
