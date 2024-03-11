@@ -10,6 +10,8 @@ jobs:
     runs-on: v4-runner-set
     steps:
       - name: Checkout and Setup PyTorch Repo
+        env:
+          _GLIBCXX_USE_CXX11_ABI: 0
         run: |
           git clone --recursive https://github.com/pytorch/pytorch
           cd pytorch/
@@ -31,6 +33,7 @@ jobs:
           PJRT_DEVICE: TPU
         # Jax is needed for pallas tests.
         run: |
+          pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu --user
           pip install fsspec
           pip install rich
           pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
