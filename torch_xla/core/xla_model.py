@@ -659,7 +659,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
         if tensor.numel() != output_selected.numel():
           raise ValueError(
               f"`output` tensor size doesn't match `input` tensor size for tensor list index {idx}: "
-              f"{output_selected.numel() vs tensor.numel().")
+              f"{output_selected.numel()} vs {tensor.numel()}.")
 
       # Tensor is larger than bucket_cap, don't bucketize
       if tensor_bytes > bucket_cap:
@@ -933,7 +933,7 @@ def reduce_scatter(reduce_type,
         if tensor.numel() != output_selected.numel():
           raise ValueError(
               f"`output` tensor size doesn't match `input` tensor size for tensor list index {idx}: "
-              f"{output_selected.numel() vs tensor.numel().")
+              f"{output_selected.numel()} vs {tensor.numel()}.")
 
       # Tensor is larger than bucket_cap, don't bucketize
       if tensor_bytes > bucket_cap:
