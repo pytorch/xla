@@ -1,0 +1,1 @@
+pip install --no-use-pep517 "git+https://github.com/pytorch/vision.git@$(cat ../.github/ci_commit_pins/vision.txt)"
