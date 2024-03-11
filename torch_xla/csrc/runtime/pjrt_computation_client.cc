@@ -496,11 +496,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
       torch_xla::runtime::ConvertHloToStableHlo(
           instance.computation.mutable_proto(), &mlir_module);
-      executable = ConsumeValue(client_->Compile(mlir_module, compile_options));
+      executable = client_->Compile(mlir_module, compile_options).value();
       StableHloCompileCounter()->AddValue(1);
     } else {
       executable =
-          ConsumeValue(client_->Compile(instance.computation, compile_options));
+          client_->Compile(instance.computation, compile_options).value();
     }
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
