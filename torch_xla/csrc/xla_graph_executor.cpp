@@ -1186,6 +1186,9 @@ XLAGraphExecutor::TryRunCachedSync(
   TF_VLOG(5) << "TensorsGraphSize=" << po_data->post_order.size();
 
   if (runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false)) {
+    // In case auto-sharding pass does not converge to the optimal solution due
+    // to timeout, there could be some discrepancy between the final cached
+    // module and the output sharding propagated inputs.
     const xla::HloModuleProto& computation_proto =
         cached_computation->computation->computation().proto();
     ShardingUtil::ReshardParameters(computation_proto, tensors,
@@ -1393,6 +1396,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
     TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
     instances.front().use_auto_spmd_partitioning = use_autosharding;
+    TORCH_LAZY_COUNTER("CompileWithAutoSharding", 1);
 
     // Apply XLA_AUTO_SPMD_MESH if it is set.
     // TODO(yeounoh) allow multi mesh exploration.

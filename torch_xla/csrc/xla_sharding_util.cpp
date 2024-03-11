@@ -193,6 +193,7 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
         xla_node->GetSharding(elem.first.index);
     // TODO(yeounoh) we should ignore UNKNOWN until auto-sharding is cleared.
     if (sharding != nullptr && sharding->type() != xla::OpSharding::UNKNOWN) {
+      std::cout << "- sharding in hlo type=" << sharding->type() << std::endl;
       *instruction->mutable_sharding() = *sharding;
       is_sharded = true;
     }
@@ -663,6 +664,10 @@ void ShardingUtil::ReshardParameters(
       input_shardings.push_back(sharding);
     }
   }
+  if (input_shardings.size() == 0) {
+    TF_VLOG(3) << "ReshardParamters... skip with empty input_shardings.";
+    return;
+  }
   XLA_CHECK_EQ(input_shardings.size(), parameters->size());
 
   // Reshard parameters as needed, as with a new sharding spec.
@@ -681,11 +686,14 @@ void ShardingUtil::ReshardParameters(
       filtered_shardings.push_back(input_shardings[i]);
     }
   }
-  TF_VLOG(3) << "ReshardParamters: resharding " << indices.size()
-             << " parameters.";
   if (indices.size() == 0) {
+    TF_VLOG(3) << "ReshardParamters... skip with no new shardings.";
     return;
   }
+  TF_VLOG(3) << "ReshardParamters... resharding " << indices.size()
+             << " parameters.";
+
+  TORCH_LAZY_COUNTER("ReshardParameters", 1);
 
   // Construct parameter handle to XlaNode mappping for faster look-up.
   std::unordered_map<torch::lazy::BackendData::Handle, const torch::lazy::Node*>
@@ -725,8 +733,6 @@ void ShardingUtil::ReshardParameters(
         << "xla_node_map does not contain " << filtered_data[i]->ToString()
         << ", target sharding: " << filtered_shardings[i].DebugString();
     auto device_data_node = DeviceData::Cast(it_node->second);
-    // TODO(yeounoh) this breaks tracing.
-    // device_data_node->Assign((*parameters)[indices[i]]);
     device_data_node->SetSharding(filtered_shardings[i], 0);
   }
 }

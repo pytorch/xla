@@ -12,6 +12,7 @@ from torch import nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla.debug.metrics as met
 import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
@@ -24,23 +25,36 @@ import torch_xla.utils.utils as xu
 from torch_xla._internal import tpu
 
 
-class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
+class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
     xr.use_spmd(auto=True)
     super().setUpClass()
 
-  def test_xla_sharded_tensor(self):
-    partition_spec = (0, 1)
-    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
-                       dtype=torch.float,
-                       device=xm.xla_device())
-    xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
-                            partition_spec)
 
-    # TODO(244003536) add more tests for XLAShardedTensror.
-    self.assertTrue(isinstance(xst1, XLAShardedTensor))
+  @unittest.skipUnless(xr.device_type() == "TPU",
+                       "Auto-sharding currently supports TPU device.")
+  def test_simple_linear_training(self):
+    met.clear_counters()
+
+    model = self.SimpleLinear().to(xm.xla_device())
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=0.1)
+    data = torch.randn(128, 128).to(xm.xla_device())
+    target = torch.zeros(128).to(xm.xla_device())
+    loss_fn = nn.CrossEntropyLoss()
+    for i in range(5):
+      optimizer.zero_grad()
+      output = model(data)
+      loss = loss_fn(output, target)
+      loss.backward()
+      optimizer.step()
+      xm.mark_step()
+
+    self.assertEqual(met.counter_value("UncachedCompile"), 2)
+    self.assertEqual(met.counter_value("CachedCompile"), 3)
+    self.assertEqual(met.counter_value("CompileWithAutoSharding"), 2)
 
 
 if __name__ == '__main__':
