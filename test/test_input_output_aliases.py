@@ -15,6 +15,7 @@ class InputOutputAliasesTest(unittest.TestCase):
     t1 = torch.randn(4, 2, 2).to(xla_device)
     t2 = torch.randn(4, 2, 2).to(xla_device)
     xm.mark_step()
+    met.clear_all()
 
     # check in place op aliasing.
     t3 = t1 + t2
@@ -26,6 +27,7 @@ class InputOutputAliasesTest(unittest.TestCase):
 
   def test_aliasing_with_cloned(self):
     xla_device = xm.xla_device()
+    met.clear_all()
     t1 = torch.randn(4, 2, 2).to(xla_device)
     # t1_cloned share the same storage as t1
     t1_cloned = torch.clone(t1)
