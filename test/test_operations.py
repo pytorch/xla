@@ -1613,6 +1613,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # 1 and 2-dimensional tensors.
     # They have different execution paths.
     for shape in ((5,), (2, 5)):
+
       def test_on_device(device):
         m = copy.deepcopy(model).to(device)
         index = torch.ones(shape, dtype=torch.int, device=device)
