@@ -24,7 +24,7 @@ import torch_xla.utils.utils as xu
 from torch_xla._internal import tpu
 
 
-class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
+class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
