@@ -468,8 +468,8 @@ TEST_F(AtenXlaTensorTest, TestDot) {
 }
 
 TEST_F(AtenXlaTensorTest, TestDotInt64) {
-  torch::Tensor a = torch::rand({4}, torch::TensorOptions(torch::kLong));
-  torch::Tensor b = torch::rand({4}, torch::TensorOptions(torch::kLong));
+  torch::Tensor a = torch::randint(0, 100, {10});
+  torch::Tensor b = torch::randint(0, 100, {10});
   torch::Tensor c = torch::dot(a, b);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
