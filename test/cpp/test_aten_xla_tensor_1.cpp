@@ -477,6 +477,8 @@ TEST_F(AtenXlaTensorTest, TestDotInt64) {
     torch::Tensor xla_c = torch::dot(xla_a, xla_b);
     AllClose(c, xla_c);
   });
+  ExpectCounterChanged("aten::dot", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::dot", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTensorDot) {
