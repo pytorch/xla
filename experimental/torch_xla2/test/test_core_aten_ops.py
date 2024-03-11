@@ -1,7 +1,6 @@
 import unittest
 
 import torch
-from torch_xla2 import ops  # pylint: disable=unused-import
 from torch_xla2 import ops_registry
 from torch_xla2 import tensor
 
