@@ -113,6 +113,9 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     original_device = x.device
     eager_result = self.fn_simple(x, y)
 
+    # Since all tests run in the same process, have to reset the metrics report.
+    met.clear_all()
+
     fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
     res_xla_dynamo = fn_simple_dynamo(x, y)
     self.assertIn('xla::add', met.counter_names())

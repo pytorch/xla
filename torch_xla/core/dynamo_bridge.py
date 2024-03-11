@@ -447,7 +447,9 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal skip_checking_input_sharding_threashold
 
     original_device: torch.device = _get_input_arg_device(args)
-    is_cuda_args: bool = _args_on_cuda(args)
+    is_cuda_args: bool = False
+    if original_device:
+      is_cuda_args = original_device.type == "cuda"
 
     if is_cuda_args:
       args = _maybe_move_tensors_to_device(args, xm.xla_device())
