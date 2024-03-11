@@ -126,7 +126,6 @@ class ShardingUtil {
 
   // Construct a device mesh for auto-sharding pass. Returns a tuple of mesh
   // shape and device ids vectors.
-  // TODO(yeounoh) integrate with automatic mesh selector.
   static std::tuple<std::vector<int64_t>, std::vector<int64_t>>
   GetAutoShardingMesh();
 
@@ -140,6 +139,9 @@ class ShardingUtil {
       const xla::HloModuleProto& module, std::vector<XLATensorPtr>* tensors,
       std::vector<torch::lazy::BackendDataPtr>* parameters,
       std::vector<const torch::lazy::Node*>* nodes);
+
+  static void SetAutoSharding();
+  static bool GetAutoSharding();
 
   //////////////////////////// Dynamo Integration ////////////////////////////
 

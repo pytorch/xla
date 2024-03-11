@@ -53,6 +53,8 @@ using tsl::ERROR;
 using tsl::INFO;
 using xla::internal::XlaBuilderFriend;
 
+static bool use_auto_sharding = false;
+
 // Return py::obj type as string.
 std::string GetPyType(const py::object& elem) {
   return elem.attr("__class__").attr("__name__").cast<std::string>();
@@ -191,9 +193,7 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
         XlaBuilderFriend::GetInstruction(elem.second);
     const std::shared_ptr<xla::OpSharding> sharding =
         xla_node->GetSharding(elem.first.index);
-    // TODO(yeounoh) we should ignore UNKNOWN until auto-sharding is cleared.
     if (sharding != nullptr && sharding->type() != xla::OpSharding::UNKNOWN) {
-      std::cout << "- sharding in hlo type=" << sharding->type() << std::endl;
       *instruction->mutable_sharding() = *sharding;
       is_sharded = true;
     }
@@ -848,5 +848,13 @@ void ShardingUtil::XlaMarkShardingDynamoCustomOp(
       ShardingUtil::ShardingType(sharding_type));
 
   ShardingUtil::XlaMarkSharding(input, op_sharding);
+}
+
+void ShardingUtil::SetAutoSharding() {
+  // This stays on throughout the program.
+  use_auto_sharding = true;
+}
+bool ShardingUtil::GetAutoSharding() {
+  return use_auto_sharding;
 }
 }  // namespace torch_xla

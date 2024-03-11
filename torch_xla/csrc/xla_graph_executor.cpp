@@ -1186,9 +1186,7 @@ XLAGraphExecutor::TryRunCachedSync(
   TF_VLOG(5) << "TensorsGraphSize=" << po_data->post_order.size();
 
   if (runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false)) {
-    // In case auto-sharding pass does not converge to the optimal solution due
-    // to timeout, there could be some discrepancy between the final cached
-    // module and the output sharding propagated inputs.
+    // TODO(yeounoh) we may be able to update the cache to avoid this.
     const xla::HloModuleProto& computation_proto =
         cached_computation->computation->computation().proto();
     ShardingUtil::ReshardParameters(computation_proto, tensors,
@@ -1308,7 +1306,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   static const bool using_pjrt =
       runtime::sys_util::GetEnvString("PJRT_DEVICE", "").size() > 0;
   static const bool use_autosharding =
-      runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false);
+      runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false) ||
+      ShardingUtil::GetAutoSharding();
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
@@ -1324,10 +1323,9 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   std::vector<size_t> buffer_donor_indices;
-  // TODO(yeounoh) aliasing is disabled for partitioned computation,
+  // TODO(yeounoh) enable aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
-  // TODO(yeounoh) re-enable aliasing with auto-sharding.
   if (enable_aliasing && !use_autosharding) {
     if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
       // We can only alias at the step barrier, when force_ltc_data is true.

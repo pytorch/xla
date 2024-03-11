@@ -523,13 +523,6 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           device_assignment);
     }
 
-    TF_VLOG(3) << "*** Compile options: "
-               << compile_options.ToProto()->DebugString();
-    TF_VLOG(3) << "auto_spmd_partitioning_mesh_shape="
-               << absl::StrJoin(compile_options.executable_build_options
-                                    .auto_spmd_partitioning_mesh_shape(),
-                                ",");
-
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;
     if (runtime::sys_util::GetEnvBool("XLA_STABLEHLO_COMPILE", false)) {
       // Convert HLO to StableHLO for PjRt client compilation.
@@ -546,14 +539,6 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
-    // TODO(yeounoh) debugging
-    TF_VLOG(3)
-        << "auto_spmd_partitioning_mesh_shape="
-        << absl::StrJoin(
-               hlo_modules[0]->config().auto_spmd_partitioning_mesh_shape(),
-               ",")
-        << " after compilation and directly from HloModuleConfig.";
-
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
             std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),

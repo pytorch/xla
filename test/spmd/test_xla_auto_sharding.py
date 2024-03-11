@@ -35,6 +35,18 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipUnless(xr.device_type() == "TPU",
                        "Auto-sharding currently supports TPU device.")
+  def test_matmul(self):
+    met.clear_counters()
+    t1 = torch.randn(64, 128, device=xm.xla_device())
+    t2 = torch.randn(128, 256, device=xm.xla_device())
+    t3 = t1 @ t2
+    xm.mark_step()
+    self.assertEqual(met.counter_value("CompileWithAutoSharding"), 1)
+    self.assertTrue(torch.allclose(t1.cpu() @ t2.cpu(), t3))
+
+
+  @unittest.skipUnless(xr.device_type() == "TPU",
+                       "Auto-sharding currently supports TPU device.")
   def test_simple_linear_training(self):
     met.clear_counters()
 
@@ -55,6 +67,7 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(met.counter_value("UncachedCompile"), 2)
     self.assertEqual(met.counter_value("CachedCompile"), 3)
     self.assertEqual(met.counter_value("CompileWithAutoSharding"), 2)
+    self.assertEqual(met.counter_value("ReshardParameters"), 2)
 
 
 if __name__ == '__main__':
