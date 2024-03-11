@@ -98,14 +98,17 @@ def j2t(x):
 def t2j_dtype(dtype):
   return {
       torch.bfloat16: jnp.bfloat16,
-      torch.double: jnp.double,
-      torch.float32: jnp.float32,
       torch.half: jnp.float16,
+      torch.float32: jnp.float32,
+      torch.double: jnp.double,
       torch.long: jnp.int64,
       torch.int32: jnp.int32,
       torch.int16: jnp.int16,
+      torch.int8: jnp.int8,
+      torch.uint8: jnp.uint8,
       torch.bool: jnp.bool_,
       torch.complex64: jnp.complex64,
+      torch.complex128: jnp.complex128,
   }.get(dtype)
 
 
@@ -186,33 +189,22 @@ class XLATensor2(torch.Tensor):
   @classmethod
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
     kwargs = kwargs or {}
-    print("running...", func.name(), types)
-    for a in torch_pytree.tree_flatten(args)[0]:
-      if isinstance(a, XLATensor2):
-        print("  ", a._elem.shape)
-      else:
-        print("  ", a)
+    with jax.named_scope(func.name()):
+      if isinstance(func, torch._ops.OpOverloadPacket):
+        return func(*args, **kwargs)
+      
+      if func in jaten.all_ops:
+        return jaten.all_ops[func](*args, **kwargs)
+      
+      lowering = ops_registry.lowerings.lookup(func)
 
+      if lowering is None:
+        raise RuntimeError("No lowering found for", func.name())
 
-    if isinstance(func, torch._ops.OpOverloadPacket):
-      return func(*args, **kwargs)
-    
-    if func in jaten.all_ops:
-      return jaten.all_ops[func](*args, **kwargs)
-    
-    lowering = ops_registry.lowerings.lookup(func)
-
-    if lowering is None:
-      raise RuntimeError("No lowering found for", func.name())
-
-    with XLADispatchMode():
-      res = lowering(*args, **kwargs)
-    print("output:")
-    for a in torch_pytree.tree_flatten(res)[0]:
-      if isinstance(a, XLATensor2):
-        print("  ", a._elem.shape)
-    debug_accuracy(func, args, kwargs, res)
-    return res
+      with XLADispatchMode():
+        res = lowering(*args, **kwargs)
+      debug_accuracy(func, args, kwargs, res)
+      return res
 
   def detach(self):
     return XLATensor2(jax.lax.stop_gradient(self.jax()))
