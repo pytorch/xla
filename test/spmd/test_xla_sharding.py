@@ -617,6 +617,11 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         '%custom-call.7 = f32[2,2]{1,0} custom-call(f32[2,2]{1,0} %add.6), custom_call_target="Sharding", sharding=',
         hlo)
 
+  # avoid calling xr.addressable_device_count here otherwise it will init the test
+  # in non-spmd mode.
+  @unittest.skipIf(xr.device_type() == 'CPU',
+                   "sharding will be the same for both tensors on single device"
+                  )
   def test_shard_hashing(self):
     xt1 = torch.ones(2, 2).to(xm.xla_device())
     xt2 = torch.ones(2, 2).to(xm.xla_device())
@@ -630,8 +635,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(xt1 + 0, xt2 + 0))
 
     # Check that hashes are different for the sharded and non-sharded tensors
-    hash1 = torch_xla._XLAC._get_graph_hash([xt1])
-    hash2 = torch_xla._XLAC._get_graph_hash([xt2])
+    hash1 = torch_xla._XLAC._get_graph_hash([xt1 + 0])
+    hash2 = torch_xla._XLAC._get_graph_hash([xt2 + 0])
     self.assertNotEqual(hash1, hash2)
 
   def test_transfer_sharded_data_to_host(self):

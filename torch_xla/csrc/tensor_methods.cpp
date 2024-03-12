@@ -1004,6 +1004,7 @@ XLATensorPtr clone(const XLATensorPtr& input) {
   if (input->sharding_spec() != nullptr) {
     cloned->SetShardingSpec(*input->sharding_spec());
   }
+  cloned->data()->is_cloned = true;
   return cloned;
 }
 

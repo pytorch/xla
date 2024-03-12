@@ -42,7 +42,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
   def test_manual_buffer_donation(self):
     device = xm.xla_device()
     input = torch.randn(5, 5).to(device)
-    input_cloned = torch.clone(input)
+    input_cloned = input.cpu().to(device)
     dummy_inplace_mul_compiled = torch.compile(
         self.dummy_inplace_mul, backend='openxla')
 
@@ -57,7 +57,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
   def test_manual_buffer_donation_for_non_inplce_op(self):
     device = xm.xla_device()
     input = torch.randn(5, 5).to(device)
-    input_cloned = torch.clone(input)
+    input_cloned = input.cpu().to(device)
     dummy_mul_compiled = torch.compile(self.dummy_mul, backend='openxla')
 
     met.clear_all()
@@ -83,7 +83,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
 
     device = xm.xla_device()
     input = torch.randn(5, 5).to(device)
-    input_cloned = torch.clone(input)
+    input_cloned = input.cpu().to(device)
     dummy_inplace_add_compiled = torch.compile(dummy_inplace, backend='openxla')
     xm.mark_step()
     met.clear_all()
@@ -111,7 +111,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
   def test_manual_buffer_donation(self):
     device = xm.xla_device()
     input = torch.randn(5, 5).to(device)
-    input_cloned = torch.clone(input)
+    input_cloned = input.cpu().to(device)
     dummy_inplace_add_compiled = torch.compile(
         self.dummy_inplace_add, backend='openxla')
 
@@ -128,7 +128,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
   def test_manual_buffer_donation_for_non_inplce_op(self):
     device = xm.xla_device()
     input = torch.randn(5, 5).to(device)
-    input_cloned = torch.clone(input)
+    input_cloned = input.cpu().to(device)
     dummy_add_compiled = torch.compile(self.dummy_add, backend='openxla')
 
     met.clear_all()
@@ -153,7 +153,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
 
     device = xm.xla_device()
     input = torch.randn(5, 5).to(device)
-    input_cloned = torch.clone(input)
+    input_cloned = input.cpu().to(device)
     dummy_inplace_add_compiled = torch.compile(dummy_inplace, backend='openxla')
     xm.mark_step()
     met.clear_all()
