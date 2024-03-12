@@ -389,7 +389,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal xla_args_need_update
     nonlocal skip_checking_input_sharding_threashold
     nonlocal arg_sizes
-    print("\n\n\n\nOptimize mod padding now with args\n\n\n")
 
     args = []
     if (len(arg_sizes)):
@@ -400,7 +399,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
         args.append(padded_tensor)
 
     args = tuple(args)
-    print("\n\n\nPadded the tensors\n\n\n")
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
