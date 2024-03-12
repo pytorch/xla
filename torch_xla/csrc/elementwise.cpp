@@ -478,7 +478,7 @@ xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
   std::tie(input, alpha) = XlaHelpers::Promote(input, alpha);
   std::tie(input, other) = XlaHelpers::Promote(input, other);
 
-  // Perform the function: ohter - alpha * input
+  // Perform the function: other - alpha * input
   xla::XlaOp mul_result =
       xla::Mul(input, alpha, XlaHelpers::getBroadcastDimensions(input, alpha));
   xla::XlaOp sub_result = xla::Sub(
