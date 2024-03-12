@@ -2391,7 +2391,8 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
   output_tensor->data()->alias_id = input_tensor->GetUniqueId();
 
   // 2) Aid SPMD.
-  if (input_tensor->sharding_spec()) {
+  XLATensor::ShardingSpecPtr sharding = input_tensor->sharding_spec();
+  if (sharding && sharding->sharding.type() != xla::OpSharding::UNKNOWN) {
     tensor_methods::custom_sharding_(output_tensor,
                                      input_tensor->sharding_spec());
   }

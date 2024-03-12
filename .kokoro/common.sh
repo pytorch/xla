@@ -36,7 +36,6 @@ function install_environments() {
   echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" >> /etc/apt/sources.list.d/google-cloud-sdk.list
   curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
 
-  # TODO(yeounoh) fix `GoogleCredentials` import error
   apt-get update
   apt-get -y install google-cloud-cli
   pip install --upgrade google-api-python-client
@@ -95,7 +94,6 @@ function run_torch_xla_tests() {
   pushd $XLA_DIR
     echo "Running integration tests..."
     # Run integration tests with CPU
-    # TODO(yeounoh) use custom GCP project for TPU
     XLA_CUDA=0 USE_COVERAGE=0 XLA_SKIP_TORCH_OP_TESTS=1 XLA_SKIP_XRT_TESTS=1 CONTINUE_ON_ERROR=1 ./test/run_tests.sh
   popd
 }

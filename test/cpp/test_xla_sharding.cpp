@@ -309,17 +309,25 @@ TEST_F(XLAShardingTest, EqualShardingSpecs) {
 }
 
 TEST_F(XLAShardingTest, CreateTensorsData) {
-  std::vector<at::Tensor> tensors(2);
+  if (torch_xla::runtime::sys_util::GetEnvString(
+          torch_xla::runtime::env::kEnvPjRtDevice, "") == "") {
+    GTEST_SKIP() << "`PJRT_DEVICE` is not set.";
+  }
+
+  std::vector<at::Tensor> tensors(3);
   auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
       CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   std::fill_n(tensors.begin(), tensors.size(), tensor);
-  std::vector<std::string> devices(2);
+  std::vector<std::string> devices(3);
   std::fill_n(devices.begin(), devices.size(),
               bridge::GetDefaultDevice()->toString());
   std::vector<XLATensor::ShardingSpecPtr> shardings = {
-      nullptr, std::make_shared<XLATensor::ShardingSpec>(
-                   xla::HloSharding::Replicate().ToProto(), tensor_shape)};
+      nullptr,
+      std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Replicate().ToProto(), tensor_shape),
+      std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Unknown().ToProto(), tensor_shape)};
   std::vector<torch::lazy::BackendDataPtr> tensors_data =
       CreateTensorsData(tensors, shardings, devices);
 
@@ -337,10 +345,21 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
                                                    shards[0]->shape()));
     EXPECT_TRUE(XlaDataValuesEqual(tensors_data[0], shards[0], at::kFloat));
 
-    // Returns multiple input shards, replicated
+    // Returns multiple input shards, explicitly replicated
     auto sharded_xla_data =
         std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
             tensors_data[1]);
+    shards = torch_xla::runtime::GetComputationClient()->GetDataShards(
+        sharded_xla_data);
+    EXPECT_EQ(shards.size(), n_devices);
+    EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(sharded_xla_data->shape(),
+                                                   shards[0]->shape()));
+    EXPECT_TRUE(XlaDataValuesEqual(shards[0], shards[1], at::kFloat));
+
+    // Returns multiple input shards, implicitly replicated
+    sharded_xla_data =
+        std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+            tensors_data[2]);
     shards = torch_xla::runtime::GetComputationClient()->GetDataShards(
         sharded_xla_data);
     EXPECT_EQ(shards.size(), n_devices);
