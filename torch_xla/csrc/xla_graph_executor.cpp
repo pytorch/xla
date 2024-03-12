@@ -1279,9 +1279,9 @@ XLAGraphExecutor::BuildInputOutputAliases(
 }
 
 XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
-    const std::vector<XLATensorPtr>& tensors,
-    absl::Span<const std::string> devices, const SyncTensorCollection& coll,
-    PostOrderData* po_data, const std::vector<torch::lazy::Value>& ir_values) {
+    std::vector<XLATensorPtr>& tensors, absl::Span<const std::string> devices,
+    const SyncTensorCollection& coll, PostOrderData* po_data,
+    const std::vector<torch::lazy::Value>& ir_values) {
   tsl::profiler::TraceMe activity(
       [&] {
         return tsl::profiler::TraceMeEncode(

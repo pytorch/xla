@@ -45,6 +45,9 @@ torch::lazy::BackendDevice GetVirtualDevice();
 // Optionally, `force_spmd` to set `use_virtual_device` to true.
 bool UseVirtualDevice(bool force_spmd = false);
 
+// Return true if `device` is of SPMD device type.
+bool IsVirtualDevice(const std::string& device);
+
 // Return true if SPMD config can be switches. That is, no device has been
 // initialized, yet.
 bool GetLockSpmdConfig();
