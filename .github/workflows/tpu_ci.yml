@@ -41,8 +41,8 @@ jobs:
           PJRT_DEVICE: TPU
         # Jax is needed for pallas tests.
         run: |
-          pip install fsspec
-          pip install rich
-          pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+          pip install fsspec --user
+          pip install rich --user
+          pip install --user torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
           cd pytorch/xla
           test/tpu/run_tests.sh
