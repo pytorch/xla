@@ -31,6 +31,7 @@ jobs:
         env:
           PJRT_DEVICE: TPU
         # Jax is needed for pallas tests.
+        
         run: |
           pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu --user
           pip install fsspec
