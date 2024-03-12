@@ -26,6 +26,7 @@ COPY --from=build /src/pytorch/xla/test /src/pytorch/xla/test
 # Copy ci_commit_pins from upstream
 RUN mkdir -p /src/pytorch/.github
 COPY --from=build /src/pytorch/.github/ci_commit_pins /src/pytorch/.github/ci_commit_pins
+RUN pip install --no-use-pep517 "git+https://github.com/pytorch/vision.git@$(cat /src/pytorch/.github/ci_commit_pins/vision.txt)"
 
 # Copy and install wheels.
 WORKDIR /tmp/wheels
