@@ -854,7 +854,5 @@ void ShardingUtil::SetAutoSharding() {
   // This stays on throughout the program.
   use_auto_sharding = true;
 }
-bool ShardingUtil::GetAutoSharding() {
-  return use_auto_sharding;
-}
+bool ShardingUtil::GetAutoSharding() { return use_auto_sharding; }
 }  // namespace torch_xla

@@ -1158,7 +1158,7 @@ XLAGraphExecutor::LookupCachedCompile(const torch::lazy::hash_t& hash) {
     return nullptr;
   }
   TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(hash)
-             << " is cached computation hash "
+             << " is computation hash "
              << torch::lazy::HashToString(torch::lazy::Hash(
                     cached_computation->computation->computation()
                         .proto()
@@ -1381,14 +1381,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
   std::vector<runtime::ComputationClient::CompileInstance> instances;
-  instances.push_back({/*computation=*/std::move(computation),
-                       /*compilation_device=*/coll.device.toString(),
-                       /*devices=*/
+  instances.push_back({std::move(computation), coll.device.toString(),
                        runtime::GetComputationClient()->GetCompilationDevices(
                            coll.device.toString(), devices),
-                       /*output_shape=*/&shape,
-                       /*parameter_is_tupled_arguments=*/should_wrap_parameter,
-                       /*is_sharded=*/is_sharded});
+                       &shape, should_wrap_parameter, is_sharded});
 
   if (use_autosharding) {
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
@@ -1414,20 +1410,19 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       /*graph_hash=*/coll.hash, /*program_shape=*/&program_shape);
 
   TF_VLOG(3) << "Compiling IR graph hash "
-             << torch::lazy::HashToString(coll.hash)
-             << (is_sharded ? " with" : " without") << " SPMD"
-             << " on device " << coll.device << " ...";
+             << torch::lazy::HashToString(coll.hash) << " on device "
+             << coll.device << " ...";
   std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
       computations =
           runtime::GetComputationClient()->Compile(std::move(instances));
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " done!";
-  TF_VLOG(6) << "Compiled program shape "
+  TF_VLOG(5) << "Compiled program shape "
              << computations.front()->program_shape().ToString() << std::endl;
   TF_VLOG(5)
       << "Graph hash " << torch::lazy::HashToString(coll.hash)
-      << " is compiled computation hash "
+      << " is computation hash "
       << torch::lazy::HashToString(torch::lazy::Hash(
              computations.front()->computation().proto().SerializeAsString()));
 
@@ -1440,9 +1435,15 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     TF_VLOG(5) << "Parameter sequence hash after resharding: "
                << torch::lazy::Hash(po_data->parameter_sequence);
   }
-  XLA_CHECK(po_data->parameters_data.size() == should_wrap_parameter
-                ? program_shape.parameters()[0].tuple_shapes_size()
-                : program_shape.parameters_size());
+
+  if (should_wrap_parameter) {
+    XLA_CHECK_EQ(program_shape.parameters_size(), 1);
+    XLA_CHECK_EQ(program_shape.parameters()[0].tuple_shapes_size(),
+                 po_data->parameters_data.size());
+  } else {
+    XLA_CHECK_EQ(program_shape.parameters_size(),
+                 po_data->parameters_data.size());
+  }
 
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
@@ -1462,16 +1463,15 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
     // Enure previous execution is complete before exiting this
     // function. Caller of `SyncTensorsGraphInternal` might want to call
     // wait() on the result of this function before accesing the value of
-    // XLAData. If nullptr is returned here caller will assume there is no
-    // need to wait. However in the cases of `SyncTensorsGraphInternal` being
-    // called twice in a row, the first one will create placeholders then
-    // return, second `SyncTensorsGraphInternal` will find there is nothing to
-    // sync and return. It is possible that by the time second
-    // `SyncTensorsGraphInternal` returned, first computation is still
-    // running. If user trying to call `TransferFromDevice` on placeholder
-    // XLAData, runtime will segfault. Force the `SyncTensorsGraphInternal` to
-    // block until previous computation either here or in
-    // `ScheduleSyncTensorsGraph` will solve this issue.
+    // XLAData. If nullptr is returned here caller will assume there is no need
+    // to wait. However in the cases of `SyncTensorsGraphInternal` being called
+    // twice in a row, the first one will create placeholders then return,
+    // second `SyncTensorsGraphInternal` will find there is nothing to sync and
+    // return. It is possible that by the time second `SyncTensorsGraphInternal`
+    // returned, first computation is still running. If user trying to call
+    // `TransferFromDevice` on placeholder XLAData, runtime will segfault. Force
+    // the `SyncTensorsGraphInternal` to block until previous computation either
+    // here or in `ScheduleSyncTensorsGraph` will solve this issue.
     TensorCollectionBarrier(&coll);
     return nullptr;
   }
@@ -1495,7 +1495,7 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   }
 
   DebugUtil::SaveGraphHash(coll.hash);
-  TF_VLOG(4) << "Parameter sequence & graph hash "
+  TF_VLOG(4) << "Parameter sequence graph hash "
              << torch::lazy::HashToString(coll.hash);
 
   std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>> cache_res =
@@ -1510,7 +1510,6 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
 
   TORCH_LAZY_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
   TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
-
   auto cached_computation = std::make_shared<CachedComputation>(
       std::move(compile_result.computation), compile_result.is_sharded);
   GetComputationCache()->Add(coll.hash, cached_computation);

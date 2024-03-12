@@ -263,6 +263,9 @@ class PjRtComputationClient : public ComputationClient {
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;
     std::optional<std::vector<xla::OpSharding>> output_shardings_;
   };
+
+  // Use XLA replication to re-assemble the sharded data.
+  std::shared_ptr<PjRtData> ReplicateShardedData(const DataPtr& handle);
 };
 
 }  // namespace runtime

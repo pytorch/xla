@@ -37,7 +37,8 @@ class XlaShardingTest(unittest.TestCase):
   @classmethod
   def tearDownClass(cls):
     del os.environ['XLA_USE_SPMD']
-    del os.environ['XLA_AUTO_SPMD']
+    if 'XLA_AUTO_SPMD' in os.environ:
+      del os.environ['XLA_AUTO_SPMD']
 
   def _get_mesh(self, mesh_shape, device_ids=None, axis_names=None):
     assert type(mesh_shape) is tuple, 'mesh_shape must be Tuple[int]'

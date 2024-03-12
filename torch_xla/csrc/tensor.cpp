@@ -290,9 +290,10 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
       // Re-sync the sharding annotation from the node to the tensor if there is
       // one attached to the node. A new sharding annotation is attached
       // directly to the node, and gets synced to the tensor after this.
-      // If sharding is attached via SetShardingSpec, then it flows from the tensor
-      // to the node. If sharding is attached by the compiler pass, then it first
-      // gets attached to the graph node, and then synced to the tensor here.
+      // If sharding is attached via SetShardingSpec, then it flows from the
+      // tensor to the node. If sharding is attached by the compiler pass, then
+      // it first gets attached to the graph node, and then synced to the tensor
+      // here.
       if (!sharding ||
           (sharding && !ShardingUtil::EqualOpShardings(*new_op_sharding,
                                                        sharding->sharding))) {

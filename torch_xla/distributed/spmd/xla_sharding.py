@@ -371,7 +371,7 @@ class ShardingType(IntEnum):
   TILED = 3
   MANUAL = 4
   PARTIAL = 5
-  UNKNOWN = 6   # implicit replication. TODO(yeounoh) wait for auto-sharding support
+  UNKNOWN = 6  # implicit replication. TODO(yeounoh) wait for auto-sharding support
 
 
 def _get_sharding_type(partition_spec: Tuple[Union[int, None]],

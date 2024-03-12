@@ -422,7 +422,8 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
         xla::HloSharding::Replicate().ToProto(), sharding_specs[0]->sharding));
   }
 
-  // Check if the placeholder is on a SPMD device (sharded) with no real values.
+  // Check if the placeholder is on a SPMD device (sharded) with no real
+  // values.
   EXPECT_EQ(data_placeholders.size(), 1);
   EXPECT_EQ(
       std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(

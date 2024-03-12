@@ -10,6 +10,7 @@ python3 test/spmd/test_xla_virtual_device.py
 python3 test/spmd/test_xla_distributed_checkpoint.py
 python3 test/spmd/test_train_spmd_linear_model.py
 python3 test/spmd/test_xla_spmd_python_api_interaction.py
+python3 test/spmd/test_xla_auto_sharding.py
 XLA_EXPERIMENTAL=nonzero:masked_select python3 test/ds/test_dynamic_shape_models.py -v
 XLA_EXPERIMENTAL=nonzero:masked_select python3 test/ds/test_dynamic_shapes.py -v
 python3 test/test_autocast.py

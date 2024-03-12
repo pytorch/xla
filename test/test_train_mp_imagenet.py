@@ -70,9 +70,6 @@ FLAGS = args_parse.parse_common_options(
 
 import os
 import sys
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(parent_dir)
-
 import schedulers
 import numpy as np
 import torch
