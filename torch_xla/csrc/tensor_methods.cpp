@@ -2447,18 +2447,10 @@ XLATensorPtr rsub(const XLATensorPtr& input, const XLATensorPtr& other,
                   c10::optional<at::ScalarType> logical_element_type) {
   torch::lazy::Value alpha_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
       alpha, other->shape(), logical_element_type, other->GetDevice());
-  static const bool use_new_rsub =
-      runtime::sys_util::GetEnvBool("NEW_OPS", "0");
-  if (use_new_rsub) {
-    std::cout << "NEW_RSUB tensor" << std::endl;
-    return input->CreateFrom(
-        Rsub(input->GetIrValue(), other->GetIrValue(), alpha_xla));
-  } else {
-    std::cout << "OLD_RSUB tensor" << std::endl;
-    return input->CreateFrom(
-        other->GetIrValue() - alpha_xla * input->GetIrValue(),
-        logical_element_type);
-  }
+
+  return input->CreateFrom(
+      Rsub(input->GetIrValue(), other->GetIrValue(), alpha_xla),
+      logical_element_type);
 }
 
 XLATensorPtr rsub(const XLATensorPtr& input, const at::Scalar& other,
@@ -2469,16 +2461,8 @@ XLATensorPtr rsub(const XLATensorPtr& input, const at::Scalar& other,
   torch::lazy::Value other_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
       other, input->shape(), logical_element_type, input->GetDevice());
 
-  static const bool use_new_rsub =
-      runtime::sys_util::GetEnvBool("NEW_OPS", "0");
-  if (use_new_rsub) {
-    std::cout << "NEW_RSUB Scalar" << std::endl;
-    return input->CreateFrom(Rsub(input->GetIrValue(), other_xla, alpha_xla));
-  } else {
-    std::cout << "OLD_RSUB Scalar" << std::endl;
-    return input->CreateFrom(other_xla - alpha_xla * input->GetIrValue(),
-                             logical_element_type);
-  }
+  return input->CreateFrom(Rsub(input->GetIrValue(), other_xla, alpha_xla),
+                           logical_element_type);
 }
 
 void copy_(XLATensorPtr& input, XLATensorPtr& src) {
@@ -2780,17 +2764,9 @@ XLATensorPtr sub(const XLATensorPtr& input, const XLATensorPtr& other,
         input->GetDevice());
   }
 
-  static const bool use_new_sub = runtime::sys_util::GetEnvBool("NEW_OPS", "0");
-  if (use_new_sub) {
-    std::cout << "NEW_SUB tensor" << std::endl;
-    return input->CreateFrom(
-        Sub(input->GetIrValue(), other->GetIrValue(), alpha_xla));
-  } else {
-    std::cout << "OLD_SUB tensor" << std::endl;
-    return input->CreateFrom(
-        input->GetIrValue() - other->GetIrValue() * alpha_xla,
-        logical_element_type);
-  }
+  return input->CreateFrom(
+      Sub(input->GetIrValue(), other->GetIrValue(), alpha_xla),
+      logical_element_type);
 }
 
 XLATensorPtr sub(const XLATensorPtr& input, const at::Scalar& other,
@@ -2800,15 +2776,9 @@ XLATensorPtr sub(const XLATensorPtr& input, const at::Scalar& other,
       other, input->shape(), logical_element_type, input->GetDevice());
   torch::lazy::Value alpha_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
       alpha, input->shape(), logical_element_type, input->GetDevice());
-  static const bool use_new_sub = runtime::sys_util::GetEnvBool("NEW_OPS", "0");
-  if (use_new_sub) {
-    std::cout << "NEW_SUB scalar" << std::endl;
-    return input->CreateFrom(Sub(input->GetIrValue(), other_xla, alpha_xla));
-  } else {
-    std::cout << "OLD_SUB scalar" << std::endl;
-    return input->CreateFrom(input->GetIrValue() - other_xla * alpha_xla,
-                             logical_element_type);
-  }
+
+  return input->CreateFrom(Sub(input->GetIrValue(), other_xla, alpha_xla),
+                           logical_element_type);
 }
 
 XLATensorPtr sum(const XLATensorPtr& input, std::vector<int64_t> dimensions,
