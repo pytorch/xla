@@ -788,12 +788,10 @@ std::vector<bool> check_materialization_helper(
       need_materialization.push_back(false);
     } else if (xtensor->CurrentIrValue().node != nullptr) {
       torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
-      printf("Node is %s\n", node->ToString().c_str());
       if (torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get()) !=
           nullptr) {
         need_materialization.push_back(false);
       } else {
-        printf("Input tensor is an IR other than device data\n");
         // input tensor is an IR other than DeviceData which means a
         // compuation is required to get the value of this tensor.
         need_materialization.push_back(true);

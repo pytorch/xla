@@ -321,7 +321,6 @@ void DebugUtil::analyze_graph_execution_python_frame(
              ? program_shape->result().tuple_shapes_size()
              : 1)
      << "\n";
-  ss << "Program shape is: " << program_shape->ToString() << "\n";
 
   int remain_frame_count = max_frame_count;
   ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
