@@ -68,6 +68,13 @@ static absl::Status ConvertHloToMhlo(const xla::HloModuleProto* proto,
 static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
                                           mlir::MLIRContext* context) {
   mlir::PassManager pm(context);
+  // legalize `mhlo.dot` to `mhlo.dot_general` to workaround the shape
+  // refinement issue in `stablehlo.dot`.
+  // TODO(lsy323): Remove this pass when mhlo.dot will can be leagalized to
+  // stablehlo.dot_general in MHLO->StableHLO converter. Or shape refinement
+  // logic is fixed for stablehlo.dot.
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::mhlo::createLegalizeDotToDotGeneralPass());
   // Apply pass to remove HLO tuple output, as MHLO/StableHLO supports multiple
   // outputs.
   pm.addPass(mlir::mhlo::createExpandHloTuplesPass());
