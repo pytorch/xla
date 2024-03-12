@@ -2165,36 +2165,6 @@ void InitXlaModuleBindings(py::module m) {
         ShardingUtil::CreateShardedData(shards, devices, sharding_spec);
     xtensor->SetXlaData(xla_data);
   });
-  // This is useful for debugging and generating a partitioned HLO separately
-  // outside the actual compilation & execution. This allows testing with
-  // different partitioning configurations.
-  m.def("_xla_partitioning_pass",
-        [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
-           int64_t num_devices, bool conv_halo_exchange_always_on_lhs = true,
-           bool choose_faster_windowed_einsum = false,
-           bool unroll_windowed_einsum = false,
-           bool bidirectional_windowed_einsum = false) -> std::string {
-          xla::HloModuleConfig config;
-          config.set_use_spmd_partitioning(true);
-          config.set_replica_count(num_replicas);
-          config.set_num_partitions(num_devices);
-
-          std::string hlo_text =
-              GetTensorsHloGraph(tensors, EmitMode::kHloReadable);
-          auto hlo_module_error =
-              xla::ParseAndReturnUnverifiedModule(hlo_text, config);
-          XLA_CHECK_OK(hlo_module_error.status())
-              << "HLO Module loading failed: " << hlo_module_error.status();
-
-          auto module = std::move(hlo_module_error.value());
-          xla::HloModuleProto module_proto = ShardingUtil::SpmdPartitioningPass(
-              module->ToProto(), num_replicas, num_devices,
-              conv_halo_exchange_always_on_lhs, choose_faster_windowed_einsum,
-              unroll_windowed_einsum, bidirectional_windowed_einsum);
-          module = std::move(
-              xla::HloModule::CreateFromProto(module_proto, config).value());
-          return module->ToString();
-        });
   // Initialize the XlaCoordinator in the runtime if not already initialized.
   m.def(
       "_ensure_xla_coordinator_initialized",
