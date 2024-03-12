@@ -1129,7 +1129,9 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
       << "dot: Expected 1-D argument tensor, but got " << tensor.dim() << "-D";
   // Fallback to CPU if both tensor types are long as this multiplication is
   // not supported for TPUs.
-  if (self.scalar_type() == at::ScalarType::Long &&
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
+  if (CheckTpuDevice(hw_type) && self.scalar_type() == at::ScalarType::Long &&
       tensor.scalar_type() == at::ScalarType::Long) {
     return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(dot)>::call(
         self, tensor);
