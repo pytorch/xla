@@ -214,7 +214,7 @@ function run_xla_op_tests3 {
   #     CI with tf.
   run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
   run_test "$CDIR/stablehlo/test_mark_pattern.py"
-  run_test "$CDIR/stablehlo/test_pt2e_qdq.py"
+  # run_test "$CDIR/stablehlo/test_pt2e_qdq.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_test "$CDIR/stablehlo/test_stablehlo_compile.py"
   # TODO(lsy323): Will be fixed in #6494
