@@ -278,55 +278,6 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
   return sharding;
 }
 
-xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
-    const xla::HloModuleProto& hlo_proto, int64_t num_replicas,
-    int64_t num_partitions, bool conv_halo_exchange_always_on_lhs,
-    bool choose_faster_windowed_einsum_over_mem, bool unroll_windowed_einsum,
-    bool bidirectional_windowed_einsum) {
-  // TODO(yeounoh) propagate this down to the PJRT client
-  auto execution_options = xla::CreateDefaultExecutionOptions();
-  execution_options.set_use_spmd_partitioning(true);
-  execution_options.set_num_replicas(num_replicas);
-  execution_options.set_num_partitions(num_partitions);
-  auto module_config = xla::HloModule::CreateModuleConfigFromProto(
-                           hlo_proto, xla::DebugOptions(), &execution_options)
-                           .value();
-  auto module = xla::HloModule::CreateFromProto(hlo_proto, module_config,
-                                                /*prohibit_empty_literal=*/true)
-                    .value();
-
-  xla::spmd::SpmdPartitionerOptions options;
-  options.conv_halo_exchange_always_on_lhs = conv_halo_exchange_always_on_lhs;
-  options.allow_module_signature_change = true;
-  options.choose_faster_windowed_einsum_over_mem =
-      choose_faster_windowed_einsum_over_mem;
-  options.unroll_windowed_einsum = unroll_windowed_einsum;
-  options.bidirectional_windowed_einsum = bidirectional_windowed_einsum;
-
-  xla::HloPassPipeline pass("spmd-partitioning");
-  pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
-                                 /*allow_mixed_precision=*/false);
-  // TODO(yeounoh) side-effecting ops gets assigned replicated sharding.
-  pass.AddPass<xla::ShardingPropagation>(
-      /*is_spmd=*/true, /*propagate_metadata=*/false,
-      /*allow_spmd_sharding_propagation_to_output=*/
-      absl::MakeConstSpan({true}));
-  pass.AddPass<xla::spmd::SpmdPartitioner>(
-      /*num_partitions=*/num_partitions,
-      /*num_replicas=*/num_replicas, options,
-      xla::spmd::GetDefaultCollectiveOpsCreator(
-          /*num_partitions=*/num_partitions,
-          /*num_replicas=*/num_replicas));
-  pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
-                                 /*allow_mixed_precision=*/false);
-  const auto& pass_status = pass.Run(module.get());
-  if (!pass_status.ok()) {
-    XLA_ERROR() << "spmd-partitioning pass failed";
-  }
-
-  return module.get()->ToProto();
-}
-
 std::vector<int64_t> ShardingUtil::GetShardShape(
     const XLATensor::ShardingSpecPtr shardings) {
   auto sharding = shardings->sharding;

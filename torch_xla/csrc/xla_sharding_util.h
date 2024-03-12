@@ -49,15 +49,6 @@ class ShardingUtil {
                                           const py::list& replication_groups,
                                           ShardingType sharding_type);
 
-  // This is a debugging tool for partitioned HLO generation with different
-  // options and sharding propagation.
-  static xla::HloModuleProto SpmdPartitioningPass(
-      const xla::HloModuleProto& hlo_proto, int64_t num_replicas,
-      int64_t num_partitions, bool conv_halo_exchange_always_on_lhs = true,
-      bool choose_faster_windowed_einsum_over_mem = false,
-      bool unroll_windowed_einsum = false,
-      bool bidirectional_windowed_einsum = false);
-
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
   // have the same shape.
