@@ -1606,6 +1606,22 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     emb_out = emb(index)
     assert emb_out.dtype == torch.bfloat16
 
+  def test_embedding_int_indices(self):
+    model = torch.nn.Embedding(1024, 10)
+
+    # 1 and 2-dimensional tensors.
+    # They have different execution paths.
+    for shape in ((5,), (2, 5)):
+
+      def test_on_device(device):
+        m = copy.deepcopy(model).to(device)
+        index = torch.ones(shape, dtype=torch.int, device=device)
+        return m(index)
+
+      out = test_on_device("cpu")
+      out_x = test_on_device(xm.xla_device())
+      self.assertEqual(out, out_x.cpu())
+
   def test_transpose_1d(self):
 
     def test_fn(t1):
