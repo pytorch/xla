@@ -22,7 +22,6 @@ jobs:
           python3 setup.py install --user
       - name: Install torchvision
         run: |
-          git clone --recursive https://github.com/pytorch/pytorch
           cd pytorch/
           pip install --no-use-pep517 "git+https://github.com/pytorch/vision.git@$(cat .github/ci_commit_pins/vision.txt)"
       - name: Checkout PyTorch/XLA Repo
