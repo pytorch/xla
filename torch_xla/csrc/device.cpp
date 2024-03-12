@@ -91,6 +91,12 @@ bool UseVirtualDevice(bool force_spmd) {
   return use_virtual_device;
 }
 
+bool IsVirtualDevice(const std::string& device) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(ParseDeviceString(device).type());
+  return hw_type == XlaDeviceType::SPMD;
+}
+
 bool GetLockSpmdConfig() { return spmd_config_is_locked; }
 
 bool CheckTpuDevice(XlaDeviceType hw_type) {
