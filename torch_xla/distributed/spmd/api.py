@@ -211,9 +211,13 @@ def xla_distribute_module(
     """
 
   if partition_fn:
-    # apply partition_fun to submodules
-    for name, submod in module.named_modules():
-      partition_fn(name, submod, device_mesh)
+    if getattr(callable, '__name__', 'unknown') == "auto_policy":
+      partition_fn("auto", module, device_mesh)
+      log.info("xla auto_policy is being used.")
+    else:
+      # apply partition_fun to submodules
+      for name, submod in module.named_modules():
+        partition_fn(name, submod, device_mesh)
   # non-partitioned (annotated) submodules and parameters are implicilty replicated
 
   # register input_fn as module forward pre hook

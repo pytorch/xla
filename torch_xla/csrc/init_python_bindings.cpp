@@ -1174,6 +1174,8 @@ void InitXlaModuleBindings(py::module m) {
     ShardingUtil::SetAutoSharding();
     XLA_CHECK(ShardingUtil::GetAutoSharding());
   });
+  m.def("_xla_get_auto_sharding",
+        []() { return ShardingUtil::GetAutoSharding(); });
   m.def("_xla_get_spmd_config_is_locked", []() { return GetLockSpmdConfig(); });
   m.def("_xla_force_spmd_device", []() {
     // It is actually more easier to force SPMD mode than blocking if there is
@@ -1200,7 +1202,14 @@ void InitXlaModuleBindings(py::module m) {
       }
     }
     if (!UseVirtualDevice()) {
-      XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
+      UseVirtualDevice(/*force_spmd=*/true);
+      bool found_spmd_device = false;
+      for (auto& device : bridge::GetBackendDevices()) {
+        if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
+          found_spmd_device = true;
+        }
+      }
+      XLA_CHECK(found_spmd_device) << "SPMD:0 backend device is not found.";
     }
   });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
