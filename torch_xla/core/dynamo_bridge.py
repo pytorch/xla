@@ -111,6 +111,67 @@ def get_fallback_ops():
   return fallback_ops
 
 
+# Checks that all input args that are tensors are on the same device.
+def _get_input_arg_device(input_args: tuple) -> torch.device:
+  device = None
+  for arg in input_args:
+    if not isinstance(arg, torch.Tensor):
+      continue
+
+    if device is None:
+      device = arg.device
+    else:
+      assert arg.device == device, "Not all args are on the same device."
+
+    return device
+
+
+# Returns True if all the input args are on a CUDA device.
+def _args_on_cuda(input_args: tuple) -> bool:
+  input_device: torch.device = _get_input_arg_device(input_args)
+  if input_device is None:
+    return False
+
+  return input_device.type == "cuda"
+
+
+# Given an input list, moves the tensors to the given target_device.
+# The output order will be the same as the input. Non tensors will also still
+# be in the list.
+def _maybe_move_tensors_to_device(tensors: tuple,
+                                  target_device: torch.device) -> tuple:
+  if not torch.cuda.is_available():
+    return tensors
+
+  moved_tensors = []
+  cpu_device: torch.device = torch.device("cpu")
+
+  for tensor in tensors:
+    if not isinstance(tensor, torch.Tensor):
+      moved_tensors.append(tensor)
+      continue
+
+    if tensor.device == target_device:
+      moved_tensors.append(tensor)
+      continue
+
+    assert target_device is not None, "Moving tensors to None device not supported"
+
+    if dynamo_debug:
+      print("Moving Tensor {} to device {}".format(tensor, target_device))
+
+    # Have to move to CPU before moving it to target device.
+    moved_tensor = tensor.to(cpu_device)
+    moved_tensor = moved_tensor.to(target_device)
+
+    # Explicitly have to copy requires_grad attribute because it's dropped
+    # with torch.to(..)
+    moved_tensor.requires_grad = tensor.requires_grad
+    moved_tensors.append(moved_tensor)
+
+  return tuple(moved_tensors)
+
+
 class Deduper:
 
   def __init__(self):
@@ -375,7 +436,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   skip_checking_input_sharding_threashold = xu.getenv_as(
       'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
 
-  def optimized_mod(*args):
+  def optimized_mod(*args: tuple):
     nonlocal xla_model
     nonlocal xla_args_sharding_spec
     nonlocal args_and_out
@@ -386,6 +447,14 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal dumb_return_handler
     nonlocal xla_args_need_update
     nonlocal skip_checking_input_sharding_threashold
+
+    original_device: torch.device = _get_input_arg_device(args)
+    is_cuda_args: bool = False
+    if original_device:
+      is_cuda_args = original_device.type == "cuda"
+
+    if is_cuda_args:
+      args = _maybe_move_tensors_to_device(args, xm.xla_device())
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
@@ -437,6 +506,9 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     result = res[len(xla_args_need_update):]
 
     none_remover.add_nones(result)
+    if is_cuda_args:
+      result = _maybe_move_tensors_to_device(tuple(result), original_device)
+
     if len(result) == 1:
       return result[0]
     else:
@@ -532,6 +604,9 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+  if _args_on_cuda(xla_args):
+    xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
+
   # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
   # value reference before actually computing it.
   for a in xla_args:
