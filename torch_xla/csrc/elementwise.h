@@ -125,6 +125,14 @@ xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
 // out = input − alpha * other
 xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
 
+// Compuate the add function. Adds other, scaled by alpha, from input.
+// out = input − alpha * other
+xla::XlaOp BuildAdd(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Compuate the mul function.
+// out = input * other
+xla::XlaOp BuildMul(xla::XlaOp input, xla::XlaOp other);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_
