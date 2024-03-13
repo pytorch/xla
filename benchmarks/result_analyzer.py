@@ -180,7 +180,7 @@ class ResultAnalyzer:
           "repeat": dataline["repeat"],
           "iterations_per_run": dataline["iterations_per_run"],
           "error_message": None,
-          "outputs_file": dataline["outputs_file"],
+          "outputs_file": dataline["experiment"].get("outputs_file", ""),
       }
 
       if "error" in dataline["metrics"] and not self._args.hide_errors:
