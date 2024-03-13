@@ -619,9 +619,9 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
         raise TypeError(
             f"`output` needs to be a list of Tensors, but given {type(output)}."
         )
-      if len(output) != len(input):
-        raise ValueError("`output` length doesn't match `input` length: "
-                         f"{len(output)} vs {len(input)}.")
+      if len(output) != len(value):
+        raise ValueError("`output` length doesn't match `value` length: "
+                         f"{len(output)} vs {len(value)}.")
 
     # helper function for bucketing
     def _all_gather_coalesced(tensor_list, output_list=None):
@@ -650,8 +650,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     else:
       divisor = xrt_world_size()
     bucket_cap = bucket_cap / divisor
-    for idx, tensor in enumerate(value):
 
+    for idx, tensor in enumerate(value):
       tensor_bytes = tensor.numel() * tensor.element_size()
       output_selected = None
       if output != None:
@@ -673,7 +673,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
         else:
           tensor_bucket.append(tensor)
           if output != None:
-            output_bucket.append(output[i])
+            output_bucket.append(output[idx])
           out_tensors.extend(
               _all_gather_coalesced(tensor_bucket, output_bucket))
         total = 0
@@ -925,7 +925,7 @@ def reduce_scatter(reduce_type,
     bucket_cap = int(
         os.getenv("ALL_GATHER_REDUCE_SCATTER_BUCKET_CAP_MB",
                   _ALL_GATHER_REDUCE_SCATTER_BUCKET_CAP_MB)) * 1024 * 1024
-    for i, tensor in enumerate(input):
+    for idx, tensor in enumerate(input):
       tensor_bytes = tensor.numel() * tensor.element_size()
       output_selected = None
       if output != None:
@@ -947,7 +947,7 @@ def reduce_scatter(reduce_type,
         else:
           tensor_bucket.append(tensor)
           if output != None:
-            output_bucket.append(output[i])
+            output_bucket.append(output[idx])
           out_tensors.extend(
               _reduce_scatter_coalesced(tensor_bucket, output_bucket))
         total = 0
