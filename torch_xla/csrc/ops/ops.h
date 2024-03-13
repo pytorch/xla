@@ -253,6 +253,13 @@ torch::lazy::NodePtr Sub(const torch::lazy::Value& input,
                          const torch::lazy::Value& other,
                          const torch::lazy::Value& alpha);
 
+torch::lazy::NodePtr Add(const torch::lazy::Value& input,
+                         const torch::lazy::Value& other,
+                         const torch::lazy::Value& alpha);
+
+torch::lazy::NodePtr Mul(const torch::lazy::Value& input,
+                         const torch::lazy::Value& other);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_OPS_OPS_H_
