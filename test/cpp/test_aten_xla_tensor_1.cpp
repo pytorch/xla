@@ -479,7 +479,7 @@ TEST_F(AtenXlaTensorTest, TestDotInt64) {
     XlaDeviceType device_type = static_cast<XlaDeviceType>(
         bridge::AtenDeviceToXlaDevice(device).type());
     if (device_type == XlaDeviceType::TPU) {
-      // Only lowered for TPU, fallback for CPU.
+      // fallback to CPU for TPU device.
       ExpectCounterChanged("aten::dot.*", cpp_test::GetIgnoredCounters());
       ExpectCounterChanged("xla::dot.*", cpp_test::GetIgnoredCounters());
       ResetCounters();
@@ -489,6 +489,20 @@ TEST_F(AtenXlaTensorTest, TestDotInt64) {
       ResetCounters();
     }
   });
+}
+
+TEST_F(AtenXlaTensorTest, TestDotInt32) {
+  torch::Tensor a = torch::randint(0, 100, {10}, torch::TensorOptions(torch::kInt32));
+  torch::Tensor b = torch::randint(0, 100, {10}, torch::TensorOptions(torch::kInt32));
+  torch::Tensor c = torch::dot(a, b);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::dot(xla_a, xla_b);
+    AllClose(c, xla_c);
+  });
+  ExpectCounterChanged("xla::dot.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestTensorDot) {

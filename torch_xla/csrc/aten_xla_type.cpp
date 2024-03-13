@@ -1127,12 +1127,15 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
       << "dot: Expected 1-D argument self, but got " << self.dim() << "-D";
   XLA_CHECK_EQ(tensor.dim(), 1)
       << "dot: Expected 1-D argument tensor, but got " << tensor.dim() << "-D";
-  // Fallback to CPU if both tensor types are long as this multiplication is
-  // not supported for TPUs.
+  // Fallback to CPU if both tensor types are integral and atleast one of them
+  // is a long, as this multiplication is not supported for TPUs.
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
-  if (CheckTpuDevice(hw_type) && self.scalar_type() == at::ScalarType::Long &&
-      tensor.scalar_type() == at::ScalarType::Long) {
+  if (CheckTpuDevice(hw_type) &&
+      (at::isIntegralType(self.scalar_type(), /*include_bool=*/true) &&
+       at::isIntegralType(tensor.scalar_type(), /*include_bool=*/true) &&
+       (at::elementSize(self.scalar_type()) == 8 ||
+        at::elementSize(tensor.scalar_type()) == 8))) {
     return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(dot)>::call(
         self, tensor);
   }
