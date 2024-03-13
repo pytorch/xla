@@ -39,7 +39,7 @@ XlaOpVector DequantizeTensor::Lower(LoweringContext* loctx) const {
   xla::Shape output_shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32,
                                                       input_shape.dimensions());
   // TODO(lsy323): Lower to HLO directly once qdtype is added to HLO.
-  static const std::string opname = "stablehlo.uniform_dequantize";
+  static const std::string opname = "mhlo.uniform_dequantize";
   auto qparams = QuantParams(scale_, zero_point_, quant_min_, quant_max_, axis_,
                              dtype_, xla::PrimitiveType::F32);
 
