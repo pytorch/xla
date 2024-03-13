@@ -10,6 +10,7 @@ import torch_xla.distributed.xla_backend
 import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from torch_xla.amp import autocast
+import torch_xla.debug.metrics as met
 
 import test_xla_sharding_base
 
@@ -120,6 +121,7 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
       self.assertEqual(xr.addressable_runtime_device_count(), 1)
 
   def test_runtime_spmd_api(self):
+    met.clear_counters()
     self.assertTrue(xr.is_spmd())
     del os.environ["XLA_USE_SPMD"]
     self.assertFalse(xr.is_spmd())
@@ -131,12 +133,13 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
 
     # Should enable SPMD without crashing.
     xr.use_spmd()
-    self.assertTrue("SPMD" in torch_xla._XLAC._xla_get_device_hw_type(t))
     self.assertTrue(xr.is_spmd())
+    # TODO(yeounoh) check device type once tensor device becomes mutable
 
     # execute replicated
-    self.assertTrue(
-        "{replicated}" in torch_xla._XLAC._get_xla_tensors_hlo([t + t]))
+    t += 1
+    xm.mark_step(True)
+    self.assertEqual(met.counter_value("ExecuteReplicated"), 1)
 
 
 class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):

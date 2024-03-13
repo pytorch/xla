@@ -1090,6 +1090,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
                 UnwrapXlaData(async->parameters_data), devices,
                 execute_options);
         results = WrapXlaData(outputs);
+        TORCH_LAZY_COUNTER("ExecuteReplicated", 1);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
                    << " on devices: " << absl::StrJoin(devices, ",")
@@ -1101,6 +1102,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         results = torch::lazy::getBackend()->ExecuteComputation(
             async->cached_computation->computation, async->parameters_data,
             async->device);
+        TORCH_LAZY_COUNTER("ExecuteComputation", 1);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " done!";
