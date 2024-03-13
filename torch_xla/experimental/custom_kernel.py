@@ -1,7 +1,13 @@
+import functools
+import jax
+import jax.numpy as jnp
+import jax._src.pallas.mosaic.pallas_call_registration
 import torch
 import torch_xla
+import torch_xla.core.xla_model as xm
 
-from typing import List
+from jax.experimental import pallas as pl
+from typing import List, Callable
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
@@ -56,3 +62,50 @@ def _extract_backend_config(
       if op.name == "stablehlo.custom_call":
         return op.backend_config.value
   return None
+
+
+def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
+  if dtype == torch.float32:
+    return jnp.float32
+  elif dtype == torch.float64:
+    return jnp.float64
+  elif dtype == torch.float16:
+    return jnp.float16
+  elif dtype == torch.bfloat16:
+    return jnp.bfloat16
+  elif dtype == torch.int32:
+    return jnp.int32
+  elif dtype == torch.int64:
+    return jnp.int64
+  elif dtype == torch.int16:
+    return jnp.int16
+  elif dtype == torch.int8:
+    return jnp.int8
+  elif dtype == torch.uint8:
+    return jnp.uint8
+  else:
+    raise ValueError(f"Unsupported dtype: {dtype}")
+
+
+def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
+  # TODO: Maybe we can cache the payload for the same input.
+  def wrapped_kernel(kernel: Callable, output_shape_dtype_fn: Callable, *args):
+    jax_args = []
+    for i, arg in enumerate(args):
+      if torch.is_tensor(arg):
+        # ShapedArray doesn't have any storage and thus is very suitable for generating the payload.
+        jax_meta_tensor = jax.core.ShapedArray(
+            arg.shape, convert_torch_dtype_to_jax(arg.dtype))
+        jax_args.append(jax_meta_tensor)
+      else:
+        # TODO: We can support more types here.
+        assert False, f"Unsupported argument type: {type(arg)}"
+
+    ir = jax.jit(kernel).lower(*jax_args).compiler_ir()
+    payload = _extract_backend_config(ir)
+    output_shape, output_dtype = output_shape_dtype_fn(*args)
+    output = torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device())
+    torch_xla._XLAC._xla_tpu_custom_call_(output, args, payload)
+    return output
+
+  return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)

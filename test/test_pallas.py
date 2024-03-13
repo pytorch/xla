@@ -135,6 +135,48 @@ class PallasTest(unittest.TestCase):
     # the most important fields are present.
     self.assertIn("custom_call_config", payload)
 
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  # TODO: This test cannot be ran individually, let's fix it.
+  def test_tpu_custom_call_pallas_wrap_add_payload(self):
+    import jax
+    import jax.numpy as jnp
+    import jax._src.pallas.mosaic.pallas_call_registration
+
+    from jax.experimental import pallas as pl
+
+    def add_vectors_kernel(x_ref, y_ref, o_ref):
+      x, y = x_ref[...], y_ref[...]
+      o_ref[...] = x + y
+
+    @jax.jit
+    def add_vectors(x: jax.Array, y: jax.Array) -> jax.Array:
+      return pl.pallas_call(
+          add_vectors_kernel, out_shape=jax.ShapeDtypeStruct(x.shape,
+                                                             x.dtype))(x, y)
+
+    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    pt_kernel = make_kernel_from_pallas(add_vectors, lambda x, y:
+                                        (x.shape, x.dtype))
+
+    dtypes = [torch.float32, torch.float
+             ]  # TODO: torch.float64, torch.bfloat16, torch.float16 don't work.
+    for i in range(len(dtypes)):
+      x = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
+      y = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
+      expected_output = x + y
+      output = pt_kernel(x, y)
+      self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+
+    dtypes = [
+        torch.int32, torch.int
+    ]  # TODO: torch.int64, torch.int16, torch.int8, torch.uint8 don't work.
+    for i in range(len(dtypes)):
+      x = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
+      y = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
+      expected_output = x + y
+      output = pt_kernel(x, y)
+      self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
