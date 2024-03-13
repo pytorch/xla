@@ -713,12 +713,12 @@ PjRtComputationClient::ExecuteReplicated(
     XLA_CHECK_EQ(output_shapes.size(), num_outputs);
 
     const std::vector<xla::OpSharding>& output_shardings =
-        pjrt_computation.output_shardings_
+        pjrt_computation.output_shardings_.has_value() && num_outputs > 0
             ? *pjrt_computation.output_shardings_
             :
             // Without an explicit sharding annotation, the output is implicitly
-            // replicated
-            std::vector(num_outputs, xla::HloSharding::Replicate().ToProto());
+            // replicated, and we mark explicitly replicated here.
+            std::vector<xla::OpSharding>(num_outputs);
     XLA_CHECK_EQ(output_shardings.size(), num_outputs);
 
     absl::BlockingCounter counter(num_outputs);
