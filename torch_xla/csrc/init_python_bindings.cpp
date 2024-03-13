@@ -1939,16 +1939,8 @@ void InitXlaModuleBindings(py::module m) {
           std::vector<std::string> sharding_specs;
           sharding_specs.reserve(tensors.size());
           for (const at::Tensor& tensor : tensors) {
-            XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
-            XLATensor::ShardingSpecPtr sharding_spec =
-                xtensor ? xtensor->sharding_spec() : nullptr;
-            if (sharding_spec != nullptr) {
-              sharding_specs.push_back(
-                  xla::HloSharding::FromProto(sharding_spec->sharding)
-                      ->ToString());
-            } else {
-              sharding_specs.push_back("");
-            }
+            sharding_specs.push_back(
+                GetXLAShardingSpec(bridge::GetXlaTensor(tensor)));
           }
           return sharding_specs;
         });

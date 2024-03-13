@@ -689,10 +689,13 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     return {};
   }
 
-  // We assume that caller can't mix virtual device and real device.
-  if (devices[0] == "SPMD:0") {
-    // When running in SPMD mode, tensors here in the unsharded
-    // CreateTensorsData should be implicitly replicated to all devices.
+  // CreateTensorsData should be implicitly replicated to all devices.
+  if (IsVirtualDevice(devices[0])) {
+    XLA_CHECK(
+        std::all_of(devices.begin(), devices.end(),
+                    [&](const std::string& s) { return s == devices[0]; }))
+        << "can't mix virtual device and real device.";
+
     std::vector<std::string> local_devices =
         runtime::GetComputationClient()->GetLocalDevices();
     std::vector<runtime::ComputationClient::DataPtr> handles;
