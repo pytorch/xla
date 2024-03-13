@@ -2212,7 +2212,8 @@ XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent,
           : at::result_type(input, bridge::AtenFromXlaTensor(exponent));
   return exponent->CreateFrom(
       Pow(ScalarOp(input, MakeXlaPrimitiveType(type, &exponent->GetDevice())),
-          exponent->GetIrValue()) type);
+          exponent->GetIrValue()),
+      type);
 }
 
 XLATensorPtr prelu(const XLATensorPtr& input, const XLATensorPtr& weight) {

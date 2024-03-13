@@ -220,6 +220,15 @@ at::Tensor DoBinaryOp(const at::Tensor& self, const at::Scalar& other,
 }
 
 template <typename B>
+at::Tensor DoBinaryOp(const at::Scalar& self, const at::Tensor& other,
+                      const B& bin_op) {
+  at::ScalarType dtype = at::result_type(self, other);
+  XLATensorPtr other_tensor = bridge::GetXlaTensor(other);
+  XLATensorPtr result = bin_op(self, other_tensor, dtype);
+  return bridge::AtenFromXlaTensor(result);
+}
+
+template <typename B>
 at::Tensor DoBinaryOpWithoutPromo(const at::Tensor& self,
                                   const at::Tensor& other, const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
