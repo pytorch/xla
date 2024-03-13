@@ -500,4 +500,28 @@ xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
   return sub_result;
 }
 
+xla::XlaOp BuildAdd(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
+  // Three-way shape and value promotion
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+  std::tie(input, alpha) = XlaHelpers::Promote(input, alpha);
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+
+  xla::XlaOp multiplied =
+      xla::Mul(other, alpha, XlaHelpers::getBroadcastDimensions(other, alpha));
+  xla::XlaOp add_result = xla::Add(
+      input, multiplied, XlaHelpers::getBroadcastDimensions(input, multiplied));
+
+  return add_result;
+}
+
+xla::XlaOp BuildMul(xla::XlaOp input, xla::XlaOp other) {
+  // Shape and value promotion
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+
+  xla::XlaOp mul_result =
+      xla::Mul(input, other, XlaHelpers::getBroadcastDimensions(input, other));
+
+  return mul_result;
+}
+
 }  // namespace torch_xla

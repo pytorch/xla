@@ -709,7 +709,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                             partition_spec)
     xst2 = xst1 + 5
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xst2.global_tensor])
-    self.assertIn('%p1.4 = f32[1,8]{1,0} parameter(1), sharding', hlo)
+    self.assertIn('%p1.3 = f32[1,8]{1,0} parameter(1), sharding', hlo)
     # scalar 5 should be implicitly replicated, so the pre-optimization HLO
     # shouldn't mark it with sharding.
     self.assertNotIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
@@ -826,7 +826,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual += 0
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
     self.assertIn(
-        '%add.12 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.10, f32[1,128]{1,0} %broadcast.11)',
+        '%add.12 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.9, f32[1,128]{1,0} %broadcast.11)',
         hlo)
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))

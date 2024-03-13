@@ -767,8 +767,9 @@ XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
         sym_int_elements, logical_element_type, device);
   }
 
-  return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
-                           logical_element_type);
+  return input->CreateFrom(
+      Add(input->GetIrValue(), other->GetIrValue(), constant),
+      logical_element_type);
 }
 
 XLATensorPtr add(const XLATensorPtr& input, const at::Scalar& other,
@@ -787,8 +788,9 @@ XLATensorPtr add(const XLATensorPtr& input, const at::Scalar& other,
           xla::ShapeUtil::MakeScalarShape(
               MakeXlaPrimitiveType(input->dtype(), &device)),
           logical_element_type, device);
+
   return input->CreateFrom(
-      input->GetIrValue() + other_constant * alpha_constant,
+      Add(input->GetIrValue(), other_constant, alpha_constant),
       logical_element_type);
 }
 
@@ -1877,7 +1879,7 @@ XLATensorPtr mse_loss_backward(const XLATensorPtr& grad_output,
 
 XLATensorPtr mul(const XLATensorPtr& input, const XLATensorPtr& other,
                  c10::optional<at::ScalarType> logical_element_type) {
-  return input->CreateFrom(input->GetIrValue() * other->GetIrValue(),
+  return input->CreateFrom(Mul(input->GetIrValue(), other->GetIrValue()),
                            logical_element_type);
 }
 
@@ -1889,7 +1891,7 @@ XLATensorPtr mul(const XLATensorPtr& input, const at::Scalar& other,
       xla::ShapeUtil::MakeScalarShape(
           MakeXlaPrimitiveType(input->dtype(), &device)),
       logical_element_type, device);
-  return input->CreateFrom(input->GetIrValue() * constant,
+  return input->CreateFrom(Mul(input->GetIrValue(), constant),
                            logical_element_type);
 }
 
