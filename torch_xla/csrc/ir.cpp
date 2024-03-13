@@ -154,7 +154,7 @@ torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
 void XlaNode::SetSharding(const xla::OpSharding& sharding, size_t index) {
   if (output_shardings_.size() == 0) {
     output_shardings_ =
-        std::vector<std::shared_ptr<xla::OpSharding>>(num_outputs());
+        std::vector<std::shared_ptr<xla::OpSharding>>(num_outputs(), nullptr);
   }
   output_shardings_[index] = std::make_shared<xla::OpSharding>(sharding);
   // TODO(JackCaoG): fix this hashing
