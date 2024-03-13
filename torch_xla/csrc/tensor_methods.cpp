@@ -2448,8 +2448,9 @@ XLATensorPtr rsub(const XLATensorPtr& input, const XLATensorPtr& other,
                   c10::optional<at::ScalarType> logical_element_type) {
   torch::lazy::Value alpha_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
       alpha, other->shape(), logical_element_type, other->GetDevice());
+
   return input->CreateFrom(
-      other->GetIrValue() - alpha_xla * input->GetIrValue(),
+      Rsub(input->GetIrValue(), other->GetIrValue(), alpha_xla),
       logical_element_type);
 }
 
@@ -2460,7 +2461,8 @@ XLATensorPtr rsub(const XLATensorPtr& input, const at::Scalar& other,
       alpha, input->shape(), logical_element_type, input->GetDevice());
   torch::lazy::Value other_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
       other, input->shape(), logical_element_type, input->GetDevice());
-  return input->CreateFrom(other_xla - alpha_xla * input->GetIrValue(),
+
+  return input->CreateFrom(Rsub(input->GetIrValue(), other_xla, alpha_xla),
                            logical_element_type);
 }
 
@@ -2752,33 +2754,32 @@ XLATensorPtr sub(const XLATensorPtr& input, const XLATensorPtr& other,
                  c10::optional<at::ScalarType> logical_element_type) {
   xla::Shape input_shape = input->shape().get();
   xla::Shape other_shape = other->shape().get();
-  torch::lazy::Value constant;
+  torch::lazy::Value alpha_xla;
   if (!input_shape.is_dynamic() && !other_shape.is_dynamic()) {
-    constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
+    alpha_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
         alpha, other->shape(), logical_element_type, input->GetDevice());
   } else {
     SymIntElements sym_int_elements(other->GetIrValue());
-    constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
+    alpha_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
         alpha, other->shape(), sym_int_elements, logical_element_type,
         input->GetDevice());
   }
 
-  return input->CreateFrom(input->GetIrValue() - other->GetIrValue() * constant,
-                           logical_element_type);
+  return input->CreateFrom(
+      Sub(input->GetIrValue(), other->GetIrValue(), alpha_xla),
+      logical_element_type);
 }
 
 XLATensorPtr sub(const XLATensorPtr& input, const at::Scalar& other,
                  const at::Scalar& alpha,
                  c10::optional<at::ScalarType> logical_element_type) {
-  torch::lazy::Value other_constant =
-      XLAGraphExecutor::Get()->GetIrValueForScalar(
-          other, input->shape(), logical_element_type, input->GetDevice());
-  torch::lazy::Value alpha_constant =
-      XLAGraphExecutor::Get()->GetIrValueForScalar(
-          alpha, input->shape(), logical_element_type, input->GetDevice());
-  return input->CreateFrom(
-      input->GetIrValue() - other_constant * alpha_constant,
-      logical_element_type);
+  torch::lazy::Value other_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
+      other, input->shape(), logical_element_type, input->GetDevice());
+  torch::lazy::Value alpha_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
+      alpha, input->shape(), logical_element_type, input->GetDevice());
+
+  return input->CreateFrom(Sub(input->GetIrValue(), other_xla, alpha_xla),
+                           logical_element_type);
 }
 
 XLATensorPtr sum(const XLATensorPtr& input, std::vector<int64_t> dimensions,

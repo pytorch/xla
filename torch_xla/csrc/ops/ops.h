@@ -245,6 +245,14 @@ torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input);
 
+torch::lazy::NodePtr Rsub(const torch::lazy::Value& input,
+                          const torch::lazy::Value& other,
+                          const torch::lazy::Value& alpha);
+
+torch::lazy::NodePtr Sub(const torch::lazy::Value& input,
+                         const torch::lazy::Value& other,
+                         const torch::lazy::Value& alpha);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_OPS_OPS_H_
