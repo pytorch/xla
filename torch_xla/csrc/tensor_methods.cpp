@@ -1149,8 +1149,7 @@ XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
   // divide and trunc divide.
   torch::lazy::Value input_value = GetFloatingIrValue(input, scalar_type);
   torch::lazy::Value other_value = GetFloatingIrValue(other, scalar_type);
-  torch::lazy::Value res = input_value / other_value;
-
+  torch::lazy::Value res = Div(input_value, other_value);
   if (rounding_mode.has_value()) {
     if (*rounding_mode == "trunc") {
       res = torch::lazy::MakeNode<Trunc>(res);

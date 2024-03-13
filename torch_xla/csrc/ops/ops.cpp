@@ -723,7 +723,7 @@ torch::lazy::NodePtr Div(const torch::lazy::Value& input,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_divisor = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(Div(xla_input, xla_divisor), loctx);
+    return node.ReturnOp(BuildDiv(xla_input, xla_divisor), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::div), {input, divisor},
                    GetXlaShape(input), std::move(lower_fn));
