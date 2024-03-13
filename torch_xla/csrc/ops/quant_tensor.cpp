@@ -40,7 +40,7 @@ XlaOpVector QuantizeTensor::Lower(LoweringContext* loctx) const {
       GetTorchIntDtypeToHloDtype(dtype_), input_shape.dimensions());
 
   // TODO(lsy323): Lower to HLO directly once qdtype is added to HLO.
-  static const std::string opname = "stablehlo.uniform_quantize";
+  static const std::string opname = "mhlo.uniform_quantize";
   auto qparams = QuantParams(scale_, zero_point_, quant_min_, quant_max_, axis_,
                              dtype_, input_shape.element_type());
 
