@@ -25,58 +25,58 @@ nightly_builds = [
 versioned_builds = [
   # Remove libtpu from PyPI builds
   {
-    git_tag         = "v2.3.0-rc1"
-    package_version = "2.3.0-rc1"
-    pytorch_git_rev = "v2.3.0-rc1"
+    git_tag         = "v2.3.0-rc2"
+    package_version = "2.3.0-rc2"
+    pytorch_git_rev = "v2.3.0-rc2"
     accelerator     = "tpu"
     python_version = "3.8"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.3.0-rc1"
-    package_version = "2.3.0-rc1"
-    pytorch_git_rev = "v2.3.0-rc1"
+    git_tag         = "v2.3.0-rc2"
+    package_version = "2.3.0-rc2"
+    pytorch_git_rev = "v2.3.0-rc2"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.3.0-rc1"
-    package_version = "2.3.0-rc1"
-    pytorch_git_rev = "v2.3.0-rc1"
+    git_tag         = "v2.3.0-rc2"
+    package_version = "2.3.0-rc2"
+    pytorch_git_rev = "v2.3.0-rc2"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.3.0-rc1"
-    package_version = "2.3.0-rc1"
-    pytorch_git_rev = "v2.3.0-rc1"
+    git_tag         = "v2.3.0-rc2"
+    package_version = "2.3.0-rc2"
+    pytorch_git_rev = "v2.3.0-rc2"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
   },
   # Bundle libtpu for Kaggle
   {
-    git_tag         = "v2.3.0-rc1"
-    package_version = "2.3.0-rc1+libtpu"
-    pytorch_git_rev = "v2.3.0-rc1"
+    git_tag         = "v2.3.0-rc2"
+    package_version = "2.3.0-rc2+libtpu"
+    pytorch_git_rev = "v2.3.0-rc2"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "1"
   },
   {
-    git_tag         = "v2.3.0-rc1"
-    pytorch_git_rev = "v2.3.0-rc1"
-    package_version = "2.3.0-rc1"
+    git_tag         = "v2.3.0-rc2"
+    pytorch_git_rev = "v2.3.0-rc2"
+    package_version = "2.3.0-rc2"
     accelerator     = "cuda"
     cuda_version    = "12.1"
     python_version = "3.8"
   },
   {
-    git_tag         = "v2.3.0-rc1"
-    pytorch_git_rev = "v2.3.0-rc1"
-    package_version = "2.3.0-rc1"
+    git_tag         = "v2.3.0-rc2"
+    pytorch_git_rev = "v2.3.0-rc2"
+    package_version = "2.3.0-rc2"
     accelerator     = "cuda"
     cuda_version    = "12.1"
     python_version  = "3.10"
