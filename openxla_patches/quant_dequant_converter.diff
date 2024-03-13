@@ -23,9 +23,9 @@ index 9250747210..9cba4c992a 100644
  #include "mlir/IR/BuiltinAttributes.h"  // from @llvm-project
  #include "mlir/IR/Location.h"  // from @llvm-project
 @@ -93,6 +94,66 @@ absl::StatusOr<mlir::Operation*> ImportRealDynamicSliceOp(
-
+ 
  }  // namespace
-
+ 
 +mlir::Type getQuantizedType(mlir::DictionaryAttr& backend_config) {
 +  std::vector<double> scales;
 +  std::vector<int64_t> zero_points;
