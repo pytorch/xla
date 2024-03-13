@@ -692,7 +692,6 @@ void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
   TF_VLOG(4) << "waiting barrier for device " << coll->device.toString()
              << " start";
   torch::lazy::LazyGraphExecutor::TensorCollectionBarrier(coll);
-  // TODO(yeounoh) lock SPMD device
   TF_VLOG(4) << "waiting barrier for device " << coll->device.toString()
              << " done";
 }
@@ -741,7 +740,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     if (output_sharding_hash.find(hash) == output_sharding_hash.end()) {
       TORCH_LAZY_COUNTER("UncachedOutputSharding", 1);
       output_sharding_hash[hash] = ShardingUtil::GetOutputSharding(
-          output_shapes, cachedComputation->computation, device);
+          *output_shapes, cachedComputation->computation);
     }
     placeholders =
         ShardingUtil::CreateShardedPlaceholder(output_sharding_hash[hash]);
@@ -1091,6 +1090,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
                 UnwrapXlaData(async->parameters_data), devices,
                 execute_options);
         results = WrapXlaData(outputs);
+        TORCH_LAZY_COUNTER("ExecuteReplicated", 1);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
                    << " on devices: " << absl::StrJoin(devices, ",")
@@ -1102,6 +1102,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         results = torch::lazy::getBackend()->ExecuteComputation(
             async->cached_computation->computation, async->parameters_data,
             async->device);
+        TORCH_LAZY_COUNTER("ExecuteComputation", 1);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " done!";

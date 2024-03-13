@@ -262,7 +262,7 @@ class XLATensor : public torch::lazy::LazyTensor {
                  const bool& minibatch)
         : sharding(sharding), shape(shape), minibatch(minibatch) {}
 
-    xla::OpSharding sharding;
+    xla::OpSharding sharding = xla::HloSharding::Unknown().ToProto();
     // Optional source tensor shape unpartitioned.
     xla::Shape shape;
     // Parameter for represent input batch in sharded along batch axes
@@ -270,7 +270,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   };
 
   // Annotate the IR value with ShardingSpec.
-  void SetShardingSpec(const ShardingSpec& sharding_spec);
+  void SetShardingSpec(const ShardingSpec& sharding_spec,
+                       bool overwrite = false);
   // Clear sharding annotation attached to the IR value and transfer sharded
   // data back to host.
   void ClearShardingSpec();

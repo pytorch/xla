@@ -26,6 +26,7 @@
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
+#include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"
@@ -236,12 +237,13 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   return data()->handle;
 }
 
-void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
+void XLATensor::SetShardingSpec(const ShardingSpec& sharding, bool overwrite) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
   // the same sharding already applied.
-  if (!sharding_spec() ||
-      (sharding_spec()->sharding.type() == xla::OpSharding::REPLICATED)) {
+  if (!sharding_spec() || overwrite ||
+      sharding_spec()->sharding.type() == xla::OpSharding::REPLICATED ||
+      sharding_spec()->sharding.type() == xla::OpSharding::UNKNOWN) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
   } else {
