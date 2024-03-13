@@ -117,19 +117,19 @@ xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
 // based on a scalar or tensor weight and returns the resulting out tensor.
 xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight);
 
-// Compuate the rsub function. Subtracts input, scaled by alpha, from other.
+// Computes the rsub function. Subtracts input, scaled by alpha, from other.
 // out = other − alpha * input
 xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
 
-// Compuate the sub function. Subtracts other, scaled by alpha, from input.
+// Computes the sub function. Subtracts other, scaled by alpha, from input.
 // out = input − alpha * other
 xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
 
-// Compuate the add function. Adds other, scaled by alpha, from input.
-// out = input − alpha * other
+// Computes the add function. Adds other, scaled by alpha, from input.
+// out = input + alpha * other
 xla::XlaOp BuildAdd(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
 
-// Compuate the mul function.
+// Computes the mul function.
 // out = input * other
 xla::XlaOp BuildMul(xla::XlaOp input, xla::XlaOp other);
 
