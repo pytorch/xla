@@ -33,7 +33,7 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
     super().setUpClass()
 
   @unittest.skipUnless(xr.device_type() in ["TPU", "CPU"],
-                       "Auto-sharding currently supports TPU device.")
+                       "Auto-sharding currently supports TPU & CPU backends.")
   def test_matmul(self):
     met.clear_counters()
     t1 = torch.ones(64, 128)
@@ -48,7 +48,7 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(t3, xt3.cpu()))
 
   @unittest.skipUnless(xr.device_type() in ["TPU", "CPU"],
-                       "Auto-sharding currently supports TPU device.")
+                       "Auto-sharding currently supports TPU & CPU backends.")
   def test_simple_linear_training(self):
     met.clear_counters()
 

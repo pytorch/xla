@@ -251,7 +251,9 @@ def use_spmd(auto: Optional[bool] = False):
         "please set SPMD mode before initializting tensors "
         "(i.e., call use_spmd() in the beginning of the program).")
     torch_xla._XLAC._xla_force_spmd_device()
+    xm.wait_device_ops()
 
+  # TODO(yeounoh) we can drop envvar in the future
   os.environ["XLA_USE_SPMD"] = "1"
   if auto:
     torch_xla._XLAC._xla_set_auto_sharding()

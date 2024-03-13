@@ -39,7 +39,9 @@ def with_xla(func: Callable) -> Callable:
 # Passing `partition_fn=auto_policy` to xla_distribute_module will
 # enable auto-sharding pass.
 def auto_policy(mod_name, mod, mesh):
-  xr.use_spmd(auto=True)
+  # no-op, xla_distribute_module will check if this is
+  # `auto_policy` and enable auto-sharding.
+  return
 
 
 @with_xla
@@ -211,9 +213,12 @@ def xla_distribute_module(
     """
 
   if partition_fn:
-    if getattr(callable, '__name__', 'unknown') == "auto_policy":
-      partition_fn("auto", module, device_mesh)
-      log.info("xla auto_policy is being used.")
+    if getattr(partition_fn, '__name__', 'unknown') == "auto_policy":
+      # TODO(yeounoh) allow pre-loading to xla device in the future.
+      assert next(module.parameters()).device != xm.xla_device(), \
+        f"Currently requires module to be on cpu, before xla_distribute_module."
+      xr.use_spmd(auto=True)
+      module = module.to(xm.xla_device())
     else:
       # apply partition_fun to submodules
       for name, submod in module.named_modules():

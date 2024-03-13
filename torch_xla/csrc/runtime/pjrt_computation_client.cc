@@ -224,7 +224,7 @@ ComputationClient::DataPtr PjRtComputationClient::GetDataShard(
 ComputationClient::DataPtr PjRtComputationClient::WrapDataShards(
     absl::Span<const DataPtr> shards, std::string device, xla::Shape shape,
     xla::OpSharding sharding) {
-  XLA_CHECK_EQ(shards.size(), client_->addressable_device_count());
+  XLA_CHECK_EQ(shards.size(), client_->addressable_devices().size());
   std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
   pjrt_data_shards.reserve(shards.size());
   for (auto& shard : shards) {
@@ -313,9 +313,9 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
   // Returns error if the buffer is already on `dst_device`.
   xla::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
       pjrt_data->buffer->CopyToDevice(dst_device);
-  XLA_CHECK(status_or.ok())
-      << pjrt_data->device() << " buffer already exists on " << dst;
-
+  if (!status_or.ok()) {
+    return data;
+  }
   return std::make_shared<PjRtData>(dst, pjrt_data->shape(),
                                     std::move(status_or.value()));
 }

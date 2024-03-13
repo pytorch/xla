@@ -39,8 +39,9 @@ class AtenXlaDeviceMapper {
     return devices_;
   }
 
- private:
-  AtenXlaDeviceMapper() {
+  void InitializeMapper() {
+    devices_.clear();
+    devices_ordinals_.clear();
     if (UseVirtualDevice()) {
       devices_.emplace_back(ParseDeviceString("SPMD:0"));
       devices_ordinals_[devices_.back()] = 0;
@@ -51,6 +52,21 @@ class AtenXlaDeviceMapper {
         devices_ordinals_[devices_.back()] = devices_.size() - 1;
       }
     }
+  }
+
+  void SetVirtualDevice() {
+    for (auto& device : GetAllDevices()) {
+      if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
+        return;
+      }
+    }
+    devices_.emplace_back(ParseDeviceString("SPMD:0"));
+    devices_ordinals_[devices_.back()] = 0;
+  }
+
+ private:
+  AtenXlaDeviceMapper() {
+    InitializeMapper();
   }
 
   std::vector<torch::lazy::BackendDevice> devices_;
@@ -308,6 +324,10 @@ c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
 
 std::vector<torch::lazy::BackendDevice> GetBackendDevices() {
   return AtenXlaDeviceMapper::Get()->GetAllDevices();
+}
+
+void ResetXlaDeviceMapper() {
+  AtenXlaDeviceMapper::Get()->InitializeMapper();
 }
 
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {

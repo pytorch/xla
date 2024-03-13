@@ -84,6 +84,9 @@ c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
 
 std::vector<torch::lazy::BackendDevice> GetBackendDevices();
 
+// Reset and re-initialize AtenXladeviceMapper.
+void ResetXlaDeviceMapper();
+
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device);
 
 c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device);

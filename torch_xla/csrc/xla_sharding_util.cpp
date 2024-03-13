@@ -671,7 +671,9 @@ void ShardingUtil::ReshardParameters(
   XLA_CHECK_EQ(input_shardings.size(), parameters->size());
 
   // Reshard parameters as needed, as with a new sharding spec.
-  auto data = UnwrapXlaData(*parameters);
+  std::vector<runtime::ComputationClient::DataPtr> data =
+      UnwrapXlaData(*parameters);
+
   std::vector<size_t> indices;
   std::vector<runtime::ComputationClient::DataPtr> filtered_data;
   std::vector<xla::OpSharding> filtered_shardings;
@@ -854,5 +856,10 @@ void ShardingUtil::SetAutoSharding() {
   // This stays on throughout the program.
   use_auto_sharding = true;
 }
-bool ShardingUtil::GetAutoSharding() { return use_auto_sharding; }
+bool ShardingUtil::GetAutoSharding() {
+  if (runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false)) {
+    use_auto_sharding = true;
+  }
+  return use_auto_sharding;
+}
 }  // namespace torch_xla

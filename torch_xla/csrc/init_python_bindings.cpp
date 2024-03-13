@@ -1201,16 +1201,9 @@ void InitXlaModuleBindings(py::module m) {
         xtensor->SetXlaData(TensorToXlaData(tensor, device));
       }
     }
-    if (!UseVirtualDevice()) {
-      UseVirtualDevice(/*force_spmd=*/true);
-      bool found_spmd_device = false;
-      for (auto& device : bridge::GetBackendDevices()) {
-        if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
-          found_spmd_device = true;
-        }
-      }
-      XLA_CHECK(found_spmd_device) << "SPMD:0 backend device is not found.";
-    }
+    // Ensure that virtual device is registered.
+    XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
+    bridge::ResetXlaDeviceMapper();
   });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
   m.def("_xla_get_device_hw_type", [](const at::Tensor& tensor) {
