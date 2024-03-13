@@ -2,6 +2,10 @@ name: TPU Integration Test
 run-name: TPU Testing
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
   push:
     branches:
       - master
@@ -16,6 +20,10 @@ jobs:
           git clone --recursive https://github.com/pytorch/pytorch
           cd pytorch/
           python3 setup.py install --user
+      - name: Install torchvision
+        run: |
+          cd pytorch/
+          pip install --user --no-use-pep517 "git+https://github.com/pytorch/vision.git@$(cat .github/ci_commit_pins/vision.txt)"
       - name: Checkout PyTorch/XLA Repo
         uses: actions/checkout@v4
         with:
@@ -32,7 +40,6 @@ jobs:
           PJRT_DEVICE: TPU
         # Jax is needed for pallas tests.
         run: |
-          pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu --user
           pip install fsspec
           pip install rich
           pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
