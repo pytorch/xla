@@ -6,9 +6,10 @@ from torch import nn
 import torch.optim as optim
 from torch.distributed._tensor import DeviceMesh, Shard
 import torch_xla
+import torch_xla.debug.metrics as met
 import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
-from torch_xla.distributed.spmd import xla_distribute_tensor, xla_distribute_module
+from torch_xla.distributed.spmd import xla_distribute_tensor, xla_distribute_module, auto_policy
 
 import unittest
 
@@ -47,6 +48,34 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
         self.assertTrue(dist_tensor.global_tensor.requires_grad)
         self.assertTrue(dist_tensor.is_leaf)
 
+  def test_optimizer_step_with_sharding(self):
+    # Use simple linear model to test model parameter sharding
+    model = self.SimpleLinear().to(xm.xla_device())
+
+    # Running the same mark_sharding test with xla_distribute_tensor instead
+    device_count = xr.global_runtime_device_count()
+    device_mesh = DeviceMesh("xla", list(range(device_count)))
+    shard_spec = [Shard(0)]
+    xla_distribute_tensor(model.fc1.weight, device_mesh, shard_spec)
+    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight)
+
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=0.1)
+    data = torch.randn(128, 128).to(xm.xla_device())
+    target = torch.zeros(128).to(xm.xla_device())
+    loss_fn = nn.CrossEntropyLoss()
+    for i in range(3):
+      optimizer.zero_grad()
+      output = model(data)
+      loss = loss_fn(output, target)
+      loss.backward()
+      optimizer.step()
+      xm.mark_step()
+      # Sharding is persisted across mark_step calls, and test if the sharded computation
+      # can repeat more than once without crashing.
+      self.assertEqual(sharding_spec,
+                       torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+
   def test_xla_distribute_module(self):
     model = self.SimpleLinear().to(xm.xla_device())
 
@@ -79,33 +108,30 @@ class DTensorIntegrationTest(test_xla_sharding_base.XlaShardingTest):
       optimizer.step()
       xm.mark_step()
 
-  def test_optimizer_step_with_sharding(self):
-    # Use simple linear model to test model parameter sharding
+  @unittest.skipUnless(xr.device_type() in ["TPU", "CPU"],
+                       "Auto-sharding currently supports TPU device.")
+  def test_xla_distribute_module_auto(self):
     model = self.SimpleLinear().to(xm.xla_device())
 
-    # Running the same mark_sharding test with xla_distribute_tensor instead
     device_count = xr.global_runtime_device_count()
     device_mesh = DeviceMesh("xla", list(range(device_count)))
-    shard_spec = [Shard(0)]
-    xla_distribute_tensor(model.fc1.weight, device_mesh, shard_spec)
-    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight)
 
-    model.train()
+    # Use torch_xla.distributed.spmd.auto_policy to enable auto-sharding
+    sharded_model = xla_distribute_module(model, device_mesh, auto_policy)
+    sharded_model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     data = torch.randn(128, 128).to(xm.xla_device())
     target = torch.zeros(128).to(xm.xla_device())
     loss_fn = nn.CrossEntropyLoss()
-    for i in range(3):
+    for i in range(5):
       optimizer.zero_grad()
       output = model(data)
       loss = loss_fn(output, target)
       loss.backward()
       optimizer.step()
       xm.mark_step()
-      # Sharding is persisted across mark_step calls, and test if the sharded computation
-      # can repeat more than once without crashing.
-      self.assertEqual(sharding_spec,
-                       torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+
+    self.assertEqual(met.counter_value("CompileWithAutoSharding"), 3)
 
 
 if __name__ == '__main__':

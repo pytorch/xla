@@ -30,10 +30,16 @@ def with_xla(func: Callable) -> Callable:
       *args: Tuple[object],
       **kwargs: Dict[str, Any]  # type: ignore[misc]
   ) -> None:
-    os.environ["XLA_USE_SPMD"] = "1"
+    xr.use_spmd()
     return func(self, *args, **kwargs)  # type: ignore[misc]
 
   return wrapper
+
+
+# Passing `partition_fn=auto_policy` to xla_distribute_module will
+# enable auto-sharding pass.
+def auto_policy(mod_name, mod, mesh):
+  xr.use_spmd(auto=True)
 
 
 @with_xla
