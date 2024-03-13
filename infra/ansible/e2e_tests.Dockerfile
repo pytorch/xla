@@ -23,6 +23,9 @@ RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" 
 # Copy test sources.
 RUN mkdir -p /src/pytorch/xla
 COPY --from=build /src/pytorch/xla/test /src/pytorch/xla/test
+# Copy ci_commit_pins from upstream
+RUN mkdir -p /src/pytorch/.github
+COPY --from=build /src/pytorch/.github/ci_commit_pins /src/pytorch/.github/ci_commit_pins
 
 # Copy and install wheels.
 WORKDIR /tmp/wheels
