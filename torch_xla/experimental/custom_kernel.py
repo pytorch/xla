@@ -1,12 +1,8 @@
 import functools
-import jax
-import jax.numpy as jnp
-import jax._src.pallas.mosaic.pallas_call_registration
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-from jax.experimental import pallas as pl
 from typing import List, Callable
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
@@ -64,30 +60,42 @@ def _extract_backend_config(
   return None
 
 
-def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
-  if dtype == torch.float32:
-    return jnp.float32
-  elif dtype == torch.float64:
-    return jnp.float64
-  elif dtype == torch.float16:
-    return jnp.float16
-  elif dtype == torch.bfloat16:
-    return jnp.bfloat16
-  elif dtype == torch.int32:
-    return jnp.int32
-  elif dtype == torch.int64:
-    return jnp.int64
-  elif dtype == torch.int16:
-    return jnp.int16
-  elif dtype == torch.int8:
-    return jnp.int8
-  elif dtype == torch.uint8:
-    return jnp.uint8
-  else:
-    raise ValueError(f"Unsupported dtype: {dtype}")
+def jax_import_guard():
+  # Somehow, we need to grab the TPU before JAX locks it. Otherwise, any pt-xla TPU operations will hang.
+  torch_xla._XLAC._init_computation_client()
 
 
 def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
+  import jax._src.pallas.mosaic.pallas_call_registration
+  from jax.experimental import pallas as pl
+
+  def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
+    if dtype == torch.float32:
+      return jnp.float32
+    elif dtype == torch.float64:
+      return jnp.float64
+    elif dtype == torch.float16:
+      return jnp.float16
+    elif dtype == torch.bfloat16:
+      return jnp.bfloat16
+    elif dtype == torch.int32:
+      return jnp.int32
+    elif dtype == torch.int64:
+      return jnp.int64
+    elif dtype == torch.int16:
+      return jnp.int16
+    elif dtype == torch.int8:
+      return jnp.int8
+    elif dtype == torch.uint8:
+      return jnp.uint8
+    else:
+      raise ValueError(f"Unsupported dtype: {dtype}")
+
   # TODO: Maybe we can cache the payload for the same input.
   def wrapped_kernel(kernel: Callable, output_shape_dtype_fn: Callable, *args):
     jax_args = []
