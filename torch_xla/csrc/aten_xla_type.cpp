@@ -3653,13 +3653,17 @@ at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
       pixel_unshuffle)>::call(self, downscale_factor);
 }
 
-at::Tensor XLANativeFunctions::reshape(const at::Tensor & self, c10::SymIntArrayRef shape) {
+at::Tensor XLANativeFunctions::reshape(const at::Tensor& self,
+                                       at::IntArrayRef shape) {
   // See Note: [Disabling functionalization]
   if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
-    return at::native::reshape_symint(self, shape);
+    return at::native::reshape_symint(
+        self,
+        c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(shape.data()),
+                            shape.size()));
   }
-  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
-      reshape)>::call(self, shape);
+  return at::functionalization::functionalize_aten_op<ATEN_OP(reshape)>::call(
+      self, shape);
 }
 
 at::Tensor XLANativeFunctions::select_backward_symint(
