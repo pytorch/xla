@@ -624,8 +624,12 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
                          f"{len(output)} vs {len(value)}.")
 
     # helper function for bucketing
-    def _all_gather_coalesced(tensor_list, output_list=None):
-      if output_list != None:
+    def _all_gather_coalesced(tensor_list, output_list=[]):
+      if output_list != []:
+        if len(output_list) != len(tensor_list):
+          raise ValueError(
+              "_all_gather_coalesced: `output_list` length doesn't match `tensor_list` length: "
+              f"{len(output_list)} vs {len(tensor_list)}.")
         # Call the out of place version of the reduce_scatter
         new_token = torch_xla._XLAC._xla_all_gather_coalesced_out(
             output_list, tensor_list, token, dim, shard_count, groups or [],
@@ -637,6 +641,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
           tensor_list, token, dim, shard_count, groups or [], pin_layout)
       torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
       return result[:-1]
+
+    #return _all_gather_coalesced(value, output if output else [])
 
     total = 0
     tensor_bucket = []
@@ -653,13 +659,6 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
 
     for idx, tensor in enumerate(value):
       tensor_bytes = tensor.numel() * tensor.element_size()
-      output_selected = None
-      if output != None:
-        output_selected = output[idx]
-        if tensor.numel() != output_selected.numel():
-          raise ValueError(
-              f"`output` tensor size doesn't match `input` tensor size for tensor list index {idx}: "
-              f"{output_selected.numel()} vs {tensor.numel()}.")
 
       # Tensor is larger than bucket_cap, don't bucketize
       if tensor_bytes > bucket_cap:
@@ -668,8 +667,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
           out_tensors.extend(
               _all_gather_coalesced(tensor_bucket, output_bucket))
           out_tensors.extend(
-              _all_gather_coalesced([tensor],
-                                    [output_selected] if output else []))
+              _all_gather_coalesced([tensor], [output[idx]] if output else []))
         else:
           tensor_bucket.append(tensor)
           if output != None:
@@ -690,7 +688,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
         output_bucket = []
       tensor_bucket.append(tensor)
       if output != None:
-        output_bucket.append(output_selected)
+        output_bucket.append(output[idx])
 
     # Flush the last remaining bucket
     if len(tensor_bucket):
@@ -901,10 +899,13 @@ def reduce_scatter(reduce_type,
       if len(output) != len(input):
         raise ValueError("`output` length doesn't match `input` length: "
                          f"{len(output)} vs {len(input)}.")
-
     # helper function for bucketing
-    def _reduce_scatter_coalesced(tensor_list, output_list=None):
-      if output_list != None:
+    def _reduce_scatter_coalesced(tensor_list, output_list=[]):
+      if output_list != []:
+        if len(output_list) != len(tensor_list):
+          raise ValueError(
+              "_reduce_scatter_coalesced: `output_list` length doesn't match `tensor_list` length: "
+              f"{len(output_list)} vs {len(tensor_list)}.")
         # Call the out of place version of the reduce_scatter
         new_token = torch_xla._XLAC._xla_reduce_scatter_coalesced_out(
             reduce_type, output_list, tensor_list, token, scale, scatter_dim,
@@ -927,13 +928,6 @@ def reduce_scatter(reduce_type,
                   _ALL_GATHER_REDUCE_SCATTER_BUCKET_CAP_MB)) * 1024 * 1024
     for idx, tensor in enumerate(input):
       tensor_bytes = tensor.numel() * tensor.element_size()
-      output_selected = None
-      if output != None:
-        output_selected = output[idx]
-        if tensor.numel() != output_selected.numel():
-          raise ValueError(
-              f"`output` tensor size doesn't match `input` tensor size for tensor list index {idx}: "
-              f"{output_selected.numel()} vs {tensor.numel()}.")
 
       # Tensor is larger than bucket_cap, don't bucketize
       if tensor_bytes > bucket_cap:
@@ -943,10 +937,11 @@ def reduce_scatter(reduce_type,
               _reduce_scatter_coalesced(tensor_bucket, output_bucket))
           out_tensors.extend(
               _reduce_scatter_coalesced([tensor],
-                                        [output_selected] if output else []))
+                                        [output[idx]] if output else []))
         else:
           tensor_bucket.append(tensor)
           if output != None:
+            assert (output[idx] != None)
             output_bucket.append(output[idx])
           out_tensors.extend(
               _reduce_scatter_coalesced(tensor_bucket, output_bucket))
@@ -965,14 +960,14 @@ def reduce_scatter(reduce_type,
         output_bucket = []
       tensor_bucket.append(tensor)
       if output != None:
-        output_bucket.append(output_selected)
+        output_bucket.append(output[idx])
 
     # Flush the last remaining bucket
     if len(tensor_bucket):
       out_tensors.extend(
           _reduce_scatter_coalesced(tensor_bucket, output_bucket))
 
-    assert len(out_tensors) == len(value)
+    assert len(out_tensors) == len(input)
 
     return out_tensors
   else:
