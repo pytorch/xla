@@ -278,8 +278,9 @@ torch::lazy::Value GetIrValueOrDefault(
 torch::lazy::Value GetFloatingIrValue(const XLATensorPtr& input,
                                       at::ScalarType float_type) {
   torch::lazy::Value input_value = input->GetIrValue();
-  if (xla::primitive_util::IsIntegralType(
-          GetXlaShape(input_value).element_type())) {
+  xla::PrimitiveType input_type = GetXlaShape(input_value).element_type();
+  if (xla::primitive_util::IsIntegralType(input_type) ||
+      input_type == xla::PRED) {
     input_value = torch::lazy::MakeNode<Cast>(input_value, float_type);
   }
   return input_value;
