@@ -337,6 +337,15 @@ def train_imagenet():
             _train_update, args=(device, step, loss, tracker, epoch, writer))
       if FLAGS.num_steps and FLAGS.num_steps == step:
         break
+      profile_step = int(os.environ.get('PROFILE_STEP', -1))
+      profile_epoch = int(os.environ.get('PROFILE_EPOCH', -1))
+      profile_duration = int(os.environ.get('PROFILE_DURATION_MS', 20000))
+      profile_logdir = os.environ.get('PROFILE_LOGDIR', None)
+      if step == profile_step and epoch == profile_epoch:
+        print('xw32 starting xp.trace_detached.')
+        xm.wait_device_ops()
+        import tempfile
+        xp.trace_detached('127.0.0.1:9012', profile_logdir, profile_duration or 20000)
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -381,7 +390,7 @@ def train_imagenet():
 
 if __name__ == '__main__':
   if FLAGS.profile:
-    server = xp.start_server(FLAGS.profiler_port)
+    server = xp.start_server(9012)
 
   torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
