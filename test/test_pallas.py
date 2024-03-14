@@ -156,6 +156,9 @@ class PallasTest(unittest.TestCase):
     dtypes = [
         torch.float32, torch.float
     ]  # Add doesn't support torch.float64, torch.bfloat16, torch.float16.
+    dtypes = [
+        torch.float32, torch.float
+    ]  # Add doesn't support torch.float64, torch.bfloat16, torch.float16.
     for i in range(len(dtypes)):
       x = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
       y = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
@@ -179,6 +182,8 @@ class PallasTest(unittest.TestCase):
   def test_tpu_custom_call_pallas_wrap_flash_attention(self):
     from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention
     from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    flash_attention_kernel = make_kernel_from_pallas(
+        flash_attention, lambda q, k, v: (q.shape, q.dtype))
     flash_attention_kernel = make_kernel_from_pallas(
         flash_attention, lambda q, k, v: (q.shape, q.dtype))
 
