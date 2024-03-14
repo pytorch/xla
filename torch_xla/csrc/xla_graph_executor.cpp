@@ -1510,6 +1510,14 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
           coll.hash, torch::lazy::Hash(buffer_donor_index));
     }
   }
+  if (ShardingUtil::GetAutoSharding()) {
+    std::string xla_auto_spmd = "XLA_AUTO_SPMD=1";
+    coll.hash = torch::lazy::HashCombine(
+        coll.hash, torch::lazy::StringHash(xla_auto_spmd.c_str()));
+    std::string xla_auto_spmd_mesh = "XLA_AUTO_SPMD_MESH=" + sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", "");
+    coll.hash = torch::lazy::HashCombine(
+        coll.hash, torch::lazy::StringHash(xla_auto_spmd_mesh.c_str()));
+  }
 
   DebugUtil::SaveGraphHash(coll.hash);
   TF_VLOG(4) << "Parameter sequence graph hash "
