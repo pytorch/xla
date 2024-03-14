@@ -1185,9 +1185,10 @@ void InitXlaModuleBindings(py::module m) {
     // allows the users to call `xr.use_spmd()` more freely, given that the
     // earlier they call, the smaller the one-time overhead of replicating
     // non-SPMD backed tensors.
-    torch::lazy::BackendDevice backend_device = bridge::GetCurrentDevice();
+    torch::lazy::BackendDevice current_device = bridge::GetCurrentDevice();
     std::vector<XLATensorPtr> xtensors =
-        XLAGraphExecutor::Get()->GetLiveTensors(&backend_device);
+        XLAGraphExecutor::Get()->GetLiveTensors(&current_device);
+    torch::lazy::BackendDevice spmd_device = ParseDeviceString("SPMD:0");
     for (auto xtensor : xtensors) {
       XlaDeviceType xla_device_type =
           static_cast<XlaDeviceType>(xtensor->GetDevice().type());
@@ -1197,13 +1198,12 @@ void InitXlaModuleBindings(py::module m) {
         // in the transition, after creating a detached host-side copy.
         // TODO(yeounoh) Consider CopyToDevice, and make data's device mutable.
         at::Tensor tensor = xtensor->ToTensor(false);
-        torch::lazy::BackendDevice device = ParseDeviceString("SPMD:0");
-        xtensor->SetXlaData(TensorToXlaData(tensor, device));
+        xtensor->SetXlaData(TensorToXlaData(tensor, spmd_device));
       }
     }
+
     // Ensure that virtual device is registered.
     XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
-    bridge::ResetXlaDeviceMapper();
   });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
   m.def("_xla_get_device_hw_type", [](const at::Tensor& tensor) {

@@ -40,18 +40,22 @@ class AtenXlaDeviceMapper {
   }
 
   void InitializeMapper() {
-    devices_.clear();
-    devices_ordinals_.clear();
+    // Make a clean copy and assign to avoid race condition during
+    // testing where we set and reset the mapper in the same process.
+    std::vector<torch::lazy::BackendDevice> devices;
+    std::map<torch::lazy::BackendDevice, size_t> devices_ordinals;
     if (UseVirtualDevice()) {
-      devices_.emplace_back(ParseDeviceString("SPMD:0"));
-      devices_ordinals_[devices_.back()] = 0;
+      devices.emplace_back(ParseDeviceString("SPMD:0"));
+      devices_ordinals[devices.back()] = 0;
     } else {
       for (auto& device_str :
            torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
-        devices_.emplace_back(ParseDeviceString(device_str));
-        devices_ordinals_[devices_.back()] = devices_.size() - 1;
+        devices.emplace_back(ParseDeviceString(device_str));
+        devices_ordinals[devices.back()] = devices.size() - 1;
       }
     }
+    devices_ = devices;
+    devices_ordinals_ = devices_ordinals;
   }
 
   void SetVirtualDevice() {

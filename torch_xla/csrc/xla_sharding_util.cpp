@@ -655,7 +655,8 @@ void ShardingUtil::ReshardParameters(
   std::vector<xla::OpSharding> input_shardings;
   if (module.spmd_parameters_shardings().size() == 1 &&
       module.spmd_parameters_shardings()[0].type() == xla::OpSharding::TUPLE) {
-    auto tuple_shardings = sharding.tuple_shardings();
+    auto tuple_shardings =
+        module.spmd_parameters_shardings()[0].tuple_shardings();
     input_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
                                                    tuple_shardings.end());
   } else {
