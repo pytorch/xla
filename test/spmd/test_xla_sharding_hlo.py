@@ -18,7 +18,6 @@ class XlaShardingHloTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   @patch.dict(os.environ, {"XLA_DUMP_POST_OPTIMIZATIONS": "1"})

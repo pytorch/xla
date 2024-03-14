@@ -492,4 +492,33 @@ generated_table = visualize_sharding(sharding, use_color=False)
 
 You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style `tiled`, `partial_replication` and `replicated`.
 
+### Auto-Sharding
+We are introducing a new PyTorch/XLA SPMD feature, called ``auto-sharding``, [RFC](https://github.com/pytorch/xla/issues/6322). This is an experimental feature in `r2.3` and `nightly`, that supports `XLA:TPU` and a single TPUVM host.
 
+PyTorch/XLA auto-sharding can be enabled by one of the following:
+- Setting envvar `XLA_SPMD_AUTO=1`
+- Calling the SPMD API in the beginning of your code:
+```python
+import torch_xla.runtime as xr
+xr.use_spmd(auto=True)
+```
+- Calling `pytorch.distributed._tensor.distribute_module` with `auto-policy` and `xla`:
+```python
+import torch_xla.runtime as xr
+from torch.distributed._tensor import DeviceMesh, distribute_module
+from torch_xla.distributed.spmd import auto_policy
+
+device_count = xr.global_runtime_device_count()
+device_mesh = DeviceMesh("xla", list(range(device_count)))
+
+# Currently, model should be loaded to xla device via distribute_module.
+model = MyModule()  # nn.module
+sharded_model = distribute_module(model, device_mesh, auto_policy)
+```
+
+Optionally, one can set the following options/env-vars to control the behvaior of
+the XLA-based auto-sharding pass:
+- `XLA_AUTO_USE_GROUP_SHARDING`: group resharding of the parameters. Set by default.
+- `XLA_AUTO_SPMD_MESH`: logical mesh shape to be used for auto-sharding. For example,
+`XLA_AUTO_SPMD_MESH=2,2` corresponds to a 2-by-2 mesh with 4 global devices. If unset,
+a default device mesh shape of `num_devices,1` will be used.
