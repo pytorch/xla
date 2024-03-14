@@ -3662,8 +3662,11 @@ at::Tensor XLANativeFunctions::reshape(const at::Tensor& self,
         c10::SymIntArrayRef(reinterpret_cast<const c10::SymInt*>(shape.data()),
                             shape.size()));
   }
-  return at::functionalization::functionalize_aten_op<ATEN_OP(reshape)>::call(
-      self, shape);
+  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
+      reshape)>::call(self,
+                      c10::SymIntArrayRef(
+                          reinterpret_cast<const c10::SymInt*>(shape.data()),
+                          shape.size()));
 }
 
 at::Tensor XLANativeFunctions::select_backward_symint(
