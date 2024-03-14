@@ -1,15 +1,21 @@
 import functools
-import jax
-import jax.numpy as jnp
-import jax._src.pallas.mosaic.pallas_call_registration
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-from jax.experimental import pallas as pl
 from typing import List, Callable
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
+
+def jax_import_guard():
+  # Somehow, this could grab the TPU before JAX locks it. Otherwise, any pt-xla TPU operations will hang.
+  xm.xla_device()
+jax_import_guard()
+
+import jax
+import jax.numpy as jnp
+import jax._src.pallas.mosaic.pallas_call_registration
+from jax.experimental import pallas as pl
 
 XLA_LIB.define(
     "tpu_custom_call_(Tensor(a!) output, Tensor[] inputs, str payload) -> ()",)
