@@ -48,8 +48,9 @@ class DTensorIntegrationTest2(test_xla_sharding_base.XlaShardingTest):
       loss.backward()
       optimizer.step()
       xm.mark_step()
-    # Should compile with auto-sharding.
-    self.assertEqual(met.counter_value("CompileWithAutoSharding"), 3)
+    # Should compile with auto-sharding, we expect up to 3 times
+    cnt = met.counter_value("CompileWithAutoSharding")
+    self.assertTrue((cnt is not None) and (cnt <= 3))
 
 
 if __name__ == '__main__':

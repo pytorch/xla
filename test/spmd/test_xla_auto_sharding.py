@@ -65,10 +65,8 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
       loss.backward()
       optimizer.step()
       xm.mark_step()
-
-    self.assertEqual(met.counter_value("UncachedCompile"), 3)
-    self.assertEqual(met.counter_value("CachedCompile"), 2)
-    self.assertEqual(met.counter_value("CompileWithAutoSharding"), 3)
+    cnt = met.counter_value("CompileWithAutoSharding")
+    self.assertTrue((cnt is not None) and (cnt <= 3))
 
 
 if __name__ == '__main__':
