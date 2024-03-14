@@ -986,8 +986,7 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   for (int i = 0; i < parameter_shapes.size(); ++i) {
     *input_tuple_shape.add_tuple_shapes() = parameter_shapes[i];
   }
-  xla::XlaOp input_tuple =
-      xla::Parameter(&builder, 0, input_tuple_shape, "in");
+  xla::XlaOp input_tuple = xla::Parameter(&builder, 0, input_tuple_shape, "in");
 
   // Handle the results of the original computation.
   std::vector<xla::XlaOp> inner_params;

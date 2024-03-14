@@ -653,14 +653,13 @@ void ShardingUtil::ReshardParameters(
     std::vector<const torch::lazy::Node*>* nodes) {
   // Extract input shardings generated from auto-sharding pass.
   std::vector<xla::OpSharding> input_shardings;
-  for (auto sharding : module.spmd_parameters_shardings()) {
-    if (sharding.type() == xla::OpSharding::TUPLE) {
-      XLA_CHECK_EQ(module.spmd_parameters_shardings().size(), 1)
-          << "We expect parameters to be wrapped as a tuple.";
-      auto tuple_shardings = sharding.tuple_shardings();
-      input_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
-                                                     tuple_shardings.end());
-    } else {
+  if (module.spmd_parameters_shardings().size() == 1 &&
+      module.spmd_parameters_shardings()[0].type() == xla::OpSharding::TUPLE) {
+    auto tuple_shardings = sharding.tuple_shardings();
+    input_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
+                                                   tuple_shardings.end());
+  } else {
+    for (auto sharding : module.spmd_parameters_shardings()) {
       input_shardings.push_back(sharding);
     }
   }
@@ -674,25 +673,25 @@ void ShardingUtil::ReshardParameters(
   std::vector<runtime::ComputationClient::DataPtr> data =
       UnwrapXlaData(*parameters);
 
-  std::vector<size_t> indices;
-  std::vector<runtime::ComputationClient::DataPtr> filtered_data;
-  std::vector<xla::OpSharding> filtered_shardings;
+  std::vector<size_t> reshard_indices;
+  std::vector<runtime::ComputationClient::DataPtr> data_to_reshard;
+  std::vector<xla::OpSharding> shardings_to_reshard;
   for (int i = 0; i < input_shardings.size(); ++i) {
     XLA_CHECK(input_shardings[i].type() != xla::OpSharding::UNKNOWN)
         << "Resharding by UNKNOWN sharding type is not allowed.";
     // Skip re-sharding if not necessary.
     if (!xla::protobuf_util::ProtobufEquals(data[i]->GetSharding(),
                                             input_shardings[i])) {
-      indices.push_back(i);
-      filtered_data.push_back(data[i]);
-      filtered_shardings.push_back(input_shardings[i]);
+      reshard_indices.push_back(i);
+      data_to_reshard.push_back(data[i]);
+      shardings_to_reshard.push_back(input_shardings[i]);
     }
   }
-  if (indices.size() == 0) {
+  if (reshard_indices.size() == 0) {
     TF_VLOG(3) << "ReshardParamters... skip with no new shardings.";
     return;
   }
-  TF_VLOG(3) << "ReshardParamters... resharding " << indices.size()
+  TF_VLOG(3) << "ReshardParamters... resharding " << reshard_indices.size()
              << " parameters.";
 
   TORCH_LAZY_COUNTER("ReshardParameters", 1);
@@ -710,7 +709,7 @@ void ShardingUtil::ReshardParameters(
   }
 
   std::vector<torch::lazy::BackendDataPtr> outputs;
-  outputs.reserve(indices.size());
+  outputs.reserve(reshard_indices.size());
   // Groupping is computationally more efficient but increases memory
   // consumption. It is groupped by default, but can be overriden for
   // more-granular control over the peak memory consumption.
@@ -718,24 +717,24 @@ void ShardingUtil::ReshardParameters(
       runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", true);
   if (group_sharding) {
     outputs = WrapXlaData(runtime::GetComputationClient()->ReshardData(
-        filtered_data, filtered_shardings));
+        data_to_reshard, shardings_to_reshard));
   } else {
-    for (int i = 0; i < filtered_data.size(); ++i) {
+    for (int i = 0; i < data_to_reshard.size(); ++i) {
       auto output = WrapXlaData(runtime::GetComputationClient()->ReshardData(
-          {filtered_data[i]}, {filtered_shardings[i]}));
+          {data_to_reshard[i]}, {shardings_to_reshard[i]}));
       outputs.insert(outputs.end(), output.begin(), output.end());
     }
   }
-  XLA_CHECK_EQ(outputs.size(), indices.size());
+  XLA_CHECK_EQ(outputs.size(), reshard_indices.size());
 
   for (int i = 0; i < outputs.size(); ++i) {
-    (*parameters)[indices[i]] = outputs[i];
-    auto it_node = xla_node_map.find(filtered_data[i]->GetHandle());
+    (*parameters)[reshard_indices[i]] = outputs[i];
+    auto it_node = xla_node_map.find(data_to_reshard[i]->GetHandle());
     XLA_CHECK(it_node != xla_node_map.end())
-        << "xla_node_map does not contain " << filtered_data[i]->ToString()
-        << ", target sharding: " << filtered_shardings[i].DebugString();
+        << "xla_node_map does not contain " << data_to_reshard[i]->ToString()
+        << ", target sharding: " << shardings_to_reshard[i].DebugString();
     auto device_data_node = DeviceData::Cast(it_node->second);
-    device_data_node->SetSharding(filtered_shardings[i], 0);
+    device_data_node->SetSharding(shardings_to_reshard[i], 0);
   }
 }
 

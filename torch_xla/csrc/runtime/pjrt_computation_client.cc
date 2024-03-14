@@ -391,17 +391,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
   XLA_COUNTER("ReshardData", 1);
   XLA_CHECK_EQ(handles.size(), shardings.size())
       << "input handles and shardings must have the same length.";
-
-  // No need to reshard in non-SPMD mode, and return an accessible DataPtr
-  // vector. This should go out-of-scope at the caller's disposal.
-  if (!UseVirtualDevice()) {
-    std::vector<ComputationClient::DataPtr> replicated_results;
-    replicated_results.reserve(handles.size());
-    for (auto handle : handles) {
-      replicated_results.push_back(std::dynamic_pointer_cast<PjRtData>(handle));
-    }
-    return replicated_results;
-  }
+  XLA_CHECK(UseVirtualDevice()) << "We only supports SPMD mode resharding.";
 
   // Perform a simple identity calculation to reshard.
   xla::XlaBuilder builder("ReshardData");

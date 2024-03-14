@@ -65,9 +65,7 @@ class AtenXlaDeviceMapper {
   }
 
  private:
-  AtenXlaDeviceMapper() {
-    InitializeMapper();
-  }
+  AtenXlaDeviceMapper() { InitializeMapper(); }
 
   std::vector<torch::lazy::BackendDevice> devices_;
   std::map<torch::lazy::BackendDevice, size_t> devices_ordinals_;
@@ -326,9 +324,7 @@ std::vector<torch::lazy::BackendDevice> GetBackendDevices() {
   return AtenXlaDeviceMapper::Get()->GetAllDevices();
 }
 
-void ResetXlaDeviceMapper() {
-  AtenXlaDeviceMapper::Get()->InitializeMapper();
-}
+void ResetXlaDeviceMapper() { AtenXlaDeviceMapper::Get()->InitializeMapper(); }
 
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
   XLA_CHECK_EQ(device.type(), at::kXLA) << device;

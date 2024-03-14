@@ -52,11 +52,9 @@ namespace torch_xla {
 
 namespace {
 bool CanApplySharding(const XLATensor::ShardingSpecPtr sharding) {
-  if (!sharding || sharding->sharding.type() == xla::OpSharding::REPLICATED ||
-      sharding->sharding.type() == xla::OpSharding::UNKNOWN) {
-    return true;
-  }
-  return false;
+  return !sharding ||
+         sharding->sharding.type() == xla::OpSharding::REPLICATED ||
+         sharding->sharding.type() == xla::OpSharding::UNKNOWN;
 }
 }  // namespace
 
@@ -259,8 +257,7 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding, bool overwrite) {
   } else {
     // Tensor is already sharding annotated, check if it is UNKNOWN or
     // the same sharding type.
-    XLA_CHECK(sharding_spec()->sharding.type() == xla::OpSharding::UNKNOWN ||
-              ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
+    XLA_CHECK(ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
         << "Existing sharding annotation, "
         << sharding_spec()->sharding.DebugString()
         << ", must be cleared before applying a new one, "
