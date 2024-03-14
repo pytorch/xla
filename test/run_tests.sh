@@ -226,6 +226,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_xla_distributed_checkpoint.py"
   run_test "$CDIR/spmd/test_xla_spmd_python_api_interaction.py"
   run_test "$CDIR/spmd/test_dtensor_integration.py"
+  run_test "$CDIR/spmd/test_dtensor_integration2.py"
   run_test "$CDIR/spmd/test_xla_auto_sharding.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
