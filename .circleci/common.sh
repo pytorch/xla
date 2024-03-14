@@ -187,7 +187,7 @@ function run_torch_xla_cpp_tests() {
 	    EXTRA_ARGS="$EXTRA_ARGS -R"
     fi
 
-    if [ "$USE_COVERAGE" == "0" ]; then
+    if [ "$USE_COVERAGE" != "0" ]; then
       if [ -x "$(command -v nvidia-smi)" ]; then
         PJRT_DEVICE=CUDA test/cpp/run_tests.sh $EXTRA_ARGS -L""
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
