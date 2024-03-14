@@ -7,9 +7,12 @@ from typing import List, Callable
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
+
 def jax_import_guard():
   # Somehow, this could grab the TPU before JAX locks it. Otherwise, any pt-xla TPU operations will hang.
   xm.xla_device()
+
+
 jax_import_guard()
 
 import jax
