@@ -159,7 +159,7 @@ class PallasTest(unittest.TestCase):
                                         (x.shape, x.dtype))
 
     dtypes = [torch.float32, torch.float
-             ]  # TODO: torch.float64, torch.bfloat16, torch.float16 don't work.
+             ]  # Add doesn't support torch.float64, torch.bfloat16, torch.float16.
     for i in range(len(dtypes)):
       x = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
       y = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
@@ -169,13 +169,39 @@ class PallasTest(unittest.TestCase):
 
     dtypes = [
         torch.int32, torch.int
-    ]  # TODO: torch.int64, torch.int16, torch.int8, torch.uint8 don't work.
+    ]  # Add doesn't support torch.int64, torch.int16, torch.int8, torch.uint8.
     for i in range(len(dtypes)):
       x = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
       y = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
       expected_output = x + y
       output = pt_kernel(x, y)
       self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  @unittest.mock.patch.dict(os.environ, {"XLA_TPU_LAYOUT": "0"})
+  def test_tpu_custom_call_pallas_wrap_flash_attention(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention
+    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    flash_attention_kernel = make_kernel_from_pallas(flash_attention, lambda q, k, v:
+                                        (q.shape, q.dtype))
+
+    def attention(q, k, v):
+      attn_weight = q @ k.transpose(-2, -1)
+      attn_weight = nn.functional.softmax(attn_weight, dim=-1)
+      attn_output = attn_weight @ v
+      return attn_output
+
+    q_mini = torch.arange(128 * 4, dtype=torch.bfloat16).reshape(128, 4) / 13
+    k_mini = torch.arange(
+        1000, 1000 + 128 * 4, dtype=torch.bfloat16).reshape(128, 4) / 13
+    q = q_mini.broadcast_to(3, 2, 128, 4).to("xla")
+    k = k_mini.broadcast_to(3, 2, 128, 4).to("xla")
+    v = torch.ones(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+
+    o = flash_attention_kernel(q, k, v)
+    expected_o = attention(q, k, v)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
 
 
 if __name__ == '__main__':
