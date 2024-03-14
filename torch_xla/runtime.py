@@ -233,10 +233,11 @@ def addressable_runtime_device_count() -> int:
 
 
 # API to enable SPMD mode. This is a recommended way to enable SPMD.
-# TODO(yeounoh) this does not block users from using XLA_USE_SPMD flag, yet.
-# we will enforce `use_spmd()` once the flag is fully deprecated.
+# This forces SPMD mode if some tensors are already initialized on non-SPMD
+# devices. This means that those tensors would be replicated across the devices.
+# TODO(yeounoh) introduce SPMD configuration.
 @requires_pjrt
-def use_spmd():
+def use_spmd(auto: Optional[bool] = False):
   if os.environ.get("XLA_USE_SPMD") is not None:
     warnings.warn("XLA_USE_SPMD is being deprecated. "
                   "Use torch_xla.runtime.use_spmd() "
@@ -250,9 +251,13 @@ def use_spmd():
         "please set SPMD mode before initializting tensors "
         "(i.e., call use_spmd() in the beginning of the program).")
     torch_xla._XLAC._xla_force_spmd_device()
+    xm.wait_device_ops()
 
-  # TODO(yeounoh) replace this when we fully deprecate the flag.
+  # TODO(yeounoh) we can drop envvar in the future
   os.environ["XLA_USE_SPMD"] = "1"
+  if auto:
+    torch_xla._XLAC._xla_set_auto_sharding()
+    os.environ["XLA_AUTO_SPMD"] = "1"
 
 
 @requires_pjrt

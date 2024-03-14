@@ -28,7 +28,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def test_xla_sharded_tensor(self):
@@ -38,8 +37,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                        device=xm.xla_device())
     xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
                             partition_spec)
-
-    # TODO(244003536) add more tests for XLAShardedTensror.
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
 
   def test_xla_sharded_tensor_repr(self):

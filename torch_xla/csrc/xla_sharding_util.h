@@ -122,6 +122,27 @@ class ShardingUtil {
   static void XlaMarkSharding(const at::Tensor& input,
                               xla::OpSharding sharding);
 
+  //////////////////////////// Auto-Sharding ////////////////////////////
+
+  // Construct a device mesh for auto-sharding pass. Returns a tuple of mesh
+  // shape and device ids vectors.
+  static std::tuple<std::vector<int64_t>, std::vector<int64_t>>
+  GetAutoShardingMesh();
+
+  // Reshard the parameters if the expected shardings mismatch. Resharding is
+  // expensive especially for those already sharded. The cost can easily be
+  // armotized over multiple steps, though, since the input sharding is
+  // propagated to the output for the subsequent runs. Sharded data transfer
+  // during resharding should be asynchronous. It is recommended to keep the
+  // input sharding on the input data as-is.
+  static void ReshardParameters(
+      const xla::HloModuleProto& module, std::vector<XLATensorPtr>* tensors,
+      std::vector<torch::lazy::BackendDataPtr>* parameters,
+      std::vector<const torch::lazy::Node*>* nodes);
+
+  static void SetAutoSharding();
+  static bool GetAutoSharding();
+
   //////////////////////////// Dynamo Integration ////////////////////////////
 
   static void XlaMarkShardingDynamoCustomOp(
