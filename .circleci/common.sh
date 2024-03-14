@@ -198,7 +198,6 @@ function run_torch_xla_cpp_tests() {
         PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
       fi
-      find / -name PTXAsmFormat.h
       genhtml /tmp/merged.dat -o ~/htmlcov/cpp/cpp_lcov.info
       mv /tmp/merged.dat ~/htmlcov/cpp_lcov.info
     else
