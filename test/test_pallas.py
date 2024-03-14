@@ -166,6 +166,7 @@ class PallasTest(unittest.TestCase):
     dtypes = [
         torch.int32, torch.int
     ]  # Add doesn't support torch.int64, torch.int16, torch.int8, torch.uint8.
+    ]  # Add doesn't support torch.int64, torch.int16, torch.int8, torch.uint8.
     for i in range(len(dtypes)):
       x = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
       y = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
