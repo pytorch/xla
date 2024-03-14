@@ -138,7 +138,6 @@ class PallasTest(unittest.TestCase):
     self.assertIn("custom_call_config", payload)
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
-  # TODO: This test cannot be ran individually, let's fix it.
   def test_tpu_custom_call_pallas_wrap_add_payload(self):
 
     def add_vectors_kernel(x_ref, y_ref, o_ref):
