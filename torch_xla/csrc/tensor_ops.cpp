@@ -1,11 +1,13 @@
 #include "torch_xla/csrc/tensor_ops.h"
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/helpers.h"
-#include "torch/csrc/lazy/core/util.h"
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/tensor_methods.h"
 
 namespace torch_xla {
@@ -185,7 +187,7 @@ XLATensorPtr Select(const XLATensorPtr& input, int64_t dim, int64_t index) {
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, shape.get().rank());
   XLATensorPtr result = tensor_methods::narrow(input, dim, index, 1);
   auto new_dims = torch::lazy::DropDimensions(
-      xla::util::ToVector<int64_t>(shape.get().dimensions()),
+      torch_xla::runtime::util::ToVector<int64_t>(shape.get().dimensions()),
       std::vector<int64_t>({dim}));
   return tensor_methods::view(result, new_dims);
 }
@@ -238,6 +240,30 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
       /*values=*/tensor_methods::where(skip_padding, grad, zero_grad),
       /*accumulate=*/true,
       /*result_permutation=*/{0, 1});
+}
+
+XLATensorPtr Embedding(const XLATensorPtr& weight,
+                       const XLATensorPtr& indices) {
+  XLA_CHECK_EQ(weight->shape().get().rank(), 2);
+  XLA_CHECK(indices->dtype() == at::kLong || indices->dtype() == at::kInt);
+
+  if (indices->shape().get().rank() == 1) {
+    return tensor_methods::index_select(weight, 0, indices);
+  }
+
+  std::vector<int64_t> final_size;
+  int64_t num_elements = 1;
+  for (int i = 0; i < indices->shape().get().rank(); i++) {
+    int64_t dim = indices->shape().get().dimensions(i);
+    final_size.push_back(dim);
+    num_elements *= dim;
+  }
+
+  final_size.push_back(weight->shape().get().dimensions(1));
+
+  XLATensorPtr embeddings = tensor_methods::index_select(
+      weight, 0, tensor_methods::view(indices, {num_elements}));
+  return tensor_methods::view(embeddings, final_size);
 }
 
 }  // namespace tensor_ops

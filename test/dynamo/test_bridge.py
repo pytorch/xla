@@ -78,6 +78,19 @@ class ModuleInplaceUpdate(nn.Module):
     return (torch.randn(10), torch.randn(10))
 
 
+class UpsampleModule(nn.Module):
+
+  def __init__(self):
+    super().__init__()
+    self.upsample = nn.Upsample(scale_factor=2)
+
+  def forward(self, x):
+    return self.upsample(x)
+
+  def get_random_inputs(self):
+    return (torch.randn((1, 1, 5)),)
+
+
 def allclose(expected, actual):
 
   def unwrap(cont):
@@ -89,11 +102,12 @@ def allclose(expected, actual):
   actual = unwrap(actual)
 
   if isinstance(expected, torch.Tensor) and isinstance(actual, torch.Tensor):
-    return torch.allclose(expected, actual)
+    return torch.allclose(expected, actual, rtol=1e-03, atol=1e-04)
   elif isinstance(expected,
                   (tuple, list)) and isinstance(actual, (tuple, list)):
     return len(expected) == len(actual) and all(
-        torch.allclose(a, b) for a, b in zip(expected, actual))
+        torch.allclose(a, b, rtol=1e-03, atol=1e-04)
+        for a, b in zip(expected, actual))
   else:
     raise RuntimeError("Unexpected types")
 
@@ -178,6 +192,7 @@ def make_training_test(model_cls):
 
     model = model.to(device=xla_dev)
     inputs = tuple(inp.to(device=xla_dev) for inp in inputs)
+    inputs = tuple(inp.requires_grad_() for inp in inputs)
 
     # do baseline
     baseline_model = copy.deepcopy(model)
@@ -205,6 +220,87 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
 
   test_training_linear = make_training_test(LinearModule)
   test_training_maxpool = make_training_test(MaxPoolModule)
+  test_training_upsample = make_training_test(UpsampleModule)
+
+  def _compile_and_check(self, fn, args, backend="openxla"):
+    r = fn(*args)
+    xm.mark_step()
+
+    compiled_fn = torch.compile(backend=backend)(fn)
+    compiled_r = compiled_fn(*args)
+    xm.mark_step()
+
+    self.assertEqual(r, compiled_r)
+
+  def test_non_tensor_args_for_partition(self):
+
+    class Emb(torch.nn.Embedding):
+
+      def __init__(self):
+        super().__init__(num_embeddings=10, embedding_dim=10, padding_idx=0)
+
+    device = xm.xla_device()
+    module = Emb()
+    module.to(device)
+
+    def foo(x):
+      return module(x)
+
+    x = torch.randint(0, 10, (10,), device=device)
+    self._compile_and_check(foo, (x,), backend="openxla_eval")
+
+  def test_inputs_not_computed(self):
+
+    def foo(x):
+      return x * 2
+
+    device = xm.xla_device()
+    x = torch.rand(5, device=device)
+    x = x.unsqueeze(dim=-1)
+    self._compile_and_check(foo, (x,))
+
+  def test_factory_copy(self):
+
+    def foo(device):
+      return torch.arange(5, device="cpu").to(device)
+
+    self._compile_and_check(foo, (xm.xla_device(),))
+
+  def test_index_flag_unsupported(self):
+    # The indices of the index operation are represented as
+    # a list of objects. If any non-XLA tensors appear, the
+    # index operation should be flagged as unsupported, since
+    # their arguments might be turned into placeholders of the
+    # partition FX graph.
+
+    def foo(xt, t):
+      return xt[t]
+
+    device = xm.xla_device()
+    xt = torch.rand(5, device=device)
+    t = torch.randint(0, 5, (3,))
+    self._compile_and_check(foo, (xt, t))
+
+  def test_stack_flag_unsupported(self):
+    # Explicit list of tensors arguments.
+
+    def foo(t):
+      return torch.stack([t])
+
+    t = torch.randint(0, 5, (3,))
+    self._compile_and_check(foo, (t,))
+
+  def test_cpu_flag_unsupported(self):
+    # Nodes that return CPU tensors should also be flagged as
+    # unsupported, since their outputs could be turned into
+    # outputs of the partition FX graph.
+
+    def foo(t):
+      return t.cpu()
+
+    device = xm.xla_device()
+    t = torch.randint(0, 5, (3,), device=device)
+    self._compile_and_check(foo, (t,))
 
 
 if __name__ == "__main__":

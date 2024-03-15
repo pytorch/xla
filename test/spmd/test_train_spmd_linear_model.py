@@ -4,16 +4,19 @@ import torch
 from torch import nn
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.parallel_loader as pl
+import torch_xla.distributed.spmd as xs
+import torch_xla.utils.checkpoint as checkpoint
 import torch_xla.utils.utils as xu
-from torch_xla.experimental.xla_sharding import Mesh
+from torch_xla.distributed.spmd import Mesh
 import torch.optim as optim
 from torch import nn
 
 MODEL_OPTS = {
     '--sharding': {
-        'choices': ['batch', 'megatron-lm'],
+        'choices': ['batch', 'megatron-lm', 'fsdp'],
         'nargs': '+',
         'default': [],
     },
@@ -25,10 +28,15 @@ MODEL_OPTS = {
         'type': int,
         'default': 1024 * 1024,
     },
+    '--use_gradient_checkpointing': {
+        'action': 'store_true',
+    }
 }
 
 FLAGS = args_parse.parse_common_options(
     batch_size=128, num_epochs=1, opts=MODEL_OPTS.items())
+
+xr.use_spmd(auto=FLAGS.auto_spmd)
 
 
 class SimpleLinear(nn.Module):
@@ -53,7 +61,6 @@ device = xm.xla_device()
 
 def train():
   print('===> Preparing data..')
-  num_epochs = 18
   lr = 0.1
   train_loader = xu.SampleGenerator(
       data=(torch.zeros(FLAGS.batch_size, FLAGS.input_dim),
@@ -62,12 +69,24 @@ def train():
   torch.manual_seed(42)
   model = SimpleLinear().to(device)
 
-  num_devices = len(xm.get_xla_supported_devices())
+  num_devices = xr.global_runtime_device_count()
   print(f'num_devices: {num_devices}')
   # Define a mesh with all devices along one axis
   mesh_shape = (num_devices, 1)
   device_ids = np.arange(num_devices)
   mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+
+  if 'batch' in FLAGS.sharding:
+    train_loader = pl.MpDeviceLoader(
+        train_loader, device, input_sharding=xs.ShardingSpec(mesh, (0, 1)))
+
+  if 'fsdp' in FLAGS.sharding:
+    train_loader = pl.MpDeviceLoader(
+        train_loader, device, input_sharding=xs.ShardingSpec(mesh, (0, 1)))
+    print('Sharding model weights')
+    # Shard the weights according to their 0th dim
+    xs.mark_sharding(model.fc1.weight, mesh, (0, 1))
+    xs.mark_sharding(model.fc2.weight, mesh, (0, 1))
 
   if 'megatron-lm' in FLAGS.sharding:
     print('Sharding model weights')
@@ -85,15 +104,19 @@ def train():
     for step, (data, target) in enumerate(loader):
       with xp.StepTrace('train_linear_model'):
         with xp.Trace('build_graph'):
-          data = data.to(device)
-          target = target.to(device)
-          if 'batch' in FLAGS.sharding:
-            # All devices are along axis 0, which corresponds to the
-            # batch axis for the input
-            xs.mark_sharding(data, mesh, (0, 1))
+          x = data.to(device)
+          y = target.to(device)
           optimizer.zero_grad()
-          output = model(data)
-          loss = loss_fn(output, target)
+          if FLAGS.use_gradient_checkpointing:
+            for n_l, layer in enumerate(model):
+              # Apply gradient checkpointing for reduced memory footprint.
+              # This would result in increased computation cost.
+              if n_l > 0:
+                x = torch_xla.utils.checkpoint.checkpoint(layer, x)
+            output = x
+          else:
+            output = model(x)
+          loss = loss_fn(output, y)
           loss.backward()
         optimizer.step()
       xm.mark_step()

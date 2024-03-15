@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_LINEAR_INTERPOLATION_H_
+#define XLA_TORCH_XLA_CSRC_OPS_LINEAR_INTERPOLATION_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -22,3 +23,5 @@ class LinearInterpolation : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_LINEAR_INTERPOLATION_H_

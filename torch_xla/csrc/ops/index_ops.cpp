@@ -2,11 +2,9 @@
 
 #include <ATen/ExpandUtils.h>
 #include <ATen/Functions.h>
+#include <ATen/ops/select_copy.h>
+#include <torch/csrc/lazy/core/util.h>
 
-#include "tensorflow/compiler/xla/permutation_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -18,9 +16,13 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/scalar.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/tensor_methods.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_lower_util.h"
+#include "xla/permutation_util.h"
 
 namespace torch_xla {
 namespace {
@@ -60,9 +62,10 @@ std::vector<at::Tensor> ExpandByteTensors(
             << self.sizes() << " at index " << src_idx;
       }
       // Replace with nonzeros.
-      auto nonzero = index->nonzero();
+      at::Tensor nonzero = index->nonzero();
       for (int64_t j = 0; j < index->dim(); j++) {
-        result.emplace_back(nonzero.select(1, j));
+        // There is no tensor.select_copy. So at::select_copy is used.
+        result.emplace_back(at::select_copy(nonzero, 1, j));
       }
     } else {
       result.emplace_back(index.value_or(at::Tensor()));
@@ -145,11 +148,24 @@ std::vector<XLATensorPtr> WrapIndicesOnce(
   for (size_t dim_idx = 0; dim_idx < indices.size(); ++dim_idx) {
     const XLATensorPtr& dim_index = indices[dim_idx];
     int64_t dim_size = base_shape_ref.get().dimensions(dim_idx + start_dim);
-    XLATensorPtr wrapped_dim_index = XLATensor::Create(
-        dim_index->GetIrValue() +
-            XLAGraphExecutor::Get()->GetIrValueForScalar(
-                dim_size, dim_index->shape(), base->GetDevice()),
-        base->GetDevice());
+
+    XLATensorPtr wrapped_dim_index;
+    if (!dim_index->shape().get().is_dynamic()) {
+      wrapped_dim_index = XLATensor::Create(
+          dim_index->GetIrValue() +
+              XLAGraphExecutor::Get()->GetIrValueForScalar(
+                  dim_size, dim_index->shape(), base->GetDevice()),
+          base->GetDevice());
+    } else {
+      SymIntElements sym_int_elements(dim_index->GetIrValue());
+      wrapped_dim_index = XLATensor::Create(
+          dim_index->GetIrValue() +
+              XLAGraphExecutor::Get()->GetIrValueForScalar(
+                  dim_size, dim_index->shape(), sym_int_elements, c10::nullopt,
+                  base->GetDevice()),
+          base->GetDevice());
+    }
+
     XLATensorPtr wrap_cond =
         tensor_methods::lt(indices[dim_idx], at::Scalar(int64_t(0)));
     canonical_indices.push_back(
@@ -244,7 +260,9 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
   CheckIndexTensorTypes(orig_indices);
   // First expand ByteTensor (boolean masks) into 1 or more LongTensors, then
   // broadcast all index tensors together.
-  auto indices = at::expand_outplace(ExpandByteTensors(base, orig_indices));
+  std::vector<at::Tensor> expand_byte_tensors =
+      ExpandByteTensors(base, orig_indices);
+  std::vector<at::Tensor> indices = xla_expand_outplace(expand_byte_tensors);
   // If the non-null indices are not all adjacent, transpose base and indices
   // together so that they're adjacent at the front.
   CanonicalIndexInfo canonical_index_info = TransposeToFront(base, indices);

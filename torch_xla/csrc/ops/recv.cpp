@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/ops/recv.h"
 
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace ir {
@@ -24,10 +24,11 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& token,
 
 Recv::Recv(const torch::lazy::Value& token, const xla::Shape& recv_shape,
            int64_t channel_id)
-    : XlaNode(xla_recv, {token},
-              [&]() { return NodeOutputShape(token, recv_shape, channel_id); },
-              /*num_outputs=*/2,
-              torch::lazy::MHash(channel_id, recv_shape.ToString())),
+    : XlaNode(
+          xla_recv, {token},
+          [&]() { return NodeOutputShape(token, recv_shape, channel_id); },
+          /*num_outputs=*/2,
+          torch::lazy::MHash(channel_id, recv_shape.ToString())),
       recv_shape_(recv_shape.ToProto()),
       channel_id_(channel_id) {}
 

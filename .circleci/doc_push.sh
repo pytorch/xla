@@ -5,6 +5,7 @@ set -ex
 cd /tmp/pytorch/xla
 
 source ./xla_env
+source .circleci/common.sh
 
 echo "Building docs"
 pushd docs
@@ -12,7 +13,7 @@ pushd docs
 popd
 
 echo "Pushing to public"
-git config --global user.email "torchxla@gmail.com"
+git config --global user.email "pytorchxla@gmail.com"
 git config --global user.name "torchxlabot2"
 GH_PAGES_BRANCH=gh-pages
 GH_PAGES_DIR=gh-pages-tmp

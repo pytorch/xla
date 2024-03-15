@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_GENERIC_SLICE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_GENERIC_SLICE_H_
 
 #include "absl/types/span.h"
 #include "torch_xla/csrc/ir.h"
@@ -27,3 +28,5 @@ class GenericSlice : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_GENERIC_SLICE_H_

@@ -1,25 +1,26 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_IR_H_
+#define XLA_TORCH_XLA_CSRC_IR_H_
 
 #include <ATen/core/interned_strings.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/ir.h>
+#include <torch/csrc/lazy/core/ir_builder.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
 
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include "absl/container/inlined_vector.h"
 #include "absl/hash/hash.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/core/lib/gtl/inlined_vector.h"
-#include "third_party/xla_client/types.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/ir.h"
-#include "torch/csrc/lazy/core/ir_builder.h"
+#include "torch_xla/csrc/runtime/types.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 
@@ -28,7 +29,7 @@ static const uint32_t default_hash_seed = (uint32_t)0x5a2d296e9;
 class XlaNode;
 class LoweringContext;
 
-using XlaOpVector = tensorflow::gtl::InlinedVector<xla::XlaOp, 1>;
+using XlaOpVector = absl::InlinedVector<xla::XlaOp, 1>;
 
 template <typename T>
 using OutputMap =
@@ -122,19 +123,35 @@ class XlaNode : public torch::lazy::Node {
   torch::lazy::hash_t shardingHash() const { return sharding_hash_; }
 
   // The node's outputs get assigned the same HLO sharding
-  // TODO: test multi-output example.
-  const std::shared_ptr<xla::OpSharding> GetSharding() const {
-    return output_sharding_;
+  const std::shared_ptr<xla::OpSharding> GetSharding(size_t index) const {
+    if (output_shardings_.size() == 0) {
+      return nullptr;
+    }
+    return output_shardings_[index];
   }
 
-  void SetSharding(const xla::OpSharding& sharding);
+  void SetSharding(const xla::OpSharding& sharding, size_t index);
 
   void ClearSharding() {
-    output_sharding_ = nullptr;
+    output_shardings_.clear();
     sharding_hash_ = 0;
   }
 
   std::string ToString() const override;
+
+  void MarkDynamicDimension(uint32_t dim) {
+    unbounded_dynamic_dims_.insert(dim);
+  }
+
+  const std::unordered_set<uint32_t>& dynamic_dims() const {
+    return unbounded_dynamic_dims_;
+  }
+
+  std::shared_ptr<torch::lazy::UserMetaData> SetUserMetadataForSubGraph(
+      std::shared_ptr<torch::lazy::UserMetaData> user_meta);
+
+ protected:
+  std::unordered_set<uint32_t> unbounded_dynamic_dims_;
 
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
@@ -145,17 +162,15 @@ class XlaNode : public torch::lazy::Node {
 
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
-  static torch::lazy::hash_t CreateShardingHash(
-      std::shared_ptr<xla::OpSharding> sharding, torch::lazy::hash_t hash_seed);
+  void UpdateShardingHash();
 
   xla::Shape xla_shape_;
   torch::lazy::hash_t node_hash_ = 0;
   torch::lazy::hash_t dag_hash_;
   torch::lazy::hash_t sharding_hash_ = 0;
 
-  // Experimental sharding annotation attached to the IR node.
-  // TODO(yeounoh): make sure that view update doesn't reset this.
-  std::shared_ptr<xla::OpSharding> output_sharding_ = nullptr;
+  // Experimental sharding annotations attached to the IR node.
+  std::vector<std::shared_ptr<xla::OpSharding>> output_shardings_;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {
@@ -179,4 +194,15 @@ T* NodeCast(const torch::lazy::Node* node, torch::lazy::OpKind op) {
   return const_cast<T*>(casted);
 }
 
+struct CustomOpNameMetaData : public torch::lazy::UserMetaData {
+  CustomOpNameMetaData(const std::string& input_op_name_prefix,
+                       int input_max_stack_depth)
+      : op_name_prefix(input_op_name_prefix),
+        max_stack_depth(input_max_stack_depth) {}
+  std::string op_name_prefix;
+  size_t max_stack_depth;
+};
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_IR_H_

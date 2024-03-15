@@ -55,6 +55,16 @@ class XlaDataTypeTest(unittest.TestCase):
     assert t2.dtype == torch.float
     assert 'f64' not in hlo_text
 
+  def test_datatype_U16_32_64(self):
+
+    def _dtype_round_trip(dtype):
+      t = torch.randint(0, 128, (2, 4), dtype=dtype).to(xm.xla_device())
+      return t.cpu().dtype
+
+    for dtype in [torch.uint16, torch.uint32, torch.uint64]:
+      dtype2 = _dtype_round_trip(dtype)
+      self.assertTrue(dtype == dtype2)
+
 
 if __name__ == '__main__':
   print(f'XLA_USE_BF16: {os.getenv("XLA_USE_BF16")}')

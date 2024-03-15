@@ -1,12 +1,13 @@
-#include "torch_xla_test.h"
+#include "test/cpp/torch_xla_test.h"
 
 #include <ATen/ATen.h>
 
 #include "absl/memory/memory.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/tf_logging.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -18,13 +19,13 @@ static bool xla_backend_inited = InitXlaBackend();
 
 void XlaTest::SetUp() {
   at::manual_seed(42);
-  XLAGraphExecutor::Get()->SetRngSeed(GetCurrentDevice(), 42);
+  XLAGraphExecutor::Get()->SetRngSeed(bridge::GetCurrentDevice(), 42);
   start_msnap_ = absl::make_unique<MetricsSnapshot>();
 }
 
 void XlaTest::TearDown() {
   static bool dump_metrics =
-      xla::sys_util::GetEnvBool("XLA_TEST_DUMP_METRICS", false);
+      torch_xla::runtime::sys_util::GetEnvBool("XLA_TEST_DUMP_METRICS", false);
   if (dump_metrics) {
     MakeEndSnapshot();
 

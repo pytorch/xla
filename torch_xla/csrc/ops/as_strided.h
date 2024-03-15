@@ -1,9 +1,10 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_H_
+#define XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_H_
 
 #include <vector>
 
-#include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 
@@ -39,3 +40,5 @@ class AsStrided : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_H_

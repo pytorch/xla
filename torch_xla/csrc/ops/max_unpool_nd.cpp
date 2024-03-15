@@ -1,9 +1,10 @@
 #include "torch_xla/csrc/ops/max_unpool_nd.h"
 
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
@@ -12,8 +13,8 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const torch::lazy::Value& indices,
                            absl::Span<const int64_t> output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildMaxUnpoolNd(GetCurrentDevice(), operands[0], operands[1],
-                            output_size);
+    return BuildMaxUnpoolNd(bridge::GetCurrentDevice(), operands[0],
+                            operands[1], output_size);
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(indices)}, shape_fn);
 }
@@ -35,10 +36,11 @@ c10::Symbol MaxUnpoolNdSymbol(int64_t spatial_dim_count) {
 MaxUnpoolNd::MaxUnpoolNd(const torch::lazy::Value& input,
                          const torch::lazy::Value& indices,
                          std::vector<int64_t> output_size)
-    : XlaNode(torch::lazy::OpKind(MaxUnpoolNdSymbol(output_size.size())),
-              {input, indices},
-              [&]() { return NodeOutputShape(input, indices, output_size); },
-              /*num_outputs=*/1, torch::lazy::MHash(output_size)),
+    : XlaNode(
+          torch::lazy::OpKind(MaxUnpoolNdSymbol(output_size.size())),
+          {input, indices},
+          [&]() { return NodeOutputShape(input, indices, output_size); },
+          /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
 torch::lazy::NodePtr MaxUnpoolNd::Clone(torch::lazy::OpList operands) const {

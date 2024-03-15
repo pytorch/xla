@@ -2,8 +2,21 @@ apiVersion: v1
 kind: Pod
 metadata:
   generateName: xla-test-job-
+  labels:
+    tpu: v2-8
 spec:
   affinity:
+    # Prevent multiple pods from scheduling on the same host
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: tpu
+            operator: In
+            values:
+            - v2-8
+        topologyKey: "kubernetes.io/hostname"
+    # Only schedule on v2-8 TPUs
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
@@ -18,20 +31,25 @@ spec:
   - name: dshm
     emptyDir:
       medium: Memory
+  activeDeadlineSeconds: 7200 # 2 hours
   containers:
   - name: xla-test
     securityContext:
       privileged: true
-    image: gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID
+    image: $IMAGE
     command:
     - bash
-    - -c
+    - -cxe
     - |
-      python3 pytorch/xla/test/pjrt/test_operations.py -v
-      python3 pytorch/xla/test/pjrt/test_experimental_pjrt_tpu.py
-      python3 pytorch/xla/test/spmd/test_xla_sharding.py
-      python3 pytorch/xla/test/spmd/test_xla_virtual_device.py
-      python3 pytorch/xla/test/spmd/test_train_spmd_linear_model.py
+      # Torchvision installed from a commit requires torch, need to install after torch is compiled.
+      pip install --no-use-pep517 "git+https://github.com/pytorch/vision.git@$(cat /src/pytorch/.github/ci_commit_pins/vision.txt)"
+      pip install expecttest==0.1.6
+      pip install rich
+      pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+
+      cd /src/pytorch/xla
+      # TODO: pallas test requires JAX, now we need to explicitly set TPU_LIBRARY_PATH for JAX, need a permanent fix.
+      TPU_LIBRARY_PATH=/usr/local/lib/python3.10/site-packages/torch_xla/lib/libtpu.so test/tpu/run_tests.sh
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm

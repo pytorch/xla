@@ -32,28 +32,38 @@ import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
 import torch_xla.distributed.data_parallel as dp
+from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
-from torch_xla.experimental import pjrt
+import torch_xla.distributed.spmd as xs
+from torch_xla import runtime as xr
 import torch_xla.test.test_utils as xtu
 import torch_xla.utils.utils as xu
 import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
 import torch_xla.core.functions as xf
 import torch_xla.debug.profiler as xp
-import torchvision
 import unittest
 import test_utils
 
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
+XLA_DISABLE_FUNCTIONALIZATION = bool(
+    os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', False))
+
 
 def _is_on_tpu():
-  return 'XRT_TPU_CONFIG' in os.environ or pjrt.device_type() == 'TPU'
+  return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
+
+
+def _is_on_eager_debug_mode():
+  return xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', bool, defval=False)
 
 
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
+skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
+                                   'skip on eager debug mode')
 
 
 def _gen_tensor(*args, **kwargs):
@@ -118,6 +128,19 @@ def _zeros_like(tensor_list):
     else:
       raise RuntimeError('Unsupported type: ', o.dtype)
   return zeros_tensors
+
+
+def onlyIfTorchSupportsCUDA(fn):
+  return unittest.skipIf(
+      not torch.cuda.is_available(), reason="requires PyTorch CUDA support")(
+          fn)
+
+
+def onlyIfPJRTDeviceIsCUDA(fn):
+  return unittest.skipIf(
+      os.environ.get("PJRT_DEVICE") not in ("GPU", "CUDA"),
+      reason="requires CUDA as PJRT_DEVICE")(
+          fn)
 
 
 class TestToXlaTensorArena(test_utils.XlaTestCase):
@@ -213,9 +236,14 @@ class XlaMNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
+@unittest.skipIf(
+    xr.device_type() == 'CUDA',
+    'Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU device per process instead of relying on threads.'
+)
 class TestParallelTensorMNIST(test_utils.XlaTestCase):
 
   def test(self):
+    # devices=['xla:0', 'xla:1', 'xla:2', 'xla:3'] for example.
     devices = xm.get_xla_supported_devices()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=8)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
@@ -240,37 +268,6 @@ class TestParallelTensorMNIST(test_utils.XlaTestCase):
           self.assertLess(loss.cpu().item(), 3.0)
 
     model_parallel = dp.DataParallel(XlaMNIST, device_ids=devices)
-    model_parallel(loop_fn, train_loader)
-
-
-class TestParallelTensorResnet18(test_utils.XlaTestCase):
-
-  def test(self):
-    devices = xm.get_xla_supported_devices()
-    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
-    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
-    train_loader = xu.SampleGenerator(
-        data=(torch.zeros(batch_size, 3, 224,
-                          224), torch.zeros(batch_size, dtype=torch.int64)),
-        sample_count=sample_count * len(devices))
-
-    def loop_fn(model, loader, device, context):
-      loss_fn = nn.NLLLoss()
-      optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
-
-      for data, target in loader:
-        with xu.TimedScope(msg='Training loop: ', printfn=None):
-          optimizer.zero_grad()
-          output = xu.timed(lambda: model(data), msg='Model: ', printfn=None)
-          loss = xu.timed(
-              lambda: loss_fn(output, target), msg='Loss: ', printfn=None)
-          xu.timed(loss.backward, msg='LossBkw: ', printfn=None)
-          xu.timed(
-              lambda: xm.optimizer_step(optimizer), msg='Step: ', printfn=None)
-          self.assertLess(loss.cpu().item(), 3.0)
-
-    model_parallel = dp.DataParallel(
-        torchvision.models.resnet18, device_ids=devices)
     model_parallel(loop_fn, train_loader)
 
 
@@ -303,6 +300,19 @@ class TestSelect(test_utils.XlaTestCase):
     sx = x.select(1, 12)
     tx = t.select(1, 12)
     self.assertEqual(tx, sx.data.cpu())
+
+  def test_masked_fill_scalar(self):
+
+    def fn(tensor):
+      # Build a mask from the first line of tensor.
+      # Also, make it have the same rank as the original tensor.
+      mask = tensor[0].ge(0.5).unsqueeze(dim=0)
+      # Call masked_fill.
+      return tensor.masked_fill(mask, 10)
+
+    x = _gen_tensor(2, 2, device=xm.xla_device())
+    x_cpu = x.cpu()
+    self.assertEqual(fn(x_cpu), fn(x))
 
 
 class TestRandom(test_utils.XlaTestCase):
@@ -385,9 +395,6 @@ class TestDynamicShape(test_utils.XlaTestCase):
         torch.masked_select(x, mask), 0)
     self.assertEqual(x_dim0_shape.item(), 3)
 
-  @unittest.skip(
-      "Temporarily disable test. See  https://github.com/pytorch/xla/issues/4501"
-  )
   def test_nonzero_cast(self):
     t1 = torch.ones(5, 2, device=xm.xla_device())
     # Result of the nonzero should be the index type. Currently
@@ -432,7 +439,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     devices = xm.get_xla_supported_devices()
     xla_devices = torch_xla._XLAC._xla_real_devices(devices)
     for device, xdevice in zip(devices, xla_devices):
-      self.assertTrue(re.match(r'(CPU|GPU|TPU):\d+$', xdevice) is not None)
+      self.assertIsNotNone(re.fullmatch(r'[A-Z]+:\d+$', xdevice))
 
   def test_negative_slice(self):
     t = _gen_tensor(32, 24, 32)
@@ -456,6 +463,55 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t_cat = torch.cat([t, empty_tensor], 0)
     x_cat = torch.cat([x, empty_tensor_xla], 0)
     self.assertEqual(t_cat.data, x_cat.data.cpu())
+
+  def test_nan_to_num_in_place(self):
+    t = torch.tensor([float('nan'), float('nan'), -float('nan'), 3.14])
+
+    def fn(x):
+      x.nan_to_num_(1.0, 2.0, 3.0)
+      return x
+
+    self.runAtenTest(t, fn)
+
+  @skipOnTpu
+  def test_nan_to_num_in_place_with_inf(self):
+    # Since TPU converts double to float (unlike CPU), the Inf entries are
+    # expected to be different. Skipping tests for Inf entries.
+    t = torch.tensor([float('nan'), float('inf'), -float('inf'), 3.14])
+
+    def fn(x):
+      x.nan_to_num_(1.0, 2.0, 3.0)
+      return x
+
+    self.runAtenTest(t, fn)
+
+  @skipOnTpu
+  def test_amp_foreach_non_finite_check_and_unscale_(self):
+    # Since TPU converts double to float (unlike CPU), the Inf entries are
+    # expected to be different. Skipping tests for Inf entries.
+    grads0 = torch.tensor([1, 2, 3, 4], dtype=torch.float32)
+    grads1 = torch.tensor([1.0, 2.0, float('nan'), 4.0], dtype=torch.float32)
+    inv_scale = torch.tensor(0.2, dtype=torch.float32)
+    found_inf = torch.tensor(0, dtype=torch.float32)
+    grads_output0 = grads0 * inv_scale
+    found_inf_output0 = torch.tensor(0, dtype=torch.float32)
+    found_inf_output1 = torch.tensor(1, dtype=torch.float32)
+
+    xla_device = xm.xla_device()
+    xla_grads0 = grads0.to(xla_device)
+    xla_inv_scale = inv_scale.to(xla_device)
+    xla_found_inf = found_inf.to(xla_device)
+    torch._amp_foreach_non_finite_check_and_unscale_([xla_grads0],
+                                                     xla_found_inf,
+                                                     xla_inv_scale)
+    self.assertEqual(grads_output0, xla_grads0, prec=1e-4)
+    self.assertEqual(found_inf_output0, xla_found_inf)
+
+    xla_grads1 = grads1.to(xla_device)
+    torch._amp_foreach_non_finite_check_and_unscale_([xla_grads1],
+                                                     xla_found_inf,
+                                                     xla_inv_scale)
+    self.assertEqual(found_inf_output1, xla_found_inf)
 
   def test_masked_fill_with_tensor(self):
     input = _gen_tensor(2, 5, 4, 3)
@@ -609,6 +665,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_result = xla_base[:, torch.empty(0, 6, dtype=torch.int64)]
     self.assertEqual(result, xla_result)
 
+  @unittest.skip(
+      "grad_input produces wrong results after functionalization. pytorch/pytorch#91199"
+  )
   def test_empty_strided(self):
     xla_device = xm.xla_device()
     m = nn.Conv1d(4, 6, kernel_size=3, groups=2)
@@ -632,6 +691,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         xla_output.sum() + sum(map(lambda x: x.sum(), xla_grad_input)),
         (xla_a, xla_output) + tuple(xla_m.parameters()),
         retain_graph=True)
+    self.assertEqual(output, xla_output, prec=1e-4)
+    self.assertEqual(grad_input, xla_grad_input, prec=1e-4)
     self.assertEqual(grad_grad_input, xla_grad_grad_input, prec=1e-4)
 
   def test_clamp(self):
@@ -903,14 +964,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     x.sum().backward()
     self.assertEqual(root.grad.tolist(), [[1, 2], [1, 1], [1, 1]])
 
-  def test_view_data_update(self):
-    a = torch.zeros(4, device=xm.xla_device())
-    v = a.view(2, 2)
-    a.data = a.data + 1
-    self.assertEqual(a.tolist(), [1, 1, 1, 1])
-    # Upadting a.data should not update v's value.
-    self.assertEqual(v.tolist(), [[0.0, 0.0], [0.0, 0.0]])
-
   def test_view_out_computation(self):
 
     def func(a, b):
@@ -922,31 +975,44 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
+  # TODO - upstream behavior has changed and results in expected DestroyXlaTensor
+  # counter as of 11/13/2023. Re-enable after reviewing the change.
+  @unittest.skipIf(True or XLA_DISABLE_FUNCTIONALIZATION,
+                   'Metrics differ when functionalization is disabled.')
   def test_set(self):
     met.clear_all()
 
     t1 = torch.zeros(50, device=xm.xla_device())
     t1 += 1
     xm.mark_step()
-    self.assertEqual(met.counter_value('DestroyXlaTensor'), 2)
-
-    t1.data = torch.zeros(20, device=xm.xla_device())
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
 
-    t1.set_(torch.zeros(10, device=xm.xla_device()))
+    t2 = torch.zeros(10, device=xm.xla_device())
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
 
-    t2 = torch.zeros(10, device=xm.xla_device())
     t1.set_(t2)
-    # shouldn't crash
-    t2.cpu()
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 6)
 
-  def test_view_data_slice(self):
+    # shouldn't crash
+    self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
+
+  @unittest.skipIf(XLA_DISABLE_FUNCTIONALIZATION,
+                   'Metrics differ when functionalization is disabled.')
+  def test_replace_xla_tensor(self):
+    met.clear_all()
+
     t1 = torch.zeros(50, device=xm.xla_device())
-    t1_slice = t1.data[:5]
-    # Assigning the view back to origonal tensor's data should be OK.
-    t1.data = t1_slice
-    self.assertEqual(t1.tolist(), [0, 0, 0, 0, 0])
+    t1 += 1
+    xm.mark_step()
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
+
+    t2 = torch.zeros(10, device=xm.xla_device())
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
+    torch_xla._XLAC._replace_xla_tensor(t1, t2)
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 5)
+
+    # shouldn't crash
+    self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
   def test_pred_type(self):
     xla_device = xm.xla_device()
@@ -1119,6 +1185,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.rand(4, 3), test_fn)
 
+  def test_diagonal_scatter_negative_dim(self):
+
+    def test_fn(input, src):
+      return torch.diagonal_scatter(input, src, 0, dim1=-1, dim2=0)
+
+    self.runAtenTest([torch.zeros(3, 3), torch.ones(3)], test_fn)
+
   def test_scatter_add_bool(self):
     xla_device = xm.xla_device()
     a = torch.tensor([[True, True, True, True, True],
@@ -1267,6 +1340,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         ), dtype=torch.int64)
     self.runAtenTest([token_type_ids, cat_ids], test_fn)
 
+  @unittest.skipIf(not XLA_DISABLE_FUNCTIONALIZATION,
+                   'When functionalization is enabled, views do not exist.')
   def test_save_view_alias_check(self):
 
     class Nested(object):
@@ -1486,7 +1561,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       return t
 
     # This test is for PjRT only
-    if pjrt.using_pjrt():
+    if xr.using_pjrt():
       self.runAtenTest([torch.tensor(20.0)], test_fn)
 
   def test_view_and_copy_(self):
@@ -1531,6 +1606,22 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     emb_out = emb(index)
     assert emb_out.dtype == torch.bfloat16
 
+  def test_embedding_int_indices(self):
+    model = torch.nn.Embedding(1024, 10)
+
+    # 1 and 2-dimensional tensors.
+    # They have different execution paths.
+    for shape in ((5,), (2, 5)):
+
+      def test_on_device(device):
+        m = copy.deepcopy(model).to(device)
+        index = torch.ones(shape, dtype=torch.int, device=device)
+        return m(index)
+
+      out = test_on_device("cpu")
+      out_x = test_on_device(xm.xla_device())
+      self.assertEqual(out, out_x.cpu())
+
   def test_transpose_1d(self):
 
     def test_fn(t1):
@@ -1564,13 +1655,49 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t3 = torch.randn(1, 3).to(xla_device)
     t1.addcdiv_(t2, t3, value=0.1)
     xm.mark_step()
-    self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+    self.assertEqual(met.metric_data("TransferToDeviceTime")[0], 4)
 
-    # The following two scalars shouldn't trigger TransferToServerTime.
+    # The following two scalars shouldn't trigger TransferToDeviceTime.
     t1.addcdiv_(t2, t3, value=0.1)
     t1.addcdiv_(t2, t3, value=0.1)
     xm.mark_step()
-    self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+    self.assertEqual(met.metric_data("TransferToDeviceTime")[0], 4)
+
+  @skipOnEagerDebug
+  def test_print_executation(self):
+    xla_device = xm.xla_device()
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+
+    # case 1 mark_step
+    t1 = torch.randn(1, 4, device=xla_device)
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    for _ in range(3):
+      print(t1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
+
+    # case 2 no mark_step, directly print
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
+
+    # case 2 no mark_step, print with .cpu
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1.cpu())
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
 
   def test_index_types(self):
 
@@ -1582,6 +1709,163 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         torch.randint(0, 1, size=(10,), dtype=dtype)
         for dtype in (torch.long, torch.int32, torch.bool)
     ], test_fn)
+
+  def test_native_dropout_backward(self):
+
+    def test_fn(input):
+      dropped = torch.native_dropout(input, 0.5, train=True)
+      loss = dropped[0] + 0.5
+      loss.mean().backward()
+      return dropped[1].cpu(), input.grad.cpu()
+
+    met.clear_all()
+    xla_device = xm.xla_device()
+    input_cpu = torch.randn(7, 7, requires_grad=True)
+    input_xla = torch.randn(7, 7, device=xla_device, requires_grad=True)
+    mask_cpu, grad_cpu = test_fn(input_cpu)
+    mask_xla, grad_xla = test_fn(input_xla)
+    # dropout is random, hence we construct the expected grad_xla by mask_xla
+    # and gradient_cpu.
+    grad_cpu_single = grad_cpu[mask_cpu][0]
+    torch.allclose(
+        grad_cpu_single * mask_xla.to(torch.float), grad_xla, rtol=1e-03)
+
+    self.assertIn("xla::native_dropout_backward", met.counter_names())
+    self.assertNotIn("aten::native_dropout_backward", met.counter_names())
+
+  def test_conv2d_backward(self):
+    # Somehow eager cpu produces different results than us, and
+    # therefore we can't compare eager and xla.
+    conv = nn.Conv2d(1, 1, kernel_size=1).to('xla')
+    input = torch.tensor([[[[2077.0]]]]).to('xla')
+
+    output = conv(input)
+    loss = torch.sum(output)
+    loss.backward()
+    self.assertTrue(
+        torch.allclose(conv.weight.grad.cpu(), torch.tensor([[[[2077.0]]]])))
+
+  @skipOnTpu  # fail with precision issue on TPU
+  def test_patched_linear_3D(self):
+    linear_cpu = nn.Linear(2, 4, bias=False)
+    input_cpu = torch.randn(4, 3, 2, requires_grad=True)
+    input_cpu.retain_grad()
+    output_cpu = linear_cpu(input_cpu)
+
+    # It looks like nn.Module.to is in-place.
+    linear = copy.deepcopy(linear_cpu).to('xla')
+    apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
+    input = copy.deepcopy(input_cpu).to('xla')
+    input.retain_grad()
+    output = linear(input)
+
+    # Make sure that we don't have any reshapes in the patched linear.
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+    self.assertNotIn("reshape", hlo)
+
+    # Make sure the forward result is correct.
+    self.assertTrue(torch.allclose(output.cpu(), output_cpu))
+
+    # Now work on the backward.
+    linear_cpu.weight.retain_grad()
+    loss_cpu = output_cpu.sum()
+    loss_cpu.backward()
+
+    loss = output.sum()
+    loss.backward()
+
+    self.assertTrue(
+        torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
+
+  @skipOnTpu  # fail with precision issue on TPU
+  def test_patched_linear_3D_bias(self):
+    linear_cpu = nn.Linear(2, 4)
+    input_cpu = torch.randn(4, 3, 2)
+    output_cpu = linear_cpu(input_cpu)
+
+    # It looks like nn.Module.to is in-place.
+    linear = copy.deepcopy(linear_cpu).to('xla')
+    apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
+    input = copy.deepcopy(input_cpu).to('xla')
+    output = linear(input)
+
+    # We will have some reshapes on the bias. So skip the check here.
+    # Make sure the forward result is correct.
+    self.assertTrue(torch.allclose(output.cpu(), output_cpu))
+
+    # Now work on the backward.
+    linear_cpu.weight.retain_grad()
+    loss_cpu = output_cpu.sum()
+    loss_cpu.backward()
+
+    loss = output.sum()
+    loss.backward()
+
+    self.assertTrue(
+        torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
+
+  @skipOnTpu  # fail with precision issue on TPU
+  def test_patched_linear_2D_bias(self):
+    linear_cpu = nn.Linear(2, 4)
+    input_cpu = torch.randn(4, 2, requires_grad=True)
+    input_cpu.retain_grad()
+    output_cpu = linear_cpu(input_cpu)
+
+    # It looks like nn.Module.to is in-place.
+    linear = copy.deepcopy(linear_cpu).to('xla')
+    apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
+    input = copy.deepcopy(input_cpu).to('xla')
+    input.retain_grad()
+    output = linear(input)
+
+    # Make sure the forward result is correct.
+    self.assertTrue(torch.allclose(output.cpu(), output_cpu))
+
+    # Now work on the backward.
+    linear_cpu.weight.retain_grad()
+    loss_cpu = output_cpu.sum()
+    loss_cpu.backward()
+
+    loss = output.sum()
+    loss.backward()
+
+    self.assertTrue(
+        torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
+    self.assertTrue(
+        torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
+
+  @skipOnTpu  # fail with precision issue on TPU
+  def test_patched_linear_1D_bias(self):
+    linear_cpu = nn.Linear(2, 4)
+    input_cpu = torch.randn(2, requires_grad=True)
+    input_cpu.retain_grad()
+    output_cpu = linear_cpu(input_cpu)
+
+    # It looks like nn.Module.to is in-place.
+    linear = copy.deepcopy(linear_cpu).to('xla')
+    apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
+    input = copy.deepcopy(input_cpu).to('xla')
+    input.retain_grad()
+    output = linear(input)
+
+    # Make sure the forward result is correct.
+    self.assertTrue(torch.allclose(output.cpu(), output_cpu))
+
+    # Now work on the backward.
+    linear_cpu.weight.retain_grad()
+    loss_cpu = output_cpu.sum()
+    loss_cpu.backward()
+
+    loss = output.sum()
+    loss.backward()
+
+    self.assertTrue(
+        torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
+    self.assertTrue(
+        torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
 
 
 class MNISTComparator(nn.Module):
@@ -1635,42 +1919,6 @@ class TestModelComparator(test_utils.XlaTestCase):
     self.assertEqual(len(report), 0)
 
 
-class TestAsyncScalar(test_utils.XlaTestCase):
-
-  def test_rng_seed_transfer(self):
-    xla_device = xm.xla_device()
-    async_mode = xu.getenv_as('XLA_TRANSFER_SCALAR_ASYNC', bool, defval=False)
-    # mark_step to clear the rng seed
-    xm.mark_step()
-
-    transfer_to_server_async_metric = met.metric_data("TransferToServerAsync")
-    async_transfer_count = 0 if transfer_to_server_async_metric == None else transfer_to_server_async_metric[
-        0]
-    t1 = torch.randn(3, 3, device=xla_device)
-    xm.mark_step()
-    if async_mode:
-      assert met.metric_data(
-          "TransferToServerAsync")[0] == async_transfer_count + 1
-    else:
-      assert met.metric_data("TransferToServerAsync") == None
-
-  def test_scalar_transfer(self):
-    xla_device = xm.xla_device()
-    async_mode = xu.getenv_as('XLA_TRANSFER_SCALAR_ASYNC', bool, defval=False)
-
-    transfer_to_server_async_metric = met.metric_data("TransferToServerAsync")
-    async_transfer_count = 0 if transfer_to_server_async_metric == None else transfer_to_server_async_metric[
-        0]
-    t1 = torch.randn(3, 3).to(xla_device)
-    t2 = t1 / 0.5
-    t3 = t2.cpu()
-    if async_mode:
-      assert met.metric_data(
-          "TransferToServerAsync")[0] == async_transfer_count + 1
-    else:
-      assert met.metric_data("TransferToServerAsync") == None
-
-
 class TestWaitDeviceOps(test_utils.XlaTestCase):
 
   def test_wait_device_ops(self):
@@ -1687,6 +1935,35 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
     xm.wait_device_ops()
     self.assertTrue("ExecuteTime" in met.metric_names() or
                     "ExecuteChainedTime" in met.metric_names())
+
+
+class TestDebuggingUtil(test_utils.XlaTestCase):
+
+  def test_get_xla_tensor_debug_info(self):
+    if xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', str, '1'):
+      # ignore this test for eager debug mode since it will
+      # mess up the IR.
+      return
+    device = xm.xla_device()
+    # test non xla tensor
+    cpu_t1 = torch.randn(5)
+    cpu_t1_info = torch_xla._XLAC._get_xla_tensor_debug_info(cpu_t1)
+    self.assertIn('Not a XLATensor', cpu_t1_info)
+
+    # test a tensor with IR
+    t1 = cpu_t1.to(device)
+    t2 = t1 + 5
+    t2_info = torch_xla._XLAC._get_xla_tensor_debug_info(t2)
+    self.assertIn('XLA Shape: f32[5]', t2_info)
+    self.assertIn('aten::add', t2_info)
+    self.assertIn('XLAData: None', t2_info)
+
+    # after makr_step XLAData should present
+    xm.mark_step()
+    t2_info_new = torch_xla._XLAC._get_xla_tensor_debug_info(t2)
+    self.assertNotIn('XLAData: None', t2_info_new)
+    self.assertIn('Data Shape: f32[5]', t2_info_new)
+    self.assertIn('IR: None', t2_info_new)
 
 
 class TestOpBuilder(test_utils.XlaTestCase):
@@ -1831,6 +2108,16 @@ class XpTraceTest(test_utils.XlaTestCase):
       with xp.Trace('conv1'):
         xm.mark_step()
 
+  def test_non_empty_scope_decorator(self):
+
+    @xp.trace_me("conv2")
+    def func():
+      xm.mark_step()
+
+    with self.assertRaisesRegex(RuntimeError,
+                                r'Expecting scope to be empty but it is conv2'):
+      func()
+
 
 class RegisterXLAKeyTest(test_utils.XlaTestCase):
 
@@ -1838,6 +2125,28 @@ class RegisterXLAKeyTest(test_utils.XlaTestCase):
     torch_xla._XLAC._init_xla_lazy_backend()
     torch_xla._XLAC._init_xla_lazy_backend()
     self.assertEqual(met.counter_value("RegisterXLAFunctions"), 1)
+
+
+# Only fails in CI https://github.com/pytorch/xla/pull/5431
+@unittest.skip
+class TestLoweringContext(test_utils.XlaTestCase):
+
+  def test_api(self):
+    device = xm.xla_device()
+    a = torch.rand(10, device=device)
+    b = torch.rand(10, device=device)
+    xm.mark_step()
+
+    result = a + b
+
+    ctx = torch_xla._XLAC.lowering.LoweringContext()
+    ctx.build([result])
+    hlo = ctx.hlo()
+    hlo_text = ctx.hlo_text()
+    self.assertTrue('opcode: "parameter"' in hlo_text)
+    self.assertTrue('opcode: "add"' in hlo_text)
+    mapping = ctx.parameter_id_tensor_mapping()
+    self.assertEqual(len(mapping), 2)
 
 
 class TestGeneric(test_utils.XlaTestCase):
@@ -1859,6 +2168,13 @@ class TestGeneric(test_utils.XlaTestCase):
     t = _gen_tensor(2, 2, requires_grad=True)
     dt = xm.send_cpu_data_to_device([t], xla_device)
     self.assertTrue(dt[0].requires_grad)
+
+  def test_send_to_device_single(self):
+    xla_device = xm.xla_device()
+    t = _gen_tensor(2, 2)
+    dt = xm.send_cpu_data_to_device(t, xla_device)
+    self.assertEqual(dt[0].device, xla_device)
+    self.assertTrue(torch.all(torch.eq(dt[0].cpu(), t)))
 
   def test_nms(self):
     BOXES = (
@@ -1986,9 +2302,40 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertEqual(xdata.batch_sizes.device, torch.device('cpu'))
     self.assertEqual(xdata.data.device, xla_device)
 
+  def test_as_strided_input_larger(self):
+    size = (5, 5)
+    device = xm.xla_device()
+
+    a = torch.ones(size, device=device)
+    small_a = a[:, ::2]
+    former_a = small_a.as_strided(size, (5, 1), 0)
+
+    self.assertEqual(a, former_a)
+
+  def _test_move_tensor_cuda_to_xla(self, cpu_tensor):
+    # Assumes CPU-XLA data movement works.
+    cuda_tensor = cpu_tensor.to("cuda")
+    # Move tensor CUDA -> XLA.
+    xla_tensor = cuda_tensor.to(xm.xla_device())
+    # Move the XLA tensor back to CPU, and check that it is the same as
+    # the original CPU tensor.
+    self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_cuda_to_xla(self):
+    self._test_move_tensor_cuda_to_xla(torch.arange(5))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_scalar_cuda_to_xla(self):
+    # 0-dimensional scalar-tensor
+    # Has a different execution path than other tensors.
+    self._test_move_tensor_cuda_to_xla(torch.tensor(42))
+
 
 if __name__ == '__main__':
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
   torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
       use_full_mat_mul_precision=True)

@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/layout_manager.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <algorithm>
 #include <exception>
 #include <functional>
@@ -9,12 +11,12 @@
 #include <unordered_map>
 
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/tf_logging.h"
-#include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {
@@ -40,7 +42,8 @@ class LayoutManager {
 
   struct DimensionsHasher {
     size_t operator()(const absl::Span<const int64_t>& dimensions) const {
-      return xla::util::HashReduce(xla::util::MHash(dimensions));
+      return torch::lazy::HashReduce(torch::lazy::MHash(
+          std::vector<int64_t>({dimensions.begin(), dimensions.end()})));
     }
   };
 
@@ -61,7 +64,8 @@ class LayoutManager {
     // Layouts: SHAPE=LAYOUT;...
     // SHAPE: INT,...
     // LAYOUT: INT,...
-    std::string layouts_env = xla::sys_util::GetEnvString("XLA_LAYOUTS", "");
+    std::string layouts_env =
+        runtime::sys_util::GetEnvString("XLA_LAYOUTS", "");
     if (!layouts_env.empty()) {
       std::vector<std::string> layouts = absl::StrSplit(layouts_env, ';');
       for (const auto& layout_str : layouts) {
@@ -138,7 +142,7 @@ xla::Shape MakeTpuShape(absl::Span<const int64_t> dimensions,
                         absl::Span<const bool> dynamic_dimensions,
                         xla::PrimitiveType type) {
   static double max_padding_factor =
-      xla::sys_util::GetEnvDouble("XLA_MAX_PADDING_FACTOR", 1.25);
+      runtime::sys_util::GetEnvDouble("XLA_MAX_PADDING_FACTOR", 1.25);
   xla::Shape shape;
   if (PaddingFactor(dimensions[dimensions.size() - 1], 128) *
           PaddingFactor(dimensions[dimensions.size() - 2], 8) <
@@ -181,7 +185,9 @@ xla::Shape MakeArrayShapeFromDimensions(
     return MakeShapeWithLayout(type, dimensions, dynamic_dimensions,
                                *layout_ptr);
   }
-  if (dimensions.size() > 1 && hw_type == XlaDeviceType::TPU) {
+
+  bool tpu_layout_env = runtime::sys_util::GetEnvBool("XLA_TPU_LAYOUT", true);
+  if (tpu_layout_env && dimensions.size() > 1 && CheckTpuDevice(hw_type)) {
     return MakeTpuShape(dimensions, dynamic_dimensions, type);
   }
   return MakeTorchTensorLayout(dimensions, dynamic_dimensions, type);

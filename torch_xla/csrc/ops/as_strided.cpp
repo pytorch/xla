@@ -1,16 +1,18 @@
 #include "torch_xla/csrc/ops/as_strided.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <algorithm>
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
-#include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
 
 namespace torch_xla {
 namespace {
@@ -18,9 +20,9 @@ namespace {
 xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const int64_t> size,
                           absl::Span<const int64_t> stride,
                           int64_t storage_offset) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   int64_t input_element_count = xla::ShapeUtil::ElementsIn(input_shape);
-  int64_t slice_size = xla::util::Multiply<int64_t>(size);
+  int64_t slice_size = torch_xla::runtime::util::Multiply<int64_t>(size);
   XLA_CHECK_LE(storage_offset + slice_size, input_element_count);
 
   xla::XlaOp off_input = input;
@@ -43,13 +45,13 @@ xla::XlaOp LowerAsStrided(xla::XlaOp input, absl::Span<const int64_t> size,
 
 AsStrided::AsStrided(const torch::lazy::Value& input, std::vector<int64_t> size,
                      std::vector<int64_t> stride, int64_t storage_offset)
-    : XlaNode(torch::lazy::OpKind(at::aten::as_strided), {input},
-              [&]() {
-                return xla::ShapeUtil::MakeShape(
-                    GetXlaShape(input).element_type(), size);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(size, stride, storage_offset)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::as_strided), {input},
+          [&]() {
+            return xla::ShapeUtil::MakeShape(GetXlaShape(input).element_type(),
+                                             size);
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(size, stride, storage_offset)),
       size_(std::move(size)),
       stride_(std::move(stride)),
       storage_offset_(storage_offset) {}

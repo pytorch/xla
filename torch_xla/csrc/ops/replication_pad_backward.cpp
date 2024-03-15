@@ -25,9 +25,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& grad_output,
 ReplicationPadBackward::ReplicationPadBackward(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
     std::vector<int64_t> padding)
-    : XlaNode(xla_replication_pad_backward, {grad_output, input},
-              [&]() { return NodeOutputShape(grad_output, input, padding); },
-              /*num_outputs=*/1, torch::lazy::MHash(padding)),
+    : XlaNode(
+          xla_replication_pad_backward, {grad_output, input},
+          [&]() { return NodeOutputShape(grad_output, input, padding); },
+          /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 torch::lazy::NodePtr ReplicationPadBackward::Clone(

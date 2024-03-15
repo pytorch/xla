@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_AVG_POOL_ND_H_
+#define XLA_TORCH_XLA_CSRC_OPS_AVG_POOL_ND_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -9,7 +10,8 @@ class AvgPoolNd : public XlaNode {
   AvgPoolNd(const torch::lazy::Value& input, int64_t spatial_dim_count,
             std::vector<int64_t> kernel_size, std::vector<int64_t> stride,
             std::vector<int64_t> padding, bool ceil_mode,
-            bool count_include_pad);
+            bool count_include_pad,
+            std::optional<int> divisor_override = std::nullopt);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
@@ -39,6 +41,9 @@ class AvgPoolNd : public XlaNode {
   // Whether the counts used to compute the average should include the added
   // padding.
   bool count_include_pad_;
+  std::optional<int> divisor_override_;
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_AVG_POOL_ND_H_

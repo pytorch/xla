@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_LOGSUMEXP_H_
+#define XLA_TORCH_XLA_CSRC_OPS_LOGSUMEXP_H_
 
 #include <c10/util/Optional.h>
 
@@ -29,3 +30,5 @@ class Logsumexp : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_LOGSUMEXP_H_

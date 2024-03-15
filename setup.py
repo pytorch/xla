@@ -4,73 +4,76 @@
 # Environment variables you are probably interested in:
 #
 #   DEBUG
-#     build with -O0 and -g (debug symbols)
+#     build with debug symbols
 #
 #   TORCH_XLA_VERSION
 #     specify the version of PyTorch/XLA, rather than the hard-coded version
 #     in this file; used when we're building binaries for distribution
 #
-#   VERSIONED_XLA_BUILD
-#     creates a versioned build
+#   GIT_VERSIONED_XLA_BUILD
+#     creates a git versioned build
 #
 #   TORCH_XLA_PACKAGE_NAME
 #     change the package name to something other than 'torch_xla'
 #
-#   COMPILE_PARALLEL=1
-#     enable parallel compile
-#
-#   BUILD_CPP_TESTS=1
-#     build the C++ tests
-#
-#   XLA_DEBUG=0
-#     build the xla/xrt client in debug mode
-#
-#   XLA_BAZEL_VERBOSE=0
+#   BAZEL_VERBOSE=0
 #     turn on verbose messages during the bazel build of the xla/xrt client
 #
 #   XLA_CUDA=0
 #     build the xla/xrt client with CUDA enabled
 #
+#   XLA_CPU_USE_ACL=0
+#     whether to use ACL
+#
 #   BUNDLE_LIBTPU=0
 #     include libtpu in final wheel
+
+#   BUILD_CPP_TESTS=0
+#     build the C++ tests
 #
-
-from __future__ import print_function
-
-from setuptools import setup, find_packages, distutils
-from torch.utils.cpp_extension import BuildExtension, CppExtension
+#   GCLOUD_SERVICE_KEY_FILE=''
+#     file containing the auth tokens for remote cache/build. implies remote cache.
+#
+#   BAZEL_REMOTE_CACHE=""
+#     whether to use remote cache for builds
+#
+#   TPUVM_MODE=0
+#     whether to build for TPU
+#
+#   SILO_NAME=""
+#     name of the remote build cache silo
+#
+#   CXX_ABI=""
+#     value for cxx_abi flag; if empty, it is inferred from `torch._C`.
+#
+from setuptools import setup, find_packages, distutils, Extension, command
+from setuptools.command import develop, build_ext
+import posixpath
 import contextlib
 import distutils.ccompiler
 import distutils.command.clean
-import glob
-import inspect
-import multiprocessing
-import multiprocessing.pool
 import os
-import platform
-import re
 import requests
 import shutil
 import subprocess
 import sys
 import tempfile
-import torch
 import zipfile
+
+import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_libtpu_version = '0.1.dev20230213'
+_date = '20240305'
+_libtpu_version = f'0.1.dev{_date}'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
+_jax_version = f'0.4.26.dev{_date}'
 
 
 def _get_build_mode():
   for i in range(1, len(sys.argv)):
     if not sys.argv[i].startswith('-'):
       return sys.argv[i]
-
-
-def _check_env_flag(name, default=''):
-  return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
 
 
 def get_git_head_sha(base_dir):
@@ -87,10 +90,10 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.1.0')
-  if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
+  version = os.getenv('TORCH_XLA_VERSION', '2.3.0')
+  if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
-      version += '+' + xla_git_sha[:7]
+      version += '+git' + xla_git_sha[:7]
     except Exception:
       pass
   return version
@@ -117,40 +120,12 @@ def create_version_files(base_dir, version, xla_git_sha, torch_git_sha):
     f.write('}  // namespace torch_xla\n')
 
 
-def generate_xla_lazy_code(base_dir):
-  generate_lazy_cmd = [
-      'python',
-      os.path.join(base_dir, 'scripts', 'gen_lazy_tensor.py')
-  ]
-  child = subprocess.Popen(generate_lazy_cmd)
-  streamdata = child.communicate()[0]
-  if child.returncode != 0:
-    print(
-        'Failed to generate lazy files: {}'.format(generate_lazy_cmd),
-        file=sys.stderr)
-    sys.exit(1)
-
-
-def build_extra_libraries(base_dir, build_mode=None):
-  build_libs_cmd = [os.path.join(base_dir, 'build_torch_xla_libs.sh')]
-  cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
-  if cxx_abi is not None:
-    build_libs_cmd += ['-O', '-D_GLIBCXX_USE_CXX11_ABI={}'.format(int(cxx_abi))]
-  if build_mode is not None:
-    build_libs_cmd += [build_mode]
-  if subprocess.call(build_libs_cmd) != 0:
-    print(
-        'Failed to build external libraries: {}'.format(build_libs_cmd),
-        file=sys.stderr)
-    sys.exit(1)
-
-
 def maybe_bundle_libtpu(base_dir):
   libtpu_path = os.path.join(base_dir, 'torch_xla', 'lib', 'libtpu.so')
   with contextlib.suppress(FileNotFoundError):
     os.remove(libtpu_path)
 
-  if not _check_env_flag('BUNDLE_LIBTPU', '0'):
+  if not build_util.check_env_flag('BUNDLE_LIBTPU', '0'):
     return
 
   try:
@@ -168,49 +143,16 @@ def maybe_bundle_libtpu(base_dir):
       whl.write(resp.content)
       whl.flush()
 
+      os.makedirs(os.path.join(base_dir, 'torch_xla', 'lib'), exist_ok=True)
       with open(libtpu_path, 'wb') as libtpu_so:
         z = zipfile.ZipFile(whl.name)
         libtpu_so.write(z.read('libtpu/libtpu.so'))
 
 
-def _compile_parallel(self,
-                      sources,
-                      output_dir=None,
-                      macros=None,
-                      include_dirs=None,
-                      debug=0,
-                      extra_preargs=None,
-                      extra_postargs=None,
-                      depends=None):
-  # Those lines are copied from distutils.ccompiler.CCompiler directly.
-  macros, objects, extra_postargs, pp_opts, build = self._setup_compile(
-      output_dir, macros, include_dirs, sources, depends, extra_postargs)
-  cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
-
-  def compile_one(obj):
-    try:
-      src, ext = build[obj]
-    except KeyError:
-      return
-    self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
-
-  list(
-      multiprocessing.pool.ThreadPool(multiprocessing.cpu_count()).imap(
-          compile_one, objects))
-  return objects
-
-
-# Plant the parallel compile function.
-if _check_env_flag('COMPILE_PARALLEL', default='1'):
-  try:
-    if (inspect.signature(distutils.ccompiler.CCompiler.compile) ==
-        inspect.signature(_compile_parallel)):
-      distutils.ccompiler.CCompiler.compile = _compile_parallel
-  except:
-    pass
-
-
 class Clean(distutils.command.clean.clean):
+
+  def bazel_clean_(self):
+    self.spawn(['bazel', 'clean', '--expunge'])
 
   def run(self):
     import glob
@@ -232,22 +174,10 @@ class Clean(distutils.command.clean.clean):
             except OSError:
               shutil.rmtree(filename, ignore_errors=True)
 
+    self.execute(self.bazel_clean_, (), msg="Cleaning bazel outputs")
+
     # It's an old-style class in Python 2.7...
     distutils.command.clean.clean.run(self)
-
-
-class Build(BuildExtension):
-
-  def run(self):
-    # Run the original BuildExtension first. We need this before building
-    # the tests.
-    BuildExtension.run(self)
-    if _check_env_flag('BUILD_CPP_TESTS', default='1'):
-      # Build the C++ tests.
-      cmd = [os.path.join(base_dir, 'test/cpp/run_tests.sh'), '-B']
-      if subprocess.call(cmd) != 0:
-        print('Failed to build tests: {}'.format(cmd), file=sys.stderr)
-        sys.exit(1)
 
 
 xla_git_sha, torch_git_sha = get_git_head_sha(base_dir)
@@ -258,127 +188,130 @@ if build_mode not in ['clean']:
   # Generate version info (torch_xla.__version__).
   create_version_files(base_dir, version, xla_git_sha, torch_git_sha)
 
-  # Generate Lazy related files
-  generate_xla_lazy_code(base_dir)
-
-  # Build the support libraries (ie, TF).
-  build_extra_libraries(base_dir, build_mode=build_mode)
-
   # Copy libtpu.so into torch_xla/lib
   maybe_bundle_libtpu(base_dir)
 
-# Fetch the sources to be built.
-torch_xla_sources = (
-    glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
-    glob.glob('torch_xla/pb/cpp/*.cc') +
-    glob.glob('torch_xla/csrc/generated/*.cpp'))
 
-# Constant known variables used throughout this file.
-lib_path = os.path.join(base_dir, 'torch_xla/lib')
-pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH',
-                                os.path.dirname(base_dir))
+class BazelExtension(Extension):
+  """A C/C++ extension that is defined as a Bazel BUILD target."""
 
-# Setup include directories folders.
-include_dirs = [
-    base_dir,
-]
-for ipath in [
-    'bazel-bin',
-    'bazel-xla',
-    'bazel-bin/external/org_tensorflow/',
-    'bazel-xla/external/org_tensorflow/',
-    'bazel-xla/external/com_github_grpc_grpc/include',
-    'bazel-xla/external/com_google_protobuf/src',
-    'bazel-xla/external/eigen_archive',
-    'bazel-xla/external/com_google_absl',
-    'bazel-xla/external/com_googlesource_code_re2',
-    'bazel-xla/com_github_grpc_grpc/include',
-]:
-  include_dirs.append(os.path.join(base_dir, ipath))
-include_dirs += [
-    pytorch_source_path,
-    os.path.join(pytorch_source_path, 'torch/csrc'),
-    os.path.join(pytorch_source_path, 'torch/lib/tmp_install/include'),
-]
-
-library_dirs = []
-library_dirs.append(lib_path)
-
-extra_link_args = []
-
-DEBUG = _check_env_flag('DEBUG')
-IS_DARWIN = (platform.system() == 'Darwin')
-IS_LINUX = (platform.system() == 'Linux')
+  def __init__(self, bazel_target):
+    self.bazel_target = bazel_target
+    self.relpath, self.target_name = (
+        posixpath.relpath(bazel_target, '//').split(':'))
+    ext_name = os.path.join(
+        self.relpath.replace(posixpath.sep, os.path.sep), self.target_name)
+    if ext_name.endswith('.so'):
+      ext_name = ext_name[:-3]
+    Extension.__init__(self, ext_name, sources=[])
 
 
-def make_relative_rpath(path):
-  if IS_DARWIN:
-    return '-Wl,-rpath,@loader_path/' + path
-  else:
-    return '-Wl,-rpath,$ORIGIN/' + path
+class BuildBazelExtension(build_ext.build_ext):
+  """A command that runs Bazel to build a C/C++ extension."""
+
+  def run(self):
+    for ext in self.extensions:
+      self.bazel_build(ext)
+    command.build_ext.build_ext.run(self)
+
+  def bazel_build(self, ext):
+    if not os.path.exists(self.build_temp):
+      os.makedirs(self.build_temp)
+
+    bazel_argv = [
+        'bazel', 'build', ext.bazel_target,
+        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
+    ]
+
+    import torch
+    cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C,
+                                              '_GLIBCXX_USE_CXX11_ABI', None)
+    if cxx_abi is not None:
+      bazel_argv.append(f'--cxxopt=-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
+
+    bazel_argv.extend(build_util.bazel_options_from_env())
+
+    self.spawn(bazel_argv)
+
+    ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
+                                      ext.target_name)
+    ext_dest_path = self.get_ext_fullpath(ext.name)
+    ext_dest_dir = os.path.dirname(ext_dest_path)
+    if not os.path.exists(ext_dest_dir):
+      os.makedirs(ext_dest_dir)
+    shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
 
 
-extra_compile_args = [
-    '-std=c++17',
-    '-Wno-sign-compare',
-    '-Wno-deprecated-declarations',
-    '-Wno-return-type',
-]
+class Develop(develop.develop):
 
-if re.match(r'clang', os.getenv('CC', '')):
-  extra_compile_args += [
-      '-Wno-macro-redefined',
-      '-Wno-return-std-move',
-  ]
+  def run(self):
+    self.run_command("build_ext")
+    super().run()
 
-if DEBUG:
-  extra_compile_args += ['-O0', '-g']
-  extra_link_args += ['-O0', '-g']
-else:
-  extra_compile_args += ['-DNDEBUG']
 
-extra_link_args += ['-lxla_computation_client']
+# Read in README.md for our long_description
+cwd = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
+  long_description = f.read()
 
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
     description='XLA bridge for PyTorch',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url='https://github.com/pytorch/xla',
     author='PyTorch/XLA Dev Team',
     author_email='pytorch-xla@googlegroups.com',
-    # Exclude the build files.
-    packages=find_packages(exclude=['build']),
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Mathematics",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: C++",
+        "Programming Language :: Python :: 3",
+    ],
+    python_requires=">=3.8.0",
+    packages=find_packages(include=['torch_xla*']),
     ext_modules=[
-        CppExtension(
-            '_XLAC',
-            torch_xla_sources,
-            include_dirs=include_dirs,
-            extra_compile_args=extra_compile_args,
-            library_dirs=library_dirs,
-            extra_link_args=extra_link_args + \
-                [make_relative_rpath('torch_xla/lib')],
-        ),
+        BazelExtension('//:_XLAC.so'),
     ],
     install_requires=[
-      'absl-py>=1.0.0',
-      'cloud-tpu-client>=0.10.0',
+        'absl-py>=1.0.0',
+        'cloud-tpu-client>=0.10.0',
+        'pyyaml',
+        # importlib.metadata backport required for PJRT plugin discovery prior
+        # to Python 3.10
+        'importlib_metadata>=4.6;python_version<"3.10"',
     ],
+    package_data={
+        'torch_xla': ['lib/*.so*',],
+    },
+    entry_points={
+        'console_scripts': [
+            'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
+        ],
+        'torch_xla.plugins': ['tpu = torch_xla._internal.tpu:TpuPlugin',],
+    },
     extras_require={
         # On Cloud TPU VM install with:
-        # $ sudo pip3 install torch_xla[tpuvm] -f https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl
+        # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+        'tpu': [f'libtpu-nightly=={_libtpu_version}'],
+        # On nightly, install libtpu with `pip install torch_xla[tpuvm]`
+        # Remove from release branches since this is not allowed by PyPI.
         'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
+        # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+        'pallas': [f'jaxlib=={_jax_version}', f'jax=={_jax_version}'],
     },
-    package_data={
-        'torch_xla': [
-            'lib/*.so*',
-        ],
-    },
-    data_files=[
-        'scripts/fixup_binary.py',
-    ] + [
-        'test/cpp/build/test_ptxla'
-    ] if _check_env_flag('BUILD_CPP_TESTS', default='1') else [],
     cmdclass={
-        'build_ext': Build,
+        'build_ext': BuildBazelExtension,
         'clean': Clean,
+        'develop': Develop,
     })

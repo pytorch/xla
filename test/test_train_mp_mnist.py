@@ -1,5 +1,5 @@
 import args_parse
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
 
 MODEL_OPTS = {
     '--ddp': {
@@ -76,12 +76,8 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_mnist(flags, **kwargs):
-  if flags.pjrt_distributed:
-    import torch_xla.experimental.pjrt_backend
-    dist.init_process_group('xla', init_method='pjrt://')
-  elif flags.ddp:
-    dist.init_process_group(
-        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+  if flags.ddp or flags.pjrt_distributed:
+    dist.init_process_group('xla', init_method='xla://')
 
   torch.manual_seed(1)
 
@@ -140,8 +136,8 @@ def train_mnist(flags, **kwargs):
 
   # Initialization is nondeterministic with multiple threads in PjRt.
   # Synchronize model parameters across replicas manually.
-  if pjrt.using_pjrt():
-    pjrt.broadcast_master_param(model)
+  if xr.using_pjrt():
+    xm.broadcast_master_param(model)
 
   if flags.ddp:
     model = DDP(model, gradient_as_bucket_view=True)
@@ -210,7 +206,7 @@ def train_mnist(flags, **kwargs):
 
 
 def _mp_fn(index, flags):
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_mnist(flags)
   if flags.tidy and os.path.isdir(flags.datadir):
     shutil.rmtree(flags.datadir)

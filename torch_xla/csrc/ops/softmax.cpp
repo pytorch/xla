@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/softmax.h"
 
-#include "torch/csrc/lazy/core/tensor_util.h"
+#include <torch/csrc/lazy/core/tensor_util.h>
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/softmax_builder.h"
@@ -29,10 +30,11 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 Softmax::Softmax(const torch::lazy::Value& input, int64_t dim,
                  c10::optional<at::ScalarType> dtype)
-    : XlaNode(torch::lazy::OpKind(at::aten::softmax), {input},
-              [&]() { return NodeOutputShape(input, dtype); },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::softmax), {input},
+          [&]() { return NodeOutputShape(input, dtype); },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
 

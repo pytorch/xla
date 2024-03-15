@@ -1,4 +1,7 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_
+#define XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_
+
+#include <torch/csrc/lazy/core/dynamic_ir.h>
 
 #include <functional>
 #include <memory>
@@ -12,6 +15,7 @@
 #include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/scalar.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 
@@ -56,6 +60,51 @@ class SizeNode : public XlaNode, public torch::lazy::DimensionNode {
 class SizeEq : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeEq(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override {
+    TORCH_CHECK(false, "Comparison operators should be using getDynamicValue");
+  }
+  bool isSymbolic() const override { return true; }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override {
+    // TODO: not sure we will ever need it?
+    TORCH_CHECK(false, "Lowering comparison nodes isn't supported yet!");
+  }
+};
+
+class SizeNe : public XlaNode, public torch::lazy::DimensionNode {
+ public:
+  SizeNe(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override {
+    TORCH_CHECK(false, "Comparison operators should be using getDynamicValue");
+  }
+  bool isSymbolic() const override { return true; }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override {
+    // TODO: not sure we will ever need it?
+    TORCH_CHECK(false, "Lowering comparison nodes isn't supported yet!");
+  }
+};
+
+class SizeGe : public XlaNode, public torch::lazy::DimensionNode {
+ public:
+  SizeGe(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override {
+    TORCH_CHECK(false, "Comparison operators should be using getDynamicValue");
+  }
+  bool isSymbolic() const override { return true; }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override {
+    // TODO: not sure we will ever need it?
+    TORCH_CHECK(false, "Lowering comparison nodes isn't supported yet!");
+  }
+};
+
+class SizeLt : public XlaNode, public torch::lazy::DimensionNode {
+ public:
+  SizeLt(torch::lazy::Value a, torch::lazy::Value b);
   int64_t getDynamicValue() const override;
   int64_t getStaticValue() const override {
     TORCH_CHECK(false, "Comparison operators should be using getDynamicValue");
@@ -120,6 +169,35 @@ class SizeDiv : public XlaNode, public torch::lazy::DimensionNode {
   int64_t upper_bound_;
 };
 
+class SizeMod : public XlaNode, public torch::lazy::DimensionNode {
+ public:
+  SizeMod(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override { return upper_bound_; }
+  bool isSymbolic() const override { return true; }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override;
+
+ private:
+  int64_t upper_bound_;
+};
+
+class SizeError : public XlaNode, public torch::lazy::DimensionNode {
+ public:
+  SizeError();
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override {
+    XLA_CHECK(false) << "SizeError shouldn't be called.";
+    return -1;
+  }
+  bool isSymbolic() const override {
+    XLA_CHECK(false) << "SizeError shouldn't be called.";
+    return true;
+  }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override;
+};
+
 const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output);
 const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node);
 const std::shared_ptr<torch::lazy::DimensionNode> DimCast(
@@ -141,3 +219,5 @@ class SizeConstant : public torch_xla::Scalar,
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_

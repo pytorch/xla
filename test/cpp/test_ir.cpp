@@ -2,7 +2,8 @@
 
 #include <stdexcept>
 
-#include "cpp_test_util.h"
+#include "test/cpp/cpp_test_util.h"
+#include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
@@ -14,7 +15,6 @@
 #include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/unselect.h"
 #include "torch_xla/csrc/ops/update_slice.h"
-#include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {

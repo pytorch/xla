@@ -4,10 +4,15 @@ import os
 import re
 import sys
 import runpy
+import torch
+import unittest
 
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
+
+from functools import wraps
+from torch.testing._internal.common_device_type import (DeviceTypeTestBase)
 
 DEFAULT_FLOATING_PRECISION = 1e-3
 
@@ -17,6 +22,10 @@ TORCH_TEST_PRECIIONS = {
     'test_pow_xla_float64': 0.0045,
     'test_var_neg_dim_xla_bfloat16': 0.01,
     'test_sum_xla_bfloat16': 0.1,
+    'test_put_xla_bfloat16': 0.05,
+    # Note test_put_* is local to PyTorch/XLA repo and not upstream.
+    'test_put_cpu_bfloat16': 0.05,
+    'test_take_xla_bfloat16': 0.05,
 }
 
 DISABLED_TORCH_TESTS_ANY = {
@@ -117,9 +126,12 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_resize_as_all_dtypes_and_devices',  # uses half
         'test_resize_all_dtypes_and_devices',  # uses half
         'test_pinverse',  # lowering
+        'test_put',  # Due to randperm and LTC, not deterministic.
+        'test_index_copy',  # Due to randperm and LTC, not deterministic
         'test_norm',
         'test_multinomial',
         'test_multinomial_alias',
+        'test_multinomial_rng_state_advance',  # very slow compile
         'test_masked_select',  # uses half
         'test_masked_fill_bool_tensor',  # lowering
         'test_lu',
@@ -201,6 +213,10 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_random_to_xla',  # doesn't raise
         'test_copy_',  # test against complex32 which is nto supported
         'test_assertRaisesRegex_ignore_msg_non_native_device_xla',  # segfault on wheel sanity test
+        'test_index_reduce',  # Broke by functionalization, pytorch/pytorch#94471
+        'test_logcumsumexp_xla',  # doesn't raise, pytorch/pytorch#92912
+        'test_narrow_copy_non_contiguous',  # the test is added for CPU, pytorch/pytorch#91789
+        'test_parallel_cow_materialize_error_xla',  # disabled in upstream /pytorch/pytorch/pull/120811
     },
 
     # test_view_ops.py
@@ -228,6 +244,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_empty_ndim_index',  # expecting a different runtime error
         'test_index_put_byte_indices_xla',  # expecting a different runtime error
     },
+
+    # test_indexing.py
     'NumpyTestsXLA': {
         'test_trivial_fancy_out_of_bounds',  # expecting a different runtime error
         'test_boolean_assignment_value_mismatch',  # expecting a different runtime error
@@ -277,6 +295,9 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_upsamplingBicubic2d_correctness_xla',  # FIXME! Got dtypes torch.float32 and torch.float64
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
+        # torch.autograd.gradcheck.GradcheckError: Jacobian mismatch for output 0 with respect to input 0
+        'test_GRU_grad_and_gradgrad_xla_float64',  # grad check failure
+        'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
     },
 
     # test/nn/test_dropout.py
@@ -304,6 +325,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_embedding_bag_device',  # FIXME! Unsupported device type for sparse layout: xla
         'test_embedding_scalar_weight_error_xla',  # tsl::CurrentStackTrace[abi:cxx11]
         'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
+        'test_EmbeddingBag_per_sample_weights_and_new_offsets',  # precision
     },
 
     # test/nn/test_convolution.py
@@ -414,8 +436,6 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # server side crash
         'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # server side crash
         'test_upsamplingNearest2d_xla',  # precision
-        'test_GRU_grad_and_gradgrad_xla_float64',  # grad check failure
-        'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
         'test_conv3d_valid_padding_backward_xla',  # grad check failure
         'test_ctc_loss_xla',  # runtime overflow error
         'test_upsamplingBicubic2d_xla',  # grad check failure
@@ -512,7 +532,7 @@ DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
 DISABLED_TORCH_TESTS = {
     'TPU': prepare_match_set(DISABLED_TORCH_TESTS_TPU),
     'CPU': prepare_match_set(DISABLED_TORCH_TESTS_CPU),
-    'GPU': prepare_match_set(DISABLED_TORCH_TESTS_GPU),
+    'CUDA': prepare_match_set(DISABLED_TORCH_TESTS_GPU),
 }
 
 

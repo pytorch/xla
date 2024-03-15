@@ -1,11 +1,12 @@
 #include "torch_xla/csrc/ops/mse_loss_backward.h"
 
-#include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
+#include <torch/csrc/lazy/core/util.h>
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/mse_loss.h"
 #include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace {
@@ -30,13 +31,14 @@ MseLossBackward::MseLossBackward(const torch::lazy::Value& grad_output,
                                  const torch::lazy::Value& input,
                                  const torch::lazy::Value& target,
                                  ReductionMode reduction)
-    : XlaNode(torch::lazy::OpKind(at::aten::mse_loss_backward),
-              {grad_output, input, target},
-              [&]() {
-                return NodeOutputShape(grad_output, input, target, reduction);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::mse_loss_backward),
+          {grad_output, input, target},
+          [&]() {
+            return NodeOutputShape(grad_output, input, target, reduction);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(torch::lazy::GetEnumValue(reduction))),
       reduction_(reduction) {}
 
 torch::lazy::NodePtr MseLossBackward::Clone(

@@ -15,10 +15,7 @@ import time
 import tempfile
 
 _QUIT = False
-_DEFAULT_VMODULE = [
-    'tensor=5', 'computation_client=5', 'xrt_computation_client=5',
-    'aten_xla_type=1'
-]
+_DEFAULT_VMODULE = ['tensor=5', 'computation_client=5', 'aten_xla_type=1']
 
 
 def term_handler(signum, frame):

@@ -1,10 +1,11 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_SHAPE_BUILDER_H_
+#define XLA_TORCH_XLA_CSRC_SHAPE_BUILDER_H_
 
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/shape.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 
@@ -32,3 +33,5 @@ class ShapeBuilder {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_SHAPE_BUILDER_H

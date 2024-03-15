@@ -1,9 +1,10 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_
+#define XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_
 
 #include <ATen/core/interned_strings.h>
 #include <c10/core/Scalar.h>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 
@@ -19,6 +20,9 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 xla::XlaOp BuildRelu(xla::XlaOp input);
 
 xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight);
+
+std::vector<xla::XlaOp> BuildPreluBackward(xla::XlaOp grad, xla::XlaOp input,
+                                           xla::XlaOp weight);
 
 std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
                                    const at::Scalar& upper, bool training,
@@ -92,6 +96,13 @@ xla::XlaOp BuildSelu(xla::XlaOp input);
 // Computes the LogSigmoid function of input.
 std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input);
 
+// Computes the logit function of the input.
+// If eps is given, the input is clamped between eps and 1-eps.
+xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps);
+
+// Computes the division of input and the divisor.
+xla::XlaOp BuildDiv(xla::XlaOp input, xla::XlaOp divisor);
+
 // Computes the backward of LogSigmoid.
 xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                    xla::XlaOp buffer);
@@ -105,4 +116,26 @@ xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
                             const at::Scalar& alpha, const at::Scalar& scale,
                             const at::Scalar& input_scale);
 
+// Computes a linear interpolation of two tensors start (given by input) and end
+// based on a scalar or tensor weight and returns the resulting out tensor.
+xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight);
+
+// Computes the rsub function. Subtracts input, scaled by alpha, from other.
+// out = other − alpha * input
+xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Computes the sub function. Subtracts other, scaled by alpha, from input.
+// out = input − alpha * other
+xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Computes the add function. Adds other, scaled by alpha, from input.
+// out = input + alpha * other
+xla::XlaOp BuildAdd(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Computes the mul function.
+// out = input * other
+xla::XlaOp BuildMul(xla::XlaOp input, xla::XlaOp other);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_

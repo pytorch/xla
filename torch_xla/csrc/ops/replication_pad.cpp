@@ -1,10 +1,10 @@
 #include "torch_xla/csrc/ops/replication_pad.h"
 
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
@@ -21,9 +21,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 ReplicationPad::ReplicationPad(const torch::lazy::Value& input,
                                std::vector<int64_t> padding)
-    : XlaNode(xla_replication_pad, {input},
-              [&]() { return NodeOutputShape(input, padding); },
-              /*num_outputs=*/1, torch::lazy::MHash(padding)),
+    : XlaNode(
+          xla_replication_pad, {input},
+          [&]() { return NodeOutputShape(input, padding); },
+          /*num_outputs=*/1, torch::lazy::MHash(padding)),
       padding_(std::move(padding)) {}
 
 torch::lazy::NodePtr ReplicationPad::Clone(torch::lazy::OpList operands) const {

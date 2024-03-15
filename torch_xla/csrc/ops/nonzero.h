@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_NONZERO_H_
+#define XLA_TORCH_XLA_CSRC_OPS_NONZERO_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -17,3 +18,5 @@ class NonZero : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_NONZERO_H_

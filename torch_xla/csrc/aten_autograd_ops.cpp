@@ -3,6 +3,7 @@
 #include <ATen/Operators.h>
 #include <ATen/RedispatchFunctions.h>
 #include <ATen/native/CPUFallback.h>
+#include <c10/core/impl/PythonDispatcherTLS.h>
 
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -98,6 +99,15 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
       c10::DispatchKey::Functionalize,
   });
   auto ks = self_keyset & mask;
+  // If python dispatcher is enabled, we need to hit it.
+  // This is a bit hacky, we should probably come up with
+  // a better way to do this (maybe don't redispatch?)
+  if (c10::impl::PythonDispatcherTLS::get_state()) {
+    ks = ks.add(c10::DispatchKey::PythonDispatcher);
+  }
+  if (ks.has(c10::DispatchKey::Python)) {
+    ks = ks.add(c10::DispatchKey::PythonTLSSnapshot);
+  }
   static auto op =
       c10::Dispatcher::singleton()
           .findSchemaOrThrow("xla::max_pool2d_forward", "")
@@ -141,6 +151,15 @@ torch::autograd::variable_list MaxPool2dAutogradFunction::backward(
       c10::DispatchKey::Functionalize,
   });
   auto ks = self_keyset & mask;
+  // If python dispatcher is enabled, we need to hit it.
+  // This is a bit hacky, we should probably come up with
+  // a better way to do this (maybe don't redispatch?)
+  if (c10::impl::PythonDispatcherTLS::get_state()) {
+    ks = ks.add(c10::DispatchKey::PythonDispatcher);
+  }
+  if (ks.has(c10::DispatchKey::Python)) {
+    ks = ks.add(c10::DispatchKey::PythonTLSSnapshot);
+  }
   grad = op.redispatch(ks, grad_output[0], self, kernel_size, stride, padding,
                        ceil_mode);
 
@@ -234,7 +253,7 @@ torch::Tensor max_pool2d_backward(torch::Tensor grad_output, torch::Tensor self,
   return grad;
 }
 
-TORCH_LIBRARY(xla, m) {
+TORCH_LIBRARY_FRAGMENT(xla, m) {
   m.def(
       "max_pool2d_forward(Tensor self, int[2] kernel_size, int[2] stride=[], "
       "int[2] padding=0, int[2] dilation=1, bool ceil_mode=False) -> Tensor",
@@ -246,5 +265,6 @@ TORCH_LIBRARY(xla, m) {
       "-> Tensor",
       torch::dispatch(c10::DispatchKey::XLA, TORCH_FN(max_pool2d_backward)));
 }
+
 }  // namespace aten_autograd_ops
 }  // namespace torch_xla

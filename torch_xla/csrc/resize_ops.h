@@ -1,9 +1,10 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_RESIZE_OPS_H_
+#define XLA_TORCH_XLA_CSRC_RESIZE_OPS_H_
 
 #include <string>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 namespace resize {
@@ -24,3 +25,5 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
 
 }  // namespace resize
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_RESIZE_OPS_H_

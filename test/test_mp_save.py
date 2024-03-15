@@ -39,6 +39,10 @@ def _mp_fn(index, temp_file):
   device = xm.xla_device()
   dd = _create_state_dict(device)
   xm.save(dd, temp_file)
+  # User needs to manually rendezvous since only master process
+  # will perform the save and other processes needs to wait.
+  # This is also aligned with the `torch.save`
+  xm.rendezvous('torch_xla.core.xla_model.save')
   ldd = torch.load(temp_file)
   pdd = _get_data_str(ldd)
   data = xm.rendezvous('xm_save_test', pdd)

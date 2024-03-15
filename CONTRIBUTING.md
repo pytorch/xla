@@ -8,7 +8,16 @@ Sending a PR without discussion might end up resulting in a rejected PR, because
 
 ## Building Manually
 
-To build from source:
+We recommend you to use our prebuilt Docker image to start your development work. If you want to use VSCode with docker, please refer to this [config](https://github.com/pytorch/xla/tree/master/.devcontainer/tpu-contributor).
+
+* Setup Development Docker Image
+
+  ```shell
+  docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
+  docker run --privileged --name ptxla -it -d -e "TERM=xterm-256color" us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
+  docker exec --privileged -it ptxla /bin/bash
+  ```
+  All of the code below will be assumed to be run within the docker.
 
 * Clone the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
 
@@ -23,122 +32,72 @@ To build from source:
   git clone --recursive https://github.com/pytorch/xla.git
   ```
 
-### Building Docker Image
-
-* We provide a Dockerfile in `docker/` that you can use to build images as the
-  following command:
-
+* Build PyTorch
+  ```Shell
+  cd /pytorch/
+  python setup.py develop
+  ```
+* Build PyTorch/XLA
   ```Shell
   cd xla/
-  docker build -t torch-xla -f docker/Dockerfile .
+  python setup.py develop
   ```
 
-### Building With Script
+### Build PyTorch/XLA from source with GPU support
 
-* To build and install `torch` and `torch_xla`:
+Please refer to this [guide](https://github.com/pytorch/xla/blob/master/docs/gpu.md#develop-pytorchxla-on-a-gpu-instance-build-pytorchxla-from-source-with-gpu-support).
 
-  ```Shell
-  xla/scripts/build_torch_wheels.sh
-  ```
-
-### Build From Source
-
-* Apply PyTorch patches:
-
-  ```Shell
-  xla/scripts/apply_patches.sh
-  ```
-
-* Install the Lark parser used for automatic code generation:
-
-  ```Shell
-  pip install lark-parser
-  ```
-
-* Currently _PyTorch_ does not build with _GCC_ 6.x, 7.x, and 8.x (various kind of ICEs). _CLANG_ 7, 8, 9 and 10 are known to be working, so install that in your VM:
-
-  ```Shell
-  sudo apt-get install clang-8 clang++-8
-  export CC=clang-8 CXX=clang++-8
-  ```
-
-  You may need to add the following line to your _/etc/apt/sources.list_ file:
-
-  ```Shell
-  deb http://deb.debian.org/debian/ testing main
-  ```
-
-  And run the following command before trying again to install _CLANG_:
-
-  ```Shell
-  sudo apt-get update
-  ```
-
-* Build _PyTorch_ from source following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
-
-  ```Shell
-  python setup.py install
-  ```
-
-* Install Bazelisk following the [instructions](https://github.com/bazelbuild/bazelisk#requirements). Bazelisk automatically picks a good version of Bazel for PyTorch/XLA build.
-
-* Build the _PyTorch/XLA_ source:
-
-  ```Shell
-  cd xla/
-  python setup.py install
-  ```
-
-## Before Submiting A Pull Request:
+## Before Submitting A Pull Request:
 
 In `pytorch/xla` repo we enforce coding style for both C++ and Python files. Please try to format
 your code before submitting a pull request.
 
 ### C++ Style Guide
 
-`pytorch/xla` uses `clang-format-7` with a customized style config.
-If your PR touches the C++ source files, please run the following command before submmiting a PR.
+`pytorch/xla` uses `clang-format-11` with a customized style config.
+If your PR touches the C++ source files, please run the following command before submitting a PR.
 
 ```Shell
-# How to install: sudo apt install clang-format-7
+# How to install: sudo apt install clang-format-11
 # If your PR only changes foo.cpp, run the following in xla/ folder
-clang-format-7 -i -style=file /PATH/TO/foo.cpp
-# To format all cpp files, run the follwoing in xla/ folder
-find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
+clang-format-11 -i -style=file /PATH/TO/foo.cpp
+# To format all cpp files, run the following in xla/ folder
+find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-11 -i -style=file
 ```
 
 ### Python Style Guide
 
 `pytorch/xla` uses `yapf`(specially version 0.30.0 in case it's not backward compatible) with a customized style config.
-If your PR touches the Python source files, please run the following command before submmiting a PR.
+If your PR touches the Python source files, please run the following command before submitting a PR.
 
 ```Shell
 # How to install: pip install yapf==0.30.0
-yapf --recursive -i *.py test/ scripts/ torch_xla/
+yapf --recursive -i *.py test/ scripts/ torch_xla/ benchmarks/
 ```
 
 ### Running the Tests
 
 To run the tests, follow __one__ of the options below:
 
-* Run on local CPU using the XRT client:
+* Run on local CPU:
 
   ```Shell
-  export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
-  export XRT_WORKERS="localservice:0;grpc://localhost:40934"
+  export PJRT_DEVICE=CPU
   ```
 
-  Select any free TCP port you prefer instead of 40934 (totally arbitrary).
-
-* Run on Cloud TPU using the XRT client, set the XRT_TPU_CONFIG environment variable:
+* Run on Cloud TPU:
 
   ```Shell
-  export XRT_TPU_CONFIG="localservice;0;localhost:51011"
+  export PJRT_DEVICE=TPU
   ```
 
-Note that the IP of the TPU node can change if the TPU node is reset. If _PyTorch_
-seem to hang at startup, verify that the IP of your TPU node is still the same of
-the one you have configured.
+* Run on GPU:
+
+  ```Shell
+  export PJRT_DEVICE=CUDA GPU_NUM_DEVICES=${NUM_GPU}
+  ```
+
+For more detail on configuring the runtime, please refer to [this doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#quickstart)
 
 If you are planning to be building from source and hence using the latest _PyTorch/TPU_ code base,
 it is suggested for you to select the _Nightly_ builds when you create a Cloud TPU instance.
@@ -148,3 +107,9 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 ### Useful materials
 1. [OP Lowering Guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md)
 2. [CODEGEN MIGRATION GUIDE](https://github.com/pytorch/xla/blob/master/CODEGEN_MIGRATION_GUIDE.md)
+3. [Dynamo Integration Guide](https://github.com/pytorch/xla/blob/master/docs/dynamo.md)
+
+### Sharp Edges
+
+* If local changes aren't visible, uninstall existing pytorch/xla with `pip uninstall torch_xla` and `pip uninstall torch`, then rebuild PyTorch and PyTorch/XLA with `python setup.py develop` or `python setup.py install`.
+* PJRT errors when running on TPU such as `The PJRT plugin has PJRT API version 0.34. The framework PJRT API version is 0.40`. You need to update your `libtpu.so` and ensure it's in your `LD_LIBRARY_PATH` environmental directory. You can download a new `libtpu.so` at [Google Cloud](https://storage.googleapis.com/libtpu-releases/index.html), which are sorted by date. Download the newest one and install it at `pip install libtpu...whl`.

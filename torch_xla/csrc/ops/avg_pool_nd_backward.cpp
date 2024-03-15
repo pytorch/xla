@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
 
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
@@ -49,16 +49,17 @@ AvgPoolNdBackward::AvgPoolNdBackward(const torch::lazy::Value& grad_output,
                                      std::vector<int64_t> stride,
                                      std::vector<int64_t> padding,
                                      bool ceil_mode, bool count_include_pad)
-    : XlaNode(torch::lazy::OpKind(AvgNdBackwardSymbol(spatial_dim_count)),
-              {grad_output, input},
-              [&]() {
-                return NodeOutputShape(grad_output, input, spatial_dim_count,
-                                       kernel_size, stride, padding, ceil_mode,
-                                       count_include_pad);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(spatial_dim_count, kernel_size, stride,
-                                 padding, ceil_mode, count_include_pad)),
+    : XlaNode(
+          torch::lazy::OpKind(AvgNdBackwardSymbol(spatial_dim_count)),
+          {grad_output, input},
+          [&]() {
+            return NodeOutputShape(grad_output, input, spatial_dim_count,
+                                   kernel_size, stride, padding, ceil_mode,
+                                   count_include_pad);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(spatial_dim_count, kernel_size, stride, padding,
+                             ceil_mode, count_include_pad)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),

@@ -27,12 +27,14 @@ xla_model
 .. autofunction:: set_rng_state
 .. autofunction:: get_rng_state
 .. autofunction:: get_memory_info
+.. autofunction:: get_stablehlo
+.. autofunction:: get_stablehlo_bytecode
 
 .. automodule:: torch_xla.core.functions
 .. autofunction:: all_reduce
 .. autofunction:: all_gather
 .. autofunction:: nms
-		
+
 distributed
 ----------------------------------
 
@@ -56,9 +58,6 @@ utils
 .. autofunction:: metric_names
 .. autofunction:: metric_data
 .. autofunction:: metrics_report
-  
-.. automodule:: torch_xla.utils.tf_record_reader
-.. autoclass:: TfRecordReader
 
 .. automodule:: torch_xla.utils.utils
 .. autoclass:: SampleGenerator
@@ -67,22 +66,6 @@ utils
 .. automodule:: torch_xla.utils.serialization
 .. autofunction:: save
 .. autofunction:: load
-
-.. automodule:: torch_xla.utils.gcsfs
-.. autofunction:: open
-.. autofunction:: list
-.. autofunction:: stat
-.. autofunction:: remove
-.. autofunction:: rmtree
-.. autofunction:: read
-.. autofunction:: write
-.. autofunction:: generic_open
-.. autofunction:: generic_read
-.. autofunction:: generic_write
-.. autofunction:: is_gcs_path
-
-.. automodule:: torch_xla.utils.cached_dataset
-.. autoclass:: CachedDataset
 
 
 test
@@ -96,8 +79,12 @@ test
 .. autofunction:: print_training_update
 .. autofunction:: print_test_update
 
+.. mdinclude:: ../pytorch_xla_overview.md
 .. mdinclude:: ../../TROUBLESHOOTING.md
 .. mdinclude:: ../pjrt.md
-.. mdinclude:: ../ddp.md
+.. mdinclude:: ../dynamo.md
 .. mdinclude:: ../fsdp.md
+.. mdinclude:: ../ddp.md
 .. mdinclude:: ../gpu.md
+.. mdinclude:: ../spmd.md
+.. mdinclude:: ../fsdpv2.md

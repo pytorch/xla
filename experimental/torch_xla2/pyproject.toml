@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
+version = "0.0.1"
+name = "torch_xla2"
+dependencies = [
+    "absl-py",
+    "flatbuffers",
+    "jax>=0.4.24",
+    "jaxlib>=0.4.24",
+    "pytest",
+    "tensorflow",
+    "torch",
+]
+
+requires-python = ">=3.10"
+license = {file = "LICENSE"}

@@ -1,7 +1,10 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_HELPERS_H_
+#define XLA_TORCH_XLA_CSRC_HELPERS_H_
 
 #include <c10/core/Scalar.h>
 #include <c10/util/Optional.h>
+#include <torch/csrc/lazy/core/shape.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include <functional>
 #include <tuple>
@@ -9,15 +12,14 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/permutation_util.h"
-#include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/core/lib/bfloat16/bfloat16.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/shape.h"
-#include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "tsl/platform/bfloat16.h"
+#include "xla/client/xla_builder.h"
+#include "xla/literal_util.h"
+#include "xla/permutation_util.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 
@@ -47,9 +49,8 @@ class XlaHelpers {
       case xla::PrimitiveType::F32:
         return xla::LiteralUtil::CreateR0<float>(scalar_value);
       case xla::PrimitiveType::BF16:
-        return xla::LiteralUtil::CreateR0<tensorflow::bfloat16>(
-            static_cast<tensorflow::bfloat16>(
-                static_cast<float>(scalar_value)));
+        return xla::LiteralUtil::CreateR0<tsl::bfloat16>(
+            static_cast<tsl::bfloat16>(static_cast<float>(scalar_value)));
       case xla::PrimitiveType::F16:
         return xla::LiteralUtil::CreateR0<xla::half>(
             static_cast<xla::half>(static_cast<float>(scalar_value)));
@@ -112,9 +113,6 @@ class XlaHelpers {
   static xla::XlaOp LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
                                         double alpha);
 
-  // Returns the shape of the given XLA operation.
-  static const xla::Shape& ShapeOfXlaOp(xla::XlaOp op);
-
   // Returns the list of dimension sizes for the given XLA operation.
   static std::vector<int64_t> SizesOfXlaOp(xla::XlaOp op);
 
@@ -160,6 +158,27 @@ class XlaHelpers {
 
   static xla::XlaOp DynamicReshape(xla::XlaOp input,
                                    absl::Span<const int64_t> output_sizes);
+
+  static bool IsUnboundedDynamic(const xla::Shape& shape);
+
+  static bool IsUnboundedDynamismEnabled() {
+    return runtime::sys_util::GetEnvBool("EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM",
+                                         false);
+  }
+
+  // Creates custom_call to express dynamic reshape op using the dimension
+  // sizes of 'aux_input'.
+  static xla::XlaOp DynamicUnboundedReshape(
+      xla::XlaOp input, xla::XlaOp aux_input,
+      absl::Span<const int64_t> output_sizes);
+
+  // Broadcasts 'input' shape to
+  // shape(aux_input)[aux_input_dimensions] x shape(input).
+  // This method is used as a replacement for xla::Broadcast when unbounded
+  // dynamic shapes are involved.
+  static xla::XlaOp DynamicUnboundedBroadcast(
+      xla::XlaOp input, xla::XlaOp aux_input,
+      const std::vector<int64_t>& aux_input_dimensions);
 
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 
@@ -256,10 +275,11 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecondValue(xla::XlaOp op1,
                                                               xla::XlaOp op2);
 
-  // Eventually performs a broadcast to make sure the shapes of the returned
-  // xla::XlaOp values have the same shape. The first returned xla::XlaOp is op1
-  // or a broadcast of it, and the second returned xla::XlaOp is either op2 or a
-  // broadcast ot it.
+  // If any of the shapes of input operations has unbounded dynamic dimensions,
+  // performs implicit broadcasting and return the broadcasted operations. For
+  // static or bounded dynamic input shapes, validate the shapes and return the
+  // input operations. The implicit broadcasting in static and bounded dynamic
+  // cases will be handled eventually by the XlaBuilder.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(xla::XlaOp op1,
                                                          xla::XlaOp op2);
 
@@ -273,8 +293,12 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecond(xla::XlaOp op1,
                                                          xla::XlaOp op2);
 
+  // Given the two shape 'shape1' and 'shape2', infers the broadcasted shape.
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
+
+  static xla::Shape GetPromotedDynamicShape(const xla::Shape& shape1,
+                                            const xla::Shape& shape2);
 
   // TODO @wonjoo - Migrate to torch::lazy after Shape is migrated
   static xla::Shape GetPromotedBinaryOpShape(const xla::Shape& shape1,
@@ -288,6 +312,21 @@ class XlaHelpers {
   static xla::XlaOp ImplicitBroadcast(xla::XlaOp op, const xla::Shape& op_shape,
                                       const xla::Shape& shape);
 
+  // Returns new operations which broadcast the input operations 'op1' and 'op2'
+  // with unbounded dynamic dimensions into the 'shape' which is usually the
+  // result of a GetPromotedShape() call.
+  // Assumption: The shapes of 'op1' and 'op2' are valid for broadcasting.
+  // TODO: We need to emit runtime shape assertions to validate the broadcasting
+  // rules are met.
+  static std::pair<xla::XlaOp, xla::XlaOp>
+  ImplicitBroadcastWithUnboundedDynamicShapes(xla::XlaOp op1, xla::XlaOp op2,
+                                              const xla::Shape& shape);
+
+  // Retuns the explicit broadcasting specifications on operations between
+  // arrays of different ranks.
+  static std::vector<int64_t> getBroadcastDimensions(xla::XlaOp op1,
+                                                     xla::XlaOp op2);
+
   // Performs the bin_op binary operation by promoting types and shapes of the
   // two input operands.
   static xla::XlaOp PromotedBinaryOp(
@@ -296,23 +335,27 @@ class XlaHelpers {
 
   // Basic promoted binary operation implementation follow.
   static xla::XlaOp PromotedAdd(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 + op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Add(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedSub(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 - op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Sub(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedMul(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 * op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Mul(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedDiv(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 / op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Div(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedLogicalBinaryOp(
@@ -322,9 +365,13 @@ class XlaHelpers {
   static xla::XlaOp PromotedLogicalUnaryOp(
       xla::XlaOp op, const std::function<xla::XlaOp(xla::XlaOp)>& unary_op);
 
-  template <typename T>
-  static xla::Literal Range(T start, T end, T step) {
-    return xla::LiteralUtil::CreateR1<T>(xla::util::Range<T>(start, end, step));
+  // T is the returned type, A is the type used for accumulation. In general,
+  // A should have higher-or-equal-precision to T.
+  template <typename T, typename A = T>
+  static xla::Literal Range(A start, A end, A step) {
+    std::vector<A> accumulated = runtime::util::Range<A>(start, end, step);
+    return xla::LiteralUtil::CreateR1<T>(
+        std::vector<T>(accumulated.begin(), accumulated.end()));
   }
 
   static xla::PrecisionConfig::Precision mat_mul_precision() {
@@ -338,7 +385,8 @@ class XlaHelpers {
   static xla::StatusOr<xla::XlaComputation> WrapXlaComputation(
       const xla::XlaComputation& computation,
       const std::vector<xla::Shape>& parameter_shapes,
-      std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair);
+      const std::vector<std::pair<int64_t, int64_t>>& input_output_alias_pair,
+      const std::vector<size_t>& buffer_donor_indices);
 
   static torch::lazy::Shape ConvertXlaShapeToLazy(const xla::Shape& shape);
 
@@ -347,3 +395,5 @@ class XlaHelpers {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_HELPERS_H_

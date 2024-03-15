@@ -1,11 +1,13 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_
+#define XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_
 
 #include <vector>
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "torch_xla/csrc/device.h"
+#include "xla/client/xla_builder.h"
+#include "xla/hlo/ir/hlo_sharding.h"
 
 namespace torch_xla {
 
@@ -27,15 +29,24 @@ xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
                                      xla::XlaOp product_multiplier,
                                      xla::XlaOp bias_multiplier);
 
+xla::XlaOp BuildCountNonzero(xla::XlaOp input, std::vector<int64_t> dim);
+
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
                           xla::PrimitiveType type);
 
+xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
+                            bool replacement, xla::XlaOp seed);
+
 xla::XlaOp BuildExponential(xla::XlaOp lambda, xla::XlaOp seed,
                             xla::PrimitiveType type);
 
 xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed);
+
+std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, xla::XlaOp seed,
+                                           float probability,
+                                           c10::optional<bool> train);
 
 xla::XlaOp BuildSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp output,
                                 xla::XlaOp scalar_1);
@@ -137,4 +148,14 @@ xla::XlaOp BuildAddcmul(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
 xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
                              bool use_hamming, bool use_chebyshev);
 
+xla::XlaOp BuildUpperTriangle(xla::XlaOp input);
+
+xla::XlaOp BuildCustomSharding(const xla::XlaOp& input);
+
+xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
+                              const xla::Shape& output_shape,
+                              const std::string& payload);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_

@@ -1,17 +1,18 @@
 #include "torch_xla/csrc/batch_norm.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 namespace {
 
 bool IsF32BatchNormWithFP16Inputs(const xla::XlaOp& input,
                                   const xla::XlaOp& weight) {
-  if (XlaHelpers::ShapeOfXlaOp(input).element_type() ==
+  if (ShapeHelper::ShapeOfXlaOp(input).element_type() ==
           xla::PrimitiveType::F16 &&
-      XlaHelpers::ShapeOfXlaOp(weight).element_type() ==
+      ShapeHelper::ShapeOfXlaOp(weight).element_type() ==
           xla::PrimitiveType::F32) {
     return true;
   }
@@ -19,7 +20,7 @@ bool IsF32BatchNormWithFP16Inputs(const xla::XlaOp& input,
 }
 
 xla::XlaOp VarianceRecover(xla::XlaOp invstd, float eps_value) {
-  const xla::Shape& invstd_shape = XlaHelpers::ShapeOfXlaOp(invstd);
+  const xla::Shape& invstd_shape = ShapeHelper::ShapeOfXlaOp(invstd);
   xla::XlaOp eps = XlaHelpers::ScalarValue(
       eps_value, invstd_shape.element_type(), invstd.builder());
   xla::XlaOp one_over_invstd =
@@ -30,7 +31,7 @@ xla::XlaOp VarianceRecover(xla::XlaOp invstd, float eps_value) {
 }  // namespace
 
 xla::XlaOp BatchNormVarianceInvert(xla::XlaOp variance, float eps_value) {
-  const xla::Shape& variance_shape = XlaHelpers::ShapeOfXlaOp(variance);
+  const xla::Shape& variance_shape = ShapeHelper::ShapeOfXlaOp(variance);
   xla::XlaOp eps = XlaHelpers::ScalarValue(
       eps_value, variance_shape.element_type(), variance.builder());
   return xla::Rsqrt(variance + eps);

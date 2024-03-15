@@ -1,9 +1,10 @@
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 
 #include "absl/strings/str_join.h"
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -48,8 +49,8 @@ int64_t SizeNode::getDynamicValue() const {
   // Wrap the IR of SizeNode into a dummy tensor and execute/fetch the value
   // of this tensor. GetTensors will return a cpu at::Tensor so we can just
   // extract the value of it.
-  std::vector<XLATensorPtr> dummy_size_tensors = {
-      XLATensor::Create(cloned, *GetDefaultDevice(), at::ScalarType::Long)};
+  std::vector<XLATensorPtr> dummy_size_tensors = {XLATensor::Create(
+      cloned, *bridge::GetDefaultDevice(), at::ScalarType::Long)};
   std::vector<at::Tensor> res =
       XLAGraphExecutor::Get()->GetTensors(&dummy_size_tensors);
   runtime_size_ = res[0].item().toInt();
@@ -140,6 +141,9 @@ SizeEq::SizeEq(torch::lazy::Value a, torch::lazy::Value b)
 };
 
 int64_t SizeEq::getDynamicValue() const {
+  if (operand(0) == operand(1)) {
+    return 1;
+  }
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);
@@ -148,6 +152,72 @@ int64_t SizeEq::getDynamicValue() const {
 }
 
 std::string SizeEq::ToString() const { return "aten::size_eq"; }
+
+SizeNe::SizeNe(torch::lazy::Value a, torch::lazy::Value b)
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_ne")},
+              {a, b},
+              xla::ShapeUtil::MakeShape(
+                  GetShapeDimensionType(/*device=*/nullptr), {}),
+              1) {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+};
+
+int64_t SizeNe::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return dim_node_0->getDynamicValue() != dim_node_1->getDynamicValue() ? 1 : 0;
+}
+
+std::string SizeNe::ToString() const { return "aten::size_ne"; }
+
+SizeGe::SizeGe(torch::lazy::Value a, torch::lazy::Value b)
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_ge")},
+              {a, b},
+              xla::ShapeUtil::MakeShape(
+                  GetShapeDimensionType(/*device=*/nullptr), {}),
+              1) {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+};
+
+int64_t SizeGe::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return dim_node_0->getDynamicValue() >= dim_node_1->getDynamicValue() ? 1 : 0;
+}
+
+std::string SizeGe::ToString() const { return "aten::size_ge"; }
+
+SizeLt::SizeLt(torch::lazy::Value a, torch::lazy::Value b)
+    : XlaNode(torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_lt")},
+              {a, b},
+              xla::ShapeUtil::MakeShape(
+                  GetShapeDimensionType(/*device=*/nullptr), {}),
+              1) {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+};
+
+int64_t SizeLt::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  return dim_node_0->getDynamicValue() < dim_node_1->getDynamicValue() ? 1 : 0;
+}
+
+std::string SizeLt::ToString() const { return "aten::size_lt"; }
 
 SizeConstant::SizeConstant(int64_t val)
     : Scalar(c10::Scalar{val},
@@ -222,6 +292,63 @@ XlaOpVector SizeDiv::Lower(LoweringContext* loctx) const {
   auto input1 = loctx->GetOutputOp(operand(0));
   auto input2 = loctx->GetOutputOp(operand(1));
   return ReturnOp(xla::Div(input1, input2), loctx);
+}
+
+SizeMod::SizeMod(torch::lazy::Value a, torch::lazy::Value b)
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_mod")},
+          {a, b},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
+                                    {}),
+          1) {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  // SizeDiv can only be perfomed between two DimensionNode
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  // We don't need to hash upper_bound_ and because it is computed
+  // from input shapes and input Node already hash its shape.
+  XLA_CHECK(dim_node_1->getStaticValue() != 0)
+      << "Can't divide a dimension by zero";
+  upper_bound_ = dim_node_0->getStaticValue() % dim_node_1->getStaticValue();
+};
+
+int64_t SizeMod::getDynamicValue() const {
+  const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
+  const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
+  XLA_CHECK(dim_node_0);
+  XLA_CHECK(dim_node_1);
+  XLA_CHECK(dim_node_1->getDynamicValue() != 0)
+      << "Can't mod a dynamic dimension by zero";
+  return dim_node_0->getDynamicValue() % dim_node_1->getDynamicValue();
+}
+
+std::string SizeMod::ToString() const { return "aten::size_mod"; }
+
+XlaOpVector SizeMod::Lower(LoweringContext* loctx) const {
+  auto input1 = loctx->GetOutputOp(operand(0));
+  auto input2 = loctx->GetOutputOp(operand(1));
+  return ReturnOp(xla::Rem(input1, input2), loctx);
+}
+
+SizeError::SizeError()
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_error")},
+          {},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
+                                    {}),
+          1){};
+
+int64_t SizeError::getDynamicValue() const {
+  XLA_CHECK(false) << "SizeError shouldn't be called.";
+  return -1;
+}
+
+std::string SizeError::ToString() const { return "aten::size_error"; }
+
+XlaOpVector SizeError::Lower(LoweringContext* loctx) const {
+  XLA_CHECK(false) << "SizeError shouldn't be called.";
+  return ReturnOp({}, loctx);
 }
 
 }  // namespace torch_xla

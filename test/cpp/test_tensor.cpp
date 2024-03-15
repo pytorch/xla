@@ -4,13 +4,13 @@
 #include <limits>
 #include <vector>
 
-#include "cpp_test_util.h"
+#include "test/cpp/cpp_test_util.h"
+#include "test/cpp/torch_xla_test.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -316,7 +316,8 @@ TEST_F(TensorTest, TestAvgPool2D) {
                            /*kernel_size=*/{kernel_size, kernel_size},
                            /*stride=*/{stride, stride},
                            /*padding=*/{padding, padding},
-                           /*ceil_mode=*/false, count_include_pad);
+                           /*ceil_mode=*/false, count_include_pad,
+                           /*divisor_override=*/std::nullopt);
         ForEachDevice([&](const torch::lazy::BackendDevice& device) {
           XLATensorPtr dev_input = XLATensor::Create(input, device);
           XLATensorPtr dev_output = tensor_methods::avg_pool_nd(
@@ -325,7 +326,8 @@ TEST_F(TensorTest, TestAvgPool2D) {
               /*kernel_size=*/{kernel_size, kernel_size},
               /*stride=*/{stride, stride},
               /*padding=*/{padding, padding},
-              /*ceil_mode=*/false, count_include_pad);
+              /*ceil_mode=*/false, count_include_pad,
+              /*divisor_override=*/std::nullopt);
           AllClose(output, dev_output);
         });
       }
@@ -344,7 +346,8 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
             /*kernel_size=*/{kernel_size, kernel_size + 1},
             /*stride=*/{stride, stride + 1},
             /*padding=*/{padding, padding + 1}, /*ceil_mode=*/false,
-            /*count_include_pad=*/count_include_pad);
+            /*count_include_pad=*/count_include_pad,
+            /*divisor_override=*/std::nullopt);
         ForEachDevice([&](const torch::lazy::BackendDevice& device) {
           XLATensorPtr dev_input = XLATensor::Create(input, device);
           XLATensorPtr dev_output = tensor_methods::avg_pool_nd(
@@ -354,7 +357,8 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
               /*stride=*/{stride, stride + 1},
               /*padding=*/{padding, padding + 1},
               /*ceil_mode=*/false,
-              /*count_include_pad=*/count_include_pad);
+              /*count_include_pad=*/count_include_pad,
+              /*divisor_override=*/std::nullopt);
           AllClose(output, dev_output);
         });
       }

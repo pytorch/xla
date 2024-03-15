@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_
+#define XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_
 
 #include <ATen/Device.h>
 #include <ATen/Functions.h>
@@ -14,6 +15,9 @@ namespace torch_xla {
 namespace bridge {
 
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor);
+
+// Same as above, applied to a list of tensors.
+std::vector<XLATensorPtr> TryGetXlaTensors(const at::ITensorListRef& tensors);
 
 bool IsXlaTensor(const at::Tensor& tensor);
 
@@ -86,14 +90,23 @@ c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device);
 
 std::string ToXlaString(const c10::Device& device);
 
+const torch::lazy::BackendDevice* GetDefaultDevice();
+
 c10::Device AtenDefaultDevice();
+
+torch::lazy::BackendDevice GetCurrentDevice();
+
+c10::Device GetCurrentAtenDevice();
+
+static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
+    const torch::lazy::BackendDevice* device) {
+  return device != nullptr ? *device : GetCurrentDevice();
+}
 
 c10::Device SetCurrentDevice(const c10::Device& device);
 
 torch::lazy::BackendDevice SetCurrentDevice(
     const torch::lazy::BackendDevice& device);
-
-c10::Device GetCurrentAtenDevice();
 
 at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
                            const at::TensorOptions& tensor_options);
@@ -135,5 +148,14 @@ auto TupleAtenFromXlaTensors(const std::vector<XLATensorPtr>& tensors) {
   return TupleAtenFromXlaTensorsImpl(tensors, std::make_index_sequence<N>{});
 }
 
+// Returns the deepest base tensor for a given tensor.
+// If the base tensor is not defined, returns the tensor itself.
+const at::Tensor& GetRootBase(const at::Tensor& tensor);
+// Sets the base tensor of a given XLATensor. Convenient function
+// to be used when returning tensors.
+XLATensorPtr SetBaseTensor(XLATensorPtr tensor, const at::Tensor& base);
+
 }  // namespace bridge
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_ATEN_XLA_BRIDGE_H_

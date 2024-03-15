@@ -1,3 +1,6 @@
+#ifndef XLA_TORCH_XLA_CSRC_OPS_OPS_XLA_SHAPE_FN_H_
+#define XLA_TORCH_XLA_CSRC_OPS_OPS_XLA_SHAPE_FN_H_
+
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -41,6 +44,12 @@ xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
 
 xla::Shape AminOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> dim, bool keepdim);
+
+xla::Shape ArgmaxOutputShape(const torch::lazy::Value& input,
+                             c10::optional<int64_t> dim, bool keepdim);
+
+xla::Shape ArgminOutputShape(const torch::lazy::Value& input,
+                             c10::optional<int64_t> dim, bool keepdim);
 
 xla::Shape AnyOutputShape(const torch::lazy::Value& input);
 
@@ -134,6 +143,8 @@ xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
 xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
 
+xla::Shape GluOutputShape(const torch::lazy::Value& input, int64_t dim);
+
 xla::Shape GtScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
 
@@ -199,11 +210,22 @@ xla::Shape LogSigmoidBackwardOutputShape(const torch::lazy::Value& grad_output,
                                          const torch::lazy::Value& input,
                                          const torch::lazy::Value& buffer);
 
+xla::Shape MaskedFillScalarOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& mask,
+                                       const torch::lazy::Value& value);
+
+xla::Shape MaskedFillTensorOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& mask,
+                                       const torch::lazy::Value& value);
+
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 
 xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
+
+xla::Shape NativeDropoutBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& mask);
 
 xla::Shape NeScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
@@ -226,6 +248,8 @@ xla::Shape SeluOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SgnOutputShape(const torch::lazy::Value& input);
 
+xla::Shape SigmoidOutputShape(const torch::lazy::Value& input);
+
 xla::Shape SignOutputShape(const torch::lazy::Value& input);
 
 xla::Shape SiluOutputShape(const torch::lazy::Value& input);
@@ -246,6 +270,8 @@ xla::Shape SoftshrinkBackwardOutputShape(const torch::lazy::Value& grad_out,
 /* Blocked on https://github.com/pytorch/xla/issues/3596 */
 // xla::Shape SlogdetOutputShape(const torch::lazy::Value& input);
 
+xla::Shape SqrtOutputShape(const torch::lazy::Value& input);
+
 xla::Shape TakeOutputShape(const torch::lazy::Value& input,
                            const torch::lazy::Value& index);
 
@@ -260,3 +286,5 @@ xla::Shape TriuOutputShape(const torch::lazy::Value& input);
 xla::Shape TruncOutputShape(const torch::lazy::Value& input);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_OPS_XLA_SHAPE_FN_H_

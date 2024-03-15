@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_RRELU_WITH_NOISE_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_RRELU_WITH_NOISE_BACKWARD_H_
 
 #include <c10/core/Scalar.h>
 
@@ -33,3 +34,5 @@ class RreluWithNoiseBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_RRELU_WITH_NOISE_BACKWARD_H_

@@ -1,0 +1,4 @@
+# ARGS: --backends inductor openxla+lazytensor --
+# Datetime(UTC),Inductor p95,Inductor p50,Inductor p5,XLA+LazyTensor p95,XLA+LazyTensor p50,XLA+LazyTensor p5
+2023-11-11 05:32:18.723407,1.0,1.0,1.0,,,
+2023-11-12 05:32:18,1.50833479,1.40761418,1.30689358,0.41071322,0.41071322,0.41071322

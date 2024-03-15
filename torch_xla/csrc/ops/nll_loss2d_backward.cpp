@@ -1,11 +1,12 @@
 #include "torch_xla/csrc/ops/nll_loss2d_backward.h"
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
+#include <torch/csrc/lazy/core/util.h>
+
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace {
@@ -30,7 +31,8 @@ xla::Shape NodeOutputShape(
                                 total_weight, ignore_index, reduction);
   };
   std::vector<xla::Shape> shapes;
-  for (auto& input : xla::util::GetValuesVector<torch::lazy::Value>(
+  for (auto& input :
+       torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
            {grad_output, logits, labels}, {&weight, &total_weight})) {
     shapes.push_back(GetXlaShape(input));
   }
@@ -45,16 +47,17 @@ NllLoss2dBackward::NllLoss2dBackward(
     const absl::optional<torch::lazy::Value>& weight,
     const absl::optional<torch::lazy::Value>& total_weight,
     ReductionMode reduction, int ignore_index)
-    : XlaNode(torch::lazy::OpKind(at::aten::nll_loss2d_backward),
-              xla::util::GetValuesVector<torch::lazy::Value>(
-                  {grad_output, logits, labels}, {&weight, &total_weight}),
-              [&]() {
-                return NodeOutputShape(grad_output, logits, labels, weight,
-                                       total_weight, reduction, ignore_index);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
-                                 ignore_index)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::nll_loss2d_backward),
+          torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
+              {grad_output, logits, labels}, {&weight, &total_weight}),
+          [&]() {
+            return NodeOutputShape(grad_output, logits, labels, weight,
+                                   total_weight, reduction, ignore_index);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(torch::lazy::GetEnumValue(reduction),
+                             ignore_index)),
       reduction_(reduction),
       ignore_index_(ignore_index) {}
 

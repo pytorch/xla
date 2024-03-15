@@ -78,10 +78,14 @@ class TestNumOutput(unittest.TestCase):
         graph_input_tensor_ids,
         graph_input_xla_values,
     ) = torch_xla._XLAC._get_tensors_xla_device_data_node(outputs)
-
+    xla_args_tensor_ids = set(
+        tree_map_only(torch.Tensor,
+                      lambda input: torch_xla._XLAC._xla_get_tensor_id(input),
+                      inputs))
     graph_input_matcher = GraphInputMatcher(tensor_id_to_arg_idx,
                                             graph_input_tensor_ids,
-                                            graph_input_xla_values)
+                                            graph_input_xla_values,
+                                            xla_args_tensor_ids)
     torch_xla._XLAC._xla_warm_up_cache(outputs, [])
 
     def run_cached_graph(*inputs):

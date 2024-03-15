@@ -6,7 +6,7 @@ set -x  # Display commands being run.
 PYTHON_VERSION=$1
 RELEASE_VERSION=$2  # rX.Y or nightly
 BUILD_CPP_TESTS="${3:-0}"
-DEFAULT_PYTHON_VERSION=3.6
+DEFAULT_PYTHON_VERSION=3.8
 DEBIAN_FRONTEND=noninteractive
 
 ACL_VERSION=v22.05 # Arm Compute Library version
@@ -86,8 +86,8 @@ function maybe_install_sources {
     popd
   fi
 
-  # Check if we have cloned pytorch or xla and cd into the pytorch dir. 
-  # Within the pytorch dir there is a subdir `torch`, and within xla 
+  # Check if we have cloned pytorch or xla and cd into the pytorch dir.
+  # Within the pytorch dir there is a subdir `torch`, and within xla
   # is `torch_xla`.
   if [ ! -d "torch" && ! -d "torch_xla" ]; then
     sudo apt-get install -y git
@@ -199,9 +199,10 @@ function install_and_setup_conda() {
   conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
-  conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
+  conda install -y numpy pyyaml setuptools==65.6.3 cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
   if [[ $(uname -m) == "x86_64" ]]; then
     # Overwrite mkl packages here, since nomkl conflicts with the anaconda env setup.
+    conda remove -y tbb
     pip install mkl==2022.2.1 mkl_include==2022.2.1
   fi
 
@@ -266,7 +267,7 @@ function build_and_install_torch() {
 function build_and_install_torch_xla() {
   git submodule update --init --recursive
   if [ "${RELEASE_VERSION}" = "nightly" ]; then
-    export VERSIONED_XLA_BUILD=1
+    export GIT_VERSIONED_XLA_BUILD=true
   else
     export TORCH_XLA_VERSION=${RELEASE_VERSION:1}  # r0.5 -> 0.5
   fi

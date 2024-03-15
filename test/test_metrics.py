@@ -3,6 +3,7 @@ import time
 
 import torch
 import torch_xla
+import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import unittest
@@ -38,6 +39,14 @@ class MetricsTest(unittest.TestCase):
     self.assertIn("TensorToData", met.metrics_report())
     assert (len(met.metric_names()) > 0)
 
+  def test_tracing_time_metrics(self):
+    xla_device = xm.xla_device()
+    met.clear_all()
+    t1 = torch.tensor(156, device=xla_device)
+    t2 = t1 + 100
+    self.assertIn('LazyTracing', met.metric_names())
+    self.assertGreater(met.metric_data('LazyTracing')[0], 1)
+
   def test_short_metrics_report_default_list(self):
     xla_device = xm.xla_device()
     t1 = torch.tensor(1456, device=xla_device)
@@ -48,8 +57,8 @@ class MetricsTest(unittest.TestCase):
     self.assertNotIn("TensorToData", short_report)
     self.assertIn("CompileTime", short_report)
     self.assertIn("ExecuteTime", short_report)
-    self.assertIn("TransferToServerTime", short_report)
-    self.assertIn("TransferFromServerTime", short_report)
+    self.assertIn("TransferToDeviceTime", short_report)
+    self.assertIn("TransferFromDeviceTime", short_report)
     self.assertIn("MarkStep", short_report)
     # repeat the same computation and expect to see the CachedCompile counter
     t3 = t1 * 2
@@ -63,6 +72,7 @@ class MetricsTest(unittest.TestCase):
     xla_device = xm.xla_device()
     t1 = torch.tensor(100, device=xla_device)
     t2 = t1 * 2
+    t1 += 2
     xm.mark_step()
     t2_cpu = t2.cpu()
     short_report = met.short_metrics_report(
@@ -93,7 +103,7 @@ class MetricsTest(unittest.TestCase):
             metric_names=['InboundData']))
 
   def test_metrics_report(self):
-    # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToServerAsync, IrValueTensorToXlaData
+    # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToDeviceAsync, IrValueTensorToXlaData
     xla_device = xm.xla_device()
     t1 = torch.tensor(2077, device=xla_device)
     t2 = t1 * 2
@@ -163,9 +173,7 @@ class MetricsTest(unittest.TestCase):
     report = met.metrics_report()
     self.assertIn("CachedCompile", report)
 
-  @unittest.skipIf(
-      xm.get_xla_supported_devices("GPU") or
-      xm.get_xla_supported_devices("TPU"), f"This test only works on CPU.")
+  @unittest.skipIf(xr.device_type() != "CPU", f"This test only works on CPU.")
   def test_execute_time_metric(self):
     # Initialize the client before starting the timer.
     xm.xla_device()

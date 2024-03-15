@@ -1,11 +1,11 @@
 #include "torch_xla/csrc/ops/qr.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
-#include "tensorflow/compiler/xla/client/lib/qr.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/matrix.h"
+#include "xla/client/lib/qr.h"
 
 namespace torch_xla {
 namespace {
@@ -40,9 +40,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool some) {
 }  // namespace
 
 QR::QR(const torch::lazy::Value& input, bool some)
-    : XlaNode(torch::lazy::OpKind(at::aten::qr), {input},
-              [&]() { return NodeOutputShape(input, some); },
-              /*num_outputs=*/2, torch::lazy::MHash(some)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::qr), {input},
+          [&]() { return NodeOutputShape(input, some); },
+          /*num_outputs=*/2, torch::lazy::MHash(some)),
       some_(some) {}
 
 torch::lazy::NodePtr QR::Clone(torch::lazy::OpList operands) const {

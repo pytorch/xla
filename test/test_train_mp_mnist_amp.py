@@ -66,10 +66,10 @@ class MNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
-def _train_update(device, x, loss, tracker, writer):
+def _train_update(device, step, loss, tracker, writer):
   test_utils.print_training_update(
       device,
-      x,
+      step,
       loss.item(),
       tracker.rate(),
       tracker.global_rate(),
@@ -130,28 +130,42 @@ def train_mnist(flags, **kwargs):
   lr = flags.lr * xm.xrt_world_size()
 
   device = xm.xla_device()
+  device_hw = xm.xla_device_hw(device)
   model = MNIST().to(device)
+
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
   optim_cls = syncfree.SGD if FLAGS.use_syncfree_optim else optim.SGD
   optimizer = optim_cls(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
-  scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+
+  if device_hw == 'TPU':
+    scaler = None
+  elif device_hw == 'CUDA':
+    # GradScaler only used for GPU
+    scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+  else:
+    print("Only TPU or GPU supported for AMP.")
+    sys.exit(1)
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
-      with autocast():
+      with autocast(device):
         output = model(data)
         loss = loss_fn(output, target)
-      scaler.scale(loss).backward()
-      gradients = xm._fetch_gradients(optimizer)
-      xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
-      scaler.step(optimizer)
-      scaler.update()
+      if scaler:
+        scaler.scale(loss).backward()
+        gradients = xm._fetch_gradients(optimizer)
+        xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
+        scaler.step(optimizer)
+        scaler.update()
+      else:
+        loss.backward()
+        xm.optimizer_step(optimizer)
       tracker.add(flags.batch_size)
       if step % flags.log_steps == 0:
         xm.add_step_closure(
@@ -197,7 +211,7 @@ def train_mnist(flags, **kwargs):
 
 
 def _mp_fn(index, flags):
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_mnist(flags)
   if flags.tidy and os.path.isdir(flags.datadir):
     shutil.rmtree(flags.datadir)

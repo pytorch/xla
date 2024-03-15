@@ -1,98 +1,10 @@
 ---
 variables:
-  xrt_variables:
-    XRT_MESH_SERVICE_ADDRESS:
-      description:
-        - The mesh service address used to create the XRT mesh client.
-      type: string
-      default_value: ""
-    XRT_GRPC_COMPRESSION:
-      description:
-        - Configures compression for rpc options on the XRT client.
-      type: string
-      default_value: ""
-    XRT_TPU_CONFIG:
-      description:
-        - Addresses for the TPU services to be used by the XRT client. ";"
-          separated list of addresses, e.g. localservice;0;localhost:51011.
-      type: string
-    XRT_WORKERS:
-      description:
-        - Addresses for the XRT workers to be used by the XRT client, for
-          example localservice:0;grpc://localhost:51011
-      type: string
-    XRT_DEVICE_MAP:
-      description:
-        - Maps devices to metadata about the job, replica, task that the device
-          is responsible for. e.g.
-          CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0
-      type: string
-    XRT_GRPC_MULTISTREAM:
-      description:
-        - Used to disable session conneciton sharing for XRT.
-      type: bool
-      default_value: true
-    XRT_START_LOCAL_SERVER:
-      description:
-        - Whether or not XRT should start the local service. If true, and if
-          the devices are CPU or GPU, XRT will try to start the local server.
-      type: bool
-      default_value: false
-    XRT_SHARD_LOCAL_ORDINAL:
-      description:
-        - Ordinal to be appended to the paths used by this thread of the xla
-          client.
-      type: int
-    XRT_GRPC_COMPRESSION_LEVEL:
-      description:
-        - Configures compression level for rpc options on the XRT client.
-      type: int
-      default_value: 3
-    XRT_MESH_MAX_MSGSIZE:
-      description:
-        - Max size of the mesh used by the XRT mesh service, product of
-          dimensions e.g. 1024 * 1024 * 1024
-      type: int
-      default_value: 1073741824  # (1024^3)
-    XRT_MESH_CONNECT_WAIT:
-      description:
-        - Number of seconds to wait for a connection to the XRT mesh service,
-          particularly the client mesh master
-      type: int
-      default_value: 300
-    XRT_LOCAL_WORKER:
-      description:
-        - Local service address for XRT local worker, e.g. localhost:8000.
-      type: string
-      default_value: ""
-    XRT_SHARD_WORLD_SIZE:
-      description:
-        - Total number of XRT shards to consider in this client instance. Does
-          not have a default because there's special behavior when the flag is
-          not set.
-      type: int
-    XRT_MULTI_PROCESSING_DEVICE:
-      description:
-        - Service address of the XRT device to be used as a multi processing
-          device.
-      type: string
-      default_value: ""
-    XRT_HOST_ORDINAL:
-      description:
-        - Sets the host ordinal for the XRT computation client. Used to
-          identify the rank of current device. Does not have a default because
-          there's special behavior when the flag is not set.
-      type: int
-    XRT_SHARD_ORDINAL:
-      description:
-        - Sets the shard ordinal for the XRT computation client.
-      type: int
-      default_value: -1
   pjrt_variables:
     PJRT_DEVICE:
       description:
         - Indicates which device is being used with PJRT. It can be either CPU,
-          TPU, or GPU
+          TPU, or CUDA
       type: string
     PJRT_SELECT_DEFAULT_DEVICE:
       description:
@@ -129,7 +41,7 @@ variables:
         - Build the xla client with CUDA enabled.
       type: bool
       default_value: false
-    VERSIONED_XLA_BUILD:
+    GIT_VERSIONED_XLA_BUILD:
       description:
         - Creates a versioned build. In particular, appends a git sha to the
           version number string
@@ -186,37 +98,12 @@ variables:
           Tensorflow, or JAX.
       type: string
       default_value: "PyTorch/XLA"
-    XLA_DEBUG:
-      description:
-        - Whether or not to build xla and the xrt client in debug mode.
-      type: bool
-      default_value: false
     XLA_BAZEL_VERBOSE:
       description:
         - Turn on verbose messages during the bazel build of the xla/xrt client.
       type: bool
       default_value: false
   feature_variables:
-    XLA_GET_TENSORS_OPBYOP:
-      description:
-        - Enables pure OpByOp dispatch. The PyTorch/XLA software tries to fuse
-          together many PyTorch operations into a single computation graph, but
-          sometimes, either for debugging, or in case the PyTorch code have a
-          very dynamic nature (in shapes or graph terms), it is better to force
-          the execution in OpByOp mode (every IR node is lowered into a
-          separate XLA computation, and chain-executed). This environment
-          variable, if set to true, enables OpByOp during the "get tensors"
-          operation (the operation used by PyTorch/XLA to fetch intermediate
-          values back from the TPU device into PyTorch CPU tensors).
-      type: bool
-      default_value: false
-    XLA_SYNC_TENSORS_OPBYOP:
-      description:
-        - The same as XLA_GET_TENSORS_OPBYOP but for "sync tensors" operation
-          (the operation used at the end of a step, to flush pending IR
-          computations and materialize them into TPU device data).
-      type: bool
-      default_value: false
     XLA_SYNC_WAIT:
       description:
         - Forces the XLA tensor sync operation to wait for its completion,
@@ -243,7 +130,7 @@ variables:
       default_value: false
     XLA_USE_F16:
       description:
-        - If set to true, tranforms all the PyTorch Float values into Float16
+        - If set to true, transforms all the PyTorch Float values into Float16
           (PyTorch Half type) when sending to devices which supports them.
       type: bool
       default_value: false
@@ -271,7 +158,7 @@ variables:
       description:
         - Size for the shape cache used by XLA.
       type: int
-      default_value: 4096
+      default_value: 12288
     XLA_DEVDATA_CACHE_SIZE:
       description:
         - Max cache size for XLA Data cache.
@@ -341,7 +228,8 @@ variables:
       default_value: false
     XLA_USE_SPMD:
       description:
-        - Whether or not to use the SPMD virtual device optimization.
+        - Deprecated. Whether or not to use the SPMD virtual device optimization.
+          Use `torch_xla.runtime.use_spmd()` instead.
       type: bool
       default_value: false
     SPLIT_EXECUTOR_CACHE_SIZE:
@@ -431,6 +319,11 @@ variables:
           dot.
       type: string
       default_value: ""
+    XLA_TPU_LAYOUT:
+      description:
+        - Determine to use TPU layout or not, where it will use sorted layout for TPU.
+      type: bool
+      default_value: true
     PT_XLA_DEBUG_FILE:
       description:
         - If set, filepath used for printing out reports.
@@ -502,7 +395,28 @@ variables:
       type: string
       default_value: "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99"
     XLA_RELEASE_GIL_DURING_TRANSFER:
-      descripton:
+      description:
         - Release Python's GIL when transferring data from the runtime.
       type: bool
       default_value: true
+    XLA_STABLEHLO_COMPILE:
+      description:
+        - Pass StableHLO to XLA PjRt client for compilation. This compilation
+          flag is experimental. The default_value will be set to true when
+          StableHLO workflow is mature.
+      type: bool
+      default_value: false
+    XLA_DUMP_POST_OPTIMIZATIONS:
+      description:
+        - Dump the HLO graph after optimizations. You need to use it together
+          with XLA_SAVE_TENSORS_FMT='hlo' and XLA_SAVE_TENSORS_FILE='your/location'.
+      type: bool
+      default_value: false
+    XLA_DISABLE_FUNCTIONALIZATION:
+      description:
+        - Setting this to true will disable functionalization, which is a dispatcher
+          pass in PyTorch that remove views and mutations to produce functional graphs.
+          This flag's main purpose is to A/B test the impact of functionalization in
+          your code.
+      type: bool
+      default_value: false

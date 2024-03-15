@@ -1,3 +1,5 @@
+import functools
+import threading
 import torch_xla
 import torch_xla.core.xla_model as xm
 
@@ -88,6 +90,15 @@ def trace(service_addr: str,
       options=options)
 
 
+def trace_detached(*args, **kwargs):
+  """
+  Wraps the :func:`~torch_xla.debug.profiler.trace` method to capture a profile
+  in a background thread. See that method for the list of supported parameters
+  and their semantics.
+  """
+  threading.Thread(target=trace, args=args, kwargs=kwargs).start()
+
+
 class Trace(torch_xla._XLAC.profiler.TraceMe):
   """Context manager that produces a trace event for profiling.
 
@@ -158,3 +169,17 @@ class StepTrace(Trace):
       del self.scope
     xm.mark_step()
     super().__exit__(type, value, traceback)
+
+
+def trace_me(scope: str):
+
+  def decorator_trace_me(func):
+
+    @functools.wraps(func)
+    def wrapper_trace_me(*args, **kwargs):
+      with Trace(scope):
+        return func(*args, **kwargs)
+
+    return wrapper_trace_me
+
+  return decorator_trace_me

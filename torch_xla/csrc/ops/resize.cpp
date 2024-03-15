@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/ops/resize.h"
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {
@@ -16,9 +16,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 Resize::Resize(const torch::lazy::Value& input, std::vector<int64_t> size)
-    : XlaNode(torch::lazy::OpKind(at::aten::resize), {input},
-              [&]() { return NodeOutputShape(input, size); },
-              /*num_outputs=*/1, torch::lazy::MHash(size)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::resize), {input},
+          [&]() { return NodeOutputShape(input, size); },
+          /*num_outputs=*/1, torch::lazy::MHash(size)),
       size_(std::move(size)) {}
 
 torch::lazy::NodePtr Resize::Clone(torch::lazy::OpList operands) const {

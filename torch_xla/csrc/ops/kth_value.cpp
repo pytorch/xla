@@ -21,9 +21,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input, int64_t k,
 
 KthValue::KthValue(const torch::lazy::Value& input, int64_t k, int64_t dim,
                    bool keepdim)
-    : XlaNode(torch::lazy::OpKind(at::aten::kthvalue), {input},
-              [&]() { return NodeOutputShape(input, k, dim, keepdim); },
-              /*num_outputs=*/2, torch::lazy::MHash(k, dim, keepdim)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::kthvalue), {input},
+          [&]() { return NodeOutputShape(input, k, dim, keepdim); },
+          /*num_outputs=*/2, torch::lazy::MHash(k, dim, keepdim)),
       k_(k),
       dim_(dim),
       keepdim_(keepdim) {}

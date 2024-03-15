@@ -1,7 +1,8 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_INFER_OUTPUT_SHAPE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_INFER_OUTPUT_SHAPE_H_
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 
@@ -18,3 +19,5 @@ xla::Shape InferOutputShapes(absl::Span<const xla::Shape> input_shapes,
                              const LowerForShapesFn& core_lowering_fn);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_INFER_OUTPUT_SHAPE_H_

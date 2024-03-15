@@ -1,6 +1,7 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TOKEN_HANDLER_H_
+#define XLA_TORCH_XLA_CSRC_TOKEN_HANDLER_H_
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 
@@ -17,3 +18,5 @@ class TokenHandler {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_TOKEN_HANDLER_H_

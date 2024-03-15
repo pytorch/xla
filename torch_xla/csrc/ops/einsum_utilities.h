@@ -1,9 +1,12 @@
+#ifndef XLA_TORCH_XLA_CSRC_OPS_EINSUM_UTILITIES_H_
+#define XLA_TORCH_XLA_CSRC_OPS_EINSUM_UTILITIES_H_
+
 #include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
 
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 
@@ -89,3 +92,5 @@ class EinsumUtilities {
   }
 };
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_EINSUM_UTILITIES_H_

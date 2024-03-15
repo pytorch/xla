@@ -1,35 +1,30 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TENSOR_H_
+#define XLA_TORCH_XLA_CSRC_TENSOR_H_
 
-#include <iostream>
+#include <c10/core/SymNodeImpl.h>
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include <memory>
 #include <string>
-#include <unordered_map>
 
-#include "c10/core/SymNodeImpl.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/async_task.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/multi_wait.h"
-#include "third_party/xla_client/util.h"
-#include "torch/csrc/autograd/variable.h"
-#include "torch/csrc/lazy/core/ir_util.h"
-#include "torch_xla/csrc/computation.h"
-#include "torch_xla/csrc/cross_replica_reduces.h"
-#include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/ir.h"
-#include "torch_xla/csrc/ir_util.h"
-#include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/view.h"
 
 namespace torch_xla {
 
-class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
+enum class PyType {
+  INT,    // int64; technically arbitrary precision
+  FLOAT,  // double
+  BOOL,   // bool
+};
+
+class TORCH_API XLASymNodeImpl final : public c10::SymNodeImpl {
  public:
-  XLASymNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
+  XLASymNodeImpl(torch::lazy::NodePtr ptr, PyType pytype)
+      : node_(std::move(ptr)), pytype_(pytype) {}
+  bool is_bool() override;
   bool is_int() override;
   bool is_float() override;
   c10::SymNode add(const c10::SymNode& other) override;
@@ -50,20 +45,45 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   c10::SymNode neg() override;
   c10::SymNode sym_min(const c10::SymNode& other) override;
   c10::SymNode sym_max(const c10::SymNode& other) override;
+  c10::SymNode sym_or(const c10::SymNode& other) override;
+  c10::SymNode sym_and(const c10::SymNode& other) override;
+  c10::SymNode sym_not() override;
+  // NB: self is ignored here, only the arguments are used
+  c10::SymNode is_contiguous(at::ArrayRef<c10::SymNode> sizes,
+                             at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_contiguous_2d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_contiguous_3d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_strides_2d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_strides_3d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_non_overlapping_and_dense(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
   c10::SymNode clone() override;
   c10::SymNode sym_float() override;
   c10::SymNode wrap_int(int64_t num) override;
   c10::SymNode wrap_float(double num) override;
+  c10::SymNode wrap_bool(bool num) override;
   int64_t guard_int(const char* file, int64_t line) override;
   double guard_float(const char* file, int64_t line) override;
+  bool guard_bool(const char* file, int64_t line) override;
   int64_t int_() override;
   bool bool_() override;
+  bool has_hint() override;
   std::string str() override;
 
   torch::lazy::NodePtr node() { return node_; }
 
  private:
   torch::lazy::NodePtr node_;
+  PyType pytype_;
 };
 
 class XLATensor;
@@ -84,25 +104,33 @@ class XLATensor : public torch::lazy::LazyTensor {
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(handle, device),
           logical_element_type(logical_element_type),
-          sharding(sharding) {}
+          sharding(sharding) {
+      alias_id = unique_id;
+    }
     Data(torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type,
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(ir_value, device),
           logical_element_type(logical_element_type),
-          sharding(sharding) {}
+          sharding(sharding) {
+      alias_id = unique_id;
+    }
     Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device,
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(tensor_data, device),
           logical_element_type(tensor_data.scalar_type()),
-          sharding(sharding) {}
+          sharding(sharding) {
+      alias_id = unique_id;
+    }
     Data(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type,
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(device),
           view(std::move(view)),
           logical_element_type(logical_element_type),
-          sharding(sharding) {}
+          sharding(sharding) {
+      alias_id = unique_id;
+    }
 
     ~Data();
 
@@ -114,6 +142,11 @@ class XLATensor : public torch::lazy::LazyTensor {
     // A copy of the sharding spec is attached to the IR node via
     // `SetShardingSpec` and also during the sync tensor collection.
     ShardingSpecPtr sharding;
+    // This is used to enable XLA's InputOutputAlias. It's inited
+    // with unique_id, and then only get updated during the in-place
+    // op funtionalize pass to point to the input.
+    int64_t alias_id{0};
+    bool is_cloned = false;
   };
 
   static XLATensorPtr Create(const at::Tensor& tensor,
@@ -170,8 +203,9 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Set logical_element_type which is visible to upstream PyTorch.
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
+  void MarkDynamicDimension(uint32_t dim);
   // We don't use the upstream shape to provide xla::shape.
-  xla::util::MaybeRef<xla::Shape> shape() const;
+  runtime::util::MaybeRef<xla::Shape> shape() const;
 
   // Retrieves an opaque ID of the alias object upon which the tensor's view is
   // rooted, or 0 if this tensor is not a view.
@@ -222,13 +256,22 @@ class XLATensor : public torch::lazy::LazyTensor {
   // XLA SPMD sharding spec annoation. The XLA tensor uses this to create
   // HloSharding for replication, manual and tile shardings.
   struct ShardingSpec {
-    ShardingSpec(const xla::OpSharding& sharding) : sharding(sharding) {}
+    ShardingSpec(const xla::OpSharding& sharding, const xla::Shape& shape)
+        : sharding(sharding), shape(shape) {}
+    ShardingSpec(const xla::OpSharding& sharding, const xla::Shape& shape,
+                 const bool& minibatch)
+        : sharding(sharding), shape(shape), minibatch(minibatch) {}
 
-    xla::OpSharding sharding;
+    xla::OpSharding sharding = xla::HloSharding::Unknown().ToProto();
+    // Optional source tensor shape unpartitioned.
+    xla::Shape shape;
+    // Parameter for represent input batch in sharded along batch axes
+    bool minibatch = false;
   };
 
   // Annotate the IR value with ShardingSpec.
-  void SetShardingSpec(const ShardingSpec& sharding_spec);
+  void SetShardingSpec(const ShardingSpec& sharding_spec,
+                       bool overwrite = false);
   // Clear sharding annotation attached to the IR value and transfer sharded
   // data back to host.
   void ClearShardingSpec();
@@ -237,10 +280,19 @@ class XLATensor : public torch::lazy::LazyTensor {
   void SetStorage(const c10::Storage& storage) { storage_ = storage; }
   const c10::Storage& Storage() const { return storage_; }
 
-  int64_t GetOpaqueHandle() const;
+  void SetBase(const at::Tensor& base) { base_ = base; }
+  const at::Tensor& Base() const { return base_; }
+
+  int64_t GetHandle() const;
 
   // Override to enable SPMD.
   void AssignIrValue(torch::lazy::Value ir_value) const final;
+
+  // Set custom op name on base Node type (since not all nodes are XlaNode),
+  // additionally when using TorchDispatch - e.g. to set a custom op name we
+  // end up adding additional frames in stack frame debug - this limits
+  // stack depth
+  bool SetNodeUserMetadata(std::shared_ptr<torch::lazy::UserMetaData> metadata);
 
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
@@ -293,6 +345,13 @@ class XLATensor : public torch::lazy::LazyTensor {
   // points to the same storage, and thus alias of each other.
   // FIXME(alanwaketan): Remove this once we have functionalization (bdhirsh).
   c10::Storage storage_;
+  // Base tensor for view and view_copy operations. This is used mainly for
+  // operations such as as_strided, which operates on the allocated storage.
+  // Since XLATensor doesn't actually expose the storage, we have to run the
+  // operation on the originally created tensor.
+  at::Tensor base_;
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_TENSOR_H_

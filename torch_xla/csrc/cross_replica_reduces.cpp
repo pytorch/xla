@@ -1,19 +1,31 @@
 #include "torch_xla/csrc/cross_replica_reduces.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <map>
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/token_handler.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {
+
+// Note [V3-8 Threading]
+// For V3-8 + PJRT, we have 4 processes and each process has 2 threads to manage
+// the 8 cores. Therefore, we need different tokens for different threads.
+std::unordered_map<int64_t, std::shared_ptr<torch::lazy::Value>>
+    g_all_reduce_tokens;
 
 struct PerTypeContext {
   std::vector<xla::XlaOp> ops;
@@ -26,7 +38,7 @@ struct ReduceContext {
 };
 
 xla::Shape MakeReduceShape(absl::Span<const xla::Shape> operand_shapes) {
-  torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+  torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
   std::vector<xla::Shape> shapes_and_layouts;
   shapes_and_layouts.reserve(operand_shapes.size());
   for (auto& shape : operand_shapes) {
@@ -40,7 +52,7 @@ xla::Shape MakeReduceShape(absl::Span<const xla::Shape> operand_shapes) {
 ReduceContext GetReduceContext(absl::Span<const xla::XlaOp> operands) {
   ReduceContext redux;
   for (size_t i = 0; i < operands.size(); ++i) {
-    xla::Shape operand_shape = XlaHelpers::ShapeOfXlaOp(operands[i]);
+    xla::Shape operand_shape = ShapeHelper::ShapeOfXlaOp(operands[i]);
     PerTypeContext& ctx = redux.contexts[operand_shape.element_type()];
     ctx.ops.push_back(operands[i]);
     ctx.indices.push_back(i);
@@ -82,6 +94,44 @@ std::vector<xla::ReplicaGroup> CreateReduceGroups(
   return reduce_groups;
 }
 
+std::shared_ptr<torch::lazy::Value> CreateToken(
+    const torch::lazy::BackendDevice& device) {
+  // This should be using xla::CreateToken() once we have added Token support to
+  // XLA AllReduce(). Meanwhile we use a constant as token, and we handle it
+  // accordingly in cross_replica_reduces.cpp.
+  // This needs to be device data (hence coming in as XLA computation parameter)
+  // as otherwise the XLA compiler passes will remove it, vanishing its
+  // sequencing effects.
+  torch::lazy::Value ir_value = XLAGraphExecutor::Get()->GetDeviceDataIrValue(
+      0.0, xla::PrimitiveType::F32, device);
+  return std::make_shared<torch::lazy::Value>(std::move(ir_value));
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// The traceable collectives integration follows here, listed in alphabetical
+// order. RFC: https://github.com/pytorch/pytorch/issues/93173
+////////////////////////////////////////////////////////////////////////////////////
+
+// tag is ignored as it's only used in PyTorch to provide backward compatibility
+// with the traditional process group API.
+at::Tensor all_reduce(const at::Tensor& self, c10::string_view reduceOp,
+                      c10::string_view /*tag*/, at::IntArrayRef /*ranks*/,
+                      int64_t /*group_size*/) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  auto self_tensor = bridge::GetXlaTensor(self);
+  // TODO(alanwaketan): Use ranks and group_size to generate groups. Currently
+  // we just suse {} as a workaround. Scale is always 1.0 here, and we always
+  // pin layout.
+  auto result = tensor_methods::all_reduce(self_tensor, GetReduceType(reduceOp),
+                                           /*scale*/ 1.0,
+                                           /*groups*/ {}, /*pin_layout*/ true);
+  return bridge::AtenFromXlaTensor(result);
+}
+
+TORCH_LIBRARY_IMPL(c10d_functional, XLA, m) {
+  m.impl("all_reduce", all_reduce);
+}
+
 }  // namespace
 
 std::vector<xla::XlaOp> BuildAllReduce(
@@ -99,7 +149,7 @@ std::vector<xla::XlaOp> BuildAllReduce(
     xla::XlaOp token_op = MaybeConvertTo(chained_token, type_ctx.first);
     type_ctx.second.ops.push_back(token_op);
     type_ctx.second.operand_shapes.push_back(
-        XlaHelpers::ShapeOfXlaOp(token_op));
+        ShapeHelper::ShapeOfXlaOp(token_op));
 
     xla::XlaOp reduce;
     if (pin_layout) {
@@ -139,11 +189,11 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
                              const std::vector<std::vector<int64_t>>& groups,
                              bool pin_layout) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   TokenHandler token_handler(token);
   xla::XlaOp reduce_result;
   if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),
@@ -165,11 +215,11 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
                                const std::vector<std::vector<int64_t>>& groups,
                                bool pin_layout) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   TokenHandler token_handler(token);
   xla::XlaOp all_gather_result;
   if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),
@@ -186,10 +236,49 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
   return {all_gather_result, token_handler.GetNewToken(all_gather_result)};
 }
 
+AllGatherResultCoalesced BuildAllGatherCoalesced(
+    absl::Span<const xla::XlaOp> inputs, xla::XlaOp token, int64_t dim,
+    int64_t shard_count, const std::vector<std::vector<int64_t>>& groups,
+    bool pin_layout) {
+  std::vector<xla::ReplicaGroup> cc_groups = CreateReduceGroups(groups);
+  TokenHandler token_handler(token);
+  // TODO: We use pseudo-tokens ATM, which are real values. This need to be
+  // switched to use the real XLA Token once support has been added to XLA
+  // AllGather().
+  ReduceContext cc_ctx = GetReduceContext(inputs);
+  std::vector<xla::XlaOp> result(inputs.size());
+
+  for (auto& type_ctx : cc_ctx.contexts) {
+    xla::XlaOp all_gather_result;
+    type_ctx.second.ops[0] = token_handler.GetInput(
+        type_ctx.second.ops[0], &type_ctx.second.operand_shapes[0]);
+    if (pin_layout) {
+      all_gather_result = xla::AllGather(
+          xla::Tuple(inputs[0].builder(), type_ctx.second.ops), dim,
+          shard_count, cc_groups, /*channel_id=*/absl::nullopt,
+          /*layout=*/
+          MakeReduceShape(type_ctx.second.operand_shapes).layout());
+    } else {
+      all_gather_result =
+          xla::AllGather(xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
+                         dim, shard_count, cc_groups);
+    }
+    if (ShapeHelper::ShapeOfXlaOp(all_gather_result).rank() == 0) {
+      for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
+        size_t op_idx = type_ctx.second.indices[i];
+        result[op_idx] = xla::GetTupleElement(all_gather_result, i);
+      }
+    } else {
+      result[0] = all_gather_result;
+    }
+  }
+  return {result, token_handler.GetNewToken(result[0])};
+}
+
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   TokenHandler token_handler(token);
   // TODO: This is missing layout pinning ATM. If XLA scheduling is not exactly
   // the same (graphs on cores differ), XLA could assign different layouts and
@@ -230,10 +319,10 @@ ReduceScatterResult BuildReduceScatter(
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   TokenHandler token_handler(token);
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp reduce_result;
   if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),
@@ -257,6 +346,95 @@ ReduceScatterResult BuildReduceScatter(
   }
 
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
+}
+
+ReduceScatterResultCoalesced BuildReduceScatterCoalesced(
+    AllReduceType reduce_type, absl::Span<const xla::XlaOp> inputs,
+    xla::XlaOp token, double scale, int64_t scatter_dim, int64_t shard_count,
+    const std::vector<std::vector<int64_t>>& groups, bool pin_layout) {
+  std::vector<xla::ReplicaGroup> cc_groups = CreateReduceGroups(groups);
+  TokenHandler token_handler(token);
+  // TODO: We use pseudo-tokens ATM, which are real values. This need to be
+  // switched to use the real XLA Token once support has been added to XLA
+  // ReduceScatter().
+  ReduceContext cc_ctx = GetReduceContext(inputs);
+  std::vector<xla::XlaOp> result(inputs.size());
+  for (auto& type_ctx : cc_ctx.contexts) {
+    xla::XlaOp reduce_result;
+    type_ctx.second.ops[0] = token_handler.GetInput(
+        type_ctx.second.ops[0], &type_ctx.second.operand_shapes[0]);
+    if (pin_layout) {
+      reduce_result = xla::ReduceScatter(
+          xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
+          GetReduceComutation(reduce_type, type_ctx.first), scatter_dim,
+          shard_count, cc_groups, /*channel_id=*/absl::nullopt,
+          /*layout=*/
+          MakeReduceShape(type_ctx.second.operand_shapes).layout());
+    } else {
+      reduce_result = xla::ReduceScatter(
+          xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
+          GetReduceComutation(reduce_type, type_ctx.first), scatter_dim,
+          shard_count, cc_groups);
+    }
+    for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
+      size_t op_idx = type_ctx.second.indices[i];
+      xla::XlaOp gte;
+      if (ShapeHelper::ShapeOfXlaOp(reduce_result).rank() == 0) {
+        gte = xla::GetTupleElement(reduce_result, i);
+      } else {
+        gte = reduce_result;
+      }
+      if (scale != 1.0) {
+        xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
+            scale, type_ctx.second.operand_shapes[i].element_type(),
+            gte.builder());
+        gte = gte * scaling_value;
+      }
+      result[op_idx] = gte;
+    }
+  }
+  return {result, token_handler.GetNewToken(result[0])};
+}
+
+std::vector<torch::lazy::Value> GetOperandListWithToken(
+    c10::ArrayRef<torch::lazy::Value> operands,
+    const torch::lazy::Value& token) {
+  std::vector<torch::lazy::Value> operand_list(operands.begin(),
+                                               operands.end());
+  operand_list.push_back(token);
+  return operand_list;
+}
+
+const torch::lazy::Value& GetAllReduceToken(
+    const torch::lazy::BackendDevice& device) {
+  auto it = g_all_reduce_tokens.find(device.ordinal());
+  if (it == g_all_reduce_tokens.end() || it->second == nullptr) {
+    g_all_reduce_tokens[device.ordinal()] = CreateToken(device);
+    return *g_all_reduce_tokens[device.ordinal()];
+  }
+  return *it->second;
+}
+
+void SetAllReduceToken(const torch::lazy::BackendDevice& device,
+                       const std::shared_ptr<torch::lazy::Value>& token) {
+  g_all_reduce_tokens[device.ordinal()] = token;
+}
+
+AllReduceType GetReduceType(c10::string_view reduce_type) {
+  if (reduce_type == "sum") {
+    return AllReduceType::kSum;
+  } else if (reduce_type == "mul") {
+    return AllReduceType::kMul;
+  } else if (reduce_type == "and") {
+    return AllReduceType::kAnd;
+  } else if (reduce_type == "or") {
+    return AllReduceType::kOr;
+  } else if (reduce_type == "min") {
+    return AllReduceType::kMin;
+  } else if (reduce_type == "max") {
+    return AllReduceType::kMax;
+  }
+  XLA_ERROR() << "Unknown AllReduce type: " << reduce_type;
 }
 
 }  // namespace torch_xla

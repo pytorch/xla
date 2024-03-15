@@ -3,25 +3,133 @@
 Note that the information in this section is subject to be removed in future releases of the _PyTorch/XLA_ software,
 since many of them are peculiar to a given internal implementation which might change.
 
-To diagnose issues, we can use the execution metrics and counters provided by _PyTorch/XLA_
+## Sanity Check
+Before performing any in depth debugging, we want to do a sanity check on the installed PyTorch/XLA.
+
+### Check PyTorch/XLA Version
+PyTorch and PyTorch/XLA version should match. Check out our [README](https://github.com/pytorch/xla#getting-started) for more detials on versions available.
+```
+vm:~$ python
+>>> import torch
+>>> import torch_xla
+>>> print(torch.__version__)
+2.1.0+cu121
+>>> print(torch_xla.__version__)
+2.1.0
+```
+
+### Perform A Simple Calculation
+```
+vm:~$ export PJRT_DEVICE=TPU
+vm:~$ python3
+>>> import torch
+>>> import torch_xla.core.xla_model as xm
+>>> t1 = torch.tensor(100, device=xm.xla_device())
+>>> t2 = torch.tensor(200, device=xm.xla_device())
+>>> print(t1 + t2)
+tensor(300, device='xla:0')
+```
+
+### Run Resnet With Fake Data
+For nightly
+```
+vm:~$ git clone https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
+```
+
+For release version `x.y`, you want to use the branch `rx.y`. For example if you installed 2.1 release, you should do
+```
+vm:~$ git clone --branch r2.1 https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
+```
+
+If you can get the resnet to run we can conclude that torch_xla is installed correctly.
+
+
+## Performance Debugging
+
+To diagnose performance issues, we can use the execution metrics and counters provided by _PyTorch/XLA_
 The **first thing** to check when model is slow is to generate a metrics report.
 
 Metrics report is extremely helpful in diagnosing issues. Please try to include it in your bug
 report sent to us if you have it.
 
-## Perform A Auto-Metrics Analysis
+## PyTorch/XLA Debugging Tool
 
-We provide ways to automatically analyze the metrics report and provide a summary. Simply run your workload with `PT_XLA_DEBUG=1`. Some example output would be
+You can enable the PyTorch/XLA debugging tool by setting `PT_XLA_DEBUG=1`, which provides a couple useful debugging features.
+
+## PyTorch/XLA + Dynamo Debugging Tool
+
+You can enable the PyTorch/XLA + Dynamo debugging tool by setting `XLA_DYNAMO_DEBUG=1`.
+
+### Perform A Auto-Metrics Analysis
+
+The debugging tool will analyze the metrics report and provide a summary. Some example output would be
 
 ```
 pt-xla-profiler: CompileTime too frequent: 21 counts during 11 steps
-pt-xla-profiler: TransferFromServerTime too frequent: 11 counts during 11 steps
+pt-xla-profiler: TransferFromDeviceTime too frequent: 11 counts during 11 steps
 pt-xla-profiler: Op(s) not lowered: aten::_ctc_loss, aten::_ctc_loss_backward,  Please open a GitHub issue with the above op lowering requests.
 pt-xla-profiler: CompileTime too frequent: 23 counts during 12 steps
-pt-xla-profiler: TransferFromServerTime too frequent: 12 counts during 12 steps
+pt-xla-profiler: TransferFromDeviceTime too frequent: 12 counts during 12 steps
 ```
 
-Following section will explain how to get and understand a more detial metrics report.
+### Compilation & Execution Analysis
+The debugging tool will analyze every compilation and execution for your model. Some example output would be
+```
+Compilation Analysis: ================================================================================
+Compilation Analysis: Compilation Cause
+Compilation Analysis:   user mark_step
+Compilation Analysis: Graph Info:
+Compilation Analysis:   Graph Hash: 537d4b0264b029688281412214d252e9
+Compilation Analysis:   Number of Graph Inputs: 588
+Compilation Analysis:   Number of Graph Outputs: 320
+Compilation Analysis: Python Frame Triggered Execution:
+Compilation Analysis:   mark_step (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:840)
+Compilation Analysis:   broadcast_master_param (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:1230)
+Compilation Analysis:   train_imagenet (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:261)
+Compilation Analysis:   _mp_fn (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:365)
+Compilation Analysis:   __call__ (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:176)
+Compilation Analysis:   _thread_fn (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:70)
+Compilation Analysis:   run (/usr/local/lib/python3.8/concurrent/futures/thread.py:57)
+Compilation Analysis:   _worker (/usr/local/lib/python3.8/concurrent/futures/thread.py:80)
+Compilation Analysis:   ..........
+Compilation Analysis: --------------------------------------------------------------------------------
+Compilation Analysis: ================================================================================
+
+Execution Analysis: ================================================================================
+Execution Analysis: Execution Cause
+Execution Analysis:   user mark_step
+Execution Analysis: Graph Info:
+Execution Analysis:   Graph Hash: 537d4b0264b029688281412214d252e9
+Execution Analysis:   Number of Graph Inputs: 588
+Execution Analysis:   Number of Graph Outputs: 320
+Execution Analysis: Python Frame Triggered Execution:
+Execution Analysis:   mark_step (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:840)
+Execution Analysis:   broadcast_master_param (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:1230)
+Execution Analysis:   train_imagenet (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:261)
+Execution Analysis:   _mp_fn (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:365)
+Execution Analysis:   __call__ (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:176)
+Execution Analysis:   _thread_fn (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:70)
+Execution Analysis:   run (/usr/local/lib/python3.8/concurrent/futures/thread.py:57)
+Execution Analysis:   _worker (/usr/local/lib/python3.8/concurrent/futures/thread.py:80)
+Execution Analysis:   ..........
+Execution Analysis: --------------------------------------------------------------------------------
+Execution Analysis: ================================================================================
+```
+
+Some common causes of Compilation/Executation are
+1. User manually call `mark_step`.
+2. [Parallel loader](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51) call `mark_step` for every x (configurable) batch.
+3. Exiting a [profiler StepTrace region](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171).
+4. Dynamo decide to compile/execute the graph.
+5. User trying to access(often due to logging) the value of a tensor before the `mark_step`.
+
+The executation caused by 1-4 are expected, and we want to avoid 5 by either reduce the frequency of accessing tensor values or manually add a `mark_step` before accessing.
+
+Users should expect to see this `Compilation Cause` + `Executation Cause` pairs for first couple steps. After the model stabilize users should expect to only see `Execution Cause`. To use PyTorch/XLA efficiently, we expect the same models code to be run for every step and compilation only happen once for every graph. If you keep seeing `Compilation Cause`, you should try to dump the IR/HLO following [this section](#common-debugging-environment-variables-combinations) and compare the graphs for each step and understand the source of the differences.
+
+Following section will explain how to get and understand a more detail metrics report.
 
 ## Get A Metrics Report
 
@@ -33,7 +141,7 @@ import torch_xla.debug.metrics as met
 # For short report that only contains a few key metrics.
 print(met.short_metrics_report())
 # For full report that includes all metrics.
-print(met.short_metrics_report())
+print(met.metrics_report())
 ```
 
 ## Understand The Metrics Report
@@ -76,8 +184,8 @@ Counter: aten::nonzero
 If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usually means a missing
 lowering in PyTorch/XLA. Feel free to open a feature request for it on [GitHub issues](https://github.com/pytorch/xla/issues).
 
-## Clar The Metrics Report
-If you want to clear the metrics between steps/epoches, you can use
+## Clear The Metrics Report
+If you want to clear the metrics between steps/epochs, you can use
 ```Python
 import torch_xla.debug.metrics as met
 
@@ -85,7 +193,7 @@ met.clear_all()
 ```
 
 ## Performance Profiling
-To profile your workload in depth to undertand bottlenecks please check the following resources:
+To profile your workload in depth to understand bottlenecks please check the following resources:
 * [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm)
 * [Colab notebook](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
 * [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
@@ -181,6 +289,11 @@ We don't expect users to use tools in this section to debug their models. But we
 them when you submit a bug report since they provide additional information that metrics report
 doesn't have.
 
+* ```print(torch_xla._XLAC._get_xla_tensors_text([res]))``` where `res` is the result tensor prints out the IR.
+* ```print(torch_xla._XLAC._get_xla_tensors_hlo([res]))``` where `res` is the result tensor prints out the generated XLA HLO.
+
+Note these functions must be called prior to `mark_step()`, otherwise the tensor will already be materialized.
+
 ### Environment Variables
 
 There are also a number of environment variables which control the behavior of the _PyTorch/XLA_
@@ -203,28 +316,22 @@ only be enabled for debugging.
 * ```XLA_SAVE_TENSORS_FMT```: The format of the graphs stored within the _XLA_SAVE_TENSORS_FILE_
   file. Can be ```text``` (the default), ```dot``` (the _Graphviz_ format) or ```hlo```.
 
+* ```XLA_FLAGS=--xla_dump_to```: If set to ```=/tmp/dir_name```, XLA compiler will dump the unoptimized and optimzed HLO per compilation.
+
 * ```XLA_METRICS_FILE```: If set, the path to a local file where the internal metrics will be
   saved at every step. Metrics will be appended to the file, if already existing.
 
 * ```XLA_SAVE_HLO_FILE```: If set, the path to a local file where, in case of compilation/execution
   error, the offending HLO graph will be saved.
 
-* ```XLA_GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/XLA_ software tries to
-  fuse together many _PyTorch_ operations into a single computation graph, but sometimes, either
-  for debugging, or in case the _PyTorch_ code have a very dynamic nature (in shapes or graph
-  terms), it is better to force the execution in _OpByOp_ mode (every IR node is lowered into
-  a separate _XLA_ computation, and chain-executed). This environment variable, if set to 1,
-  enables _OpByOp_ during the "get tensors" operation (the operation used by _PyTorch/XLA_ to
-  fetch intermediate values back from the _TPU_ device into _PyTorch_ CPU tensors).
-
-* ```XLA_SYNC_TENSORS_OPBYOP```: The same as _XLA_GET_TENSORS_OPBYOP_ but for "sync tensors"
-  operation (the operation used at the end of a step, to flush pending IR computations and
-  materialize them into _TPU_ device data).
-
 * ```XLA_SYNC_WAIT```: Forces the XLA tensor sync operation to wait for its completion, before
   moving to the next step.
 
-* ```XLA_USE_BF16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _BiFloat16_
+* ```XLA_USE_EAGER_DEBUG_MODE```: Forces the XLA tensor to execute eagerly, meaning compile and execute the torch operations one
+  by one. This is useful to bypass the long compilation time but overall step time will be a lot slower and memory usage will be higher
+  since all compiler optimizaiton will be skipped.
+
+* ```XLA_USE_BF16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _BiFloat16_
   when sending to the _TPU_ device. Note that when using `XLA_USE_BF16=1` tensor arithmetic will
   be done in reduced precision and so tensors will not be accurate if accumulated over time.
   For example:
@@ -240,31 +347,15 @@ only be enabled for debugging.
   So to get accurate metrics such as average loss value over many steps, use manual mixed
   precision where metrics stay in FP32.
 
-* ```XLA_USE_F16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _Float16_
+* ```XLA_USE_F16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _Float16_
   (_PyTorch_ _Half_ type) when sending to devices which supports them.
-
-* ```XLA_USE_32BIT_LONG```: If set to 1, maps _PyTorch_ _Long_ types to _XLA_ 32bit type.
-  On the versions of the TPU HW at the time of writing, 64bit integer computations are
-  expensive, so setting this flag might help. It should be verified by the user that truncating
-  to 32bit values is a valid operation according to the use of _PyTorch_ _Long_ values in it.
 
 * ```TF_CPP_LOG_THREAD_ID```: If set to 1, the TF logs will show the thread ID
   helping with debugging multithreaded processes.
 
 * ```TF_CPP_VMODULE```: Environment variable used for TF VLOGs and takes the
   form of `TF_CPP_VMODULE=name=value,...`. Note that for VLOGs you must set
-  `TF_CPP_MIN_LOG_LEVEL=0`. For PyTorch/XLA using a configuration like
-  `TF_CPP_VMODULE=tensor=5` would enable logging such as:
-
-  ```
-  2019-10-03 17:23:56.419040: I   27891 torch_xla/csrc/tensor.cpp:1104]
-  Executing IR graph hash 4211381954965020633 on device TPU:3 done!
-  2019-10-03 17:23:56.419448: I   27890 torch_xla/csrc/tensor.cpp:1104]
-  Executing IR graph hash 15483856951158150605 on device TPU:5 done!
-  2019-10-03 17:23:56.419539: I   27896 torch_xla/csrc/tensor.cpp:1104]
-  Executing IR graph hash 4211381954965020633 on device TPU:4 done!
-  ...
-  ```
+  `TF_CPP_MIN_LOG_LEVEL=0`.
 
 * ```TF_CPP_MIN_LOG_LEVEL```: Level to print messages for. `TF_CPP_MIN_LOG_LEVEL=0` will turn
   on INFO logging, `TF_CPP_MIN_LOG_LEVEL=1` WARNING and so on. Our PyTorch/XLA `TF_VLOG` uses
@@ -273,61 +364,32 @@ only be enabled for debugging.
 * ```XLA_DUMP_HLO_GRAPH```: If set to `=1` in case of a compilation or execution error the
   offending HLO graph will be dumped as part of the runtime error raised by `xla_util.cc`.
 
-### Retrieving Stack Traces
+### Common Debugging Environment Variables Combinations
 
-In the event that the _PyTorch_ process is hanging, it might be useful to include the stack
-traces together with the GitHub issue.
+* Record the graph execution in the IR format
+  ```
+  XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"  
+  ```
 
-First thing is to find out which PID the _PyTorch_ process is associated with. Using the ```ps```
-command it is possible to find that information. It will be a _python_ process running your
-main _python_ file.
+* Record the graph execution in the HLO format
+  ```
+  XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="hlo" XLA_SAVE_TENSORS_FILE="/tmp/save1.hlo"
+  ```
 
-In order to allow _GDB_ to attach a user process the following command should be run as root:
+* Show debugging VLOG for runtime and graph compilation/execution
+  ```
+  TF_CPP_MIN_LOG_LEVEL=0 TF_CPP_VMODULE="xla_graph_executor=5,pjrt_computation_client=3"
+  ```
 
-```Shell
-echo 0 > /proc/sys/kernel/yama/ptrace_scope
+### Reproducing PyTorch/XLA CI/CD unit test failures.
+
+You may see some test failures for a PR such as:
+
+```
+To execute this test, run the following from the base repo dir:
+    PYTORCH_TEST_WITH_SLOW=1 python ../test/test_torch.py -k test_put_xla_uint8
 ```
 
-The above command remains active until the machine is rebooted.
+Running this directly in the command line does not work. You need to set the environment variable `TORCH_TEST_DEVICES` to your local `pytorch/xla/test/pytorch_test_base.py`. For example:
 
-The, given the PID, it is possible to grab the stack traces with the following command:
-
-```Shell
-./scripts/dump_stacks.py PID > /tmp/stack-traces.log
-```
-
-## Using debug_run.py To Collect Debug Information
-
-A utility is provided in `scripts/debug_run.py` which can be used to create a `tar.gz`
-archive with the information required to debug _PyTorch/XLA_ executions.
-
-Example:
-
-```Shell
-./scripts/debug_run.py --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT [ARGS...]
-```
-
-The _python_ `-u` flag is suggested to disable buffering so that captured logs are correctly
-interleaved (otherwise STDOUT will be rendered after all STDERR).
-
-The above command line example will leave the temporary folder containing the archived
-information on the filesystem. Use the `--tidy` flag to have that removed on exit:
-
-```Shell
-./scripts/debug_run.py --tidy --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT [ARGS...]
-```
-
-The `debug_run.tar.gz` file should then be attached to bug reports when necessary.
-
-Since the script will collect a lot of data, it should usually be let run for no more
-than hundred steps or so.
-
-If the SCRIPT has arguments to control the number of steps, those should be used,
-otherwise hitting `CTRL^C` will interrupt the run.
-
-It is also sugested to run in single-core mode, to minimize the amount of data.
-Running in single-core mode is also strongly suggested when debugging execution issues.
-
-## Common Issues
-
-* `Missing XLA configuration` error message: You need to set `XRT_TPU_CONFIG` if using TPUs. If using GPUs set `GPU_NUM_DEVICES=N` for `N` number of GPUs. If using CPUs set `XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"` and `XRT_WORKERS="localservice:0;grpc://localhost:9002"`
+`TORCH_TEST_DEVICES=/path/to/pytorch/xla/test/pytorch_test_base.py PYTORCH_TEST_WITH_SLOW=1 python ../test/test_torch.py -k test_put_xla_uint8` should work.

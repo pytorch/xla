@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/ops/index_select.h"
 
-#include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "xla/client/lib/slicing.h"
 
 namespace torch_xla {
 namespace {
@@ -22,9 +22,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 IndexSelect::IndexSelect(const torch::lazy::Value& input, int64_t dim,
                          const torch::lazy::Value& index)
-    : XlaNode(torch::lazy::OpKind(at::aten::index_select), {input, index},
-              [&]() { return NodeOutputShape(input, index, dim); },
-              /*num_outputs=*/1, torch::lazy::MHash(dim)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::index_select), {input, index},
+          [&]() { return NodeOutputShape(input, index, dim); },
+          /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr IndexSelect::Clone(torch::lazy::OpList operands) const {

@@ -1,5 +1,8 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
+#define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
+#include "torch_xla/csrc/cross_replica_reduces.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
@@ -8,22 +11,13 @@ namespace tensor_methods {
 //////////////////////////////////////////////////////////////////////////////
 // XLA dedicated operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
-std::pair<XLATensorPtr, torch::lazy::Value> all_reduce(
-    const XLATensorPtr& input, const torch::lazy::Value& token,
-    AllReduceType reduce_type, double scale,
-    std::vector<std::vector<int64_t>> groups, bool pin_layout);
+XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
+                        double scale, std::vector<std::vector<int64_t>> groups,
+                        bool pin_layout);
 
-torch::lazy::Value all_reduce_(XLATensorPtr& input,
-                               const torch::lazy::Value& token,
-                               AllReduceType reduce_type, double scale,
-                               std::vector<std::vector<int64_t>> groups,
-                               bool pin_layout);
-
-torch::lazy::Value all_reduce(std::vector<XLATensorPtr>* inputs,
-                              const torch::lazy::Value& token,
-                              AllReduceType reduce_type, double scale,
-                              std::vector<std::vector<int64_t>> groups,
-                              bool pin_layout);
+void all_reduce(const std::vector<XLATensorPtr>& inputs,
+                AllReduceType reduce_type, double scale,
+                std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
 std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
     const XLATensorPtr& input, const torch::lazy::Value& token,
@@ -39,15 +33,30 @@ torch::lazy::Value reduce_scatter_out(XLATensorPtr& output,
                                       std::vector<std::vector<int64_t>> groups,
                                       bool pin_layout);
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value>
+reduce_scatter_coalesced(const std::vector<XLATensorPtr>& inputs,
+                         const torch::lazy::Value& token,
+                         AllReduceType reduce_type, double scale,
+                         int64_t scatter_dim, int64_t shard_count,
+                         std::vector<std::vector<int64_t>> groups,
+                         bool pin_layout);
+
+torch::lazy::Value reduce_scatter_coalesced_out(
+    const std::vector<XLATensorPtr>& outputs,
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    AllReduceType reduce_type, double scale, int64_t scatter_dim,
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout);
+
 std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
     std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
-std::pair<XLATensorPtr, torch::lazy::Value> all_gather(
-    const XLATensorPtr& input, const torch::lazy::Value& token, int64_t dim,
-    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-    bool pin_layout);
+XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
+                        int64_t shard_count,
+                        std::vector<std::vector<int64_t>> groups,
+                        bool pin_layout);
 
 torch::lazy::Value all_gather_out(XLATensorPtr& output,
                                   const XLATensorPtr& input,
@@ -56,9 +65,26 @@ torch::lazy::Value all_gather_out(XLATensorPtr& output,
                                   std::vector<std::vector<int64_t>> groups,
                                   bool pin_layout);
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather_coalesced(
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout);
+
+torch::lazy::Value all_gather_coalesced_out(
+    std::vector<XLATensorPtr>& outputs, const std::vector<XLATensorPtr>& inputs,
+    const torch::lazy::Value& token, int64_t dim, int64_t shard_count,
+    std::vector<std::vector<int64_t>> groups, bool pin_layout);
+
 std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
+
+void custom_sharding_(const XLATensorPtr& input,
+                      const std::shared_ptr<XLATensor::ShardingSpec>& spec);
+
+void tpu_custom_call_(XLATensorPtr& output,
+                      const std::vector<XLATensorPtr>& inputs,
+                      const std::string& payload);
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
                                  std::vector<int64_t> dimensions);
@@ -86,7 +112,22 @@ void adam_optimizer_step_(const XLATensorPtr& found_inf, XLATensorPtr& step,
 
 std::vector<XLATensorPtr> user_computation(
     const std::string& opname, absl::Span<const XLATensorPtr> inputs,
-    ComputationPtr computation);
+    runtime::ComputationClient::ComputationPtr computation);
+
+//////////////////////////////////////////////////////////////////////////////
+// Quantization related ops here.
+//////////////////////////////////////////////////////////////////////////////
+XLATensorPtr quantize_tensor(const XLATensorPtr& input,
+                             const std::vector<float>& scale_list,
+                             const std::vector<int>& zero_point_list,
+                             int quant_min, int quant_max,
+                             const std::string& dtype, int axis);
+
+XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
+                               const std::vector<float>& scale_list,
+                               const std::vector<int>& zero_point_list,
+                               int quant_min, int quant_max,
+                               const std::string& dtype, int axis);
 
 //////////////////////////////////////////////////////////////////////////////
 // ATEN operators follows here, listed in alphabetical order.
@@ -166,12 +207,6 @@ void arange_out(XLATensorPtr& out, const at::Scalar& start,
                 const at::Scalar& end, const at::Scalar& step,
                 at::ScalarType scalar_type);
 
-XLATensorPtr argmax(const XLATensorPtr& input, int64_t dim, bool keepdim);
-XLATensorPtr argmax(const XLATensorPtr& input);
-
-XLATensorPtr argmin(const XLATensorPtr& input, int64_t dim, bool keepdim);
-XLATensorPtr argmin(const XLATensorPtr& input);
-
 // Takes a slice from the input as R1 at the specified offset and reshapes it
 // into the provided size.
 XLATensorPtr as_strided(const XLATensorPtr& input, std::vector<int64_t> size,
@@ -187,7 +222,8 @@ XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
                          std::vector<int64_t> kernel_size,
                          std::vector<int64_t> stride,
                          std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad);
+                         bool count_include_pad,
+                         std::optional<int> divisor_override);
 
 XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
                                   const XLATensorPtr& input,
@@ -234,6 +270,8 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
 XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                            double p);
 
+XLATensorPtr pdist_forward(const XLATensorPtr& input, double p);
+
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
 void celu_(XLATensorPtr& input, const at::Scalar& alpha);
 
@@ -270,6 +308,9 @@ XLATensorPtr convolution_overrideable(
     std::vector<int64_t> stride, std::vector<int64_t> padding,
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups);
+
+XLATensorPtr count_nonzero(const XLATensorPtr& input,
+                           std::vector<int64_t> dims);
 
 // Returns the cross product of the two input tensors in the given dimension.
 // If the dimension is not given, it defaults to the first dimension found
@@ -319,6 +360,8 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                       const XLATensorPtr& indices,
                                       int64_t num_weights, int64_t padding_idx,
                                       bool scale_grad_by_freq);
+
+XLATensorPtr embedding(const XLATensorPtr& weight, const XLATensorPtr& indices);
 
 XLATensorPtr eq(const XLATensorPtr& input, const at::Scalar& other);
 
@@ -453,11 +496,18 @@ XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
 XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
                   const at::Scalar& weight);
 
+XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
+                                const at::Scalar& ord,
+                                std::vector<int64_t> dimensions, bool keep_dim,
+                                c10::optional<at::ScalarType> dtype);
+
 XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,
                       const int64_t steps, at::ScalarType element_type,
                       const torch::lazy::BackendDevice& device);
 
 XLATensorPtr log(const XLATensorPtr& input);
+
+XLATensorPtr logit(const XLATensorPtr& input, c10::optional<double> eps);
 
 XLATensorPtr log_base(const XLATensorPtr& input, torch::lazy::OpKind op,
                       double base);
@@ -484,12 +534,10 @@ XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other);
 
-// In-place version of the method above.
-void masked_fill_(XLATensorPtr& input, const XLATensorPtr& mask,
-                  const at::Scalar& value);
+XLATensorPtr mark_tensor(const XLATensorPtr& input, const std::string& info);
 
-void masked_scatter_(XLATensorPtr& input, const XLATensorPtr& mask,
-                     const XLATensorPtr& source);
+XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
+                            const XLATensorPtr& source);
 
 XLATensorPtr masked_select(const XLATensorPtr& input, const XLATensorPtr& mask);
 
@@ -557,6 +605,9 @@ XLATensorPtr mul(
     const XLATensorPtr& input, const at::Scalar& other,
     c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
+XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples,
+                         bool replacement);
+
 XLATensorPtr mv(const XLATensorPtr& input, const XLATensorPtr& vec);
 void mv_out(XLATensorPtr& out, const XLATensorPtr& input,
             const XLATensorPtr& vec);
@@ -581,6 +632,9 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm_backward(
     const XLATensorPtr& grad_out, const XLATensorPtr& input,
     const XLATensorPtr& weight, const XLATensorPtr& save_mean,
     const XLATensorPtr& save_invstd, bool training, double eps);
+
+std::tuple<XLATensorPtr, XLATensorPtr> native_dropout(
+    const XLATensorPtr& input, double p, c10::optional<bool> train);
 
 XLATensorPtr ne(const XLATensorPtr& input, const at::Scalar& other);
 
@@ -644,6 +698,10 @@ XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent);
 
 XLATensorPtr prelu(const XLATensorPtr& input, const XLATensorPtr& weight);
 
+std::tuple<XLATensorPtr, XLATensorPtr> prelu_backward(
+    const XLATensorPtr& grad_out, const XLATensorPtr& input,
+    const XLATensorPtr& weight);
+
 XLATensorPtr prod(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                   bool keep_reduced_dimensions,
                   c10::optional<at::ScalarType> dtype);
@@ -658,10 +716,24 @@ void random_(XLATensorPtr& input, int64_t from, int64_t to);
 XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
                       at::ScalarType scalar_type);
 
+XLATensorPtr reflection_pad1d(const XLATensorPtr& input,
+                              std::vector<int64_t> padding);
+
+XLATensorPtr reflection_pad1d_backward(const XLATensorPtr& grad_output,
+                                       const XLATensorPtr& input,
+                                       std::vector<int64_t> padding);
+
 XLATensorPtr reflection_pad2d(const XLATensorPtr& input,
                               std::vector<int64_t> padding);
 
 XLATensorPtr reflection_pad2d_backward(const XLATensorPtr& grad_output,
+                                       const XLATensorPtr& input,
+                                       std::vector<int64_t> padding);
+
+XLATensorPtr reflection_pad3d(const XLATensorPtr& input,
+                              std::vector<int64_t> padding);
+
+XLATensorPtr reflection_pad3d_backward(const XLATensorPtr& grad_output,
                                        const XLATensorPtr& input,
                                        std::vector<int64_t> padding);
 
@@ -677,6 +749,12 @@ XLATensorPtr replication_pad1d_backward(const XLATensorPtr& grad_output,
 XLATensorPtr replication_pad2d(const XLATensorPtr& input,
                                std::vector<int64_t> padding);
 XLATensorPtr replication_pad2d_backward(const XLATensorPtr& grad_output,
+                                        const XLATensorPtr& input,
+                                        std::vector<int64_t> padding);
+
+XLATensorPtr replication_pad3d(const XLATensorPtr& input,
+                               std::vector<int64_t> padding);
+XLATensorPtr replication_pad3d_backward(const XLATensorPtr& grad_output,
                                         const XLATensorPtr& input,
                                         std::vector<int64_t> padding);
 
@@ -771,14 +849,15 @@ std::vector<XLATensorPtr> split_with_sizes(const XLATensorPtr& input,
                                            std::vector<int64_t> split_size,
                                            int64_t dim);
 
-XLATensorPtr sqrt(const XLATensorPtr& input);
-
 // Squeeze out all trivial (size 1) dimensions.
 XLATensorPtr squeeze(const XLATensorPtr& input);
 
 // Squeeze out the specified dimension index, if trivial (size 1). Returns
 // unchanged input otherwise.
 XLATensorPtr squeeze(const XLATensorPtr& input, int64_t dim);
+
+// Same as above, but with a tuple of dims.
+XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims);
 
 // In-place versions of the methods above.
 void squeeze_(XLATensorPtr& input);
@@ -880,6 +959,12 @@ std::tuple<XLATensorPtr, XLATensorPtr> var_mean(const XLATensorPtr& input,
 // Like reshape, but it returns a view into the original tensor.
 XLATensorPtr view(const XLATensorPtr& input,
                   absl::Span<const int64_t> output_size);
+XLATensorPtr view_symint(const XLATensorPtr& input,
+                         at::SymIntArrayRef sym_size);
+
+XLATensorPtr view_as_complex_copy(const XLATensorPtr& input);
+
+XLATensorPtr view_as_real_copy(const XLATensorPtr& input);
 
 void zero_(XLATensorPtr& input);
 
@@ -888,3 +973,5 @@ XLATensorPtr where(const XLATensorPtr& condition, const XLATensorPtr& input,
 
 }  // namespace tensor_methods
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_

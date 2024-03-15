@@ -1,0 +1,4 @@
+# ARGS: --backends inductor openxla+lazytensor --
+# Datetime(UTC),Speedup(Inductor/Oldest Inductor),StdDev,Speedup(XLA+LazyTensor/Oldest Inductor),StdDev
+2023-11-11 05:32:18.723407,1.0,0.03108182,,
+2023-11-12 05:32:18,1.40315838,0.03083885,0.41071322,0.0

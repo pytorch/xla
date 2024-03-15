@@ -25,7 +25,7 @@ TORCHVISION_WHEEL_TMPL = 'torchvision-{whl_version}-cp{py_version}-cp{py_version
 VERSION_REGEX = re.compile(r'^(\d+\.)+\d+$')
 
 def is_gpu_runtime():
-  return int(os.environ.get('COLAB_GPU', 0)) == 1
+  return os.environ.get('COLAB_GPU', 0) == '1'
 
 
 def is_tpu_runtime():

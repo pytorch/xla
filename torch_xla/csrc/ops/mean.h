@@ -1,12 +1,13 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_MEAN_H_
+#define XLA_TORCH_XLA_CSRC_OPS_MEAN_H_
 
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
 
 #include <vector>
 
-#include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 
@@ -34,3 +35,5 @@ class Mean : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_MEAN_H_

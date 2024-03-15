@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_OPS_H_
+#define XLA_TORCH_XLA_CSRC_OPS_OPS_H_
 
 // This header can depend on ops/ and ir.h, as well as system/c++, tensorflow,
 // PT,... but not on other PT/XLA headers.
@@ -90,6 +91,9 @@ torch::lazy::NodePtr Exp(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Log(const torch::lazy::Value& input);
 
+torch::lazy::NodePtr Logit(const torch::lazy::Value& input,
+                           c10::optional<double> eps);
+
 torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
                              torch::lazy::OpKind op, double base);
 
@@ -99,6 +103,10 @@ torch::lazy::NodePtr Sqrt(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Prelu(const torch::lazy::Value& input,
                            const torch::lazy::Value& weight);
+
+torch::lazy::NodePtr PreluBackward(const torch::lazy::Value& grad,
+                                   const torch::lazy::Value& input,
+                                   const torch::lazy::Value& weight);
 
 torch::lazy::NodePtr Pow(const torch::lazy::Value& input,
                          const torch::lazy::Value& exponent);
@@ -165,6 +173,16 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
                           c10::optional<at::ScalarType> dtype,
                           absl::Span<const int64_t> dims, bool keepdim);
 
+torch::lazy::NodePtr Pdist_forward(const torch::lazy::Value& input,
+                                   const c10::optional<at::Scalar>& p,
+                                   c10::optional<at::ScalarType> dtype);
+
+torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
+                                      const at::Scalar& ord,
+                                      std::vector<int64_t> dimensions,
+                                      bool keepdim,
+                                      c10::optional<at::ScalarType> dtype);
+
 torch::lazy::NodePtr Identity(int64_t lines, int64_t cols,
                               xla::PrimitiveType element_type);
 
@@ -190,6 +208,9 @@ torch::lazy::NodePtr Rshift(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Rshift(const torch::lazy::Value& input,
                             const torch::lazy::Value& other);
+
+torch::lazy::NodePtr Div(const torch::lazy::Value& input,
+                         const torch::lazy::Value& divisor);
 
 torch::lazy::NodePtr Remainder(const torch::lazy::Value& input,
                                const torch::lazy::Value& divisor);
@@ -223,4 +244,25 @@ torch::lazy::NodePtr Softplus(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Selu(const torch::lazy::Value& input);
 
+torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input);
+
+torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input);
+
+torch::lazy::NodePtr Rsub(const torch::lazy::Value& input,
+                          const torch::lazy::Value& other,
+                          const torch::lazy::Value& alpha);
+
+torch::lazy::NodePtr Sub(const torch::lazy::Value& input,
+                         const torch::lazy::Value& other,
+                         const torch::lazy::Value& alpha);
+
+torch::lazy::NodePtr Add(const torch::lazy::Value& input,
+                         const torch::lazy::Value& other,
+                         const torch::lazy::Value& alpha);
+
+torch::lazy::NodePtr Mul(const torch::lazy::Value& input,
+                         const torch::lazy::Value& other);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_OPS_H_

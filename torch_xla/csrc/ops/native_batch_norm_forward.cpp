@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/batch_norm.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
@@ -56,13 +56,14 @@ NativeBatchNormForward::NativeBatchNormForward(
     const torch::lazy::Value& input, const torch::lazy::Value& weight,
     const torch::lazy::Value& bias, const torch::lazy::Value& running_mean,
     const torch::lazy::Value& running_var, bool training, double eps)
-    : XlaNode(torch::lazy::OpKind(at::aten::native_batch_norm),
-              {input, weight, bias, running_mean, running_var},
-              [&]() {
-                return NodeOutputShape(input, weight, bias, running_mean,
-                                       running_var, training);
-              },
-              /*num_outputs=*/4, torch::lazy::MHash(training, eps)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::native_batch_norm),
+          {input, weight, bias, running_mean, running_var},
+          [&]() {
+            return NodeOutputShape(input, weight, bias, running_mean,
+                                   running_var, training);
+          },
+          /*num_outputs=*/4, torch::lazy::MHash(training, eps)),
       training_(training),
       eps_(eps) {}
 

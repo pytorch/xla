@@ -1,10 +1,10 @@
 #include "torch_xla/csrc/ops/nms.h"
 
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nms_op.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
@@ -31,12 +31,13 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& boxes,
 Nms::Nms(const torch::lazy::Value& boxes, const torch::lazy::Value& scores,
          const torch::lazy::Value& score_threshold,
          const torch::lazy::Value& iou_threshold, int64_t output_size)
-    : XlaNode(xla_nms, {boxes, scores, score_threshold, iou_threshold},
-              [&]() {
-                return NodeOutputShape(boxes, scores, score_threshold,
-                                       iou_threshold, output_size);
-              },
-              /*num_outputs=*/2, torch::lazy::MHash(output_size)),
+    : XlaNode(
+          xla_nms, {boxes, scores, score_threshold, iou_threshold},
+          [&]() {
+            return NodeOutputShape(boxes, scores, score_threshold,
+                                   iou_threshold, output_size);
+          },
+          /*num_outputs=*/2, torch::lazy::MHash(output_size)),
       output_size_(output_size) {}
 
 torch::lazy::NodePtr Nms::Clone(torch::lazy::OpList operands) const {

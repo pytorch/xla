@@ -1,9 +1,10 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_VIEW_UPDATE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_VIEW_UPDATE_H_
 
 #include <vector>
 
-#include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 
@@ -33,3 +34,5 @@ class AsStridedViewUpdate : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_AS_STRIDED_VIEW_UPDATE_H_

@@ -1,26 +1,26 @@
-import distutils.util
-import os
 import torch
 import torch.distributed as dist
-import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
+from torch_xla._internal import rendezvous
 import logging
-from torch._C._distributed_c10d import (
-    ProcessGroup,
-    Work,
-)
-from .xrt_init import init_xrt_context
+import os
+from torch._C._distributed_c10d import ProcessGroup
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
+  assert not xr.is_spmd(
+  ), "XLA backend is not supported with SPMD. Please use a CPU process group instead."
   return ProcessGroupXla(prefix_store, rank, size, timeout)
 
 
 def _register_xla_backend():
-  dist.Backend.register_backend('xla', _create_xla_process_group)
+  dist.Backend.register_backend('xla', _create_xla_process_group, devices='xla')
 
 
 _register_xla_backend()
+
+dist.register_rendezvous_handler('xla', rendezvous.pjrt_rendezvous_handler)
 
 
 def _ret_work(ret):
@@ -42,13 +42,6 @@ class ProcessGroupXla(ProcessGroup):
     self.prefix_store = prefix_store  # reserved for future use.
     self.timeout = timeout
     self._mesh = []
-    # Initialize xrt neuron environment
-    # Passes in the store created by torch.distributed to avoid
-    # creating two TCP stores. We only want to call this
-    # when the user is using torchrun and not xmp.spawn()
-    # or some other flow.
-    if os.getenv('TORCHELASTIC_RUN_ID') != None:
-      init_xrt_context(store=prefix_store)
 
   def getBackendName(self):
     return 'xla'
@@ -80,10 +73,22 @@ class ProcessGroupXla(ProcessGroup):
 
   def allgather(self, output_tensors_list, input_tensors, opts=None):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
+      is_scalar = (input_tensor.dim() == 0)
+      if is_scalar:
+        input_tensor = torch.reshape(input_tensor, (1,))
       result = xm.all_gather(input_tensor, groups=self._mesh, pin_layout=False)
       for i, slice in enumerate(torch.split(result, input_tensor.shape[0])):
         with torch.no_grad():
-          output_tensors[i].copy_(slice)
+          output_tensors[i].copy_(
+              slice if not is_scalar else torch.reshape(slice, ()))
+
+    return _ret_work([t for sublist in output_tensors_list for t in sublist])
+
+  def allgather_coalesced(self, output_tensors_list, input_tensors, opts=None):
+    results = xm.all_gather(input_tensors, groups=self._mesh, pin_layout=False)
+    for i, result in enumerate(results):
+      for j, slice in enumerate(torch.split(result, input_tensors[i].shape[0])):
+        output_tensors_list[i][j].copy_(slice)
 
     return _ret_work([t for sublist in output_tensors_list for t in sublist])
 
@@ -124,6 +129,33 @@ class ProcessGroupXla(ProcessGroup):
 
     return _ret_work(output_tensors)
 
+  def reduce_scatter_coalesced(self, output_tensors, input_tensors_list, opts):
+    input_tensor_list = []
+    for input_tensors in input_tensors_list:
+      # Ensure all inputs have the same shape.
+      first_shape = input_tensors[0].shape
+      for i, t in enumerate(input_tensors[1:]):
+        if first_shape != t.shape:
+          raise ValueError(f"Input {i+1}'s shape is different from input 0: "
+                           f"{t.shape} vs {first_shape}")
+      input_tensor = torch.cat(input_tensors)
+      input_tensor_list.append(input_tensor)
+
+    reduce_type = self._get_reduce_type(opts.reduceOp)
+    groups = self._mesh
+    shard_count = len(groups[0]) if groups else self.size()
+    xm.reduce_scatter(
+        reduce_type,
+        input_tensor_list,
+        scatter_dim=0,
+        shard_count=shard_count,
+        scale=1,
+        groups=groups,
+        output=output_tensors,
+        pin_layout=False)
+
+    return _ret_work(output_tensors)
+
   # Call site:
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L2683
   def barrier(self, opts):
@@ -133,9 +165,6 @@ class ProcessGroupXla(ProcessGroup):
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L1417
   # `reduce` is not needed by DeepSpeed for now.
   def reduce(self, *args):
-    raise NotImplementedError
-
-  def allgather_coalesced(self, *args):
     raise NotImplementedError
 
   def allreduce_coalesced(self, *args):
@@ -169,7 +198,8 @@ class ProcessGroupXla(ProcessGroup):
       input_as_result = xm.send(t, channel_id)
       # Make the sent tensor depend on the token, such that the `send`
       # op can actually be built into the computation graph.
-      t.data = input_as_result
+      with torch.no_grad():
+        t.copy_(input_as_result)
       results.append(input_as_result)
     return _ret_work(results)
 
@@ -216,7 +246,7 @@ def _infer_mesh(slice_ranks, world_size):
          [2, 6, 10],
          [3, 7, 11]]
 
-    We only support ractangular meshes.
+    We only support rectangular meshes.
     '''
   slice_len = len(slice_ranks)
   if world_size % slice_len != 0:
@@ -272,6 +302,16 @@ def new_xla_process_group(ranks=None,
                           timeout=dist.default_pg_timeout,
                           backend=None,
                           pg_options=None):
+  #this options tells xla backend to "infer" a mesh
+  use_spmd = False
+  #this option allows the application to pass in the mesh
+  mesh_spmd = None
+  if pg_options is not None and isinstance(pg_options, dict):
+    if 'xla_pg_options' in pg_options:
+      mesh_spmd = pg_options['xla_pg_options'].get('mesh', None)
+      if mesh_spmd == None:
+        use_spmd = pg_options['xla_pg_options'].get('spmd', False)
+
   pg = _orig_new_group_fn(
       ranks=ranks, timeout=timeout, backend=backend, pg_options=pg_options)
   if isinstance(pg, ProcessGroupXla) and ranks is not None:
@@ -291,7 +331,12 @@ def new_xla_process_group(ranks=None,
                          f'World size: {world_pg.size()}, ranks: {ranks}')
       pg._mesh = [[r] for r in range(world_pg.size())]
     elif len(ranks) < world_pg.size() and len(ranks) > 1:
-      pg._mesh = _infer_mesh(ranks, world_pg.size())
+      if mesh_spmd:
+        pg._mesh = mesh_spmd
+      elif use_spmd:
+        pg._mesh = _infer_mesh(ranks, world_pg.size())
+      else:
+        pg._mesh = [ranks]
     else:
       logging.warn(
           f'Can\'t infer process group mesh from given ranks "{str(ranks)}". '

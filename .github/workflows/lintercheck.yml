@@ -1,0 +1,79 @@
+name: Linter check
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+    tags:
+      - r[0-9]+.[0-9]+
+
+jobs:
+  linter_check:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.7'
+          cache: 'pip'
+      - run: pip install yapf==0.30.0
+
+      - name: Check no TORCH_PIN
+        if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          TORCH_PIN=./torch_patches/.torch_pin
+          if [[ -f "${TORCH_PIN}" ]]; then
+            echo "Please remove ${TORCH_PIN} before landing."
+            exit 1
+          else
+            echo "No ${TORCH_PIN} found, safe to land..."
+          fi
+      - name: Run clang-format
+        shell: bash
+        env:
+          CLANG_FORMAT: clang-format-11
+        run: |
+          sudo apt-get update
+          sudo apt install -y "${CLANG_FORMAT}"
+          git_status=$(git status --porcelain)
+          if [[ $git_status ]]; then
+            echo "Checkout code is not clean"
+            echo "${git_status}"
+            exit 1
+          fi
+
+          find . -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs "${CLANG_FORMAT}" -i -style=file
+          git_status=$(git status --porcelain)
+          if [[ $git_status ]]; then
+            git diff
+            echo "${CLANG_FORMAT} recommends the changes above, please manually apply them OR automatically apply the changes "
+            echo "by running \"${CLANG_FORMAT} -i -style=file /PATH/TO/foo.cpp\" to the following files"
+            echo "${git_status}"
+            exit 1
+          else
+            echo "PASSED C++ format"
+          fi
+      - name: Run yapf
+        shell: bash
+        run: |
+          git_status=$(git status --porcelain)
+          if [[ $git_status ]]; then
+            echo "Checkout code is not clean"
+            echo "${git_status}"
+            exit 1
+          fi
+
+          yapf -i -r *.py test/ scripts/ torch_xla/ benchmarks/
+          git_status=$(git status --porcelain)
+          if [[ $git_status ]]; then
+            git diff
+            echo "yapf recommends the changes above, please manually apply them OR automatically apply the changes "
+            echo "by running `yapf -i /PATH/TO/foo.py` to the following files"
+            echo "${git_status}"
+            exit 1
+          else
+            echo "PASSED Python format"
+          fi

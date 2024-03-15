@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_LOG_SOFTMAX_BACKWARD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_LOG_SOFTMAX_BACKWARD_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -23,3 +24,5 @@ class LogSoftmaxBackward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_LOG_SOFTMAX_BACKWARD_H_#pragma once

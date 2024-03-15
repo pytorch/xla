@@ -1,7 +1,8 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_REDUCTION_H_
+#define XLA_TORCH_XLA_CSRC_REDUCTION_H_
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 
@@ -108,3 +109,5 @@ std::vector<xla::XlaOp> BuildEinsumBackward(const xla::XlaOp& grad_output,
                                             const std::string& equation);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_REDUCTION_H_

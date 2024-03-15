@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
-#include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 
@@ -15,7 +15,7 @@ xla::Shape InferOutputShape(absl::Span<const xla::Shape> input_shapes,
                                         absl::StrCat("p", parameter_number)));
   }
   xla::XlaOp result = core_lowering_fn(parameters);
-  return XlaHelpers::ShapeOfXlaOp(result);
+  return ShapeHelper::ShapeOfXlaOp(result);
 }
 
 xla::Shape InferOutputShapes(absl::Span<const xla::Shape> input_shapes,
@@ -33,10 +33,10 @@ xla::Shape InferOutputShapes(absl::Span<const xla::Shape> input_shapes,
   xla::Shape output_shape;
   if (results.size() == 2) {
     output_shape =
-        xla::ShapeUtil::MakeTupleShape({XlaHelpers::ShapeOfXlaOp(results[0]),
-                                        XlaHelpers::ShapeOfXlaOp(results[1])});
+        xla::ShapeUtil::MakeTupleShape({ShapeHelper::ShapeOfXlaOp(results[0]),
+                                        ShapeHelper::ShapeOfXlaOp(results[1])});
   } else {
-    output_shape = XlaHelpers::ShapeOfXlaOp(results[0]);
+    output_shape = ShapeHelper::ShapeOfXlaOp(results[0]);
   }
   return output_shape;
 }

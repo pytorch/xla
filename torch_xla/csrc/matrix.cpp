@@ -1,12 +1,13 @@
 #include "torch_xla/csrc/matrix.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
-#include "tensorflow/compiler/xla/client/lib/qr.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/matrix.h"
+#include "xla/client/lib/qr.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
 
 namespace torch_xla {
 namespace {
@@ -47,7 +48,7 @@ xla::PaddingConfig CreateDiagonalPaddingConfig(const xla::Shape& target_shape,
 DiagonalMask CreateDiagonalMask(xla::XlaOp input,
                                 const xla::Shape& target_shape,
                                 int64_t offset) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::PaddingConfig padding_config =
       CreateDiagonalPaddingConfig(target_shape, input_shape, offset);
   xla::XlaOp zero_scalar =
@@ -95,7 +96,7 @@ xla::XlaOp BuildDiagonal(xla::XlaOp input, int64_t offset, int64_t dim1,
                          int64_t dim2) {
   xla::XlaOp diag_input = input;
   if (dim1 != 0 || dim2 != 1) {
-    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+    const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
     auto permutation = GetDiagonalPermutation(input_shape.rank(), dim1, dim2);
     diag_input = xla::Transpose(diag_input, permutation);
   }
@@ -104,19 +105,19 @@ xla::XlaOp BuildDiagonal(xla::XlaOp input, int64_t offset, int64_t dim1,
 
 xla::XlaOp BuildDiagonalViewUpdate(xla::XlaOp target, xla::XlaOp input,
                                    int64_t offset, int64_t dim1, int64_t dim2) {
-  const xla::Shape* target_shape = &XlaHelpers::ShapeOfXlaOp(target);
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape* target_shape = &ShapeHelper::ShapeOfXlaOp(target);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp diag_input = input;
   if (target_shape->element_type() != input_shape.element_type()) {
     diag_input = ConvertTo(input, input_shape.element_type(),
-                           target_shape->element_type(), /*device=*/nullptr);
+                           target_shape->element_type());
   }
   std::vector<int64_t> permutation;
   xla::XlaOp diag_target = target;
   if (dim1 != 0 || dim2 != 1) {
     permutation = GetDiagonalPermutation(target_shape->rank(), dim1, dim2);
     diag_target = xla::Transpose(diag_target, permutation);
-    target_shape = &XlaHelpers::ShapeOfXlaOp(diag_target);
+    target_shape = &ShapeHelper::ShapeOfXlaOp(diag_target);
   }
   DiagonalMask dmask = CreateDiagonalMask(diag_input, *target_shape, offset);
   xla::XlaOp result = xla::Select(dmask.mask, dmask.source, diag_target);

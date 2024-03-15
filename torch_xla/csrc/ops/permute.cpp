@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/ops/permute.h"
 
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
@@ -21,9 +21,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 Permute::Permute(const torch::lazy::Value& input, std::vector<int64_t> dims)
-    : XlaNode(torch::lazy::OpKind(at::aten::permute), {input},
-              [&]() { return NodeOutputShape(input, dims); },
-              /*num_outputs=*/1, torch::lazy::MHash(dims)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::permute), {input},
+          [&]() { return NodeOutputShape(input, dims); },
+          /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(std::move(dims)) {}
 
 torch::lazy::NodePtr Permute::Clone(torch::lazy::OpList operands) const {
@@ -44,9 +45,12 @@ std::string Permute::ToString() const {
 
 xla::Shape Permute::MakePermuteShape(const xla::Shape& source_shape,
                                      absl::Span<const int64_t> permutation) {
-  return XlaHelpers::GetDynamicReshape(
-      source_shape,
-      XlaHelpers::Permute(permutation, source_shape.dimensions()));
+  auto output_static_dims =
+      XlaHelpers::Permute(permutation, source_shape.dimensions());
+  auto output_dyn_dims =
+      XlaHelpers::Permute(permutation, source_shape.dynamic_dimensions());
+  return xla::ShapeUtil::MakeShape(source_shape.element_type(),
+                                   output_static_dims, output_dyn_dims);
 }
 
 }  // namespace torch_xla

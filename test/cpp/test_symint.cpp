@@ -2,21 +2,20 @@
 
 #include <iostream>
 
-#include "cpp_test_util.h"
-#include "torch_xla/csrc/generated/LazyIr.h"
+#include "test/cpp/cpp_test_util.h"
+#include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/torch_util.h"
-using std::cerr;
 
 namespace torch_xla {
 namespace cpp_test {
 
 static c10::SymInt make_symint(const torch::lazy::NodePtr& p) {
-  return c10::SymInt(
-      static_cast<c10::SymNode>(c10::make_intrusive<XLASymNodeImpl>(p)));
+  return c10::SymInt(static_cast<c10::SymNode>(
+      c10::make_intrusive<XLASymNodeImpl>(p, PyType::INT)));
 }
 
 TEST(SymintTest, TestStaticSymint) {
@@ -175,7 +174,7 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   // Testing XLASymNodeImpl::add
   c10::SymInt c = a + b;
   auto size_add_symnode =
-      dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImpl().get());
+      dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImplUnowned());
   ASSERT_TRUE(size_add_symnode);
   auto size_add =
       std::dynamic_pointer_cast<torch_xla::SizeAdd>(size_add_symnode->node());
@@ -185,7 +184,7 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   // Testing XLASymNodeImpl::mul
   c = a * b;
   auto size_mul_symnode =
-      dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImpl().get());
+      dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImplUnowned());
   ASSERT_TRUE(size_mul_symnode);
   auto size_mul =
       std::dynamic_pointer_cast<torch_xla::SizeMul>(size_mul_symnode->node());
@@ -196,7 +195,7 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   // Testing XLASymNodeImpl::floordiv
   c = a / b;
   auto size_floordiv_symnode =
-      dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImpl().get());
+      dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImplUnowned());
   ASSERT_TRUE(size_floordiv_symnode);
   auto size_floordiv =
       std::dynamic_pointer_cast<SizeDiv>(size_floordiv_symnode->node());
@@ -213,7 +212,8 @@ TEST(SymintTest, TestXLASymNodeImplStr) {
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   torch::lazy::NodePtr size_node =
       torch::lazy::MakeNode<SizeNode>(expand_value, 0);
-  c10::SymNode symint_node = c10::make_intrusive<XLASymNodeImpl>(size_node);
+  c10::SymNode symint_node =
+      c10::make_intrusive<XLASymNodeImpl>(size_node, PyType::INT);
   ASSERT_EQ(symint_node.get()->str(), "<=2");
 }
 

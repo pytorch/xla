@@ -1,17 +1,19 @@
 #include "torch_xla/csrc/nms_op.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <limits>
 
-#include "tensorflow/compiler/xla/client/lib/arithmetic.h"
-#include "tensorflow/compiler/xla/client/lib/comparators.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/loops.h"
-#include "tensorflow/compiler/xla/client/lib/sorting.h"
-#include "tensorflow/compiler/xla/util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "xla/client/lib/arithmetic.h"
+#include "xla/client/lib/comparators.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/loops.h"
+#include "xla/client/lib/sorting.h"
+#include "xla/util.h"
 
 // Code extracted from:
 // https://github.com/tensorflow/tensorflow/blob/dc4c6d305ba3d2de4a795ec77b483b0fa695b9ee/tensorflow/compiler/tf2xla/kernels/image_ops.cc#L399
@@ -89,8 +91,8 @@ struct SuppressBodyFn {
 xla::XlaOp NmsGather(xla::XlaOp input, absl::Span<const int64_t> input_sizes,
                      xla::XlaOp indices,
                      absl::Span<const int64_t> indices_sizes, int64_t axis) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  int64_t num_indices = xla::util::Multiply<int64_t>(indices_sizes);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  int64_t num_indices = runtime::util::Multiply<int64_t>(indices_sizes);
   if (num_indices == 0) {
     std::vector<int64_t> output_sizes =
         torch::lazy::ToVector<int64_t>(input_sizes);
@@ -150,9 +152,9 @@ xla::XlaOp NmsGather(xla::XlaOp input, absl::Span<const int64_t> input_sizes,
 NmsResult BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
                    xla::XlaOp score_threshold, xla::XlaOp iou_threshold,
                    int64_t output_size) {
-  const xla::Shape& boxes_shape = XlaHelpers::ShapeOfXlaOp(boxes);
+  const xla::Shape& boxes_shape = ShapeHelper::ShapeOfXlaOp(boxes);
   int64_t num_boxes = boxes_shape.dimensions(0);
-  const xla::Shape& scores_shape = XlaHelpers::ShapeOfXlaOp(scores);
+  const xla::Shape& scores_shape = ShapeHelper::ShapeOfXlaOp(scores);
   XLA_CHECK_EQ(boxes_shape.rank(), 2);
   XLA_CHECK_EQ(boxes_shape.dimensions(1), 4);
   XLA_CHECK_EQ(scores_shape.rank(), 1);

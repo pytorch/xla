@@ -1,9 +1,13 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_
+#define XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_
 
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "torch/csrc/lazy/core/ir.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ir.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 
@@ -23,6 +27,11 @@ struct AllToAllResult {
 
 struct AllGatherResult {
   xla::XlaOp result;
+  xla::XlaOp token;
+};
+
+struct AllGatherResultCoalesced {
+  std::vector<xla::XlaOp> result;
   xla::XlaOp token;
 };
 
@@ -46,6 +55,11 @@ struct ReduceScatterResult {
   xla::XlaOp token;
 };
 
+struct ReduceScatterResultCoalesced {
+  std::vector<xla::XlaOp> result;
+  xla::XlaOp token;
+};
+
 std::vector<xla::XlaOp> BuildAllReduce(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> operands,
     xla::XlaOp token, double scale,
@@ -62,6 +76,11 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
                                const std::vector<std::vector<int64_t>>& groups,
                                bool pin_layout);
 
+AllGatherResultCoalesced BuildAllGatherCoalesced(
+    absl::Span<const xla::XlaOp> inputs, xla::XlaOp token, int64_t dim,
+    int64_t shard_count, const std::vector<std::vector<int64_t>>& groups,
+    bool pin_layout);
+
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs);
@@ -77,4 +96,22 @@ ReduceScatterResult BuildReduceScatter(
     int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
+ReduceScatterResultCoalesced BuildReduceScatterCoalesced(
+    AllReduceType reduce_type, absl::Span<const xla::XlaOp> inputs,
+    xla::XlaOp token, double scale, int64_t scatter_dim, int64_t shard_count,
+    const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
+
+std::vector<torch::lazy::Value> GetOperandListWithToken(
+    c10::ArrayRef<torch::lazy::Value> operands,
+    const torch::lazy::Value& token);
+
+const torch::lazy::Value& GetAllReduceToken(
+    const torch::lazy::BackendDevice& device);
+void SetAllReduceToken(const torch::lazy::BackendDevice& device,
+                       const std::shared_ptr<torch::lazy::Value>& token);
+
+AllReduceType GetReduceType(c10::string_view reduce_type);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_

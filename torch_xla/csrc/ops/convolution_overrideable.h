@@ -1,8 +1,9 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_CONVOLUTION_OVERRIDEABLE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_CONVOLUTION_OVERRIDEABLE_H_
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/xla_data.pb.h"
 #include "torch_xla/csrc/ir.h"
+#include "xla/xla_data.pb.h"
 
 namespace torch_xla {
 
@@ -52,3 +53,5 @@ class ConvolutionOverrideable : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_CONVOLUTION_OVERRIDEABLE_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_SGD_OPTIMIZER_STEP_H_
+#define XLA_TORCH_XLA_CSRC_OPS_SGD_OPTIMIZER_STEP_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -27,3 +28,5 @@ class SgdOptimizerStep : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_SGD_OPTIMIZER_STEP_H_

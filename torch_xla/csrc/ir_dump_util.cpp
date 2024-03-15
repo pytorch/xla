@@ -1,16 +1,18 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 
+#include <torch/csrc/lazy/core/ir_util.h>
+
 #include <regex>
 #include <sstream>
 #include <unordered_map>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/xla_util.h"
-#include "torch/csrc/lazy/core/ir_util.h"
-#include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
@@ -251,7 +253,8 @@ std::string DumpUtil::PostOrderToText(
 }
 
 std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
-                            const torch::lazy::BackendDevice& device) {
+                            const torch::lazy::BackendDevice& device,
+                            EmitMode mode) {
   LoweringContext lowering_ctx("IrToHlo", device);
   for (auto& ir_value : values) {
     lowering_ctx.AddResult(
@@ -260,25 +263,37 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
 
   // Annotate HLO sharding selectively in the compuation.
   // This is no-op if an instruction doesn't have any sharding annotation.
-  bool is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
+  auto is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
-  if (is_sharded) {
+
+  static bool dump_post_optimizations =
+      runtime::sys_util::GetEnvBool("XLA_DUMP_POST_OPTIMIZATIONS", false);
+  if (dump_post_optimizations) {
     xla::Shape shape = MakeShapeWithDeviceLayout(
         ConsumeValue(computation.GetProgramShape()).result(),
         static_cast<XlaDeviceType>(device.type()));
-    std::vector<xla::ComputationClient::CompileInstance> instances;
+    std::vector<runtime::ComputationClient::CompileInstance> instances;
     instances.push_back({std::move(computation), device.toString(),
-                         xla::ComputationClient::Get()->GetCompilationDevices(
+                         runtime::GetComputationClient()->GetCompilationDevices(
                              device.toString(), {}),
-                         &shape, /*parameter_is_tupled_arguments=*/false,
-                         is_sharded});
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+                         &shape,
+                         /*parameter_is_tupled_arguments=*/false, is_sharded});
+    std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
         computations =
-            xla::ComputationClient::Get()->Compile(std::move(instances));
-    return ConsumeValue(
-        xla::util::GetComputationHloText(computations[0]->computation()));
+            runtime::GetComputationClient()->Compile(std::move(instances));
+    computation = std::move(computations[0]->move_computation());
   }
-  return ConsumeValue(xla::util::GetComputationHloText(computation));
+
+  switch (mode) {
+    case EmitMode::kHloReadable:
+      return ConsumeValue(runtime::util::GetComputationHloText(computation));
+    case EmitMode::kStableHloReadable:
+      return hloToStablehlo(&computation.proto(),
+                            /* emit_bytecode = */ false);
+    case EmitMode::kStableHloBytecode:
+      return hloToStablehlo(&computation.proto(),
+                            /* emit_bytecode = */ true);
+  }
 }
 
 }  // namespace torch_xla

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_SOFTMAX_H_
+#define XLA_TORCH_XLA_CSRC_OPS_SOFTMAX_H_
 
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
@@ -28,3 +29,5 @@ class Softmax : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_SOFTMAX_H_

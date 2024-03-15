@@ -1,7 +1,7 @@
 import args_parse
 
 from datasets import load_dataset
-from transformers import FSMTForConditionalGeneration, FSMTTokenizer, get_scheduler
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_scheduler
 import torch
 from torch.optim import AdamW
 import evaluate
@@ -10,20 +10,8 @@ import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
-import time
 
-# TODO: Add a smaller model for a short integration test.
-SUPPORTED_MODELS = ["facebook/wmt19-de-en"]
-
-MODEL_OPTS = {
-    '--model': {
-        'choices': SUPPORTED_MODELS,
-        'default': 'facebook/wmt19-de-en',
-    },
-    '--short_data': {
-        'action': 'store_true',
-    }
-}
+MODEL_OPTS = {'--short_data': {'action': 'store_true',}}
 
 
 def _train_update(device, step, loss, tracker, epoch, writer):
@@ -31,8 +19,13 @@ def _train_update(device, step, loss, tracker, epoch, writer):
                                    tracker.global_rate(), epoch, writer)
 
 
+# Based on https://huggingface.co/docs/transformers/en/training#train-in-native-pytorch
 def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
   print('Starting', rank)
+
+  writer = None
+  if xm.is_master_ordinal():
+    writer = test_utils.get_summary_writer(flags.logdir)
 
   if flags.short_data:
     train_dataset = train_dataset.select(range(1000))
@@ -54,25 +47,25 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
       drop_last=True,
       generator=rng)
   test_loader = torch.utils.data.DataLoader(
-      train_dataset,
+      test_dataset,
       batch_size=flags.batch_size,
       shuffle=False,
       num_workers=flags.num_workers,
       drop_last=True,
       generator=rng)
 
-  writer = None
-  if xm.is_master_ordinal():
-    writer = test_utils.get_summary_writer(flags.logdir)
-
   device = xm.xla_device()
-  model = FSMTForConditionalGeneration.from_pretrained(flags.model).to(device)
-  optimizer = AdamW(model.parameters(), lr=flags.lr)
+  model = AutoModelForSequenceClassification.from_pretrained(
+      'google-bert/bert-base-cased', num_labels=5)
+  model.to(device)
+
+  optimizer = AdamW(model.parameters(), lr=5e-5)
+  num_training_steps = flags.num_epochs * len(train_loader)
   lr_scheduler = get_scheduler(
       name="linear",
       optimizer=optimizer,
       num_warmup_steps=0,
-      num_training_steps=flags.num_epochs * len(train_loader))
+      num_training_steps=num_training_steps)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
@@ -90,7 +83,7 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
             _train_update, args=(device, step, loss, tracker, epoch, writer))
 
   def test_loop_fn(loader, epoch):
-    metric = evaluate.load("sacrebleu")
+    metric = evaluate.load("accuracy")
     model.eval()
     for batch in loader:
       with torch.no_grad():
@@ -99,26 +92,13 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
       logits = outputs.logits
       predictions = torch.argmax(logits, dim=-1)
 
-      decoded_preds = [
-          pred.strip() for pred in tokenizer.batch_decode(
-              predictions, skip_special_tokens=True)
-      ]
-      decoded_labels = [[label.strip()] for label in tokenizer.batch_decode(
-          batch["labels"], skip_special_tokens=True)]
-      metric.add_batch(predictions=decoded_preds, references=decoded_labels)
+      metric.add_batch(predictions=predictions, references=batch["labels"])
 
     eval_metric = metric.compute()
     xm.mark_step()
-    print(
-        '[xla:{}] Bleu={:.5f} Time={}'.format(xm.get_ordinal(),
-                                              eval_metric["score"],
-                                              time.asctime()),
-        flush=True)
+    print(f'eval metrics for epoch {epoch}', eval_metric)
     test_utils.write_to_summary(
-        writer,
-        epoch,
-        dict_to_write={'bleu': eval_metric["score"]},
-        write_xla_metrics=True)
+        writer, epoch, dict_to_write=eval_metric, write_xla_metrics=True)
 
   train_device_loader = pl.MpDeviceLoader(train_loader, device)
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
@@ -136,31 +116,26 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
 def get_dataset(tokenizer, flags):
 
   def preprocess(examples):
-    inputs = [ex['de'] for ex in examples["translation"]]
-    targets = [ex['en'] for ex in examples["translation"]]
+    return tokenizer(examples["text"], padding="max_length", truncation=True)
 
-    return tokenizer(
-        text=inputs, text_target=targets, padding="max_length", truncation=True)
-
-  ds = load_dataset(
-      "news_commentary", "de-en", data_dir=flags.datadir, split="train")
+  ds = load_dataset("yelp_review_full", data_dir=flags.datadir, split="train")
   ds = ds.map(preprocess, batched=True)
-  ds = ds.remove_columns(["id", "translation"])
+  ds = ds.remove_columns(["text"])
+  ds = ds.rename_column('label', 'labels')
   ds = ds.train_test_split(test_size=0.2)
   ds.set_format("torch")
 
-  return ds["train"], ds["test"]
+  return ds["train"].shuffle(seed=42), ds["test"].shuffle(seed=42)
 
 
 if __name__ == '__main__':
   flags = args_parse.parse_common_options(
       datadir=None,
-      batch_size=4,
+      batch_size=8,
       num_epochs=3,
       log_steps=20,
-      lr=.0002,
       opts=MODEL_OPTS.items())
-  tokenizer = FSMTTokenizer.from_pretrained(flags.model)
+  tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-cased")
   # Load dataset once and share it with each process
   train_dataset, test_dataset = get_dataset(tokenizer, flags)
   xmp.spawn(

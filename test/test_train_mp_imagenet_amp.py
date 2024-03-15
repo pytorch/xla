@@ -27,7 +27,6 @@ MODEL_OPTS = {
     '--test_only_at_end': {
         'action': 'store_true',
     },
-    # AMP only works with XLA:GPU
     '--amp': {
         'action': 'store_true',
     },
@@ -197,6 +196,7 @@ def train_imagenet():
   torch.manual_seed(42)
 
   device = xm.xla_device()
+  device_hw = xm.xla_device_hw(device)
   model = get_model_property('model_fn')().to(device)
   writer = None
   if xm.is_master_ordinal():
@@ -219,7 +219,10 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
   if FLAGS.amp:
-    scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+    if device_hw == 'TPU':
+      scaler = None
+    elif device_hw == 'CUDA':
+      scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
@@ -227,15 +230,18 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
       if FLAGS.amp:
-        with autocast():
+        with autocast(xm.xla_device()):
           output = model(data)
           loss = loss_fn(output, target)
-
-        scaler.scale(loss).backward()
-        gradients = xm._fetch_gradients(optimizer)
-        xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
-        scaler.step(optimizer)
-        scaler.update()
+        if scaler:
+          scaler.scale(loss).backward()
+          gradients = xm._fetch_gradients(optimizer)
+          xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
+          scaler.step(optimizer)
+          scaler.update()
+        else:
+          loss.backward()
+          xm.optimizer_step(optimizer)
       else:
         output = model(data)
         loss = loss_fn(output, target)
@@ -292,7 +298,7 @@ def train_imagenet():
 def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,

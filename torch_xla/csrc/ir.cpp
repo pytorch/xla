@@ -1,27 +1,28 @@
 #include "torch_xla/csrc/ir.h"
 
+#include <torch/csrc/lazy/core/config.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
+#include <torch/csrc/lazy/python/python_util.h>
+
 #include <functional>
 #include <sstream>
 
 #include "absl/strings/str_cat.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
-#include "torch/csrc/lazy/core/config.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/ir_metadata.h"
-#include "torch/csrc/lazy/python/python_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {
 namespace {
 
-using ShapeCache =
-    xla::util::Cache<torch::lazy::hash_t, xla::Shape, torch::lazy::HashReducer>;
+using ShapeCache = runtime::util::Cache<torch::lazy::hash_t, xla::Shape,
+                                        torch::lazy::HashReducer>;
 
 ShapeCache* GetShapeCache() {
   static int64_t shape_cache_size =
-      xla::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 4096);
+      runtime::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 12288);
   static ShapeCache* cache = new ShapeCache(shape_cache_size);
   return cache;
 }
@@ -150,9 +151,14 @@ torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
   return torch::lazy::HashCombine(h, hash_seed);
 }
 
-void XlaNode::SetSharding(const xla::OpSharding& sharding) {
-  output_sharding_ = std::make_shared<xla::OpSharding>(sharding);
-  sharding_hash_ = CreateShardingHash(output_sharding_, node_hash_);
+void XlaNode::SetSharding(const xla::OpSharding& sharding, size_t index) {
+  if (output_shardings_.size() == 0) {
+    output_shardings_ =
+        std::vector<std::shared_ptr<xla::OpSharding>>(num_outputs(), nullptr);
+  }
+  output_shardings_[index] = std::make_shared<xla::OpSharding>(sharding);
+  // TODO(JackCaoG): fix this hashing
+  UpdateShardingHash();
 }
 
 xla::Shape XlaNode::GetOpShape(
@@ -168,6 +174,8 @@ xla::Shape XlaNode::GetOpShape(
 std::string XlaNode::ToString() const {
   std::stringstream ss;
   ss << torch::lazy::Node::ToString() << ", xla_shape=" << xla_shape_;
+  ss << ", dynamic_dims: (" << absl::StrJoin(unbounded_dynamic_dims_, ", ")
+     << ')';
   return ss.str();
 }
 
@@ -178,40 +186,60 @@ const xla::Shape& GetXlaShape(const torch::lazy::Value& value) {
 
 // The sharding hash is only based on relevant fields from the xla::OpSharding
 // object. We skip the field that's irrelevant, which is the layout.
-torch::lazy::hash_t XlaNode::CreateShardingHash(
-    std::shared_ptr<xla::OpSharding> sharding, torch::lazy::hash_t hash_seed) {
-  torch::lazy::hash_t sharding_hash = hash_seed;
-  for (const auto& tile_assignment_dimension :
-       sharding->tile_assignment_dimensions()) {
-    sharding_hash = torch::lazy::HashCombine(
-        sharding_hash, (uint32_t)tile_assignment_dimension);
-  }
-  for (const auto& tile_assignment_device :
-       sharding->tile_assignment_devices()) {
-    sharding_hash = torch::lazy::HashCombine(sharding_hash,
-                                             (uint32_t)tile_assignment_device);
-  }
-  for (const auto& last_tile_dim : sharding->last_tile_dims()) {
-    sharding_hash =
-        torch::lazy::HashCombine(sharding_hash, (uint32_t)last_tile_dim);
-  }
-  sharding_hash =
-      torch::lazy::HashCombine(sharding_hash, (uint32_t)sharding->type());
-  sharding_hash = torch::lazy::HashCombine(
-      sharding_hash, (uint32_t)sharding->replicate_on_last_tile_dim());
+void XlaNode::UpdateShardingHash() {
+  sharding_hash_ = node_hash_;
+  for (size_t i = 0; i < output_shardings_.size(); i++) {
+    // keep the index as part of the hash
+    sharding_hash_ = torch::lazy::HashCombine(sharding_hash_, (uint32_t)i);
+    std::shared_ptr<xla::OpSharding> sharding = output_shardings_[i];
+    // skip the hash compute for empty sharding
+    if (!sharding) {
+      continue;
+    }
+    for (const auto& tile_assignment_dimension :
+         sharding->tile_assignment_dimensions()) {
+      sharding_hash_ = torch::lazy::HashCombine(
+          sharding_hash_, (uint32_t)tile_assignment_dimension);
+    }
+    {
+      const int64_t* data = sharding->tile_assignment_devices().data();
+      const size_t size_in_bytes =
+          sharding->tile_assignment_devices().size() * sizeof(*data);
+      sharding_hash_ =
+          torch::lazy::HashBlock(data, size_in_bytes, sharding_hash_);
+    }
+    for (const auto& last_tile_dim : sharding->last_tile_dims()) {
+      sharding_hash_ =
+          torch::lazy::HashCombine(sharding_hash_, (uint32_t)last_tile_dim);
+    }
+    sharding_hash_ =
+        torch::lazy::HashCombine(sharding_hash_, (uint32_t)sharding->type());
+    sharding_hash_ = torch::lazy::HashCombine(
+        sharding_hash_, (uint32_t)sharding->replicate_on_last_tile_dim());
 
-  xla::ShapeProto shape_proto = sharding->tile_shape();
-  sharding_hash = torch::lazy::HashCombine(
-      sharding_hash, (uint32_t)shape_proto.element_type());
-  for (const auto& dim : shape_proto.dimensions()) {
-    sharding_hash = torch::lazy::HashCombine(sharding_hash, (uint32_t)dim);
+    xla::ShapeProto shape_proto = sharding->tile_shape();
+    sharding_hash_ = torch::lazy::HashCombine(
+        sharding_hash_, (uint32_t)shape_proto.element_type());
+    for (const auto& dim : shape_proto.dimensions()) {
+      sharding_hash_ = torch::lazy::HashCombine(sharding_hash_, (uint32_t)dim);
+    }
+    for (const auto& is_dyn_dim : shape_proto.is_dynamic_dimension()) {
+      sharding_hash_ =
+          torch::lazy::HashCombine(sharding_hash_, (uint32_t)is_dyn_dim);
+    }
   }
-  for (const auto& is_dyn_dim : shape_proto.is_dynamic_dimension()) {
-    sharding_hash =
-        torch::lazy::HashCombine(sharding_hash, (uint32_t)is_dyn_dim);
-  }
+}
 
-  return sharding_hash;
+std::shared_ptr<torch::lazy::UserMetaData> XlaNode::SetUserMetadataForSubGraph(
+    std::shared_ptr<torch::lazy::UserMetaData> user_meta) {
+  for (auto np : operands_) {
+    XlaNode* xnp = dynamic_cast<XlaNode*>(np.get());
+    if (xnp != nullptr && xnp->user_metadata() == nullptr) {
+      xnp->SetUserMetadataForSubGraph(user_meta);
+    }
+  }
+  // Only set if there is no metadata already set
+  return SetUserMetadata(user_meta);
 }
 
 }  // namespace torch_xla

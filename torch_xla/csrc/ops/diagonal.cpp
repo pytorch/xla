@@ -2,21 +2,21 @@
 
 #include <cmath>
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 
 Diagonal::Diagonal(const torch::lazy::Value& input, int64_t offset,
                    int64_t dim1, int64_t dim2)
-    : XlaNode(torch::lazy::OpKind(at::aten::diagonal), {input},
-              [&]() {
-                return MakeDiagonalShape(GetXlaShape(input), offset, dim1,
-                                         dim2);
-              },
-              /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::diagonal), {input},
+          [&]() {
+            return MakeDiagonalShape(GetXlaShape(input), offset, dim1, dim2);
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(offset, dim1, dim2)),
       offset_(offset),
       dim1_(dim1),
       dim2_(dim2) {}

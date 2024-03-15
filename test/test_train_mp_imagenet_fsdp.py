@@ -60,6 +60,9 @@ MODEL_OPTS = {
     '--fp32_reduce_scatter': {
         'action': 'store_true',
     },
+    '--pjrt_distributed': {
+        'action': 'store_true',
+    },
     '--shard_param_on_dim_0': {
         'action': 'store_true',
     },
@@ -70,6 +73,9 @@ MODEL_OPTS = {
     '--use_small_fake_sample': {
         'action': 'store_true',
     },
+    '--profile': {
+        'action': 'store_true',
+    }
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -97,16 +103,21 @@ import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
+import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.profiler as xp
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+
+import torch.distributed as dist
+import torch_xla.distributed.xla_backend
 
 from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP, checkpoint_module
 from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
                                              transformer_auto_wrap_policy)
 
 DEFAULT_KWARGS = dict(
-    batch_size=128,
+    batch_size=64,
     test_set_batch_size=64,
     num_epochs=18,
     momentum=0.9,
@@ -159,6 +170,9 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
+  if FLAGS.pjrt_distributed:
+    dist.init_process_group('xla', init_method='xla://')
+
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
@@ -312,21 +326,26 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
 
+  if FLAGS.profile:
+    server = xp.start_server(FLAGS.profiler_port)
+
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      optimizer.step()  # do not reduce gradients on sharded params
-      tracker.add(FLAGS.batch_size)
-      if lr_scheduler:
-        lr_scheduler.step()
-      if step % FLAGS.log_steps == 0:
-        xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, epoch, writer))
+      with xp.StepTrace('train_imagenet', step_num=step):
+        with xp.Trace('build_graph'):
+          optimizer.zero_grad()
+          output = model(data)
+          loss = loss_fn(output, target)
+          loss.backward()
+          optimizer.step()  # do not reduce gradients on sharded params
+          tracker.add(FLAGS.batch_size)
+          if lr_scheduler:
+            lr_scheduler.step()
+        if step % FLAGS.log_steps == 0:
+          xm.add_step_closure(
+              _train_update, args=(device, step, loss, tracker, epoch, writer))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -376,7 +395,7 @@ def train_imagenet():
 def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
@@ -385,4 +404,7 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  if dist.is_torchelastic_launched():
+    _mp_fn(xu.getenv_as(xenv.LOCAL_RANK, int), FLAGS)
+  else:
+    xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
