@@ -28,32 +28,29 @@ from torch_xla._internal import tpu
 class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   # initialized in setUpClass
-  hash_no_spmd = ""
-  hash_with_spmd = ""
+  hash_no_auto = ""
 
   @classmethod
   def setUpClass(cls):
-    cls.init_test_variables()
-    assert cls.hash_no_spmd != cls.hash_with_spmd
-    xr.use_spmd(auto=True)
     super().setUpClass()
+    assert not torch_xla._XLAC._xla_get_auto_sharding()
+    cls.init_test_variables(cls)
+    assert cls.hash_no_auto
+    xr.use_spmd(auto=True)
 
-  def init_test_variables():
-    # initialize before xr.use_spmd()
-    xt_no_spmd = torch.ones(2, 2).to(xm.xla_device())
-    hash_no_spmd = torch_xla._XLAC._get_graph_hash([xt_no_spmd + 0])
-
-    # initialize with SPMD, hasing with sharding annotations
-    # is already being tested in test_xla_sharding.py
-    xr.use_spmd()
-    xt_with_spmd = torch.ones(2, 2).to(xm.xla_device())
-    hash_with_spmd = torch_xla._XLAC._get_graph_hash([xt_with_spmd + 0])
+  def init_test_variables(cls):
+    xt_no_auto = torch.ones(2, 2).to(xm.xla_device())
+    cls.hash_no_auto = torch_xla._XLAC._get_graph_hash([xt_no_auto + 0])
 
   def test_auto_sharding_hashing(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
+    assert torch_xla._XLAC._xla_get_auto_sharding()
     hash_auto_spmd = torch_xla._XLAC._get_graph_hash([xt + 0])
-    self.assertNotEqual(hash_auto_spmd, self.hash_no_spmd)
-    self.assertNotEqual(hash_auto_spmd, self.hash_with_spmd)
+    self.assertNotEqual(hash_auto_spmd, self.hash_no_auto)
+    os.environ['XLA_AUTO_SPMD_MESH'] = '2,2'
+    hash_auto_spmd2 = torch_xla._XLAC._get_graph_hash([xt + 0])
+    self.assertNotEqual(hash_auto_spmd, hash_auto_spmd2)
+    del os.environ['XLA_AUTO_SPMD_MESH']
 
   @unittest.skipUnless(xr.device_type() in ["TPU", "CPU"],
                        "Auto-sharding currently supports TPU & CPU backends.")
@@ -90,6 +87,7 @@ class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
       xm.mark_step()
     cnt = met.counter_value("CompileWithAutoSharding")
     self.assertTrue((cnt is not None) and (cnt <= 3))
+
 
 if __name__ == '__main__':
   test = unittest.main()
