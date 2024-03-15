@@ -124,10 +124,13 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
         kernel, static_argnames=static_argnames).lower(*jax_args,
                                                        **kwargs).compiler_ir()
     payload = _extract_backend_config(ir)
-    output_shape, output_dtype = output_shape_dtype_fn(*args)
-    output = torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device())
-    torch_xla._XLAC._xla_tpu_custom_call_(output, args, payload)
-    return output
+    # print(payload)
+    outputs = []
+    print("aha", output_shape_dtype_fn(*args))
+    for output_shape, output_dtype in output_shape_dtype_fn(*args):
+      outputs.append(torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device()))
+    torch_xla._XLAC._xla_tpu_custom_call_(outputs, args, payload)
+    return outputs
 
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
 

@@ -528,15 +528,25 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
-void tpu_custom_call_(XLATensorPtr& output,
+void tpu_custom_call_(const std::vector<XLATensorPtr>& outputs,
                       const std::vector<XLATensorPtr>& inputs,
                       const std::string& payload) {
   std::vector<torch::lazy::Value> values;
   for (const auto& input : inputs) {
     values.push_back(input->GetIrValue());
   }
-  output->SetInPlaceIrValue(torch::lazy::MakeNode<TpuCustomCall>(
-      values, output->shape().get(), payload));
+
+  // TODO: Let's see if we can do some shape inference here.
+  std::vector<xla::Shape> output_shapes;
+  for (const auto& output : outputs) {
+    output_shapes.push_back(output->shape().get());
+  }
+
+  auto node = torch::lazy::MakeNode<TpuCustomCall>(
+      values, xla::ShapeUtil::MakeTupleShape(output_shapes), payload);
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    outputs[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
+  }
 }
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
