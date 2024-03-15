@@ -517,6 +517,15 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
           res_hash, torch::lazy::Hash(buffer_donor_index));
     }
   }
+  {
+    // Auto-sharding configs
+    res_hash = torch::lazy::HashCombine(
+        res_hash, torch::lazy::MHash(ShardingUtil::GetAutoSharding()));
+    res_hash = torch::lazy::HashCombine(
+        res_hash,
+        torch::lazy::StringHash(
+            runtime::sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", "").c_str()));
+  }
   DeviceContextArena::Get()->SaveOutputShapes(res_hash,
                                               std::move(output_shapes));
   DeviceContextArena::Get()->SaveGraphAsString(res_hash, tensors,
@@ -1509,6 +1518,15 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
       coll.hash = torch::lazy::HashCombine(
           coll.hash, torch::lazy::Hash(buffer_donor_index));
     }
+  }
+  {
+    // Auto-sharding configs
+    coll.hash = torch::lazy::HashCombine(
+        coll.hash, torch::lazy::MHash(ShardingUtil::GetAutoSharding()));
+    coll.hash = torch::lazy::HashCombine(
+        coll.hash,
+        torch::lazy::StringHash(
+            runtime::sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", "").c_str()));
   }
 
   DebugUtil::SaveGraphHash(coll.hash);

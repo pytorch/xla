@@ -27,10 +27,30 @@ from torch_xla._internal import tpu
 
 class XlaAutoShardingTest(test_xla_sharding_base.XlaShardingTest):
 
+  # initialized in setUpClass
+  hash_no_auto = ""
+
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd(auto=True)
     super().setUpClass()
+    assert not torch_xla._XLAC._xla_get_auto_sharding()
+    cls.init_test_variables(cls)
+    assert cls.hash_no_auto
+    xr.use_spmd(auto=True)
+
+  def init_test_variables(cls):
+    xt_no_auto = torch.ones(2, 2).to(xm.xla_device())
+    cls.hash_no_auto = torch_xla._XLAC._get_graph_hash([xt_no_auto + 0])
+
+  def test_auto_sharding_hashing(self):
+    xt = torch.ones(2, 2).to(xm.xla_device())
+    assert torch_xla._XLAC._xla_get_auto_sharding()
+    hash_auto_spmd = torch_xla._XLAC._get_graph_hash([xt + 0])
+    self.assertNotEqual(hash_auto_spmd, self.hash_no_auto)
+    os.environ['XLA_AUTO_SPMD_MESH'] = '2,2'
+    hash_auto_spmd2 = torch_xla._XLAC._get_graph_hash([xt + 0])
+    self.assertNotEqual(hash_auto_spmd, hash_auto_spmd2)
+    del os.environ['XLA_AUTO_SPMD_MESH']
 
   @unittest.skipUnless(xr.device_type() in ["TPU", "CPU"],
                        "Auto-sharding currently supports TPU & CPU backends.")
