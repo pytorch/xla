@@ -84,6 +84,26 @@
     state: absent
     mode: '0755'
 
+- name: Read Torchvision pin
+  ansible.builtin.command: cat {{ (src_root, 'pytorch') | path_join }}/.github/ci_commit_pins/vision.txt
+  register: torchvision_pin
+
+- name: Build Torchvision wheel
+  ansible.builtin.command:
+    cmd: pip wheel --no-build-isolation --no-deps "git+https://github.com/pytorch/vision.git@{{ torchvision_pin.stdout }}"
+    chdir: /dist
+  environment: "{{ env_vars }}"
+
+- name: Find Torchvision *.whl files in /dist
+  ansible.builtin.find:
+    path: /dist
+    pattern: "torchvision*.whl"
+  register: torchvision_wheels
+
+- name: Install Torchvision wheel
+  ansible.builtin.pip:
+    name: "{{ torchvision_wheels.files | map(attribute='path') }}"
+
 - name: "Tests"
   include_tasks: tests.yaml
   tags:
