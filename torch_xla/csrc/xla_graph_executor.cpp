@@ -629,26 +629,9 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
       if (ir_value) {
         if (ShouldSyncIrValue(ir_value)) {
-          auto device_data = torch_xla::DeviceData::Cast(ir_value.node.get());
-          // If current tensor is cloned from another tensor, we want to assign
-          // a new XlaData to it after current execution. Cloned tensor might
-          // share the same storage with the origional tensor but origional
-          // tensor might alias its storage with the output. It is safer to
-          // allocate a new buffer for the cloned tensor.
-          if (device_data != nullptr && !tensors[i]->data()->is_cloned) {
-            // current IR is a devicedata, we don't need to include it as a
-            // result of the computation. Call `GetXlaData` to extract the
-            // XlaData from the DeviceData Node and reset the IR. We also want
-            // to update XlaData's tensorID to make it match with the current
-            // XLATensor.
-            tensors[i]->GetXlaData()->SetInfo(
-                std::make_shared<LazyGraphExecutor::DeviceDataInfo>(
-                    tensors[i]->GetUniqueId(), /*=read_only=*/false));
-          } else {
-            // Add only tensors which need to be synced.
-            coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
-            coll.indices.push_back(i);
-          }
+          // Add only tensors which need to be synced.
+          coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
+          coll.indices.push_back(i);
         }
       } else if (config.force_ltc_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
