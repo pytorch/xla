@@ -6,7 +6,6 @@ RUN apt-get -y install clang time
 RUN pip install pytest
 ARG USE_MKLDNN=0
 ARG SCCACHE_BUCKET=ossci-compiler-cache-circleci-v2
-ARG DISABLE_XRT=1
 ARG XLA_CUDA=0
 ARG BAZEL_REMOTE_CACHE=1
 ARG USE_FBGEMM=0

@@ -26,7 +26,6 @@ module "tpu_e2e_tests" {
   ansible_vars = {
     arch            = "amd64"
     accelerator     = "tpu"
-    disable_xrt     = "1"
     pytorch_git_rev = "main"
     # The commit ID associated with the triggered build. Substituted when
     # Cloud Build is triggered.
