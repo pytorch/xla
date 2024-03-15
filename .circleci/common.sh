@@ -198,10 +198,8 @@ function run_torch_xla_cpp_tests() {
         PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
       fi
-      # The command below is failing the post-submit CPU CI
-      # https://github.com/pytorch/xla/pull/6746#issue-2185119218
-      # genhtml --no-prefix /tmp/merged.dat -o ~/htmlcov/cpp/cpp_lcov.info
-      # mv /tmp/merged.dat ~/htmlcov/cpp_lcov.info
+      genhtml /tmp/merged.dat -o ~/htmlcov/cpp/cpp_lcov.info
+      mv /tmp/merged.dat ~/htmlcov/cpp_lcov.info
     else
       # Shard GPU testing
       if [ -x "$(command -v nvidia-smi)" ]; then
