@@ -1170,6 +1170,12 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor) { return GetTensorViewAliasId(tensor); });
   m.def("_xla_get_tensor_id",
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
+  m.def("_xla_set_auto_sharding", []() {
+    ShardingUtil::SetAutoSharding();
+    XLA_CHECK(ShardingUtil::GetAutoSharding());
+  });
+  m.def("_xla_get_auto_sharding",
+        []() { return ShardingUtil::GetAutoSharding(); });
   m.def("_xla_get_spmd_config_is_locked", []() { return GetLockSpmdConfig(); });
   m.def("_xla_force_spmd_device", []() {
     // It is actually more easier to force SPMD mode than blocking if there is
@@ -1179,9 +1185,10 @@ void InitXlaModuleBindings(py::module m) {
     // allows the users to call `xr.use_spmd()` more freely, given that the
     // earlier they call, the smaller the one-time overhead of replicating
     // non-SPMD backed tensors.
-    torch::lazy::BackendDevice backend_device = bridge::GetCurrentDevice();
+    torch::lazy::BackendDevice current_device = bridge::GetCurrentDevice();
     std::vector<XLATensorPtr> xtensors =
-        XLAGraphExecutor::Get()->GetLiveTensors(&backend_device);
+        XLAGraphExecutor::Get()->GetLiveTensors(&current_device);
+    torch::lazy::BackendDevice spmd_device = ParseDeviceString("SPMD:0");
     for (auto xtensor : xtensors) {
       XlaDeviceType xla_device_type =
           static_cast<XlaDeviceType>(xtensor->GetDevice().type());
@@ -1189,16 +1196,14 @@ void InitXlaModuleBindings(py::module m) {
         // Internally this moves the device data to the host and then copy
         // to the SPMD virtual device. The original data should be destroyed
         // in the transition, after creating a detached host-side copy.
-        // TODO(yeounoh) this can be further optimized via CopyToDevice.
+        // TODO(yeounoh) Consider CopyToDevice, and make data's device mutable.
         at::Tensor tensor = xtensor->ToTensor(false);
-        torch::lazy::BackendDevice device = ParseDeviceString("SPMD:0");
-        xtensor->SetXlaData(TensorToXlaData(tensor, device));
-        // TODO(yeounoh) allow tensor data's device to be mutable.
+        xtensor->SetXlaData(TensorToXlaData(tensor, spmd_device));
       }
     }
-    if (!UseVirtualDevice()) {
-      XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
-    }
+
+    // Ensure that virtual device is registered.
+    XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
   });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
   m.def("_xla_get_device_hw_type", [](const at::Tensor& tensor) {

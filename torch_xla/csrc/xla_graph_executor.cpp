@@ -614,6 +614,12 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   coll.device = *unique_device;
   coll.indices.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
+    // Sync sharding annotations between the tensor and its node, if exists.
+    // This either push down the sharding on the tensor to the IR before node
+    // hash computation if the node has no annotation, or it actually syncs the
+    // sharding attached to the node to the tensor, since sharding propagation &
+    // resharding should attach the latest to the node.
+    tensors[i]->sharding_spec();
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
         // A tensor's xla_data might not be up to date if there is a view
         // associated with it. Make sure to sync those tensors here too.
@@ -626,15 +632,6 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
           // Add only tensors which need to be synced.
           coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
           coll.indices.push_back(i);
-
-          // `sharding_spec()` checks sharding equality. If IR node has no
-          // sharding, then sync XLATensor sharding to the IR node. XLATensor's
-          // sharding takes the precedence as the source of the truth.
-          XLATensor::ShardingSpecPtr sharding = tensors[i]->sharding_spec();
-          if (sharding) {
-            dynamic_cast<XlaNode*>(ir_value.node.get())
-                ->SetSharding(sharding->sharding, ir_value.index);
-          }
         }
       } else if (config.force_ltc_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
@@ -1187,6 +1184,19 @@ XLAGraphExecutor::TryRunCachedSync(
   TORCH_LAZY_VALUE_METRIC("TensorsGraphSize", po_data->post_order.size());
   TF_VLOG(5) << "TensorsGraphSize=" << po_data->post_order.size();
 
+  if (ShardingUtil::GetAutoSharding()) {
+    // TODO(yeounoh) we may be able to update the cache to avoid this.
+    // The current issue is that we are not properly updating the original
+    // tensors to track the new sharded data after resharding.
+    const xla::HloModuleProto& computation_proto =
+        cached_computation->computation->computation().proto();
+    ShardingUtil::ReshardParameters(computation_proto, tensors,
+                                    &po_data->parameters_data,
+                                    &po_data->post_order);
+    TF_VLOG(5) << "Parameter sequence hash after resharding: "
+               << torch::lazy::Hash(po_data->parameter_sequence);
+  }
+
   // don't schedule the execution if the purpose of this SyncTensor is just to
   // warm up the cache.
   return std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>>(
@@ -1296,6 +1306,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
   static const bool using_pjrt =
       runtime::sys_util::GetEnvString("PJRT_DEVICE", "").size() > 0;
+  static const bool use_autosharding = ShardingUtil::GetAutoSharding();
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
@@ -1311,10 +1322,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   std::vector<size_t> buffer_donor_indices;
-  // TODO(yeounoh) aliasing is disabled for partitioned computation,
+  // TODO(yeounoh) enable aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
-  if (enable_aliasing) {
+  if (enable_aliasing && !use_autosharding) {
     if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
       // We can only alias at the step barrier, when force_ltc_data is true.
       // Consider the case:
@@ -1352,9 +1363,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 
+  // TODO(yeounoh) enable wrapping with auto-sharding.
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
-      using_pjrt;
+      using_pjrt && !use_autosharding;
   if (should_wrap_parameter) {
     TF_VLOG(3) << "Wrapping graph with " << program_shape.parameters_size()
                << " parameters. Threadshold = "
@@ -1372,6 +1384,25 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                        runtime::GetComputationClient()->GetCompilationDevices(
                            coll.device.toString(), devices),
                        &shape, should_wrap_parameter, is_sharded});
+
+  if (use_autosharding) {
+    TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
+    TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
+    instances.front().use_auto_spmd_partitioning = use_autosharding;
+    TORCH_LAZY_COUNTER("CompileWithAutoSharding", 1);
+
+    // Apply XLA_AUTO_SPMD_MESH if it is set.
+    // TODO(yeounoh) allow multi mesh exploration.
+    auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
+    std::vector<int64_t> auto_spmd_mesh_shape = std::get<0>(mesh_shape_ids);
+    std::vector<int64_t> auto_spmd_mesh_ids = std::get<1>(mesh_shape_ids);
+    instances.front().auto_spmd_mesh_shape = auto_spmd_mesh_shape;
+    instances.front().auto_spmd_mesh_ids = auto_spmd_mesh_ids;
+    TF_VLOG(5) << "auto_spmd_mesh_shape={"
+               << absl::StrJoin(auto_spmd_mesh_shape, ",") << "}\n"
+               << "auto_spmd_mesh_ids={"
+               << absl::StrJoin(auto_spmd_mesh_ids, ",") << "}";
+  }
 
   DebugUtil::analyze_graph_execution_python_frame(
       DebugUtil::GraphAnalysisSource::Compilation,
@@ -1393,6 +1424,17 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       << " is computation hash "
       << torch::lazy::HashToString(torch::lazy::Hash(
              computations.front()->computation().proto().SerializeAsString()));
+
+  if (use_autosharding) {
+    const xla::HloModuleProto& computation_proto =
+        computations.front()->computation().proto();
+    ShardingUtil::ReshardParameters(computation_proto, &tensors,
+                                    &po_data->parameters_data,
+                                    &po_data->post_order);
+    TF_VLOG(5) << "Parameter sequence hash after resharding: "
+               << torch::lazy::Hash(po_data->parameter_sequence);
+  }
+
   if (should_wrap_parameter) {
     XLA_CHECK_EQ(program_shape.parameters_size(), 1);
     XLA_CHECK_EQ(program_shape.parameters()[0].tuple_shapes_size(),
@@ -1404,8 +1446,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
-          /*computation=*/
-          computations.front(),
+          /*computation=*/computations.front(),
           /*parameters_data=*/std::move(po_data->parameters_data),
           /*is_sharded=*/is_sharded};
 }
@@ -1465,9 +1506,9 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   }
   CompilationResult compile_result =
       Compile(*tensors, devices, coll, &po_data, ir_values);
+
   TORCH_LAZY_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
   TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;
-
   auto cached_computation = std::make_shared<CachedComputation>(
       std::move(compile_result.computation), compile_result.is_sharded);
   GetComputationCache()->Add(coll.hash, cached_computation);
