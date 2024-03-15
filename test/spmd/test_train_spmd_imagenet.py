@@ -342,7 +342,6 @@ def train_imagenet():
       profile_duration = int(os.environ.get('PROFILE_DURATION_MS', 20000))
       profile_logdir = os.environ.get('PROFILE_LOGDIR', None)
       if step == profile_step and epoch == profile_epoch:
-        print('xw32 starting xp.trace_detached.')
         xm.wait_device_ops()
         import tempfile
         xp.trace_detached('127.0.0.1:9012', profile_logdir, profile_duration or 20000)
