@@ -49,5 +49,3 @@ pip:
   # Packages that will be installed with the `--nodeps` flag.
   pkgs_nodeps:
     release_common:
-      - torchvision
-      - pillow
