@@ -54,6 +54,14 @@ build:cuda --@local_config_cuda//:enable_cuda
 build:cuda --define=xla_python_enable_gpu=true
 build:cuda --cxxopt=-DXLA_CUDA=1
 
+build:rocm --repo_env TF_NEED_ROCM=1
+build:rocm --crosstool_top=@local_config_rocm//crosstool:toolchain
+
+
+build:rocm --@xla//xla/python:enable_gpu=true
+build:rocm --define=xla_python_enable_gpu=true
+build:rocm --cxxopt=-DXLA_ROCM=1
+
 # Coverage with cuda/gcc/nvcc requires manually setting coverage flags.
 coverage:cuda --per_file_copt=third_party/.*,torch_xla/.*@--coverage
 coverage:cuda --linkopt=-lgcov
