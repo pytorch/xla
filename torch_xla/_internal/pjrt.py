@@ -98,6 +98,7 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
   initialize_singleprocess()
   return fn(*args, **kwargs)
 
+
 @runtime.requires_pjrt
 def initialize_singleprocess():
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, '1')
@@ -107,6 +108,7 @@ def initialize_singleprocess():
   elif runtime.device_type() == 'TPU':
     tpu.configure_one_chip_topology()
   xm.set_replication(xm.xla_device(), [])
+
 
 @runtime.requires_pjrt
 def initialize_multiprocess(local_rank: int, local_world_size: int):

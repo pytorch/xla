@@ -133,7 +133,8 @@ InitializePjRt(const std::string& device_type) {
 
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size
-               << ", local_process_rank=" << local_process_rank << ", local_world_size=" << local_world_size
+               << ", local_process_rank=" << local_process_rank
+               << ", local_world_size=" << local_world_size
                << ", spmd case=" << sys_util::GetEnvBool("XLA_USE_SPMD", false)
                << ", PJRT_LOCAL_PROCESS_RANK="
                << sys_util::GetEnvString(env::kEnvPjRtLocalRank, "")
