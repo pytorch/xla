@@ -137,6 +137,7 @@ function run_torch_xla_python_tests() {
       if [ -x "$(command -v nvidia-smi)" ]; then
         # single-host-single-process
         PJRT_DEVICE=CUDA python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_cores=1 --num_steps=25 --model=resnet18
+        PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 pytorch/xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
 
         # single-host-multi-process
         num_devices=$(nvidia-smi --list-gpus | wc -l)
