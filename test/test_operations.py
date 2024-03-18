@@ -2336,9 +2336,10 @@ class TestGeneric(test_utils.XlaTestCase):
 
 
 class SimpleModelWithDropout(torch.nn.Module):
+
   def __init__(self):
     super().__init__()
-    self.x = torch.nn.Linear(128,128)
+    self.x = torch.nn.Linear(128, 128)
     self.dropout = torch.nn.Dropout(p=0.1)
     self.to_save = []
 
@@ -2353,6 +2354,7 @@ class SimpleModelWithDropout(torch.nn.Module):
 
 
 class TestActivationCheckpoint(test_utils.XlaTestCase):
+
   def test_dropout(self):
     device = xm.xla_device()
     model = SimpleModelWithDropout().to(device)
