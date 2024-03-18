@@ -342,12 +342,27 @@ xla::XlaOp BuildConvolutionOverrideableBias(
       BuildConvolutionOverrideable(input, kernel, stride, padding, dilation,
                                    transposed, output_padding, groups);
   auto broadcast_sizes = XlaHelpers::SizesOfXlaOp(conv);
+  std::vector<int64_t> conv_dims(broadcast_sizes.size());
+  std::iota(conv_dims.begin(), conv_dims.end(), 0);
   // Remove the channels dimension.
   broadcast_sizes.erase(broadcast_sizes.begin() + 1);
+  conv_dims.erase(conv_dims.begin() + 1);
   // Make the bias match the output dimensions.
-  xla::XlaOp bias_broadcast =
-      xla::Transpose(xla::Broadcast(bias, broadcast_sizes),
-                     BiasTransposePermutation(broadcast_sizes.size() + 1));
+  const xla::Shape& bias_shape = ShapeHelper::ShapeOfXlaOp(bias);
+  bool bias_broadcast_unbounded_dynamic =
+      std::any_of(
+          broadcast_sizes.begin(), broadcast_sizes.end(),
+          [](int64_t size) { return size == xla::Shape::kUnboundedSize; }) ||
+      bias_shape.is_unbounded_dynamic();
+
+  xla::XlaOp broadcasted_bias =
+      bias_broadcast_unbounded_dynamic
+          ? XlaHelpers::DynamicUnboundedBroadcast(bias, conv, conv_dims)
+          : xla::Broadcast(bias, broadcast_sizes);
+  xla::XlaOp bias_broadcast = xla::Transpose(
+      broadcasted_bias, BiasTransposePermutation(broadcast_sizes.size() + 1));
+  const xla::Shape& conv_shape = ShapeHelper::ShapeOfXlaOp(conv);
+  const xla::Shape& bb_shape = ShapeHelper::ShapeOfXlaOp(bias_broadcast);
   auto promoted = XlaHelpers::Promote(conv, bias_broadcast);
   return xla::Add(
       promoted.first, promoted.second,

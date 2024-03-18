@@ -346,7 +346,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   std::vector<size_t> SetBufferDonors(LoweringContext* lowering_ctx);
 
   // We don't use upstream Compile to have BuildInputOutputAliases.
-  CompilationResult Compile(const std::vector<XLATensorPtr>& tensors,
+  // TODO(yeounoh) auto-sharding can change tensors shardings, which needs to be
+  // accounted for in Dynamo integration.
+  CompilationResult Compile(std::vector<XLATensorPtr>& tensors,
                             absl::Span<const std::string> devices,
                             const SyncTensorCollection& coll,
                             PostOrderData* po_data,

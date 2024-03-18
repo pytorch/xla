@@ -209,6 +209,9 @@ torch::lazy::NodePtr Rshift(const torch::lazy::Value& input,
 torch::lazy::NodePtr Rshift(const torch::lazy::Value& input,
                             const torch::lazy::Value& other);
 
+torch::lazy::NodePtr Div(const torch::lazy::Value& input,
+                         const torch::lazy::Value& divisor);
+
 torch::lazy::NodePtr Remainder(const torch::lazy::Value& input,
                                const torch::lazy::Value& divisor);
 
@@ -244,6 +247,21 @@ torch::lazy::NodePtr Selu(const torch::lazy::Value& input);
 torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input);
+
+torch::lazy::NodePtr Rsub(const torch::lazy::Value& input,
+                          const torch::lazy::Value& other,
+                          const torch::lazy::Value& alpha);
+
+torch::lazy::NodePtr Sub(const torch::lazy::Value& input,
+                         const torch::lazy::Value& other,
+                         const torch::lazy::Value& alpha);
+
+torch::lazy::NodePtr Add(const torch::lazy::Value& input,
+                         const torch::lazy::Value& other,
+                         const torch::lazy::Value& alpha);
+
+torch::lazy::NodePtr Mul(const torch::lazy::Value& input,
+                         const torch::lazy::Value& other);
 
 }  // namespace torch_xla
 

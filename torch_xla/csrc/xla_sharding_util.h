@@ -3,6 +3,8 @@
 
 #include <torch/csrc/jit/python/pybind.h>
 
+#include <tuple>
+
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -22,7 +24,8 @@ class ShardingUtil {
     TUPLE = 2,
     TILED = 3,
     MANUAL = 4,
-    PARTIAL = 5
+    PARTIAL = 5,
+    UNKNOWN = 6  // implicit replication
   };
 
   // Determine the ShardingType of the given xla::OpSharding.
@@ -48,15 +51,6 @@ class ShardingUtil {
                                           const py::list& group_assignment,
                                           const py::list& replication_groups,
                                           ShardingType sharding_type);
-
-  // This is a debugging tool for partitioned HLO generation with different
-  // options and sharding propagation.
-  static xla::HloModuleProto SpmdPartitioningPass(
-      const xla::HloModuleProto& hlo_proto, int64_t num_replicas,
-      int64_t num_partitions, bool conv_halo_exchange_always_on_lhs = true,
-      bool choose_faster_windowed_einsum_over_mem = false,
-      bool unroll_windowed_einsum = false,
-      bool bidirectional_windowed_einsum = false);
 
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
@@ -95,11 +89,11 @@ class ShardingUtil {
       const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
       const std::vector<std::string>& devices, bool padded = true);
 
-  // Retrieve output sharding of a given XLA computation.
+  // Retrieve output sharding of a given XLA computation. ShardingSpec::shape
+  // is always on virtual SPMD device.
   static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
-      std::vector<xla::Shape>* output_shapes,
-      runtime::ComputationClient::ComputationPtr computation,
-      const torch::lazy::BackendDevice& device);
+      const std::vector<xla::Shape>& output_shapes,
+      runtime::ComputationClient::ComputationPtr computation);
 
   // Create sharded data placeholders, each corresponding to the individual
   // sharding spec from the input list
@@ -127,6 +121,27 @@ class ShardingUtil {
 
   static void XlaMarkSharding(const at::Tensor& input,
                               xla::OpSharding sharding);
+
+  //////////////////////////// Auto-Sharding ////////////////////////////
+
+  // Construct a device mesh for auto-sharding pass. Returns a tuple of mesh
+  // shape and device ids vectors.
+  static std::tuple<std::vector<int64_t>, std::vector<int64_t>>
+  GetAutoShardingMesh();
+
+  // Reshard the parameters if the expected shardings mismatch. Resharding is
+  // expensive especially for those already sharded. The cost can easily be
+  // armotized over multiple steps, though, since the input sharding is
+  // propagated to the output for the subsequent runs. Sharded data transfer
+  // during resharding should be asynchronous. It is recommended to keep the
+  // input sharding on the input data as-is.
+  static void ReshardParameters(
+      const xla::HloModuleProto& module, std::vector<XLATensorPtr>* tensors,
+      std::vector<torch::lazy::BackendDataPtr>* parameters,
+      std::vector<const torch::lazy::Node*>* nodes);
+
+  static void SetAutoSharding();
+  static bool GetAutoSharding();
 
   //////////////////////////// Dynamo Integration ////////////////////////////
 

@@ -261,6 +261,14 @@ std::vector<xla::XlaOp> BuildPreluBackward(xla::XlaOp grad, xla::XlaOp input,
 
 xla::XlaOp BuildSigmoid(xla::XlaOp input) { return xla::Logistic(input); }
 
+xla::XlaOp BuildDiv(xla::XlaOp input, xla::XlaOp divisor) {
+  // Shape and value promotion.
+  std::tie(input, divisor) = XlaHelpers::Promote(input, divisor);
+  xla::XlaOp div_result = xla::Div(
+      input, divisor, XlaHelpers::getBroadcastDimensions(input, divisor));
+  return div_result;
+}
+
 xla::XlaOp BuildSiLUBackward(xla::XlaOp grad_output, xla::XlaOp input) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp one = xla::One(input.builder(), shape.element_type());
@@ -470,6 +478,58 @@ xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight) {
       start, mul_result, XlaHelpers::getBroadcastDimensions(start, mul_result));
 
   return add_result;
+}
+
+xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
+  // Three-way shape and value promotion
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+  std::tie(input, alpha) = XlaHelpers::Promote(input, alpha);
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+
+  // Perform the function: other - alpha * input
+  xla::XlaOp mul_result =
+      xla::Mul(input, alpha, XlaHelpers::getBroadcastDimensions(input, alpha));
+  xla::XlaOp sub_result = xla::Sub(
+      other, mul_result, XlaHelpers::getBroadcastDimensions(other, mul_result));
+  return sub_result;
+}
+
+xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
+  // Three-way shape and value promotion
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+  std::tie(input, alpha) = XlaHelpers::Promote(input, alpha);
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+
+  // Perform the function: input - alpha * other
+  xla::XlaOp mul_result =
+      xla::Mul(other, alpha, XlaHelpers::getBroadcastDimensions(other, alpha));
+  xla::XlaOp sub_result = xla::Sub(
+      input, mul_result, XlaHelpers::getBroadcastDimensions(input, mul_result));
+  return sub_result;
+}
+
+xla::XlaOp BuildAdd(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
+  // Three-way shape and value promotion
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+  std::tie(input, alpha) = XlaHelpers::Promote(input, alpha);
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+
+  xla::XlaOp multiplied =
+      xla::Mul(other, alpha, XlaHelpers::getBroadcastDimensions(other, alpha));
+  xla::XlaOp add_result = xla::Add(
+      input, multiplied, XlaHelpers::getBroadcastDimensions(input, multiplied));
+
+  return add_result;
+}
+
+xla::XlaOp BuildMul(xla::XlaOp input, xla::XlaOp other) {
+  // Shape and value promotion
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+
+  xla::XlaOp mul_result =
+      xla::Mul(input, other, XlaHelpers::getBroadcastDimensions(input, other));
+
+  return mul_result;
 }
 
 }  // namespace torch_xla

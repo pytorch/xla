@@ -1170,8 +1170,48 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor) { return GetTensorViewAliasId(tensor); });
   m.def("_xla_get_tensor_id",
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
+  m.def("_xla_set_auto_sharding", []() {
+    ShardingUtil::SetAutoSharding();
+    XLA_CHECK(ShardingUtil::GetAutoSharding());
+  });
+  m.def("_xla_get_auto_sharding",
+        []() { return ShardingUtil::GetAutoSharding(); });
   m.def("_xla_get_spmd_config_is_locked", []() { return GetLockSpmdConfig(); });
+  m.def("_xla_force_spmd_device", []() {
+    // It is actually more easier to force SPMD mode than blocking if there is
+    // non-SPMD initialized tensors, for the 3rd-party solution integration. For
+    // instance, HuggingFace trainer pre-loads embeddings table and the training
+    // initialization is done over multiple scripts. Being able to force SPMD
+    // allows the users to call `xr.use_spmd()` more freely, given that the
+    // earlier they call, the smaller the one-time overhead of replicating
+    // non-SPMD backed tensors.
+    torch::lazy::BackendDevice current_device = bridge::GetCurrentDevice();
+    std::vector<XLATensorPtr> xtensors =
+        XLAGraphExecutor::Get()->GetLiveTensors(&current_device);
+    torch::lazy::BackendDevice spmd_device = ParseDeviceString("SPMD:0");
+    for (auto xtensor : xtensors) {
+      XlaDeviceType xla_device_type =
+          static_cast<XlaDeviceType>(xtensor->GetDevice().type());
+      if (xla_device_type != XlaDeviceType::SPMD) {
+        // Internally this moves the device data to the host and then copy
+        // to the SPMD virtual device. The original data should be destroyed
+        // in the transition, after creating a detached host-side copy.
+        // TODO(yeounoh) Consider CopyToDevice, and make data's device mutable.
+        at::Tensor tensor = xtensor->ToTensor(false);
+        xtensor->SetXlaData(TensorToXlaData(tensor, spmd_device));
+      }
+    }
+
+    // Ensure that virtual device is registered.
+    XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
+  });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
+  m.def("_xla_get_device_hw_type", [](const at::Tensor& tensor) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+    XlaDeviceType xla_device_type =
+        static_cast<XlaDeviceType>(xtensor->GetDevice().type());
+    return DeviceType(xla_device_type).toString();
+  });
   m.def("_xla_get_devices", []() {
     if (UseVirtualDevice()) {
       // Under SPMD context, there is only one virtual devices from user
@@ -1904,16 +1944,8 @@ void InitXlaModuleBindings(py::module m) {
           std::vector<std::string> sharding_specs;
           sharding_specs.reserve(tensors.size());
           for (const at::Tensor& tensor : tensors) {
-            XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
-            XLATensor::ShardingSpecPtr sharding_spec =
-                xtensor ? xtensor->sharding_spec() : nullptr;
-            if (sharding_spec != nullptr) {
-              sharding_specs.push_back(
-                  xla::HloSharding::FromProto(sharding_spec->sharding)
-                      ->ToString());
-            } else {
-              sharding_specs.push_back("");
-            }
+            sharding_specs.push_back(
+                GetXLAShardingSpec(bridge::GetXlaTensor(tensor)));
           }
           return sharding_specs;
         });
@@ -2130,36 +2162,6 @@ void InitXlaModuleBindings(py::module m) {
         ShardingUtil::CreateShardedData(shards, devices, sharding_spec);
     xtensor->SetXlaData(xla_data);
   });
-  // This is useful for debugging and generating a partitioned HLO separately
-  // outside the actual compilation & execution. This allows testing with
-  // different partitioning configurations.
-  m.def("_xla_partitioning_pass",
-        [](const std::vector<at::Tensor>& tensors, int64_t num_replicas,
-           int64_t num_devices, bool conv_halo_exchange_always_on_lhs = true,
-           bool choose_faster_windowed_einsum = false,
-           bool unroll_windowed_einsum = false,
-           bool bidirectional_windowed_einsum = false) -> std::string {
-          xla::HloModuleConfig config;
-          config.set_use_spmd_partitioning(true);
-          config.set_replica_count(num_replicas);
-          config.set_num_partitions(num_devices);
-
-          std::string hlo_text =
-              GetTensorsHloGraph(tensors, EmitMode::kHloReadable);
-          auto hlo_module_error =
-              xla::ParseAndReturnUnverifiedModule(hlo_text, config);
-          XLA_CHECK_OK(hlo_module_error.status())
-              << "HLO Module loading failed: " << hlo_module_error.status();
-
-          auto module = std::move(hlo_module_error.value());
-          xla::HloModuleProto module_proto = ShardingUtil::SpmdPartitioningPass(
-              module->ToProto(), num_replicas, num_devices,
-              conv_halo_exchange_always_on_lhs, choose_faster_windowed_einsum,
-              unroll_windowed_einsum, bidirectional_windowed_einsum);
-          module = std::move(
-              xla::HloModule::CreateFromProto(module_proto, config).value());
-          return module->ToString();
-        });
   // Initialize the XlaCoordinator in the runtime if not already initialized.
   m.def(
       "_ensure_xla_coordinator_initialized",

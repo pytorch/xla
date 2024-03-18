@@ -26,8 +26,7 @@ COPY --from=build /src/pytorch/xla/test /src/pytorch/xla/test
 
 # Copy and install wheels.
 WORKDIR /tmp/wheels
-COPY --from=build /src/pytorch/dist/*.whl ./
-COPY --from=build /src/pytorch/xla/dist/*.whl ./
+COPY --from=build /dist/*.whl ./
 
 RUN echo "Installing the following wheels" && ls *.whl
 RUN pip install *.whl

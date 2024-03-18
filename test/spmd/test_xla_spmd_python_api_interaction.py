@@ -10,6 +10,7 @@ import torch_xla.distributed.xla_backend
 import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from torch_xla.amp import autocast
+import torch_xla.debug.metrics as met
 
 import test_xla_sharding_base
 
@@ -18,7 +19,6 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def test_get_xla_supported_devices(self):
@@ -64,7 +64,6 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def test_local_process_count(self):
@@ -120,18 +119,31 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
       self.assertEqual(xr.addressable_runtime_device_count(), 1)
 
   def test_runtime_spmd_api(self):
+    met.clear_counters()
     self.assertTrue(xr.is_spmd())
     del os.environ["XLA_USE_SPMD"]
     self.assertFalse(xr.is_spmd())
-    # reset for other test cases
-    os.environ["XLA_USE_SPMD"] = "1"
+
+    # unittest process can persist XLA_USE_SPMD from other test suites,
+    # so t may be on a SPMD or non-SPMD device. If this test is run independently
+    # outside unittest, then it lives on a non-SPMD device.
+    t = torch.ones(2, 2).to(xm.xla_device())
+
+    # Should enable SPMD without crashing.
+    xr.use_spmd()
+    self.assertTrue(xr.is_spmd())
+    # TODO(yeounoh) check device type once tensor device becomes mutable
+
+    # execute replicated
+    t += 1
+    xm.mark_step(True)
+    self.assertEqual(met.counter_value("ExecuteReplicated"), 1)
 
 
 class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   @unittest.skipIf(xr.device_type() not in ['TPU', 'CUDA'],
@@ -150,7 +162,6 @@ class BasicDistributedTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     return super().setUpClass()
 
   def test_xla_backend(self):

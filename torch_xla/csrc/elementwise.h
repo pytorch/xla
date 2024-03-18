@@ -100,6 +100,9 @@ std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input);
 // If eps is given, the input is clamped between eps and 1-eps.
 xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps);
 
+// Computes the division of input and the divisor.
+xla::XlaOp BuildDiv(xla::XlaOp input, xla::XlaOp divisor);
+
 // Computes the backward of LogSigmoid.
 xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                    xla::XlaOp buffer);
@@ -116,6 +119,22 @@ xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
 // Computes a linear interpolation of two tensors start (given by input) and end
 // based on a scalar or tensor weight and returns the resulting out tensor.
 xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight);
+
+// Computes the rsub function. Subtracts input, scaled by alpha, from other.
+// out = other − alpha * input
+xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Computes the sub function. Subtracts other, scaled by alpha, from input.
+// out = input − alpha * other
+xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Computes the add function. Adds other, scaled by alpha, from input.
+// out = input + alpha * other
+xla::XlaOp BuildAdd(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
+// Computes the mul function.
+// out = input * other
+xla::XlaOp BuildMul(xla::XlaOp input, xla::XlaOp other);
 
 }  // namespace torch_xla
 

@@ -245,7 +245,7 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
 XLATensorPtr Embedding(const XLATensorPtr& weight,
                        const XLATensorPtr& indices) {
   XLA_CHECK_EQ(weight->shape().get().rank(), 2);
-  XLA_CHECK_EQ(indices->dtype(), at::ScalarType::Long);
+  XLA_CHECK(indices->dtype() == at::kLong || indices->dtype() == at::kInt);
 
   if (indices->shape().get().rank() == 1) {
     return tensor_methods::index_select(weight, 0, indices);

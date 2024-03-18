@@ -95,16 +95,19 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
   Returns:
     the result of calling `fn`.
   """
+  initialize_singleprocess()
+  return fn(*args, **kwargs)
+
+
+@runtime.requires_pjrt
+def initialize_singleprocess():
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, '1')
 
   if plugins.using_dynamic_plugins():
     plugins.default().configure_single_process()
   elif runtime.device_type() == 'TPU':
     tpu.configure_one_chip_topology()
-
   xm.set_replication(xm.xla_device(), [])
-
-  return fn(*args, **kwargs)
 
 
 @runtime.requires_pjrt

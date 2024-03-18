@@ -24,11 +24,10 @@ import torch_xla.utils.utils as xu
 from torch_xla._internal import tpu
 
 
-class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
+class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def test_xla_sharded_tensor(self):
@@ -38,8 +37,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
                        device=xm.xla_device())
     xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
                             partition_spec)
-
-    # TODO(244003536) add more tests for XLAShardedTensror.
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
 
   def test_xla_sharded_tensor_repr(self):
@@ -617,6 +614,11 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         '%custom-call.7 = f32[2,2]{1,0} custom-call(f32[2,2]{1,0} %add.6), custom_call_target="Sharding", sharding=',
         hlo)
 
+  # avoid calling xr.addressable_device_count here otherwise it will init the test
+  # in non-spmd mode.
+  @unittest.skipIf(xr.device_type() == 'CPU',
+                   "sharding will be the same for both tensors on single device"
+                  )
   def test_shard_hashing(self):
     xt1 = torch.ones(2, 2).to(xm.xla_device())
     xt2 = torch.ones(2, 2).to(xm.xla_device())
@@ -630,8 +632,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(xt1 + 0, xt2 + 0))
 
     # Check that hashes are different for the sharded and non-sharded tensors
-    hash1 = torch_xla._XLAC._get_graph_hash([xt1])
-    hash2 = torch_xla._XLAC._get_graph_hash([xt2])
+    hash1 = torch_xla._XLAC._get_graph_hash([xt1 + 0])
+    hash2 = torch_xla._XLAC._get_graph_hash([xt2 + 0])
     self.assertNotEqual(hash1, hash2)
 
   def test_transfer_sharded_data_to_host(self):
@@ -709,9 +711,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
                             partition_spec)
     xst2 = xst1 + 5
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xst2.global_tensor])
-    self.assertIn('%p1.4 = f32[1,8]{1,0} parameter(1), sharding', hlo)
-    # scalar 5 should be replicated
-    self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
+    self.assertIn('%p1.3 = f32[1,8]{1,0} parameter(1), sharding', hlo)
+    # scalar 5 should be implicitly replicated, so the pre-optimization HLO
+    # shouldn't mark it with sharding.
+    self.assertNotIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
 
   def test_2d_tensor_3d_mesh(self):
     ct1 = torch.randn(16, 16, device='cpu')
@@ -825,7 +828,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual += 0
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
     self.assertIn(
-        '%add.12 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.10, f32[1,128]{1,0} %broadcast.11)',
+        '%add.12 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.9, f32[1,128]{1,0} %broadcast.11)',
         hlo)
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))

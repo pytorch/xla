@@ -30,6 +30,7 @@
 #include "xla/service/sharding_propagation.h"
 #include "xla/service/spmd/spmd_partitioner.h"
 #include "xla/xla.pb.h"
+#include "xla_sharding_util.h"
 
 namespace torch_xla {
 
@@ -51,6 +52,8 @@ namespace {
 using tsl::ERROR;
 using tsl::INFO;
 using xla::internal::XlaBuilderFriend;
+
+static bool use_auto_sharding = false;
 
 // Return py::obj type as string.
 std::string GetPyType(const py::object& elem) {
@@ -163,6 +166,21 @@ std::vector<std::vector<int64_t>> ExtractGroupMembers(
   return groups;
 }
 
+std::vector<int64_t> ParseStringToIntVector(const std::string& str) {
+  std::istringstream ss;
+  ss.str(str);
+  std::vector<int64_t> result;
+  for (std::string s; std::getline(ss, s, ',');) {
+    try {
+      result.push_back(std::stoi(s));
+    } catch (std::invalid_argument const& e) {
+      TF_LOG(ERROR) << "Error parsing string: " << str
+                    << " with an exception: " << e.what();
+    }
+  }
+  return result;
+}
+
 }  // namespace
 
 bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
@@ -171,10 +189,12 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
        lowering_ctx->GetEmittedOutputs()) {
     const torch::lazy::Node* node = elem.first.node;
     const XlaNode* xla_node = dynamic_cast<const XlaNode*>(node);
-    auto instruction = XlaBuilderFriend::GetInstruction(elem.second);
-    if (xla_node->GetSharding(elem.first.index) != nullptr) {
-      *instruction->mutable_sharding() =
-          *xla_node->GetSharding(elem.first.index);
+    xla::HloInstructionProto* instruction =
+        XlaBuilderFriend::GetInstruction(elem.second);
+    const std::shared_ptr<xla::OpSharding> sharding =
+        xla_node->GetSharding(elem.first.index);
+    if (sharding != nullptr && sharding->type() != xla::OpSharding::UNKNOWN) {
+      *instruction->mutable_sharding() = *sharding;
       is_sharded = true;
     }
   }
@@ -196,6 +216,8 @@ ShardingUtil::ShardingType ShardingUtil::GetShardingType(
                                                    : ShardingType::TILED;
     case xla::OpSharding::MANUAL:
       return ShardingType::MANUAL;
+    case xla::OpSharding::UNKNOWN:
+      return ShardingType::UNKNOWN;
     default:
       TF_LOG(ERROR) << "Unsupported sharding type: " << sharding.type();
   }
@@ -268,70 +290,22 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
       sharding = xla::HloSharding::PartialTile(new_tile_assignment).ToProto();
       break;
     }
+    case ShardingType::UNKNOWN: {
+      sharding = xla::HloSharding::Unknown().ToProto();
+    }
     default: {
       TF_LOG(ERROR) << "Invalid arguments: sharding_type " << sharding_type;
     }
   }
-  TF_VLOG(INFO) << "OpSharding (ShardingType: " << sharding_type << "):\n"
-                << sharding.DebugString()
-                << ", sharding.type()=" << sharding.type();
   return sharding;
-}
-
-xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
-    const xla::HloModuleProto& hlo_proto, int64_t num_replicas,
-    int64_t num_partitions, bool conv_halo_exchange_always_on_lhs,
-    bool choose_faster_windowed_einsum_over_mem, bool unroll_windowed_einsum,
-    bool bidirectional_windowed_einsum) {
-  // TODO(yeounoh) propagate this down to the PJRT client
-  auto execution_options = xla::CreateDefaultExecutionOptions();
-  execution_options.set_use_spmd_partitioning(true);
-  execution_options.set_num_replicas(num_replicas);
-  execution_options.set_num_partitions(num_partitions);
-  auto module_config = xla::HloModule::CreateModuleConfigFromProto(
-                           hlo_proto, xla::DebugOptions(), &execution_options)
-                           .value();
-  auto module = xla::HloModule::CreateFromProto(hlo_proto, module_config,
-                                                /*prohibit_empty_literal=*/true)
-                    .value();
-
-  xla::spmd::SpmdPartitionerOptions options;
-  options.conv_halo_exchange_always_on_lhs = conv_halo_exchange_always_on_lhs;
-  options.allow_module_signature_change = true;
-  options.choose_faster_windowed_einsum_over_mem =
-      choose_faster_windowed_einsum_over_mem;
-  options.unroll_windowed_einsum = unroll_windowed_einsum;
-  options.bidirectional_windowed_einsum = bidirectional_windowed_einsum;
-
-  xla::HloPassPipeline pass("spmd-partitioning");
-  pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
-                                 /*allow_mixed_precision=*/false);
-  // TODO(yeounoh) side-effecting ops gets assigned replicated sharding.
-  pass.AddPass<xla::ShardingPropagation>(
-      /*is_spmd=*/true, /*propagate_metadata=*/false,
-      /*allow_spmd_sharding_propagation_to_output=*/
-      absl::MakeConstSpan({true}));
-  pass.AddPass<xla::spmd::SpmdPartitioner>(
-      /*num_partitions=*/num_partitions,
-      /*num_replicas=*/num_replicas, options,
-      xla::spmd::GetDefaultCollectiveOpsCreator(
-          /*num_partitions=*/num_partitions,
-          /*num_replicas=*/num_replicas));
-  pass.AddPass<xla::HloVerifier>(/*layout_sensitive=*/false,
-                                 /*allow_mixed_precision=*/false);
-  const auto& pass_status = pass.Run(module.get());
-  if (!pass_status.ok()) {
-    XLA_ERROR() << "spmd-partitioning pass failed";
-  }
-
-  return module.get()->ToProto();
 }
 
 std::vector<int64_t> ShardingUtil::GetShardShape(
     const XLATensor::ShardingSpecPtr shardings) {
   auto sharding = shardings->sharding;
   auto global_shape = shardings->shape.dimensions();
-  if (sharding.type() == xla::OpSharding::REPLICATED) {
+  if (sharding.type() == xla::OpSharding::REPLICATED ||
+      sharding.type() == xla::OpSharding::UNKNOWN) {
     std::vector<int64_t> globalShape;
     globalShape.assign(global_shape.begin(), global_shape.end());
     return globalShape;
@@ -390,7 +364,8 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
   std::vector<std::pair<int, std::vector<TensorIndex>>> shard_indices(
       devices.size());
   auto tile_shape = sharding.tile_assignment_dimensions();
-  if (sharding.type() == xla::OpSharding::REPLICATED) {
+  if (sharding.type() == xla::OpSharding::REPLICATED ||
+      sharding.type() == xla::OpSharding::UNKNOWN) {
     // Use Ellipsis to indicate all dimensions are replicated
     auto ellipsis = TensorIndex(Ellipsis);
     auto indices = std::vector<TensorIndex>({ellipsis});
@@ -468,11 +443,12 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     sharding = shardings->sharding;
     minibatch = shardings->minibatch;
   }
-  TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type()
-               << ")... and minibatch = " << minibatch << std::endl;
+  TF_VLOG(5) << "ShardTensor with sharding type(" << sharding.type()
+             << ")... and minibatch = " << minibatch << std::endl;
   auto device_index = build_index_map(devices);
   std::vector<at::Tensor> shards(devices.size());
-  if (shardings == nullptr || sharding.type() == xla::OpSharding::REPLICATED) {
+  if (shardings == nullptr || sharding.type() == xla::OpSharding::REPLICATED ||
+      sharding.type() == xla::OpSharding::UNKNOWN) {
     std::fill_n(shards.begin(), shards.size(), tensor);
   } else if (sharding.type() == xla::OpSharding::OTHER) {
     XLA_CHECK(sharding.tile_shape().dimensions_size() <= 2);
@@ -520,11 +496,10 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
 }
 
 std::vector<XLATensor::ShardingSpecPtr> ShardingUtil::GetOutputSharding(
-    std::vector<xla::Shape>* output_shapes,
-    runtime::ComputationClient::ComputationPtr computation,
-    const torch::lazy::BackendDevice& device) {
+    const std::vector<xla::Shape>& output_shapes,
+    runtime::ComputationClient::ComputationPtr computation) {
   const auto& computation_proto = computation->computation().proto();
-  uint64_t num_outputs = output_shapes->size();
+  size_t num_outputs = output_shapes.size();
   std::vector<xla::OpSharding> output_shardings;
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(num_outputs);
   if (computation_proto.has_spmd_output_sharding()) {
@@ -547,21 +522,9 @@ std::vector<XLATensor::ShardingSpecPtr> ShardingUtil::GetOutputSharding(
   }
 
   for (int i = 0; i < num_outputs; ++i) {
-    if (output_shardings[i].type()) {
-      // Tensor sharding annotation type is non-zero (sharded).
-      sharding_specs[i] = std::make_shared<XLATensor::ShardingSpec>(
-          output_shardings[i],
-          MakeShapeWithDeviceLayout((*output_shapes)[i],
-                                    static_cast<XlaDeviceType>(device.type())));
-    } else {
-      // Clear sharding if the output parameter is no longer sharded, this
-      // assumes that the output is implicitly replicated and wrapped inside
-      // PjRtShardedData.
-      sharding_specs[i] = std::make_shared<XLATensor::ShardingSpec>(
-          xla::HloSharding::Replicate().ToProto(),
-          MakeShapeWithDeviceLayout((*output_shapes)[i],
-                                    static_cast<XlaDeviceType>(device.type())));
-    }
+    sharding_specs[i] = std::make_shared<XLATensor::ShardingSpec>(
+        output_shardings[i],
+        MakeShapeWithDeviceLayout(output_shapes[i], XlaDeviceType::SPMD));
   }
   return sharding_specs;
 }
@@ -594,38 +557,24 @@ void ShardingUtil::PrepareOutputShardingPropagation(
   data_placeholders->resize(indices.size());
   sharding_specs->resize(indices.size());
 
-  const auto& computation_proto = computation->computation().proto();
-
-  std::vector<xla::OpSharding> output_shardings;
-  if (computation_proto.has_spmd_output_sharding()) {
-    if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {
-      auto tuple_shardings =
-          computation_proto.spmd_output_sharding().tuple_shardings();
-      output_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
-                                                      tuple_shardings.end());
-    } else {
-      output_shardings = std::vector<xla::OpSharding>{
-          computation_proto.spmd_output_sharding()};
-    }
+  std::vector<xla::Shape> output_shapes;
+  output_shapes.reserve(indices.size());
+  for (int i = 0; i < indices.size(); ++i) {
+    auto xtensor = (*tensors)[indices[i]];
+    output_shapes.push_back(xtensor->shape().get());
   }
-
-  // Output parameter sharding annotations, defaults to REPLICATED(0) if unset.
-  if (output_shardings.empty()) {
-    // Initializes with default sharding type, REPLCIATED.
-    output_shardings.resize(indices.size());
-  }
-  XLA_CHECK(indices.size() == output_shardings.size())
+  auto new_sharding_specs = GetOutputSharding(output_shapes, computation);
+  XLA_CHECK(indices.size() == new_sharding_specs.size())
       << "Expected size: " << indices.size()
-      << ", actual size: " << output_shardings.size();
+      << ", actual size: " << new_sharding_specs.size();
 
   for (int i = 0; i < indices.size(); ++i) {
     auto xtensor = (*tensors)[indices[i]];
-    (*sharding_specs)[i] = std::make_shared<XLATensor::ShardingSpec>(
-        output_shardings[i],
-        MakeShapeWithDeviceLayout(
-            xtensor->shape().get(),
-            static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
-    xtensor->SetShardingSpec(*(*sharding_specs)[i]);
+    (*sharding_specs)[i] = new_sharding_specs[i];
+    // Allow overwriting the sharding specs, since output sharding propagation
+    // happens after any resharding that might have already taken place during
+    // auto-sharding pass.
+    xtensor->SetShardingSpec(*(*sharding_specs)[i], /*allow_overwrite=*/true);
 
     // Create sharded data placeholder, this will be used to
     // hold the corresponding computation results for both sharding &
@@ -655,11 +604,11 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
   xla::Shape global_shape;
   xla::OpSharding sharding;
   if (sharding_spec == nullptr) {
-    // if sharding.type is replicated, global_shape is shape of the tensor.
+    sharding = xla::HloSharding::Unknown().ToProto();
+    // if replicated, global_shape is shape of the tensor.
     auto first_device = ParseDeviceString(devices[0]);
     global_shape =
         CreateComputationShapeFromTensor(local_shards[0], &first_device);
-    sharding = xla::HloSharding::Replicate().ToProto();
   } else {
     global_shape = sharding_spec->shape;
     sharding = sharding_spec->sharding;
@@ -675,16 +624,134 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 
+std::tuple<std::vector<int64_t>, std::vector<int64_t>>
+ShardingUtil::GetAutoShardingMesh() {
+  // Auto-sharding uses mesh_shape = {n_devices, 1} if XLA_AUTO_SPMD_MESH
+  // is not set. XLA_AUTO_SPMD_MESH takes a form of string, "2,2" which
+  // corresponds to a 2-by-2 mesh.
+  std::vector<int64_t> mesh_shape = ParseStringToIntVector(
+      runtime::sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", ""));
+  std::vector<int64_t> device_mesh_ids;
+  if (!mesh_shape.empty()) {
+    int64_t total_devices = 1;
+    for (auto i : mesh_shape) {
+      total_devices *= i;
+    }
+    XLA_CHECK_EQ(total_devices,
+                 runtime::GetComputationClient()->GetAllDevices().size())
+        << "Invalid auto-sharding mesh_shape: "
+        << absl::StrJoin(mesh_shape, ",");
+    device_mesh_ids = std::vector<int64_t>(total_devices);
+    std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
+  }
+  return std::make_tuple(mesh_shape, device_mesh_ids);
+}
+
+void ShardingUtil::ReshardParameters(
+    const xla::HloModuleProto& module, std::vector<XLATensorPtr>* tensors,
+    std::vector<torch::lazy::BackendDataPtr>* parameters,
+    std::vector<const torch::lazy::Node*>* nodes) {
+  // Extract input shardings generated from auto-sharding pass.
+  std::vector<xla::OpSharding> input_shardings;
+  if (module.spmd_parameters_shardings().size() == 1 &&
+      module.spmd_parameters_shardings()[0].type() == xla::OpSharding::TUPLE) {
+    auto tuple_shardings =
+        module.spmd_parameters_shardings()[0].tuple_shardings();
+    input_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
+                                                   tuple_shardings.end());
+  } else {
+    for (auto sharding : module.spmd_parameters_shardings()) {
+      input_shardings.push_back(sharding);
+    }
+  }
+  if (input_shardings.size() == 0) {
+    TF_VLOG(3) << "ReshardParamters... skip with empty input_shardings.";
+    return;
+  }
+  XLA_CHECK_EQ(input_shardings.size(), parameters->size());
+
+  // Reshard parameters as needed, as with a new sharding spec.
+  std::vector<runtime::ComputationClient::DataPtr> data =
+      UnwrapXlaData(*parameters);
+
+  std::vector<size_t> reshard_indices;
+  std::vector<runtime::ComputationClient::DataPtr> data_to_reshard;
+  std::vector<xla::OpSharding> shardings_to_reshard;
+  for (int i = 0; i < input_shardings.size(); ++i) {
+    XLA_CHECK(input_shardings[i].type() != xla::OpSharding::UNKNOWN)
+        << "Resharding by UNKNOWN sharding type is not allowed.";
+    // Skip re-sharding if not necessary.
+    if (!xla::protobuf_util::ProtobufEquals(data[i]->GetSharding(),
+                                            input_shardings[i])) {
+      reshard_indices.push_back(i);
+      data_to_reshard.push_back(data[i]);
+      shardings_to_reshard.push_back(input_shardings[i]);
+    }
+  }
+  if (reshard_indices.size() == 0) {
+    TF_VLOG(3) << "ReshardParamters... skip with no new shardings.";
+    return;
+  }
+  TF_VLOG(3) << "ReshardParamters... resharding " << reshard_indices.size()
+             << " parameters.";
+
+  TORCH_LAZY_COUNTER("ReshardParameters", 1);
+
+  // Construct parameter handle to XlaNode mappping for faster look-up.
+  std::unordered_map<torch::lazy::BackendData::Handle, const torch::lazy::Node*>
+      xla_node_map;
+  for (const torch::lazy::Node* node : *nodes) {
+    const auto backend_data =
+        torch::lazy::getBackend()->GetComputationDataFromNode(node);
+    if (backend_data) {
+      torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
+      xla_node_map[handle] = node;
+    }
+  }
+
+  std::vector<torch::lazy::BackendDataPtr> outputs;
+  outputs.reserve(reshard_indices.size());
+  // Groupping is computationally more efficient but increases memory
+  // consumption. It is groupped by default, but can be overriden for
+  // more-granular control over the peak memory consumption.
+  bool group_sharding =
+      runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", true);
+  if (group_sharding) {
+    outputs = WrapXlaData(runtime::GetComputationClient()->ReshardData(
+        data_to_reshard, shardings_to_reshard));
+  } else {
+    for (int i = 0; i < data_to_reshard.size(); ++i) {
+      auto output = WrapXlaData(runtime::GetComputationClient()->ReshardData(
+          {data_to_reshard[i]}, {shardings_to_reshard[i]}));
+      outputs.insert(outputs.end(), output.begin(), output.end());
+    }
+  }
+  XLA_CHECK_EQ(outputs.size(), reshard_indices.size());
+
+  for (int i = 0; i < outputs.size(); ++i) {
+    (*parameters)[reshard_indices[i]] = outputs[i];
+    auto it_node = xla_node_map.find(data_to_reshard[i]->GetHandle());
+    XLA_CHECK(it_node != xla_node_map.end())
+        << "xla_node_map does not contain " << data_to_reshard[i]->ToString()
+        << ", target sharding: " << shardings_to_reshard[i].DebugString();
+    auto device_data_node = DeviceData::Cast(it_node->second);
+    device_data_node->SetSharding(shardings_to_reshard[i], 0);
+  }
+}
+
 void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
                                    xla::OpSharding sharding) {
   TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
   XLA_CHECK(UseVirtualDevice())
       << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
+  XLA_CHECK(sharding.type() != xla::OpSharding::UNKNOWN)
+      << "Can't explicilty annotate with UNKNOWN sharding type.";
   XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-  auto new_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
-      sharding, MakeShapeWithDeviceLayout(
-                    xtensor->shape(),
-                    static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
+  XLATensor::ShardingSpecPtr new_sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(
+          sharding, MakeShapeWithDeviceLayout(
+                        xtensor->shape(), static_cast<XlaDeviceType>(
+                                              xtensor->GetDevice().type())));
 
   // For Non DeviceData IR values, we directly attach the sharding spec
   // to the xtensor.
@@ -712,13 +779,18 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
     // in which case we can skip if it's the same sharding; however, if it's
     // the same input with a different sharding then we block & ask the user
     // to clear the existing sharding first.
-    auto current_sharding_spec = xtensor->sharding_spec();
-    if (current_sharding_spec && (current_sharding_spec->sharding.type() !=
-                                  xla::OpSharding::REPLICATED)) {
-      XLA_CHECK(ShardingUtil::EqualShardingSpecs(*new_sharding_spec,
-                                                 *current_sharding_spec))
-          << "Existing annotation must be cleared first.";
-      return;
+    XLATensor::ShardingSpecPtr current_sharding_spec = xtensor->sharding_spec();
+    if (current_sharding_spec) {
+      if (ShardingUtil::EqualShardingSpecs(*new_sharding_spec,
+                                           *current_sharding_spec)) {
+        return;
+      }
+      auto type = current_sharding_spec->sharding.type();
+      if (type != xla::OpSharding::REPLICATED &&
+          type != xla::OpSharding::UNKNOWN) {
+        XLA_CHECK(false) << "Existing annotation must be cleared first: "
+                         << current_sharding_spec->sharding.DebugString();
+      }
     }
 
     // If the at::Tensor data is not present, we need to re-download the
@@ -780,4 +852,14 @@ void ShardingUtil::XlaMarkShardingDynamoCustomOp(
   ShardingUtil::XlaMarkSharding(input, op_sharding);
 }
 
+void ShardingUtil::SetAutoSharding() {
+  // This stays on throughout the program.
+  use_auto_sharding = true;
+}
+bool ShardingUtil::GetAutoSharding() {
+  if (runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false)) {
+    use_auto_sharding = true;
+  }
+  return use_auto_sharding;
+}
 }  // namespace torch_xla

@@ -61,6 +61,36 @@ class DynamRandomOpTest(unittest.TestCase):
     self.assertFalse(torch.allclose(dynamo_res_2, dynamo_res_3))
 
 
+class DynamoLTCInteractionTest(unittest.TestCase):
+
+  def index_copy_inplace(self, cache, update_indices, xk):
+    cache.index_copy_(0, update_indices, xk)
+
+  def test_mark_step_after_dynamo(self):
+    cache_len = 512
+    kv_heads = 8
+    head_dim = 128
+    running = 16
+
+    device = xm.xla_device()
+    cache = torch.rand((cache_len, kv_heads, head_dim)).to(device)
+    update_indices = torch.randint(
+        0, cache_len, (running,), dtype=torch.long).to(device)
+    xk = torch.rand((running, kv_heads, head_dim)).to(device)
+
+    dynamo_index_copy_inplace = torch.compile(
+        self.index_copy_inplace, backend="openxla", fullgraph=True)
+    met.clear_all()
+    for i in range(10):
+      dynamo_index_copy_inplace(cache, update_indices, xk)
+      xm.wait_device_ops()
+      current_execute_time = met.metric_data('ExecuteTime')[0]
+      # This mark_step should be a no-op and don't trigger additional execution.
+      xm.mark_step()
+      xm.wait_device_ops()
+      self.assertEqual(current_execute_time, met.metric_data('ExecuteTime')[0])
+
+
 class DynamoInferenceBasicTest(unittest.TestCase):
 
   @classmethod
@@ -83,7 +113,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_xla_dynamo = fn_simple_dynamo(xla_x, xla_y)
     self.assertIn('xla::add', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
-    # verifiy that tracing is skipped in following runs
+    # verify that tracing is skipped in following runs
     met.clear_counters()
     res_xla_dynamo_2 = fn_simple_dynamo(xla_x, xla_y)
     self.assertNotIn('xla::add', met.counter_names())
@@ -102,6 +132,38 @@ class DynamoInferenceBasicTest(unittest.TestCase):
                      torch_xla._XLAC._get_xla_tensor_debug_info(xla_xy))
     self.assertNotIn('XLAData: None',
                      torch_xla._XLAC._get_xla_tensor_debug_info(xla_y3))
+
+  # Tests that the dynamo bridge automatically moves tensors to XLA device,
+  # then back to the original device.
+  @unittest.skipIf(xr.device_type() != "CUDA",
+                   f"GPU tests should only run on GPU devices.")
+  def test_simple_model_automoves_tensors(self):
+    x = torch.tensor(100.0).to(device="cuda")
+    y = torch.tensor(200.0).to(device="cuda")
+    original_device = x.device
+    eager_result = self.fn_simple(x, y)
+
+    # Since all tests run in the same process, have to reset the metrics report.
+    met.clear_all()
+
+    fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
+    res_xla_dynamo = fn_simple_dynamo(x, y)
+    self.assertIn('xla::add', met.counter_names())
+    self.assertTrue(res_xla_dynamo.device == original_device)
+    self.assertTrue(torch.allclose(eager_result, res_xla_dynamo))
+
+    # verify that tracing is skipped in following runs
+    met.clear_counters()
+    res_xla_dynamo_reused = fn_simple_dynamo(x, y)
+    self.assertNotIn('xla::add', met.counter_names())
+    self.assertTrue(res_xla_dynamo_reused.device == original_device)
+    self.assertTrue(torch.allclose(eager_result, res_xla_dynamo_reused))
+
+    # verify that dynamo can handle different inputs
+    res_xla_dynamo_different = fn_simple_dynamo(x + y, y * 3)
+    res_cpu_3 = self.fn_simple(x + y, y * 3)
+    self.assertTrue(res_xla_dynamo_different.device == original_device)
+    self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_different))
 
   def test_fn_without_input(self):
 
@@ -256,8 +318,8 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     # 2 compilations are caused by `t_xla` init and a no-op graph.
-    self.assertEqual(met.metric_data('CompileTime')[0], 2)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
     # Second tracing
     met.clear_all()
@@ -295,8 +357,8 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     cpu_res = fn_fallback(t)
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
-    self.assertEqual(met.metric_data('CompileTime')[0], 3)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 7)
+    self.assertEqual(met.metric_data('CompileTime')[0], 2)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 5)
 
     # Second tracing
     met.clear_all()
@@ -410,8 +472,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     # Graph 1: forward
     # Graph 2: backward
     # Graph 3: sync input for backward
-    # Graph 4: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    self.assertEqual(met.metric_data('CompileTime')[0], 3)
     # We execute 3 graphs per step.
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3)
     # one for each forward and one for each backward
@@ -513,10 +574,9 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     # Graph 2: backward
     # Graph 3: optimizer
     # Graph 4: sync input for backward
-    # Graph 5: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    # Graph 6, 7: PyTorch has updated the number of captured by resnet
+    # Graph 5, 6: PyTorch has updated the number of captured by resnet
     # (https://github.com/pytorch/pytorch/pull/117434)
-    self.assertEqual(met.metric_data('CompileTime')[0], 7)
+    self.assertEqual(met.metric_data('CompileTime')[0], 6)
     # We execute 4 graphs per step (+ 1 for SGD) when optimizer is enabled.
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4 + 1)
     # one for each forward, backward and optimizer
@@ -526,7 +586,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
         met.metric_data('RunCachedGraphOutputData')[0], sample_count * 3)
 
 
-class DynamErrorMessageTest(unittest.TestCase):
+class DynamoErrorMessageTest(unittest.TestCase):
 
   def test_mixed_cpu_tensor(self):
     device = xm.xla_device()

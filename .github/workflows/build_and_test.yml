@@ -35,7 +35,7 @@ jobs:
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
       timeout-minutes: 120
-      collect-coverage: ${{ github.event_name == 'push' && github.event.ref == 'refs/heads/master' }}
+      collect-coverage: false
       disable-xrt: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}

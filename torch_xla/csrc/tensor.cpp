@@ -26,6 +26,7 @@
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
+#include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"
@@ -48,6 +49,14 @@
 #include "xla/shape_util.h"
 
 namespace torch_xla {
+
+namespace {
+bool CanApplySharding(const XLATensor::ShardingSpecPtr sharding) {
+  return !sharding ||
+         sharding->sharding.type() == xla::OpSharding::REPLICATED ||
+         sharding->sharding.type() == xla::OpSharding::UNKNOWN;
+}
+}  // namespace
 
 XLATensor::Data::~Data() { XLAGraphExecutor::Get()->UnregisterTensor(this); }
 
@@ -236,21 +245,25 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   return data()->handle;
 }
 
-void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
+void XLATensor::SetShardingSpec(const ShardingSpec& sharding, bool overwrite) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
   // the same sharding already applied.
-  if (!sharding_spec() ||
-      (sharding_spec()->sharding.type() == xla::OpSharding::REPLICATED)) {
+  if (!sharding_spec() || overwrite ||
+      sharding_spec()->sharding.type() == xla::OpSharding::REPLICATED ||
+      sharding_spec()->sharding.type() == xla::OpSharding::UNKNOWN) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
   } else {
+    // Tensor is already sharding annotated, check if it is UNKNOWN or
+    // the same sharding type.
     XLA_CHECK(ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
         << "Existing sharding annotation, "
         << sharding_spec()->sharding.DebugString()
         << ", must be cleared before applying a new one, "
         << sharding.sharding.DebugString();
   }
+  // Sync to the node.
   dynamic_cast<XlaNode*>(GetIrValue().node.get())
       ->SetSharding(sharding_spec()->sharding, GetIrValue().index);
 }
@@ -266,18 +279,31 @@ void XLATensor::ClearShardingSpec() {
 XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   ShardingSpecPtr sharding = data()->sharding;
   torch::lazy::Value ir_value = CurrentIrValue();
-  if (sharding && ir_value) {
-    // The copy of sharding annotation on the IR node should be the same.
+  if (ir_value) {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
-    if (xla_node->GetSharding(ir_value.index)) {
-      XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding, ShardingSpec{*xla_node->GetSharding(ir_value.index),
-                                  xla_node->xla_shape()}))
-          << "Sharding on tensor: "
-          << xla::HloSharding::FromProto(sharding->sharding)->ToString()
-          << ", sharding on IR: "
-          << xla::HloSharding::FromProto(*xla_node->GetSharding(ir_value.index))
-                 ->ToString();
+    const auto* new_op_sharding = xla_node->GetSharding(ir_value.index).get();
+    if (new_op_sharding &&
+        (new_op_sharding->type() != xla::OpSharding::UNKNOWN)) {
+      // Re-sync the sharding annotation from the node to the tensor if there is
+      // one attached to the node. A new sharding annotation is attached
+      // directly to the node, and gets synced to the tensor after this.
+      // If sharding is attached via SetShardingSpec, then it flows from the
+      // tensor to the node. If sharding is attached by the compiler pass, then
+      // it first gets attached to the graph node, and then synced to the tensor
+      // here.
+      if (!sharding ||
+          (sharding && !ShardingUtil::EqualOpShardings(*new_op_sharding,
+                                                       sharding->sharding))) {
+        TF_VLOG(5) << "Syncing node sharding (type=" << new_op_sharding->type()
+                   << ") to tensor (shape=" << xla_node->xla_shape().ToString()
+                   << ").";
+        data()->sharding = std::make_shared<ShardingSpec>(
+            *new_op_sharding, xla_node->xla_shape());
+      }
+    } else if (sharding) {
+      // There is a case where the sharding spec on the tensor is not
+      // propagated down to the node after a reset.
+      xla_node->SetSharding(sharding->sharding, ir_value.index);
     }
   }
   return sharding;
@@ -297,6 +323,7 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
     data()->view = nullptr;
     data()->tensor_data = c10::nullopt;
   }
+  data()->is_cloned = false;
 }
 
 void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
@@ -319,6 +346,7 @@ void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
     std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
     XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
   }
+  data()->is_cloned = false;
 }
 
 void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
@@ -331,10 +359,11 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  TF_VLOG(5) << "Assign IR value: "
+  TF_VLOG(6) << "Assign IR value: "
              << (ir_value ? ir_value->ToString() : "empty node");
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
+  data()->is_cloned = false;
 }
 
 torch::lazy::Value XLATensor::GetIrValue() const {

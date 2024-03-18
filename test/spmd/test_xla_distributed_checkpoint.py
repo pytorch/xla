@@ -41,7 +41,6 @@ class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def _get_sharded_model(self, mesh_shape=None):
