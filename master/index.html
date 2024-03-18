@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.3.0+gitf04870e )
+                  master (2.3.0+gitd205f9d )
                 </div>
               
             
@@ -2659,11 +2659,6 @@ comparison.</p>
 <span class="nb">print</span><span class="p">(</span><span class="n">compiled_code</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">)))</span>
 </pre></div>
 </div>
-<p>Currently there are two different backends, that eventually will be merged into a single ‘openxla’ backend:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">backend='openxla'</span></code> - Useful for training.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">backend='openxla_eval'</span></code> - Useful for inference.</p></li>
-</ul>
 </div>
 <div class="section" id="inference">
 <h3>Inference<a class="headerlink" href="#inference" title="Permalink to this headline">¶</a></h3>
@@ -2695,11 +2690,6 @@ BERT_pytorch | 7.49
 squeezenet1_1 | 2.29
 timm_vision_transformer | 3.52
 geomean | 3.04</p>
-<p>Note</p>
-<ol class="arabic simple">
-<li><p>User will likely see better inference performance by putting the inference execution in a <code class="docutils literal notranslate"><span class="pre">torch.no_grad</span></code> context. <code class="docutils literal notranslate"><span class="pre">openxla</span></code> is an <code class="docutils literal notranslate"><span class="pre">aot-autograd</span></code> backend of <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code>; <code class="docutils literal notranslate"><span class="pre">aot-autograd</span></code> attempts to save some state for a potential backward pass. Setting <code class="docutils literal notranslate"><span class="pre">torch.no_grad</span></code> helps <code class="docutils literal notranslate"><span class="pre">aot-autograd</span></code> understand that it is being executed in an inference context.</p></li>
-<li><p>User can also use the <code class="docutils literal notranslate"><span class="pre">openxla_eval</span></code> backend directly without <code class="docutils literal notranslate"><span class="pre">torch.no_grad</span></code>, since <code class="docutils literal notranslate"><span class="pre">openxla_eval</span></code> is not an <code class="docutils literal notranslate"><span class="pre">aot-autograd</span></code> backend and only works for inference.</p></li>
-</ol>
 </div>
 <div class="section" id="training">
 <h3>Training<a class="headerlink" href="#training" title="Permalink to this headline">¶</a></h3>
