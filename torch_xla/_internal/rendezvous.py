@@ -20,7 +20,10 @@ def pjrt_rendezvous_handler(url: str,
   if dist.is_torchelastic_launched():
     local_world_size = xu.getenv_as('LOCAL_WORLD_SIZE', int)
     local_rank = xu.getenv_as('LOCAL_RANK', int)
-    pjrt.initialize_multiprocess(local_rank, local_world_size)
+    if local_world_size > 1:
+      pjrt.initialize_multiprocess(local_rank, local_world_size)
+    else:
+      pjrt.initialize_singleprocess()
 
   master_ip = xu.getenv_as('MASTER_ADDR', str)
   if not master_ip:
