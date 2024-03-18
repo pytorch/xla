@@ -2179,37 +2179,41 @@ XLATensorPtr permute(const XLATensorPtr& input,
       torch::lazy::MakeNode<Permute>(input->GetIrValue(), dimensions));
 }
 
-XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
+XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent,
+                 c10::optional<at::ScalarType> logical_element_type) {
   // We want to pass exponent_node as a constant to give XLA more room to
-  // optimize
-  const torch::lazy::BackendDevice& device = input->GetDevice();
-  auto xla_type = MakeXlaPrimitiveType(GetScalarType(exponent), &device);
-  // Float scalar literal in Python defaults to F64. But we want to produce
-  // F32 as this is the default Pytorch behavior.
-  if (xla_type == xla::PrimitiveType::F64) {
-    xla_type = xla::PrimitiveType::F32;
-  }
-  torch::lazy::Value exp_node = ScalarOp(exponent, xla_type);
-  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exp_node);
-  return input->CreateFrom(node, /*logical_element_type=*/c10::nullopt);
+  // optimize.
+  at::ScalarType type =
+      logical_element_type
+          ? *logical_element_type
+          : at::result_type(bridge::AtenFromXlaTensor(input), exponent);
+  return input->CreateFrom(
+      Pow(input->GetIrValue(),
+          ScalarOp(exponent, MakeXlaPrimitiveType(type, &input->GetDevice()))),
+      type);
 }
 
-XLATensorPtr pow(const XLATensorPtr& input, const XLATensorPtr& exponent) {
-  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exponent->GetIrValue());
-  return input->CreateFrom(node, /*logical_element_type=*/c10::nullopt);
+XLATensorPtr pow(const XLATensorPtr& input, const XLATensorPtr& exponent,
+                 c10::optional<at::ScalarType> logical_element_type) {
+  at::ScalarType type =
+      logical_element_type
+          ? *logical_element_type
+          : at::result_type(bridge::AtenFromXlaTensor(input),
+                            bridge::AtenFromXlaTensor(exponent));
+  return input->CreateFrom(Pow(input->GetIrValue(), exponent->GetIrValue()),
+                           type);
 }
 
-XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {
-  const torch::lazy::BackendDevice& device = exponent->GetDevice();
-  torch::lazy::Value input_node = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      input, MakeXlaPrimitiveType(GetScalarType(input), &device), device);
-  torch::lazy::NodePtr pow_node = Pow(input_node, exponent->GetIrValue());
-  at::ScalarType input_dtype = GetScalarType(input);
-  at::ScalarType exp_dtype = exponent->dtype();
-  at::ScalarType promoted_dtype =
-      MaybeUpcastToHostTorchType(XlaHelpers::PromoteType(
-          XlaTypeFromTorchType(input_dtype), XlaTypeFromTorchType(exp_dtype)));
-  return exponent->CreateFrom(pow_node, promoted_dtype);
+XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent,
+                 c10::optional<at::ScalarType> logical_element_type) {
+  at::ScalarType type =
+      logical_element_type
+          ? *logical_element_type
+          : at::result_type(input, bridge::AtenFromXlaTensor(exponent));
+  return exponent->CreateFrom(
+      Pow(ScalarOp(input, MakeXlaPrimitiveType(type, &exponent->GetDevice())),
+          exponent->GetIrValue()),
+      type);
 }
 
 XLATensorPtr prelu(const XLATensorPtr& input, const XLATensorPtr& weight) {

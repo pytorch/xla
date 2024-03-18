@@ -1867,6 +1867,34 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(
         torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
 
+  def test_pow_dtype_promotion(self):
+
+    def test(dtype):
+
+      def foo(x):
+        return torch.pow(x, 3.0)
+
+      x = torch.arange(10).to(dtype)
+      r = foo(x)
+
+      device = xm.xla_device()
+      Xx = x.to(device)
+      Xr = foo(Xx)
+
+      self.assertEqual(r, Xr.cpu())
+
+    test_dtypes = [
+        torch.bfloat16,
+        torch.float16,
+        torch.float32,
+        torch.float64,
+        torch.cfloat,
+        torch.cdouble,
+    ]
+
+    for dtype in test_dtypes:
+      test(dtype)
+
 
 class MNISTComparator(nn.Module):
 

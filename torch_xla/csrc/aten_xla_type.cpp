@@ -220,6 +220,15 @@ at::Tensor DoBinaryOp(const at::Tensor& self, const at::Scalar& other,
 }
 
 template <typename B>
+at::Tensor DoBinaryOp(const at::Scalar& self, const at::Tensor& other,
+                      const B& bin_op) {
+  at::ScalarType dtype = at::result_type(self, other);
+  XLATensorPtr other_tensor = bridge::GetXlaTensor(other);
+  XLATensorPtr result = bin_op(self, other_tensor, dtype);
+  return bridge::AtenFromXlaTensor(result);
+}
+
+template <typename B>
 at::Tensor DoBinaryOpWithoutPromo(const at::Tensor& self,
                                   const at::Tensor& other, const B& bin_op) {
   at::ScalarType dtype = at::result_type(self, other);
@@ -2302,22 +2311,28 @@ at::Tensor XLANativeFunctions::permute_copy(const at::Tensor& self,
 at::Tensor XLANativeFunctions::pow(const at::Tensor& self,
                                    const at::Scalar& exponent) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::pow(bridge::GetXlaTensor(self), exponent));
+  XLATensorPtr (*method_pow)(const XLATensorPtr&, const at::Scalar&,
+                             c10::optional<at::ScalarType>) =
+      tensor_methods::pow;
+  return DoBinaryOp(self, exponent, method_pow);
 }
 
 at::Tensor XLANativeFunctions::pow(const at::Tensor& self,
                                    const at::Tensor& exponent) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(tensor_methods::pow(
-      bridge::GetXlaTensor(self), bridge::GetXlaTensor(exponent)));
+  XLATensorPtr (*method_pow)(const XLATensorPtr&, const XLATensorPtr&,
+                             c10::optional<at::ScalarType>) =
+      tensor_methods::pow;
+  return DoBinaryOp(self, exponent, method_pow);
 }
 
 at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
                                    const at::Tensor& exponent) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::pow(self, bridge::GetXlaTensor(exponent)));
+  XLATensorPtr (*method_pow)(const at::Scalar&, const XLATensorPtr&,
+                             c10::optional<at::ScalarType>) =
+      tensor_methods::pow;
+  return DoBinaryOp(self, exponent, method_pow);
 }
 
 at::Tensor XLANativeFunctions::_prelu_kernel(const at::Tensor& self,
