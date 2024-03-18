@@ -415,7 +415,7 @@ void XLAGraphExecutor::MarkStep(const torch::lazy::BackendDevice& device) {
   ResetTrimCounter();
 }
 
-std::vector<size_t> GetBufferDonorIndex(
+std::vector<size_t> GetBufferDonorIndexFromUserConfig(
     const std::vector<torch::lazy::BackendDataPtr>& parameters_data) {
   std::vector<size_t> buffer_donor_indexs;
   for (size_t i = 0; i < parameters_data.size(); ++i) {
@@ -428,12 +428,12 @@ std::vector<size_t> GetBufferDonorIndex(
   return buffer_donor_indexs;
 }
 
-std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
+std::vector<size_t> XLAGraphExecutor::SetBufferDonorsFromUserConfig(
     LoweringContext* lowering_ctx) {
   const std::vector<torch::lazy::BackendDataPtr>& parameters_data =
       lowering_ctx->GetParametersData();
   std::vector<size_t> buffer_donor_indexs =
-      GetBufferDonorIndex(parameters_data);
+      GetBufferDonorIndexFromUserConfig(parameters_data);
   for (size_t i : buffer_donor_indexs) {
     lowering_ctx->builder()->AddBufferDonor(/*param_number=*/i,
                                             /*param_index=*/{});
@@ -510,7 +510,7 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
   if (GetAliasWithBufferDonorConfig()) {
     std::vector<size_t> buffer_donor_index =
-        GetBufferDonorIndex(po_data.parameters_data);
+        GetBufferDonorIndexFromUserConfig(po_data.parameters_data);
     // Do not include hash on a empty vector.
     if (buffer_donor_index.size() > 0) {
       res_hash = torch::lazy::HashCombine(
@@ -1235,15 +1235,14 @@ XLAGraphExecutor::TryRunCachedSync(
                            std::move(cached_computation), tensor_data_vec));
 }
 
-std::vector<std::pair<int64_t, int64_t>>
-XLAGraphExecutor::BuildInputOutputAliases(
+std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
     const std::vector<XLATensorPtr>& tensors, absl::Span<const size_t> indices,
     LoweringContext* lowering_ctx) {
   std::unordered_map<int64_t, size_t> output_tensor_id_map;
-  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+  std::vector<size_t> buffer_donor_indexs;
   // tensors[indices] represent all tensors that needs to be updated after
-  // the execution. We can only alias the current buffer of these tensors since
-  // those buffers are no longer needed after execution.
+  // the execution. We can only alias the current buffer of these tensors
+  // since those buffers are no longer needed after execution.
   for (size_t i = 0; i < indices.size(); ++i) {
     size_t tensor_index = indices[i];
     int64_t tensor_id = tensors[tensor_index]->data()->alias_id;
@@ -1261,59 +1260,14 @@ XLAGraphExecutor::BuildInputOutputAliases(
       // this buffer is not needed after execution since XLATensor will get a
       // new buffer.
       if (it != output_tensor_id_map.end()) {
-        size_t output_index = it->second;
-        xla::XlaOp root = lowering_ctx->GetResult(output_index);
-        const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root);
-        auto parameter_data_shape =
-            std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-                parameters_data[i])
-                ->shape();
-        // Need to check whether existing buffer and the new value has the same
-        // shape and the existing buffer has not been aliased before aliasing
-        // the existing and new buffer.
-
-        bool equal_sharding;
-        // get sharding for the parameter data
-        std::optional<xla::OpSharding> parameter_sharding =
-            torch_xla::runtime::GetComputationClient()->GetDataSharding(
-                std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-                    parameters_data[i]));
-        // get sharding for output tensor
-        size_t output_tensor_index = indices[output_index];
-        XLATensor::ShardingSpecPtr output_sharding =
-            tensors[output_tensor_index]->sharding_spec();
-        if (!parameter_sharding && !output_sharding) {
-          // Both parameter and output does not have sharding.
-          // TODO(JackCaoG): It is possible that output might get a sharding
-          // after sharding propagation. Consier not aliased here(if under SPMD
-          // mode).
-          equal_sharding = true;
-        } else if (parameter_sharding && output_sharding) {
-          equal_sharding = ShardingUtil::EqualOpShardings(
-              *parameter_sharding, output_sharding->sharding);
-        } else {
-          // one of the parameter and output does not have sharding.
-          equal_sharding = false;
-        }
-
-        if (parameter_data_shape == root_shape && alias_map[output_index] < 0 &&
-            equal_sharding) {
-          // parameter is not a tuple so param_index will always be {}
-          lowering_ctx->builder()->SetUpAlias(
-              {/*output_index=*/static_cast<int64_t>(output_index)},
-              /*param_number=*/i, /*param_index=*/{});
-          alias_map[output_index] = i;
-          input_output_alias_pair.push_back(std::make_pair(i, output_index));
-
-          TF_VLOG(6) << "Aliased paramter " << i << " with output "
-                     << output_index << ": " << parameter_data_shape;
-        }
+        lowering_ctx->builder()->AddBufferDonor(/*param_number=*/i,
+                                                /*param_index=*/{});
+        buffer_donor_indexs.push_back(i);
       }
     }
   }
-  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount",
-                          input_output_alias_pair.size());
-  return input_output_alias_pair;
+  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", buffer_donor_indexs.size());
+  return buffer_donor_indexs;
 }
 
 XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
@@ -1347,7 +1301,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   // Annotate HLO sharding selectively in the compuation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
 
-  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   std::vector<size_t> buffer_donor_indices;
   // TODO(yeounoh) enable aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
@@ -1378,12 +1331,12 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       // will later fetch the new value of A, which is incorrect.
       // But, when we issue a step barrier (force_ltc_data == true) we have to
       // turn everything into DEVICE_DATA, so we can activate aliasing.
-      input_output_alias_pair =
-          BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
+      buffer_donor_indices =
+          SetBufferDonors(tensors, coll.indices, &lowering_ctx);
     } else if (GetAliasWithBufferDonorConfig()) {
       // only alias based on buffer donor if LTC can't auto infer the input
       // output aliasing.
-      buffer_donor_indices = SetBufferDonors(&lowering_ctx);
+      buffer_donor_indices = SetBufferDonorsFromUserConfig(&lowering_ctx);
     }
   }
 
@@ -1399,8 +1352,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                << " parameters. Threadshold = "
                << parameter_wrapping_threadshold;
     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-        computation, program_shape.parameters(), input_output_alias_pair,
-        buffer_donor_indices));
+        computation, program_shape.parameters(), buffer_donor_indices));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
   xla::Shape shape = MakeShapeWithDeviceLayout(
@@ -1512,7 +1464,7 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
   if (GetAliasWithBufferDonorConfig()) {
     std::vector<size_t> buffer_donor_index =
-        GetBufferDonorIndex(po_data.parameters_data);
+        GetBufferDonorIndexFromUserConfig(po_data.parameters_data);
     if (buffer_donor_index.size() > 0) {
       // Do not include hash on a empty vector.
       coll.hash = torch::lazy::HashCombine(
