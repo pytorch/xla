@@ -76,7 +76,6 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
                         save_planner=None,
                         load_planner=None,
                         is_sharded_cpu_state_dict=False,
-                        no_dist=True,
                         chkpt_path=None):
     """
     Checkpoint model_in using the provided save_planner and load into model_out
@@ -90,24 +89,22 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
     if is_sharded_cpu_state_dict:
       model_in_state_dict = _sharded_cpu_state_dict(model_in_state_dict)
     model_out_state_dict = model_out.state_dict()
-    dist_cp.save_state_dict(
+    dist_cp.save(
         state_dict=model_in_state_dict,
         storage_writer=dist_cp.FileSystemWriter(
             chkpt_path,
             per_thread_copy_ahead=0,
         ),
         planner=save_planner,
-        no_dist=no_dist,
     )
     # Load the checkpoint using the provided load planner
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
       self.assertFalse(torch.allclose(p1.cpu(), p2.cpu()))
 
-    dist_cp.load_state_dict(
+    dist_cp.load(
         state_dict=model_out_state_dict,
         storage_reader=dist_cp.FileSystemReader(chkpt_path),
         planner=load_planner,
-        no_dist=no_dist,
     )
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
       self.assertTrue(torch.allclose(p1.cpu(), p2.cpu()))
@@ -143,14 +140,13 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         load_planner=SPMDLoadPlanner())
 
   @unittest.skipUnless(
-      {'CHKPT_PATH', 'MASTER_ADDR', 'MASTER_PORT', 'RANK', 'WORLD_SIZE'
-      } <= os.environ.keys(),
-      'CHKPT_PATH and distributed config must be set for multihost checkpoint')
+      'CHKPT_PATH' in os.environ,
+      'CHKPT_PATH must be set for multihost checkpoint')
   def test_multihost_checkpoint(self):
     torch.manual_seed(42)
 
     # Initialize the default CPU process group from the environment.
-    dist.init_process_group()
+    dist.init_process_group(backend='gloo', init_method='xla://')
 
     model1 = self._get_sharded_model(mesh_shape=(1, self.n_devices))
     model2 = self._get_sharded_model(mesh_shape=(self.n_devices, 1))
@@ -160,7 +156,6 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         model2,
         save_planner=SPMDSavePlanner(),
         load_planner=SPMDLoadPlanner(),
-        no_dist=False,
         chkpt_path=os.environ['CHKPT_PATH'])
 
     # Destroy the CPU process group after the test

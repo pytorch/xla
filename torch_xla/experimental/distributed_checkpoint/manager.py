@@ -218,7 +218,7 @@ class CheckpointManager:
       path = self._get_path(step)
       # Delete any existing checkpoint at the current step.
       self._delete_chkpt_at_step(step)
-      dist_cp.save_state_dict(
+      dist_cp.save(
           state_dict=state_dict,
           storage_writer=FsspecWriter(
               path,
@@ -244,7 +244,7 @@ class CheckpointManager:
     """
     preemption_detected = False
     if self.chkpt_on_preemption and self.reached_preemption(step):
-      logging.warn(
+      logging.warning(
           f"Preemption sync point reached at step {step}. Triggering a checkpoint."
       )
       preemption_detected = True
@@ -319,7 +319,7 @@ class CheckpointManager:
     tracked_steps = set(x.step for x in self._tracked_chkpts)
     assert step in tracked_steps, f'Cannot restore from untracked step {step}. Valid steps are: {tracked_steps}'
     path = self._get_path(step)
-    dist_cp.load_state_dict(
+    dist_cp.load(
         state_dict=state_dict,
         storage_reader=FsspecReader(path),
         planner=xc.SPMDLoadPlanner(),
