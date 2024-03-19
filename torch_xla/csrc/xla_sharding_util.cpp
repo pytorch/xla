@@ -663,8 +663,8 @@ std::vector<int64_t> ShardingUtil::GetAutoShardingMeshIds(
         xla::OpSharding sharding = instruction.sharding();
         auto tile_assignment_devices = sharding.tile_assignment_devices();
         if (!tile_assignment_devices.empty()) {
-          auto new_mesh_ids = std::vector<int64_t>(tile_assignment_devices.begin(),
-                                              tile_assignment_devices.end());
+          auto new_mesh_ids = std::vector<int64_t>(
+              tile_assignment_devices.begin(), tile_assignment_devices.end());
           // return the first non-default (iota) device assigments.
           if (new_mesh_ids != device_mesh_ids) {
             return new_mesh_ids;
