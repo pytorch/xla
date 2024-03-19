@@ -314,8 +314,8 @@ class ZeroRedundancyOptimizer(Optimizer):
 
             if grad_shard.dtype != self.optimizer_dtype:
               grad_shard = grad_shard.to(dtype=self.optimizer_dtype)
-          shard.grad = grad_shard
-          index += 1
+            shard.grad = grad_shard
+            index += 1
 
     if self.grad_clipping:
       # Update unscale/clip with sub partitions
