@@ -2366,7 +2366,8 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
     output.backward()
     xm.mark_step()
     same_output = torch.allclose(model.to_save[0], model.to_save[1])
-    self.assertTrue(same_output, f"in fwd {model.to_save[0]}, in bwd {model.to_save[1]}")
+    self.assertTrue(same_output,
+                    f"in fwd {model.to_save[0]}, in bwd {model.to_save[1]}")
 
 
 if __name__ == '__main__':
