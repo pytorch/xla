@@ -139,9 +139,8 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         save_planner=SPMDSavePlanner(),
         load_planner=SPMDLoadPlanner())
 
-  @unittest.skipUnless(
-      'CHKPT_PATH' in os.environ,
-      'CHKPT_PATH must be set for multihost checkpoint')
+  @unittest.skipUnless('CHKPT_PATH' in os.environ,
+                       'CHKPT_PATH must be set for multihost checkpoint')
   def test_multihost_checkpoint(self):
     torch.manual_seed(42)
 
