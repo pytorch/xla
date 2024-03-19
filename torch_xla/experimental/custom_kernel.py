@@ -117,3 +117,7 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
     return output
 
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
+
+
+def flash_attention(q: torch.Tensor, k torch.Tensor, v torch.Tensor):
+  kernel =
