@@ -1963,7 +1963,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     ]
 
     if not _is_on_tpu():
-      test_dtypes += [torch.cdouble, ]
+      test_dtypes += [
+          torch.cdouble,
+      ]
 
     for dtype in test_dtypes:
       test(dtype)
