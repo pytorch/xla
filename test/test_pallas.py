@@ -7,6 +7,7 @@ from torch import nn as nn
 
 import torch_xla
 from torch_xla import runtime as xr
+from torch_xla._internal import tpu
 
 
 class PallasTest(unittest.TestCase):
@@ -178,7 +179,7 @@ class PallasTest(unittest.TestCase):
       output = pt_kernel(x, y)
       self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
 
-  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3, "This test only works on TPUv3+.")
   @unittest.mock.patch.dict(os.environ, {"XLA_TPU_LAYOUT": "0"})
   def test_tpu_custom_call_pallas_wrap_flash_attention(self):
     from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention
