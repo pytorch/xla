@@ -9,11 +9,11 @@ import torch_xla
 from torch_xla import runtime as xr
 from torch_xla.experimental.custom_kernel import jax_import_guard
 
-jax_import_guard()
-import jax
-import jax.numpy as jnp
-from jax.experimental import pallas as pl
-
+if xr.device_type() == 'TPU':
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
+  from jax.experimental import pallas as pl
 
 class PallasTest(unittest.TestCase):
 
