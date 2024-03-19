@@ -35,8 +35,7 @@ RUN curl -f -L -o runner-container-hooks.zip https://github.com/actions/runner-c
     && unzip ./runner-container-hooks.zip -d ./k8s \
     && rm runner-container-hooks.zip
 
-RUN apt-get update
-RUN echo "y" | apt-get upgrade
+RUN apt update && apt -y upgrade && apt -y autoremove
 
 RUN chown $USER:$USER /usr/local/bin/bazel
 USER $USER
