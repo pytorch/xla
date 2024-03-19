@@ -15,6 +15,7 @@ if xr.device_type() == 'TPU':
   import jax.numpy as jnp
   from jax.experimental import pallas as pl
 
+
 class PallasTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")

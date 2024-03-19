@@ -7,7 +7,6 @@ from typing import List, Callable
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
-
 XLA_LIB.define(
     "tpu_custom_call_(Tensor(a!) output, Tensor[] inputs, str payload) -> ()",)
 
