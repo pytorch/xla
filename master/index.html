@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.3.0+git7e0d3a5 )
+                  master (2.3.0+git73629de )
                 </div>
               
             
@@ -3460,7 +3460,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <div class="section" id="distributed-checkpointing">
 <h3>Distributed Checkpointing<a class="headerlink" href="#distributed-checkpointing" title="Permalink to this headline">¶</a></h3>
 <p>PyTorch/XLA SPMD is compatible with the <a class="reference external" href="https://pytorch.org/docs/stable/distributed.checkpoint.html">torch.distributed.checkpoint</a> library through a dedicated <code class="docutils literal notranslate"><span class="pre">Planner</span></code> instance. Users are able to synchronously save and load checkpoints through this common interface.</p>
-<p>The SPMDSavePlanner and SPMDLoadPlanner (<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint.py">src</a>) classes enable the <code class="docutils literal notranslate"><span class="pre">save_state_dict</span></code> and <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> functions to operate directly on the shards of an <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>, enabling all of the benefits of distributed checkpointing in SPMD training.</p>
+<p>The SPMDSavePlanner and SPMDLoadPlanner (<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint.py">src</a>) classes enable the <code class="docutils literal notranslate"><span class="pre">save</span></code> and <code class="docutils literal notranslate"><span class="pre">load</span></code> functions to operate directly on the shards of an <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>, enabling all of the benefits of distributed checkpointing in SPMD training.</p>
 <p>Here is a demonstration of the synchronous distributed checkpointing API:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.distributed.checkpoint</span> <span class="k">as</span> <span class="nn">dist_cp</span>
 <span class="kn">import</span> <span class="nn">torch_xla.experimental.distributed_checkpoint</span> <span class="k">as</span> <span class="nn">xc</span>
@@ -3471,7 +3471,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
     <span class="s2">&quot;optim&quot;</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
 <span class="p">}</span>
 
-<span class="n">dist_cp</span><span class="o">.</span><span class="n">save_state_dict</span><span class="p">(</span>
+<span class="n">dist_cp</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
     <span class="n">state_dict</span><span class="o">=</span><span class="n">state_dict</span><span class="p">,</span>
     <span class="n">storage_writer</span><span class="o">=</span><span class="n">dist_cp</span><span class="o">.</span><span class="n">FileSystemWriter</span><span class="p">(</span><span class="n">CHECKPOINT_DIR</span><span class="p">),</span>
     <span class="n">planner</span><span class="o">=</span><span class="n">xc</span><span class="o">.</span><span class="n">SPMDSavePlanner</span><span class="p">(),</span>
@@ -3484,7 +3484,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
     <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
 <span class="p">}</span>
 
-<span class="n">dist_cp</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span>
+<span class="n">dist_cp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
     <span class="n">state_dict</span><span class="o">=</span><span class="n">state_dict</span><span class="p">,</span>
     <span class="n">storage_reader</span><span class="o">=</span><span class="n">dist_cp</span><span class="o">.</span><span class="n">FileSystemReader</span><span class="p">(</span><span class="n">CHECKPOINT_DIR</span><span class="p">),</span>
     <span class="n">planner</span><span class="o">=</span><span class="n">xc</span><span class="o">.</span><span class="n">SPMDLoadPlanner</span><span class="p">(),</span>
