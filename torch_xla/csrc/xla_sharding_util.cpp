@@ -624,14 +624,12 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 
-std::tuple<std::vector<int64_t>, std::vector<int64_t>>
-ShardingUtil::GetAutoShardingMesh() {
+std::vector<int64_t> ShardingUtil::GetAutoShardingMesh() {
   // Auto-sharding uses mesh_shape = {n_devices, 1} if XLA_AUTO_SPMD_MESH
   // is not set. XLA_AUTO_SPMD_MESH takes a form of string, "2,2" which
   // corresponds to a 2-by-2 mesh.
   std::vector<int64_t> mesh_shape = ParseStringToIntVector(
       runtime::sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", ""));
-  std::vector<int64_t> device_mesh_ids;
   if (!mesh_shape.empty()) {
     int64_t total_devices = 1;
     for (auto i : mesh_shape) {
@@ -641,10 +639,42 @@ ShardingUtil::GetAutoShardingMesh() {
                  runtime::GetComputationClient()->GetAllDevices().size())
         << "Invalid auto-sharding mesh_shape: "
         << absl::StrJoin(mesh_shape, ",");
-    device_mesh_ids = std::vector<int64_t>(total_devices);
-    std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
   }
-  return std::make_tuple(mesh_shape, device_mesh_ids);
+  return mesh_shape;
+}
+
+std::vector<int64_t> ShardingUtil::GetAutoShardingMeshIds(
+    const xla::HloModuleProto& module) {
+  // Return the first non-default (iota) mesh ids arrangement, as we expect
+  // only one such assignment and/or the logical mesh device assignment should
+  // be compatible with the other arrangements in the HLO. This is a work-around
+  // as the auto-sharding pass takes only one arrangement for now.
+  // TODO(yeounoh) this was not necessary before; replace if this can be done
+  // during the auto-sharding pass.
+  int64_t n_devices = runtime::GetComputationClient()->GetAllDevices().size();
+  std::vector<int64_t> device_mesh_ids = std::vector<int64_t>(n_devices);
+  std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
+
+  // Unforuntately, we have to go through the instructions since
+  // `spmd_parameters_shardings` is not available.
+  for (auto computation : module.computations()) {
+    for (auto instruction : computation.instructions()) {
+      if (instruction.opcode() == "parameter" && instruction.has_sharding()) {
+        xla::OpSharding sharding = instruction.sharding();
+        auto tile_assignment_devices = sharding.tile_assignment_devices();
+        if (!tile_assignment_devices.empty()) {
+          auto new_mesh_ids = std::vector<int64_t>(
+              tile_assignment_devices.begin(), tile_assignment_devices.end());
+          // return the first non-default (iota) device assigments.
+          if (new_mesh_ids != device_mesh_ids) {
+            return new_mesh_ids;
+          }
+        }
+      }
+    }
+  }
+  // return the default (iota) device assignments.
+  return device_mesh_ids;
 }
 
 void ShardingUtil::ReshardParameters(

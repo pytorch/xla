@@ -126,8 +126,9 @@ class ShardingUtil {
 
   // Construct a device mesh for auto-sharding pass. Returns a tuple of mesh
   // shape and device ids vectors.
-  static std::tuple<std::vector<int64_t>, std::vector<int64_t>>
-  GetAutoShardingMesh();
+  static std::vector<int64_t> GetAutoShardingMesh();
+  static std::vector<int64_t> GetAutoShardingMeshIds(
+      const xla::HloModuleProto& module);
 
   // Reshard the parameters if the expected shardings mismatch. Resharding is
   // expensive especially for those already sharded. The cost can easily be

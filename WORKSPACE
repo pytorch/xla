@@ -49,11 +49,10 @@ http_archive(
         "//openxla_patches:cache_urls.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
-        "//openxla_patches:quant_dequant_converter.diff",
     ],
-    strip_prefix = "xla-18cbd2019898d3a7b563aeb73683f0c5a6ce14fd",
+    strip_prefix = "xla-25c8a6781af6be51d3bc43a0953b07803ab761ea",
     urls = [
-        "https://github.com/openxla/xla/archive/18cbd2019898d3a7b563aeb73683f0c5a6ce14fd.tar.gz",
+        "https://github.com/openxla/xla/archive/25c8a6781af6be51d3bc43a0953b07803ab761ea.tar.gz",
     ],
 )
 
