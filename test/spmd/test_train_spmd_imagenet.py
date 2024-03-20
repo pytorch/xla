@@ -312,14 +312,15 @@ def train_imagenet():
     tracker = xm.RateTracker()
     model.train()
 
-    wait_steps = 1
-    warmup_steps = 1
-    active_steps = 3
-    num_repeats = 1
+    wait_steps = 5
+    warmup_steps = 5
+    active_steps = 10
+    num_repeats = 0
     prof = torch.profiler.profile(
             schedule=torch.profiler.schedule(wait=wait_steps, warmup=warmup_steps, active=active_steps, repeat=num_repeats),
             on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/resnet18'),
             record_shapes=True,
+            profile_memory=True,
             with_stack=True)
     prof.start()  
     for step, (data, target) in enumerate(loader):
@@ -377,16 +378,16 @@ def train_imagenet():
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     train_loop_fn(train_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
-    if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
-      accuracy = test_loop_fn(test_loader, epoch)
-      xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
-          epoch, test_utils.now(), accuracy))
-      max_accuracy = max(accuracy, max_accuracy)
-      test_utils.write_to_summary(
-          writer,
-          epoch,
-          dict_to_write={'Accuracy/test': accuracy},
-          write_xla_metrics=True)
+    # if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
+    #   accuracy = test_loop_fn(test_loader, epoch)
+    #   xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
+    #       epoch, test_utils.now(), accuracy))
+    #   max_accuracy = max(accuracy, max_accuracy)
+    #   test_utils.write_to_summary(
+    #       writer,
+    #       epoch,
+    #       dict_to_write={'Accuracy/test': accuracy},
+    #       write_xla_metrics=True)
     if FLAGS.metrics_debug:
       xm.master_print(met.metrics_report())
 
