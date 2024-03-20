@@ -39,6 +39,16 @@ class AtenXlaDeviceMapper {
     return devices_;
   }
 
+  void SetVirtualDevice() {
+    for (auto& device : GetAllDevices()) {
+      if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
+        return;
+      }
+    }
+    devices_.emplace_back(ParseDeviceString("SPMD:0"));
+    devices_ordinals_[devices_.back()] = 0;
+  }
+
  private:
   AtenXlaDeviceMapper() {
     if (UseVirtualDevice()) {

@@ -692,9 +692,15 @@ void optimization_barrier_(std::vector<XLATensorPtr>& tensors);
 // Permute the dimensions of this tensor according to the given permutation.
 XLATensorPtr permute(const XLATensorPtr& input, absl::Span<const int64_t> dims);
 
-XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent);
-XLATensorPtr pow(const XLATensorPtr& input, const XLATensorPtr& exponent);
-XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent);
+XLATensorPtr pow(
+    const XLATensorPtr& input, const at::Scalar& exponent,
+    c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+XLATensorPtr pow(
+    const XLATensorPtr& input, const XLATensorPtr& exponent,
+    c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+XLATensorPtr pow(
+    const at::Scalar& input, const XLATensorPtr& exponent,
+    c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
 XLATensorPtr prelu(const XLATensorPtr& input, const XLATensorPtr& weight);
 

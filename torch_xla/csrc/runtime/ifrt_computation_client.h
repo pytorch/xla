@@ -45,6 +45,12 @@ class IfrtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
+  std::vector<DataPtr> ReshardData(
+      absl::Span<const DataPtr> handles,
+      absl::Span<const xla::OpSharding> shardings) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
 
