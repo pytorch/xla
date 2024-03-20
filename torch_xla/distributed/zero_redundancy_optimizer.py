@@ -40,6 +40,9 @@ class ZeroRedundancyOptimizer(Optimizer):
           If specified, ZeRO-1 will use this ``grad_norm_groups`` for the
           EXTRA all-reduce op in grad norm calculation. This can be model parallel
           groups when mixing ZeRO-1 with model parallelism such as Megatron.
+        bucket_cap_mb:
+          If non-zero, specifies the maximum number of megabytes to combine tensors
+          before doing the all-gather/reduce-scatter operations.
         **defaults: any trailing arguments, which are forwarded to the local
             optimizer.
 
@@ -60,7 +63,7 @@ class ZeroRedundancyOptimizer(Optimizer):
       sharding_groups: Optional[Any] = None,
       grad_norm_groups: Optional[Any] = None,
       lazy_init: bool = False,
-      coalesce_cc: bool = False,
+      bucket_cap_mb: int = 0,
       **defaults: Any,
   ):
     super().__init__(params, defaults)
@@ -77,7 +80,8 @@ class ZeroRedundancyOptimizer(Optimizer):
     self.grad_clipping = grad_clipping
     self.max_norm = max_norm if max_norm is not None else 1.0
     self.pin_layout = pin_layout
-    self.coalesce_cc = coalesce_cc
+    self.bucket_cap_mb = bucket_cap_mb
+    self.coalesce_cc = bucket_cap_mb > 0
 
     self._grad_norm = None
 
@@ -295,7 +299,7 @@ class ZeroRedundancyOptimizer(Optimizer):
             shard.grad = grad_shard
 
     if self.coalesce_cc:
-      grad_shards = xm.reduce_scatter(
+      grad_shards = xm.reduce_scatter_bucketized(
           xm.REDUCE_SUM,
           padded_grads,
           scale=1.0 / self.local_world_size,
@@ -303,6 +307,7 @@ class ZeroRedundancyOptimizer(Optimizer):
           shard_count=self.local_world_size,
           pin_layout=self.pin_layout,
           groups=self.sharding_groups,
+          bucket_cap_mb=self.bucket_cap_mb,
       )
       index = 0
       for param_group, sharded_param_group in zip(
@@ -349,11 +354,12 @@ class ZeroRedundancyOptimizer(Optimizer):
             param.data.copy_(padded_param.data[:param.size(0)])
 
     if self.coalesce_cc:
-      padded_params = xm.all_gather(
+      padded_params = xm.all_gather_bucketized(
           sharded_data,
           dim=0,
           pin_layout=self.pin_layout,
           groups=self.sharding_groups,
+          bucket_cap_mb=self.bucket_cap_mb,
       )
       index = 0
       for param_group, sharded_param_group in zip(
