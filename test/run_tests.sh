@@ -212,6 +212,7 @@ function run_xla_op_tests2 {
 function run_xla_op_tests3 {
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
+  run_test "$CDIR/stablehlo/test_export_fx_passes.py"
   run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
   run_test "$CDIR/stablehlo/test_mark_pattern.py"
   run_test "$CDIR/stablehlo/test_pt2e_qdq.py"

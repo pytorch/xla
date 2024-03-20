@@ -387,8 +387,6 @@ xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
       aux_input.builder(), "mhlo.dynamic_reshape", {input, concat_op},
       xla::ShapeUtil::MakeShape(aux_input_shape.element_type(), output_sizes,
                                 output_dynamic));
-
-  return input;
 }
 
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
@@ -826,9 +824,12 @@ std::string StringifyBroadcastDimensions(std::vector<int64_t> broadcast_dims) {
   return str;
 };
 
+}  // namespace
+
 // Emit XLA custom call for dynamic_broadcast_in_dim.
-xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
-                                 xla::XlaOp final_broadcast_dimensions) {
+xla::XlaOp XlaHelpers::DynamicBroadcastInDim(
+    xla::XlaOp op, const xla::Shape& final_shape,
+    xla::XlaOp final_broadcast_dimensions) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op);
 
   std::vector<int64_t> op_broadcast_dims(shape.dimensions().size());
@@ -840,8 +841,6 @@ xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
       /*operands=*/{op, final_broadcast_dimensions}, /*shape*/ final_shape,
       /*opaque=*/StringifyBroadcastDimensions(op_broadcast_dims));
 }
-
-}  // namespace
 
 xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
     xla::XlaOp input, xla::XlaOp aux_input,

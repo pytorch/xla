@@ -38,6 +38,8 @@ extern const OpKindWrapper xla_cross_replica_sum;
 extern const OpKindWrapper xla_device_data;
 extern const OpKindWrapper xla_dequantize_tensor;
 extern const OpKindWrapper xla_diagonal_view_update;
+extern const OpKindWrapper xla_dynamic_expand;
+extern const OpKindWrapper xla_dynamic_view;
 extern const OpKindWrapper xla_einsum_backward;
 extern const OpKindWrapper xla_generic_slice;
 extern const OpKindWrapper xla_get_dimensions_size;
