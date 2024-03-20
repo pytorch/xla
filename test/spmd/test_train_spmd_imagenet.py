@@ -68,6 +68,7 @@ import schedulers
 import numpy as np
 from functools import partial
 import torch
+import torch.profiler
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -310,7 +311,21 @@ def train_imagenet():
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
+
+    wait_steps = 1
+    warmup_steps = 1
+    active_steps = 3
+    num_repeats = 1
+    prof = torch.profiler.profile(
+            schedule=torch.profiler.schedule(wait=wait_steps, warmup=warmup_steps, active=active_steps, repeat=num_repeats),
+            on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/resnet18'),
+            record_shapes=True,
+            with_stack=True)
+    prof.start()  
     for step, (data, target) in enumerate(loader):
+      prof.step()
+      if step >= wait_steps + warmup_steps + active_steps:
+        break
       x = data.to(xm.xla_device())
       y = target.to(xm.xla_device())
       with xp.StepTrace('train_imagenet'):
@@ -337,6 +352,7 @@ def train_imagenet():
             _train_update, args=(device, step, loss, tracker, epoch, writer))
       if FLAGS.num_steps and FLAGS.num_steps == step:
         break
+    prof.stop()
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
