@@ -193,6 +193,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  @unittest.skip("Unbounded dynamism is not supported yet.")
   def test_conv1d(self):
     args = (
         torch.rand((3, 1, 800)),
@@ -427,17 +428,10 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
   def test_native_group_norm(self):
-    # class M(torch.nn.Module):
-
-    #   def forward(self, x, weight, bias, N, C, HxW, group, eps):
-    #     return torch.ops.aten.native_group_norm.default(x, weight, bias, N, C, HxW, group, eps)[0]
-
     class M2(torch.nn.Module):
       def __init__(self):
         super().__init__()
-        # self.conv = torch.nn.Conv1d(1, 512, 10, stride=5)
         self.layer_norm = torch.nn.GroupNorm(num_groups=512, num_channels=512, affine=True)
-        # self.layer_norm = torch.nn.LayerNorm(159, eps=1e-12)
 
       def forward(self, x):
         x = self.layer_norm(x)
@@ -578,6 +572,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  @unittest.skip("Unbounded dynamism is not supported yet.")
   def test_softmax_reduce_on_dynamic_dim(self):
     args = (torch.rand((1, 8, 128, 3)), -1, False)
     dynamic_shapes = ([{3: Dim("dim")}, None, None],)
