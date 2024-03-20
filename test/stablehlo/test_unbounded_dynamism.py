@@ -373,7 +373,6 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("Implicit broadcasting logic is broken.")
   def test_ne_scalar(self):
 
     class M(torch.nn.Module):
@@ -383,20 +382,19 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
     args = (torch.rand((3, 5)).to(torch.int64),)
     dynamic_shapes = ({0: Dim("dim")},)
-    # dynamic_shapes = None
     m = M()
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
     shlo_text = shlo_module.get_stablehlo_text()
     self.assertTrue(
-        re.search(r"%arg.: tensor<\?x5xf32>.*->.*tensor<\?x5xi32>", shlo_text)
+        re.search(r"%arg.: tensor<\?x5xi64>.*->.*tensor<\?x5xi32>", shlo_text)
         is not None)
-    # if has_tf_package():
-    #   with tempfile.TemporaryDirectory() as tempdir:
-    #     save_torch_module_as_tf_saved_model(
-    #         m, args, tempdir, dynamic_shapes=dynamic_shapes)
-    #     self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
-    #     compare_exported_program_and_saved_model_result(ep, tempdir, args)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
   def test_var(self):
 
