@@ -202,17 +202,25 @@ class PallasTest(unittest.TestCase):
     expected_o = attention(q, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
 
-  # @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
-  #                  "This test only works on TPUv3+.")
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
   @unittest.mock.patch.dict(os.environ, {"XLA_TPU_LAYOUT": "0"})
   def test_flash_attention_wrapper(self):
     from torch_xla.experimental.custom_kernel import flash_attention
 
+    def attention(q, k, v):
+      attn_weight = q @ k.transpose(-2, -1)
+      attn_weight = nn.functional.softmax(attn_weight, dim=-1)
+      attn_output = attn_weight @ v
+      return attn_output
+
     q = torch.randn(3, 2, 128, 4).to("xla")
     k = torch.randn(3, 2, 128, 4).to("xla")
     v = torch.randn(3, 2, 128, 4).to("xla")
+
     o = flash_attention(q, k, v)
-    print(o)
+    expected_o = attention(q, k, v)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
 
 
 if __name__ == '__main__':
@@ -220,7 +228,5 @@ if __name__ == '__main__':
   # TODO: do we want to set the following flags?
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
