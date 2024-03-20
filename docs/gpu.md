@@ -8,16 +8,26 @@ You can either use a local machine with GPU attached or a GPU VM on the cloud. F
 
 ## Environment Setup
 
+Make sure you have cuda driver installed on the host.
+
 ### Docker
-Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.7/8 and python 3.8. We recommend users to create a docker container with corresponding config. For a full list of docker images and wheels, please refer to [this doc](https://github.com/pytorch/xla#available-docker-images-and-wheels).
+Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.8/12.1 and python 3.8. We recommend users to create a docker container with corresponding config. For a full list of docker images and wheels, please refer to [this doc](https://github.com/pytorch/xla#available-docker-images-and-wheels).
 ```
 sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1
-sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+
+# Installing the NVIDIA Container Toolkit per https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+# For example
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+
+# Configuring the NVIDIA Container Toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
+
 sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1 bin/bash
 sudo docker exec -it $(sudo docker ps | awk 'NR==2 { print $1 }') /bin/bash
 ```
