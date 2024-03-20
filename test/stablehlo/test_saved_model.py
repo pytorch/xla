@@ -14,8 +14,9 @@ from torch_xla.stablehlo import (StableHLOExportOptions,
 from torch_xla.tf_saved_model_integration import (
     make_tf_function, save_stablehlo_graph_as_tf,
     save_torch_module_as_tf_saved_model)
-from utils import (compare_exported_program_and_saved_model_result,
-                   has_tf_package, wrap_func_as_nn_module)
+from torch_xla.utils.stablehlo_test_utils import (
+    compare_exported_program_and_saved_model_result, has_tf_package,
+    wrap_func_as_nn_module)
 
 
 class StableHLOInferenceTest(unittest.TestCase):
