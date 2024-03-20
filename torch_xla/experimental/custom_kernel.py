@@ -119,5 +119,15 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
 
 
-def flash_attention(q: torch.Tensor, k torch.Tensor, v torch.Tensor):
+def flash_attention(
+    q,  # [batch_size, num_heads, q_seq_len, d_model]
+    k,  # [batch_size, num_heads, kv_seq_len, d_model]
+    v,  # [batch_size, num_heads, kv_seq_len, d_model]
+    ab=None,  # [batch_size, num_heads, q_seq_len, kv_seq_len]
+    segment_ids=None,  # q of [batch_size, q_seq_len] and kv of [batch_size, kv_seq_len]
+    *,
+    causal: bool = False,
+    sm_scale: float = 1.0,
+    block_sizes: BlockSizes | None = None,
+    debug: bool = False,):
   kernel =
