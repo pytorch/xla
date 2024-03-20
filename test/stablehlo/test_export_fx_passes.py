@@ -111,9 +111,7 @@ class ExportFxPassTest(unittest.TestCase):
     ep = export(m, args, dynamic_shapes=dynamic_shapes)
     out1 = ep.module()(*args)
     replace_dynamic_view_with_xla_op(ep.graph_module)
-    print(ep)
     ep.graph_module.recompile()
-    print(ep.graph_module.code)
     self.assertTrue('xla.dynamic_view' in ep.graph_module.code)
     out2 = ep.module()(*args)
     self.assertTrue(torch.allclose(out1, out2))
@@ -153,9 +151,7 @@ class ExportFxPassTest(unittest.TestCase):
     dynamic_shapes = ({3: Dim("bs")}, {0: Dim("bs")})
     ep = export(m, args, dynamic_shapes=dynamic_shapes)
     out1 = ep.module()(*args)
-    print(ep)
     replace_dynamic_expand_with_xla_op(ep.graph_module)
-    print(ep)
     ep.graph_module.recompile()
     self.assertTrue('xla.dynamic_expand' in ep.graph_module.code)
     out2 = ep.module()(*args)
@@ -221,7 +217,6 @@ class ExportFxPassTest(unittest.TestCase):
     ep.graph_module.recompile()
     self.assertFalse('aten.native_group_norm' in ep.graph_module.code)
     after_decomp_ep_out = ep.module()(*export_args)
-    # print(before_decomp_ep_out - after_decomp_ep_out)
     self.assertTrue(
         torch.allclose(before_decomp_ep_out, after_decomp_ep_out, atol=1e-6))
 

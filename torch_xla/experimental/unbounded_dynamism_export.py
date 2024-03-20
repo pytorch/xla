@@ -152,14 +152,17 @@ def replace_dynamic_expand_with_xla_op(gm: GraphModule):
       if len(symbolic_dims_sizes) == 0:
         continue
       assert len(symbolic_dims_sizes) == 1
-      src_sizes = n.args[0].meta['val'].size()
-      expanded_sizes = n.args[1]
-      assert len(src_sizes) == len(expanded_sizes)
-      for i in range(len(src_sizes)):
-        if not isinstance(src_sizes[i], int) and not isinstance(
-            expanded_sizes[i], int):
-          assert src_sizes[i] == expanded_sizes[i].meta[
-              'val'], "Expanded symbolic dim to a different symbolic size is not supported."
+      if 'val' in n.args[0].meta:
+        # Some nodes may not have meta['val'] stored.
+        # Skip the check for now.
+        src_sizes = n.args[0].meta['val'].size()
+        expanded_sizes = n.args[1]
+        assert len(src_sizes) == len(expanded_sizes)
+        for i in range(len(src_sizes)):
+          if not isinstance(src_sizes[i], int) and not isinstance(
+              expanded_sizes[i], int):
+            assert src_sizes[i] == expanded_sizes[i].meta[
+                'val'], "Expanded symbolic dim to a different symbolic size is not supported."
       for dim, sym_size_node in symbolic_dims_sizes:
         assert sym_size_node.op == "call_function" and sym_size_node.target == aten.sym_size.int
         dynamic_src = sym_size_node.args[0]
