@@ -1420,9 +1420,11 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
     // Apply XLA_AUTO_SPMD_MESH if it is set.
     // TODO(yeounoh) allow multi mesh exploration.
-    auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
-    std::vector<int64_t> auto_spmd_mesh_shape = std::get<0>(mesh_shape_ids);
-    std::vector<int64_t> auto_spmd_mesh_ids = std::get<1>(mesh_shape_ids);
+    std::vector<int64_t> auto_spmd_mesh_shape =
+        ShardingUtil::GetAutoShardingMesh();
+    std::vector<int64_t> auto_spmd_mesh_ids =
+        ShardingUtil::GetAutoShardingMeshIds(
+            instances.front().computation.proto());
     instances.front().auto_spmd_mesh_shape = auto_spmd_mesh_shape;
     instances.front().auto_spmd_mesh_ids = auto_spmd_mesh_ids;
     TF_VLOG(5) << "auto_spmd_mesh_shape={"
