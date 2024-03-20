@@ -14,6 +14,8 @@ namespace {
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> output_sizes) {
+  // Unbounded dynamism only propagates at XlaOp level. So at lazy IR level
+  // we are still using traced shape.
   const xla::Shape& input_shape = GetXlaShape(input);
   auto info = XlaHelpers::GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {

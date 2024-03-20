@@ -15,6 +15,8 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const std::vector<int64_t>& size,
                            const torch::lazy::Value& src_tensor, int src_index,
                            int target_index) {
+  // Unbounded dynamism only propagates at XlaOp level. So at lazy IR level
+  // we are still using traced shape.
   std::vector<int64_t> expanded_size(size);
   xla::Shape input_shape = GetXlaShape(input);
   for (size_t i = 0; i < expanded_size.size(); ++i) {
