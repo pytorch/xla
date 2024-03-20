@@ -99,9 +99,12 @@ class XlaMarkPatternTest(unittest.TestCase):
 
       def forward(self, x, y):
         q, k, v = x.split(128, dim=-2)
-        q = torch.ops.xla.mark_tensor(q, "test.sdpa", pos=0, id="0", is_input=True)
-        k = torch.ops.xla.mark_tensor(k, "test.sdpa", pos=1, id="0", is_input=True)
-        v = torch.ops.xla.mark_tensor(v, "test.sdpa", pos=2, id="0", is_input=True)
+        q = torch.ops.xla.mark_tensor(
+            q, "test.sdpa", pos=0, id="0", is_input=True)
+        k = torch.ops.xla.mark_tensor(
+            k, "test.sdpa", pos=1, id="0", is_input=True)
+        v = torch.ops.xla.mark_tensor(
+            v, "test.sdpa", pos=2, id="0", is_input=True)
         attn_out = F.scaled_dot_product_attention(q, k, v, scale=0.25)
         attn_out = torch.ops.xla.mark_tensor(
             attn_out,
@@ -111,9 +114,12 @@ class XlaMarkPatternTest(unittest.TestCase):
             is_input=False,
             attr=xla_marker.serialize_composite_attr({"scale": 0.25}))
         q, k, v = y.split(128, dim=-2)
-        q = torch.ops.xla.mark_tensor(q, "test.sdpa", pos=0, id="1", is_input=True)
-        k = torch.ops.xla.mark_tensor(k, "test.sdpa", pos=1, id="1", is_input=True)
-        v = torch.ops.xla.mark_tensor(v, "test.sdpa", pos=2, id="1", is_input=True)
+        q = torch.ops.xla.mark_tensor(
+            q, "test.sdpa", pos=0, id="1", is_input=True)
+        k = torch.ops.xla.mark_tensor(
+            k, "test.sdpa", pos=1, id="1", is_input=True)
+        v = torch.ops.xla.mark_tensor(
+            v, "test.sdpa", pos=2, id="1", is_input=True)
         attn_out2 = F.scaled_dot_product_attention(q, k, v, scale=4)
         attn_out2 = torch.ops.xla.mark_tensor(
             attn_out2,
@@ -128,10 +134,11 @@ class XlaMarkPatternTest(unittest.TestCase):
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.sdpa\""), 2)
     self.assertTrue(
-        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}' in
-        stablehlo)
+        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}'
+        in stablehlo)
     self.assertTrue(
-        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}' in stablehlo)
+        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}'
+        in stablehlo)
 
   def test_composite_builder_sdpa_pattern(self):
 
@@ -155,10 +162,11 @@ class XlaMarkPatternTest(unittest.TestCase):
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.sdpa\""), 2)
     self.assertTrue(
-        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}' in
-        stablehlo)
+        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}'
+        in stablehlo)
     self.assertTrue(
-        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}' in stablehlo)
+        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}'
+        in stablehlo)
 
   def test_composite_builder_export_sdpa_pattern(self):
 
@@ -187,10 +195,11 @@ class XlaMarkPatternTest(unittest.TestCase):
     stablehlo = stablehlo_gm.get_stablehlo_text()
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.sdpa\""), 2)
     self.assertTrue(
-        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}' in
-        stablehlo)
+        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}'
+        in stablehlo)
     self.assertTrue(
-        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}' in stablehlo)
+        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}'
+        in stablehlo)
     if has_tf_package():
       self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
@@ -218,10 +227,11 @@ class XlaMarkPatternTest(unittest.TestCase):
     stablehlo = stablehlo_gm.get_stablehlo_text()
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.sdpa\""), 2)
     self.assertTrue(
-        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}' in
-        stablehlo)
+        '{composite_attributes = {scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl_0}'
+        in stablehlo)
     self.assertTrue(
-        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}' in stablehlo)
+        '{composite_attributes = {scale = 2 : i64}, decomposition = @test.sdpa.impl}'
+        in stablehlo)
     if has_tf_package():
       self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
@@ -240,7 +250,8 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
-    self.assertEqual(stablehlo.count("stablehlo.composite \"test.sample_composite\""), 1)
+    self.assertEqual(
+        stablehlo.count("stablehlo.composite \"test.sample_composite\""), 1)
 
   def test_composite_builder_mix_attr_value_types(self):
 
@@ -261,7 +272,8 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
-    self.assertEqual(stablehlo.count("stablehlo.composite \"test.sample_composite\""), 1)
+    self.assertEqual(
+        stablehlo.count("stablehlo.composite \"test.sample_composite\""), 1)
     self.assertEqual(stablehlo.count('int_attr = 1 : i64'), 1)
     self.assertEqual(stablehlo.count('float_attr = 2.300000e+00 : f32'), 1)
     self.assertEqual(stablehlo.count('bool_attr = true'), 1)
@@ -341,7 +353,8 @@ class XlaMarkPatternTest(unittest.TestCase):
     exported = torch.export.export(model, (input_pos, k_val, v_val))
     shlo = stablehlo.exported_program_to_stablehlo(exported)
     shlo_text = shlo.get_stablehlo_text()
-    self.assertEqual(shlo_text.count("stablehlo.composite \"test.update_kv_cache\""), 1)
+    self.assertEqual(
+        shlo_text.count("stablehlo.composite \"test.update_kv_cache\""), 1)
 
 
 if __name__ == '__main__':

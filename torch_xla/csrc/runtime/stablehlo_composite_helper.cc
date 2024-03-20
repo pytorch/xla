@@ -442,7 +442,8 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     mlir::Operation* composite_op =
         builder.create<mlir::stablehlo::CompositeOp>(
             boundary_output_op->getLoc(),
-            impl_func.getFunctionType().getResults(), args, metadata.name, *attributes_or, impl_func.getSymName());
+            impl_func.getFunctionType().getResults(), args, metadata.name,
+            *attributes_or, impl_func.getSymName());
     return composite_op;
   }
 };
