@@ -202,6 +202,18 @@ class PallasTest(unittest.TestCase):
     expected_o = attention(q, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
 
+  # @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+  #                  "This test only works on TPUv3+.")
+  @unittest.mock.patch.dict(os.environ, {"XLA_TPU_LAYOUT": "0"})
+  def test_flash_attention_wrapper(self):
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    o = flash_attention(q, k, v)
+    print(o)
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
