@@ -206,6 +206,7 @@ class PallasTest(unittest.TestCase):
                    "This test only works on TPUv3+.")
   @unittest.mock.patch.dict(os.environ, {"XLA_TPU_LAYOUT": "0"})
   def test_flash_attention_wrapper(self):
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     from torch_xla.experimental.custom_kernel import flash_attention
 
     def attention(q, k, v):
@@ -221,6 +222,7 @@ class PallasTest(unittest.TestCase):
     o = flash_attention(q, k, v)
     expected_o = attention(q, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
 
 if __name__ == '__main__':
@@ -228,5 +230,7 @@ if __name__ == '__main__':
   # TODO: do we want to set the following flags?
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
+  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
+      use_full_mat_mul_precision=True)
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
