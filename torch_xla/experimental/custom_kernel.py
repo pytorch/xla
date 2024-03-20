@@ -96,7 +96,11 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
       raise ValueError(f"Unsupported dtype: {dtype}")
 
   # TODO: Maybe we can cache the payload for the same input.
-  def wrapped_kernel(kernel: Callable, output_shape_dtype_fn: Callable, *args, static_argnames=[], **kwargs) -> Callable:
+  def wrapped_kernel(kernel: Callable,
+                     output_shape_dtype_fn: Callable,
+                     *args,
+                     static_argnames=[],
+                     **kwargs) -> Callable:
     jax_args = []
     for i, arg in enumerate(args):
       if torch.is_tensor(arg):
@@ -109,7 +113,9 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
         assert False, f"Unsupported argument type: {type(arg)}"
 
     # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
-    ir = jax.jit(kernel, static_argnames=static_argnames).lower(*jax_args, **kwargs).compiler_ir()
+    ir = jax.jit(
+        kernel, static_argnames=static_argnames).lower(*jax_args,
+                                                       **kwargs).compiler_ir()
     payload = _extract_backend_config(ir)
     output_shape, output_dtype = output_shape_dtype_fn(*args)
     output = torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device())
@@ -117,6 +123,7 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
     return output
 
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
+
 
 # This is a simplified wrapper on top of https://github.com/google/jax/blob/b2058d72b7e1693a41303d5411572aabf99b7981/jax/experimental/pallas/ops/tpu/flash_attention.py#L139
 # where we only takes q, k, v, and segment_ids as input and set causal and block_sizes for the users.
@@ -135,20 +142,25 @@ def flash_attention(
 
   # TODO: Support segment_ids and causal.
   flash_attention_kernel = make_kernel_from_pallas(
-        tpu_flash_attention.flash_attention, lambda q, k, v: (q.shape, q.dtype))
+      tpu_flash_attention.flash_attention, lambda q, k, v: (q.shape, q.dtype))
 
   # The block_sizes configuration is copied from https://github.com/google/maxtext/blob/0fee320451738166c8e596dc63a57a4673671576/MaxText/layers/attentions.py#L215-L240
   # It yields much better performance than the default block_sizes.
-  return flash_attention_kernel(q, k, v, static_argnames=["block_sizes"], block_sizes=tpu_flash_attention.BlockSizes(
-              block_q=min(512, q.shape[2]),
-              block_k_major=min(512, k.shape[2]),
-              block_k=min(512, k.shape[2]),
-              block_b=min(2, q.shape[0]),
-              block_q_major_dkv=min(512, q.shape[2]),
-              block_k_major_dkv=min(512, k.shape[2]),
-              block_q_dkv=min(512, q.shape[2]),
-              block_k_dkv=min(512, k.shape[2]),
-              block_q_dq=min(1024, q.shape[2]),
-              block_k_dq=min(256, k.shape[2]),
-              block_k_major_dq=min(512, k.shape[2]),
-          ))
+  return flash_attention_kernel(
+      q,
+      k,
+      v,
+      static_argnames=["block_sizes"],
+      block_sizes=tpu_flash_attention.BlockSizes(
+          block_q=min(512, q.shape[2]),
+          block_k_major=min(512, k.shape[2]),
+          block_k=min(512, k.shape[2]),
+          block_b=min(2, q.shape[0]),
+          block_q_major_dkv=min(512, q.shape[2]),
+          block_k_major_dkv=min(512, k.shape[2]),
+          block_q_dkv=min(512, q.shape[2]),
+          block_k_dkv=min(512, k.shape[2]),
+          block_q_dq=min(1024, q.shape[2]),
+          block_k_dq=min(256, k.shape[2]),
+          block_k_major_dq=min(512, k.shape[2]),
+      ))
