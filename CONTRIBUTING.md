@@ -34,7 +34,6 @@ We recommend you to use our prebuilt Docker image to start your development work
 
 * Build PyTorch
   ```Shell
-  cd /pytorch/
   python setup.py develop
   ```
 * Build PyTorch/XLA
