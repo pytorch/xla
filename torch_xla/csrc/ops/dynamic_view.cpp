@@ -62,19 +62,21 @@ XlaOpVector DynamicView::Lower(LoweringContext* loctx) const {
       xla::Mul(dynamic_dim_tensor, dynamic_dim_scaler);
 
   std::vector<xla::XlaOp> concat_ops;
-  std::vector<int32_t> static_input_dims_vec(size_.begin(), size_.begin() + target_index_);
+  std::vector<int32_t> static_input_dims_vec(size_.begin(),
+                                             size_.begin() + target_index_);
   if (!static_input_dims_vec.empty()) {
     concat_ops.push_back(xla::ConstantR1(
-      loctx->builder(), absl::Span<const int32_t>(static_input_dims_vec)));
+        loctx->builder(), absl::Span<const int32_t>(static_input_dims_vec)));
   }
   concat_ops.push_back(dynamic_dim_scaled);
   if (target_index_ + 1 < size_.size()) {
-    static_input_dims_vec = std::vector<int32_t>(size_.begin() + target_index_ + 1, size_.end());
+    static_input_dims_vec =
+        std::vector<int32_t>(size_.begin() + target_index_ + 1, size_.end());
     concat_ops.push_back(xla::ConstantR1(
-      loctx->builder(), absl::Span<const int32_t>(static_input_dims_vec)));
+        loctx->builder(), absl::Span<const int32_t>(static_input_dims_vec)));
   }
-  xla::XlaOp final_broadcast_dimensions = xla::ConcatInDim(
-      loctx->builder(), absl::Span<xla::XlaOp>(concat_ops), 0);
+  xla::XlaOp final_broadcast_dimensions =
+      xla::ConcatInDim(loctx->builder(), absl::Span<xla::XlaOp>(concat_ops), 0);
 
   // Output shape
   xla::Shape final_shape = complete_output_shape_;

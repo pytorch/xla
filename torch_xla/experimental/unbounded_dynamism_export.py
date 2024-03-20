@@ -5,53 +5,73 @@ from torch.fx import Graph, GraphModule, subgraph_rewriter
 
 aten = torch.ops.aten
 
+
 def wrap_func_as_nn_module(f):
+
   class M(torch.nn.Module):
+
     def forward(self, *args):
       return f(*args)
+
   return M()
+
 
 def native_layer_norm_impl(input, normalized_shape, weight, bias, eps):
   mean = torch.mean(input, -1, keepdim=True)
   rstd = torch.rsqrt(torch.var(input, -1, keepdim=True, correction=0) + eps)
-  out = ((input + mean * -1) * rstd) # sub doesn't support unbounded dynamism
+  out = ((input + mean * -1) * rstd)  # sub doesn't support unbounded dynamism
   out = out * weight + bias
   return out
+
 
 def native_group_norm_impl(input, weight, bias, N, C, HxW, group, eps):
   mean = torch.mean(input, -1, keepdim=True)
   rstd = torch.rsqrt(torch.var(input, -1, keepdim=True, correction=0) + eps)
-  out = ((input + mean * -1) * rstd) # sub doesn't support unbounded dynamism
+  out = ((input + mean * -1) * rstd)  # sub doesn't support unbounded dynamism
   weight = weight.unsqueeze(1)
   bias = bias.unsqueeze(1)
   out = out * weight + bias
   return out
 
+
 def native_layer_norm_pattern(x, dim, weight, bias, eps):
   # We need to include get_item semantic in the pattern.
   # native_layer_norm returns a tuple, which is a single fx node if traced
   # in export, but it will be multiple fx nodes if graph is symbolic traced.
-  # 
-  # If we export the native_layer_norm pattern it doesn't work with 
+  #
+  # If we export the native_layer_norm pattern it doesn't work with
   # subgraph_rewritter, because of the dangling input for the eps constant.
   # Exporting a nn.Module with a nn.LayerNorm inside also doesn't work,
   # the order of the LayerNorm parameters in the exported grpah signature
   # may not match the order in the replacement function.
   return torch.ops.aten.native_layer_norm.default(x, dim, weight, bias, eps)[0]
 
+
 def native_group_norm_pattern(x, weight, bias, N, C, HxW, group, eps):
-  return torch.ops.aten.native_group_norm.default(x, weight, bias, N, C, HxW, group, eps)[0]
+  return torch.ops.aten.native_group_norm.default(x, weight, bias, N, C, HxW,
+                                                  group, eps)[0]
+
 
 def decompose_dynamic_native_layer_norm(gm):
-  replaced_patterns = subgraph_rewriter.replace_pattern_with_filters(gm, native_layer_norm_pattern, native_layer_norm_impl, ignore_literals=False)
+  replaced_patterns = subgraph_rewriter.replace_pattern_with_filters(
+      gm,
+      native_layer_norm_pattern,
+      native_layer_norm_impl,
+      ignore_literals=False)
   # Only support normalize along the last dim now. Check if replacement is valid.
   for matches in replaced_patterns:
     for pattern_n, match_n in matches.nodes_map.items():
       if isinstance(match_n, list):
         assert len(match_n) == 1
 
+
 def decompose_dynamic_native_group_norm(gm):
-  replaced_patterns = subgraph_rewriter.replace_pattern_with_filters(gm, native_group_norm_pattern, native_group_norm_impl, ignore_literals=True)
+  replaced_patterns = subgraph_rewriter.replace_pattern_with_filters(
+      gm,
+      native_group_norm_pattern,
+      native_group_norm_impl,
+      ignore_literals=True)
+
 
 def decompose_dynamic_shape_select(gm: GraphModule):
   '''
@@ -74,7 +94,8 @@ def decompose_dynamic_shape_select(gm: GraphModule):
         with graph.inserting_before(n):
           select_src_node = n.args[0]
           select_dim = n.args[1]
-          assert symbolic_dims[0] != select_dim, "Selected dim cannot be symbolic."
+          assert symbolic_dims[
+              0] != select_dim, "Selected dim cannot be symbolic."
           select_idx = n.args[2]
           slice_args = (select_src_node, select_dim, select_idx,
                         (select_idx + 1), 1)
@@ -135,8 +156,10 @@ def replace_dynamic_expand_with_xla_op(gm: GraphModule):
       expanded_sizes = n.args[1]
       assert len(src_sizes) == len(expanded_sizes)
       for i in range(len(src_sizes)):
-        if not isinstance(src_sizes[i], int) and not isinstance(expanded_sizes[i], int):
-          assert src_sizes[i] == expanded_sizes[i].meta['val'], "Expanded symbolic dim to a different symbolic size is not supported."
+        if not isinstance(src_sizes[i], int) and not isinstance(
+            expanded_sizes[i], int):
+          assert src_sizes[i] == expanded_sizes[i].meta[
+              'val'], "Expanded symbolic dim to a different symbolic size is not supported."
       for dim, sym_size_node in symbolic_dims_sizes:
         assert sym_size_node.op == "call_function" and sym_size_node.target == aten.sym_size.int
         dynamic_src = sym_size_node.args[0]
@@ -166,7 +189,8 @@ def replace_dynamic_view_with_xla_op(gm: GraphModule):
         if not isinstance(node, int):
           sym_sizes.append((dim, node))
       if len(sym_sizes) != 0:
-        assert len(sym_sizes) == 1, "Only 1 symoblic dim in view src tensor is supported."
+        assert len(sym_sizes
+                  ) == 1, "Only 1 symoblic dim in view src tensor is supported."
         new_args = list(n.args)
         new_args[1] = list(new_args[1])
         target_dim = sym_sizes[0][0]
@@ -194,6 +218,7 @@ def replace_dynamic_view_with_xla_op(gm: GraphModule):
                                     int(mul_scaler))
         n.target = torch.ops.xla.dynamic_view
 
+
 def dynamic_unsqueeze_to_view(gm: GraphModule):
   '''
   Replace unsqueeze with symbolic input shape to view.
@@ -211,10 +236,12 @@ def dynamic_unsqueeze_to_view(gm: GraphModule):
       view_args = list(src_shape)
       with graph.inserting_before(n):
         for dim in symbolic_dims:
-          get_size_node = graph.call_function(aten.sym_size.int, (unsqueeze_src, dim))
+          get_size_node = graph.call_function(aten.sym_size.int,
+                                              (unsqueeze_src, dim))
           view_args[dim] = get_size_node
         squeezed_dim = n.args[1]
-        view_args = (unsqueeze_src, view_args[:squeezed_dim] + [1] + view_args[squeezed_dim:])
+        view_args = (unsqueeze_src,
+                     view_args[:squeezed_dim] + [1] + view_args[squeezed_dim:])
         view_node = graph.call_function(aten.view, view_args)
         n.replace_all_uses_with(view_node)
         graph.erase_node(n)

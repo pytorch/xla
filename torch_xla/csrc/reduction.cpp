@@ -311,12 +311,13 @@ xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
       BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
   xla::XlaOp bcast_mean;
   if (input_shape.is_unbounded_dynamic()) {
-    auto promoted = XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(input, mean, input_shape);
+    auto promoted = XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
+        input, mean, input_shape);
     bcast_mean = promoted.second;
   } else {
     bcast_mean =
-      xla::BroadcastInDim(mean, input_shape.dimensions(),
-                          torch::lazy::Iota<int64_t>(input_shape.rank()));
+        xla::BroadcastInDim(mean, input_shape.dimensions(),
+                            torch::lazy::Iota<int64_t>(input_shape.rank()));
   }
   xla::XlaOp input_mean_diff = input - bcast_mean;
   xla::XlaOp diff2 = input_mean_diff * input_mean_diff;

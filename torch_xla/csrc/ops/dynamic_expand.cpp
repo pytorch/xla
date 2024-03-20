@@ -59,23 +59,23 @@ XlaOpVector DynamicExpand::Lower(LoweringContext* loctx) const {
   for (size_t i = 0; i < input_shape.rank(); ++i) {
     if (i == target_index_) {
       dynamic_dim_tensor.push_back(
-        xla::Reshape(xla::GetDimensionSize(src_tensor, src_index_), {1}));
+          xla::Reshape(xla::GetDimensionSize(src_tensor, src_index_), {1}));
     } else {
-      dynamic_dim_tensor.push_back(xla::ConstantR1(loctx->builder(),
-                      absl::Span<const int32_t>({static_cast<int32_t>(size_.at(i))})));
+      dynamic_dim_tensor.push_back(xla::ConstantR1(
+          loctx->builder(),
+          absl::Span<const int32_t>({static_cast<int32_t>(size_.at(i))})));
     }
   }
-  xla::XlaOp final_broadcast_dimensions = xla::ConcatInDim(
-    loctx->builder(), dynamic_dim_tensor, 0);
+  xla::XlaOp final_broadcast_dimensions =
+      xla::ConcatInDim(loctx->builder(), dynamic_dim_tensor, 0);
 
   // Output shape
   std::vector<int64_t> output_sizes(size_.begin(), size_.end());
   output_sizes[target_index_] = xla::Shape::kUnboundedSize;
   std::vector<bool> output_dynamic(size_.size(), false);
   output_dynamic[target_index_] = true;
-  xla::Shape final_shape = xla::ShapeUtil::MakeShape(input_shape.element_type(),
-                                output_sizes,
-                                output_dynamic);
+  xla::Shape final_shape = xla::ShapeUtil::MakeShape(
+      input_shape.element_type(), output_sizes, output_dynamic);
   xla::XlaOp result = XlaHelpers::DynamicBroadcastInDim(
       input, final_shape, final_broadcast_dimensions);
   return ReturnOp(result, loctx);

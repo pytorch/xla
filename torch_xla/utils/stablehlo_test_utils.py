@@ -39,7 +39,10 @@ def load_save_model_and_inference(path: str, args: Tuple[Any, ...]) -> Dict:
   return tf_output
 
 
-def compare_exported_program_and_saved_model_result(ep, saved_model_path, args, atol=1e-7):
+def compare_exported_program_and_saved_model_result(ep,
+                                                    saved_model_path,
+                                                    args,
+                                                    atol=1e-7):
   tf_output = load_save_model_and_inference(saved_model_path, args)
   with torch.no_grad():
     torch_output = ep.module()(*args)
@@ -52,4 +55,4 @@ def compare_exported_program_and_saved_model_result(ep, saved_model_path, args, 
     assert torch_output_np.dtype == tf_output_np.dtype, f"torch dtype: {torch_output[idx].dtype}, tf dtype: {tf_output[idx].dtype}"
     assert np.allclose(torch_output_np, tf_output_np, atol=atol)
   return tuple(map(lambda x: x.numpy(),
-                  torch_output)), tuple(map(lambda x: x.numpy(), tf_output))
+                   torch_output)), tuple(map(lambda x: x.numpy(), tf_output))

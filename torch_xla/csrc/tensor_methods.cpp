@@ -2292,9 +2292,11 @@ XLATensorPtr dynamic_expand(const XLATensorPtr& input,
                             const std::vector<int64_t>& size,
                             const XLATensorPtr& src_tensor, int src_dim,
                             int target_dim) {
-  std::vector<int64_t> expanded_size = GetExpandDimensions(input->shape().get(), size);
+  std::vector<int64_t> expanded_size =
+      GetExpandDimensions(input->shape().get(), size);
   torch::lazy::NodePtr node = torch::lazy::MakeNode<DynamicExpand>(
-      input->GetIrValue(), expanded_size, src_tensor->GetIrValue(), src_dim, target_dim);
+      input->GetIrValue(), expanded_size, src_tensor->GetIrValue(), src_dim,
+      target_dim);
   return input->CreateFrom(torch::lazy::Value(node));
 }
 
