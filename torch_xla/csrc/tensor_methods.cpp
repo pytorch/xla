@@ -2510,7 +2510,7 @@ XLATensorPtr rsub(const XLATensorPtr& input, const at::Scalar& other,
           MakeXlaPrimitiveType(input->dtype(), &device)),
       logical_element_type, device);
   torch::lazy::Value alpha_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      other,
+      alpha,
       xla::ShapeUtil::MakeScalarShape(
           MakeXlaPrimitiveType(input->dtype(), &device)),
       logical_element_type, device);
