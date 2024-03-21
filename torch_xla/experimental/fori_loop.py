@@ -12,6 +12,22 @@ import torch._higher_order_ops.while_loop
 from torch._higher_order_ops.while_loop import while_loop_op
 
 
+def fori_loop(lower, upper, body_fun, init_val, one_value):
+
+  device = xm.xla_device()
+  init = lower
+  limit_value = upper
+
+  def cond_fn(init, limit_value):
+    return limit_value[0] >= init[0]
+
+  def body_fn(init, limit_value):
+    one_value = torch.ones(1, dtype=torch.int32, device=device)
+    return (body_fun(init, one_value), limit_value.clone())
+
+  res = _xla_while_loop(cond_fn, body_fn, (init, limit_value))
+  return res
+
 @while_loop_op.py_impl(DispatchKey.XLA)
 def while_loop(cond_fn, body_fn, operands):
   # cond_fn&body_fn: callable
@@ -31,7 +47,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     params.append(p)
 
   # generate cond_fn xlacomputation
-  cond_result = cond_fn(operands[0], operands[1])
+  cond_result = cond_fn(*operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
   cond_ctx.build([cond_result])
@@ -40,7 +56,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
                                                       cond_hlo)
 
   # generate body_fn xlacomputation
-  body_result = body_fn(operands[0], operands[1])
+  body_result = body_fn(*operands)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
   body_ctx.build(list(body_result))
