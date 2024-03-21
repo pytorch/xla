@@ -15,11 +15,12 @@ from torch._higher_order_ops.while_loop import while_loop_op
 def fori_loop(lower, upper, body_fun, *init_vals): # *init_val):
 
   device = xm.xla_device()
-  limit_value = upper
-  init = lower
-  iterator = lower
+  # limit_value = upper
+  # init = lower
+  # iterator = lower
 
   # one_value_original = torch.tensor([1], dtype=torch.int32, device=device)
+  (a, b) = init_vals
 
   def cond_fn(upper, lower, *init_vals):
     # init_val_compy = init_val.clone()
@@ -27,9 +28,11 @@ def fori_loop(lower, upper, body_fun, *init_vals): # *init_val):
     # one_value2 = torch.tensor([0], dtype=torch.int32, device=device)
     # lower = torch.add(lower, one_value1[0])
     # lower = torch.sub(lower, one_value2[0])
-    assert isinstance(init_vals[0], torch.Tensor)
-    assert isinstance(init_vals[1], torch.Tensor)
-    return lower[0] <= upper[0]
+    # assert isinstance(init_vals[0], torch.Tensor)
+    # assert isinstance(init_vals[1], torch.Tensor)
+    bool_value = isinstance(init_vals[0], torch.Tensor) and isinstance(init_vals[1], torch.Tensor)
+    # body_fun(*init_vals)
+    return (lower[0] <= upper[0]) and bool_value
 
   def body_fn(upper, lower, *init_vals):
     # one_value_original = torch.tensor(1, dtype=torch.int32, device=device)
