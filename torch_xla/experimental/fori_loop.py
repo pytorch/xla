@@ -32,11 +32,13 @@ def fori_loop(lower, upper, body_fun, *init_vals): # *init_val):
     # assert isinstance(init_vals[1], torch.Tensor)
     bool_value = isinstance(init_vals[0], torch.Tensor) and isinstance(init_vals[1], torch.Tensor)
     # body_fun(*init_vals)
-    result = True
-    if (lower[0] <= upper[0]) and bool_value:
-      return True
-    return False
-    # return (lower[0] <= upper[0]) and bool_value
+    # result = True
+    # if (lower[0] <= upper[0]) and bool_value:
+    #   return True
+    # return False
+    bool_result = ((lower[0] <= upper[0]) and bool_value)
+    bool_tensor = torch.tensor(bool_result, dtype=torch.bool)
+    return bool_tensor # (lower[0] <= upper[0]) and bool_tensor
 
   def body_fn(upper, lower, *init_vals):
     # one_value_original = torch.tensor(1, dtype=torch.int32, device=device)
