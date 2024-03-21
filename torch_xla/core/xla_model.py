@@ -38,9 +38,6 @@ _ORDINAL = None
 
 XLA_LIB = Library("xla", "DEF")
 
-# Default bucket size for all-gather and reduce-scatter
-_ALL_GATHER_REDUCE_SCATTER_BUCKET_CAP_MB = 160
-
 
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
@@ -636,6 +633,81 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
                     f"given {type(value)}.")
 
 
+class CoalescingBuckets(object):
+
+  def __init__(self,
+               func,
+               input_list,
+               output_list=None,
+               groups=None,
+               bucket_cap_mb=160):
+    if not isinstance(input_list, list) or any(
+        not isinstance(v, torch.Tensor) for v in input_list):
+      raise TypeError(
+          f"`input_list` needs to be a list of Tensors, but given {type(input_list)}."
+      )
+    if output_list != None:
+      if not isinstance(output_list, list) or any(
+          not isinstance(v, torch.Tensor) for v in output_list):
+        raise TypeError(
+            f"`output_list` needs to be a list of Tensors, but given {type(output_list)}."
+        )
+      if len(output_list) != len(input_list):
+        raise ValueError(
+            "`output_list` length doesn't match `input_list` length: "
+            f"{len(output_list)} vs {len(input_list)}.")
+    self._func = func
+    self._input_list = input_list
+    self._output_list = output_list
+    self._total = 0
+    self._tensor_bucket = []
+    self._output_bucket = [] if output_list else None
+    self._bucket_cap = bucket_cap_mb * 1024 * 1024
+    if groups:
+      divisor = len(groups[0]) if type(groups[0]) == list else len(groups)
+    else:
+      divisor = xrt_world_size()
+    self._bucket_cap = self._bucket_cap / divisor
+    self._out_tensors = []
+
+  def flush(self):
+    if len(self._tensor_bucket):
+      self._out_tensors.extend(
+          self._func(self._tensor_bucket, self._output_bucket))
+    self._total = 0
+    self._tensor_bucket = []
+    self._output_bucket = [] if self._output_list else None
+
+  def add(self, tensor, idx):
+    self._total += tensor.numel() * tensor.element_size()
+    self._tensor_bucket.append(tensor)
+    if self._output_list != None:
+      self._output_bucket.append(self._output_list[idx])
+
+  def __call__(self):
+    for idx, tensor in enumerate(self._input_list):
+      tensor_bytes = tensor.numel() * tensor.element_size()
+
+      # Aim for target bucket_cap_mb: flush new tensor with bucket if bucket content
+      # is small (1/2 cap) but don't combine if combined total is over 2x cap
+      total_new = self._total + tensor_bytes
+      if tensor_bytes > self._bucket_cap and self._total < 0.5 * self._bucket_cap and total_new <= 2 * self._bucket_cap:
+        self.add(tensor, idx)
+        self.flush()
+      else:
+        # Bucketize till the total spills over
+        if total_new > self._bucket_cap:
+          self.flush()
+        self.add(tensor, idx)
+
+    # Flush the last remaining bucket
+    self.flush()
+
+    assert len(self._out_tensors) == len(self._input_list)
+
+    return self._out_tensors
+
+
 def all_gather_bucketized(input_list,
                           dim=0,
                           groups=None,
@@ -657,19 +729,6 @@ def all_gather_bucketized(input_list,
   if pin_layout:
     raise RuntimeError(
         "For xm.all_gather_bucketized, pin_layout=True is not yet supported.")
-  if not isinstance(input_list, list) or any(
-      not isinstance(v, torch.Tensor) for v in input_list):
-    raise TypeError(
-        f"`input_list` needs to be a list of Tensors, but given {type(input_list)}."
-    )
-  if output != None:
-    if not isinstance(output, list) or any(
-        not isinstance(v, torch.Tensor) for v in output):
-      raise TypeError(
-          f"`output` needs to be a list of Tensors, but given {type(output)}.")
-    if len(output) != len(input_list):
-      raise ValueError("`output` length doesn't match `input_list` length: "
-                       f"{len(output)} vs {len(input_list)}.")
 
   def _all_gather_coalesced(_input_list, _output_list=None):
     return all_gather(
@@ -679,52 +738,13 @@ def all_gather_bucketized(input_list,
         output=_output_list,
         pin_layout=pin_layout)
 
-  total = 0
-  tensor_bucket = []
-  output_bucket = [] if output else None
-  out_tensors = []
-  bucket_cap = bucket_cap_mb * 1024 * 1024
-  if groups:
-    divisor = len(groups[0]) if type(groups[0]) == list else len(groups)
-  else:
-    divisor = xrt_world_size()
-  bucket_cap = bucket_cap / divisor
-
-  for idx, tensor in enumerate(input_list):
-    tensor_bytes = tensor.numel() * tensor.element_size()
-
-    # Aim for target bucket_cap_mb: flush new tensor with bucket if bucket content
-    # is small (1/2 cap) but don't combine if combined total is over 2x cap
-    total_new = total + tensor_bytes
-    if tensor_bytes > bucket_cap and total < 0.5 * bucket_cap and total_new <= 2 * bucket_cap:
-      tensor_bucket.append(tensor)
-      if output != None:
-        output_bucket.append(output[idx])
-      out_tensors.extend(_all_gather_coalesced(tensor_bucket, output_bucket))
-      total = 0
-      tensor_bucket = []
-      output_bucket = [] if output else None
-    else:
-      # Bucketize till the total spills over
-      if total_new > bucket_cap:
-        if len(tensor_bucket):
-          out_tensors.extend(
-              _all_gather_coalesced(tensor_bucket, output_bucket))
-        total = 0
-        tensor_bucket = []
-        output_bucket = [] if output else None
-      total = total_new
-      tensor_bucket.append(tensor)
-      if output != None:
-        output_bucket.append(output[idx])
-
-  # Flush the last remaining bucket
-  if len(tensor_bucket):
-    out_tensors.extend(_all_gather_coalesced(tensor_bucket, output_bucket))
-
-  assert len(out_tensors) == len(input_list)
-
-  return out_tensors
+  buckets = CoalescingBuckets(
+      _all_gather_coalesced,
+      input_list,
+      output,
+      groups=groups,
+      bucket_cap_mb=bucket_cap_mb)
+  return buckets()
 
 
 def all_to_all(value,
@@ -964,21 +984,6 @@ def reduce_scatter_bucketized(reduce_type,
     gets a shard split along the `scatter_dim`. All other dimensions are
     the same as the input.
   """
-  token, devctx = _get_all_reduce_token()
-
-  if not isinstance(input_list, list) or any(
-      not isinstance(v, torch.Tensor) for v in input_list):
-    raise TypeError(
-        f"`input_list` needs to be a list of Tensors, but given {type(input_list)}."
-    )
-  if output != None:
-    if not isinstance(output, list) or any(
-        not isinstance(v, torch.Tensor) for v in output):
-      raise TypeError(
-          f"`output` needs to be a list of Tensors, but given {type(output)}.")
-    if len(output) != len(input_list):
-      raise ValueError("`output` length doesn't match `input_list` length: "
-                       f"{len(output)} vs {len(input_list)}.")
 
   def _reduce_scatter_coalesced(_input_list, _output_list=None):
     return reduce_scatter(
@@ -991,48 +996,13 @@ def reduce_scatter_bucketized(reduce_type,
         output=_output_list,
         pin_layout=pin_layout)
 
-  total = 0
-  tensor_bucket = []
-  output_bucket = [] if output else None
-  out_tensors = []
-  bucket_cap = bucket_cap_mb * 1024 * 1024
-
-  for idx, tensor in enumerate(input_list):
-    tensor_bytes = tensor.numel() * tensor.element_size()
-
-    # Aim for target bucket_cap_mb: flush new tensor with bucket if bucket content
-    # is small (1/2 cap) but don't combine if combined total is over 2x cap
-    total_new = total + tensor_bytes
-    if tensor_bytes > bucket_cap and total < 0.5 * bucket_cap and total_new <= 2 * bucket_cap:
-      tensor_bucket.append(tensor)
-      if output != None:
-        output_bucket.append(output[idx])
-      out_tensors.extend(
-          _reduce_scatter_coalesced(tensor_bucket, output_bucket))
-      total = 0
-      tensor_bucket = []
-      output_bucket = [] if output else None
-    else:
-      # Bucketize till the total spills over
-      if total_new > bucket_cap:
-        if len(tensor_bucket):
-          out_tensors.extend(
-              _reduce_scatter_coalesced(tensor_bucket, output_bucket))
-        total = 0
-        tensor_bucket = []
-        output_bucket = [] if output else None
-      total = total_new
-      tensor_bucket.append(tensor)
-      if output != None:
-        output_bucket.append(output[idx])
-
-  # Flush the last remaining bucket
-  if len(tensor_bucket):
-    out_tensors.extend(_reduce_scatter_coalesced(tensor_bucket, output_bucket))
-
-  assert len(out_tensors) == len(input_list)
-
-  return out_tensors
+  buckets = CoalescingBuckets(
+      _reduce_scatter_coalesced,
+      input_list,
+      output,
+      groups=groups,
+      bucket_cap_mb=bucket_cap_mb)
+  return buckets()
 
 
 def add_step_closure(closure, args=(), run_async=False):

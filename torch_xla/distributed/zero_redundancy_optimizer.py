@@ -316,7 +316,6 @@ class ZeroRedundancyOptimizer(Optimizer):
                                 sharded_param_group['params']):
           if param.grad is not None:
             grad_shard = grad_shards[index]
-
             if grad_shard.dtype != self.optimizer_dtype:
               grad_shard = grad_shard.to(dtype=self.optimizer_dtype)
             shard.grad = grad_shard

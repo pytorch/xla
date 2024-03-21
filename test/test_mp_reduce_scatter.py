@@ -111,7 +111,7 @@ def _mp_fn(index):
 
     xm.rendezvous('test_reduce_scatter_list_input_output')
 
-    # Testing reduce-scatter with list input and output
+    # Testing reduce-scatter with list input and output (buckettized)
     output_list = [
         torch.rand((32, shard_size * world_size, 32))
         for _ in range(input_list_size)
