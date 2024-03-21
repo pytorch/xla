@@ -117,6 +117,94 @@ def decompose_dynamic_shape_select(gm: GraphModule):
         graph.erase_node(n)
 
 
+def decompose_split_with_sizes(gm: GraphModule):
+  '''
+  Decompose `split_with_sizes` with symbolic input shape into `aten.slice` ops.
+
+  This is to reuse the unbounded dynamism support added to `aten.slice`.
+  '''
+  graph = gm.graph
+  for n in graph.nodes:
+    if n.op == "call_function" and n.target == aten.split_with_sizes.default:
+      src_node = n.args[0]
+      src_shape = src_node.meta['val'].size()
+      symbolic_dims = [
+          i for i, x in enumerate(src_shape) if not isinstance(x, int)
+      ]
+      if len(symbolic_dims) == 0:
+        continue
+      assert len(symbolic_dims) == 1, "Only 1 dimention can be symbolic."
+      split_sizes = n.args[1]
+      split_dim = n.args[2]
+      assert symbolic_dims[
+          0] != split_dim, "Split along symbolic dim is not supported."
+      with graph.inserting_before(n):
+        start_idx = 0
+        decomposed_slices = []
+        for size in split_sizes:
+          slice_args = (src_node, split_dim, start_idx, start_idx + size)
+          slice_node = graph.call_function(torch.ops.aten.slice.Tensor,
+                                           slice_args)
+          start_idx += size
+          decomposed_slices.append(slice_node)
+        consumers = n.users
+        for consumer in consumers:
+          assert n.op == "call_function" and consumer.target.__name__ == "getitem"
+          slice_idx = consumer.args[1]
+          consumer.replace_all_uses_with(decomposed_slices[slice_idx])
+
+
+def flatten_embedding_indices_tensor(gm: GraphModule):
+  '''
+  Flatten the indices tensor of `aten.embedding.default` to avoid `view` op with
+  symbolic input during LTC tracing.
+
+  The indices tensor will be flattened, the embedding output shape will be recovered.
+
+  The symbolic shape in `aten.view` will be handled by `aten.view` -> `xla.dynamic_view` pass.
+  '''
+  graph = gm.graph
+  for n in graph.nodes:
+    if n.op == "call_function" and n.target == aten.embedding.default:
+      select_src_shape = n.args[1].meta['val'].shape
+      symbolic_dims = [
+          i for i, x in enumerate(select_src_shape) if not isinstance(x, int)
+      ]
+      if len(symbolic_dims) > 0:
+        assert len(symbolic_dims) == 1, "Only 1 dimention can be symbolic."
+        with graph.inserting_before(n):
+          indices_node = n.args[1]
+          indices_shape = indices_node.meta['val'].size()
+          flatten_mul_scale = 1
+          get_dim_size_node = None
+          recover_view_shape = []
+          for dim, size in enumerate(indices_shape):
+            if not isinstance(size, int):
+              get_dim_size_args = (indices_node, dim)
+              get_dim_size_node = graph.call_function(aten.sym_size.int,
+                                                      get_dim_size_args)
+              recover_view_shape.append(get_dim_size_node)
+            else:
+              flatten_mul_scale *= size
+              recover_view_shape.append(size)
+          weight_shape = n.args[0].meta['val'].size()
+          recover_view_shape.append(weight_shape[-1])
+
+          mul_args = (get_dim_size_node, flatten_mul_scale)
+          flatten_size_node = graph.call_function(aten.mul.Scalar, mul_args)
+          view_args = (indices_node, [flatten_size_node])
+          view_node = graph.call_function(aten.view, view_args)
+          new_embedding_args = n.args[0:1] + (view_node,)
+          if len(n.args) > 2:
+            new_embedding_args += n.args[2:]
+          n.args = new_embedding_args
+        with graph.inserting_after(n):
+          recover_view_args = (n, recover_view_shape)
+          recover_view_node = graph.call_function(aten.view, recover_view_args)
+          n.replace_all_uses_with(recover_view_node)
+          recover_view_node.update_arg(0, n)
+
+
 def _is_no_op_slice(n):
   assert n.op == "call_function" and n.target == aten.slice.Tensor
   return n.args[2] == 0 and n.args[3] == torch.iinfo(torch.int64).max
@@ -152,14 +240,17 @@ def replace_dynamic_expand_with_xla_op(gm: GraphModule):
       if len(symbolic_dims_sizes) == 0:
         continue
       assert len(symbolic_dims_sizes) == 1
-      src_sizes = n.args[0].meta['val'].size()
-      expanded_sizes = n.args[1]
-      assert len(src_sizes) == len(expanded_sizes)
-      for i in range(len(src_sizes)):
-        if not isinstance(src_sizes[i], int) and not isinstance(
-            expanded_sizes[i], int):
-          assert src_sizes[i] == expanded_sizes[i].meta[
-              'val'], "Expanded symbolic dim to a different symbolic size is not supported."
+      if 'val' in n.args[0].meta:
+        # Some nodes may not have meta['val'] stored.
+        # Skip the check for now.
+        src_sizes = n.args[0].meta['val'].size()
+        expanded_sizes = n.args[1]
+        assert len(src_sizes) == len(expanded_sizes)
+        for i in range(len(src_sizes)):
+          if not isinstance(src_sizes[i], int) and not isinstance(
+              expanded_sizes[i], int):
+            assert src_sizes[i] == expanded_sizes[i].meta[
+                'val'], "Expanded symbolic dim to a different symbolic size is not supported."
       for dim, sym_size_node in symbolic_dims_sizes:
         assert sym_size_node.op == "call_function" and sym_size_node.target == aten.sym_size.int
         dynamic_src = sym_size_node.args[0]
@@ -199,8 +290,10 @@ def replace_dynamic_view_with_xla_op(gm: GraphModule):
         mul_scaler = 1
         sym_size_node = dynamic_src
         mul_node = None
-        if hasattr(dynamic_src.target,
-                   "__name__") and dynamic_src.target.__name__ == "mul":
+        if hasattr(
+            dynamic_src.target,
+            "__name__") and (dynamic_src.target.__name__ == "mul" or
+                             dynamic_src.target.__name__ == "mul.Scalar"):
           assert isinstance(dynamic_src.args[0], int) or isinstance(
               dynamic_src.args[1], int)
           mul_node = dynamic_src
@@ -233,6 +326,7 @@ def dynamic_unsqueeze_to_view(gm: GraphModule):
       ]
       if len(symbolic_dims) == 0:
         continue
+      assert len(symbolic_dims) == 1, "Only 1 dimention can be symbolic."
       view_args = list(src_shape)
       with graph.inserting_before(n):
         for dim in symbolic_dims:
@@ -263,10 +357,12 @@ def exported_program_has_symbolic_input_shape(ep):
 def process_exported_program_with_symbolic_input(ep):
   passes = [
       decompose_dynamic_shape_select,
+      decompose_split_with_sizes,
       remove_no_op_slice,
       decompose_dynamic_native_group_norm,
       decompose_dynamic_native_layer_norm,
       dynamic_unsqueeze_to_view,
+      flatten_embedding_indices_tensor,
       replace_dynamic_expand_with_xla_op,
       replace_dynamic_view_with_xla_op,
   ]

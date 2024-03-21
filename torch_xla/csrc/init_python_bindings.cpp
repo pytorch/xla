@@ -933,8 +933,7 @@ class PyLoweringContext {
       bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
       if (should_wrap_parameter) {
         computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-            computation, program_shape.parameters(), input_output_alias_pair,
-            buffer_donor_indices));
+            computation, program_shape.parameters(), buffer_donor_indices));
       }
     }
   }
