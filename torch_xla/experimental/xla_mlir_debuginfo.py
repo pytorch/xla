@@ -2,11 +2,13 @@ import os
 
 import torch
 import torch_xla
+from torch_xla.core import xla_model as xm
 from torch_xla.core.xla_model import XLA_LIB
 
 # Enable debug info automatically when importing this file. This is necessary
 # to propagate any debug info to downstream MLIR locations.
 os.environ["XLA_HLO_DEBUG"] = "1"
+xla_device = xm.xla_device()
 
 XLA_LIB.define("write_mlir_debuginfo(Tensor x, str data) -> Tensor")
 
@@ -14,6 +16,9 @@ XLA_LIB.define("write_mlir_debuginfo(Tensor x, str data) -> Tensor")
 @torch.library.impl(XLA_LIB, "write_mlir_debuginfo",
                     "CompositeExplicitAutograd")
 def write_mlir_debuginfo(x, data: str):
+  if x.device != xla_device:
+    return x
+
   begin_token = "<XLA_MLIR_DEBUGINFO_BEGIN>"
   end_token = "<XLA_MLIR_DEBUGINFO_END>"
   # Add the debuginfo string as the op prefix in MLIR location, surrounded
