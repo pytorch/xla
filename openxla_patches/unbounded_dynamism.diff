@@ -1,0 +1,40 @@
+diff --git a/xla/client/xla_builder.cc b/xla/client/xla_builder.cc
+index 57f0529b5..5f8a1c582 100644
+--- a/xla/client/xla_builder.cc
++++ b/xla/client/xla_builder.cc
+@@ -1182,12 +1182,16 @@ XlaOp XlaBuilder::BinaryOp(HloOpcode binop, XlaOp lhs, XlaOp rhs,
+                                   this, rhs, lhs, *lhs_shape));
+         }
+       } else {
+-        TF_ASSIGN_OR_RETURN(UnboundedBroadcastResult broadcast_result,
+-                            BroadcastToOutputShapeWithUnbounded(
+-                                this, lhs, *lhs_shape, rhs, *rhs_shape, shape,
+-                                broadcast_dimensions));
+-        updated_lhs = broadcast_result.lhs;
+-        updated_rhs = broadcast_result.rhs;
++        if (!ShapeUtil::SameDimensions(*lhs_shape, *rhs_shape)) {
++          Shape output_shape = shape;
++          output_shape.set_element_type(lhs_shape->element_type());
++          TF_ASSIGN_OR_RETURN(UnboundedBroadcastResult broadcast_result,
++                              BroadcastToOutputShapeWithUnbounded(
++                                  this, lhs, *lhs_shape, rhs, *rhs_shape,
++                                  output_shape, broadcast_dimensions));
++          updated_lhs = broadcast_result.lhs;
++          updated_rhs = broadcast_result.rhs;
++        }
+       }
+     }
+ 
+diff --git a/xla/client/xla_builder_test.cc b/xla/client/xla_builder_test.cc
+index ee9d100a3..231cd6baf 100644
+--- a/xla/client/xla_builder_test.cc
++++ b/xla/client/xla_builder_test.cc
+@@ -2436,6 +2436,8 @@ INSTANTIATE_TEST_SUITE_P(
+          /*broadcast_dimensions=*/{}, "f32[?, ?, 2, 2, <=2, <=2, ?]", &Mul},
+         {"f32[?, 10]", "f32[1]", /*broadcast_dimensions=*/zero_array,
+          "f32[?, 10]", &Mul},
++        {"f32[?, 10]", "f32[1]", /*broadcast_dimensions=*/zero_array,
++         "pred[?, 10]", &Ne},
+         {"f32[1, ?, 2, ?, <=2, ?, ?]", "f32[?, 1, ?, 2, ?, <=2, ?]",
+          /*broadcast_dimensions=*/{}, "f32[?, ?, 2, 2, <=2, <=2, ?]", &Pow},
+         {"f32[?, 10]", "f32[1]", /*broadcast_dimensions=*/zero_array,

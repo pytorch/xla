@@ -377,7 +377,6 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("Unbounded dynamism is not supported.")
   def test_ne_scalar(self):
 
     class M(torch.nn.Module):
@@ -392,7 +391,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
     shlo_module = exported_program_to_stablehlo(ep)
     shlo_text = shlo_module.get_stablehlo_text()
     self.assertTrue(
-        re.search(r"%arg.: tensor<\?x5xf32>.*->.*tensor<\?x5xi32>", shlo_text)
+        re.search(r"%arg.: tensor<\?x5xi64>.*->.*tensor<\?x5xi32>", shlo_text)
         is not None)
     if has_tf_package():
       with tempfile.TemporaryDirectory() as tempdir:
