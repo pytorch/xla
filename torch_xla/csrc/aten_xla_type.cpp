@@ -629,6 +629,7 @@ at::Tensor XLANativeFunctions::_unsafe_view(const at::Tensor& self,
 at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                                    const at::Tensor& other,
                                    const at::Scalar& alpha) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // Currently, we disallow the case when both operands contain dynamic
   // dimensions. This is consistent with PyTorch's behavior.
@@ -648,6 +649,7 @@ at::Tensor XLANativeFunctions::add(const at::Tensor& self,
 at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                                    const at::Scalar& other,
                                    const at::Scalar& alpha) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return DoBinaryOp(self, other,
                     [&](const XLATensorPtr& xself, const at::Scalar& other,
@@ -661,6 +663,7 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                                      const at::Tensor& mat2,
                                      const at::Scalar& beta,
                                      const at::Scalar& alpha) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (beta.to<double>() != 1 || alpha.to<double>() != 1) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,

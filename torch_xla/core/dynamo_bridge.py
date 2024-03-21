@@ -449,6 +449,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal skip_checking_input_sharding_threashold
 
     original_device: torch.device = _get_input_arg_device(args)
+    print('xw32 line452 optimized_mod begins original_device=', original_device, ', args=', args)
     is_cuda_args: bool = False
     if original_device:
       is_cuda_args = original_device.type == "cuda"
@@ -604,6 +605,8 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+  # breakpoint()
+  print('xw32 line609 extract_compiled_graph is called. xla_args=', xla_args)
   if _args_on_cuda(xla_args):
     xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
 
@@ -628,6 +631,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   for name, buffer in xla_model.named_buffers():
     if "self" in name:
       self_args.append(buffer)
+  print('xw32 line634 _args_on_cuda(self_args)=', _args_on_cuda(self_args)) # false
   all_xla_args = list(xla_args) + self_args
 
   for xla_arg in xla_args:
