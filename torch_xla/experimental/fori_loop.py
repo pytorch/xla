@@ -13,7 +13,7 @@ from torch._higher_order_ops.while_loop import while_loop_op
 
 
 # def fori_loop(upper, body_fun, lowers):#  upper, body_fun, *init_vals): # *init_val):
-def fori_loop(lower, upper, body_fun, init_vals): # (init_val, one_value)):
+def fori_loop(lower, upper, body_fun, init_val, one_value):
 
   device = xm.xla_device()
   # limit_value = upper
