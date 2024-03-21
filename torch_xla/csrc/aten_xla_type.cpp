@@ -3663,11 +3663,13 @@ at::Tensor XLANativeFunctions::reshape(const at::Tensor& self,
                             shape.size()));
   }
   auto inner_tensor = torch::lazy::maybe_unwrap_functional(self);
-  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
-      reshape)>::call(inner_tensor,
-                      c10::SymIntArrayRef(
-                          reinterpret_cast<const c10::SymInt*>(shape.data()),
-                          shape.size()));
+  return MaybeWrapTensorToFunctional(
+      at::functionalization::functionalize_aten_op_symint<ATEN_OP(
+          reshape)>::call(inner_tensor,
+                          c10::SymIntArrayRef(
+                              reinterpret_cast<const c10::SymInt*>(
+                                  shape.data()),
+                              shape.size())));
 }
 
 at::Tensor XLANativeFunctions::select_backward_symint(
