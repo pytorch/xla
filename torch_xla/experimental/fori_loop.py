@@ -72,7 +72,8 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
 
   # res = while_loop(cond_fn, body_fn, (upper, lower, *init_vals))
   # lowers = (lower, *init_vals)
-  res = _xla_while_loop(cond_fn, body_fn, (upper, lowers)) # , *init_vals))
+  # res = _xla_while_loop(cond_fn, body_fn, (upper, lowers)) # , *init_vals))
+  res = _xla_while_loop(cond_fn, body_fn, (init, limit_value))
   # print("upper: ", upper)
   # print("lower: ", lower)
   return res
