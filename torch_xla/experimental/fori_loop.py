@@ -46,7 +46,7 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
     def while_body_fun(loop_carry):
       i, upper, x = loop_carry
       one_value = torch.ones(1, dtype=torch.int32, device=device)
-      return torch.add(i, one_value), upper, body_fun()(i, x)
+      return torch.add(i, one_value), upper, body_fun(i, x) # body_fun()(i, x)
     return while_body_fun
 
   # # def cond_fn(upper, lowers): # lower, *init_vals):
