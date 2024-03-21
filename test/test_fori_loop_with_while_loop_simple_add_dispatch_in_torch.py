@@ -89,7 +89,7 @@ class WhileLoopTest(unittest.TestCase):
     print("result: ", res)
     print("A: ", A)
     print("B: ", B)
-    print("C: ", C)
+    print("D: ", D)
     # print("lower[0] <= upper[0]: ", lower[0] <= upper[0])
     # print("lower: ", lower)
     # print("upper: ", upper)
