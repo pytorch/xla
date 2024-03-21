@@ -39,8 +39,8 @@ def fori_loop(lower, upper, body_fun, *init_vals): # *init_val):
 
   res = while_loop(cond_fn, body_fn, (upper, lower, *init_vals))
   # res = _xla_while_loop(cond_fn, body_fn, (upper, lower, *init_vals))
-  # print("upper: ", upper)
-  # print("lower: ", lower)
+  print("upper: ", upper)
+  print("lower: ", lower)
   return res
 
 @while_loop_op.py_impl(DispatchKey.XLA)
