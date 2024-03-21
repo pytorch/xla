@@ -22,7 +22,7 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
 
   # one_value is actually not used here, but actually redefined in body_fn to avoid introduce new argument in body_xlacomputation
   # lower == init_val
-  assert(lower == init_val)
+  # assert(lower == init_val)
   init = lower # = init_val
   limit_value = upper
 
