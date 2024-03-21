@@ -219,7 +219,7 @@ class PallasTest(unittest.TestCase):
     k = torch.randn(3, 2, 128, 4).to("xla")
     v = torch.randn(3, 2, 128, 4).to("xla")
 
-    o = flash_attention(q, k, v, causal=False)
+    o = flash_attention(q, k, v)
     expected_o = attention(q, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
@@ -243,7 +243,7 @@ class PallasTest(unittest.TestCase):
 
     # The causal mask is turned on by default in the wrapper.
     # It masks out the top right triangle of the attention matrix, therefore it speeds up the compute but also changes the output.
-    o = flash_attention(q, k, v)
+    o = flash_attention(q, k, v, causal=True)
     expected_o = attention(q, k, v)
     self.assertFalse(torch.allclose(o.cpu(), expected_o.cpu()))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
