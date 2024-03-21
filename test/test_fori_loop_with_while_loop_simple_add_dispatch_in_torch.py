@@ -84,8 +84,12 @@ class WhileLoopTest(unittest.TestCase):
 
     def body_fun(a, b):
       return torch.add(a, b[0])
-    _, _, res, _ = fori_loop(lower, upper, body_fun, init_val, one_value) # init_val_list) # init_val)
+    # _, _, res, _ = fori_loop(lower, upper, body_fun, init_val, one_value) # init_val_list) # init_val)
+    A, B, res, D = fori_loop(lower, upper, body_fun, init_val, one_value) # init_val_list) # init_val)
     print("result: ", res)
+    print("A: ", A)
+    print("B: ", B)
+    print("C: ", C)
     # print("lower[0] <= upper[0]: ", lower[0] <= upper[0])
     # print("lower: ", lower)
     # print("upper: ", upper)
