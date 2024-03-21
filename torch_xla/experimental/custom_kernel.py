@@ -126,12 +126,13 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
 
 
 # This is a simplified wrapper on top of https://github.com/google/jax/blob/b2058d72b7e1693a41303d5411572aabf99b7981/jax/experimental/pallas/ops/tpu/flash_attention.py#L139
-# where we only takes q, k, v, and segment_ids as input and set causal and block_sizes for the users.
+# where we only takes q, k, v, segment_ids and causal as input and set block_sizes for the users.
 def flash_attention(
     q,  # [batch_size, num_heads, q_seq_len, d_model]
     k,  # [batch_size, num_heads, kv_seq_len, d_model]
     v,  # [batch_size, num_heads, kv_seq_len, d_model]
     segment_ids=None,  # q of [batch_size, q_seq_len] and kv of [batch_size, kv_seq_len]
+    causal=False,
 ):
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
@@ -140,7 +141,7 @@ def flash_attention(
   import jax.numpy as jnp
   import jax.experimental.pallas.ops.tpu.flash_attention as tpu_flash_attention
 
-  # TODO: Support segment_ids and causal.
+  # TODO: Support segment_ids.
   flash_attention_kernel = make_kernel_from_pallas(
       tpu_flash_attention.flash_attention, lambda q, k, v: (q.shape, q.dtype))
 
@@ -150,7 +151,7 @@ def flash_attention(
       q,
       k,
       v,
-      static_argnames=["block_sizes"],
+      static_argnames=["block_sizes", "causal"],
       block_sizes=tpu_flash_attention.BlockSizes(
           block_q=min(512, q.shape[2]),
           block_k_major=min(512, k.shape[2]),
@@ -163,4 +164,5 @@ def flash_attention(
           block_q_dq=min(1024, q.shape[2]),
           block_k_dq=min(256, k.shape[2]),
           block_k_major_dq=min(512, k.shape[2]),
-      ))
+      ),
+      causal=causal)
