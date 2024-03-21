@@ -1262,7 +1262,8 @@ xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
   return xla::CustomCallWithLayout(
       inputs[0].builder(),
       /*call_target_name=*/"TritonKernelCall", inputs, output_shape,
-      input_shapes, payload, false, {}, xla::CustomCallSchedule::SCHEDULE_NONE,
+      input_shapes, payload, false, {}, nullptr,
+      xla::CustomCallSchedule::SCHEDULE_NONE,
       xla::CustomCallApiVersion::API_VERSION_STATUS_RETURNING);
 }
 
