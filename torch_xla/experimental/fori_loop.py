@@ -54,9 +54,6 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
-  cond_hlo_print = xb.get_computation_hlo(cond_computation)
-  print("cond computation: !!!!!!!!!")
-  print(cond_hlo_print)
 
   # generate body_fn xlacomputation
   body_result = body_fn(*operands)
