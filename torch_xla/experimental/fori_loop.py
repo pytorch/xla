@@ -33,7 +33,7 @@ def fori_loop(lower, upper, body_fun, *init_vals): # *init_val):
     # one_value_original = torch.tensor(1, dtype=torch.int32, device=device)
     # (a, b) = init_vals
     # return (upper, torch.add(lower, 1), body_fun(a, b), b.clone())
-    return (upper, torch.add(lower, 1), body_fun(*init_vals), init_vals[1]) # init_vals[1:])
+    return (upper.clone(), (torch.add(lower, 1)).clone(), (body_fun(*init_vals)).clone(), init_vals[1].clone()) # init_vals[1:])
     # (body_fun(*init_vals)).clone(), init_vals[1].clone())
     # body_fun(one_value_original, init_val)) # body_fun(lower, init_val))
 
