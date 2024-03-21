@@ -1259,9 +1259,11 @@ xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
   }
 
   XLA_CHECK(inputs.size() > 0) << "inputs are empty";
-  return xla::CustomCall(inputs[0].builder(),
-                         /*call_target_name=*/"argmin_custom", inputs,
-                         output_shape);
+  return xla::CustomCallWithLayout(
+      inputs[0].builder(),
+      /*call_target_name=*/"TritonKernelCall", inputs, output_shape,
+      input_shapes, payload, false, {}, xla::CustomCallSchedule::SCHEDULE_NONE,
+      xla::CustomCallApiVersion::API_VERSION_STATUS_RETURNING);
 }
 
 }  // namespace torch_xla

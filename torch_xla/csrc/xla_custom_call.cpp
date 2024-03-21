@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <memory>
-#include "xla/service/custom_call_status.h"
 
 // TODO: number of inputs and shapes of inputs and outputs are
 // hardcoded. Need to be sent in the args. 

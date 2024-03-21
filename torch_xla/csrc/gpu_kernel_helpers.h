@@ -24,7 +24,7 @@ limitations under the License.
 #include "torch_xla/csrc/gpu_vendor.h"
 
 #define JAX_AS_STATUS(expr) \
-  jax::JAX_GPU_NAMESPACE::AsStatus(expr, __FILE__, __LINE__, #expr)
+  torch_xla::XLA_GPU_NAMESPACE::AsStatus(expr, __FILE__, __LINE__, #expr)
 
 #define JAX_THROW_IF_ERROR(expr)                             \
   {                                                          \

@@ -432,6 +432,7 @@ cc_library(
         ":cuda_vendor",
         ":triton_utils",
         ":triton_cc_proto",
+        "@xla//xla/service:custom_call_target_registry",
         "@xla//xla/service:custom_call_status",
         "@xla//xla/stream_executor/gpu:asm_compiler",
         "@xla//xla/tsl/cuda:cudart",
