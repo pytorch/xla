@@ -63,7 +63,8 @@ class ZeroRedundancyOptimizer(Optimizer):
       sharding_groups: Optional[Any] = None,
       grad_norm_groups: Optional[Any] = None,
       lazy_init: bool = False,
-      bucket_cap_mb: int = 0,
+      bucket_cap_mb_all_gather: int = 0,
+      bucket_cap_mb_reduce_scatter: int = 0,
       **defaults: Any,
   ):
     super().__init__(params, defaults)
@@ -80,8 +81,10 @@ class ZeroRedundancyOptimizer(Optimizer):
     self.grad_clipping = grad_clipping
     self.max_norm = max_norm if max_norm is not None else 1.0
     self.pin_layout = pin_layout
-    self.bucket_cap_mb = bucket_cap_mb
-    self.coalesce_cc = bucket_cap_mb > 0
+    self.bucket_cap_mb_all_gather = bucket_cap_mb_all_gather
+    self.bucket_cap_mb_reduce_scatter = bucket_cap_mb_reduce_scatter
+    self.coalesce_cc_all_gather = bucket_cap_mb_all_gather > 0
+    self.coalesce_cc_reduce_scatter = bucket_cap_mb_reduce_scatter > 0
 
     self._grad_norm = None
 
@@ -282,7 +285,7 @@ class ZeroRedundancyOptimizer(Optimizer):
         if param.grad is not None:
           padded_grad = self._pad_to_world_size(param.grad,
                                                 self.local_world_size)
-          if self.coalesce_cc:
+          if self.coalesce_cc_reduce_scatter:
             padded_grads.append(padded_grad)
           else:
             grad_shard = xm.reduce_scatter(
@@ -298,7 +301,7 @@ class ZeroRedundancyOptimizer(Optimizer):
               grad_shard = grad_shard.to(dtype=self.optimizer_dtype)
             shard.grad = grad_shard
 
-    if self.coalesce_cc:
+    if self.coalesce_cc_reduce_scatter:
       grad_shards = xm.reduce_scatter_bucketized(
           xm.REDUCE_SUM,
           padded_grads,
@@ -307,7 +310,7 @@ class ZeroRedundancyOptimizer(Optimizer):
           shard_count=self.local_world_size,
           pin_layout=self.pin_layout,
           groups=self.sharding_groups,
-          bucket_cap_mb=self.bucket_cap_mb,
+          bucket_cap_mb=self.bucket_cap_mb_reduce_scatter,
       )
       index = 0
       for param_group, sharded_param_group in zip(
@@ -341,7 +344,7 @@ class ZeroRedundancyOptimizer(Optimizer):
           shard_data = shard.data
           if param.dtype != self.optimizer_dtype:
             shard_data = shard_data.to(dtype=param.dtype)
-          if self.coalesce_cc:
+          if self.coalesce_cc_all_gather:
             sharded_data.append(shard_data)
           else:
             padded_param = xm.all_gather(
@@ -352,13 +355,13 @@ class ZeroRedundancyOptimizer(Optimizer):
             )
             param.data.copy_(padded_param.data[:param.size(0)])
 
-    if self.coalesce_cc:
+    if self.coalesce_cc_all_gather:
       padded_params = xm.all_gather_bucketized(
           sharded_data,
           dim=0,
           pin_layout=self.pin_layout,
           groups=self.sharding_groups,
-          bucket_cap_mb=self.bucket_cap_mb,
+          bucket_cap_mb=self.bucket_cap_mb_all_gather,
       )
       index = 0
       for param_group, sharded_param_group in zip(

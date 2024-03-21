@@ -635,12 +635,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
 
 class CoalescingBuckets(object):
 
-  def __init__(self,
-               func,
-               input_list,
-               output_list=None,
-               groups=None,
-               bucket_cap_mb=160):
+  def __init__(self, func, input_list, output_list=None, bucket_cap_mb=160):
     if not isinstance(input_list, list) or any(
         not isinstance(v, torch.Tensor) for v in input_list):
       raise TypeError(
@@ -663,15 +658,14 @@ class CoalescingBuckets(object):
     self._tensor_bucket = []
     self._output_bucket = [] if output_list else None
     self._bucket_cap = bucket_cap_mb * 1024 * 1024
-    if groups:
-      divisor = len(groups[0]) if type(groups[0]) == list else len(groups)
-    else:
-      divisor = xrt_world_size()
-    self._bucket_cap = self._bucket_cap / divisor
     self._out_tensors = []
 
   def flush(self):
-    if len(self._tensor_bucket):
+    if len(self._tensor_bucket) == 1:
+      # Use non-coalesced CCOp if its just one tensor
+      output = self._output_bucket[0] if self._output_bucket else None
+      self._out_tensors.append(self._func(self._tensor_bucket[0], output))
+    elif len(self._tensor_bucket):
       self._out_tensors.extend(
           self._func(self._tensor_bucket, self._output_bucket))
     self._total = 0
@@ -712,7 +706,7 @@ def all_gather_bucketized(input_list,
                           dim=0,
                           groups=None,
                           output=None,
-                          pin_layout=True,
+                          pin_layout=False,
                           bucket_cap_mb=160):
   """Performs an all-gather operation along a given dimension, with bucketization.
 
@@ -739,11 +733,7 @@ def all_gather_bucketized(input_list,
         pin_layout=pin_layout)
 
   buckets = CoalescingBuckets(
-      _all_gather_coalesced,
-      input_list,
-      output,
-      groups=groups,
-      bucket_cap_mb=bucket_cap_mb)
+      _all_gather_coalesced, input_list, output, bucket_cap_mb=bucket_cap_mb)
   return buckets()
 
 
@@ -967,7 +957,7 @@ def reduce_scatter_bucketized(reduce_type,
                               shard_count,
                               groups=None,
                               output=None,
-                              pin_layout=True,
+                              pin_layout=False,
                               bucket_cap_mb=160):
   """Performs a XLA `ReduceScatter()` operation on a list of tensors (bucketized).
 
@@ -1000,7 +990,6 @@ def reduce_scatter_bucketized(reduce_type,
       _reduce_scatter_coalesced,
       input_list,
       output,
-      groups=groups,
       bucket_cap_mb=bucket_cap_mb)
   return buckets()
 
