@@ -8,6 +8,13 @@ from torch import nn as nn
 import torch_xla
 from torch_xla import runtime as xr
 
+if xr.device_type() == 'TPU':
+  from torch_xla.experimental.custom_kernel import jax_import_guard
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
+  from jax.experimental import pallas as pl
+
 
 class PallasTest(unittest.TestCase):
 
@@ -111,11 +118,7 @@ class PallasTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_extract_add_payload(self):
-    import jax
-    import jax.numpy as jnp
     import jax._src.pallas.mosaic.pallas_call_registration
-
-    from jax.experimental import pallas as pl
 
     def add_vectors_kernel(x_ref, y_ref, o_ref):
       x, y = x_ref[...], y_ref[...]
@@ -136,13 +139,7 @@ class PallasTest(unittest.TestCase):
     self.assertIn("custom_call_config", payload)
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
-  # TODO: This test cannot be ran individually, let's fix it.
   def test_tpu_custom_call_pallas_wrap_add_payload(self):
-    import jax
-    import jax.numpy as jnp
-    import jax._src.pallas.mosaic.pallas_call_registration
-
-    from jax.experimental import pallas as pl
 
     def add_vectors_kernel(x_ref, y_ref, o_ref):
       x, y = x_ref[...], y_ref[...]
