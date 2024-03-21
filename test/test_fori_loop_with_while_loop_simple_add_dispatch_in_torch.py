@@ -81,7 +81,7 @@ class WhileLoopTest(unittest.TestCase):
     upper = torch.tensor([30], dtype=torch.int32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     init_val_list = (init_val, one_value)
-    lowers = torch.tensor([1, 1, 1], dtype=torch.int32, device=device) # lower, init_val, one_value
+    lowers = torch.tensor([[1], [1], [1]], dtype=torch.int32, device=device) # lower, init_val, one_value
 
     def body_fun(a, b):
       return torch.add(a, b) # [0])
