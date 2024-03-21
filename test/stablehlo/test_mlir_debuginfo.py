@@ -7,7 +7,7 @@ import torch_xla.experimental.xla_mlir_debuginfo
 from torch_xla.stablehlo import exported_program_to_stablehlo
 
 
-class XlaMarkPatternTest(unittest.TestCase):
+class XlaMlirDebuginfoTest(unittest.TestCase):
 
   def test_write_debuginfo(self):
 
