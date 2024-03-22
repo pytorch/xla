@@ -19,6 +19,16 @@ nightly_builds = [
     accelerator  = "cuda"
     cuda_version = "12.1"
   },
+  {
+    accelerator  = "cuda"
+    cuda_version = "12.1"
+    python_version = "3.10"
+  },
+  {
+    accelerator  = "cuda"
+    cuda_version = "12.1"
+    python_version = "3.11"
+  },
 ]
 
 # Built on push to specific tag.
