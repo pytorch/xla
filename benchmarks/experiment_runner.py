@@ -140,6 +140,7 @@ class ExperimentRunner:
           continue
 
         # Setup HLO dumps.
+        new_xla_flags = None
         if self._args.dump_hlo:
           hlo_path = self._get_results_dir_path(experiment_cfg, model_cfg,
                                                 "hlo")
@@ -151,6 +152,7 @@ class ExperimentRunner:
           xla_flags = new_xla_flags
         else:
           xla_flags = f"{xla_flags} {new_xla_flags}"
+        print("ssssssssssssss", xla_flags)
         process_env["XLA_FLAGS"] = xla_flags
 
         # Launch subprocess.
