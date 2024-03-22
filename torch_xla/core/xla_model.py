@@ -1132,29 +1132,9 @@ def bucketed_allreduce(gradients):
     for grad in gradients:
       grad_bytes = grad.numel() * grad.element_size()
 
-      # Gradient is larger than bucket_cap, don't bucketize
-      if grad_bytes > bucket_cap:
-        # Flush out previous buckets even if they don't fill up
-        # This maintains the strict reverse ordering
-        if len(tensor_bucket):
-          all_reduce(
-              REDUCE_SUM,
-              tensor_bucket,
-              scale=1.0 / count,
-              groups=groups,
-              pin_layout=pin_layout)
-          total = 0
-          tensor_bucket = []
-        all_reduce(
-            REDUCE_SUM, [grad],
-            scale=1.0 / count,
-            groups=groups,
-            pin_layout=pin_layout)
-        continue
-
       # Bucketize till the total spills over
       total += grad_bytes
-      if total > bucket_cap:
+      if total > bucket_cap and len(tensor_bucket) > 0:
         all_reduce(
             REDUCE_SUM,
             tensor_bucket,
