@@ -13,7 +13,7 @@ from torch._higher_order_ops.while_loop import while_loop_op
 
 
 # def fori_loop(upper, body_fun, lowers):#  upper, body_fun, *init_vals): # *init_val):
-def fori_loop(lower, upper, body_fun, inits): # init_val, one_value):
+def fori_loop(lower, upper, body_fun, init_val, one_value):
 
   device = xm.xla_device()
   # limit_value = upper
@@ -89,10 +89,10 @@ def fori_loop(lower, upper, body_fun, inits): # init_val, one_value):
   # res = _xla_while_loop(cond_fn, body_fn, (upper, lowers)) # , *init_vals))
   # res = _xla_while_loop(cond_fn, body_fn, (init, limit_value))
   # inits): # init_val, one_value):
-  _, _, result = _xla_while_loop(_fori_cond_fun, _fori_body_fun(body_fun),
-                            (lower, upper, inits))
   # _, _, result = _xla_while_loop(_fori_cond_fun, _fori_body_fun(body_fun),
-  #                           (lower, upper, init_val))
+  #                           (lower, upper, inits))
+  _, _, result = _xla_while_loop(_fori_cond_fun, _fori_body_fun(body_fun),
+                            (lower, upper, init_val))
   # print("upper: ", upper)
   # print("lower: ", lower)
   return res
