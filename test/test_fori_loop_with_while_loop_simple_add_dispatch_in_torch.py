@@ -55,6 +55,42 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+  def test_while_loop_tpu_subtraction_nested(self):
+
+    device = xm.xla_device()
+
+    def cond_fn(init, limit_value):
+      return limit_value[0] <= init[0]
+
+    def body_fn(init, limit_value):
+      one_value = torch.ones(1, dtype=torch.int32, device=device)
+      two_value = limit_value.clone()
+      return (torch.sub(torch.sub(init, one_value), one_value), two_value)
+
+    init = torch.tensor([10], dtype=torch.int32, device=device)
+    limit_value = torch.tensor([0], dtype=torch.int32, device=device)
+    res = while_loop(cond_fn, body_fn, (init, limit_value))
+    expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
+    self.assertEqual(expected, res)
+
+  def test_while_loop_tpu_addition_nested(self):
+
+    device = xm.xla_device()
+
+    def cond_fn(init, limit_value):
+      return limit_value[0] >= init[0]
+
+    def body_fn(init, limit_value):
+      one_value = torch.ones(1, dtype=torch.int32, device=device)
+      two_value = limit_value.clone()
+      return (torch.add(torch.add(init, one_value), one_value), two_value)
+
+    init = torch.tensor([0], dtype=torch.int32, device=device)
+    limit_value = torch.tensor([10], dtype=torch.int32, device=device)
+    res = while_loop(cond_fn, body_fn, (init, limit_value))
+    expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
+    self.assertEqual(expected, res)
+
 
 if __name__ == '__main__':
   test = unittest.main()
