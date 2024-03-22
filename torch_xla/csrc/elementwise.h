@@ -100,6 +100,9 @@ std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input);
 // If eps is given, the input is clamped between eps and 1-eps.
 xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps);
 
+// Computes the division of input and the divisor.
+xla::XlaOp BuildDiv(xla::XlaOp input, xla::XlaOp divisor);
+
 // Computes the backward of LogSigmoid.
 xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                    xla::XlaOp buffer);
