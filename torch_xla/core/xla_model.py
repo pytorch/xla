@@ -634,6 +634,110 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
                     f"given {type(value)}.")
 
 
+class CoalescingBuckets(object):
+
+  def __init__(self, func, input_list, output_list=None, bucket_cap_mb=160):
+    if not isinstance(input_list, list) or any(
+        not isinstance(v, torch.Tensor) for v in input_list):
+      raise TypeError(
+          f"`input_list` needs to be a list of Tensors, but given {type(input_list)}."
+      )
+    if output_list != None:
+      if not isinstance(output_list, list) or any(
+          not isinstance(v, torch.Tensor) for v in output_list):
+        raise TypeError(
+            f"`output_list` needs to be a list of Tensors, but given {type(output_list)}."
+        )
+      if len(output_list) != len(input_list):
+        raise ValueError(
+            "`output_list` length doesn't match `input_list` length: "
+            f"{len(output_list)} vs {len(input_list)}.")
+    self._func = func
+    self._input_list = input_list
+    self._output_list = output_list
+    self._total = 0
+    self._tensor_bucket = []
+    self._output_bucket = [] if output_list else None
+    self._bucket_cap = bucket_cap_mb * 1024 * 1024
+    self._out_tensors = []
+
+  def flush(self):
+    if len(self._tensor_bucket) == 1:
+      # Use non-coalesced CCOp if its just one tensor
+      output = self._output_bucket[0] if self._output_bucket else None
+      self._out_tensors.append(self._func(self._tensor_bucket[0], output))
+    elif len(self._tensor_bucket):
+      self._out_tensors.extend(
+          self._func(self._tensor_bucket, self._output_bucket))
+    self._total = 0
+    self._tensor_bucket = []
+    self._output_bucket = [] if self._output_list else None
+
+  def add(self, tensor, idx):
+    self._total += tensor.numel() * tensor.element_size()
+    self._tensor_bucket.append(tensor)
+    if self._output_list != None:
+      self._output_bucket.append(self._output_list[idx])
+
+  def __call__(self):
+    for idx, tensor in enumerate(self._input_list):
+      tensor_bytes = tensor.numel() * tensor.element_size()
+
+      # Aim for target bucket_cap_mb: flush new tensor with bucket if bucket content
+      # is small (1/2 cap) but don't combine if combined total is over 2x cap
+      total_new = self._total + tensor_bytes
+      if tensor_bytes > self._bucket_cap and self._total < 0.5 * self._bucket_cap and total_new <= 2 * self._bucket_cap:
+        self.add(tensor, idx)
+        self.flush()
+      else:
+        # Bucketize till the total spills over
+        if total_new > self._bucket_cap:
+          self.flush()
+        self.add(tensor, idx)
+
+    # Flush the last remaining bucket
+    self.flush()
+
+    assert len(self._out_tensors) == len(self._input_list)
+
+    return self._out_tensors
+
+
+def all_gather_bucketized(input_list,
+                          dim=0,
+                          groups=None,
+                          output=None,
+                          pin_layout=False,
+                          bucket_cap_mb=160):
+  """Performs an all-gather operation along a given dimension, with bucketization.
+
+  Args:
+    See all_gather for the args: dim, groups, output, pin_layout
+    input_list: List of input tensors
+    bucket_cap_mb: Number of MegaBytes of the tensor bucket to fill before doing all-gather.
+
+  Returns:
+    A list of tensors each of which has, in the ``dim`` dimension, all the values from the
+    participating replicas.
+  """
+  # sanity checks
+  if pin_layout:
+    raise RuntimeError(
+        "For xm.all_gather_bucketized, pin_layout=True is not yet supported.")
+
+  def _all_gather_coalesced(_input_list, _output_list=None):
+    return all_gather(
+        value=_input_list,
+        dim=dim,
+        groups=groups,
+        output=_output_list,
+        pin_layout=pin_layout)
+
+  buckets = CoalescingBuckets(
+      _all_gather_coalesced, input_list, output, bucket_cap_mb=bucket_cap_mb)
+  return buckets()
+
+
 def all_to_all(value,
                split_dimension,
                concat_dimension,
@@ -845,6 +949,50 @@ def reduce_scatter(reduce_type,
   else:
     raise TypeError("`input` needs to be a Tensor or a list of Tensors, but "
                     f"given {type(input)}.")
+
+
+def reduce_scatter_bucketized(reduce_type,
+                              input_list,
+                              scale,
+                              scatter_dim,
+                              shard_count,
+                              groups=None,
+                              output=None,
+                              pin_layout=False,
+                              bucket_cap_mb=160):
+  """Performs a XLA `ReduceScatter()` operation on a list of tensors (bucketized).
+
+  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
+
+  Args:
+    see reduce_scatter for reduce_type, scale, scatter_dim, shard_count, groups, pin_layout
+    input_list: List of input tensors
+    output: Optional list of output torch.Tensor
+    bucket_cap_mb: Number of MegaBytes of the tensor bucket to fill before doing all-gather.
+
+  Returns:
+    A list of `torch.Tensors` with all the values reduced across replicas. Each process
+    gets a shard split along the `scatter_dim`. All other dimensions are
+    the same as the input.
+  """
+
+  def _reduce_scatter_coalesced(_input_list, _output_list=None):
+    return reduce_scatter(
+        reduce_type=reduce_type,
+        input=_input_list,
+        scale=scale,
+        scatter_dim=scatter_dim,
+        shard_count=shard_count,
+        groups=groups,
+        output=_output_list,
+        pin_layout=pin_layout)
+
+  buckets = CoalescingBuckets(
+      _reduce_scatter_coalesced,
+      input_list,
+      output,
+      bucket_cap_mb=bucket_cap_mb)
+  return buckets()
 
 
 def add_step_closure(closure, args=(), run_async=False):
