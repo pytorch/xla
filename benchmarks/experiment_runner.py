@@ -144,12 +144,14 @@ class ExperimentRunner:
           hlo_path = self._get_results_dir_path(experiment_cfg, model_cfg,
                                                 "hlo")
           new_xla_flags = f"--xla_dump_to={hlo_path}"
-          xla_flags = process_env.pop("XLA_FLAGS", None)
-          if xla_flags is None:
-            xla_flags = new_xla_flags
-          else:
-            xla_flags = f"{xla_flags} {new_xla_flags}"
-          process_env["XLA_FLAGS"] = xla_flags
+        elif json.dumps(xla_flags):
+          new_xla_flags = json.dumps(xla_flags)
+        xla_flags = process_env.pop("XLA_FLAGS", None)
+        if xla_flags is None:
+          xla_flags = new_xla_flags
+        else:
+          xla_flags = f"{xla_flags} {new_xla_flags}"
+        process_env["XLA_FLAGS"] = xla_flags
 
         # Launch subprocess.
         try:
