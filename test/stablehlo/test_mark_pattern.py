@@ -353,6 +353,7 @@ class XlaMarkPatternTest(unittest.TestCase):
     exported = torch.export.export(model, (input_pos, k_val, v_val))
     shlo = stablehlo.exported_program_to_stablehlo(exported)
     shlo_text = shlo.get_stablehlo_text()
+    print(shlo_text)
     self.assertEqual(
         shlo_text.count("stablehlo.composite \"test.update_kv_cache\""), 1)
 

@@ -60,6 +60,9 @@ class StableHLOExportOptions:
   override_tracing_arguments: Optional[Tuple[Any]] = None
   override_tracing_kwargs: Optional[Mapping[str, Any]] = None
   save_weights: bool = True
+  # Inline all constants in StableHLO if True. Otherwise only
+  # special constants (0 and 1) are inlined.
+  inline_all_constant: bool = True
 
 
 class StableHLOGraphModule:
@@ -318,6 +321,9 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   device = xm.xla_device()
 
   # Run the fx graph tracing using lazy tensor
+  if options.inline_all_constant:
+    # Inline all constants.
+    torch_xla._XLAC._set_xla_all_numbers_special_scalars(True)
   xla_interpreter = XLAExportInterpreter(exported_model.graph_module, device)
   with torch.no_grad():
     res = xla_interpreter.run(*_flat_input_args, enable_io_processing=False)
@@ -433,6 +439,9 @@ def _exported_program_to_stablehlo_bundle(exported_model,
                                       state_dict),
       additional_constants=additional_constants,
   )
+
+  # Recover the global flag to not inline all scalars.
+  torch_xla._XLAC._set_xla_all_numbers_special_scalars(False)
 
   return bundle
 
