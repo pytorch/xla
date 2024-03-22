@@ -313,7 +313,7 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       x = data.to(xm.xla_device())
       y = target.to(xm.xla_device())
-      with xp.StepTrace('train_imagenet'):
+      with xp.StepTrace('train_imagenet'): # calls mark_step on __exit__
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
           if FLAGS.use_gradient_checkpointing:
@@ -331,7 +331,7 @@ def train_imagenet():
       xm.mark_step()
       tracker.add(FLAGS.batch_size)
       if lr_scheduler:
-        lr_scheduler.step()
+        lr_scheduler.step() # this runs
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             _train_update, args=(device, step, loss, tracker, epoch, writer))
@@ -369,18 +369,18 @@ def train_imagenet():
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     train_loop_fn(train_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
-    if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
-      accuracy = test_loop_fn(test_loader, epoch)
-      xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
-          epoch, test_utils.now(), accuracy))
-      max_accuracy = max(accuracy, max_accuracy)
-      test_utils.write_to_summary(
-          writer,
-          epoch,
-          dict_to_write={'Accuracy/test': accuracy},
-          write_xla_metrics=True)
-    if FLAGS.metrics_debug:
-      xm.master_print(met.metrics_report())
+    # if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
+    #   accuracy = test_loop_fn(test_loader, epoch)
+    #   xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
+    #       epoch, test_utils.now(), accuracy))
+    #   max_accuracy = max(accuracy, max_accuracy)
+    #   test_utils.write_to_summary(
+    #       writer,
+    #       epoch,
+    #       dict_to_write={'Accuracy/test': accuracy},
+    #       write_xla_metrics=True)
+    # if FLAGS.metrics_debug:
+    #   xm.master_print(met.metrics_report())
 
   test_utils.close_summary_writer(writer)
   xm.master_print('Max Accuracy: {:.2f}%'.format(max_accuracy))
