@@ -278,8 +278,9 @@ torch::lazy::Value GetIrValueOrDefault(
 torch::lazy::Value GetFloatingIrValue(const XLATensorPtr& input,
                                       at::ScalarType float_type) {
   torch::lazy::Value input_value = input->GetIrValue();
-  if (xla::primitive_util::IsIntegralType(
-          GetXlaShape(input_value).element_type())) {
+  xla::PrimitiveType input_type = GetXlaShape(input_value).element_type();
+  if (xla::primitive_util::IsIntegralType(input_type) ||
+      input_type == xla::PRED) {
     input_value = torch::lazy::MakeNode<Cast>(input_value, float_type);
   }
   return input_value;
@@ -1151,7 +1152,7 @@ XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
   // divide and trunc divide.
   torch::lazy::Value input_value = GetFloatingIrValue(input, scalar_type);
   torch::lazy::Value other_value = GetFloatingIrValue(other, scalar_type);
-  torch::lazy::Value res = input_value / other_value;
+  torch::lazy::Value res = Div(input_value, other_value);
 
   if (rounding_mode.has_value()) {
     if (*rounding_mode == "trunc") {
@@ -1195,7 +1196,7 @@ XLATensorPtr div(const XLATensorPtr& input, const at::Scalar& other) {
   torch::lazy::Value input_value = GetFloatingIrValue(input, scalar_type);
   torch::lazy::Value other_value = XLAGraphExecutor::Get()->GetIrValueForScalar(
       other, GetXlaShape(input_value).element_type(), input->GetDevice());
-  return input->CreateFrom(input_value / other_value, scalar_type);
+  return input->CreateFrom(Div(input_value, other_value), scalar_type);
 }
 
 XLATensorPtr einsum(const std::string& equation,

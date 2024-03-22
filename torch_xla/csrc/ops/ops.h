@@ -212,6 +212,9 @@ torch::lazy::NodePtr Rshift(const torch::lazy::Value& input,
 torch::lazy::NodePtr Remainder(const torch::lazy::Value& input,
                                const torch::lazy::Value& divisor);
 
+torch::lazy::NodePtr Div(const torch::lazy::Value& input,
+                         const torch::lazy::Value& divisor);
+
 torch::lazy::NodePtr MaxUnary(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr MinUnary(const torch::lazy::Value& input);

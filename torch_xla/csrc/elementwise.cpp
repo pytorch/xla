@@ -261,6 +261,14 @@ std::vector<xla::XlaOp> BuildPreluBackward(xla::XlaOp grad, xla::XlaOp input,
 
 xla::XlaOp BuildSigmoid(xla::XlaOp input) { return xla::Logistic(input); }
 
+xla::XlaOp BuildDiv(xla::XlaOp input, xla::XlaOp divisor) {
+  // Shape and value promotion.
+  std::tie(input, divisor) = XlaHelpers::Promote(input, divisor);
+  xla::XlaOp div_result = xla::Div(
+      input, divisor, XlaHelpers::getBroadcastDimensions(input, divisor));
+  return div_result;
+}
+
 xla::XlaOp BuildSiLUBackward(xla::XlaOp grad_output, xla::XlaOp input) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp one = xla::One(input.builder(), shape.element_type());

@@ -717,6 +717,18 @@ torch::lazy::NodePtr Remainder(const torch::lazy::Value& input,
                                     ScalarOp(0, GetXlaShape(input)));
 }
 
+torch::lazy::NodePtr Div(const torch::lazy::Value& input,
+                         const torch::lazy::Value& divisor) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_divisor = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(BuildDiv(xla_input, xla_divisor), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::div), {input, divisor},
+                   GetXlaShape(input), std::move(lower_fn));
+}
+
 torch::lazy::NodePtr MaxUnary(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
