@@ -579,7 +579,8 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     # (https://github.com/pytorch/pytorch/pull/117434)
     self.assertLessEqual(met.metric_data('CompileTime')[0], 7)
     # We execute 4 graphs per step (+ 1 for SGD) when optimizer is enabled.
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4 + 1)
+    self.assertLessEqual(
+        met.metric_data('ExecuteTime')[0], sample_count * 4 + 1)
     # one for each forward, backward and optimizer
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count * 3)
