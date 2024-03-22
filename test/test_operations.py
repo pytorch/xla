@@ -2343,6 +2343,28 @@ class TestGeneric(test_utils.XlaTestCase):
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
     print(met.metrics_report())
 
+  def _test_aten_move_xla_to_cuda(self, cpu_tensor):
+    xla_tensor = cpu_tensor.to(xm.xla_device())
+    cuda_tensor = xla_tensor.cuda()
+    
+    # Move the XLA tensor back to CPU, and check that it is the same as
+    # the original CPU tensor.
+    self.assertTrue(torch.equal(cpu_tensor, cuda_tensor.cpu()))
+    print(met.metrics_report())
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_xla_to_cuda(self):
+    self._test_move_tensor_cuda_to_xla(torch.arange(5))
+    print(met.metrics_report())
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_scalar_xla_to_cuda(self):
+    # 0-dimensional scalar-tensor
+    # Has a different execution path than other tensors.
+    self._test_move_tensor_cuda_to_xla(torch.tensor(42))
+    print(met.metrics_report())
 
 if __name__ == '__main__':
   torch.set_default_dtype(torch.float32)
