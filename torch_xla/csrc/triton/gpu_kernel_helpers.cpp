@@ -158,8 +158,6 @@ std::string ErrorString(cufftResult status) {
   }
 }
 
-
-
 template <typename T>
 std::string ErrorString(T status, const char* file, std::int64_t line,
                         const char* expr) {
@@ -196,7 +194,6 @@ absl::Status AsStatus(gpublasStatus_t status, const char* file,
   return absl::OkStatus();
 }
 
-
 absl::Status AsStatus(CUresult error, const char* file, std::int64_t line,
                       const char* expr) {
   if (ABSL_PREDICT_FALSE(error != CUDA_SUCCESS))
@@ -218,7 +215,7 @@ absl::Status AsStatus(cufftResult error, const char* file, std::int64_t line,
   return absl::OkStatus();
 }
 
-absl::StatusOr<std::unique_ptr<void*[]>> MakeBatchPointers(
+absl::StatusOr<std::unique_ptr<void* []>> MakeBatchPointers(
     gpuStream_t stream, void* buffer, void* dev_ptrs, int batch,
     int batch_elem_size) {
   char* ptr = static_cast<char*>(buffer);

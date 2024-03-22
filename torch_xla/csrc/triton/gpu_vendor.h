@@ -30,7 +30,6 @@ limitations under the License.
 #include "third_party/gpus/cuda/include/cusparse.h"    // IWYU pragma: export
 #include "third_party/gpus/cudnn/cudnn.h"              // IWYU pragma: export
 
-
 #define XLA_GPU_NAMESPACE cuda
 #define XLA_GPU_PREFIX "cu"
 

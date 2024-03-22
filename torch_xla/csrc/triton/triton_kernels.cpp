@@ -26,9 +26,9 @@
 #include "absl/strings/str_format.h"
 #include "absl/synchronization/mutex.h"
 #include "torch_xla/csrc/triton/gpu_kernel_helpers.h"
+#include "torch_xla/csrc/triton/gpu_vendor.h"
 #include "torch_xla/csrc/triton/triton.pb.h"
 #include "torch_xla/csrc/triton/triton_utils.h"
-#include "torch_xla/csrc/triton/gpu_vendor.h"
 #include "xla/service/custom_call_status.h"
 #include "xla/stream_executor/gpu/asm_compiler.h"
 

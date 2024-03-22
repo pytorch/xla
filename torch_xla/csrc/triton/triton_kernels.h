@@ -95,8 +95,7 @@ class AutotunedKernelCall {
 
   AutotunedKernelCall(
       std::string name, std::vector<Config> configs,
-      std::vector<std::tuple<size_t,
-      size_t, size_t>> input_output_aliases);
+      std::vector<std::tuple<size_t, size_t, size_t>> input_output_aliases);
 
   static absl::StatusOr<KernelCall> Autotune(AutotunedKernelCall kernel_call,
                                              gpuStream_t stream,
