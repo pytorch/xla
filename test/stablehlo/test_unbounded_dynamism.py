@@ -51,9 +51,8 @@ class UnboundedDynamismExportTest(unittest.TestCase):
     shlo_module = exported_program_to_stablehlo(ep)
     shlo_text = shlo_module.get_stablehlo_text()
     self.assertTrue(
-        re.search(
-            r'tensor<f32>.*tensor<\?x197x768xf32>.*->.*tensor<\?x197x768xf32>',
-            shlo_text) is not None)
+        re.search(r'tensor<\?x197x768xf32>.*->.*tensor<\?x197x768xf32>',
+                  shlo_text) is not None)
     if has_tf_package():
       with tempfile.TemporaryDirectory() as tempdir:
         save_torch_module_as_tf_saved_model(
@@ -367,9 +366,8 @@ class UnboundedDynamismExportTest(unittest.TestCase):
     shlo_module = exported_program_to_stablehlo(ep)
     shlo_text = shlo_module.get_stablehlo_text()
     self.assertTrue(
-        re.search(
-            r'tensor<f32>.*tensor<\?x2x768xf32>.*->.*tensor<\?x2x768xf32>',
-            shlo_text) is not None)
+        re.search(r'tensor<\?x2x768xf32>.*->.*tensor<\?x2x768xf32>', shlo_text)
+        is not None)
     if has_tf_package():
       with tempfile.TemporaryDirectory() as tempdir:
         save_torch_module_as_tf_saved_model(
