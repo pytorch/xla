@@ -2317,14 +2317,23 @@ class TestGeneric(test_utils.XlaTestCase):
     cuda_tensor = cpu_tensor.to("cuda")
     # Move tensor CUDA -> XLA.
     xla_tensor = cuda_tensor.to(xm.xla_device())
+    # xw32, file=torch_xla/csrc/aten_xla_type.cpp, line=520function=_to_copy: 
+    # xw32, file=torch_xla/csrc/aten_xla_type.cpp, line=1199function=empty_symint: 
+    # xw32, file=torch_xla/csrc/xla_graph_executor.cpp, line=238function=RegisterTensor: 
+    # xw32, file=./torch_xla/csrc/runtime/tensor_source.h, line=60function=AtenSource: 
+    # xw32, file=torch_xla/csrc/runtime/pjrt_computation_client.cc, line=249function=TransferToDevice:
+    
     # Move the XLA tensor back to CPU, and check that it is the same as
     # the original CPU tensor.
     self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
 
+
+  # xw32
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   def test_aten_move_cuda_to_xla(self):
     self._test_move_tensor_cuda_to_xla(torch.arange(5))
+    print(met.metrics_report())
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
@@ -2332,6 +2341,7 @@ class TestGeneric(test_utils.XlaTestCase):
     # 0-dimensional scalar-tensor
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
+    print(met.metrics_report())
 
 
 if __name__ == '__main__':

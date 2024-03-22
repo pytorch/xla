@@ -246,6 +246,7 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   metrics::TimedSection timed(TransferToDeviceMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);

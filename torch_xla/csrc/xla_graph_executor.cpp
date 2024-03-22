@@ -235,6 +235,7 @@ XLAGraphExecutor* XLAGraphExecutor::Get() {
 
 void XLAGraphExecutor::RegisterTensor(
     std::shared_ptr<torch::lazy::LazyTensor::Data> data) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   DeviceContextArena::Get()->RegisterTensor(data);
   TORCH_LAZY_COUNTER("CreateXlaTensor", 1);
 }

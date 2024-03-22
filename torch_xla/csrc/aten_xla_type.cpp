@@ -517,6 +517,7 @@ at::Tensor XLANativeFunctions::_to_copy(
     c10::optional<at::Layout> layout, c10::optional<at::Device> device,
     c10::optional<bool> pin_memory, bool non_blocking,
     c10::optional<at::MemoryFormat> memory_format) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
 
   auto options = self.options();
@@ -1195,6 +1196,7 @@ at::Tensor XLANativeFunctions::empty_symint(
     c10::optional<at::Layout> layout, c10::optional<at::Device> device,
     c10::optional<bool> pin_memory,
     c10::optional<at::MemoryFormat> /* memory_format */) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   c10::optional<at::IntArrayRef> int_sizes =
       c10::asIntArrayRefSlowOpt(sym_size);

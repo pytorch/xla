@@ -57,6 +57,7 @@ class AtenSource : public TensorSource {
     // TODO(ysiraichi): check, first, if tensor lives in a device that the
     // current PjRt client has access. If so, we don't need to go through the
     // CPU.
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     tensor_ = std::move(
         tensor.to(at::TensorOptions().device(at::kCPU).dtype(target_torch_type),
                   /*non_blocking=*/false,
