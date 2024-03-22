@@ -82,6 +82,10 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
 void custom_sharding_(const XLATensorPtr& input,
                       const std::shared_ptr<XLATensor::ShardingSpec>& spec);
 
+void gpu_custom_call_(XLATensorPtr& output,
+                      const std::vector<XLATensorPtr>& inputs,
+                      const std::string& payload);
+
 void tpu_custom_call_(XLATensorPtr& output,
                       const std::vector<XLATensorPtr>& inputs,
                       const std::string& payload);

@@ -2235,6 +2235,13 @@ void InitXlaModuleBindings(py::module m) {
           return tensor_methods::tpu_custom_call_(
               x_output, bridge::GetXlaTensors(inputs), payload);
         });
+  m.def("_xla_gpu_custom_call_",
+        [](at::Tensor& output, const std::vector<at::Tensor>& inputs,
+           const std::string& payload) {
+          auto x_output = bridge::GetXlaTensor(output);
+          return tensor_methods::gpu_custom_call_(
+              x_output, bridge::GetXlaTensors(inputs), payload);
+        });
   m.def("_set_xla_custom_op_name_prefix",
         [](const at::Tensor& input, const std::string& op_name_prefix,
            size_t max_call_stack_depth) -> bool {

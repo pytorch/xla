@@ -10,11 +10,11 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "torch_xla/csrc/gpu_kernel_helpers.h"
-#include "xla/service/custom_call_target_registry.h"
-#include "torch_xla/csrc/triton.pb.h"
-#include "torch_xla/csrc/gpu_vendor.h"
+#include "torch_xla/csrc/triton/gpu_kernel_helpers.h"
+#include "torch_xla/csrc/triton/gpu_vendor.h"
+#include "torch_xla/csrc/triton/triton.pb.h"
 #include "xla/service/custom_call_status.h"
+#include "xla/service/custom_call_target_registry.h"
 
 namespace torch_xla::XLA_GPU_NAMESPACE {
 

@@ -55,6 +55,7 @@
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/generic_slice.h"
 #include "torch_xla/csrc/ops/get_dimensions_size.h"
+#include "torch_xla/csrc/ops/gpu_custom_call.h"
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/ops/index_select.h"
@@ -524,6 +525,17 @@ void custom_sharding_(
   input->SetInPlaceIrValue(
       torch::lazy::MakeNode<CustomSharding>(input->GetIrValue()));
   input->SetShardingSpec(*sharding_spec);
+}
+
+void gpu_custom_call_(XLATensorPtr& output,
+                      const std::vector<XLATensorPtr>& inputs,
+                      const std::string& payload) {
+  std::vector<torch::lazy::Value> values;
+  for (const auto& input : inputs) {
+    values.push_back(input->GetIrValue());
+  }
+  output->SetInPlaceIrValue(torch::lazy::MakeNode<GpuCustomCall>(
+      values, output->shape().get(), payload));
 }
 
 void tpu_custom_call_(XLATensorPtr& output,

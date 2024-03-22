@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/triton_utils.h"
+#include "torch_xla/csrc/triton/triton_utils.h"
 
 #include <zlib.h>
 
@@ -7,8 +7,8 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "torch_xla/csrc/gpu_kernel_helpers.h"
-#include "torch_xla/csrc/triton.pb.h"
+#include "torch_xla/csrc/triton/gpu_kernel_helpers.h"
+#include "torch_xla/csrc/triton/triton.pb.h"
 
 namespace torch_xla::XLA_GPU_NAMESPACE {
 

@@ -1249,7 +1249,7 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
                          {input}, ShapeHelper::ShapeOfXlaOp(input));
 }
 
-xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
+xla::XlaOp BuildGpuCustomCall(const std::vector<xla::XlaOp>& inputs,
                               const xla::Shape& output_shape,
                               const std::string& payload) {
   std::vector<xla::Shape> input_shapes;
@@ -1265,6 +1265,21 @@ xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
       input_shapes, payload, false, {}, nullptr,
       xla::CustomCallSchedule::SCHEDULE_NONE,
       xla::CustomCallApiVersion::API_VERSION_STATUS_RETURNING);
+}
+
+xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
+                              const xla::Shape& output_shape,
+                              const std::string& payload) {
+  std::vector<xla::Shape> input_shapes;
+  input_shapes.reserve(inputs.size());
+  for (const auto& input : inputs) {
+    input_shapes.push_back(ShapeHelper::ShapeOfXlaOp(input));
+  }
+
+  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+  return xla::CustomCallWithLayout(inputs[0].builder(),
+                                   /*call_target_name=*/"tpu_custom_call",
+                                   inputs, output_shape, input_shapes, payload);
 }
 
 }  // namespace torch_xla

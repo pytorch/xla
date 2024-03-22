@@ -21,7 +21,7 @@ limitations under the License.
 #include "absl/base/optimization.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "torch_xla/csrc/gpu_vendor.h"
+#include "torch_xla/csrc/triton/gpu_vendor.h"
 
 #define JAX_AS_STATUS(expr) \
   torch_xla::XLA_GPU_NAMESPACE::AsStatus(expr, __FILE__, __LINE__, #expr)
