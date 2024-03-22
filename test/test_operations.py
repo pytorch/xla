@@ -1996,6 +1996,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     torch_xla._XLAC._xla_gpu_custom_call_(output, [x, y], payload)
     self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
 
+
 class MNISTComparator(nn.Module):
 
   def __init__(self):
