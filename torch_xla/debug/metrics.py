@@ -72,7 +72,7 @@ def short_metrics_report(counter_names: list = None, metric_names: list = None):
     metric_names (list): The list of metric names whose data needs to be printed.
   """
   if not counter_names:
-    counter_names = ['CachedCompile', 'MarkStep']
+    counter_names = ['CachedCompile', 'MarkStep', 'DynamoSyncInputExecuteTime']
   if not metric_names:
     metric_names = [
         'CompileTime', 'ExecuteTime', 'ExecuteReplicatedTime',
