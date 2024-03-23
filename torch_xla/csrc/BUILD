@@ -66,6 +66,7 @@ ptxla_cc_library(
         "xla_lower_util.cpp",
         "xla_op_builder.cpp",
         "xla_sharding_util.cpp",
+        "xla_manual_registration.cpp",
         ":RegisterAutogradXLA.cpp",
         ":RegisterXLA.cpp",
         ":XLANativeFunctions.cpp",
