@@ -124,6 +124,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     xla_y3 = xla_y * 3
     res_xla_dynamo_3 = fn_simple_dynamo(xla_xy, xla_y3)
     res_cpu_3 = self.fn_simple(x + y, y * 3)
+    breakpoint()
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
     # executing the compiled function should only materalize input XLATensor
     self.assertIn('XLAData: None',
@@ -132,6 +133,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
                      torch_xla._XLAC._get_xla_tensor_debug_info(xla_xy))
     self.assertNotIn('XLAData: None',
                      torch_xla._XLAC._get_xla_tensor_debug_info(xla_y3))
+    # Dynamo has to sync the input since they are intermedate IR(xla_xy and xla_y3)
+    self.assertEqual(met.counter_value('DynamoSyncInputExecuteTime'), 1)
 
   # Tests that the dynamo bridge automatically moves tensors to XLA device,
   # then back to the original device.
