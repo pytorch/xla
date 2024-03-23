@@ -16,12 +16,15 @@ def _mp_fn(index):
 
     dist.init_process_group('xla', world_size=world_size, rank=rank)
 
-    tensor_list = [torch.empty((i, i), device=device) for i in range(1, 1000, 101)]
+    tensor_list = [
+        torch.empty((i, i), device=device) for i in range(1, 1000, 101)
+    ]
     for j, t in enumerate(tensor_list):
       t.fill_(float(j))
     dist.bucketed_allreduce(tensor_list)
     for j, t in enumerate(tensor_list):
-      assert torch.all(torch.eq(t.cpu(), float(j)*world_size)) == torch.tensor(True)
+      assert torch.all(torch.eq(t.cpu(),
+                                float(j) * world_size)) == torch.tensor(True)
   else:
     print(
         'Default device {} is not a TPU or GPU device'.format(device),

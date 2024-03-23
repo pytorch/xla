@@ -1126,33 +1126,33 @@ def wait_device_ops(devices=[]):
 
 
 def bucketed_allreduce(gradients):
-    total = 0
-    tensor_bucket = []
+  total = 0
+  tensor_bucket = []
 
-    for grad in gradients:
-      grad_bytes = grad.numel() * grad.element_size()
+  for grad in gradients:
+    grad_bytes = grad.numel() * grad.element_size()
 
-      # Bucketize till the total spills over
-      total += grad_bytes
-      if total > bucket_cap and len(tensor_bucket) > 0:
-        all_reduce(
-            REDUCE_SUM,
-            tensor_bucket,
-            scale=1.0 / count,
-            groups=groups,
-            pin_layout=pin_layout)
-        total = grad_bytes
-        tensor_bucket = []
-      tensor_bucket.append(grad)
-
-    # Flush the last remaining bucket
-    if len(tensor_bucket):
+    # Bucketize till the total spills over
+    total += grad_bytes
+    if total > bucket_cap and len(tensor_bucket) > 0:
       all_reduce(
           REDUCE_SUM,
           tensor_bucket,
           scale=1.0 / count,
           groups=groups,
           pin_layout=pin_layout)
+      total = grad_bytes
+      tensor_bucket = []
+    tensor_bucket.append(grad)
+
+  # Flush the last remaining bucket
+  if len(tensor_bucket):
+    all_reduce(
+        REDUCE_SUM,
+        tensor_bucket,
+        scale=1.0 / count,
+        groups=groups,
+        pin_layout=pin_layout)
 
 
 def reduce_gradients(optimizer, groups=None, pin_layout=True):
@@ -1178,6 +1178,7 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
     # overlap with backward pass.
     gradients = reversed(_fetch_gradients(optimizer))
     bucketed_allreduce(gradients)
+
 
 def optimizer_step(optimizer,
                    barrier=False,
