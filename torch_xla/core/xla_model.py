@@ -1125,6 +1125,36 @@ def wait_device_ops(devices=[]):
   torch_xla._XLAC._xla_wait_device_ops(devices=devices)
 
 
+def bucketed_allreduce(gradients):
+  total = 0
+  tensor_bucket = []
+
+  for grad in gradients:
+    grad_bytes = grad.numel() * grad.element_size()
+
+    # Bucketize till the total spills over
+    total += grad_bytes
+    if total > bucket_cap and len(tensor_bucket) > 0:
+      all_reduce(
+          REDUCE_SUM,
+          tensor_bucket,
+          scale=1.0 / count,
+          groups=groups,
+          pin_layout=pin_layout)
+      total = grad_bytes
+      tensor_bucket = []
+    tensor_bucket.append(grad)
+
+  # Flush the last remaining bucket
+  if len(tensor_bucket):
+    all_reduce(
+        REDUCE_SUM,
+        tensor_bucket,
+        scale=1.0 / count,
+        groups=groups,
+        pin_layout=pin_layout)
+
+
 def reduce_gradients(optimizer, groups=None, pin_layout=True):
   """Reduces all the gradients handled by an optimizer.
 
@@ -1148,6 +1178,7 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
         scale=1.0 / count,
         groups=groups,
         pin_layout=pin_layout)
+
 
 def optimizer_step(optimizer,
                    barrier=False,
