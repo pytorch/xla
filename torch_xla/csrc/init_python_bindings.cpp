@@ -1745,6 +1745,12 @@ void InitXlaModuleBindings(py::module m) {
     return xla_data != nullptr ? py::cast<int64_t>(xla_data->Value())
                                : py::none();
   });
+  // TORCH_LAZY_COUNTER
+  m.def("_xla_increment_counter",
+        [](const std::string& name, uint64_t inc_val) {
+          torch::lazy::Counter* counter = new ::torch::lazy::Counter(name);
+          counter->AddValue(inc_val);
+        });
   m.def("_xla_metric_names", []() {
     auto metric_names = torch::lazy::GetMetricNames();
     auto xla_metric_names = runtime::metrics::GetMetricNames();
