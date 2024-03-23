@@ -2501,8 +2501,8 @@ class TestNMS(test_utils.XlaTestCase):
   def test_nms_input_errors(self):
     with self.assertRaisesRegex(RuntimeError, "boxes should be a 2D tensor."):
       self._nms(torch.rand(4), torch.rand(3), 0.5)
-    with self.assertRaisesRegex(RuntimeError,
-                                "boxes should be a 2D tensor of shape \[N, 4\]."):
+    with self.assertRaisesRegex(
+        RuntimeError, "boxes should be a 2D tensor of shape \[N, 4\]."):
       self._nms(torch.rand(3, 5), torch.rand(3), 0.5)
     with self.assertRaisesRegex(RuntimeError, "scores should be a 1D tensor."):
       self._nms(torch.rand(3, 4), torch.rand(3, 2), 0.5)
