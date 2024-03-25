@@ -555,7 +555,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
-  if pin_layout and (output == None or xla_device_hw(value.device) == 'NEURON'):
+  # _all_gather_using_all_reduce does not support list of tensors as input
+  if pin_layout and output == None and isinstance(value, torch.Tensor):
     # There is not an easy way to pin the all_gather layout on TPU, GPU and NEURON,
     # use all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
@@ -591,6 +592,10 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
       not isinstance(v, torch.Tensor) for v in value):
     raise TypeError("`value` needs to be a Tensor or a list of Tensors, but "
                     f"given {type(value)}.")
+  if isinstance(value, list) and pin_layout:
+    raise RuntimeError(
+        "For xm.all_gather with list of tensors input, pin_layout=True is not yet supported."
+    )
 
   def _all_gather_coalesced(tensor_list):
     token, devctx = _get_all_reduce_token()
