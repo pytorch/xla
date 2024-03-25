@@ -144,7 +144,8 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
   def test_multihost_checkpoint(self):
     torch.manual_seed(42)
 
-    # Initialize the default CPU process group from the environment.
+    # Initialize the default CPU process group.
+    import torch_xla.distributed.xla_backend
     dist.init_process_group(backend='gloo', init_method='xla://')
 
     model1 = self._get_sharded_model(mesh_shape=(1, self.n_devices))

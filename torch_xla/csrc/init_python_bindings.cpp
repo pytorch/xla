@@ -2233,6 +2233,11 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_set_ir_debug",
         [](bool ir_debug) { FLAGS_torch_lazy_ir_debug = ir_debug; });
   m.def("_get_ir_debug", []() { return FLAGS_torch_lazy_ir_debug; });
+  m.def("_set_xla_all_numbers_special_scalars",
+        [](bool all_numbers_special_scalars) {
+          FLAGS_torch_lazy_all_numbers_special_scalars =
+              all_numbers_special_scalars;
+        });
   m.def("_set_xla_handle_special_scalars", [](bool handle_special_scalars) {
     FLAGS_torch_lazy_handle_special_scalars = handle_special_scalars;
   });
