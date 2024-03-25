@@ -96,6 +96,7 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         state_dict=model_in_state_dict,
         storage_writer=storage_writer_cls(
             chkpt_path,
+            sync_files=False,
             per_thread_copy_ahead=0,
         ),
         planner=save_planner,
