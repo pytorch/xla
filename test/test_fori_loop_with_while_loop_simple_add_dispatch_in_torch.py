@@ -6,16 +6,31 @@ import torch
 import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
+from torch_xla.experimental.fori_loop import fori_loop
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
 
 
 def _fake_while_loop(cond_fn, body_fn, operands):
-  while cond_fn(operands[0], operands[1]):
-    operands = body_fn(operands[0], operands[1])
+  # operands need to be more than one here
+  while cond_fn(*operands):
+    operands = body_fn(*operands)
   return operands
 
+def _fake_fori_loop(lower, upper, body_fun, *init_val):
+  # operands need to be more than one here
+  # print("upper - lower: ", upper - lower)
+  # print("init_val: ", init_val)
+  # print("type init_val: ", type(init_val))
+  (a, b) = init_val
+  # print("a: ", a)
+  # print("b: ", b)
+  for i in range((upper - lower)[0]):
+    a = body_fun(a, b)
+    # print("a: ", a)
+    # print("i: ", i)
+  return a
 
 class WhileLoopTest(unittest.TestCase):
 
@@ -53,6 +68,36 @@ class WhileLoopTest(unittest.TestCase):
     limit_value = torch.tensor([10], dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
+    self.assertEqual(expected, res)
+
+  def test_fori_loop_tpu_addition(self):
+
+    xm.mark_step()
+    device = xm.xla_device()
+
+    # TODO(@manfei): lower, upper and init_val has to be torch.tensor.
+    init_val = torch.tensor([1], dtype=torch.int32, device=device)
+    lower = torch.tensor([0], dtype=torch.int32, device=device)
+    upper = torch.tensor([30], dtype=torch.int32, device=device)
+    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val_list = (init_val, one_value)
+    # lowers = torch.tensor(([1], [1], [1]), dtype=torch.int32, device=device) # lower, init_val, one_value
+
+    def body_fun(a, b):
+      return torch.add(a, b) # [0])
+    # _, _, res, _ = fori_loop(lower, upper, body_fun, init_val, one_value) # init_val_list) # init_val)
+    # A, B, res, D = fori_loop(lower, upper, body_fun, init_val, one_value) # init_val_list) # init_val)
+    # A, B, res, D = fori_loop(upper, body_fun, lowers) # lower, upper, body_fun, init_val, one_value)
+    res, _ = fori_loop(lower, upper, body_fun, init_val, one_value)
+    print("result: ", res) # init_val_
+    # print("A: ", A) # lower_
+    # print("B: ", B) # upper_
+    # print("D: ", D) # one_value_
+    # print("lower[0] <= upper[0]: ", lower[0] <= upper[0])
+    # print("lower: ", lower)
+    # print("upper: ", upper)
+    # fori_loop(cond_fn, body_fn, (init, limit_value))
+    expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
     self.assertEqual(expected, res)
 
 
