@@ -16,6 +16,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.distributed.spmd as xs
 
+from torch.distributed.checkpoint._fsspec_filesystem import *
 from torch.distributed.checkpoint.default_planner import (
     create_default_local_save_plan,
     create_default_global_save_plan,
@@ -75,6 +76,8 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
                         model_out,
                         save_planner=None,
                         load_planner=None,
+                        storage_writer_cls=dist_cp.FileSystemWriter,
+                        storage_reader_cls=dist_cp.FileSystemReader,
                         is_sharded_cpu_state_dict=False,
                         chkpt_path=None):
     """
@@ -91,7 +94,7 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
     model_out_state_dict = model_out.state_dict()
     dist_cp.save(
         state_dict=model_in_state_dict,
-        storage_writer=dist_cp.FileSystemWriter(
+        storage_writer=storage_writer_cls(
             chkpt_path,
             per_thread_copy_ahead=0,
         ),
@@ -103,7 +106,7 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
 
     dist_cp.load(
         state_dict=model_out_state_dict,
-        storage_reader=dist_cp.FileSystemReader(chkpt_path),
+        storage_reader=storage_reader_cls(chkpt_path),
         planner=load_planner,
     )
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
@@ -156,6 +159,8 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         model2,
         save_planner=SPMDSavePlanner(),
         load_planner=SPMDLoadPlanner(),
+        storage_writer_cls=FsspecWriter,
+        storage_reader_cls=FsspecReader,
         chkpt_path=os.environ['CHKPT_PATH'])
 
     # Destroy the CPU process group after the test
