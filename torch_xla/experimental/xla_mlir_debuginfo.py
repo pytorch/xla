@@ -13,12 +13,8 @@ xla_device = xm.xla_device()
 XLA_LIB.define("write_mlir_debuginfo(Tensor x, str data) -> Tensor")
 
 
-@torch.library.impl(XLA_LIB, "write_mlir_debuginfo",
-                    "CompositeExplicitAutograd")
+@torch.library.impl(XLA_LIB, "write_mlir_debuginfo", "XLA")
 def write_mlir_debuginfo(x, data: str):
-  if x.device != xla_device:
-    return x
-
   begin_token = "<XLA_MLIR_DEBUGINFO_BEGIN>"
   end_token = "<XLA_MLIR_DEBUGINFO_END>"
   # Add the debuginfo string as the op prefix in MLIR location, surrounded
@@ -30,6 +26,12 @@ def write_mlir_debuginfo(x, data: str):
       begin_token + data + end_token,
       0,
   )
+  return x
+
+
+@torch.library.impl(XLA_LIB, "write_mlir_debuginfo",
+                    "CompositeExplicitAutograd")
+def write_mlir_debuginfo(x, data: str):
   return x
 
 
