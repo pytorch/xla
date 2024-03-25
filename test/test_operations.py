@@ -1421,13 +1421,26 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     with tempfile.TemporaryDirectory() as tmpdir:
       path = os.path.join(tmpdir, 'data.pt')
       xla_device = xm.xla_device()
-      model = XlaMNIST().to(xla_device)
-      xser.save(model.state_dict(), path)
-      state_dict = xser.load(path)
+      xla_model = XlaMNIST().to(xla_device)
+      # save weights on the XLA device
+      xser.save(xla_model.state_dict(), path)
+      # test loading XLA weights
+      xla_state_dict = xser.load(path)
+      self.assertEqual(xla_state_dict["fc2.weight"].device.type,
+                       xla_device.type)
       cpu_model = XlaMNIST()
-      cpu_model.load_state_dict(state_dict)
-      loaded_model = cpu_model.to(xla_device)
-      self.assertEqual(model.state_dict(), loaded_model.state_dict())
+      cpu_model.load_state_dict(xla_state_dict)
+      self.assertEqual(cpu_model.fc2.weight.device.type, "cpu")
+      xla_loaded_model = cpu_model.to(xla_device)
+      self.assertEqual(cpu_model.fc2.weight.device.type, xla_device.type)
+      self.assertEqual(xla_model.state_dict(), xla_loaded_model.state_dict())
+      # test loading XLA weights on CPU
+      cpu_state_dict = xser.load(path, map_location="cpu")
+      self.assertEqual(cpu_state_dict["fc2.weight"].device.type, "cpu")
+      xla_loaded_model = XlaMNIST().to(xla_device)
+      xla_loaded_model.load_state_dict(cpu_state_dict)
+      self.assertEqual(xla_model.fc2.weight.device.type, xla_device.type)
+      self.assertEqual(xla_model.state_dict(), xla_loaded_model.state_dict())
 
   def test_deepcopy(self):
     xla_device = xm.xla_device()

@@ -76,11 +76,13 @@ def save(data, path, master_only=True, global_master=False):
     torch.save(ref_data, path)
 
 
-def load(path):
+def load(path, map_location=None):
   """Loads data previously saved with the `save()` API.
 
   Args:
     path (str): The path passed to the `save()` API.
+    map_location: The map location passed to :func:`torch.load`.
+      Saving and loading on CPU is recommended.
   Returns:
     The loaded data.
   """
@@ -91,7 +93,9 @@ def load(path):
     rewritten_tensors = []
     for t in tensors:
       rewritten_tensors.append(
-          torch.load(_get_tensor_file(tensor_folder, t.tid)))
+          torch.load(
+              _get_tensor_file(tensor_folder, t.tid),
+              map_location=map_location))
     return rewritten_tensors
 
   def select_fn(v):
