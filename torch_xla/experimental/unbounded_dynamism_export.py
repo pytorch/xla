@@ -1,12 +1,18 @@
+import operator
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
+
 import torch
 import torch_xla.experimental.xla_dynamic_reshape_ops
+from torch._inductor.fx_utils import get_fake, get_fake_args_kwargs
 from torch.export import export
 from torch.fx import Graph, GraphModule, subgraph_rewriter
+from torch.utils import _pytree as pytree
+from torch.utils._pytree import tree_map
 
 aten = torch.ops.aten
 
 
-def wrap_func_as_nn_module(f):
+def wrap_func_as_nn_module(f: Callable[..., Any]):
 
   class M(torch.nn.Module):
 
@@ -14,6 +20,18 @@ def wrap_func_as_nn_module(f):
       return f(*args)
 
   return M()
+
+
+def call_function(
+    graph: torch.fx.Graph,
+    target: Callable[..., Any],
+    args: Optional[Tuple[torch.fx.node.Argument, ...]] = None,
+    kwargs: Optional[Dict[str, torch.fx.node.Argument]] = None,
+) -> torch.fx.Node:
+  node = graph.call_function(target, args, kwargs)
+  _, args, kwargs = get_fake_args_kwargs(node)
+  node.meta["val"] = target(*args, **kwargs)
+  return node
 
 
 def native_layer_norm_impl(input, normalized_shape, weight, bias, eps):
@@ -52,7 +70,7 @@ def native_group_norm_pattern(x, weight, bias, N, C, HxW, group, eps):
                                                   group, eps)[0]
 
 
-def decompose_dynamic_native_layer_norm(gm):
+def decompose_dynamic_native_layer_norm(gm: GraphModule):
   replaced_patterns = subgraph_rewriter.replace_pattern_with_filters(
       gm,
       native_layer_norm_pattern,
@@ -65,7 +83,7 @@ def decompose_dynamic_native_layer_norm(gm):
         assert len(match_n) == 1
 
 
-def decompose_dynamic_native_group_norm(gm):
+def decompose_dynamic_native_group_norm(gm: GraphModule):
   replaced_patterns = subgraph_rewriter.replace_pattern_with_filters(
       gm,
       native_group_norm_pattern,
@@ -99,7 +117,7 @@ def decompose_dynamic_shape_select(gm: GraphModule):
           select_idx = n.args[2]
           slice_args = (select_src_node, select_dim, select_idx,
                         (select_idx + 1), 1)
-          slice_node = graph.call_function(aten.slice, slice_args)
+          slice_node = call_function(graph, aten.slice, slice_args)
           view_new_shape = []
           for dim, size in enumerate(select_src_shape):
             if dim == select_dim:
@@ -108,11 +126,11 @@ def decompose_dynamic_shape_select(gm: GraphModule):
               view_new_shape.append(size)
             else:
               get_dim_size_args = (select_src_node, dim)
-              get_dim_size_node = graph.call_function(aten.sym_size.int,
-                                                      get_dim_size_args)
+              get_dim_size_node = call_function(graph, aten.sym_size.int,
+                                                get_dim_size_args)
               view_new_shape.append(get_dim_size_node)
           view_args = (slice_node, view_new_shape)
-          view_node = graph.call_function(aten.view.default, view_args)
+          view_node = call_function(graph, aten.view.default, view_args)
           n.replace_all_uses_with(view_node)
         graph.erase_node(n)
 
@@ -143,8 +161,8 @@ def decompose_split_with_sizes(gm: GraphModule):
         decomposed_slices = []
         for size in split_sizes:
           slice_args = (src_node, split_dim, start_idx, start_idx + size)
-          slice_node = graph.call_function(torch.ops.aten.slice.Tensor,
-                                           slice_args)
+          slice_node = call_function(graph, torch.ops.aten.slice.Tensor,
+                                     slice_args)
           start_idx += size
           decomposed_slices.append(slice_node)
         consumers = n.users
@@ -181,8 +199,8 @@ def flatten_embedding_indices_tensor(gm: GraphModule):
           for dim, size in enumerate(indices_shape):
             if not isinstance(size, int):
               get_dim_size_args = (indices_node, dim)
-              get_dim_size_node = graph.call_function(aten.sym_size.int,
-                                                      get_dim_size_args)
+              get_dim_size_node = call_function(graph, aten.sym_size.int,
+                                                get_dim_size_args)
               recover_view_shape.append(get_dim_size_node)
             else:
               flatten_mul_scale *= size
@@ -191,21 +209,22 @@ def flatten_embedding_indices_tensor(gm: GraphModule):
           recover_view_shape.append(weight_shape[-1])
 
           mul_args = (get_dim_size_node, flatten_mul_scale)
-          flatten_size_node = graph.call_function(aten.mul.Scalar, mul_args)
+          flatten_size_node = call_function(graph, operator.mul, mul_args)
           view_args = (indices_node, [flatten_size_node])
-          view_node = graph.call_function(aten.view, view_args)
+          view_node = call_function(graph, aten.reshape, view_args)
           new_embedding_args = n.args[0:1] + (view_node,)
           if len(n.args) > 2:
             new_embedding_args += n.args[2:]
           n.args = new_embedding_args
         with graph.inserting_after(n):
           recover_view_args = (n, recover_view_shape)
-          recover_view_node = graph.call_function(aten.view, recover_view_args)
+          recover_view_node = call_function(graph, aten.reshape,
+                                            recover_view_args)
           n.replace_all_uses_with(recover_view_node)
           recover_view_node.update_arg(0, n)
 
 
-def _is_no_op_slice(n):
+def _is_no_op_slice(n: torch.fx.Node):
   assert n.op == "call_function" and n.target == aten.slice.Tensor
   return n.args[2] == 0 and n.args[3] == torch.iinfo(torch.int64).max
 
@@ -267,6 +286,8 @@ def replace_dynamic_view_with_xla_op(gm: GraphModule):
   '''
   g = gm.graph
   ATEN_VIEW_OPS = [
+      torch.ops.aten.reshape,
+      torch.ops.aten.reshape.default,
       torch.ops.aten.view,
       torch.ops.aten.view.default,
       torch.ops.aten._unsafe_view,
@@ -290,10 +311,7 @@ def replace_dynamic_view_with_xla_op(gm: GraphModule):
         mul_scaler = 1
         sym_size_node = dynamic_src
         mul_node = None
-        if hasattr(
-            dynamic_src.target,
-            "__name__") and (dynamic_src.target.__name__ == "mul" or
-                             dynamic_src.target.__name__ == "mul.Scalar"):
+        if dynamic_src.target == operator.mul:
           assert isinstance(dynamic_src.args[0], int) or isinstance(
               dynamic_src.args[1], int)
           mul_node = dynamic_src
@@ -326,22 +344,22 @@ def dynamic_unsqueeze_to_view(gm: GraphModule):
       ]
       if len(symbolic_dims) == 0:
         continue
-      assert len(symbolic_dims) == 1, "Only 1 dimention can be symbolic."
+      assert len(symbolic_dims) == 1, "Only 1 dimension can be symbolic."
       view_args = list(src_shape)
       with graph.inserting_before(n):
         for dim in symbolic_dims:
-          get_size_node = graph.call_function(aten.sym_size.int,
-                                              (unsqueeze_src, dim))
+          get_size_node = call_function(graph, aten.sym_size.int,
+                                        (unsqueeze_src, dim))
           view_args[dim] = get_size_node
         squeezed_dim = n.args[1]
         view_args = (unsqueeze_src,
                      view_args[:squeezed_dim] + [1] + view_args[squeezed_dim:])
-        view_node = graph.call_function(aten.view, view_args)
+        view_node = call_function(graph, aten.view, view_args)
         n.replace_all_uses_with(view_node)
         graph.erase_node(n)
 
 
-def exported_program_has_symbolic_input_shape(ep):
+def exported_program_has_symbolic_input_shape(ep: torch.export.ExportedProgram):
   for n in ep.graph_module.graph.nodes:
     if n.op == "placeholder":
       fake_t = n.meta['val']
