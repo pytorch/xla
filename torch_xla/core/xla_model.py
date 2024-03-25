@@ -618,7 +618,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     if tensor_bytes > bucket_cap:
       # Flush out previous buckets even if they don't fill up
       if total >= 0.5 * bucket_cap or (total + tensor_bytes) > 2 * bucket_cap:
-        out_tensors.extend(_all_gather_coalesced(tensor_bucket))
+        if len(tensor_bucket):
+          out_tensors.extend(_all_gather_coalesced(tensor_bucket))
         out_tensors.extend(_all_gather_coalesced([tensor]))
       else:
         tensor_bucket.append(tensor)
@@ -630,7 +631,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     # Bucketize till the total spills over
     total += tensor_bytes
     if total > bucket_cap:
-      out_tensors.extend(_all_gather_coalesced(tensor_bucket))
+      if len(tensor_bucket):
+        out_tensors.extend(_all_gather_coalesced(tensor_bucket))
       total = tensor_bytes
       tensor_bucket = []
     tensor_bucket.append(tensor)
@@ -866,8 +868,9 @@ def reduce_scatter(reduce_type,
     if tensor_bytes > bucket_cap:
       # Flush out previous buckets even if they don't fill up
       if total >= 0.5 * bucket_cap or (total + tensor_bytes) > 2 * bucket_cap:
-        out_tensors.extend(
-            _reduce_scatter_coalesced(tensor_bucket, out_tensor_bucket))
+        if len(tensor_bucket):
+          out_tensors.extend(
+              _reduce_scatter_coalesced(tensor_bucket, out_tensor_bucket))
         out_tensors.extend(
             _reduce_scatter_coalesced([tensor], [output[i]] if output else []))
       else:
@@ -883,8 +886,9 @@ def reduce_scatter(reduce_type,
     # Bucketize till the total spills over
     total += tensor_bytes
     if total > bucket_cap:
-      out_tensors.extend(
-          _reduce_scatter_coalesced(tensor_bucket, out_tensor_bucket))
+      if len(tensor_bucket):
+        out_tensors.extend(
+            _reduce_scatter_coalesced(tensor_bucket, out_tensor_bucket))
       total = tensor_bytes
       tensor_bucket = []
       out_tensor_bucket = []
