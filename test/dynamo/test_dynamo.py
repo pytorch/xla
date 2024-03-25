@@ -124,7 +124,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     xla_y3 = xla_y * 3
     res_xla_dynamo_3 = fn_simple_dynamo(xla_xy, xla_y3)
     res_cpu_3 = self.fn_simple(x + y, y * 3)
-    breakpoint()
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
     # executing the compiled function should only materalize input XLATensor
     self.assertIn('XLAData: None',
