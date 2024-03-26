@@ -13,6 +13,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/stablehlo_composite_helper.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/xla_mlir_debuginfo_helper.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "xla/mlir_hlo/mhlo/transforms/passes.h"
 #include "xla/translate/hlo_to_mhlo/hlo_to_mlir_hlo.h"
@@ -68,6 +69,7 @@ static absl::Status ConvertHloToMhlo(const xla::HloModuleProto* proto,
 static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
                                           mlir::MLIRContext* context) {
   mlir::PassManager pm(context);
+  pm.addPass(torch_xla::runtime::CreatePrepareXlaMlirDebuginfoPass());
   // legalize `mhlo.dot` to `mhlo.dot_general` to workaround the shape
   // refinement issue in `stablehlo.dot`.
   // TODO(lsy323): Remove this pass when mhlo.dot will can be leagalized to
