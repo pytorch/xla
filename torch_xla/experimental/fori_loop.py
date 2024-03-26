@@ -129,7 +129,7 @@ def _xla_while_loop(cond_fn, body_fn, original_operands):
   cond_result = cond_fn(operands) # *operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
-  cond_ctx.build([cond_result])
+  cond_ctx.build([cond_result], [operands])
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
