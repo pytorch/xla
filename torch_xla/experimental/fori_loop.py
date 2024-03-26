@@ -111,7 +111,7 @@ def _xla_while_loop(cond_fn, body_fn, original_operands):
     device = original_operand.device
     operands.append(torch.randint(10, original_operand.size(), dtype=torch.int32).to(device))
 
-  print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
+  # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
 
   # create inputs placeholder
   kwargs = {}
