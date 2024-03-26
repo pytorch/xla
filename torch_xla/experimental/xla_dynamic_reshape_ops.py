@@ -6,7 +6,7 @@ from torch.library import Library, impl
 from torch_xla.core.xla_model import XLA_LIB
 
 XLA_LIB.define(
-    "dynamic_expand(Tensor input, int[] size, Tensor src_tensor, int src_dim, int target_dim) -> Tensor"
+    "dynamic_expand(Tensor input, SymInt[] size, Tensor src_tensor, int src_dim, int target_dim) -> Tensor"
 )
 
 
@@ -61,7 +61,7 @@ def dynamic_expand_meta(
 
 
 XLA_LIB.define(
-    "dynamic_view(Tensor input, int[] size, Tensor src_tensor, int src_dim, int target_dim, float mul_scaler) -> Tensor"
+    "dynamic_view(Tensor input, SymInt[] size, Tensor src_tensor, int src_dim, int target_dim, float mul_scaler) -> Tensor"
 )
 
 
