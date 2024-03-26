@@ -916,7 +916,7 @@ class PyLoweringContext {
     xla::XlaBuilder* local_builder = lowering_ctx.builder();
 
     for (at::Tensor input_argument : input_arguments) {
-      xla::Shape shape = input_arguments.xla_shape(); //->shape();
+      xla::Shape shape = input_argument.xla_shape(); //->shape();
       xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
     }
     // xla::Shape shape = input_arguments->shape();
