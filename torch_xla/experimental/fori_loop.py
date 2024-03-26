@@ -107,7 +107,7 @@ def while_loop(cond_fn, body_fn, operands):
 def _xla_while_loop(cond_fn, body_fn, original_operands):
   # fake operands to split formal code
   operands = [] # fake_operands
-  for original_operand : original_operands:
+  for original_operand in original_operands:
     device = original_operand.device
     operands.append(torch.randn(original_operand.size).to(device))
 
