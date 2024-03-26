@@ -20,7 +20,8 @@ ARG ansible_vars
 RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
 
 WORKDIR /tmp/wheels
-COPY --from=build /dist/*.whl ./
+COPY --from=build /src/pytorch/dist/*.whl ./
+COPY --from=build /src/pytorch/xla/dist/*.whl ./
 
 RUN echo "Installing the following wheels" && ls *.whl
 RUN pip install *.whl
