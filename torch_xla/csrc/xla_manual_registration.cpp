@@ -25,7 +25,8 @@ at::Tensor nms_kernel(const at::Tensor& boxes, const at::Tensor& scores,
   XLATensorPtr xla_boxes = bridge::GetXlaTensor(boxes);
   XLATensorPtr xla_scores = bridge::GetXlaTensor(scores);
   return bridge::AtenFromXlaTensor(
-      tensor_methods::nms(xla_boxes, xla_scores, iou_threshold), /*skip_functionalization=*/true);
+      tensor_methods::nms(xla_boxes, xla_scores, iou_threshold),
+      /*skip_functionalization=*/true);
 }
 
 }  // namespace
