@@ -913,7 +913,7 @@ class PyLoweringContext {
     // xla::Shape shape =
     //     std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
     //         ->shape();
-    builder = lowering_ctxt.builder()
+    builder = lowering_ctx.builder()
 
     for (std::vector<at::Tensor> input_argument : input_arguments) {
       xla::Shape shape = input_arguments->shape();
