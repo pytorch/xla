@@ -109,7 +109,7 @@ def _xla_while_loop(cond_fn, body_fn, original_operands):
   operands = [] # fake_operands
   for original_operand in original_operands:
     device = original_operand.device
-    operands.append(torch.randn(original_operand.size).to(device))
+    operands.append(torch.randint(10, init.size(), dtype=torch.int32).to(device))
 
   print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
 
@@ -157,7 +157,7 @@ def _xla_while_loop(cond_fn, body_fn, original_operands):
 
   # gain final result with generated while xlacomputation
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
-                                                 tuple(operands), computation)
+                                                 tuple(original_operands), computation)
 
   # print("operands: ", operands)
   # print("upper: ", operands[0])
