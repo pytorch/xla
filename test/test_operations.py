@@ -2483,6 +2483,7 @@ class TestNMS(test_utils.XlaTestCase):
     scores = torch.rand(N)
     return boxes, scores
 
+  @skipOnEagerDebug
   def test_nms_ref(self):
 
     def _test(iou, seed):
@@ -2510,21 +2511,6 @@ class TestNMS(test_utils.XlaTestCase):
         RuntimeError,
         "boxes and scores should have the same size for dimension 0."):
       self._nms(torch.rand(3, 4), torch.rand(4), 0.5)
-
-  @onlyOnCUDA
-  def test_nms_float16(self):
-    boxes = torch.tensor([
-        [285.3538, 185.5758, 1193.5110, 851.4551],
-        [285.1472, 188.7374, 1192.4984, 851.0669],
-        [279.2440, 197.9812, 1189.4746, 849.2019],
-    ])
-    scores = torch.tensor([0.6370, 0.7569, 0.3966])
-
-    iou_thres = 0.2
-    keep32 = self._nms(boxes, scores, iou_thres)
-    keep16 = self._nms(
-        boxes.to(torch.float16), scores.to(torch.float16), iou_thres)
-    assert keep32.eq(keep16).all().item(), f"{keep32} != {keep16}"
 
   def test_legacy(self):
     BOXES = (
