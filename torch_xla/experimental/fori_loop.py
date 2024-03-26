@@ -37,18 +37,18 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
     #   return (torch.add(init, one_value), limit_value.clone())
 
   # cond_fn
-  def _fori_cond_fun(loop_carry):
-    i, upper, _ = loop_carry
-    return torch.lt(i, upper)
+  # def _fori_cond_fun(loop_carry):
+  #   i, upper, _ = loop_carry
+  #   return torch.lt(i, upper)
 
-  def _fori_body_fun(body_fun):
-    # body_fun = weakref.ref(body_fun)
-    def while_body_fun(loop_carry):
-      i, upper, x = loop_carry
-      one_value = torch.ones(1, dtype=torch.int32, device=device)
-      # return torch.add(i, one_value), upper, body_fun(i, x) # body_fun()(i, x)
-      return torch.add(i, one_value), upper, body_fun(x) # body_fun()(i, x)
-    return while_body_fun
+  # def _fori_body_fun(body_fun):
+  #   # body_fun = weakref.ref(body_fun)
+  #   def while_body_fun(loop_carry):
+  #     i, upper, x = loop_carry
+  #     one_value = torch.ones(1, dtype=torch.int32, device=device)
+  #     # return torch.add(i, one_value), upper, body_fun(i, x) # body_fun()(i, x)
+  #     return torch.add(i, one_value), upper, body_fun(x) # body_fun()(i, x)
+  #   return while_body_fun
 
   # # def cond_fn(upper, lowers): # lower, *init_vals):
   # def cond_fn(init, limit_value): # lower, *init_vals):
@@ -71,9 +71,11 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   #   # return lower[0] <= upper[0]
   #   # return lowers[0] <= upper[0]
   #   return limit_value[0] >= init[0]
+  def cond_fn(iter, upper, one_value): # lower, *init_vals):
+    return iter <= upper
 
   # def body_fn(upper, lowers): # , *init_vals):
-  # def body_fn(init, limit_value):
+  def body_fn(iter, upper, one_value):
   #   # one_value_original = torch.tensor(1, dtype=torch.int32, device=device)
   #   # (a, b) = init_vals
   #   # return (upper, torch.add(lower, 1), body_fun(a, b), b.clone())
@@ -82,17 +84,18 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   #   # (body_fun(*init_vals)).clone(), init_vals[1].clone())
   #   # body_fun(one_value_original, init_val)) # body_fun(lower, init_val))
   #   one_value = torch.ones(1, dtype=torch.int32, device=device)
-  #   return (body_fun(init, one_value), limit_value.clone())
+    return (body_fun(iter, one_value), upper.clone(), one_value.clone())
 
   # res = while_loop(cond_fn, body_fn, (upper, lower, *init_vals))
   # lowers = (lower, *init_vals)
   # res = _xla_while_loop(cond_fn, body_fn, (upper, lowers)) # , *init_vals))
-  # res = _xla_while_loop(cond_fn, body_fn, (init, limit_value))
+  # lower, upper, body_fun, init_val, one_value
+  res = _xla_while_loop(cond_fn, body_fn, (init, limit_value))
   # inits): # init_val, one_value):
   # _, _, result = _xla_while_loop(_fori_cond_fun, _fori_body_fun(body_fun),
   #                           (lower, upper, inits))
-  _, _, result = _xla_while_loop(_fori_cond_fun, _fori_body_fun(body_fun),
-                            (lower, upper, init_val))
+  # _, _, result = _xla_while_loop(_fori_cond_fun, _fori_body_fun(body_fun),
+  #                           (lower, upper, init_val))
   # print("upper: ", upper)
   # print("lower: ", lower)
   return res
