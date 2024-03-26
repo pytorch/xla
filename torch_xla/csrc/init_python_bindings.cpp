@@ -882,7 +882,8 @@ class PyLoweringContext {
       : lowering_ctx("PyLoweringContext", device) {}
 
   // Builds a HLO graph given a set of output tensors.
-  void Build(std::vector<at::Tensor> tensors) {
+  // tensors==result_tensors, input_arguments==input_arguments
+  void Build(std::vector<at::Tensor> tensors, std::vector<at::Tensor> input_arguments) {
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
@@ -900,6 +901,30 @@ class PyLoweringContext {
           torch::lazy::Output(ir_value.node.get(), ir_value.index));
       lowering_ctx.AddResult(root);
     }
+
+    // xla::XlaOp casted_input = CastToScalarType(input, dtype);
+    // const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(casted_input);
+    // xla::XlaOp init = XlaHelpers::ScalarValue<float>(
+    //   0, input_shape.element_type(), casted_input.builder());
+    // xla::XlaComputation reducer =
+    //   XlaHelpers::CreateAddComputation(input_shape.element_type());
+    // xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
+
+    // xla::Shape shape =
+    //     std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
+    //         ->shape();
+    builder = lowering_ctxt.builder()
+
+    for (std::vector<at::Tensor> input_argument : input_arguments) {
+      xla::Shape shape = input_arguments->shape();
+      xla::XlaOp x = xla::Parameter(&builder, 0, shape, "UnusedArgumentsPlaceholder");
+    }
+    // xla::Shape shape = input_arguments->shape();
+
+    // xla::XlaOp x =
+    //   xla::Parameter(&builder, 0, xla::ShapeUtil::MakeShape(type, {}), "x");
+    // builder = lowering_ctxt.builder()
+    // xla::XlaOp x = xla::Parameter(&builder, 0, shape, "p0");
     computation = ConsumeValue(lowering_ctx.BuildXla());
 
     // wrap inputs of cond/body_computation
