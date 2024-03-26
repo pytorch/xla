@@ -913,7 +913,7 @@ class PyLoweringContext {
     // xla::Shape shape =
     //     std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
     //         ->shape();
-    xla::XlaBuilder local_builder = &(lowering_ctx.builder());
+    xla::XlaBuilder* local_builder = lowering_ctx->builder();
     // std::stringstream ss;
     // ss << "input_argument: " << input_argument->ToString() << "\n";
 
