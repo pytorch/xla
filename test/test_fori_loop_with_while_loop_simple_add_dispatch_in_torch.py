@@ -76,9 +76,10 @@ class WhileLoopTest(unittest.TestCase):
     device = xm.xla_device()
 
     # TODO(@manfei): lower, upper and init_val has to be torch.tensor.
-    init_val = torch.tensor([1], dtype=torch.int32, device=device)
+    # init_val = torch.tensor([1], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
     upper = torch.tensor([30], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     init_val_list = (init_val, one_value)
     # lowers = torch.tensor(([1], [1], [1]), dtype=torch.int32, device=device) # lower, init_val, one_value
