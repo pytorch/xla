@@ -24,7 +24,7 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   # def body_fn(upper, lowers): # , *init_vals):
   def body_fn(loop_carry): # iter, upper, one_value):
     iter, upper, one_value, x = loop_carry
-    return (torch.add(iter, one_value), upper.clone(), one_value.clone(), body_fun(x, one_value))
+    return (torch.add(iter, one_value).clone(), upper.clone(), one_value.clone(), body_fun(x, one_value).clone())
 
   res = _xla_while_loop(cond_fn, body_fn, (lower, upper, one_value, init_val))
   return res
