@@ -38,11 +38,12 @@ def pjrt_rendezvous_handler(url: str,
   with _store_lock:
     global _store
     if not _store:
-      # Create DummyStore when user disables TORCH_DIST_INIT_BARRIER
-      # to skip store based barriers. It's safe to do this because store
-      # created by _pjrt_rendezvous_handler is only used as a barrier in
-      # process group initialization.
-      if xu.getenv_as('TORCH_DIST_INIT_BARRIER', int, 1) == 0:
+      # Create DummyStore when user skips store based barrier by setting TORCH_DIST_INIT_BARRIER=0
+      # and enables XLA_USE_DUMMY_STORE=1. It's safe to do so because store created by _pjrt_rendezvous_handler
+      # is only used as a barrier in process groups. If store is needed, user can set XLA_USE_DUMMY_STORE=0 to
+      # use TCPStore.
+      if xu.getenv_as('TORCH_DIST_INIT_BARRIER', int, 1) == 0 and xu.getenv_as(
+          'XLA_USE_DUMMY_STORE', int, 0) == 1:
         _store = DummyStore()
       elif xu.getenv_as('TORCHELASTIC_USE_AGENT_STORE', str) == 'True':
         attempt = xu.getenv_as('TORCHELASTIC_RESTART_COUNT', int, defval=0)
