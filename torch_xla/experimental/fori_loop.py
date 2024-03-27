@@ -16,7 +16,107 @@ from torch._higher_order_ops.while_loop import while_loop_op
 def fori_loop(lower, upper, body_fun, init_val, one_value):
 
   device = xm.xla_device()
-  # limit_value = upper
+
+  def cond_fn(loop_carry) # iter, upper, one_value): # lower, *init_vals):
+    iter, upper, one_value = loop_carry
+    return iter <= upper
+
+  # def body_fn(upper, lowers): # , *init_vals):
+  def body_fn(loop_carry): # iter, upper, one_value):
+    iter, upper, one_value = loop_carry
+    return (body_fun(iter, one_value), upper.clone(), one_value.clone())
+
+  res = _xla_while_loop(cond_fn, body_fn, (lower, upper, init_val))
+  return res
+
+@while_loop_op.py_impl(DispatchKey.XLA)
+def while_loop(cond_fn, body_fn, operands):
+  # cond_fn&body_fn: callable
+  # operands: (Tuple of possibly nested dict/list/tuple of tensors)
+  return _xla_while_loop(cond_fn, body_fn, operands)
+
+
+# fori_loop: original_operands==(lower, upper, init_val)
+# def _xla_while_loop(cond_fn, body_fn, original_operands):
+def _xla_while_loop(cond_fn, body_fn, operands):
+  # print("!!! arguments: original_operands: ", original_operands)
+  # fake operands to split formal code
+  # operands = [] # fake_operands
+  # for original_operand in original_operands:
+  #   device = original_operand.device
+  #   operands.append(torch.randint(10, original_operand.size(), dtype=torch.int32).to(device))
+  # operands = tuple(operands)
+  # print("!!! operands: ", operands) # (tensor([0], device='xla:0', dtype=torch.int32), tensor([30], device='xla:0', dtype=torch.int32), tensor([1], device='xla:0', dtype=torch.int32))
+
+  # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
+
+  # create inputs placeholder
+  # operands_tuple = tuple(operands)
+  kwargs = {}
+  shapes = xb.tensor_shape(operands) # _tuple)
+  builder = xb.create_builder('test_while')
+  params = []
+  for shape in shapes:
+    p = xb.mkparam(builder, len(params), shape)
+    params.append(p)
+
+  lower, upper, init_val = operands
+  # print("arrive here!!!")
+  # generate cond_fn xlacomputation
+  cond_result = cond_fn(operands) # lower, upper, init_val) # operands) # *operands)
+  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  cond_ctx.set_name_string("condctx")
+  # print("arrive here!!!")
+  # print("cond_result: ", cond_result)
+  # print("init_val: ", init_val)
+  cond_ctx.build([cond_result], [init_val]) # , init_val) # [operands[2]])
+  print("arrive here!!!")
+  cond_hlo = cond_ctx.hlo()
+  cond_computation = xb.computation_from_module_proto("condcomputation",
+                                                      cond_hlo)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  print("cond computation: !!!!!!!!!")
+  print(cond_hlo_print)
+
+  # generate body_fn xlacomputation
+  body_result = body_fn(operands) # lower, upper, init_val) # operands) # *operands)
+  body_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  body_ctx.set_name_string("bodyctx")
+  # body_ctx.build(list(body_result))
+  body_ctx.build([body_result], [init_val])
+  body_hlo = body_ctx.hlo()
+  body_computation = xb.computation_from_module_proto("bodycomputation",
+                                                      body_hlo)
+  body_hlo_print = xb.get_computation_hlo(body_computation)
+  print("body computation: !!!!!!!!!")
+  print(body_hlo_print)
+
+  # generate while xlacomputation
+  input_tuple = xb.Op.tuple(tuple(params))
+  w = xb.mkop(
+      'While', (input_tuple.op,),
+      condition_computation=cond_computation,
+      body_computation=body_computation)
+  name = 'fori_loop_ed_torch_func'
+  computation = w.build(name)
+  hlo_print = xb.get_computation_hlo(computation)
+  print("while computation: !!!!!!!!!")
+  print(hlo_print)
+
+  # gain final result with generated while xlacomputation
+  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
+                                                 tuple(original_operands), computation)
+
+  # print("operands: ", operands)
+  # print("upper: ", operands[0])
+  # print("lower: ", operands[1])
+  # print("init: ", operands[2])
+
+  return result
+
+
+##################### old tried code
+ # limit_value = upper
   # init = lower
   # iterator = lower
 
@@ -71,11 +171,8 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   #   # return lower[0] <= upper[0]
   #   # return lowers[0] <= upper[0]
   #   return limit_value[0] >= init[0]
-  def cond_fn(iter, upper, one_value): # lower, *init_vals):
-    return iter <= upper
 
-  # def body_fn(upper, lowers): # , *init_vals):
-  def body_fn(iter, upper, one_value):
+
   #   # one_value_original = torch.tensor(1, dtype=torch.int32, device=device)
   #   # (a, b) = init_vals
   #   # return (upper, torch.add(lower, 1), body_fun(a, b), b.clone())
@@ -84,7 +181,7 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   #   # (body_fun(*init_vals)).clone(), init_vals[1].clone())
   #   # body_fun(one_value_original, init_val)) # body_fun(lower, init_val))
   #   one_value = torch.ones(1, dtype=torch.int32, device=device)
-    return (body_fun(iter, one_value), upper.clone(), one_value.clone())
+
 
   # res = while_loop(cond_fn, body_fn, (upper, lower, *init_vals))
   # lowers = (lower, *init_vals)
@@ -92,7 +189,8 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   # lower, upper, body_fun, init_val, one_value
   # res = _xla_while_loop(cond_fn, body_fn, (init, limit_value))
   # res = _xla_while_loop(cond_fn, body_fn, (lower, upper, init_val))
-  res = _xla_while_loop(cond_fn, body_fn, (lower, upper, init_val))
+
+
   # inits): # init_val, one_value):
   # _, _, result = _xla_while_loop(_fori_cond_fun, _fori_body_fun(body_fun),
   #                           (lower, upper, inits))
@@ -100,89 +198,3 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   #                           (lower, upper, init_val))
   # print("upper: ", upper)
   # print("lower: ", lower)
-  return res
-
-@while_loop_op.py_impl(DispatchKey.XLA)
-def while_loop(cond_fn, body_fn, operands):
-  # cond_fn&body_fn: callable
-  # operands: (Tuple of possibly nested dict/list/tuple of tensors)
-  return _xla_while_loop(cond_fn, body_fn, operands)
-
-
-# fori_loop: original_operands==(lower, upper, init_val)
-# def _xla_while_loop(cond_fn, body_fn, original_operands):
-def _xla_while_loop(cond_fn, body_fn, operands):
-  # print("!!! arguments: original_operands: ", original_operands)
-  # fake operands to split formal code
-  # operands = [] # fake_operands
-  # for original_operand in original_operands:
-  #   device = original_operand.device
-  #   operands.append(torch.randint(10, original_operand.size(), dtype=torch.int32).to(device))
-  # operands = tuple(operands)
-  # print("!!! operands: ", operands)
-
-  # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
-
-  # create inputs placeholder
-  # operands_tuple = tuple(operands)
-  kwargs = {}
-  shapes = xb.tensor_shape(operands) # _tuple)
-  builder = xb.create_builder('test_while')
-  params = []
-  for shape in shapes:
-    p = xb.mkparam(builder, len(params), shape)
-    params.append(p)
-
-  lower, upper, init_val = operands
-  # print("arrive here!!!")
-  # generate cond_fn xlacomputation
-  cond_result = cond_fn(lower, upper, init_val) # operands) # *operands)
-  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
-  cond_ctx.set_name_string("condctx")
-  # print("arrive here!!!")
-  # print("cond_result: ", cond_result)
-  # print("init_val: ", init_val)
-  cond_ctx.build([cond_result], [init_val]) # , init_val) # [operands[2]])
-  print("arrive here!!!")
-  cond_hlo = cond_ctx.hlo()
-  cond_computation = xb.computation_from_module_proto("condcomputation",
-                                                      cond_hlo)
-  cond_hlo_print = xb.get_computation_hlo(cond_computation)
-  print("cond computation: !!!!!!!!!")
-  print(cond_hlo_print)
-
-  # generate body_fn xlacomputation
-  body_result = body_fn(lower, upper, init_val) # operands) # *operands)
-  body_ctx = torch_xla._XLAC.lowering.LoweringContext()
-  body_ctx.set_name_string("bodyctx")
-  # body_ctx.build(list(body_result))
-  body_ctx.build([body_result], [init_val])
-  body_hlo = body_ctx.hlo()
-  body_computation = xb.computation_from_module_proto("bodycomputation",
-                                                      body_hlo)
-  body_hlo_print = xb.get_computation_hlo(body_computation)
-  print("body computation: !!!!!!!!!")
-  print(body_hlo_print)
-
-  # generate while xlacomputation
-  input_tuple = xb.Op.tuple(tuple(params))
-  w = xb.mkop(
-      'While', (input_tuple.op,),
-      condition_computation=cond_computation,
-      body_computation=body_computation)
-  name = 'fori_loop_ed_torch_func'
-  computation = w.build(name)
-  hlo_print = xb.get_computation_hlo(computation)
-  print("while computation: !!!!!!!!!")
-  print(hlo_print)
-
-  # gain final result with generated while xlacomputation
-  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
-                                                 tuple(original_operands), computation)
-
-  # print("operands: ", operands)
-  # print("upper: ", operands[0])
-  # print("lower: ", operands[1])
-  # print("init: ", operands[2])
-
-  return result
