@@ -190,35 +190,64 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     return metadata;
   }
 
+  mlir::FailureOr<mlir::Attribute> BuildAttrFromJson(mlir::OpBuilder& builder,
+                                                     const json& json_value) {
+    switch (json_value.type()) {
+      case json::value_t::number_integer:
+      case json::value_t::number_unsigned:
+        return builder.getI64IntegerAttr(json_value.template get<int64_t>());
+      case json::value_t::number_float:
+        return builder.getF32FloatAttr(json_value.template get<float>());
+      case json::value_t::boolean:
+        return builder.getBoolAttr(json_value.template get<bool>());
+      case json::value_t::string:
+        return builder.getStringAttr(json_value.template get<std::string>());
+      case json::value_t::array: {
+        // Check if all the elements in the json array have the same type.
+        std::optional<json::value_t> common_el_type;
+        for (auto& el : json_value) {
+          auto el_type = el.type();
+          if (el_type == json::value_t::number_unsigned) {
+            el_type = json::value_t::number_integer;
+          }
+          if (common_el_type.has_value() && common_el_type.value() != el_type) {
+            return mlir::failure();
+          }
+          common_el_type = el_type;
+        }
+        if (!common_el_type.has_value()) {
+          return builder.getArrayAttr({});
+        }
+        switch (common_el_type.value()) {
+          case json::value_t::number_integer:
+            return builder.getDenseI64ArrayAttr(
+                json_value.template get<llvm::SmallVector<int64_t>>());
+          case json::value_t::number_float:
+            return builder.getDenseF32ArrayAttr(
+                json_value.template get<llvm::SmallVector<float>>());
+          case json::value_t::boolean:
+            return builder.getDenseBoolArrayAttr(
+                json_value.template get<llvm::SmallVector<bool>>());
+          default:
+            return mlir::failure();
+        }
+      }
+      default:
+        return mlir::failure();
+    }
+  }
+
   mlir::FailureOr<mlir::DictionaryAttr> BuildDictionaryAttrFromJsonMap(
       mlir::OpBuilder& builder,
       const std::unordered_map<std::string, json>& json_map) {
     llvm::SmallVector<mlir::NamedAttribute> named_attrs;
     for (auto& [key, j] : json_map) {
-      switch (j.type()) {
-        case json::value_t::number_integer:
-        case json::value_t::number_unsigned:
-          named_attrs.push_back(
-              {builder.getStringAttr(key),
-               builder.getI64IntegerAttr(j.template get<int64_t>())});
-          break;
-        case json::value_t::number_float:
-          named_attrs.push_back(
-              {builder.getStringAttr(key),
-               builder.getF32FloatAttr(j.template get<float>())});
-          break;
-        case json::value_t::boolean:
-          named_attrs.push_back({builder.getStringAttr(key),
-                                 builder.getBoolAttr(j.template get<bool>())});
-          break;
-        case json::value_t::string:
-          named_attrs.push_back(
-              {builder.getStringAttr(key),
-               builder.getStringAttr(j.template get<std::string>())});
-          break;
-        default:
-          return mlir::failure();
+      mlir::FailureOr<mlir::Attribute> attribute_or =
+          BuildAttrFromJson(builder, j);
+      if (mlir::failed(attribute_or)) {
+        return mlir::failure();
       }
+      named_attrs.push_back({builder.getStringAttr(key), *attribute_or});
     }
     return builder.getDictionaryAttr(named_attrs);
   }
