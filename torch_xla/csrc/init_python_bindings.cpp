@@ -927,7 +927,7 @@ class PyLoweringContext {
     //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
       xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {});
     //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
-    //   xla::XlaOp x = xla::Parameter(local_builder, 0, shape, "UnusedArgumentsPlaceholder");
+      xla::XlaOp x = xla::Parameter(local_builder, 0, shape, "UnusedArgumentsPlaceholder");
     }
 
 
