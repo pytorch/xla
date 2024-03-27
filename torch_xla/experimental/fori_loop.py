@@ -25,7 +25,7 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
 
   def cond_fn(lower, upper, one_value, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
     # lower, upper, one_value, init_val = loop_carry
-    return lower[0] <= upper[0] # while stop when cond fail
+    return lower[0] >= upper[0] # while stop when cond fail
 
   # def body_fn(upper, lowers): # , *init_vals):
   def body_fn(lower, upper, one_value, init_val): # loop_carry): # iter, upper, one_value):
