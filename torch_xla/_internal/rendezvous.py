@@ -44,7 +44,7 @@ def pjrt_rendezvous_handler(url: str,
       # process group initialization. In NxD, the store is also used to exchange python
       # objects. So, to use DummyStore, set TORCH_DIST_INIT_BARRIER=0 and NEURON_USE_DUMMY_STORE=1
       if xu.getenv_as('TORCH_DIST_INIT_BARRIER', int, 1) == 0 and xu.getenv_as(
-          'NEURON_USE_DUMMY_STORE', int, 1) == 1:
+          'TORCH_USE_DUMMY_STORE', int, 1) == 1:
         _store = DummyStore()
       elif xu.getenv_as('TORCHELASTIC_USE_AGENT_STORE', str) == 'True':
         attempt = xu.getenv_as('TORCHELASTIC_RESTART_COUNT', int, defval=0)
