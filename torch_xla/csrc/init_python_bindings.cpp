@@ -926,7 +926,7 @@ class PyLoweringContext {
       //   // ss << "input_argument: " << input_argument->ToString() << "\n";
       //   // xla::Shape shape = input_argument.xla_shape(); //->shape();
       //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
-        xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {});
+        xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
       //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
         xla::XlaOp x = xla::Parameter(local_builder, parameters_number_i, shape, "UnusedArgumentsPlaceholder");
         parameters_number_i = parameters_number_i + 1;
