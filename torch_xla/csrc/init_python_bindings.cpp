@@ -917,7 +917,7 @@ class PyLoweringContext {
     //         ->shape();
 
 
-    // xla::XlaBuilder* local_builder = lowering_ctx.builder();
+    xla::XlaBuilder* local_builder = lowering_ctx.builder();
     // // std::stringstream ss;
     // ss << "arrived here too cpp!!!" << "\n";
 
