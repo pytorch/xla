@@ -15,11 +15,11 @@ from torch._higher_order_ops.while_loop import while_loop_op
 # def fori_loop(upper, body_fun, lowers):#  upper, body_fun, *init_vals): # *init_val):
 def fori_loop(lower, upper, body_fun, init_val, one_value):
 
-  print("lower: ", lower)
-  print("upper: ", upper)
-  print("body_fun: ", body_fun)
-  print("init_val: ", init_val)
-  print("one_value: ", one_value)
+  # print("lower: ", lower) # tensor([1], device='xla:0', dtype=torch.int32)
+  # print("upper: ", upper) # tensor([20], device='xla:0', dtype=torch.int32)
+  # print("body_fun: ", body_fun) # <function WhileLoopTest.test_fori_loop_tpu_addition.<locals>.body_fun at 0x7f69c40ce320>
+  # print("init_val: ", init_val) # tensor([1], device='xla:0', dtype=torch.int32)
+  # print("one_value: ", one_value) # tensor([1], device='xla:0', dtype=torch.int32)
 
   device = xm.xla_device()
 
@@ -34,6 +34,12 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
     new_lower = torch.add(lower, one_value)
     new_init_val = body_fun(init_val, one_value)
     return (new_lower, upper, one_value, new_init_val)
+
+  loop_carruy_print = (lower, upper, one_value, init_val)
+  print("loop_carruy_print[0]: ", loop_carruy_print[0])
+  print("loop_carruy_print[1]: ", loop_carruy_print[1])
+  print("loop_carruy_print[2]: ", loop_carruy_print[2])
+  print("loop_carruy_print[3]: ", loop_carruy_print[3])
 
   res = _xla_while_loop(cond_fn, body_fn, (lower, upper, one_value, init_val))
   return res
