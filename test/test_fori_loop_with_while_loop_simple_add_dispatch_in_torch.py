@@ -78,7 +78,7 @@ class WhileLoopTest(unittest.TestCase):
     # TODO(@manfei): lower, upper and init_val has to be torch.tensor.
     # init_val = torch.tensor([1], dtype=torch.int32, device=device)
     # one_value = torch.tensor([1], dtype=torch.int32, device=device)
-    lower = torch.tensor([5], dtype=torch.int32, device=device)
+    lower = torch.tensor([0], dtype=torch.int32, device=device)
     upper = torch.tensor([20], dtype=torch.int32, device=device)
     init_val = torch.tensor([1], dtype=torch.int32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
