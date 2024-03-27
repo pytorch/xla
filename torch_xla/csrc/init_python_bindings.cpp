@@ -914,8 +914,8 @@ class PyLoweringContext {
     //     std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
     //         ->shape();
     xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    // std::stringstream ss;
-    // ss << "input_argument: " << input_argument->ToString() << "\n";
+    std::stringstream ss;
+    ss << "arrived here too cpp!!! "\n";
 
     for (at::Tensor input_argument : input_arguments) {
       // ss << "input_argument: " << input_argument->ToString() << "\n";
