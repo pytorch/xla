@@ -24,7 +24,10 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   # def body_fn(upper, lowers): # , *init_vals):
   def body_fn(loop_carry): # iter, upper, one_value):
     iter, upper, one_value, x = loop_carry
-    return (torch.add(iter, one_value).clone(), upper.clone(), one_value.clone(), body_fun(x, one_value).clone())
+    # return (torch.add(iter, one_value).clone(), upper.clone(), one_value.clone(), body_fun(x, one_value).clone())
+    new_iter = torch.add(iter, one_value)
+    new_x = body_fun(x, one_value)
+    return (new_iter, upper, one_value, new_x)
 
   res = _xla_while_loop(cond_fn, body_fn, (lower, upper, one_value, init_val))
   return res
@@ -84,7 +87,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
   # body_ctx.build(list(body_result))
-  body_ctx.build(list(body_result), [one_value, init_val]) # , [init_val])
+  body_ctx.build(list(body_result), []) # [one_value, init_val]) # , [init_val])
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
