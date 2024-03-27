@@ -94,6 +94,19 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   #     tensor([1], device='xla:0', dtype=torch.int32),
   #     tensor([1], device='xla:0', dtype=torch.int32))
 
+  # generate body_fn xlacomputation
+  body_result = body_fn(*operands) # lower, upper, init_val) # operands) # *operands)
+  body_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  body_ctx.set_name_string("bodyctx")
+  # body_ctx.build(list(body_result))
+  body_ctx.build(list(body_result), []) # [one_value, init_val]) # , [init_val])
+  body_hlo = body_ctx.hlo()
+  body_computation = xb.computation_from_module_proto("bodycomputation",
+                                                      body_hlo)
+  # body_hlo_print = xb.get_computation_hlo(body_computation)
+  # print("body computation: !!!!!!!!!")
+  # print(body_hlo_print)
+
   cond_result = cond_fn(*operands) # lower, upper, init_val) # operands) # *operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
@@ -108,19 +121,6 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # cond_hlo_print = xb.get_computation_hlo(cond_computation)
   # print("cond computation: !!!!!!!!!")
   # print(cond_hlo_print)
-
-  # generate body_fn xlacomputation
-  body_result = body_fn(*operands) # lower, upper, init_val) # operands) # *operands)
-  body_ctx = torch_xla._XLAC.lowering.LoweringContext()
-  body_ctx.set_name_string("bodyctx")
-  # body_ctx.build(list(body_result))
-  body_ctx.build(list(body_result), []) # [one_value, init_val]) # , [init_val])
-  body_hlo = body_ctx.hlo()
-  body_computation = xb.computation_from_module_proto("bodycomputation",
-                                                      body_hlo)
-  # body_hlo_print = xb.get_computation_hlo(body_computation)
-  # print("body computation: !!!!!!!!!")
-  # print(body_hlo_print)
 
   # generate while xlacomputation
   input_tuple = xb.Op.tuple(tuple(params))
