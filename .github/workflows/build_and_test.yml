@@ -36,7 +36,6 @@ jobs:
       docker-image: ${{ needs.build.outputs.docker-image }}
       timeout-minutes: 120
       collect-coverage: false
-      disable-xrt: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
@@ -49,7 +48,6 @@ jobs:
       runner: linux.8xlarge.nvidia.gpu
       timeout-minutes: 300
       collect-coverage: false  # TODO(yeounoh) separate from CPU coverage metrics
-      disable-xrt: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
