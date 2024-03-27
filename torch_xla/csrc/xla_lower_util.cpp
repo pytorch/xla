@@ -1258,11 +1258,11 @@ xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
   std::vector<xla::Shape> input_shapes;
   input_shapes.reserve(inputs.size());
   for (const auto& input : inputs) {
-    auto shape = ShapeHelper::ShapeOfXlaOp(input);
+    xla::Shape shape = ShapeHelper::ShapeOfXlaOp(input);
     input_shapes.push_back(MakeTorchTensorLayout(
         shape.dimensions(), shape.dynamic_dimensions(), shape.element_type()));
   }
-  auto output_shape_impl = MakeTorchTensorLayout(
+  xla::Shape output_shape_impl = MakeTorchTensorLayout(
       output_shape.dimensions(), output_shape.dynamic_dimensions(),
       output_shape.element_type());
 
