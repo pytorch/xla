@@ -93,9 +93,9 @@ class WhileLoopTest(unittest.TestCase):
     # iter_, upper_, res, one_value_ = fori_loop(lower, upper, body_fun, init_val, one_value)
     # lower_, upper_, one_value_, res = fori_loop(lower, upper, body_fun, one_value, init_val)
     upper_, lower_, one_value_, res = fori_loop(upper, lower, body_fun, one_value, init_val)
-    print("upper_: ", upper_)
-    print("lower_: ", lower_)
-    print("one_value_: ", one_value_)
+    # print("upper_: ", upper_)
+    # print("lower_: ", lower_)
+    # print("one_value_: ", one_value_)
     print("res: ", res)
     # print("iter_: ", iter_)
     # print("upper_: ", upper_)
@@ -109,6 +109,7 @@ class WhileLoopTest(unittest.TestCase):
     # print("upper: ", upper)
     # fori_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
+    print("expected: ", expected)
     self.assertEqual(expected, res)
 
 
