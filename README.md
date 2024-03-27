@@ -19,9 +19,9 @@ started:
 * [Distributed PyTorch/XLA
   Basics](https://github.com/pytorch/xla/blob/master/contrib/kaggle/distributed-pytorch-xla-basics-with-pjrt.ipynb)
 
-## Getting Started
+## Installation
 
-**PyTorch/XLA is now on PyPI!**
+### TPU
 
 To install PyTorch/XLA stable build in a new TPU VM:
 
@@ -35,6 +35,18 @@ To install PyTorch/XLA nightly build in a new TPU VM:
 pip3 install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
 pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl
 ```
+
+### GPU Plugin (beta)
+
+PyTorch/XLA now provides GPU support through a plugin package similar to `libtpu`:
+
+```
+pip install torch~=2.3.0 torch_xla~=2.3.0 https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla_cuda_plugin-2.3.0-py3-none-any.whl
+```
+
+To use the plugin, set `XLA_REGISTER_INSTALLED_PLUGINS=1` or call `torch_xla.experimental.plugins.use_dynamic_plugins()` in your script.
+
+## Getting Started
 
 To update your existing training loop, make the following changes:
 
