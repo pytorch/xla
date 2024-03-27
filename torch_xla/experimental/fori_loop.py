@@ -142,7 +142,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # print("arrive here!!!")
   print("cond_result: ", cond_result)
   print("init_val: ", init_val)
-  cond_ctx.build(cond_result, init_val) # [operands[2]])
+  cond_ctx.build(cond_result) # , init_val) # [operands[2]])
   print("arrive here!!!")
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
