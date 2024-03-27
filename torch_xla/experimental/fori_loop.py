@@ -23,13 +23,13 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
 
   device = xm.xla_device()
 
-  def cond_fn(loop_carry): # iter, upper, one_value): # lower, *init_vals):
-    lower, upper, one_value, init_val = loop_carry
+  def cond_fn(lower, upper, one_value, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
+    # lower, upper, one_value, init_val = loop_carry
     return lower[0] <= upper[0] # while stop when cond fail
 
   # def body_fn(upper, lowers): # , *init_vals):
-  def body_fn(loop_carry): # iter, upper, one_value):
-    lower, upper, one_value, init_val = loop_carry
+  def body_fn(lower, upper, one_value, init_val): # loop_carry): # iter, upper, one_value):
+    # lower, upper, one_value, init_val = loop_carry
     # return (torch.add(iter, one_value).clone(), upper.clone(), one_value.clone(), body_fun(x, one_value).clone())
     new_lower = torch.add(lower, one_value)
     new_init_val = body_fun(init_val, one_value)
@@ -54,7 +54,7 @@ def while_loop(cond_fn, body_fn, operands):
 # fori_loop: original_operands==(lower, upper, init_val)
 # def _xla_while_loop(cond_fn, body_fn, original_operands):
 # (lower, upper, one_value, init_val)
-def _xla_while_loop(cond_fn, body_fn, operands):
+def _xla_while_loop(cond_fn, body_fn, *operands):
   # print("!!! arguments: original_operands: ", original_operands)
   # fake operands to split formal code
   # operands = [] # fake_operands
@@ -62,7 +62,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   #   device = original_operand.device
   #   operands.append(torch.randint(10, original_operand.size(), dtype=torch.int32).to(device))
   # operands = tuple(operands)
-  # print("!!! operands: ", operands) # (tensor([0], device='xla:0', dtype=torch.int32), tensor([30], device='xla:0', dtype=torch.int32), tensor([1], device='xla:0', dtype=torch.int32))
+  print("!!! operands: ", operands) # (tensor([0], device='xla:0', dtype=torch.int32), tensor([30], device='xla:0', dtype=torch.int32), tensor([1], device='xla:0', dtype=torch.int32))
 
   # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
   # cond_fn: <function fori_loop.<locals>.cond_fn at 0x7f469149e710>
