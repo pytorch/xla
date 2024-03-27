@@ -112,7 +112,7 @@ class WhileLoopTest(unittest.TestCase):
     # fori_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
     print("expected: ", expected)
-    self.assertEqual(expected, res)
+    self.assertEqual(expected, res_)
 
 
 if __name__ == '__main__':
