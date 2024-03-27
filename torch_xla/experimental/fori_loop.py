@@ -35,11 +35,11 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
     new_init_val = body_fun(init_val, one_value)
     return (new_lower, upper, one_value, new_init_val)
 
-  loop_carruy_print = (lower, upper, one_value, init_val)
-  print("loop_carruy_print[0]: ", loop_carruy_print[0])
-  print("loop_carruy_print[1]: ", loop_carruy_print[1])
-  print("loop_carruy_print[2]: ", loop_carruy_print[2])
-  print("loop_carruy_print[3]: ", loop_carruy_print[3])
+  # loop_carruy_print = (lower, upper, one_value, init_val)
+  # print("loop_carruy_print[0]: ", loop_carruy_print[0]) # tensor([1], device='xla:0', dtype=torch.int32)
+  # print("loop_carruy_print[1]: ", loop_carruy_print[1]) # tensor([20], device='xla:0', dtype=torch.int32)
+  # print("loop_carruy_print[2]: ", loop_carruy_print[2]) # tensor([1], device='xla:0', dtype=torch.int32)
+  # print("loop_carruy_print[3]: ", loop_carruy_print[3]) # tensor([1], device='xla:0', dtype=torch.int32)
 
   res = _xla_while_loop(cond_fn, body_fn, (lower, upper, one_value, init_val))
   return res
@@ -64,7 +64,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # operands = tuple(operands)
   # print("!!! operands: ", operands) # (tensor([0], device='xla:0', dtype=torch.int32), tensor([30], device='xla:0', dtype=torch.int32), tensor([1], device='xla:0', dtype=torch.int32))
 
-  # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
+  print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
 
   # create inputs placeholder
   # operands_tuple = tuple(operands)
