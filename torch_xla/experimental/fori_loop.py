@@ -26,8 +26,8 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
   # upper, lower, one_value, init_val
   def cond_fn(upper, lower, one_value, init_val): #one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
     # lower, upper, one_value, init_val = loop_carry
-    lower_compare = lower + one_value
-    upper_compare = upper + one_value
+    lower_compare = torch.add(lower, one_value)
+    upper_compare = torch.add(upper, one_value)
     # return lower[0] <= upper[0] # while stop when cond fail
     return lower_compare[0] <= upper_compare[0]
 
