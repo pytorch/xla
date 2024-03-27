@@ -18,16 +18,16 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   device = xm.xla_device()
 
   def cond_fn(loop_carry): # iter, upper, one_value): # lower, *init_vals):
-    iter, upper, one_value, x = loop_carry
-    return iter[0] <= upper[0] # while stop when cond fail
+    lower, upper, one_value, init_val = loop_carry
+    return lower[0] <= upper[0] # while stop when cond fail
 
   # def body_fn(upper, lowers): # , *init_vals):
   def body_fn(loop_carry): # iter, upper, one_value):
-    iter, upper, one_value, x = loop_carry
+    lower, upper, one_value, init_val = loop_carry
     # return (torch.add(iter, one_value).clone(), upper.clone(), one_value.clone(), body_fun(x, one_value).clone())
-    new_iter = torch.add(iter, one_value)
-    new_x = body_fun(x, one_value)
-    return (new_iter, upper, one_value, new_x)
+    new_lower = torch.add(lower, one_value)
+    new_init_val = body_fun(init_val, one_value)
+    return (new_lower, upper, one_value, new_init_val)
 
   res = _xla_while_loop(cond_fn, body_fn, (lower, upper, one_value, init_val))
   return res
@@ -41,6 +41,7 @@ def while_loop(cond_fn, body_fn, operands):
 
 # fori_loop: original_operands==(lower, upper, init_val)
 # def _xla_while_loop(cond_fn, body_fn, original_operands):
+# (lower, upper, one_value, init_val)
 def _xla_while_loop(cond_fn, body_fn, operands):
   # print("!!! arguments: original_operands: ", original_operands)
   # fake operands to split formal code
