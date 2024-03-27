@@ -204,7 +204,7 @@ function run_torch_xla_tests() {
     run_torch_xla_benchmark_tests $XLA_DIR
   else
     # run tests separately.
-    if [[ "$RUN_PYTHON_TESTS" == "python_tests" &&  ]]; then
+    if [[ "$RUN_PYTHON_TESTS" == "python_tests" ]]; then
       run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     elif [[ "$RUN_BENCHMARK_TESTS" == "benchmark_tests" ]]; then
       run_torch_xla_benchmark_tests $XLA_DIR
