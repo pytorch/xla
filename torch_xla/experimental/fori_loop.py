@@ -24,7 +24,7 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
   device = xm.xla_device()
 
   # upper, lower, one_value, init_val
-  def cond_fn(one_value, upper, lower, init_val): #one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
+  def cond_fn(upper, lower, one_value, init_val): #one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
     # lower, upper, one_value, init_val = loop_carry
     lower_compare = torch.add(lower, one_value)
     upper_compare = torch.add(upper, one_value)
@@ -32,14 +32,14 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
     return lower_compare[0] <= upper_compare[0]
 
   # def body_fn(upper, lowers): # , *init_vals):
-  def body_fn(one_value, upper, lower, init_val): # one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value):
+  def body_fn(upper, lower, one_value, init_val): # one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value):
     # lower, upper, one_value, init_val = loop_carry
     # return (torch.add(iter, one_value).clone(), upper.clone(), one_value.clone(), body_fun(x, one_value).clone())
     # one_value = torch.tensor([1], dtype=torch.int32, device=device)
     new_upper = torch.sub(upper, one_value)
     new_init_val = body_fun(init_val, one_value)
     # return (new_lower, upper, one_value, new_init_val)
-    return (one_value, new_upper, lower, new_init_val) # one_value, lower, new_upper, new_init_val)
+    return (new_upper, lower, one_value, new_init_val) # one_value, lower, new_upper, new_init_val)
 
   # loop_carruy_print = (lower, upper, one_value, init_val)
   # print("loop_carruy_print[0]: ", loop_carruy_print[0]) # tensor([1], device='xla:0', dtype=torch.int32)
@@ -47,7 +47,7 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
   # print("loop_carruy_print[2]: ", loop_carruy_print[2]) # tensor([1], device='xla:0', dtype=torch.int32)
   # print("loop_carruy_print[3]: ", loop_carruy_print[3]) # tensor([1], device='xla:0', dtype=torch.int32)
 
-  res = _xla_while_loop(cond_fn, body_fn, one_value, upper, lower, init_val) # one_value, lower, upper, init_val) # upper, lower, one_value, init_val)
+  res = _xla_while_loop(cond_fn, body_fn, upper, lower, one_value, init_val) # one_value, lower, upper, init_val) # upper, lower, one_value, init_val)
   return res
 
 @while_loop_op.py_impl(DispatchKey.XLA)
