@@ -92,6 +92,10 @@ class WhileLoopTest(unittest.TestCase):
     # iter, upper, one_value, x
     # iter_, upper_, res, one_value_ = fori_loop(lower, upper, body_fun, init_val, one_value)
     lower_, upper_, one_value_, res = fori_loop(lower, upper, body_fun, one_value, init_val)
+    print("lower_: ", lower_)
+    print("upper_: ", upper_)
+    print("one_value_: ", one_value_)
+    print("res: ", res)
     # print("iter_: ", iter_)
     # print("upper_: ", upper_)
     # print("res: ", res)
