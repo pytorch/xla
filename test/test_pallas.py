@@ -224,6 +224,30 @@ class PallasTest(unittest.TestCase):
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  @unittest.mock.patch.dict(os.environ, {"XLA_TPU_LAYOUT": "0"})
+  def test_flash_attention_wrapper_causal(self):
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    def attention(q, k, v):
+      attn_weight = q @ k.transpose(-2, -1)
+      attn_weight = nn.functional.softmax(attn_weight, dim=-1)
+      attn_output = attn_weight @ v
+      return attn_output
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+
+    # The causal mask is turned on by default in the wrapper.
+    # It masks out the top right triangle of the attention matrix, therefore it speeds up the compute but also changes the output.
+    o = flash_attention(q, k, v, causal=True)
+    expected_o = attention(q, k, v)
+    self.assertFalse(torch.allclose(o.cpu(), expected_o.cpu()))
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
