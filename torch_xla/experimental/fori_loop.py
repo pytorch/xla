@@ -64,7 +64,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # operands = tuple(operands)
   # print("!!! operands: ", operands) # (tensor([0], device='xla:0', dtype=torch.int32), tensor([30], device='xla:0', dtype=torch.int32), tensor([1], device='xla:0', dtype=torch.int32))
 
-  print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
+  # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
   # cond_fn: <function fori_loop.<locals>.cond_fn at 0x7f469149e710>
   # body_fn: <function fori_loop.<locals>.body_fn at 0x7f469149e680>
   # operands: (tensor([1], device='xla:0', dtype=torch.int32),
@@ -86,7 +86,13 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # lower, upper, one_value, init_val = operands
   # print("arrive here!!!")
   # generate cond_fn xlacomputation
-  print("!!! operands: ", operands)
+  # print("!!! operands: ", operands)
+  # !!! operands:  
+  #     (tensor([1], device='xla:0', dtype=torch.int32),
+  #     tensor([20], device='xla:0', dtype=torch.int32),
+  #     tensor([1], device='xla:0', dtype=torch.int32),
+  #     tensor([1], device='xla:0', dtype=torch.int32))
+
   cond_result = cond_fn(operands) # lower, upper, init_val) # operands) # *operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
@@ -98,9 +104,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
-  cond_hlo_print = xb.get_computation_hlo(cond_computation)
-  print("cond computation: !!!!!!!!!")
-  print(cond_hlo_print)
+  # cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  # print("cond computation: !!!!!!!!!")
+  # print(cond_hlo_print)
 
   # generate body_fn xlacomputation
   body_result = body_fn(operands) # lower, upper, init_val) # operands) # *operands)
@@ -111,9 +117,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
-  body_hlo_print = xb.get_computation_hlo(body_computation)
-  print("body computation: !!!!!!!!!")
-  print(body_hlo_print)
+  # body_hlo_print = xb.get_computation_hlo(body_computation)
+  # print("body computation: !!!!!!!!!")
+  # print(body_hlo_print)
 
   # generate while xlacomputation
   input_tuple = xb.Op.tuple(tuple(params))
@@ -135,7 +141,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # print("upper: ", operands[0])
   # print("lower: ", operands[1])
   # print("init: ", operands[2])
-  print("in _xla_while_loop result: ", result)
+  # print("in _xla_while_loop result: ", result)
   return result
 
 
