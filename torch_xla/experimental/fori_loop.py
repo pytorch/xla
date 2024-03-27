@@ -90,7 +90,8 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   # lowers = (lower, *init_vals)
   # res = _xla_while_loop(cond_fn, body_fn, (upper, lowers)) # , *init_vals))
   # lower, upper, body_fun, init_val, one_value
-  res = _xla_while_loop(cond_fn, body_fn, (init, limit_value))
+  # res = _xla_while_loop(cond_fn, body_fn, (init, limit_value))
+  res = _xla_while_loop(cond_fn, body_fn, (lower, upper, init_val))
   # inits): # init_val, one_value):
   # _, _, result = _xla_while_loop(_fori_cond_fun, _fori_body_fun(body_fun),
   #                           (lower, upper, inits))
