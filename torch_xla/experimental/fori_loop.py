@@ -108,14 +108,15 @@ def while_loop(cond_fn, body_fn, operands):
 
 
 # fori_loop: original_operands==(lower, upper, init_val)
-def _xla_while_loop(cond_fn, body_fn, original_operands):
+# def _xla_while_loop(cond_fn, body_fn, original_operands):
+def _xla_while_loop(cond_fn, body_fn, operands):
   # print("!!! arguments: original_operands: ", original_operands)
   # fake operands to split formal code
-  operands = [] # fake_operands
-  for original_operand in original_operands:
-    device = original_operand.device
-    operands.append(torch.randint(10, original_operand.size(), dtype=torch.int32).to(device))
-  operands = tuple(operands)
+  # operands = [] # fake_operands
+  # for original_operand in original_operands:
+  #   device = original_operand.device
+  #   operands.append(torch.randint(10, original_operand.size(), dtype=torch.int32).to(device))
+  # operands = tuple(operands)
   # print("!!! operands: ", operands)
 
   # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
