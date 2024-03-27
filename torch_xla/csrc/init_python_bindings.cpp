@@ -884,8 +884,25 @@ class PyLoweringContext {
   // Builds a HLO graph given a set of output tensors.
   // tensors==result_tensors, input_arguments==input_arguments
   void Build(std::vector<at::Tensor> tensors, std::vector<at::Tensor> input_arguments) {
-    std::stringstream ss;
-    ss << "111 arrived here too cpp!!!" << "\n";
+    // std::stringstream ss;
+    // ss << "111 arrived here too cpp!!!" << "\n";
+    xla::XlaBuilder* local_builder = lowering_ctx.builder();
+    // // std::stringstream ss;
+    // ss << "arrived here too cpp!!!" << "\n";
+    int64_t parameters_number_i = 2;
+    if (GetNameString() == "condctx") {
+      for (at::Tensor input_argument : input_arguments) {
+      //   // ss << "input_argument: " << input_argument->ToString() << "\n";
+      //   // xla::Shape shape = input_argument.xla_shape(); //->shape();
+      //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
+        xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
+      //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
+        xla::XlaOp x = xla::Parameter(local_builder, parameters_number_i, shape, "UnusedArgumentsPlaceholder");
+        parameters_number_i = parameters_number_i + 1;
+
+      }
+    }
+
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
@@ -917,22 +934,22 @@ class PyLoweringContext {
     //         ->shape();
 
 
-    xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    // // std::stringstream ss;
-    // ss << "arrived here too cpp!!!" << "\n";
-    int64_t parameters_number_i = 2;
-    if (GetNameString() == "condctx") {
-      for (at::Tensor input_argument : input_arguments) {
-      //   // ss << "input_argument: " << input_argument->ToString() << "\n";
-      //   // xla::Shape shape = input_argument.xla_shape(); //->shape();
-      //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
-        xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
-      //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
-        xla::XlaOp x = xla::Parameter(local_builder, parameters_number_i, shape, "UnusedArgumentsPlaceholder");
-        parameters_number_i = parameters_number_i + 1;
+    // xla::XlaBuilder* local_builder = lowering_ctx.builder();
+    // // // std::stringstream ss;
+    // // ss << "arrived here too cpp!!!" << "\n";
+    // int64_t parameters_number_i = 2;
+    // if (GetNameString() == "condctx") {
+    //   for (at::Tensor input_argument : input_arguments) {
+    //   //   // ss << "input_argument: " << input_argument->ToString() << "\n";
+    //   //   // xla::Shape shape = input_argument.xla_shape(); //->shape();
+    //   //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
+    //     xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
+    //   //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
+    //     xla::XlaOp x = xla::Parameter(local_builder, parameters_number_i, shape, "UnusedArgumentsPlaceholder");
+    //     parameters_number_i = parameters_number_i + 1;
 
-      }
-    }
+    //   }
+    // }
 
 
     // xla::Shape shape = input_arguments->shape();
