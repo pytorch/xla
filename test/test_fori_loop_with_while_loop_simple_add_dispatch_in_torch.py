@@ -103,6 +103,7 @@ class WhileLoopTest(unittest.TestCase):
     # print("one_value_: ", one_value_)
     print("lower_: ", lower_)
     print("upper_: ", upper_)
+    print("one_value_: ", one_value_)
     print("res_: ", res_)
     # print("iter_: ", iter_)
     # print("upper_: ", upper_)
