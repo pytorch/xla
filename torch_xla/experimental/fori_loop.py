@@ -112,6 +112,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # print("upper: ", operands[0])
   # print("lower: ", operands[1])
   # print("init: ", operands[2])
+  print("in _xla_while_loop result: ", result)
   return result
 
 
