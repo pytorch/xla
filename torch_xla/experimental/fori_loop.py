@@ -91,7 +91,8 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   # res = _xla_while_loop(cond_fn, body_fn, (upper, lowers)) # , *init_vals))
   # lower, upper, body_fun, init_val, one_value
   # res = _xla_while_loop(cond_fn, body_fn, (init, limit_value))
-  res = _xla_while_loop(cond_fn, body_fn, (lower, upper, init_val))
+  # res = _xla_while_loop(cond_fn, body_fn, (lower, upper, init_val))
+  res = _xla_while_loop(cond_fn, body_fn, lower, upper, init_val)
   # inits): # init_val, one_value):
   # _, _, result = _xla_while_loop(_fori_cond_fun, _fori_body_fun(body_fun),
   #                           (lower, upper, inits))
@@ -110,7 +111,7 @@ def while_loop(cond_fn, body_fn, operands):
 
 # fori_loop: original_operands==(lower, upper, init_val)
 # def _xla_while_loop(cond_fn, body_fn, original_operands):
-def _xla_while_loop(cond_fn, body_fn, operands):
+def _xla_while_loop(cond_fn, body_fn, *operands):
   # print("!!! arguments: original_operands: ", original_operands)
   # fake operands to split formal code
   # operands = [] # fake_operands
@@ -124,7 +125,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
   # create inputs placeholder
   kwargs = {}
-  shapes = xb.tensor_shape(operands)
+  shapes = xb.tensor_shape(tuple(operands))
   builder = xb.create_builder('test_while')
   params = []
   for shape in shapes:
@@ -132,7 +133,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     params.append(p)
 
   # generate cond_fn xlacomputation
-  cond_result = cond_fn(operands) # *operands)
+  cond_result = cond_fn(*operands) # *operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
   cond_ctx.build([cond_result], [operands[2]])
