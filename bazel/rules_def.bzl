@@ -4,6 +4,7 @@ load(
     "@xla//xla:xla.bzl",
     "xla_cc_test",
 )
+load("@rules_cc//cc:defs.bzl", _cc_proto_library = "cc_proto_library")
 
 def ptxla_cc_library(
         deps = [],
@@ -38,3 +39,4 @@ def ptxla_cc_test(
         ],
         **kwargs
     )
+cc_proto_library = _cc_proto_library

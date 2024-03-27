@@ -156,6 +156,10 @@ xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
                               const xla::Shape& output_shape,
                               const std::string& payload);
 
+xla::XlaOp BuildGpuCustomCall(const std::vector<xla::XlaOp>& inputs,
+                              const xla::Shape& output_shape,
+                              const std::string& payload);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_
