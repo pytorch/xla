@@ -13,7 +13,7 @@ from torch._higher_order_ops.while_loop import while_loop_op
 
 # lower, upper, body_fun, init_val, one_value
 # def fori_loop(upper, body_fun, lowers):#  upper, body_fun, *init_vals): # *init_val):
-def fori_loop(lower, upper, body_fun, init_val):
+def fori_loop(lower, upper, body_fun, one_value, init_val):
 
   # print("lower: ", lower) # tensor([1], device='xla:0', dtype=torch.int32)
   # print("upper: ", upper) # tensor([20], device='xla:0', dtype=torch.int32)
@@ -24,19 +24,19 @@ def fori_loop(lower, upper, body_fun, init_val):
   device = xm.xla_device()
 
   # upper, lower, one_value, init_val
-  def cond_fn(upper, lower, init_val): #one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
+  def cond_fn(upper, lower,  one_value, init_val): #one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
     # lower, upper, one_value, init_val = loop_carry
     return lower[0] <= upper[0] # while stop when cond fail
 
   # def body_fn(upper, lowers): # , *init_vals):
-  def body_fn(upper, lower, init_val): # one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value):
+  def body_fn(upper, lower, one_value, init_val): # one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value):
     # lower, upper, one_value, init_val = loop_carry
     # return (torch.add(iter, one_value).clone(), upper.clone(), one_value.clone(), body_fun(x, one_value).clone())
-    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    # one_value = torch.tensor([1], dtype=torch.int32, device=device)
     new_upper = torch.sub(upper, one_value)
     new_init_val = body_fun(init_val, one_value)
     # return (new_lower, upper, one_value, new_init_val)
-    return (new_upper, lower, new_init_val) # one_value, lower, new_upper, new_init_val)
+    return (new_upper, lower,  one_value, new_init_val) # one_value, lower, new_upper, new_init_val)
 
   # loop_carruy_print = (lower, upper, one_value, init_val)
   # print("loop_carruy_print[0]: ", loop_carruy_print[0]) # tensor([1], device='xla:0', dtype=torch.int32)
@@ -102,7 +102,8 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # print("arrive here!!!")
   # print("cond_result: ", cond_result)
   # print("init_val: ", init_val)
-  cond_ctx.build([cond_result], list(operands[1:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
+  # TODO(@manfei) to reduce to operands[2:]
+  cond_ctx.build([cond_result], list(operands[2:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
   # print("arrive here!!!")
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
