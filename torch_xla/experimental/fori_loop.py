@@ -62,7 +62,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   #   device = original_operand.device
   #   operands.append(torch.randint(10, original_operand.size(), dtype=torch.int32).to(device))
   # operands = tuple(operands)
-  print("!!! operands: ", operands) # (tensor([0], device='xla:0', dtype=torch.int32), tensor([30], device='xla:0', dtype=torch.int32), tensor([1], device='xla:0', dtype=torch.int32))
+  # print("!!! operands: ", operands) # (tensor([0], device='xla:0', dtype=torch.int32), tensor([30], device='xla:0', dtype=torch.int32), tensor([1], device='xla:0', dtype=torch.int32))
 
   # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
   # cond_fn: <function fori_loop.<locals>.cond_fn at 0x7f469149e710>
@@ -75,7 +75,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # create inputs placeholder
   # operands_tuple = tuple(operands)
   kwargs = {}
-  shapes = xb.tensor_shape(operands) # _tuple)
+  shapes = xb.tensor_shape(*operands) # _tuple)
   builder = xb.create_builder('test_while')
   params = []
   for shape in shapes:
@@ -93,7 +93,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   #     tensor([1], device='xla:0', dtype=torch.int32),
   #     tensor([1], device='xla:0', dtype=torch.int32))
 
-  cond_result = cond_fn(operands) # lower, upper, init_val) # operands) # *operands)
+  cond_result = cond_fn(*operands) # lower, upper, init_val) # operands) # *operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
   # print("arrive here!!!")
