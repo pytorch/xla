@@ -18,5 +18,6 @@ dev_images = [
     accelerator  = "cuda"
     cuda_version = "12.3"
     extra_tags   = ["cuda"]
+    python_version = "3.10"
   }
 ]
