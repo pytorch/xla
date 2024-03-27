@@ -24,9 +24,12 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
   device = xm.xla_device()
 
   # upper, lower, one_value, init_val
-  def cond_fn(upper, lower,  one_value, init_val): #one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
+  def cond_fn(upper, lower, one_value, init_val): #one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
     # lower, upper, one_value, init_val = loop_carry
-    return lower[0] <= upper[0] # while stop when cond fail
+    lower_compare = lower + one_value
+    upper_compare = upper + one_value
+    # return lower[0] <= upper[0] # while stop when cond fail
+    return lower_compare[0] <= upper_compare[0]
 
   # def body_fn(upper, lowers): # , *init_vals):
   def body_fn(upper, lower, one_value, init_val): # one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value):
@@ -103,7 +106,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # print("cond_result: ", cond_result)
   # print("init_val: ", init_val)
   # TODO(@manfei) to reduce to operands[2:]
-  cond_ctx.build([cond_result], list(operands[2:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
+  cond_ctx.build([cond_result], list(operands[3:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
   # print("arrive here!!!")
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
