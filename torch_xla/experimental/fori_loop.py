@@ -124,8 +124,9 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
 
   # create inputs placeholder
+  operands_tuple = tuple(operands)
   kwargs = {}
-  shapes = xb.tensor_shape(tuple(operands))
+  shapes = xb.tensor_shape(operands_tuple)
   builder = xb.create_builder('test_while')
   params = []
   for shape in shapes:
