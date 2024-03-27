@@ -884,6 +884,8 @@ class PyLoweringContext {
   // Builds a HLO graph given a set of output tensors.
   // tensors==result_tensors, input_arguments==input_arguments
   void Build(std::vector<at::Tensor> tensors, std::vector<at::Tensor> input_arguments) {
+    std::stringstream ss;
+    ss << "111 arrived here too cpp!!!" << "\n";
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
@@ -914,7 +916,7 @@ class PyLoweringContext {
     //     std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
     //         ->shape();
     xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    std::stringstream ss;
+    // std::stringstream ss;
     ss << "arrived here too cpp!!!" << "\n";
 
     for (at::Tensor input_argument : input_arguments) {
