@@ -39,10 +39,12 @@ def pjrt_rendezvous_handler(url: str,
     global _store
     if not _store:
       # Create DummyStore when user disables TORCH_DIST_INIT_BARRIER
-      # to skip store based barriers. It's safe to do this because store
-      # created by _pjrt_rendezvous_handler is only used as a barrier in
-      # process group initialization.
-      if xu.getenv_as('TORCH_DIST_INIT_BARRIER', int, 1) == 0:
+      # to skip store based barriers. It's safe to do this in Neuron NeMo Megatron
+      # because store created by _pjrt_rendezvous_handler is only used as a barrier
+      # process group initialization. In NxD, the store is also used to exchange python
+      # objects. So, to use DummyStore, set TORCH_DIST_INIT_BARRIER=0 and NEURON_USE_DUMMY_STORE=1
+      if xu.getenv_as('TORCH_DIST_INIT_BARRIER', int, 1) == 0 and xu.getenv_as(
+          'NEURON_USE_DUMMY_STORE', int, 1) == 1:
         _store = DummyStore()
       elif xu.getenv_as('TORCHELASTIC_USE_AGENT_STORE', str) == 'True':
         attempt = xu.getenv_as('TORCHELASTIC_RESTART_COUNT', int, defval=0)
