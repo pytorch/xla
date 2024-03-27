@@ -193,6 +193,18 @@ class MetricsTest(unittest.TestCase):
     # of `ExecuteComputation`, but the actual async time.
     self.assertGreater(execute_time_ns, .5 * wall_time_ns)
 
+  def test_pybind_increment_counter(self):
+    met.clear_all()
+    xla_device = xm.xla_device()
+    t1 = torch.tensor(2077, device=xla_device)
+    self.assertEqual(met.counter_value('CreateXlaTensor'), 1)
+    torch_xla._XLAC._xla_increment_counter('CreateXlaTensor', 3)
+    self.assertEqual(met.counter_value('CreateXlaTensor'), 4)
+
+    # try increment a counter that does not exist
+    torch_xla._XLAC._xla_increment_counter('FakeCounter', 2)
+    self.assertEqual(met.counter_value('FakeCounter'), 2)
+
 
 if __name__ == '__main__':
   test = unittest.main()

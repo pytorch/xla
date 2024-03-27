@@ -464,6 +464,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
                 [a for a in args if isinstance(a, torch.Tensor)])) if x
     ]
     if len(input_tensors_to_sync) > 0:
+      torch_xla._XLAC._xla_increment_counter('DynamoSyncInputExecuteTime', 1)
       torch_xla._XLAC._xla_sync_multi(
           input_tensors_to_sync, devices=[], wait=True, sync_xla_data=True)
 
