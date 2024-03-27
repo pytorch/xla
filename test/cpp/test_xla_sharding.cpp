@@ -437,7 +437,7 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
 
 TEST_F(XLAShardingTest, TestForiLoop) {
   xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {}); // {4, 4});
-  int64_t n_devices =
+//   int64_t n_devices =
     //   torch_xla::runtime::GetComputationClient()->GetLocalDevices().size();
 //   xla::Array<int64_t> tile_assignment({1, n_devices});
 //   tile_assignment.FillIota(0);
