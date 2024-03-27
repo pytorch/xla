@@ -134,6 +134,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     params.append(p)
 
   lower, upper, init_val = operands
+  print("arrive here!!!")
   # generate cond_fn xlacomputation
   cond_result = cond_fn(lower, upper, init_val) # operands) # *operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
