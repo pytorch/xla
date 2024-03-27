@@ -18,15 +18,15 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
   device = xm.xla_device()
 
   def cond_fn(loop_carry): # iter, upper, one_value): # lower, *init_vals):
-    iter, upper, one_value = loop_carry
+    iter, upper, one_value, x = loop_carry
     return iter[0] <= upper[0]
 
   # def body_fn(upper, lowers): # , *init_vals):
   def body_fn(loop_carry): # iter, upper, one_value):
-    iter, upper, one_value = loop_carry
-    return (body_fun(iter, one_value), upper.clone(), one_value.clone())
+    iter, upper, one_value, x = loop_carry
+    return (torch.add(iter, one_value), upper.clone(), one_value.clone(), body_fun(iter, one_value))
 
-  res = _xla_while_loop(cond_fn, body_fn, (lower, upper, init_val))
+  res = _xla_while_loop(cond_fn, body_fn, (lower, upper, one_value, init_val))
   return res
 
 @while_loop_op.py_impl(DispatchKey.XLA)
