@@ -920,7 +920,7 @@ class PyLoweringContext {
     xla::XlaBuilder* local_builder = lowering_ctx.builder();
     // // std::stringstream ss;
     // ss << "arrived here too cpp!!!" << "\n";
-    int64_t parameters_number_i = 0;
+    int64_t parameters_number_i = 2;
     if (GetNameString() == "condctx") {
       for (at::Tensor input_argument : input_arguments) {
       //   // ss << "input_argument: " << input_argument->ToString() << "\n";
