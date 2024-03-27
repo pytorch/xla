@@ -920,7 +920,7 @@ class PyLoweringContext {
     xla::XlaBuilder* local_builder = lowering_ctx.builder();
     // // std::stringstream ss;
     // ss << "arrived here too cpp!!!" << "\n";
-
+    int64_t parameters_number_i = 0;
     if (GetNameString() == "condctx") {
       for (at::Tensor input_argument : input_arguments) {
       //   // ss << "input_argument: " << input_argument->ToString() << "\n";
@@ -928,7 +928,9 @@ class PyLoweringContext {
       //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
         xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {});
       //   // xla::XlaOp x = xla::Parameter(&local_builder, 0, shape, "UnusedArgumentsPlaceholder");
-        xla::XlaOp x = xla::Parameter(local_builder, 0, shape, "UnusedArgumentsPlaceholder");
+        xla::XlaOp x = xla::Parameter(local_builder, i, shape, "UnusedArgumentsPlaceholder");
+        i = i + 1;
+
       }
     }
 
