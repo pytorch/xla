@@ -915,7 +915,7 @@ class PyLoweringContext {
     //         ->shape();
     xla::XlaBuilder* local_builder = lowering_ctx.builder();
     std::stringstream ss;
-    ss << "arrived here too cpp!!! "\n";
+    ss << "arrived here too cpp!!!" << "\n";
 
     for (at::Tensor input_argument : input_arguments) {
       // ss << "input_argument: " << input_argument->ToString() << "\n";
