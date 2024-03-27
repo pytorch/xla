@@ -12,9 +12,12 @@ import torch_xla.utils.utils as xu
 _store = None
 _store_lock = threading.Lock()
 
+
 class DummyStore(dist.Store):
+
   def __init__(self, *args, **kwargs):
     super().__init__()
+
 
 def pjrt_rendezvous_handler(url: str,
                             timeout: datetime.timedelta = ...,
@@ -37,7 +40,7 @@ def pjrt_rendezvous_handler(url: str,
     if not _store:
       # Create DummyStore when user disables TORCH_DIST_INIT_BARRIER
       # to skip store based barriers. It's safe to do this because store
-      # created by _pjrt_rendezvous_handler is only used as a barrier in 
+      # created by _pjrt_rendezvous_handler is only used as a barrier in
       # process group initialization.
       if xu.getenv_as('TORCH_DIST_INIT_BARRIER', int, 1) == 0:
         _store = DummyStore()
