@@ -17,7 +17,7 @@ def fori_loop(lower, upper, body_fun, init_val, one_value):
 
   device = xm.xla_device()
 
-  def cond_fn(loop_carry) # iter, upper, one_value): # lower, *init_vals):
+  def cond_fn(loop_carry): # iter, upper, one_value): # lower, *init_vals):
     iter, upper, one_value = loop_carry
     return iter <= upper
 
