@@ -448,7 +448,7 @@ TEST_F(XLAShardingTest, TestForiLoop) {
 //   b.SetSharding(tiled);
   auto x = xla::Parameter(&b, 0, shape, "p0");
   xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {});
-//   auto zzz = xla::Parameter(&b, 0, shape2, "p1");
+  auto zzz = xla::Parameter(&b, 0, shape2, "p1");
 //   b.ClearSharding();
   auto y = xla::Add(x, xla::ConstantR0<float>(&b, 3));
   xla::XlaComputation xla_computation =
