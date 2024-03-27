@@ -133,11 +133,12 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
 
+  lower, upper, init_val = operands
   # generate cond_fn xlacomputation
-  cond_result = cond_fn(operands) # *operands)
+  cond_result = cond_fn(lower, upper, init_val) # operands) # *operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
-  cond_ctx.build([cond_result], [operands[2]])
+  cond_ctx.build([cond_result], [init_val]) # [operands[2]])
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
@@ -146,7 +147,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print(cond_hlo_print)
 
   # generate body_fn xlacomputation
-  body_result = body_fn(operands) # *operands)
+  body_result = body_fn(lower, upper, init_val) # operands) # *operands)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
   body_ctx.build(list(body_result))
