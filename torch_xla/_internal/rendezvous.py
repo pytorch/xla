@@ -13,6 +13,12 @@ _store = None
 _store_lock = threading.Lock()
 
 
+class DummyStore(dist.Store):
+
+  def __init__(self, *args, **kwargs):
+    super().__init__()
+
+
 def pjrt_rendezvous_handler(url: str,
                             timeout: datetime.timedelta = ...,
                             **kwargs):
@@ -32,7 +38,13 @@ def pjrt_rendezvous_handler(url: str,
   with _store_lock:
     global _store
     if not _store:
-      if xu.getenv_as('TORCHELASTIC_USE_AGENT_STORE', str) == 'True':
+      # Create DummyStore when user disables TORCH_DIST_INIT_BARRIER
+      # to skip store based barriers. It's safe to do this because store
+      # created by _pjrt_rendezvous_handler is only used as a barrier in
+      # process group initialization.
+      if xu.getenv_as('TORCH_DIST_INIT_BARRIER', int, 1) == 0:
+        _store = DummyStore()
+      elif xu.getenv_as('TORCHELASTIC_USE_AGENT_STORE', str) == 'True':
         attempt = xu.getenv_as('TORCHELASTIC_RESTART_COUNT', int, defval=0)
         tcp_store = dist.TCPStore(
             master_ip, master_port, xr.process_count(), is_master=False)
