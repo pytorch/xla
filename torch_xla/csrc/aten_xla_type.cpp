@@ -55,7 +55,7 @@
 //         ATEN_OP2(op_name, overload_name)>::call(args...)
 //   ATEN_OP accepts an operator name without an overload, and
 //   ATEN_OP2 accepts an operator name along with its overload name.
-//   The description of these acros can be found in
+//   The description of these macros can be found in
 //   https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/templates/Operators.h
 //   (You can find some examples below)
 
@@ -3641,6 +3641,16 @@ at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
       !runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       pixel_unshuffle)>::call(self, downscale_factor);
+}
+
+at::Tensor XLANativeFunctions::reshape_symint(const at::Tensor& self,
+                                              c10::SymIntArrayRef shape) {
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return at::native::reshape_symint(self, shape);
+  }
+  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
+      reshape)>::call(self, shape);
 }
 
 at::Tensor XLANativeFunctions::select_backward_symint(

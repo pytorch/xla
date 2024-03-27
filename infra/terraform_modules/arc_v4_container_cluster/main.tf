@@ -50,9 +50,9 @@ resource "google_container_node_pool" "arc_v4_tpu_nodes" {
   location           = "us-central2"
   node_locations     = ["us-central2-b"]
   cluster            = google_container_cluster.arc_v4_cluster.name
-  initial_node_count = 0
+  initial_node_count = 1
   autoscaling {
-    total_min_node_count = 0
+    total_min_node_count = 1
     total_max_node_count = var.max_tpu_nodes
     location_policy      = "ANY"
   }

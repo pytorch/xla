@@ -26,9 +26,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     if (!default_device_type_inited_) {
       // bridge::GetDefaultDevice will trigger the runtime device init, should
       // not do it during class init time.
-      torch::lazy::BackendDevice default_device = *bridge::GetDefaultDevice();
       default_device_type_ = std::make_shared<DeviceType>(
-          static_cast<XlaDeviceType>(default_device.type()));
+          runtime::GetComputationClient()->GetDeviceType());
       default_device_type_inited_ = true;
     }
     return true;

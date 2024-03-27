@@ -5,6 +5,7 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/quant_util.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
@@ -35,13 +36,16 @@ torch::lazy::NodePtr QuantizeTensor::Clone(torch::lazy::OpList operands) const {
 XlaOpVector QuantizeTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::Shape input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  xla::Shape output_shape = xla::ShapeUtil::MakeShape(
+      GetTorchIntDtypeToHloDtype(dtype_), input_shape.dimensions());
+
   // TODO(lsy323): Lower to HLO directly once qdtype is added to HLO.
   static const std::string opname = "stablehlo.uniform_quantize";
   auto qparams = QuantParams(scale_, zero_point_, quant_min_, quant_max_, axis_,
                              dtype_, input_shape.element_type());
 
   xla::XlaOp output = xla::CustomCall(
-      input.builder(), opname, {input}, input_shape,
+      input.builder(), opname, {input}, output_shape,
       qparams.SerializeToAttrDictStr(),
       /*has_side_effect=*/false,
       /*output_operand_aliasing=*/{}, /*literal=*/nullptr,

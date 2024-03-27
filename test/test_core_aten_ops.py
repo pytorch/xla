@@ -107,25 +107,21 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acos, args, kwargs)
 
-  @unittest.skip
   def test_aten_acosh_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_acosh_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_acosh_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_0(self):
     args = (
         torch.randn((1, 3, 10)).to(torch.float32),
@@ -134,7 +130,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_1(self):
     args = (
         torch.randn((1, 3, 10)).to(torch.float16),
@@ -143,7 +138,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_2(self):
     args = (
         torch.randint(0, 10, (1, 3, 10)).to(torch.int32),
@@ -152,7 +146,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_3(self):
     args = (
         torch.randn((1, 3, 10)).to(torch.float32),
@@ -161,7 +154,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_4(self):
     args = (
         torch.randn((1, 3, 10)).to(torch.float16),
@@ -170,7 +162,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_5(self):
     args = (
         torch.randint(0, 10, (1, 3, 10)).to(torch.int32),
@@ -227,7 +218,6 @@ class AtenOpTest(unittest.TestCase):
     run_export_and_compare(self, torch.ops.aten._adaptive_avg_pool2d, args,
                            kwargs)
 
-  @unittest.skip
   def test_aten_squeeze_dim_0(self):
     args = (
         torch.randn((1, 3, 1, 5)).to(torch.float32),
@@ -236,7 +226,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.squeeze.dim, args, kwargs)
 
-  @unittest.skip
   def test_aten_squeeze_dim_1(self):
     args = (
         torch.randn((1, 3, 1, 5)).to(torch.float32),
@@ -704,19 +693,16 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.atan2, args, kwargs)
 
-  @unittest.skip
   def test_aten_atanh_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.atanh, args, kwargs)
 
-  @unittest.skip
   def test_aten_atanh_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.atanh, args, kwargs)
 
-  @unittest.skip
   def test_aten_atanh_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -1315,7 +1301,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_cumsum_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -1324,14 +1309,14 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cumsum, args, kwargs)
 
-  @unittest.skip
   def test_aten_cumsum_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
         1,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.cumsum, args, kwargs)
+    run_export_and_compare(
+        self, torch.ops.aten.cumsum, args, kwargs, rtol=0.001, atol=0.01)
 
   def test_aten_cumsum_2(self):
     args = (
@@ -1432,7 +1417,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.div.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_div_Tensor_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -2171,7 +2155,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index_select, args, kwargs)
 
-  @unittest.skip
   def test_aten_index_select_1(self):
     args = (
         torch.randn((2, 10)).to(torch.float16),
@@ -2190,34 +2173,58 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index_select, args, kwargs)
 
-  @unittest.skip
-  def test_aten_index_Tensor_0(self):
+  def test_aten_index_select_3(self):
     args = (
         torch.randn((2, 10)).to(torch.float32),
-        [
-            torch.randint(0, 10, (2,)).to(torch.int64),
-        ],
+        1,
+        torch.randint(0, 10, (2,)).to(torch.int32),
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.index.Tensor, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten.index_select, args, kwargs)
 
-  @unittest.skip
-  def test_aten_index_Tensor_1(self):
+  def test_aten_index_select_4(self):
     args = (
         torch.randn((2, 10)).to(torch.float16),
+        1,
+        torch.randint(0, 10, (2,)).to(torch.int32),
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.index_select, args, kwargs)
+
+  def test_aten_index_select_5(self):
+    args = (
+        torch.randint(0, 10, (2, 10)).to(torch.int32),
+        1,
+        torch.randint(0, 10, (2,)).to(torch.int32),
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.index_select, args, kwargs)
+
+  def test_aten_index_Tensor_0(self):
+    args = (
+        torch.randn((11, 2)).to(torch.float32),
         [
-            torch.randint(0, 10, (2,)).to(torch.int64),
+            torch.randint(5, 10, (2,)).to(torch.int64),
         ],
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index.Tensor, args, kwargs)
 
-  @unittest.skip
+  def test_aten_index_Tensor_1(self):
+    args = (
+        torch.randn((11, 2)).to(torch.float16),
+        [
+            torch.randint(5, 10, (2,)).to(torch.int64),
+        ],
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.index.Tensor, args, kwargs)
+
   def test_aten_index_Tensor_2(self):
     args = (
-        torch.randint(0, 10, (2, 10)).to(torch.int32),
+        torch.randint(0, 10, (11, 2)).to(torch.int32),
         [
-            torch.randint(0, 10, (2,)).to(torch.int64),
+            torch.randint(5, 10, (2,)).to(torch.int64),
         ],
     )
     kwargs = dict()
@@ -2420,7 +2427,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten._log_softmax, args, kwargs)
 
-  @unittest.skip
   def test_aten__log_softmax_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -2428,7 +2434,8 @@ class AtenOpTest(unittest.TestCase):
         False,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten._log_softmax, args, kwargs)
+    run_export_and_compare(
+        self, torch.ops.aten._log_softmax, args, kwargs, rtol=0.001, atol=0.01)
 
   def test_aten_logical_and_0(self):
     args = (
@@ -2446,11 +2453,18 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.logical_and, args, kwargs)
 
-  @unittest.skip
   def test_aten_logical_and_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
         torch.randint(0, 10, (10, 10)).to(torch.int32),
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.logical_and, args, kwargs)
+
+  def test_aten_logical_and_3(self):
+    args = (
+        torch.randint(0, 2, (10, 10)).to(torch.bool),
+        torch.randint(0, 2, (10, 10)).to(torch.bool),
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.logical_and, args, kwargs)
@@ -3709,23 +3723,44 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.round, args, kwargs)
 
-  @unittest.skip
   def test_aten_rsqrt_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.rsqrt, args, kwargs)
+    # run_export_and_compare(self, torch.ops.aten.rsqrt, args, kwargs)
+    run_export_and_compare(
+        self,
+        torch.ops.aten.rsqrt,
+        args,
+        kwargs,
+        rtol=0.001,
+        atol=0.01,
+    )
 
-  @unittest.skip
   def test_aten_rsqrt_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.rsqrt, args, kwargs)
+    # run_export_and_compare(self, torch.ops.aten.rsqrt, args, kwargs)
+    run_export_and_compare(
+        self,
+        torch.ops.aten.rsqrt,
+        args,
+        kwargs,
+        rtol=0.001,
+        atol=0.01,
+    )
 
-  @unittest.skip
   def test_aten_rsqrt_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.rsqrt, args, kwargs)
+    # run_export_and_compare(self, torch.ops.aten.rsqrt, args, kwargs)
+    run_export_and_compare(
+        self,
+        torch.ops.aten.rsqrt,
+        args,
+        kwargs,
+        rtol=0.001,
+        atol=0.01,
+    )
 
   def test_aten_rsub_Scalar_0(self):
     args = (
@@ -4110,26 +4145,24 @@ class AtenOpTest(unittest.TestCase):
 
   def test_aten_sort_0(self):
     args = (
-        torch.randn((10, 10)).to(torch.float32),
+        torch.reshape(torch.randperm(100), (10, 10)).to(torch.float32),
         1,
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sort, args, kwargs)
 
-  @unittest.skip
   def test_aten_sort_1(self):
     args = (
-        torch.randn((10, 10)).to(torch.float16),
+        torch.reshape(torch.randperm(100), (10, 10)).to(torch.float16),
         1,
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sort, args, kwargs)
 
-  @unittest.skip
   def test_aten_sort_2(self):
     args = (
-        torch.randint(0, 10, (10, 10)).to(torch.int32),
-        1,
+        torch.reshape(torch.randperm(100), (10, 10)).to(torch.int32),
+        True,
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sort, args, kwargs)
