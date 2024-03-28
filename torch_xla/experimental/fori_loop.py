@@ -128,6 +128,11 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # operands_tuple = tuple(operands)
   # print("in _xla_while_loop: ", operands)
   kwargs = {}
+  # extend input operands to include complex model generated more arguments
+  # cond_fn, body_fn, lower, upper, *init_val = operands
+  # placeholder_func = torch.rand(size = l_out.size(), device = device)
+  # placeholder_input = torch.rand(size = l_in_i.size(), device = device)
+
   if type(operands) is tuple:
     # print("aaa")
     operands = operands[0]
