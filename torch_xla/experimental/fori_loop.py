@@ -53,7 +53,8 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
   # print("loop_carruy_print[2]: ", loop_carruy_print[2]) # tensor([1], device='xla:0', dtype=torch.int32)
   # print("loop_carruy_print[3]: ", loop_carruy_print[3]) # tensor([1], device='xla:0', dtype=torch.int32)
 
-  res = _xla_while_loop(cond_fn, body_fn, upper, lower, one_value, init_val) # one_value, lower, upper, init_val) # upper, lower, one_value, init_val)
+  # res = _xla_while_loop(cond_fn, body_fn, upper, lower, one_value, init_val) # one_value, lower, upper, init_val) # upper, lower, one_value, init_val)
+  res = _xla_while_loop(cond_fn, body_fn, one_value, lower, upper, init_val)
   return res
 
 @while_loop_op.py_impl(DispatchKey.XLA)
