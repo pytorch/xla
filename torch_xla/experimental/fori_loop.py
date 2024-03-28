@@ -29,9 +29,9 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
   def cond_fn(one_value, lower, upper, init_val): 
     # lower, upper, one_value, init_val = loop_carry
     lower_compare = torch.add(lower, one_value)
-    upper_compare = torch.add(upper, one_value)
+    # upper_compare = torch.add(upper, one_value)
     # return lower[0] <= upper[0] # while stop when cond fail
-    return lower_compare[0] >= upper_compare[0]
+    return lower_compare[0] <= upper_compare[0]
 
   # def body_fn(upper, lowers): # , *init_vals):
   # def body_fn(upper, lower, one_value, init_val): # one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value):
@@ -118,9 +118,9 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
-  cond_hlo_print = xb.get_computation_hlo(cond_computation)
-  print("cond computation: !!!!!!!!!")
-  print(cond_hlo_print)
+  # cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  # print("cond computation: !!!!!!!!!")
+  # print(cond_hlo_print)
 
   # generate body_fn xlacomputation
   body_result = body_fn(*operands) # lower, upper, init_val) # operands) # *operands)
@@ -131,9 +131,9 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
-  body_hlo_print = xb.get_computation_hlo(body_computation)
-  print("body computation: !!!!!!!!!")
-  print(body_hlo_print)
+  # body_hlo_print = xb.get_computation_hlo(body_computation)
+  # print("body computation: !!!!!!!!!")
+  # print(body_hlo_print)
 
   # generate while xlacomputation
   input_tuple = xb.Op.tuple(tuple(params))
@@ -143,9 +143,9 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
       body_computation=body_computation)
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
-  hlo_print = xb.get_computation_hlo(computation)
-  print("while computation: !!!!!!!!!")
-  print(hlo_print)
+  # hlo_print = xb.get_computation_hlo(computation)
+  # print("while computation: !!!!!!!!!")
+  # print(hlo_print)
 
   # gain final result with generated while xlacomputation
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', (operands), computation)
