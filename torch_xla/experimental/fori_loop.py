@@ -82,7 +82,7 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     val_list.insert(0, lower)
     val_list.insert(1, upper)
     print("val_list: ", val_list)
-    res = _xla_while_loop(cond_fn, body_fn, tuple(val_list))
+    res = _xla_while_loop(cond_fn, body_fn, val_list) # tuple(val_list))
     return res
   else:
     # TODO(@manfei): this should not arrived, due to init_val must contain value
