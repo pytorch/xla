@@ -47,6 +47,8 @@ import torch_xla.core.functions as xf
 import torch_xla.debug.profiler as xp
 import unittest
 import test_utils
+import triton
+import triton.language as tl
 
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
@@ -1999,9 +2001,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   @unittest.skipIf(xr.device_type() != 'CUDA', "This test only works on GPU.")
   def test_jax_triton_kernel(self):
-    import triton
-    import triton.language as tl
-
     @triton.jit
     def add_kernel(
         x_ptr,
