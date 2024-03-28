@@ -69,10 +69,17 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
 
   # res = _xla_while_loop(cond_fn, body_fn, upper, lower, one_value, init_val) # one_value, lower, upper, init_val) # upper, lower, one_value, init_val)
   # res = _xla_while_loop(cond_fn, body_fn, one_value, lower, upper, init_val)
+  print("init_val: ", init_val)
+  print("init_val[0]: ", init_val[0])
+  print("init_val[1]: ", init_val[1])
+  print("init_val[2]: ", init_val[2])
+  print("init_val[3]: ", init_val[3])
+
   if len(init_val) >= 1:
     val_list = list(init_val)
     val_list.insert(0, lower)
     val_list.insert(1, upper)
+    print("val_list: ", val_list)
     res = _xla_while_loop(cond_fn, body_fn, tuple(val_list))
     return res
   else:
@@ -110,6 +117,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
 
   # create inputs placeholder
   # operands_tuple = tuple(operands)
+  print("in _xla_while_loop: ", operands)
   kwargs = {}
   if type(operands) is tuple:
     shapes = xb.tensor_shape(operands)
