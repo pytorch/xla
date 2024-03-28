@@ -72,6 +72,24 @@ for epoch in range(epochs):
 
     print('epoch {}, loss {}'.format(epoch, loss.item()))
 
+# --- while simple test case ---
+
+device = xm.xla_device()
+
+lower = torch.tensor([2], dtype=torch.int32, device=device)
+upper = torch.tensor([52], dtype=torch.int32, device=device)
+one_value = torch.tensor([1], dtype=torch.int32, device=device)
+init_val = torch.tensor([1], dtype=torch.int32, device=device)
+
+def body_fun(a, b):
+  return torch.add(a, b) # [0])
+
+lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
+
+print("lower_: ", lower_)
+print("upper_: ", upper_)
+print("res_: ", res_)
+
 # --- test ---
 for epoch in range(epochs):
     with torch.no_grad(): # we don't need gradients in the testing phase
