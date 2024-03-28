@@ -28,6 +28,7 @@ lower = torch.tensor([2], dtype=torch.int32, device=device)
 upper = torch.tensor([52], dtype=torch.int32, device=device)
 one_value = torch.tensor([1], dtype=torch.int32, device=device)
 init_val = torch.tensor([1], dtype=torch.int32, device=device)
+# one_one = torch.one(1, dtype=torch.int32, device=device)
 
 # def body_fun(l_in):
 #   # l_in = torch.randn(10, device=xm.xla_device())

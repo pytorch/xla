@@ -37,10 +37,10 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     # (s32[1], s32[1], s32[1],   f32[20], f32[20,10], /*index=5*/f32[10])
     one_value = torch.ones(1, dtype=torch.int32, device=device)
     # two_value = upper.clone()
-    return_list = list(body_fun(one_value, *x))
+    return_list = list(body_fun(one_value, *x), one_value)
     return_list.insert(0, torch.sub(upper, one_value))
     return_list.insert(0, lower)
-    return_list.insert(-1, one_value)
+    # return_list.insert(-1, one_value)
     return tuple(return_list) # (torch.sub(upper, one_value), lower, body_fun(one_value, *x)) # , one_value))
 
   # upper, lower, one_value, init_val
@@ -173,11 +173,11 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
 
   import pdb; pdb.set_trace()
   # analyze body_hlo_print, get body_xlacomputation's input/output * check same
-  body_hlo_print_first_line = (body_hlo_print.split("ENTRY"))[0]
+  body_hlo_print_first_line = (body_hlo_print.split(")}", 1))[0]
   print("body_hlo_print_first_line: ", body_hlo_print_first_line)
-  entry_computation_layout = (body_hlo_print_first_line.split(", entry_computation_layout={"))[1][:-1]
+  entry_computation_layout = (body_hlo_print_first_line.split(", entry_computation_layout={"))[1][2:]
   inputs_shape, outputs_shape = entry_computation_layout.split("->", 1)
-  if inputs_shape[1:-1] != outputs_shape:
+  if inputs_shape[:-2] != outputs_shape[1:]:
     print("[ERROR]: body_xlacomputation's input and output are not the same!!!")
   # outputs_shape = (s32[1]{0}, s32[1]{0}, s32[1]{0}, f32[20]{0}, f32[20]{0}, /*index=5*/f32[10]{0})
   # filter all item in outputs_shape and trans to `cond_ctx.build` to add new params when build cond xlacomputation
