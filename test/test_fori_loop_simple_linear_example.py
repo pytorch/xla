@@ -10,7 +10,8 @@ from torch_xla.experimental.fori_loop import fori_loop
 # from torch._higher_order_ops.while_loop import while_loop
 # import torch_xla.core.xla_model as xm
 # import torch_xla.core.xla_builder as xb
-# import numpy as np
+
+import numpy as np
 # create dummy data for training
 x_values = [i for i in range(11)]
 x_train = np.array(x_values, dtype=np.float32)
