@@ -191,6 +191,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
   }
 
   mlir::FailureOr<mlir::Attribute> BuildAttrFromJson(mlir::OpBuilder& builder,
+                                                     mlir::Operation* op,
                                                      const json& json_value) {
     switch (json_value.type()) {
       case json::value_t::number_integer:
@@ -203,22 +204,27 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       case json::value_t::string:
         return builder.getStringAttr(json_value.template get<std::string>());
       case json::value_t::array: {
-        // Check if all the elements in the json array have the same type.
-        std::optional<json::value_t> common_el_type;
-        for (auto& el : json_value) {
-          auto el_type = el.type();
-          if (el_type == json::value_t::number_unsigned) {
-            el_type = json::value_t::number_integer;
-          }
-          if (common_el_type.has_value() && common_el_type.value() != el_type) {
-            return mlir::failure();
-          }
-          common_el_type = el_type;
-        }
-        if (!common_el_type.has_value()) {
+        if (json_value.empty()) {
           return builder.getArrayAttr({});
         }
-        switch (common_el_type.value()) {
+        auto get_json_type = [](const json& j) {
+          auto ty = j.type();
+          if (ty == json::value_t::number_unsigned) {
+            return json::value_t::number_integer;
+          }
+          return ty;
+        };
+
+        auto head_type = get_json_type(json_value[0]);
+        bool is_homogeneous = llvm::all_of(json_value, [&](auto& el) {
+          return get_json_type(el) == head_type;
+        });
+        if (!is_homogeneous) {
+          return op->emitError()
+                 << "invalid JSON to MLIR, arrays must be homogeneous";
+        }
+
+        switch (head_type) {
           case json::value_t::number_integer:
             return builder.getDenseI64ArrayAttr(
                 json_value.template get<llvm::SmallVector<int64_t>>());
@@ -229,21 +235,25 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
             return builder.getDenseBoolArrayAttr(
                 json_value.template get<llvm::SmallVector<bool>>());
           default:
-            return mlir::failure();
+            return op->emitError()
+                   << "invalid JSON to MLIR: invalid array type. arrays must "
+                      "be "
+                      "1-D homogeneous arrays of supported primitive types";
         }
       }
       default:
-        return mlir::failure();
+        return op->emitError()
+               << "invalid JSON to MLIR: unsupported json value type";
     }
   }
 
   mlir::FailureOr<mlir::DictionaryAttr> BuildDictionaryAttrFromJsonMap(
-      mlir::OpBuilder& builder,
+      mlir::OpBuilder& builder, mlir::Operation* op,
       const std::unordered_map<std::string, json>& json_map) {
     llvm::SmallVector<mlir::NamedAttribute> named_attrs;
     for (auto& [key, j] : json_map) {
       mlir::FailureOr<mlir::Attribute> attribute_or =
-          BuildAttrFromJson(builder, j);
+          BuildAttrFromJson(builder, op, j);
       if (mlir::failed(attribute_or)) {
         return mlir::failure();
       }
@@ -459,7 +469,8 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     mlir::OpBuilder builder(context);
 
     mlir::FailureOr<mlir::DictionaryAttr> attributes_or =
-        BuildDictionaryAttrFromJsonMap(builder, metadata.attrs);
+        BuildDictionaryAttrFromJsonMap(builder, boundary_output_op,
+                                       metadata.attrs);
     if (mlir::failed(attributes_or)) {
       return boundary_output_op->emitError()
              << "failed to transform boundary attr "
