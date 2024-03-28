@@ -152,7 +152,7 @@ xla::XlaOp BuildUpperTriangle(xla::XlaOp input);
 
 xla::XlaOp BuildCustomSharding(const xla::XlaOp& input);
 
-xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
+std::vector<xla::XlaOp> BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
                               const xla::Shape& output_shape,
                               const std::string& payload);
 

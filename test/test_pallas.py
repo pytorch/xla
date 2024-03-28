@@ -156,9 +156,6 @@ class PallasTest(unittest.TestCase):
     dtypes = [
         torch.float32, torch.float
     ]  # Add doesn't support torch.float64, torch.bfloat16, torch.float16.
-    dtypes = [
-        torch.float32, torch.float
-    ]  # Add doesn't support torch.float64, torch.bfloat16, torch.float16.
     for i in range(len(dtypes)):
       x = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
       y = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
@@ -168,7 +165,6 @@ class PallasTest(unittest.TestCase):
 
     dtypes = [
         torch.int32, torch.int
-    ]  # Add doesn't support torch.int64, torch.int16, torch.int8, torch.uint8.
     ]  # Add doesn't support torch.int64, torch.int16, torch.int8, torch.uint8.
     for i in range(len(dtypes)):
       x = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
@@ -182,8 +178,6 @@ class PallasTest(unittest.TestCase):
   def test_tpu_custom_call_pallas_wrap_flash_attention(self):
     from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention
     from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
-    flash_attention_kernel = make_kernel_from_pallas(
-        flash_attention, lambda q, k, v: (q.shape, q.dtype))
     flash_attention_kernel = make_kernel_from_pallas(
         flash_attention, lambda q, k, v: (q.shape, q.dtype))
 
@@ -260,6 +254,31 @@ class PallasTest(unittest.TestCase):
 
     # No exception being raised.
     o = flash_attention(q, k, v)
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_multiple_returns(self):
+    import jax._src.pallas.mosaic.pallas_call_registration
+
+    def add_minus_vectors_kernel(x_ref, y_ref, o1_ref, o2_ref):
+      x, y = x_ref[...], y_ref[...]
+      o1_ref[...] = x + y
+      o2_ref[...] = x - y
+
+    @jax.jit
+    def add_minus_vectors(x: jax.Array, y: jax.Array) -> jax.Array:
+      out_shape = jax.ShapeDtypeStruct(x.shape, x.dtype)
+      return pl.pallas_call(
+          add_minus_vectors_kernel, out_shape=[out_shape, out_shape])(x, y)
+
+    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    pt_kernel = make_kernel_from_pallas(add_minus_vectors, lambda x, y:
+                                        [(x.shape, x.dtype), (x.shape, x.dtype)])
+    x = torch.arange(8, device="xla", dtype=torch.float)
+    o = pt_kernel(x, x)
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo(o)
+    print(hlo)
+    print(o[0])
+    print(o[1])
 
 
 if __name__ == '__main__':
