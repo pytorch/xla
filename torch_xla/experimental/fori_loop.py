@@ -31,7 +31,7 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
     lower_compare = torch.add(lower, one_value)
     # upper_compare = torch.add(upper, one_value)
     # return lower[0] <= upper[0] # while stop when cond fail
-    return lower_compare[0] <= upper_compare[0]
+    return lower_compare[0] <= upper[0] # upper_compare[0]
 
   # def body_fn(upper, lowers): # , *init_vals):
   # def body_fn(upper, lower, one_value, init_val): # one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value):
