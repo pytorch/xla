@@ -23,10 +23,18 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
 
   device = xm.xla_device()
 
+  def cond_fn(init, limit_value, x):
+    return limit_value[0] <= init[0]
+
+  def body_fn(init, limit_value, x):
+    one_value = torch.ones(1, dtype=torch.int32, device=device)
+    two_value = limit_value.clone()
+    return (torch.sub(init, one_value), two_value, body_fun(x, one_value))
+
   # upper, lower, one_value, init_val
   # real(ov, lower, upper, x)
   # def cond_fn(upper, lower, one_value, init_val): #one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value): # lower, *init_vals):
-  def cond_fn(one_value, lower, upper, init_val): 
+  def old_cond_fn(one_value, lower, upper, init_val): 
     # lower, upper, one_value, init_val = loop_carry
     lower_compare = torch.add(lower, one_value)
     # upper_compare = torch.add(upper, one_value)
@@ -35,7 +43,7 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
 
   # def body_fn(upper, lowers): # , *init_vals):
   # def body_fn(upper, lower, one_value, init_val): # one_value, lower, upper, init_val): # loop_carry): # iter, upper, one_value):
-  def body_fn(one_value, lower, upper, init_val):
+  def old_body_fn(one_value, lower, upper, init_val):
     # lower, upper, one_value, init_val = loop_carry
     # return (torch.add(iter, one_value).clone(), upper.clone(), one_value.clone(), body_fun(x, one_value).clone())
     # one_value = torch.tensor([1], dtype=torch.int32, device=device)
@@ -54,7 +62,8 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
   # print("loop_carruy_print[3]: ", loop_carruy_print[3]) # tensor([1], device='xla:0', dtype=torch.int32)
 
   # res = _xla_while_loop(cond_fn, body_fn, upper, lower, one_value, init_val) # one_value, lower, upper, init_val) # upper, lower, one_value, init_val)
-  res = _xla_while_loop(cond_fn, body_fn, one_value, lower, upper, init_val)
+  # res = _xla_while_loop(cond_fn, body_fn, one_value, lower, upper, init_val)
+  res = _xla_while_loop(cond_fn, body_fn, lower, upper, init_val)
   return res
 
 @while_loop_op.py_impl(DispatchKey.XLA)
@@ -113,7 +122,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # print("cond_result: ", cond_result)
   # print("init_val: ", init_val)
   # TODO(@manfei) to reduce to operands[2:]
-  cond_ctx.build([cond_result], list(operands[3:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
+  cond_ctx.build([cond_result], list(operands[2:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
   # print("arrive here!!!")
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
