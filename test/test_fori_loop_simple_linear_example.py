@@ -39,6 +39,7 @@ def body_fun(y, x, l_in):
   # l_out = linear(l_in)
   return torch.add(y, x), linear(l_in) # linear(l_in) # torch.add(a, b) # [0])
 
+l_in = torch.randn(10, device=xm.xla_device())
 
 # def body_fun(x, y, l_in):
 #   # l_in = torch.randn(10, device=xm.xla_device())
@@ -46,7 +47,7 @@ def body_fun(y, x, l_in):
 #   # l_out = linear(l_in)
 #   return torch.add(x, y), linear(l_in) # linear(l_in) # torch.add(a, b) # [0])
 
-lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
+lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val, l_in)
 
 print("lower_: ", lower_)
 print("upper_: ", upper_)
