@@ -14,7 +14,10 @@ from torch._higher_order_ops.while_loop import while_loop_op
 # lower, upper, body_fun, init_val, one_value
 # def fori_loop(upper, body_fun, lowers):#  upper, body_fun, *init_vals): # *init_val):
 def fori_loop(lower, upper, body_fun, one_value, *init_val):
-  print("init_val: ", init_val)
+  # print("init_val: ", init_val)
+  # val_list = list(init_val)
+  # val_list.insert(0, lower)
+  # val_list.insert(1, upper)
 
   # print("lower: ", lower) # tensor([1], device='xla:0', dtype=torch.int32)
   # print("upper: ", upper) # tensor([20], device='xla:0', dtype=torch.int32)
@@ -66,8 +69,16 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
 
   # res = _xla_while_loop(cond_fn, body_fn, upper, lower, one_value, init_val) # one_value, lower, upper, init_val) # upper, lower, one_value, init_val)
   # res = _xla_while_loop(cond_fn, body_fn, one_value, lower, upper, init_val)
-  res = _xla_while_loop(cond_fn, body_fn, lower, upper, *init_val)
-  return res
+  if len(init_val) >= 1:
+    val_list = list(init_val)
+    val_list.insert(0, lower)
+    val_list.insert(1, upper)
+    res = _xla_while_loop(cond_fn, body_fn, tuple(val_list))
+    return res
+  else:
+    # TODO(@manfei): this should not arrived, due to init_val must contain value
+    res = _xla_while_loop(cond_fn, body_fn, lower, upper, *init_val)
+    return res
 
 @while_loop_op.py_impl(DispatchKey.XLA)
 def while_loop(cond_fn, body_fn, operands):
@@ -100,7 +111,10 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # create inputs placeholder
   # operands_tuple = tuple(operands)
   kwargs = {}
-  shapes = xb.tensor_shape((operands)) # _tuple)
+  if type(operands) is tuple:
+    shapes = xb.tensor_shape(operands)
+  else:
+    shapes = xb.tensor_shape((operands)) # _tuple)
   builder = xb.create_builder('test_while')
   params = []
   for shape in shapes:
