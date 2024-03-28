@@ -191,7 +191,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
       additional_arguments.append((i[:3], i_size_number))
     # additional_arguments.append(i[])
     else: # not end with {0}
-      additional_arguments(('s32', 1)) # s32[1] # xla::PrimitiveType::S32
+      additional_arguments.append(('s64', 0)) # s32[1] # xla::PrimitiveType::S32
 
   cond_result = cond_fn(*operands) # lower, upper, init_val) # operands) # *operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
