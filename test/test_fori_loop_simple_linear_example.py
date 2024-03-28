@@ -27,8 +27,17 @@ upper = torch.tensor([52], dtype=torch.int32, device=device)
 one_value = torch.tensor([1], dtype=torch.int32, device=device)
 init_val = torch.tensor([1], dtype=torch.int32, device=device)
 
-def body_fun(a, b):
-  return torch.add(a, b) # [0])
+# def body_fun(l_in):
+#   # l_in = torch.randn(10, device=xm.xla_device())
+#   linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+#   # l_out = linear(l_in)
+#   return linear(l_in) # torch.add(a, b) # [0])
+
+def body_fun(x):
+  # l_in = torch.randn(10, device=xm.xla_device())
+  # linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+  # l_out = linear(l_in)
+  return torch.add(x, x) # linear(l_in) # torch.add(a, b) # [0])
 
 lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
 

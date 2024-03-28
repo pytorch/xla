@@ -29,7 +29,7 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
   def body_fn(init, limit_value, x):
     one_value = torch.ones(1, dtype=torch.int32, device=device)
     two_value = limit_value.clone()
-    return (torch.sub(init, one_value), two_value, body_fun(x, one_value))
+    return (torch.sub(init, one_value), two_value, body_fun(x)) # , one_value))
 
   # upper, lower, one_value, init_val
   # real(ov, lower, upper, x)
