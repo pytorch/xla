@@ -80,8 +80,9 @@ with torch.no_grad(): # we don't need gradients in the testing phase
         predicted = model(Variable(torch.from_numpy(x_train))).data.numpy()
     print(predicted)
 
-plt.clf()
-plt.plot(x_train, y_train, 'go', label='True data', alpha=0.5)
-plt.plot(x_train, predicted, '--', label='Predictions', alpha=0.5)
-plt.legend(loc='best')
-plt.show()
+# --- draw ---
+# plt.clf()
+# plt.plot(x_train, y_train, 'go', label='True data', alpha=0.5)
+# plt.plot(x_train, predicted, '--', label='Predictions', alpha=0.5)
+# plt.legend(loc='best')
+# plt.show()
