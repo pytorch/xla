@@ -174,7 +174,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # analyze body_hlo_print, get body_xlacomputation's input/output * check same
   body_hlo_print_first_line = (body_hlo_print.split("ENTRY"))[0]
   entry_computation_layout = (body_hlo_print_first_line.split(", entry_computation_layout={"))[1][:-1]
-  inputs_shape, outputs_shape = entry_computation_layout.split("->")
+  inputs_shape, outputs_shape = entry_computation_layout.split("->", 1)
   if inputs_shape[1:-1] != outputs_shape:
     print("[ERROR]: body_xlacomputation's input and output are not the same!!!")
   # outputs_shape = (s32[1]{0}, s32[1]{0}, s32[1]{0}, f32[20]{0}, f32[20]{0}, /*index=5*/f32[10]{0})
