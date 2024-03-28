@@ -126,7 +126,8 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
     payload = _extract_backend_config(ir)
     outputs = []
     for output_shape, output_dtype in output_shape_dtype_fn(*args):
-      outputs.append(torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device()))
+      outputs.append(
+          torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device()))
     torch_xla._XLAC._xla_tpu_custom_call_(outputs, args, payload)
 
     # Make the output easier to use.

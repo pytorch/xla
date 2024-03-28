@@ -150,8 +150,8 @@ class PallasTest(unittest.TestCase):
                                                              x.dtype))(x, y)
 
     from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
-    pt_kernel = make_kernel_from_pallas(add_vectors, lambda x, y:
-                                        [(x.shape, x.dtype)])
+    pt_kernel = make_kernel_from_pallas(add_vectors,
+                                        lambda x, y: [(x.shape, x.dtype)])
 
     dtypes = [
         torch.float32, torch.float
@@ -271,8 +271,9 @@ class PallasTest(unittest.TestCase):
           add_minus_vectors_kernel, out_shape=[out_shape, out_shape])(x, y)
 
     from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
-    pt_kernel = make_kernel_from_pallas(add_minus_vectors, lambda x, y:
-                                        [(x.shape, x.dtype), (x.shape, x.dtype)])
+    pt_kernel = make_kernel_from_pallas(
+        add_minus_vectors, lambda x, y: [(x.shape, x.dtype),
+                                         (x.shape, x.dtype)])
     x = torch.arange(8, device="xla", dtype=torch.float)
     o = pt_kernel(x, x)
 

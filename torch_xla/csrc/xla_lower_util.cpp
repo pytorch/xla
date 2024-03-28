@@ -1250,9 +1250,9 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
                          {input}, ShapeHelper::ShapeOfXlaOp(input));
 }
 
-std::vector<xla::XlaOp> BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
-                              const xla::Shape& output_shape,
-                              const std::string& payload) {
+std::vector<xla::XlaOp> BuildTpuCustomCall(
+    const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
+    const std::string& payload) {
   XLA_CHECK(inputs.size() > 0) << "inputs are empty";
 
   // We need to enforce the default C-order (major-to-minor) layouts for inputs
@@ -1273,22 +1273,23 @@ std::vector<xla::XlaOp> BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs
         shape.dimensions(), shape.dynamic_dimensions(), shape.element_type()));
   }
 
-  // Mosaic has some weird checks that disallow using a tuple output for single element.
+  // Mosaic has some weird checks that disallow using a tuple output for single
+  // element.
   if (output_shapes.size() == 1) {
     return {xla::CustomCallWithLayout(inputs[0].builder(),
-                            /*call_target_name=*/"tpu_custom_call", inputs,
-                            output_shapes[0], input_shapes, payload)};
+                                      /*call_target_name=*/"tpu_custom_call",
+                                      inputs, output_shapes[0], input_shapes,
+                                      payload)};
   }
 
-  xla::XlaOp outputs = xla::CustomCallWithLayout(inputs[0].builder(),
-                                   /*call_target_name=*/"tpu_custom_call",
-                                   inputs, xla::ShapeUtil::MakeTupleShape(output_shapes), input_shapes,
-                                   payload);
+  xla::XlaOp outputs = xla::CustomCallWithLayout(
+      inputs[0].builder(),
+      /*call_target_name=*/"tpu_custom_call", inputs,
+      xla::ShapeUtil::MakeTupleShape(output_shapes), input_shapes, payload);
   std::vector<xla::XlaOp> result;
   result.reserve(output_shapes.size());
   for (int i = 0; i < output_shapes.size(); ++i) {
     result.push_back(xla::GetTupleElement(outputs, i));
-
   }
   return result;
 }

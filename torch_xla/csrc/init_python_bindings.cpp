@@ -2253,8 +2253,8 @@ void InitXlaModuleBindings(py::module m) {
           return XLANativeFunctions::set_(self, source);
         });
   m.def("_xla_tpu_custom_call_",
-        [](const std::vector<at::Tensor>& outputs, const std::vector<at::Tensor>& inputs,
-           const std::string& payload) {
+        [](const std::vector<at::Tensor>& outputs,
+           const std::vector<at::Tensor>& inputs, const std::string& payload) {
           auto x_outputs = bridge::GetXlaTensors(outputs);
           return tensor_methods::tpu_custom_call_(
               x_outputs, bridge::GetXlaTensors(inputs), payload);
