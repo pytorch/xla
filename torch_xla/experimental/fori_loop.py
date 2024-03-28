@@ -65,7 +65,7 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
 
   # res = _xla_while_loop(cond_fn, body_fn, upper, lower, one_value, init_val) # one_value, lower, upper, init_val) # upper, lower, one_value, init_val)
   # res = _xla_while_loop(cond_fn, body_fn, one_value, lower, upper, init_val)
-  res = _xla_while_loop(cond_fn, body_fn, lower, upper, *init_val)
+  res = _xla_while_loop(cond_fn, body_fn, lower, upper, init_val)
   return res
 
 @while_loop_op.py_impl(DispatchKey.XLA)
