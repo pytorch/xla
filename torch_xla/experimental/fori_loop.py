@@ -180,6 +180,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # outputs_shape = (s32[1]{0}, s32[1]{0}, s32[1]{0}, f32[20]{0}, f32[20]{0}, /*index=5*/f32[10]{0})
   # filter all item in outputs_shape and trans to `cond_ctx.build` to add new params when build cond xlacomputation
   outputs_shape_list = outputs_shape[1:-1].split(", ")
+  print("outputs_shape_list: ", outputs_shape_list)
   additional_arguments = []
   for i in outputs_shape_list[2:]: # skip upper and lower
     if (i[:2]=='/*'): # clean prefix like /*...*/
