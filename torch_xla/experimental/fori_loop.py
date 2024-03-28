@@ -23,13 +23,13 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
 
   device = xm.xla_device()
 
-  def cond_fn(init, limit_value, x):
-    return limit_value[0] < init[0]
+  def cond_fn(lower, upper, x):
+    return upper[0] < lower[0]
 
-  def body_fn(init, limit_value, x):
+  def body_fn(lower, upper, x):
     one_value = torch.ones(1, dtype=torch.int32, device=device)
-    two_value = limit_value.clone()
-    return (torch.sub(init, one_value), two_value, body_fun(x)) # , one_value))
+    # two_value = upper.clone()
+    return (torch.sub(lower, one_value), upper, body_fun(x)) # , one_value))
 
   # upper, lower, one_value, init_val
   # real(ov, lower, upper, x)
