@@ -79,7 +79,16 @@ for epoch in range(epochs):
             predicted = model(Variable(torch.from_numpy(x_train).cuda())).cpu().data.numpy()
         else:
             predicted = model(Variable(torch.from_numpy(x_train))).data.numpy()
-        print(epoch, "-th predicted result: ", predicted)
+        print(epoch, "-th prediction finised") # ed result: ", predicted)
+
+print("do one more prediction")
+with torch.no_grad(): # we don't need gradients in the testing phase
+    if torch.cuda.is_available():
+        predicted = model(Variable(torch.from_numpy(x_train).cuda())).cpu().data.numpy()
+    else:
+        predicted = model(Variable(torch.from_numpy(x_train))).data.numpy()
+    print(predicted)
+print("finished one more prediction")
 
 # --- draw ---
 # plt.clf()
