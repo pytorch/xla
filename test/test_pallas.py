@@ -275,10 +275,11 @@ class PallasTest(unittest.TestCase):
                                         [(x.shape, x.dtype), (x.shape, x.dtype)])
     x = torch.arange(8, device="xla", dtype=torch.float)
     o = pt_kernel(x, x)
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo(o)
-    print(hlo)
-    print(o[0])
-    print(o[1])
+
+    expected_o0 = x + x
+    expected_o1 = x - x
+    self.assertTrue(torch.allclose(o[0].cpu(), expected_o0.cpu()))
+    self.assertTrue(torch.allclose(o[1].cpu(), expected_o1.cpu()))
 
 
 if __name__ == '__main__':
