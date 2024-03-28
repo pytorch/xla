@@ -99,6 +99,10 @@ function install_deps_pytorch_xla() {
   if ls $CUBLAS_PATTERN 1> /dev/null 2>&1; then
     sudo ln -s $CUBLAS_PATTERN /usr/local/cuda/include
   fi
+  pip install --no-deps -IU --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/Triton-Nightly/pypi/simple/ triton-nightly==2.1.0.post20231216005823
+  pip install -IU --pre "jaxlib[cuda12_pip]==0.4.24.dev20240103" -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_cuda12_releases.html
+  pip install -IU --pre jax==0.4.24.dev20240104 -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
+  pip install --no-deps 'jax-triton @ git+https://github.com/bhavya01/jax-triton.git@cbd0f9d'
 }
 
 function build_torch_xla() {
