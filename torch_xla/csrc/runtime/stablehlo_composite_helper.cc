@@ -226,13 +226,17 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
 
         switch (head_type) {
           case json::value_t::number_integer:
-            return builder.getDenseI64ArrayAttr(
+            return builder.getI64TensorAttr(
                 json_value.template get<llvm::SmallVector<int64_t>>());
           case json::value_t::number_float:
-            return builder.getDenseF32ArrayAttr(
+            return mlir::DenseFPElementsAttr::get(
+                mlir::RankedTensorType::get(json_value.size(),
+                                            builder.getF32Type()),
                 json_value.template get<llvm::SmallVector<float>>());
           case json::value_t::boolean:
-            return builder.getDenseBoolArrayAttr(
+            return mlir::DenseIntElementsAttr::get(
+                mlir::RankedTensorType::get(json_value.size(),
+                                            builder.getI1Type()),
                 json_value.template get<llvm::SmallVector<bool>>());
           default:
             return op->emitError()

@@ -375,12 +375,14 @@ class XlaMarkPatternTest(unittest.TestCase):
     input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.add\""), 1)
-    self.assertTrue(stablehlo.count("bool_arr = array<i1: true, false>"), 1)
+    self.assertTrue(
+        stablehlo.count("bool_arr = dense<[true, false]> : tensor<2xi1>"), 1)
     self.assertTrue(
         stablehlo.count(
-            "float_arr = array<f32: 1.000000e+00, 1.100000e+00, 1.200000e+00>"),
-        1)
-    self.assertTrue(stablehlo.count("int_arr = array<i64: 1, 2, 3>"), 1)
+            "float_arr = dense<[1.000000e+00, 1.100000e+00, 1.200000e+00]> : tensor<3xf32>"
+        ), 1)
+    self.assertTrue(
+        stablehlo.count("int_arr = dense<[1, 2, 3]> : tensor<3xi64>"), 1)
 
 
 if __name__ == '__main__':
