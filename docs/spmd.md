@@ -235,7 +235,7 @@ train_loader = pl.MpDeviceLoader(
 
 PyTorch/XLA SPMD is compatible with the [torch.distributed.checkpoint](https://pytorch.org/docs/stable/distributed.checkpoint.html) library through a dedicated `Planner` instance. Users are able to synchronously save and load checkpoints through this common interface.
 
-The SPMDSavePlanner and SPMDLoadPlanner ([src](https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint.py)) classes enable the `save_state_dict` and `load_state_dict` functions to operate directly on the shards of an `XLAShardedTensor`, enabling all of the benefits of distributed checkpointing in SPMD training.
+The SPMDSavePlanner and SPMDLoadPlanner ([src](https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint.py)) classes enable the `save` and `load` functions to operate directly on the shards of an `XLAShardedTensor`, enabling all of the benefits of distributed checkpointing in SPMD training.
 
 Here is a demonstration of the synchronous distributed checkpointing API:
 
@@ -249,7 +249,7 @@ state_dict = {
     "optim": optim.state_dict(),
 }
 
-dist_cp.save_state_dict(
+dist_cp.save(
     state_dict=state_dict,
     storage_writer=dist_cp.FileSystemWriter(CHECKPOINT_DIR),
     planner=xc.SPMDSavePlanner(),
@@ -262,7 +262,7 @@ state_dict = {
     "model": model.state_dict(),
 }
 
-dist_cp.load_state_dict(
+dist_cp.load(
     state_dict=state_dict,
     storage_reader=dist_cp.FileSystemReader(CHECKPOINT_DIR),
     planner=xc.SPMDLoadPlanner(),

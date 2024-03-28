@@ -223,6 +223,26 @@ at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
+at::Tensor DynamicExpand(const at::Tensor& input,
+                         const std::vector<int64_t>& size,
+                         const at::Tensor& src_tensor, int src_dim,
+                         int target_dim) {
+  XLATensorPtr result = tensor_methods::dynamic_expand(
+      bridge::GetXlaTensor(input), size, bridge::GetXlaTensor(src_tensor),
+      src_dim, target_dim);
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
+at::Tensor DynamicView(const at::Tensor& input,
+                       const std::vector<int64_t>& size,
+                       const at::Tensor& src_tensor, int src_dim,
+                       int target_dim, float mul_scaler) {
+  XLATensorPtr result = tensor_methods::dynamic_view(
+      bridge::GetXlaTensor(input), size, bridge::GetXlaTensor(src_tensor),
+      src_dim, target_dim, mul_scaler);
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
 at::Tensor QuantizeTensor(const at::Tensor& input,
                           const std::vector<float>& scale_list,
                           const std::vector<int>& zero_point_list,
@@ -913,8 +933,7 @@ class PyLoweringContext {
       bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
       if (should_wrap_parameter) {
         computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-            computation, program_shape.parameters(), input_output_alias_pair,
-            buffer_donor_indices));
+            computation, program_shape.parameters(), buffer_donor_indices));
       }
     }
   }
@@ -2214,6 +2233,11 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_set_ir_debug",
         [](bool ir_debug) { FLAGS_torch_lazy_ir_debug = ir_debug; });
   m.def("_get_ir_debug", []() { return FLAGS_torch_lazy_ir_debug; });
+  m.def("_set_xla_all_numbers_special_scalars",
+        [](bool all_numbers_special_scalars) {
+          FLAGS_torch_lazy_all_numbers_special_scalars =
+              all_numbers_special_scalars;
+        });
   m.def("_set_xla_handle_special_scalars", [](bool handle_special_scalars) {
     FLAGS_torch_lazy_handle_special_scalars = handle_special_scalars;
   });
@@ -2290,6 +2314,30 @@ void InitXlaModuleBindings(py::module m) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xtensor->MarkDynamicDimension(dim);
   });
+  m.def("_xla_dynamic_expand",
+        [](const at::Tensor& input, const std::vector<int64_t>& size,
+           const at::Tensor& src_tensor, int src_dim,
+           int target_dim) -> at::Tensor {
+          at::Tensor result;
+          {
+            NoGilSection nogil;
+            result =
+                DynamicExpand(input, size, src_tensor, src_dim, target_dim);
+          }
+          return result;
+        });
+  m.def("_xla_dynamic_view",
+        [](const at::Tensor& input, const std::vector<int64_t>& size,
+           const at::Tensor& src_tensor, int src_dim, int target_dim,
+           float mul_scaler) -> at::Tensor {
+          at::Tensor result;
+          {
+            NoGilSection nogil;
+            result = DynamicView(input, size, src_tensor, src_dim, target_dim,
+                                 mul_scaler);
+          }
+          return result;
+        });
 
   // This api will set the `should_donate_buffer_` field in the
   // ComputationClient::Data. This api is currently only useful if you are

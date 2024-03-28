@@ -180,6 +180,10 @@ class XlaHelpers {
       xla::XlaOp input, xla::XlaOp aux_input,
       const std::vector<int64_t>& aux_input_dimensions);
 
+  static xla::XlaOp DynamicBroadcastInDim(
+      xla::XlaOp op, const xla::Shape& final_shape,
+      xla::XlaOp final_broadcast_dimensions);
+
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 
   static bool SameStaticDimensions(const xla::Shape& shape1,
@@ -385,7 +389,6 @@ class XlaHelpers {
   static xla::StatusOr<xla::XlaComputation> WrapXlaComputation(
       const xla::XlaComputation& computation,
       const std::vector<xla::Shape>& parameter_shapes,
-      const std::vector<std::pair<int64_t, int64_t>>& input_output_alias_pair,
       const std::vector<size_t>& buffer_donor_indices);
 
   static torch::lazy::Shape ConvertXlaShapeToLazy(const xla::Shape& shape);

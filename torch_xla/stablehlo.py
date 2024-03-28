@@ -18,6 +18,7 @@ from torch_xla.core import xla_model as xm
 from torch_xla.core import dynamo_bridge
 from torch_xla.debug import metrics
 import torch_xla.experimental.quantized
+from torch_xla.experimental.unbounded_dynamism_export import exported_program_has_symbolic_input_shape, process_exported_program_with_symbolic_input
 import torch._dynamo as torchdynamo
 from torch.utils import _pytree as pytree
 from torch._decomp import get_decompositions
@@ -59,6 +60,9 @@ class StableHLOExportOptions:
   override_tracing_arguments: Optional[Tuple[Any]] = None
   override_tracing_kwargs: Optional[Mapping[str, Any]] = None
   save_weights: bool = True
+  # Inline all constants in StableHLO if True. Otherwise only
+  # special constants (0 and 1) are inlined.
+  inline_all_constant: bool = True
 
 
 class StableHLOGraphModule:
@@ -297,7 +301,8 @@ def _exported_program_to_stablehlo_bundle(exported_model,
     options = StableHLOExportOptions()
   exported_model = exported_model.run_decompositions()
   exported_model = exported_model.run_decompositions(_extra_decompositions)
-
+  if exported_program_has_symbolic_input_shape(exported_model):
+    process_exported_program_with_symbolic_input(exported_model)
   args, kwargs = exported_model.example_inputs
 
   assert len(kwargs) == 0, "Export to stablehlo doesnt support kwargs yet."
@@ -316,6 +321,9 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   device = xm.xla_device()
 
   # Run the fx graph tracing using lazy tensor
+  if options.inline_all_constant:
+    # Inline all constants.
+    torch_xla._XLAC._set_xla_all_numbers_special_scalars(True)
   xla_interpreter = XLAExportInterpreter(exported_model.graph_module, device)
   with torch.no_grad():
     res = xla_interpreter.run(*_flat_input_args, enable_io_processing=False)
@@ -431,6 +439,9 @@ def _exported_program_to_stablehlo_bundle(exported_model,
                                       state_dict),
       additional_constants=additional_constants,
   )
+
+  # Recover the global flag to not inline all scalars.
+  torch_xla._XLAC._set_xla_all_numbers_special_scalars(False)
 
   return bundle
 

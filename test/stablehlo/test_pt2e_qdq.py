@@ -11,7 +11,7 @@ from torch.ao.quantization.quantize_pt2e import convert_pt2e, prepare_pt2e
 from torch.ao.quantization.quantizer.xnnpack_quantizer import (
     XNNPACKQuantizer, get_symmetric_quantization_config)
 from torch_xla import stablehlo
-from utils import has_tf_package
+from torch_xla.utils.stablehlo_test_utils import has_tf_package
 
 try:
   from torch_xla.tf_saved_model_integration import \

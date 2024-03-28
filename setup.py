@@ -64,7 +64,7 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_date = '20240305'
+_date = '20240322'
 _libtpu_version = f'0.1.dev{_date}'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 _jax_version = f'0.4.26.dev{_date}'
@@ -90,7 +90,7 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.3.0')
+  version = os.getenv('TORCH_XLA_VERSION', '2.4.0')
   if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
       version += '+git' + xla_git_sha[:7]

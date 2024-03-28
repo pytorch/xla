@@ -326,12 +326,24 @@ cc_library(
 )
 
 cc_library(
+    name = "xla_mlir_debuginfo_helper",
+    srcs = ["xla_mlir_debuginfo_helper.cc"],
+    hdrs = ["xla_mlir_debuginfo_helper.h"],
+    deps = [
+        ":types",
+        ":xla_util",
+        "@xla//xla/mlir_hlo:all_passes",
+    ],
+)
+
+cc_library(
     name = "stablehlo_helper",
     srcs = ["stablehlo_helper.cc"],
     hdrs = ["stablehlo_helper.h"],
     deps = [
         ":types",
         ":xla_util",
+        ":xla_mlir_debuginfo_helper",
         ":stablehlo_composite_helper",
         "@stablehlo//:stablehlo_portable_api",
         "@stablehlo//:stablehlo_serialization",

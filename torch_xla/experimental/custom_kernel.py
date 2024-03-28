@@ -1,4 +1,5 @@
 import functools
+import os
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -6,6 +7,8 @@ import torch_xla.core.xla_model as xm
 from typing import List, Callable
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
+
+_XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
 
 XLA_LIB.define(
     "tpu_custom_call_(Tensor(a!) output, Tensor[] inputs, str payload) -> ()",)
@@ -72,12 +75,15 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   import jax
   import jax.numpy as jnp
   import jax._src.pallas.mosaic.pallas_call_registration
-  from jax.experimental import pallas as pl
 
   def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
     if dtype == torch.float32:
+      if _XLA_USE_BF16:
+        return jnp.bfloat16
       return jnp.float32
     elif dtype == torch.float64:
+      if _XLA_USE_BF16:
+        return jnp.bfloat16
       return jnp.float64
     elif dtype == torch.float16:
       return jnp.float16
@@ -97,19 +103,26 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
       raise ValueError(f"Unsupported dtype: {dtype}")
 
   # TODO: Maybe we can cache the payload for the same input.
-  def wrapped_kernel(kernel: Callable, output_shape_dtype_fn: Callable, *args):
+  def wrapped_kernel(kernel: Callable,
+                     output_shape_dtype_fn: Callable,
+                     *args,
+                     static_argnames=[],
+                     **kwargs) -> Callable:
     jax_args = []
     for i, arg in enumerate(args):
       if torch.is_tensor(arg):
-        # ShapedArray doesn't have any storage and thus is very suitable for generating the payload.
-        jax_meta_tensor = jax.core.ShapedArray(
+        # ShapeDtypeStruct doesn't have any storage and thus is very suitable for generating the payload.
+        jax_meta_tensor = jax.ShapeDtypeStruct(
             arg.shape, convert_torch_dtype_to_jax(arg.dtype))
         jax_args.append(jax_meta_tensor)
       else:
         # TODO: We can support more types here.
         assert False, f"Unsupported argument type: {type(arg)}"
 
-    ir = jax.jit(kernel).lower(*jax_args).compiler_ir()
+    # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
+    ir = jax.jit(
+        kernel, static_argnames=static_argnames).lower(*jax_args,
+                                                       **kwargs).compiler_ir()
     payload = _extract_backend_config(ir)
     output_shape, output_dtype = output_shape_dtype_fn(*args)
     output = torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device())
@@ -117,3 +130,46 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
     return output
 
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
+
+
+# This is a simplified wrapper on top of https://github.com/google/jax/blob/b2058d72b7e1693a41303d5411572aabf99b7981/jax/experimental/pallas/ops/tpu/flash_attention.py#L139
+# where we only takes q, k, v, segment_ids and causal as input and set block_sizes for the users.
+def flash_attention(
+    q,  # [batch_size, num_heads, q_seq_len, d_model]
+    k,  # [batch_size, num_heads, kv_seq_len, d_model]
+    v,  # [batch_size, num_heads, kv_seq_len, d_model]
+    segment_ids=None,  # q of [batch_size, q_seq_len] and kv of [batch_size, kv_seq_len]
+    causal=False,
+):
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
+  import jax.experimental.pallas.ops.tpu.flash_attention as tpu_flash_attention
+
+  # TODO: Support segment_ids.
+  flash_attention_kernel = make_kernel_from_pallas(
+      tpu_flash_attention.flash_attention, lambda q, k, v: (q.shape, q.dtype))
+
+  # The block_sizes configuration is copied from https://github.com/google/maxtext/blob/0fee320451738166c8e596dc63a57a4673671576/MaxText/layers/attentions.py#L215-L240
+  # It yields much better performance than the default block_sizes.
+  return flash_attention_kernel(
+      q,
+      k,
+      v,
+      static_argnames=["block_sizes", "causal"],
+      block_sizes=tpu_flash_attention.BlockSizes(
+          block_q=min(512, q.shape[2]),
+          block_k_major=min(512, k.shape[2]),
+          block_k=min(512, k.shape[2]),
+          block_b=min(2, q.shape[0]),
+          block_q_major_dkv=min(512, q.shape[2]),
+          block_k_major_dkv=min(512, k.shape[2]),
+          block_q_dkv=min(512, q.shape[2]),
+          block_k_dkv=min(512, k.shape[2]),
+          block_q_dq=min(1024, q.shape[2]),
+          block_k_dq=min(256, k.shape[2]),
+          block_k_major_dq=min(512, k.shape[2]),
+      ),
+      causal=causal)

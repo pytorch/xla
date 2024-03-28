@@ -3,10 +3,6 @@
 <b>Current CI status:</b>  ![GitHub Actions
 status](https://github.com/pytorch/xla/actions/workflows/build_and_test.yml/badge.svg)
 
-Note: PyTorch/XLA r2.1 will be the last release with XRT available as a legacy
-runtime. Our main release build will not include XRT, but it will be available
-in a separate package.
-
 PyTorch/XLA is a Python package that uses the [XLA deep learning
 compiler](https://www.tensorflow.org/xla) to connect the [PyTorch deep learning
 framework](https://pytorch.org/) and [Cloud

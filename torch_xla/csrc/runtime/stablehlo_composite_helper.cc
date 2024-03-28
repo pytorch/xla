@@ -437,37 +437,13 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
                 "JSON into composite attributes.";
     }
 
-    builder.setInsertionPointAfter(boundary_output_op);
-    llvm::SmallVector<mlir::NamedAttribute> call_attrs{
-        {
-            builder.getStringAttr("call_target_name"),
-            builder.getStringAttr("stablehlo.composite"),
-        },
-        {
-            builder.getStringAttr("called_computations"),
-            builder.getArrayAttr(mlir::FlatSymbolRefAttr::get(
-                builder.getContext(), impl_func.getSymName())),
-        },
-        {
-            builder.getStringAttr("composite.backend_config"),
-            builder.getDictionaryAttr(llvm::SmallVector<mlir::NamedAttribute>{
-                {
-                    builder.getStringAttr("attributes"),
-                    *attributes_or,
-                },
-                {
-                    builder.getStringAttr("name"),
-                    builder.getStringAttr(metadata.name),
-                },
-            }),
-        },
-    };
-
     // Creates and inserts composite call op.
+    builder.setInsertionPointAfter(boundary_output_op);
     mlir::Operation* composite_op =
-        builder.create<mlir::stablehlo::CustomCallOp>(
+        builder.create<mlir::stablehlo::CompositeOp>(
             boundary_output_op->getLoc(),
-            impl_func.getFunctionType().getResults(), args, call_attrs);
+            impl_func.getFunctionType().getResults(), args, metadata.name,
+            *attributes_or, impl_func.getSymName());
     return composite_op;
   }
 };

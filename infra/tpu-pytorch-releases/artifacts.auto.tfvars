@@ -1,4 +1,4 @@
-nightly_package_version = "2.3.0"
+nightly_package_version = "2.4.0"
 
 # Built once a day from master.
 nightly_builds = [
@@ -18,6 +18,16 @@ nightly_builds = [
   {
     accelerator  = "cuda"
     cuda_version = "12.1"
+  },
+  {
+    accelerator  = "cuda"
+    cuda_version = "12.1"
+    python_version = "3.10"
+  },
+  {
+    accelerator  = "cuda"
+    cuda_version = "12.1"
+    python_version = "3.11"
   },
 ]
 

@@ -12,6 +12,8 @@ const OpKindWrapper xla_cross_replica_sum("xla::cross_replica_sum");
 const OpKindWrapper xla_device_data("xla::device_data");
 const OpKindWrapper xla_dequantize_tensor("xla::dequantize_tensor");
 const OpKindWrapper xla_diagonal_view_update("xla::diagonal_view_update");
+const OpKindWrapper xla_dynamic_expand("xla::dynamic_expand");
+const OpKindWrapper xla_dynamic_view("xla::dynamic_view");
 const OpKindWrapper xla_einsum_backward("xla::einsum_backward");
 const OpKindWrapper xla_generic_slice("xla::generic_slice");
 const OpKindWrapper xla_get_dimensions_size("xla::xla_get_dimensions_size");

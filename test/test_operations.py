@@ -32,6 +32,7 @@ import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
 import torch_xla.distributed.data_parallel as dp
+from torch_xla.distributed.fsdp import checkpoint_module
 from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
@@ -2461,6 +2462,41 @@ class TestGeneric(test_utils.XlaTestCase):
     # 0-dimensional scalar-tensor
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
+
+
+class SimpleModelWithDropout(torch.nn.Module):
+
+  def __init__(self):
+    super().__init__()
+    self.x = torch.nn.Linear(128, 128)
+    self.dropout = torch.nn.Dropout(p=0.1)
+    self.to_save = []
+
+  def save_output(self, output):
+    self.to_save.append(output.detach().cpu())
+
+  def forward(self, inp):
+    x = self.x(inp)
+    output = self.dropout(x)
+    xm.add_step_closure(self.save_output, args=(output,), run_async=False)
+    return output
+
+
+class TestActivationCheckpoint(test_utils.XlaTestCase):
+
+  def test_dropout(self):
+    device = xm.xla_device()
+    model = SimpleModelWithDropout().to(device)
+    model = checkpoint_module(model)
+    _input = torch.randn(128, 128, requires_grad=True)
+    _input = _input.to(device)
+    output = model(_input)
+    output = torch.sum(output)
+    output.backward()
+    xm.mark_step()
+    same_output = torch.allclose(model.to_save[0], model.to_save[1])
+    self.assertTrue(same_output,
+                    f"in fwd {model.to_save[0]}, in bwd {model.to_save[1]}")
 
 
 if __name__ == '__main__':
