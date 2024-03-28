@@ -39,13 +39,13 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
     # lower, upper, one_value, init_val = loop_carry
     # return (torch.add(iter, one_value).clone(), upper.clone(), one_value.clone(), body_fun(x, one_value).clone())
     # one_value = torch.tensor([1], dtype=torch.int32, device=device)
-    new_upper = torch.sub(upper, one_value)
-    # new_lower = torch.add(lower, one_value)
+    # new_upper = torch.sub(upper, one_value)
+    new_lower = torch.add(lower, one_value)
     new_init_val = body_fun(init_val, one_value)
     # return (new_lower, upper, one_value, new_init_val)
     # return (new_upper, lower, one_value, new_init_val) # one_value, lower, new_upper, new_init_val)
     # return (upper, new_lower, one_value, new_init_val)
-    return (one_value, lower, new_upper, new_init_val)
+    return (one_value, new_lower, upper, new_init_val)
 
   # loop_carruy_print = (lower, upper, one_value, init_val)
   # print("loop_carruy_print[0]: ", loop_carruy_print[0]) # tensor([1], device='xla:0', dtype=torch.int32)
