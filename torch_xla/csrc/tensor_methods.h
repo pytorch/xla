@@ -678,11 +678,8 @@ XLATensorPtr nll_loss_backward(const XLATensorPtr& grad_output,
                                int ignore_index,
                                const XLATensorPtr& total_weight);
 
-std::pair<XLATensorPtr, XLATensorPtr> nms(const XLATensorPtr& boxes,
-                                          const XLATensorPtr& scores,
-                                          const XLATensorPtr& score_threshold,
-                                          const XLATensorPtr& iou_threshold,
-                                          int64_t output_size);
+XLATensorPtr nms(const XLATensorPtr& boxes, const XLATensorPtr& scores,
+                 double iou_threshold);
 
 XLATensorPtr nonzero(const XLATensorPtr& input);
 

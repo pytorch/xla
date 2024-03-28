@@ -112,7 +112,8 @@ at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
                            const at::TensorOptions& tensor_options);
 
 // Creates an ATen tensor with XLA type id from an XLATensorPtr.
-at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor);
+at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor,
+                             bool skip_functionalization = false);
 
 std::vector<at::Tensor> AtenFromXlaTensors(
     absl::Span<const XLATensorPtr> xla_tensors);
