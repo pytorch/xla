@@ -171,8 +171,10 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   print("body computation: !!!!!!!!!")
   print(body_hlo_print)
 
+  import pdb; pdb.set_trace()
   # analyze body_hlo_print, get body_xlacomputation's input/output * check same
   body_hlo_print_first_line = (body_hlo_print.split("ENTRY"))[0]
+  print("body_hlo_print_first_line: ", body_hlo_print_first_line)
   entry_computation_layout = (body_hlo_print_first_line.split(", entry_computation_layout={"))[1][:-1]
   inputs_shape, outputs_shape = entry_computation_layout.split("->", 1)
   if inputs_shape[1:-1] != outputs_shape:
