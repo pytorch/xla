@@ -1254,6 +1254,7 @@ std::vector<xla::XlaOp> BuildTpuCustomCall(
     const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
     const std::string& payload) {
   XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+  XLA_CHECK(output_shape.IsTuple()) << "output_shape is not a tuple";
 
   // We need to enforce the default C-order (major-to-minor) layouts for inputs
   // to Mosaic and outputs from Mosaic.

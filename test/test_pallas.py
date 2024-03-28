@@ -276,6 +276,7 @@ class PallasTest(unittest.TestCase):
                                          (x.shape, x.dtype)])
     x = torch.arange(8, device="xla", dtype=torch.float)
     o = pt_kernel(x, x)
+    self.assertEqual(len(o), 2)
 
     expected_o0 = x + x
     expected_o1 = x - x
