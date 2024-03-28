@@ -203,9 +203,9 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
     # [('s32', 1), ('f32', 20), ('f32', 20), ('f32', 10), ('s64', 0)]
     if i=='s32':
       additional_tensors.append(torch.ones(j, dtype=torch.int32, device=device))
-    else if i=='f32':
+    elif i=='f32':
       additional_tensors.append(torch.ones(j, dtype=torch.float32, device=device))
-    else if i=='s64':
+    elif i=='s64':
       additional_tensors.append(torch.ones(j, dtype=torch.int64, device=device))
     else:
       additional_tensors.append(torch.ones(j, dtype=torch.int32, device=device))
