@@ -127,7 +127,8 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
     # TODO: We can consider supporting un-array output.
     outputs = []
     output_shape_dtype = output_shape_dtype_fn(*args)
-    assert isinstance(output_shape_dtype, list), "The output_shape_dtype_fn should return a list."
+    assert isinstance(output_shape_dtype,
+                      list), "The output_shape_dtype_fn should return a list."
     for output_shape, output_dtype in output_shape_dtype:
       outputs.append(
           torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device()))
