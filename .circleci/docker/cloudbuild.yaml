@@ -14,7 +14,7 @@ steps:
         ]
   timeout: 2000s
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/tpu-pytorch/xla_base']
+  args: ['push', 'gcr.io/tpu-pytorch/xla_base:${_TAG_NAME}']
   timeout: 1000s
 
 options:
@@ -25,5 +25,5 @@ substitutions:
     _CUDA: '1'
     _BASE_IMAGE: 'us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3'
     _PYTHON_VERSION: '3.10'
-    _TAG_NAME: '${_PYTHON_VERSION}-mini'
+    _TAG_NAME: '${_PYTHON_VERSION}-image'
 timeout: 3000s
