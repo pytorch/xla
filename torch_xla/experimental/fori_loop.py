@@ -35,7 +35,10 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
   def body_fn(upper, lower, *x):
     one_value = torch.ones(1, dtype=torch.int32, device=device)
     # two_value = upper.clone()
-    return (torch.sub(upper, one_value), lower, body_fun(one_value, *x)) # , one_value))
+    return_list = list(body_fun(one_value, *x))
+    return_list.insert(0, torch.sub(upper, one_value))
+    return_list.insert(0, lower)
+    return tuple(return_list) # (torch.sub(upper, one_value), lower, body_fun(one_value, *x)) # , one_value))
 
   # upper, lower, one_value, init_val
   # real(ov, lower, upper, x)
