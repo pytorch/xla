@@ -30,7 +30,7 @@ function install_and_setup_conda() {
   conda update -y -n base conda
   conda install -y python=$PYTHON_VERSION
 
-  conda install -y nomkl numpy=1.18.5 pyyaml setuptools \
+  conda install -y nomkl numpy=1.22.3 pyyaml setuptools \
     cffi typing tqdm coverage hypothesis dataclasses cython
 
   /usr/bin/yes | pip install mkl==2022.2.1
@@ -45,7 +45,7 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install pandas
   /usr/bin/yes | pip install tabulate
   # Additional PyTorch requirements
-  /usr/bin/yes | pip install scikit-image scipy==1.6.3
+  /usr/bin/yes | pip install scikit-image scipy==1.10.0
   /usr/bin/yes | pip install boto3==1.16.34
   /usr/bin/yes | pip install mypy==0.812
   /usr/bin/yes | pip install psutil
