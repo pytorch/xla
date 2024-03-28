@@ -199,6 +199,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
 
   # create tensors based on additional_arguments
   additional_tensors = []
+  device = operands[0].device
   for i, j in additional_arguments:
     # [('s32', 1), ('f32', 20), ('f32', 20), ('f32', 10), ('s64', 0)]
     if i=='s32':
