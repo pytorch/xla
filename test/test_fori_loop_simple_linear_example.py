@@ -2,7 +2,7 @@ import os
 # import unittest
 # from typing import Callable, Dict, List
 
-# import torch
+import torch
 import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
@@ -21,8 +21,9 @@ y_values = [2*i + 1 for i in x_values]
 y_train = np.array(y_values, dtype=np.float32)
 y_train = y_train.reshape(-1, 1)
 
-import torch
+# import torch
 from torch.autograd import Variable
+
 class linearRegression(torch.nn.Module):
     def __init__(self, inputSize, outputSize):
         super(linearRegression, self).__init__()
@@ -35,10 +36,11 @@ class linearRegression(torch.nn.Module):
 # --- training ---
 inputDim = 1        # takes variable 'x' 
 outputDim = 1       # takes variable 'y'
-learningRate = 0.01 
+learningRate = 0.01 * xm.xrt_world_size()
 epochs = 10 # 100
 
-model = linearRegression(inputDim, outputDim)
+model = linearRegression(inputDim, outputDim).to(device)
+# model = MNIST().to(device)
 ##### For GPU #######
 if torch.cuda.is_available():
     model.cuda()
@@ -68,7 +70,8 @@ for epoch in range(epochs):
     loss.backward()
 
     # update parameters
-    optimizer.step()
+    # optimizer.step()
+    xm.optimizer_step(optimizer)
 
     print('epoch {}, loss {}'.format(epoch, loss.item()))
 
