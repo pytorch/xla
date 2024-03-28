@@ -17,10 +17,10 @@ torch.set_grad_enabled(False)
 device = xm.xla_device()
 
 # --- linear one ---
-l_in = torch.randn(10, device=xm.xla_device())
-linear = torch.nn.Linear(10, 20).to(xm.xla_device())
-l_out = linear(l_in)
-print("linear one: ", l_out)
+# l_in = torch.randn(10, device=xm.xla_device())
+# linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+# l_out = linear(l_in)
+# print("linear one: ", l_out)
 
 # --- while test case ---
 
@@ -57,10 +57,10 @@ print("upper_: ", upper_)
 print("res_: ", res_)
 
 # --- linear two ---
-l_in_2 = torch.randn(10, device=xm.xla_device())
-linear_2 = torch.nn.Linear(10, 20).to(xm.xla_device())
-l_out_2 = linear(l_in_2)
-print("linear two: ", l_out_2)
+# l_in_2 = torch.randn(10, device=xm.xla_device())
+# linear_2 = torch.nn.Linear(10, 20).to(xm.xla_device())
+# l_out_2 = linear(l_in_2)
+# print("linear two: ", l_out_2)
 
 # =================================================================================
 
