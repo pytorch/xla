@@ -73,12 +73,13 @@ for epoch in range(epochs):
     print('epoch {}, loss {}'.format(epoch, loss.item()))
 
 # --- test ---
-with torch.no_grad(): # we don't need gradients in the testing phase
-    if torch.cuda.is_available():
-        predicted = model(Variable(torch.from_numpy(x_train).cuda())).cpu().data.numpy()
-    else:
-        predicted = model(Variable(torch.from_numpy(x_train))).data.numpy()
-    print(predicted)
+for epoch in range(epochs):
+    with torch.no_grad(): # we don't need gradients in the testing phase
+        if torch.cuda.is_available():
+            predicted = model(Variable(torch.from_numpy(x_train).cuda())).cpu().data.numpy()
+        else:
+            predicted = model(Variable(torch.from_numpy(x_train))).data.numpy()
+        print(epoch, "-th predicted result: ", predicted)
 
 # --- draw ---
 # plt.clf()
