@@ -39,10 +39,10 @@ linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
 def body_fun(y, x, l_in_i):
   # l_in = torch.randn(10, device=xm.xla_device())
   # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-  l_out = linear_0(l_in)
+  l_out = linear_0(l_in_i)
   placeholder_func = torch.rand(size = l_out.size(), device = device)
-  placeholder_input = torch.rand(size = l_in.size(), device = device)
-  return torch.add(y, x), linear_0(l_in_i), placeholder_func, placeholder_input # , linear_0, l_in_i # additional return: body and input-placeholder   # linear(l_in) # torch.add(a, b) # [0])
+  placeholder_input = torch.rand(size = l_in_i.size(), device = device)
+  return torch.add(y, x), l_out, placeholder_func, placeholder_input # linear_0(l_in_i), linear_0, l_in_i # additional return: body and input-placeholder   # linear(l_in) # torch.add(a, b) # [0])
 
 # TODO(@manfei), need to create new variable to seperate old/formal HLO/IR
 l_in_0 = torch.randn(10, device=xm.xla_device())
