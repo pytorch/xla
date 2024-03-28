@@ -72,8 +72,10 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
   print("init_val: ", init_val)
   print("init_val[0]: ", init_val[0])
   print("init_val[1]: ", init_val[1])
-  print("init_val[2]: ", init_val[2])
-  print("init_val[3]: ", init_val[3])
+  print("type init_val[0]: ", type(init_val[0]))
+  print("type init_val[1]: ", type(init_val[1]))
+  # print("init_val[2]: ", init_val[2])
+  # print("init_val[3]: ", init_val[3])
 
   if len(init_val) >= 1:
     val_list = list(init_val)
