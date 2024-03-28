@@ -254,6 +254,8 @@ def train_imagenet():
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             _train_update, args=(device, step, loss, tracker, epoch, writer))
+      if FLAGS.num_steps and FLAGS.num_steps == step:
+        break
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -266,6 +268,8 @@ def train_imagenet():
       if step % FLAGS.log_steps == 0:
         xm.add_step_closure(
             test_utils.print_test_update, args=(device, None, epoch, step))
+      if FLAGS.num_steps and FLAGS.num_steps == step:
+        break
     accuracy = 100.0 * correct.item() / total_samples
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
