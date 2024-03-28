@@ -24,7 +24,7 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
   device = xm.xla_device()
 
   def cond_fn(init, limit_value, x):
-    return limit_value[0] <= init[0]
+    return limit_value[0] < init[0]
 
   def body_fn(init, limit_value, x):
     one_value = torch.ones(1, dtype=torch.int32, device=device)
