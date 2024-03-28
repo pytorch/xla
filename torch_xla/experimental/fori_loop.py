@@ -13,7 +13,7 @@ from torch._higher_order_ops.while_loop import while_loop_op
 
 # lower, upper, body_fun, init_val, one_value
 # def fori_loop(upper, body_fun, lowers):#  upper, body_fun, *init_vals): # *init_val):
-def fori_loop(lower, upper, body_fun, one_value, init_val):
+def fori_loop(lower, upper, body_fun, one_value, *init_val):
 
   # print("lower: ", lower) # tensor([1], device='xla:0', dtype=torch.int32)
   # print("upper: ", upper) # tensor([20], device='xla:0', dtype=torch.int32)
@@ -65,7 +65,7 @@ def fori_loop(lower, upper, body_fun, one_value, init_val):
 
   # res = _xla_while_loop(cond_fn, body_fn, upper, lower, one_value, init_val) # one_value, lower, upper, init_val) # upper, lower, one_value, init_val)
   # res = _xla_while_loop(cond_fn, body_fn, one_value, lower, upper, init_val)
-  res = _xla_while_loop(cond_fn, body_fn, lower, upper, init_val)
+  res = _xla_while_loop(cond_fn, body_fn, lower, upper, *init_val)
   return res
 
 @while_loop_op.py_impl(DispatchKey.XLA)
