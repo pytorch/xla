@@ -40,6 +40,7 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     return_list = list(body_fun(one_value, *x))
     return_list.insert(0, torch.sub(upper, one_value))
     return_list.insert(0, lower)
+    return_list.insert(-1, one_value)
     return tuple(return_list) # (torch.sub(upper, one_value), lower, body_fun(one_value, *x)) # , one_value))
 
   # upper, lower, one_value, init_val
@@ -157,24 +158,6 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   #     tensor([1], device='xla:0', dtype=torch.int32),
   #     tensor([1], device='xla:0', dtype=torch.int32))
 
-  cond_result = cond_fn(*operands) # lower, upper, init_val) # operands) # *operands)
-  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
-  cond_ctx.set_name_string("condctx")
-  # print("arrive here!!!")
-  # print("cond_result: ", cond_result)
-  # print("init_val: ", init_val)
-  # TODO(@manfei) to reduce to operands[2:]
-  cond_ctx.build([cond_result], list(operands[2:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
-  # print("arrive here!!!")
-  cond_hlo = cond_ctx.hlo()
-  cond_computation = xb.computation_from_module_proto("condcomputation",
-                                                      cond_hlo)
-  cond_hlo_print = xb.get_computation_hlo(cond_computation)
-  print("cond computation: !!!!!!!!!")
-  print(cond_hlo_print)
-
-  print("body: operands: ", operands)
-
   # generate body_fn xlacomputation
   body_result = body_fn(*operands) # lower, upper, init_val) # operands) # *operands)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
@@ -187,6 +170,46 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   body_hlo_print = xb.get_computation_hlo(body_computation)
   print("body computation: !!!!!!!!!")
   print(body_hlo_print)
+
+  # analyze body_hlo_print, get body_xlacomputation's input/output * check same
+  body_hlo_print_first_line = (body_hlo_print.split("ENTRY"))[0]
+  entry_computation_layout = (body_hlo_print_first_line.split(", entry_computation_layout={"))[1][:-1]
+  inputs_shape, outputs_shape = entry_computation_layout.split("->")
+  if inputs_shape[1:-1] != outputs_shape:
+    print("[ERROR]: body_xlacomputation's input and output are not the same!!!")
+  # outputs_shape = (s32[1]{0}, s32[1]{0}, s32[1]{0}, f32[20]{0}, f32[20]{0}, /*index=5*/f32[10]{0})
+  # filter all item in outputs_shape and trans to `cond_ctx.build` to add new params when build cond xlacomputation
+  outputs_shape_list = outputs_shape[1:-1].split(", ")
+  additional_arguments = []
+  for i in outputs_shape_list[2:]: # skip upper and lower
+    if (i[:2]=='/*'): # clean prefix like /*...*/
+      i = (i.split('*/'))[1]
+
+    if (i[-3:]=='{0}'): # check end with {0}
+      # if (i[:3]=='s32'): # xla::PrimitiveType::S32
+      i_size_number = int(i[4:-4])
+      additional_arguments.append((i[:3], i_size_number))
+    # additional_arguments.append(i[])
+    else: # not end with {0}
+      additional_arguments(('s32', 1)) # s32[1] # xla::PrimitiveType::S32
+
+  cond_result = cond_fn(*operands) # lower, upper, init_val) # operands) # *operands)
+  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  cond_ctx.set_name_string("condctx")
+  # print("arrive here!!!")
+  # print("cond_result: ", cond_result)
+  # print("init_val: ", init_val)
+  # TODO(@manfei) to reduce to operands[2:]
+  cond_ctx.build([cond_result], additional_arguments) # list(operands[2:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
+  # print("arrive here!!!")
+  cond_hlo = cond_ctx.hlo()
+  cond_computation = xb.computation_from_module_proto("condcomputation",
+                                                      cond_hlo)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  print("cond computation: !!!!!!!!!")
+  print(cond_hlo_print)
+
+  print("body: operands: ", operands)
 
   # generate while xlacomputation
   input_tuple = xb.Op.tuple(tuple(params))

@@ -53,10 +53,10 @@ l_in_0 = torch.randn(10, device=xm.xla_device())
 #   # l_out = linear(l_in)
 #   return torch.add(x, y), linear(l_in) # linear(l_in) # torch.add(a, b) # [0])
 
-placeholder_func = torch.rand(size = l_out.size(), device = device)
-placeholder_input = torch.rand(size = l_in_i.size(), device = device)
+# placeholder_func = torch.rand(size = l_out.size(), device = device)
+# placeholder_input = torch.rand(size = l_in_i.size(), device = device)
 
-lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val, l_in_0, placeholder_func, placeholder_input) # , linear_0, l_in_0)
+lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val, l_in_0) # , placeholder_func, placeholder_input) # , linear_0, l_in_0)
 
 print("lower_: ", lower_)
 print("upper_: ", upper_)
