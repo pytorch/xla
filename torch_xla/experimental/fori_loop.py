@@ -122,11 +122,11 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # print("in _xla_while_loop: ", operands)
   kwargs = {}
   if type(operands) is tuple:
-    print("aaa")
+    # print("aaa")
     operands = operands[0]
     shapes = xb.tensor_shape(operands)
   else:
-    print("bbb")
+    # print("bbb")
     shapes = xb.tensor_shape((operands)) # _tuple)
   builder = xb.create_builder('test_while')
   params = []
@@ -160,6 +160,8 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   cond_hlo_print = xb.get_computation_hlo(cond_computation)
   print("cond computation: !!!!!!!!!")
   print(cond_hlo_print)
+
+  print("body: operands: ", operands)
 
   # generate body_fn xlacomputation
   body_result = body_fn(*operands) # lower, upper, init_val) # operands) # *operands)
