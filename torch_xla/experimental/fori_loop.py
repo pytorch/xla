@@ -14,6 +14,7 @@ from torch._higher_order_ops.while_loop import while_loop_op
 # lower, upper, body_fun, init_val, one_value
 # def fori_loop(upper, body_fun, lowers):#  upper, body_fun, *init_vals): # *init_val):
 def fori_loop(lower, upper, body_fun, one_value, *init_val):
+  print("init_val: ", init_val)
 
   # print("lower: ", lower) # tensor([1], device='xla:0', dtype=torch.int32)
   # print("upper: ", upper) # tensor([20], device='xla:0', dtype=torch.int32)
