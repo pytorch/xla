@@ -20,14 +20,14 @@ device = xm.xla_device()
 l_in = torch.randn(10, device=xm.xla_device())
 linear = torch.nn.Linear(10, 20).to(xm.xla_device())
 l_out = linear(l_in)
-print("linear one: ", l_out)
+# print("linear one: ", l_out)
 
 # --- for loop case ---
 for i in range(0, 5):
   l_in = torch.randn(10, device=xm.xla_device())
   linear = torch.nn.Linear(10, 20).to(xm.xla_device())
   l_out = linear(l_in)
-  print("linear ", i, ": ", l_out)
+#   print("linear ", i, ": ", l_out)
 
 print("finish all infers")
 
