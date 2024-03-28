@@ -33,6 +33,8 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
 
   # def body_fn(lower, upper, x):
   def body_fn(upper, lower, *x):
+    # lower,   upper,  init_val, l_in
+    # (s32[1], s32[1], s32[1],   f32[20], f32[20,10], /*index=5*/f32[10])
     one_value = torch.ones(1, dtype=torch.int32, device=device)
     # two_value = upper.clone()
     return_list = list(body_fun(one_value, *x))
@@ -86,6 +88,8 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     val_list.insert(1, upper)
     # print("val_list: ", val_list)
     res = _xla_while_loop(cond_fn, body_fn, tuple(val_list))
+    # upper, lower, body_fun, one_value, init_val, l_in
+    # lower, upper, init_val, l_in
     return res
   else:
     # TODO(@manfei): this should not arrived, due to init_val must contain value
