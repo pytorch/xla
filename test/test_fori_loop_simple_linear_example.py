@@ -11,6 +11,8 @@ from torch_xla.experimental.fori_loop import fori_loop
 import torch_xla.core.xla_model as xm
 # import torch_xla.core.xla_builder as xb
 
+device = xm.xla_device()
+
 import numpy as np
 # create dummy data for training
 x_values = [i for i in range(11)]
@@ -77,7 +79,7 @@ for epoch in range(epochs):
 
 # --- while simple test case ---
 
-device = xm.xla_device()
+# device = xm.xla_device()
 
 lower = torch.tensor([2], dtype=torch.int32, device=device)
 upper = torch.tensor([52], dtype=torch.int32, device=device)
