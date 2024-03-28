@@ -172,7 +172,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   print("body computation: !!!!!!!!!")
   print(body_hlo_print)
 
-  import pdb; pdb.set_trace()
+  # import pdb; pdb.set_trace()
   # analyze body_hlo_print, get body_xlacomputation's input/output * check same
   body_hlo_print_first_line = (body_hlo_print.split(")}", 1))[0]
   print("body_hlo_print_first_line: ", body_hlo_print_first_line)
@@ -197,6 +197,19 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
     else: # not end with {0}
       additional_arguments.append(('s64', 0)) # s32[1] # xla::PrimitiveType::S32
 
+  # create tensors based on additional_arguments
+  additional_tensors = []
+  for i, j in additional_arguments:
+    # [('s32', 1), ('f32', 20), ('f32', 20), ('f32', 10), ('s64', 0)]
+    if i=='s32':
+      additional_tensors.append(torch.ones(j, dtype=torch.int32, device=device))
+    else if i=='f32':
+      additional_tensors.append(torch.ones(j, dtype=torch.float32, device=device))
+    else if i=='s64':
+      additional_tensors.append(torch.ones(j, dtype=torch.int64, device=device))
+    else:
+      additional_tensors.append(torch.ones(j, dtype=torch.int32, device=device))
+
   cond_result = cond_fn(*operands) # lower, upper, init_val) # operands) # *operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
@@ -204,7 +217,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   # print("cond_result: ", cond_result)
   # print("init_val: ", init_val)
   # TODO(@manfei) to reduce to operands[2:]
-  cond_ctx.build([cond_result], additional_arguments) # list(operands[2:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
+  cond_ctx.build([cond_result], additional_tensors) # list(operands[2:]))# operands[:1], operands[3:])) # [one_value, init_val]) # , init_val) # [operands[2]])
   # print("arrive here!!!")
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
