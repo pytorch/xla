@@ -270,10 +270,10 @@ function run_xla_op_tests3 {
       # performance evaluation & comparison among different
       # amp optimizers.
       echo "Running ImageNet Test"
-      python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1
+      python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1 --batch_size 64
 
       echo "Running MNIST Test"
-      python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
+      python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1 --batch_size 64
     fi
   fi
 }
