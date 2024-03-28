@@ -28,7 +28,7 @@ for i in range(0, 5):
   linear = torch.nn.Linear(10, 20).to(xm.xla_device())
   l_out = linear(l_in)
 #   print("linear ", i, ": ", l_out)
-
+print("linear: ", l_out)
 print("finish all infers")
 
 # --- while test case ---
