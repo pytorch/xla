@@ -12,6 +12,8 @@ import torch_xla.core.xla_model as xm
 # import torch_xla.core.xla_builder as xb
 import torch_xla.utils.utils as xu
 
+torch.set_grad_enabled(False)
+
 device = xm.xla_device()
 
 # --- linear one ---
