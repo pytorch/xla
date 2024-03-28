@@ -17,7 +17,7 @@ install_environments
 pip install --user https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch-nightly-cp38-cp38-linux_x86_64.whl \
   https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torchvision-nightly-cp38-cp38-linux_x86_64.whl \
   https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl
-pip install torch_xla[tpuvm] --user
+pip install torch_xla[tpu] --user
 
 set +e
 # -E is for preserving environment
