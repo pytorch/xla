@@ -6,7 +6,7 @@ steps:
   args: [
           'build',
           '--build-arg', 'cloud_build_prefix=.cicleci/docker',
-          '--build-arg', 'base_image=nvidia/cuda:${_CUDA_TAG}',
+          '--build-arg', 'base_image=${_BASE_IMAGE}',
           '--build-arg', 'cuda=${_CUDA}',
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '-t', 'gcr.io/tpu-pytorch/xla_base:${_TAG_NAME}',
@@ -23,7 +23,7 @@ options:
     substitution_option: 'ALLOW_LOOSE'
 substitutions:
     _CUDA: '1'
-    _CUDA_TAG: '11.7.0-cudnn8-devel-ubuntu18.04'
-    _PYTHON_VERSION: '3.7'
-    _TAG_NAME: '${_PYTHON_VERSION}-${_CUDA_TAG}-mini'
+    _BASE_IMAGE: 'us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3'
+    _PYTHON_VERSION: '3.10'
+    _TAG_NAME: '${_PYTHON_VERSION}-mini'
 timeout: 3000s

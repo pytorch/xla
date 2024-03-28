@@ -1,6 +1,6 @@
 # This requires cuda & cudnn packages pre-installed in the base image.
 # Other available cuda images are listed at https://hub.docker.com/r/nvidia/cuda
-ARG base_image="us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1"
+ARG base_image="us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3"
 FROM "${base_image}"
 
 ARG python_version="3.8"
