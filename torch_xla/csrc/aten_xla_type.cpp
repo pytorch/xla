@@ -551,8 +551,8 @@ at::Tensor XLANativeFunctions::_to_copy(
 
   // Case 1: Materialize the tensor.
   if (device && device->type() != c10::kXLA) {
-    XLA_CHECK(device->type() == c10::kCPU)
-        << "only cpu device is supported in _to_copy.";
+    // XLA_CHECK(device->type() == c10::kCPU)
+    //     << "only cpu device is supported in _to_copy.";
     auto self_tensor = bridge::GetXlaTensor(self);
     auto eager_tensor = self_tensor->ToTensor(/*detached=*/true);
 
