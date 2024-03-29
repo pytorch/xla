@@ -55,6 +55,40 @@ DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 XLA_DISABLE_FUNCTIONALIZATION = bool(
     os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', False))
 
+@triton.jit
+def add_kernel(
+    x_ptr,
+    y_ptr,
+    length,
+    output_ptr,
+    block_size: tl.constexpr,
+):
+  """Adds two vectors."""
+  pid = tl.program_id(axis=0)
+  block_start = pid * block_size
+  offsets = block_start + tl.arange(0, block_size)
+  mask = offsets < length
+  x = tl.load(x_ptr + offsets, mask=mask)
+  y = tl.load(y_ptr + offsets, mask=mask)
+  output = x + y
+  tl.store(output_ptr + offsets, output, mask=mask)
+
+
+import jax
+import jax.numpy as jnp
+import jax_triton as jt
+
+def jax_add(x: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
+  out_shape = jax.ShapeDtypeStruct(shape=x.shape, dtype=x.dtype)
+  block_size = 8
+  return jt.triton_call(
+      x,
+      y,
+      x.size,
+      kernel=add_kernel,
+      out_shape=out_shape,
+      grid=(x.size // block_size,),
+      block_size=block_size)
 
 def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
@@ -2001,46 +2035,11 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   @unittest.skipIf(xr.device_type() != 'CUDA', "This test only works on GPU.")
   def test_jax_triton_kernel(self):
-    @triton.jit
-    def add_kernel(
-        x_ptr,
-        y_ptr,
-        length,
-        output_ptr,
-        block_size: tl.constexpr,
-    ):
-      """Adds two vectors."""
-      pid = tl.program_id(axis=0)
-      block_start = pid * block_size
-      offsets = block_start + tl.arange(0, block_size)
-      mask = offsets < length
-      x = tl.load(x_ptr + offsets, mask=mask)
-      y = tl.load(y_ptr + offsets, mask=mask)
-      output = x + y
-      tl.store(output_ptr + offsets, output, mask=mask)
-
-
-    import jax
-    import jax.numpy as jnp
-    import jax_triton as jt
-
-    def add(x: jnp.ndarray, y: jnp.ndarray) -> jnp.ndarray:
-      out_shape = jax.ShapeDtypeStruct(shape=x.shape, dtype=x.dtype)
-      block_size = 8
-      return jt.triton_call(
-          x,
-          y,
-          x.size,
-          kernel=add_kernel,
-          out_shape=out_shape,
-          grid=(x.size // block_size,),
-          block_size=block_size)
-
     x_val = jnp.arange(8)
     y_val = jnp.arange(8)
-    print(add(x_val, y_val))
-    print(jax.jit(add)(x_val, y_val))
-    lowered = jax.jit(add).lower(x_val, y_val).as_text()
+    print(jax_add(x_val, y_val))
+    print(jax.jit(jax_add)(x_val, y_val))
+    lowered = jax.jit(jax_add).lower(x_val, y_val).as_text()
     print(lowered)
 
 

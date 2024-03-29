@@ -45,7 +45,7 @@ jobs:
     needs: build
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
-      runner: linux.8xlarge.nvidia.gpu
+      runner: linux.g5.4xlarge.nvidia.gpu
       timeout-minutes: 300
       collect-coverage: false  # TODO(yeounoh) separate from CPU coverage metrics
     secrets:
