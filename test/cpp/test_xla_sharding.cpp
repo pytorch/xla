@@ -435,72 +435,16 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
           ->HasValue());
 }
 
-TEST_F(XLAShardingTest, TestForiLoop) {
-  xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {}); // {4, 4});
-//   int64_t n_devices =
-    //   torch_xla::runtime::GetComputationClient()->GetLocalDevices().size();
-//   xla::Array<int64_t> tile_assignment({1, n_devices});
-//   tile_assignment.FillIota(0);
-//   xla::OpSharding tiled = xla::HloSharding::Tile(tile_assignment).ToProto();
-
-  // Build simple addition with a sharded input.
+TEST_F(XLAShardingTest, TestForiLoopAddUnusedParameterInXlaComputation) {
+  xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {});
+  // Build simple addition.
   xla::XlaBuilder b("builder");
-//   b.SetSharding(tiled);
   auto x = xla::Parameter(&b, /*parameter_number=*/0, shape, "p0");
   xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {});
   auto zzz = xla::Parameter(&b, /*parameter_number=*/1, shape2, "p1");
-//   b.ClearSharding();
   auto y = xla::Add(x, xla::ConstantR0<float>(&b, 3));
   xla::XlaComputation xla_computation =
       ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
-//   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
-//   instances.push_back({std::move(xla_computation),
-//                        bridge::GetDefaultDevice()->toString(),
-//                        {bridge::GetDefaultDevice()->toString()},
-//                        &shape,
-//                        /*should_wrap_parameter=*/false,
-//                        /*is_sharded=*/true});
-
-//   std::vector<
-//       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
-//       computations = torch_xla::runtime::GetComputationClient()->Compile(
-//           std::move(instances));
-//   torch_xla::runtime::ComputationClient::ComputationPtr computation =
-//       std::make_shared<torch_xla::runtime::ComputationClient::Computation>(
-//           "add", std::move(computations[0]->move_computation()));
-
-//   // Prepare output sharding propagation, expect a sharded output placeholder.
-//   std::vector<XLATensorPtr> tensors{XLATensor::Create(
-//       torch_xla::runtime::GetComputationClient()->CreateDataPlaceholder(
-//           bridge::GetDefaultDevice()->toString(), std::move(shape)))};
-//   std::vector<torch::lazy::BackendDataPtr> data_placeholders;
-//   std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
-//   ShardingUtil::PrepareOutputShardingPropagation(
-//       &tensors, {0}, computation, &data_placeholders, &sharding_specs);
-
-//   // Check if the output sharding spec is correctly extracted.
-//   EXPECT_EQ(sharding_specs.size(), 1);
-//   if (n_devices > 1) {
-//     // Tiled sharding requires multiple devices.
-//     EXPECT_TRUE(
-//         xla::protobuf_util::ProtobufEquals(tiled, sharding_specs[0]->sharding));
-//   } else {
-//     // Sincle device execution defaults to replication sharding.
-//     EXPECT_TRUE(xla::protobuf_util::ProtobufEquals(
-//         xla::HloSharding::Replicate().ToProto(), sharding_specs[0]->sharding));
-//   }
-
-//   // Check if the placeholder is on a SPMD device (sharded) with no real values.
-//   EXPECT_EQ(data_placeholders.size(), 1);
-//   EXPECT_EQ(
-//       std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
-//           data_placeholders[0])
-//           ->device(),
-//       "SPMD:0");
-//   EXPECT_FALSE(
-//       std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
-//           data_placeholders[0])
-//           ->HasValue());
 }
 
 }  // namespace cpp_test
