@@ -243,18 +243,19 @@ function run_xla_op_tests3 {
 
   # CUDA tests
   if [ -x "$(command -v nvidia-smi)" ]; then
-    # single-host-single-process
+    # Please keep PJRT_DEVICE and GPU_NUM_DEVICES explicit in the following test commands.
+    echo "single-host-single-process"
     PJRT_DEVICE=CUDA GPU_NUM_DEVICES=1 python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_cores=1 --num_steps=25 --model=resnet18
     PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
 
-    # single-host-multi-process
+    echo "single-host-multi-process"
     num_devices=$(nvidia-smi --list-gpus | wc -l)
     PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_steps=25 --model=resnet18
     PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=$num_devices test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
 
-    # single-host-SPMD
+    echo "single-host-SPMD"
     # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
-    XLA_USE_SPMD=1 PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/spmd/test_train_spmd_imagenet.py --fake_data --batch_size 8 --model=resnet50 --sharding=batch --num_epochs=1  --num_steps=25 --model=resnet18
+    XLA_USE_SPMD=1 PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/spmd/test_train_spmd_imagenet.py --fake_data --batch_size 8 --sharding=batch --num_epochs=1 --num_steps=25 --model=resnet18
 
     # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
     PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1 --batch_size 32 --test_set_batch_size 32
