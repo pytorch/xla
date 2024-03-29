@@ -11,6 +11,12 @@ from torch._ops import HigherOrderOperator
 import torch._higher_order_ops.while_loop
 from torch._higher_order_ops.while_loop import while_loop_op
 
+# _xla_get_tensor_id
+  # (
+  #     graph_input_tensor_ids,
+  #     graph_input_xla_values,
+  # ) = torch_xla._XLAC._get_tensors_xla_device_data_node(res)
+
 # lower, upper, body_fun, init_val, one_value
 # def fori_loop(upper, body_fun, lowers):#  upper, body_fun, *init_vals): # *init_val):
 def fori_loop(lower, upper, body_fun, one_value, *init_val):
@@ -37,8 +43,9 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     # (s32[1], s32[1], s32[1],   f32[20], f32[20,10], /*index=5*/f32[10])
     one_value = torch.ones(1, dtype=torch.int32, device=device)
     # two_value = upper.clone()
-    return_list = list(body_fun(one_value, *x))
-    # return_list.append(one_value)
+    # return_list = list(body_fun(one_value, *x))
+    return_list = list(body_fun)
+    return_list.append(one_value)
     return_list.insert(0, torch.sub(upper, one_value))
     return_list.insert(0, lower)
     # return_list.insert(-1, one_value)
