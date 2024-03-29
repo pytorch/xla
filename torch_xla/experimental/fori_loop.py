@@ -45,11 +45,11 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     # TODO(@manfei):
     # two_value = upper.clone()
     weight = torch.ones([20, 10], dtype=torch.float32, device=device)
-    # return_list = list()
+    return_list = [] # list()
+    # return_list = list(body_fun(one_value, *x)) # s32[1], f32[20],
+    # return_list.insert(2, weight) # f32[20,10]
     # return_list.append(weight)
-    return_list = list(body_fun(one_value, *x)) # s32[1], f32[20],
     # return_list.append(body_fun(one_value, *x))
-    return_list.insert(2, weight) # f32[20,10]
     # weight = torch.ones([20, 10], dtype=torch.float32, device=device) # torch.linear weight
     # one_value = torch.ones(1, dtype=torch.int32, device=device)
     # return_list.append(weight)
