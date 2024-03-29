@@ -49,7 +49,7 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     # return_list.append(weight)
     return_list = list(body_fun(one_value, *x))
     # return_list.append(body_fun(one_value, *x))
-    return_list.insert(0, weight)
+    return_list.insert(2, weight)
     # weight = torch.ones([20, 10], dtype=torch.float32, device=device) # torch.linear weight
     # one_value = torch.ones(1, dtype=torch.int32, device=device)
     # return_list.append(weight)
