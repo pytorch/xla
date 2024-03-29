@@ -604,7 +604,13 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
   xla::Shape global_shape;
   xla::OpSharding sharding;
   if (sharding_spec == nullptr) {
-    sharding = xla::HloSharding::Unknown().ToProto();
+    // Unknown type is used to mark implicitly replicated data for
+    // auto-sharding.
+    // TODO(yeounoh) see if we can completely rely on Unknown without inference
+    // performance degradation.
+    sharding = ShardingUtil::GetAutoSharding()
+                   ? xla::HloSharding::Unknown().ToProto()
+                   : xla::HloSharding::Replicate().ToProto();
     // if replicated, global_shape is shape of the tensor.
     auto first_device = ParseDeviceString(devices[0]);
     global_shape =
