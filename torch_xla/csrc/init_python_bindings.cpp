@@ -891,7 +891,17 @@ class PyLoweringContext {
       : lowering_ctx("PyLoweringContext", device) {}
 
   // Builds a HLO graph given a set of output tensors.
-  void Build(std::vector<at::Tensor> tensors) {
+  void Build(std::vector<at::Tensor> tensors, std::vector<at::Tensor> input_arguments) {
+    if (GetNameString() == "condctx") {
+      xla::XlaBuilder* local_builder = lowering_ctx.builder();
+      int64_t parameters_number_i = 2;
+      for (at::Tensor input_argument : input_arguments) {
+        xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
+        xla::XlaOp x = xla::Parameter(local_builder, parameters_number_i, shape, "UnusedArgumentsPlaceholder");
+        parameters_number_i = parameters_number_i + 1;
+      }
+    }
+
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
