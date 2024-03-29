@@ -43,6 +43,10 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     return_list = list(body_fun(one_value, *x))
     return_list.insert(0, lower)
     return_list.insert(0, torch.sub(upper, one_value))
+    weight = torch.ones([20, 10], dtype=torch.float32, device=device)
+    return_list.append(weight)
+    final_one = torch.tensor([], dtype=torch.int64, device=device)
+    return_list.append(final_one)
     return tuple(return_list) # (torch.sub(upper, one_value), lower, body_fun(one_value, *x))
 
   # def cond_fn(lower, upper, x):
