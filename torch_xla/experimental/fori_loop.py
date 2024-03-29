@@ -54,8 +54,8 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     # one_value = torch.ones(1, dtype=torch.int32, device=device)
     # return_list.append(weight)
     # return_list.append(one_value)
-    return_list.insert(0, torch.sub(upper, one_value)) # s32[1]
-    # return_list.insert(0, lower) # s32[1]
+    # return_list.insert(0, torch.sub(upper, one_value)) # s32[1]
+    # return_list.insert(0, lower) # s32[1] 
     # return_list.insert(-1, one_value)
     return tuple(return_list) # (torch.sub(upper, one_value), lower, body_fun(one_value, *x)) # , one_value))
 
