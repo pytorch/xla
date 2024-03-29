@@ -40,10 +40,16 @@ def _assert_valid_composite_attr(attr):
   for k, v in attr.items():
     if not isinstance(k, str):
       raise ValueError("Composite attr name must be a Python str.")
-    if type(k) not in (str, float, int, bool):
-      raise ValueError(
-          "Composite attr value must be either Python str, float, int, or bool."
-      )
+
+    invalid_attr_value_error = ValueError(
+        "Composite attr value must be either Python str, float, int, bool, list[int], list[float], list[bool]."
+    )
+    if isinstance(v, (list, tuple)):
+      eltys = {type(el) for el in v}
+      if len(eltys) > 1 or next(iter(eltys)) not in (int, float, bool):
+        raise invalid_attr_value_error
+    elif type(v) not in (str, float, int, bool):
+      raise invalid_attr_value_error
 
 
 @torchdynamo.assume_constant_result
