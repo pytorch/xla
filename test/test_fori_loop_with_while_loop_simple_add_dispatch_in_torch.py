@@ -55,12 +55,10 @@ class WhileLoopTest(unittest.TestCase):
 
     device = xm.xla_device()
 
-    def cond_fn(loop_carry): # init, limit_value):
-      init, limit_value = loop_carry
+    def cond_fn(init, limit_value):
       return limit_value[0] >= init[0]
 
-    def body_fn(loop_carry): # init, limit_value):
-      init, limit_value = loop_carry
+    def body_fn(init, limit_value):
       one_value = torch.ones(1, dtype=torch.int32, device=device)
       return (torch.add(init, one_value), limit_value.clone())
 
