@@ -178,10 +178,10 @@ class ZeroRedundancyOptimizer(Optimizer):
         if not hasattr(shard, 'main_grad'):
           # Create main gradients
           shard.main_grad = torch.zeros(
-            param.shape,
-            dtype=self.optimizer_dtype,
-            device=self.device,
-            requires_grad=False)
+              param.shape,
+              dtype=self.optimizer_dtype,
+              device=self.device,
+              requires_grad=False)
           param.main_grad = shard.main_grad
         shard.main_grad.add_(param.grad.data.to(dtype=self.optimizer_dtype))
         # Deallocate grad memory.
@@ -320,8 +320,8 @@ class ZeroRedundancyOptimizer(Optimizer):
         if param.grad is not None or (self.use_grad_acc_hook and
                                       hasattr(shard, 'main_grad')):
           padded_grad = self._pad_to_world_size(
-            shard.main_grad if self.use_grad_acc_hook else param.grad,
-            self.local_world_size)
+              shard.main_grad if self.use_grad_acc_hook else param.grad,
+              self.local_world_size)
           if self.coalesce_cc:
             padded_grads.append(padded_grad.to(dtype=self.optimizer_dtype))
           else:
@@ -452,10 +452,10 @@ class ZeroRedundancyOptimizer(Optimizer):
     if 'sharded_master_weights' in state_dict:
       master_weights = state_dict['sharded_master_weights']
       index = 0
-      for param_group, sharded_param_group in zip(self.param_groups,
-                                                  self.base_optimizer.param_groups):
+      for param_group, sharded_param_group in zip(
+          self.param_groups, self.base_optimizer.param_groups):
         for param, shard in zip(param_group['params'],
-                                        sharded_param_group['params']):
+                                sharded_param_group['params']):
           shard.data.copy_(master_weights[index])
           # set dummy gradient for allgather to be triggered.
           if self.use_grad_acc_hook:
