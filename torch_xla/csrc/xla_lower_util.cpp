@@ -1250,9 +1250,12 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
                          {input}, ShapeHelper::ShapeOfXlaOp(input));
 }
 
-xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
-                              const xla::Shape& output_shape,
-                              const std::string& payload) {
+std::vector<xla::XlaOp> BuildTpuCustomCall(
+    const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
+    const std::string& payload) {
+  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+  XLA_CHECK(output_shape.IsTuple()) << "output_shape is not a tuple";
+
   // We need to enforce the default C-order (major-to-minor) layouts for inputs
   // to Mosaic and outputs from Mosaic.
   std::vector<xla::Shape> input_shapes;
@@ -1262,15 +1265,34 @@ xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
     input_shapes.push_back(MakeTorchTensorLayout(
         shape.dimensions(), shape.dynamic_dimensions(), shape.element_type()));
   }
-  xla::Shape output_shape_impl = MakeTorchTensorLayout(
-      output_shape.dimensions(), output_shape.dynamic_dimensions(),
-      output_shape.element_type());
 
-  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
-  return xla::CustomCallWithLayout(inputs[0].builder(),
-                                   /*call_target_name=*/"tpu_custom_call",
-                                   inputs, output_shape_impl, input_shapes,
-                                   payload);
+  std::vector<xla::Shape> output_shapes;
+  output_shapes.reserve(output_shape.tuple_shapes_size());
+  for (int i = 0; i < output_shape.tuple_shapes_size(); ++i) {
+    const xla::Shape& shape = output_shape.tuple_shapes(i);
+    output_shapes.push_back(MakeTorchTensorLayout(
+        shape.dimensions(), shape.dynamic_dimensions(), shape.element_type()));
+  }
+
+  // Mosaic has some weird checks that disallow using a tuple output for single
+  // element.
+  if (output_shapes.size() == 1) {
+    return {xla::CustomCallWithLayout(inputs[0].builder(),
+                                      /*call_target_name=*/"tpu_custom_call",
+                                      inputs, output_shapes[0], input_shapes,
+                                      payload)};
+  }
+
+  xla::XlaOp outputs = xla::CustomCallWithLayout(
+      inputs[0].builder(),
+      /*call_target_name=*/"tpu_custom_call", inputs,
+      xla::ShapeUtil::MakeTupleShape(output_shapes), input_shapes, payload);
+  std::vector<xla::XlaOp> result;
+  result.reserve(output_shapes.size());
+  for (int i = 0; i < output_shapes.size(); ++i) {
+    result.push_back(xla::GetTupleElement(outputs, i));
+  }
+  return result;
 }
 
 }  // namespace torch_xla

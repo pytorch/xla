@@ -124,10 +124,20 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
         kernel, static_argnames=static_argnames).lower(*jax_args,
                                                        **kwargs).compiler_ir()
     payload = _extract_backend_config(ir)
-    output_shape, output_dtype = output_shape_dtype_fn(*args)
-    output = torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device())
-    torch_xla._XLAC._xla_tpu_custom_call_(output, args, payload)
-    return output
+    # TODO: We can consider supporting un-array output.
+    outputs = []
+    output_shape_dtype = output_shape_dtype_fn(*args)
+    assert isinstance(output_shape_dtype,
+                      list), "The output_shape_dtype_fn should return a list."
+    for output_shape, output_dtype in output_shape_dtype:
+      outputs.append(
+          torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device()))
+    torch_xla._XLAC._xla_tpu_custom_call_(outputs, args, payload)
+
+    # Make the output easier to use.
+    if len(outputs) == 1:
+      return outputs[0]
+    return tuple(outputs)
 
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
 
@@ -150,7 +160,7 @@ def flash_attention(
 
   # TODO: Support segment_ids.
   flash_attention_kernel = make_kernel_from_pallas(
-      tpu_flash_attention.flash_attention, lambda q, k, v: (q.shape, q.dtype))
+      tpu_flash_attention.flash_attention, lambda q, k, v: [(q.shape, q.dtype)])
 
   # The block_sizes configuration is copied from https://github.com/google/maxtext/blob/0fee320451738166c8e596dc63a57a4673671576/MaxText/layers/attentions.py#L215-L240
   # It yields much better performance than the default block_sizes.
