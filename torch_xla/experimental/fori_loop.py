@@ -33,12 +33,21 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
 
   device = xm.xla_device()
 
-  # def cond_fn(lower, upper, x):
+  #           upper, lower, l_in
   def cond_fn(upper, lower, *x):
+    return lower[0] <= upper[0]
+
+  def body_fn(upper, lower, *x):
+    one_value = torch.ones(1, dtype=torch.int32, device=device)
+    two_value = lower.clone()
+    return (torch.sub(upper, one_value), two_value, body_fun(one_value, *x))
+
+  # def cond_fn(lower, upper, x):
+  def new_cond_fn(upper, lower, *x):
     return lower[0] < upper[0]
 
   # def body_fn(lower, upper, x):
-  def body_fn(upper, lower, *x):
+  def new_body_fn(upper, lower, *x):
     # lower,   upper,  init_val, l_in
     # (s32[1], s32[1], s32[1],   f32[20], f32[20,10], /*index=5*/f32[10])
     one_value = torch.ones(1, dtype=torch.int32, device=device)
@@ -55,7 +64,7 @@ def fori_loop(lower, upper, body_fun, one_value, *init_val):
     # one_value = torch.ones(1, dtype=torch.int32, device=device)
     # return_list.append(weight)
     # return_list.append(one_value)
-    # return_list.insert(0, torch.sub(upper, one_value)) # s32[1]
+    return_list.insert(0, torch.sub(upper, one_value)) # s32[1]
     # return_list.insert(0, lower) # s32[1] 
     # return_list.insert(-1, one_value)
     return tuple(return_list) # (torch.sub(upper, one_value), lower, body_fun(one_value, *x)) # , one_value))
