@@ -326,6 +326,14 @@ class ZeroRedundancyOptimizer(Optimizer):
     self.base_optimizer.step(closure=None, **kwargs)
     # Remove shards' grads
     self.base_optimizer.zero_grad(set_to_none=True)
+    self.allgather_weights_and_update_full_parameter()
+
+    # sync back
+    self._sync_param_groups(self.base_optimizer.param_groups, self.param_groups)
+
+    return loss
+
+  def allgather_weights_and_update_full_parameter(self):
 
     # All gather the new weights across the ranks and assign them to the full parameters
     sharded_data = []
@@ -335,8 +343,7 @@ class ZeroRedundancyOptimizer(Optimizer):
                               sharded_param_group['params']):
         if param.grad is not None:
           shard_data = shard.data
-          if param.dtype != self.optimizer_dtype:
-            shard_data = shard_data.to(dtype=param.dtype)
+          shard_data = shard_data.to(dtype=param.dtype)
           if self.coalesce_cc:
             sharded_data.append(shard_data)
           else:
@@ -365,16 +372,18 @@ class ZeroRedundancyOptimizer(Optimizer):
             param.data.copy_(padded_param.data[:param.size(0)])
             index += 1
 
-    # sync back
-    self._sync_param_groups(self.base_optimizer.param_groups, self.param_groups)
-
-    return loss
-
   def state_dict(self):
     state_dict = super().state_dict()
     base_state = self.base_optimizer.state_dict()['state']
     state_dict['base_state'] = base_state
     state_dict['shape_info'] = self.get_shape_info()
+    master_weights = []
+    for sharded_param_group in self.base_optimizer.param_groups:
+      for sharded_param in sharded_param_group['params']:
+        master_weights.append(sharded_param.data)
+
+    state_dict['sharded_master_weights'] = master_weights
+
     return state_dict
 
   def load_state_dict(self, state_dict):
@@ -388,6 +397,22 @@ class ZeroRedundancyOptimizer(Optimizer):
     tmp = self.base_optimizer.state_dict()
     tmp['state'] = base_state
     self.base_optimizer.load_state_dict(tmp)
+    if 'sharded_master_weights' in state_dict:
+      master_weights = state_dict['sharded_master_weights']
+      index = 0
+      for param_group, sharded_param_group in zip(
+          self.param_groups, self.base_optimizer.param_groups):
+        for param, sharded_param in zip(param_group['params'],
+                                        sharded_param_group['params']):
+          sharded_param.data.copy_(master_weights[index])
+          # set dummy gradient for allgather to be triggered.
+          param.grad = torch.zeros_like(param.data)
+          sharded_param.grad = torch.zeros_like(sharded_param.data)
+          index += 1
+      xm.mark_step()
+      # add mark_step around allgather to avoid large number of compilation
+      self.allgather_weights_and_update_full_parameter()
+      xm.mark_step()
 
   def get_shape_info(self):
     shape_info = {}
