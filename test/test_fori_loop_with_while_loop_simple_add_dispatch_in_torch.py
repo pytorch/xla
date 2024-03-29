@@ -20,17 +20,9 @@ def _fake_while_loop(cond_fn, body_fn, operands):
 
 
 def _fake_fori_loop(lower, upper, body_fun, *init_val):
-  # operands need to be more than one here
-  # print("upper - lower: ", upper - lower)
-  # print("init_val: ", init_val)
-  # print("type init_val: ", type(init_val))
   (a, b) = init_val
-  # print("a: ", a)
-  # print("b: ", b)
   for i in range((upper - lower)[0]):
     a = body_fun(a, b)
-    # print("a: ", a)
-    # print("i: ", i)
   return a
 
 def _fake_fori_loop(lower, upper, body_fun, *init_val):
@@ -55,7 +47,7 @@ class WhileLoopTest(unittest.TestCase):
 
     init = torch.tensor([10], dtype=torch.int32, device=device)
     limit_value = torch.tensor([0], dtype=torch.int32, device=device)
-    res = while_loop(cond_fn, body_fn, (init, limit_value))
+    res = while_loop(cond_fn, body_fn, init, limit_value) # (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
@@ -73,7 +65,7 @@ class WhileLoopTest(unittest.TestCase):
     # TODO(@manfei): init and limit_value has to be torch.tensor.
     init = torch.tensor([0], dtype=torch.int32, device=device)
     limit_value = torch.tensor([10], dtype=torch.int32, device=device)
-    res = while_loop(cond_fn, body_fn, (init, limit_value))
+    res = while_loop(cond_fn, body_fn, init, limit_value) # (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
