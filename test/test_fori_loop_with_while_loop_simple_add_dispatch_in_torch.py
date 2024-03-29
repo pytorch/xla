@@ -55,10 +55,12 @@ class WhileLoopTest(unittest.TestCase):
 
     device = xm.xla_device()
 
-    def cond_fn(init, limit_value):
+    def cond_fn(loop_carry): # init, limit_value):
+      init, limit_value = loop_carry
       return limit_value[0] >= init[0]
 
-    def body_fn(init, limit_value):
+    def body_fn(loop_carry): # init, limit_value):
+      init, limit_value = loop_carry
       one_value = torch.ones(1, dtype=torch.int32, device=device)
       return (torch.add(init, one_value), limit_value.clone())
 
@@ -85,7 +87,6 @@ class WhileLoopTest(unittest.TestCase):
     lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value,
                                      init_val)
     expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
-    print("expected: ", expected)
     self.assertEqual(expected, res_)
 
   def test_fori_loop_tpu_addition(self):
