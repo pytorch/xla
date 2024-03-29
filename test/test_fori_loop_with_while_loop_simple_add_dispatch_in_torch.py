@@ -18,6 +18,19 @@ def _fake_while_loop(cond_fn, body_fn, operands):
     operands = body_fn(*operands)
   return operands
 
+def _fake_fori_loop(lower, upper, body_fun, *init_val):
+  # operands need to be more than one here
+  # print("upper - lower: ", upper - lower)
+  # print("init_val: ", init_val)
+  # print("type init_val: ", type(init_val))
+  (a, b) = init_val
+  # print("a: ", a)
+  # print("b: ", b)
+  for i in range((upper - lower)[0]):
+    a = body_fun(a, b)
+    # print("a: ", a)
+    # print("i: ", i)
+  return a
 
 def _fake_fori_loop(lower, upper, body_fun, *init_val):
   (plus_value, init_val) = init_val
@@ -64,23 +77,23 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
-  def test_while_loop_tpu_subtraction_nested(self):
+  def test_fori_loop_tpu_addition(self):
 
+    xm.mark_step()
     device = xm.xla_device()
 
-    def cond_fn(init, limit_value):
-      return limit_value[0] <= init[0]
+    lower = torch.tensor([2], dtype=torch.int32, device=device)
+    upper = torch.tensor([52], dtype=torch.int32, device=device)
+    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device)
 
-    def body_fn(init, limit_value):
-      one_value = torch.ones(1, dtype=torch.int32, device=device)
-      two_value = limit_value.clone()
-      return (torch.sub(torch.sub(init, one_value), one_value), two_value)
+    def body_fun(a, b):
+      return torch.add(a, b)
 
-    init = torch.tensor([10], dtype=torch.int32, device=device)
-    limit_value = torch.tensor([0], dtype=torch.int32, device=device)
-    res = while_loop(cond_fn, body_fn, (init, limit_value))
-    expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
-    self.assertEqual(expected, res)
+    lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
+    expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
+    print("expected: ", expected)
+    self.assertEqual(expected, res_)
 
   def test_fori_loop_tpu_addition(self):
 
