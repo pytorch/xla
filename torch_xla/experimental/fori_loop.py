@@ -149,7 +149,7 @@ def _xla_while_loop(cond_fn, body_fn, *original_operands):
     device = original_operand.device
     # type = original_operand.type
     operands.append(torch.randint(10, original_operand.size(), dtype=torch.int32).to(device))
-  operands = tuple(operands)
+  operands = tuple(tuple(operands))
   print("!!! operands: ", operands) # (tensor([0], device='xla:0', dtype=torch.int32), tensor([30], device='xla:0', dtype=torch.int32), tensor([1], device='xla:0', dtype=torch.int32))
 
   # print("!!! arguments: cond_fn: ", cond_fn, ", body_fn: ", body_fn, ", operands: ", operands)
