@@ -143,6 +143,7 @@ def while_loop(cond_fn, body_fn, operands):
 def _xla_while_loop(cond_fn, body_fn, *original_operands):
   print("!!! arguments: original_operands: ", original_operands)
   # fake operands to split formal code
+  mid_original_operands = original_operands[0]
   operands = [] # fake_operands
   for original_operand in original_operands:
     device = original_operand.device
