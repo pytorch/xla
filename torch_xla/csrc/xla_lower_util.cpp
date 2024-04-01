@@ -1295,4 +1295,247 @@ std::vector<xla::XlaOp> BuildTpuCustomCall(
   return result;
 }
 
+std::vector<xla::XlaOp> BuildBoxSelectionLoop(int64_t num_boxes,
+                                              xla::XlaOp iou_threshold_mask) {
+  using IndexType = int32_t;
+  const xla::PrimitiveType XLAIndexType = xla::PrimitiveType::S32;
+
+  xla::XlaBuilder* builder = iou_threshold_mask.builder();
+
+  const xla::XlaOp ZERO = xla::Zero(builder, XLAIndexType);
+  const xla::XlaOp TRUE = xla::ConstantR0<bool>(builder, true);
+
+  // Initial values to the while loop.
+  std::vector<xla::XlaOp> init_values(3);
+  // 1. Loop counter: represents the actual box being processed.
+  init_values[0] = ZERO;
+  // 2. State of each box (i.e. whether it was included or not).
+  init_values[1] = xla::Broadcast(TRUE, {num_boxes});
+  // 3. The actual IoU threshold matrix.
+  init_values[2] = iou_threshold_mask;
+
+  return ConsumeValue(xla::WhileLoopHelper(
+      [=](absl::Span<const xla::XlaOp> values, xla::XlaBuilder* builder) {
+        xla::XlaOp box_index = values[0];
+        // Check: current loop counter is within bounds, i.e. has a
+        // corresponding box.
+        return xla::Lt(box_index,
+                       xla::ConstantR0<IndexType>(builder, num_boxes));
+      },
+      [=](absl::Span<const xla::XlaOp> values, xla::XlaBuilder* builder) {
+        const xla::XlaOp ONE = xla::One(builder, XLAIndexType);
+        const xla::XlaOp ZERO = xla::Zero(builder, XLAIndexType);
+
+        xla::XlaOp box_index = values[0];
+        xla::XlaOp state = values[1];
+        xla::XlaOp iou_threshold_mask = values[2];
+
+        // Retrieve the IoU mask row corresponding to this box.
+        xla::XlaOp box_iou_threshold_mask = xla::DynamicSlice(
+            iou_threshold_mask, {box_index, ZERO}, {1, num_boxes});
+
+        // Update the current state with the IoU mask.
+        // Basically, sets to false every box X whose IoU with the current box
+        // is less-than or equal than the given threshold.
+        xla::XlaOp updated_state = xla::And(
+            state,
+            // Update the mask so that if we select this box
+            // (i.e. state[box] == true), we don't de-select it.
+            xla::DynamicUpdateSlice(
+                // Before that, we need to pre-process the mask.
+                //   1. Negate the mask: if this box is selected, we only want
+                //      those that have a low intersection ratio.
+                //   2. Reshape it to: [num_boxes].
+                xla::Reshape(xla::Not(box_iou_threshold_mask), {num_boxes}),
+                xla::ConstantR1<bool>(builder, {true}), {box_index}));
+
+        // Flag: should this box (loop counter) be included in the output?
+        xla::XlaOp should_include = xla::DynamicSlice(state, {box_index}, {1});
+        // Pick the new values of state, depending on whether we should include
+        // this box or not.
+        xla::XlaOp new_state =
+            xla::Select(xla::BroadcastInDim(should_include, {num_boxes}, {0}),
+                        updated_state, state);
+
+        xla::XlaOp next_box_index = box_index + ONE;
+        return std::vector<xla::XlaOp>{next_box_index, new_state,
+                                       iou_threshold_mask};
+      },
+      init_values, "BoxSelectionLoop", builder));
+}
+
+xla::XlaOp BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
+                    xla::XlaOp iou_threshold) {
+  using IndexType = int32_t;
+  const xla::PrimitiveType XLAIndexType = xla::PrimitiveType::S32;
+
+  xla::XlaBuilder* builder = boxes.builder();
+
+  const int64_t COORDINATES = 4;
+  const xla::XlaOp ONE = xla::One(builder, XLAIndexType);
+  const xla::XlaOp ZERO = xla::Zero(builder, XLAIndexType);
+
+  const xla::Shape& boxes_shape = ShapeHelper::ShapeOfXlaOp(boxes);
+  XLA_CHECK_EQ(boxes_shape.rank(), 2);
+  XLA_CHECK_EQ(boxes_shape.dimensions(1), COORDINATES);
+  int64_t num_boxes = boxes_shape.dimensions(0);
+
+  const xla::Shape& scores_shape = ShapeHelper::ShapeOfXlaOp(scores);
+  XLA_CHECK_EQ(scores_shape.rank(), 1);
+  XLA_CHECK_EQ(scores_shape.dimensions(0), num_boxes);
+
+  // 1. Order the boxes according to their scores.
+  //    Also remember the order of the boxes original indices by having an
+  //    extra Iota operand.
+  xla::XlaOp sorted = xla::Sort(
+      {
+          // Here, we need to broadcast both the scores and Iota operands, so
+          // as to have the same dimensions as boxes: {COORDINATES, num_boxes}.
+          xla::Broadcast(scores, {COORDINATES}),
+          xla::Broadcast(xla::Iota(builder, XLAIndexType, num_boxes),
+                         {COORDINATES}),
+          // Transpose boxes, so as to manipulate its values in an easier way.
+          xla::Transpose(boxes, {1, 0}),
+      },
+      xla::CreateScalarGtComputation(
+          {
+              scores_shape.element_type(),
+              XLAIndexType,
+              boxes_shape.element_type(),
+          },
+          builder),
+      /*dimension=*/1);
+
+  // 1.1. De-construct the returned tuple.
+  //      Specifically, we only need one of the rows of the sorted index tensor
+  //      and of the sorted scores, since the others were only broadcasted.
+  //
+  //      Shape: [1, num_boxes]
+  xla::XlaOp sorted_scores =
+      xla::SliceInDim(xla::GetTupleElement(sorted, 0), /*start_index=*/0,
+                      /*limit_index=*/1, /*stride=*/1, /*dimno=*/0);
+  //      Shape: [1, num_boxes]
+  xla::XlaOp sorted_indices =
+      xla::SliceInDim(xla::GetTupleElement(sorted, 1), /*start_index=*/0,
+                      /*limit_index=*/1, /*stride=*/1, /*dimno=*/0);
+  //      Shape: [COORDINATES, num_boxes]
+  xla::XlaOp sorted_boxes = xla::GetTupleElement(sorted, 2);
+
+  // 1.2. Retrieve each coordinate, in their own tensor.
+  //      Since we transposed boxes tensor, each row corresponds to a
+  //      coordinate.
+  //
+  //      Shape: [1, num_boxes]
+  xla::XlaOp y0 = xla::SliceInDim(sorted_boxes, /*start_index=*/0,
+                                  /*limit_index=*/1, /*stride=*/1, /*dimno=*/0);
+  xla::XlaOp x0 = xla::SliceInDim(sorted_boxes, /*start_index=*/1,
+                                  /*limit_index=*/2, /*stride=*/1, /*dimno=*/0);
+  xla::XlaOp y1 = xla::SliceInDim(sorted_boxes, /*start_index=*/2,
+                                  /*limit_index=*/3, /*stride=*/1, /*dimno=*/0);
+  xla::XlaOp x1 = xla::SliceInDim(sorted_boxes, /*start_index=*/3,
+                                  /*limit_index=*/4, /*stride=*/1, /*dimno=*/0);
+
+  // 2. Create the IoU (Intersection over Union) ratio mask
+  // 2.1. First, compute the area of each box.
+  //
+  //      Shape: [1, num_boxes]
+  xla::XlaOp area = (y1 - y0) * (x1 - x0);
+
+  // 2.2. Get the corners of the intersection box created by every pair of
+  // boxes.
+  //      Basically, given 2 boxes, what the <direction> corner of their
+  //      intersection box would be?
+  //
+  //      Shape: [num_boxes, num_boxes]
+  xla::XlaOp left = xla::Max(x0, xla::Transpose(x0, {1, 0}));
+  xla::XlaOp bottom = xla::Max(y0, xla::Transpose(y0, {1, 0}));
+  xla::XlaOp right = xla::Min(x1, xla::Transpose(x1, {1, 0}));
+  xla::XlaOp top = xla::Min(y1, xla::Transpose(y1, {1, 0}));
+
+  // 2.3. Compute the intersection area.
+  //      Whenever 2 boxes don't intersect, either their width or height will be
+  //      negative.
+  //
+  //      Shape: [num_boxes, num_boxes]
+  xla::XlaOp zeros = xla::ZerosLike(left);
+  xla::XlaOp intersection_area =
+      xla::Max(right - left, zeros) * xla::Max(top - bottom, zeros);
+
+  // 2.4. Compute the union area.
+  //      Sum of the areas of every pair of boxes, minus their intersection
+  //      area.
+  //
+  //      Shape: [num_boxes, num_boxes]
+  xla::XlaOp union_area =
+      area + xla::Transpose(area, {1, 0}) - intersection_area;
+
+  // 2.5. Compute the IoU ratio.
+  //
+  //      Shape: [num_boxes, num_boxes]
+  xla::XlaOp iou = intersection_area / union_area;
+
+  // 2.6. Create the mask by comparing it with the given threshold.
+  //
+  //      Shape: [num_boxes, num_boxes]
+  xla::XlaOp casted_threshold =
+      xla::ConvertElementType(iou_threshold, XlaHelpers::TypeOfXlaOp(iou));
+  xla::XlaOp iou_threshold_mask = xla::Gt(iou, casted_threshold);
+
+  // 3. Iteratively select the highest scoring box, and eliminate those whose
+  //    IoU is greater than the threshold.
+  //
+  //    state: a [num_boxes] tensor, where, at the end of the loop, for
+  //           each box i, state[i] represents whether box i should be
+  //           included in the output or not
+  //
+  //    Loop Invariant: for every i in [0..current iteration], state[i]
+  //                    represents whether box i is included or not in the
+  //                    output.
+  //
+  //    Rough idea: at every iteration i, we:
+  //      - Check if state[i] == true (i.e. box i should be included)
+  //
+  //      - If so, retrieve and negate the i-th row from the IoU mask
+  //        (i.e. what are the boxes that have an IoU ratio lower-than or
+  //        equal the given threshold?).
+  //
+  //      - Update state[i+1..] by computing a logical and operation with
+  //        the retrieved negated IoU mask. Note that this won't modify
+  //        state[0..i]. The next box j > i, where state[j] == true is
+  //        the next box that will be included.
+  std::vector<xla::XlaOp> loop_result =
+      BuildBoxSelectionLoop(num_boxes, iou_threshold_mask);
+
+  xla::XlaOp loop_counter = loop_result[0];
+  xla::XlaOp included_mask = loop_result[1];
+
+  // 4. Retrieve the included box indices.
+  // 4.1. Compute the number of included boxes.
+  // 4.1.1. Transform that mask into a 0-1 tensor.
+  xla::XlaOp one_if_included =
+      xla::Select(included_mask, xla::Broadcast(ONE, {num_boxes}),
+                  xla::Broadcast(ZERO, {num_boxes}));
+  // 4.1.2. Sum it up.
+  xla::XlaOp included_boxes =
+      xla::Reduce(one_if_included, ZERO,
+                  xla::CreateScalarAddComputation(XLAIndexType, builder), {0});
+
+  // 4.2. Move the indices of the included boxes to the beginning.
+  //      Doing so alongside the previously sorted indices gives us an index
+  //      tensor with the original indices of the selected boxes at the
+  //      beginning.
+  xla::XlaOp included_indices_first = xla::GetTupleElement(
+      xla::Sort(
+          {
+              one_if_included,
+              xla::Reshape(sorted_indices, {num_boxes}),
+          },
+          xla::CreateScalarGtComputation({XLAIndexType, XLAIndexType}, builder),
+          /*dimension=*/0, /*is_stable=*/true),
+      1);
+
+  // 4.3. Get only the first included_boxes indices.
+  return xla::SetDimensionSize(included_indices_first, included_boxes, 0);
+}
+
 }  // namespace torch_xla

@@ -33,7 +33,6 @@ xla_model
 .. automodule:: torch_xla.core.functions
 .. autofunction:: all_reduce
 .. autofunction:: all_gather
-.. autofunction:: nms
 
 distributed
 ----------------------------------

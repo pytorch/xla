@@ -2089,19 +2089,14 @@ XLATensorPtr nll_loss_backward(const XLATensorPtr& grad_output,
       GetXlaReductionMode(reduction), ignore_index));
 }
 
-std::pair<XLATensorPtr, XLATensorPtr> nms(const XLATensorPtr& boxes,
-                                          const XLATensorPtr& scores,
-                                          const XLATensorPtr& score_threshold,
-                                          const XLATensorPtr& iou_threshold,
-                                          int64_t output_size) {
+XLATensorPtr nms(const XLATensorPtr& boxes, const XLATensorPtr& scores,
+                 double iou_threshold) {
+  const torch::lazy::BackendDevice& device = boxes->GetDevice();
+  torch::lazy::NodePtr xla_iou_threshold =
+      ScalarOp(iou_threshold, MakeXlaPrimitiveType(at::kDouble, &device));
   torch::lazy::NodePtr node = torch::lazy::MakeNode<Nms>(
-      boxes->GetIrValue(), scores->GetIrValue(), score_threshold->GetIrValue(),
-      iou_threshold->GetIrValue(), output_size);
-  return std::pair<XLATensorPtr, XLATensorPtr>(
-      XLATensor::Create(torch::lazy::Value(node, 0), boxes->GetDevice(),
-                        at::ScalarType::Int),
-      XLATensor::Create(torch::lazy::Value(node, 1), boxes->GetDevice(),
-                        at::ScalarType::Int));
+      boxes->GetIrValue(), scores->GetIrValue(), xla_iou_threshold);
+  return XLATensor::Create(node, device, at::ScalarType::Long);
 }
 
 XLATensorPtr nonzero(const XLATensorPtr& input) {

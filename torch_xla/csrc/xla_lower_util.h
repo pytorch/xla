@@ -156,6 +156,9 @@ std::vector<xla::XlaOp> BuildTpuCustomCall(
     const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
     const std::string& payload);
 
+xla::XlaOp BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
+                    xla::XlaOp iou_threshold);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_
