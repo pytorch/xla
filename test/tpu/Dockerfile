@@ -16,7 +16,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV RUNNER_MANUALLY_TRAP_SIG=1
 ENV ACTIONS_RUNNER_PRINT_LOG_TO_STDOUT=1
 
-RUN apt update -y && apt install curl unzip -y
+RUN apt update -y && apt -y upgrade
+RUN apt -y autoremove
+RUN apt install curl unzip -y
 
 RUN adduser --disabled-password --gecos "" --uid 1001 runner \
     && groupadd docker --gid 123 \
