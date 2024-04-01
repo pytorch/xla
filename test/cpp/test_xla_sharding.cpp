@@ -447,7 +447,7 @@ TEST_F(XLAShardingTest, TestForiLoopAddUnusedParameterInXlaComputation) {
   xla::XlaComputation xla_computation =
       ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
 
-  // Check whether the unused parameter has been included into xlacomputation or not 
+  // Check whether the unused parameter has been included into xlacomputation
   EEXPECT_EQ(xla_computation.GetProgramShape()->parameters_size(), 2);
 }
 
