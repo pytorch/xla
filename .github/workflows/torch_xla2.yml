@@ -36,7 +36,7 @@ jobs:
         run: |
           pip install pytest absl-py jax[cpu] flatbuffers tensorflow
           pip install torch --index-url https://download.pytorch.org/whl/cpu 
-          pip install -r dev-requirements.txt
+          pip install -r test_requirements.txt
           pip install -e .
       - name: Run tests
         working-directory: experimental/torch_xla2
