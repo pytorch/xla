@@ -65,8 +65,6 @@ ptxla_cc_test(
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
         "@xla//xla:shape_util",
-        "@tsl//tsl/util:stats_calculator_test",
-        "@tsl//tsl/util:device_name_utils_test",
     ],
 )
 
