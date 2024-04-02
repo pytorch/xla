@@ -1174,7 +1174,7 @@ class AtenOpTest(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.div.Tensor, args, kwargs)
-  
+
   def test_aten_div_Tensor_3(self):
     args = (
         torch.rand(1, 3, 4, 1),
