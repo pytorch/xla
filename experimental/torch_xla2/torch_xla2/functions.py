@@ -1,0 +1,28 @@
+"""Tensor constructor overrides"""
+import warnings
+
+import torch
+import jax.numpy as jnp
+
+fns = {
+  torch.tensor: jnp.array,
+  # torch.ones: jnp.ones,
+  # torch.zeros: jnp.zeros,
+  # torch.arange: jnp.arange,
+  # torch.linspace: jnp.linspace,
+  # torch.logspace: jnp.logspace,
+  # torch.empty: jnp.empty,
+  # torch.eye: jnp.eye,
+  # torch.full: jnp.full,
+}
+
+class XLAFunctionMode(torch.overrides.TorchFunctionMode):
+  def __torch_function__(self, func, types, args=(), kwargs=None):
+    jax_func = fns.get(func)
+    if not jax_func:
+      raise NotImplementedError(f'No jax function found for {func.__name__}')
+
+    if kwargs:
+      warnings.warn(f'kwargs not implemented for {kwargs}')
+
+    return jax_func(*args)
