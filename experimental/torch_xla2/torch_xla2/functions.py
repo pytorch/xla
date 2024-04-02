@@ -3,6 +3,7 @@ import warnings
 
 import torch
 import jax.numpy as jnp
+from torch_xla2 import tensor
 
 fns = {
   torch.tensor: jnp.array,
@@ -25,4 +26,4 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
     if kwargs:
       warnings.warn(f'kwargs not implemented for {kwargs}')
 
-    return jax_func(*args)
+    return tensor.wrap(jax_func(*args))
