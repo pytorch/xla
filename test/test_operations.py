@@ -2439,7 +2439,9 @@ class TestGeneric(test_utils.XlaTestCase):
 
   def _test_aten_move_xla_to_cuda(self, cpu_tensor):
     xla_tensor = cpu_tensor.to(xm.xla_device())
-    cuda_tensor = xla_tensor.cuda()
+    #cuda_tensor = xla_tensor.cuda()
+
+    xla_tensor
 
     # Move the XLA tensor back to CPU, and check that it is the same as
     # the original CPU tensor.
@@ -2456,6 +2458,19 @@ class TestGeneric(test_utils.XlaTestCase):
     # 0-dimensional scalar-tensor
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
+  
+  def test_move_xla_to_cuda_go_thru_cpu(self):
+    xla_t = torch.arange(5, device=xm.xla_device())
+    cpu_t = xla_t.cpu()
+    cuda_t = cpu_t.cuda()
+    print(met.metrics_report())
+
+  def test_move_xla_to_cuda_go_without_thru_cpu(self):
+    # import pdb; pdb.set_trace()
+    xla_t = torch.arange(5, device=xm.xla_device())
+    cuda_t = xla_t.cuda()
+    print('cuda_t.device=', cuda_t.device)
+    # print(met.metrics_report())
 
 
 class SimpleModelWithDropout(torch.nn.Module):

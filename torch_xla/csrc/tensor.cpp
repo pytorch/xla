@@ -210,29 +210,29 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     up_to_date = !ir_value_updated.updated;
     ir_value = std::move(ir_value_updated.ir_value);
   }
-  if (up_to_date) {
+  if (up_to_date) { // true
     torch::lazy::BackendDataPtr handle = CurrentDataHandle();
-    if (handle != nullptr) {
+    if (handle != nullptr) { // false, handle==nullptr
       XLA_CHECK(handle->HasValue())
           << "Trying to access XLA data while an async operation is in flight: "
           << handle->shape();
       return handle;
     }
   }
-  if (ir_value) {
+  if (ir_value) { // false
     // The view gave us an updated IR value. We usually do not have a valid IR
     // value field together with a view, but to allow code reuse in
     // ApplyPendingGraph() we temporarily set it here. The following call to
     // ApplyPendingGraph() will clear it.
     AssignIrValue(std::move(ir_value));
   }
-  if (data()->ir_value) {
+  if (data()->ir_value) { // true
     torch::lazy::BackendDataPtr node_data =
         torch::lazy::getBackend()->GetComputationDataFromNode(
             data()->ir_value.node.get());
     // Current IR is a DeviceData Node, we can retrive the data handle directly
     // instead of triggering an additional execution.
-    if (node_data) {
+    if (node_data) { // false
       data()->ir_value = torch::lazy::Value();
       data()->handle = node_data;
     } else {
@@ -397,7 +397,7 @@ torch::lazy::Value XLATensor::CurrentIrValue() const {
 }
 
 c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
-  if (data()->view != nullptr && !data()->view->IsUpToDate()) {
+  if (data()->view != nullptr && !data()->view->IsUpToDate()) { // false
     return c10::nullopt;
   }
   return data()->tensor_data;

@@ -527,6 +527,7 @@ at::Tensor XLANativeFunctions::_to_copy(
     c10::optional<at::Layout> layout, c10::optional<at::Device> device,
     c10::optional<bool> pin_memory, bool non_blocking,
     c10::optional<at::MemoryFormat> memory_format) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
 
   auto options = self.options();
@@ -2487,6 +2488,7 @@ at::Tensor XLANativeFunctions::prod(const at::Tensor& self, int64_t dim,
 
 void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
                                              const at::Tensor& output) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // This op is only called when functionalize pass is transforming an in-place
   // op. Therefore, we can populate some meta data to maintain any optimization
