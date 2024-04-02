@@ -343,6 +343,36 @@ class PallasTest(unittest.TestCase):
     self.assertEqual(grad_k.shape, (3, 2, 128, 4))
     self.assertEqual(grad_v.shape, (3, 2, 128, 4))
 
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test__flash_attention_bwd_dkv(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq
+    from torch_xla.experimental.custom_kernel import trace_pallas
+    MIN_BLOCK_SIZE = 128
+    DEFAULT_MASK_VALUE = -0.7 * float(torch.finfo(torch.float32).max)
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    l = torch.randn(3, 2, 128).to("xla")
+    m = torch.randn(3, 2, 128).to("xla")
+    grad_i = torch.randn(3, 2, 128, dtype=torch.float32).to("xla")
+    grad_o = torch.randn(3, 2, 128, 4).to("xla")
+
+    payload, _ = trace_pallas(_flash_attention_bwd_dq, q, k, v, None, None, l, m, grad_o, grad_i, block_q_major=128, block_k_major=128, block_k=128, sm_scale=1.0, causal=False, mask_value=DEFAULT_MASK_VALUE, debug=False, static_argnames=["block_q_major", "block_k_major", "block_k", "sm_scale", "causal", "mask_value", "debug"])
+
+    # TODO: Because of the following reshapes, we can't use make_kernel_from_pallas directly.
+    l = l.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    m = m.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    grad_q =  torch.randn(3, 2, 128, 4).to("xla")
+    torch_xla._XLAC._xla_tpu_custom_call_([grad_q], [q, k, v, l, m, grad_o, grad_i], payload)
+
+    xm.mark_step()
+
+    # TODO: I don't really know how to test the value. Let's do the shape check for now.
+    self.assertEqual(grad_q.shape, (3, 2, 128, 4))
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
