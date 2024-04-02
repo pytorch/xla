@@ -68,7 +68,7 @@ def jax_import_guard():
   torch_xla._XLAC._init_computation_client()
 
 
-def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
+def trace_pallas(kernel: Callable, *args, static_argnums=None, static_argnames=None, **kwargs):
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
@@ -102,6 +102,28 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
     else:
       raise ValueError(f"Unsupported dtype: {dtype}")
 
+  jax_args = []  # for tracing
+  tensor_args = []  # for execution
+  for i, arg in enumerate(args):
+    # TODO: Could the args be a tuple of tensors or a list of tensors? Flattern them?
+    if torch.is_tensor(arg):
+      # ShapeDtypeStruct doesn't have any storage and thus is very suitable for generating the payload.
+      jax_meta_tensor = jax.ShapeDtypeStruct(
+          arg.shape, convert_torch_dtype_to_jax(arg.dtype))
+      jax_args.append(jax_meta_tensor)
+      tensor_args.append(arg)
+    else:
+      jax_args.append(arg)
+
+  # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
+  ir = jax.jit(
+      kernel, static_argnums=static_argnums, static_argnames=static_argnames).lower(*jax_args,
+                                                      **kwargs).compiler_ir()
+  payload = _extract_backend_config(ir)
+  return payload, tensor_args
+
+
+def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   # TODO: Maybe we can cache the payload for the same input.
   def wrapped_kernel(kernel: Callable,
                      output_shape_dtype_fn: Callable,
@@ -109,25 +131,7 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
                      static_argnums=None,
                      static_argnames=None,
                      **kwargs) -> Callable:
-    jax_args = []  # for tracing
-    tensor_args = []  # for execution
-    for i, arg in enumerate(args):
-      # TODO: Could the args be a tuple of tensors or a list of tensors? Flattern them?
-      if torch.is_tensor(arg):
-        # ShapeDtypeStruct doesn't have any storage and thus is very suitable for generating the payload.
-        jax_meta_tensor = jax.ShapeDtypeStruct(
-            arg.shape, convert_torch_dtype_to_jax(arg.dtype))
-        jax_args.append(jax_meta_tensor)
-        tensor_args.append(arg)
-      else:
-        jax_args.append(arg)
-
-    # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
-    ir = jax.jit(
-        kernel, static_argnums=static_argnums, static_argnames=static_argnames).lower(*jax_args,
-                                                       **kwargs).compiler_ir()
-    payload = _extract_backend_config(ir)
-    # TODO: We can consider supporting un-array output.
+    payload, tensor_args = trace_pallas(kernel, *args, static_argnums=static_argnums, static_argnames=static_argnames, **kwargs)
     outputs = []
     output_shape_dtype = output_shape_dtype_fn(*args)
     assert isinstance(output_shape_dtype,
