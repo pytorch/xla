@@ -6,6 +6,7 @@ import torch
 from torch import nn as nn
 
 import torch_xla
+import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -282,6 +283,33 @@ class PallasTest(unittest.TestCase):
     expected_o1 = x - x
     self.assertTrue(torch.allclose(o[0].cpu(), expected_o0.cpu()))
     self.assertTrue(torch.allclose(o[1].cpu(), expected_o1.cpu()))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test__flash_attention_impl(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
+    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    MIN_BLOCK_SIZE = 128
+
+    def shape_dtype(q, *arg):
+      res_shape = list(q.shape)
+      res_shape[-1] = MIN_BLOCK_SIZE
+      return [(q.shape, q.dtype), (res_shape, torch.float32), (res_shape, torch.float32)]
+    flash_attention_kernel = make_kernel_from_pallas(
+        _flash_attention_impl, shape_dtype)
+
+    q = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+    k = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+    v = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+
+    o, l, m = flash_attention_kernel(q, k, v, None, None, True, False, 1.0, 2, 128, 128, 128, False, static_argnums=range(5,13))
+    xm.mark_step()
+
+    # TODO: I don't really know how to test the value. Let's do the shape check for now.
+    self.assertEqual(l.shape, (3, 2, 128, MIN_BLOCK_SIZE))
+    self.assertEqual(l.dtype, torch.float32)
+    self.assertEqual(m.shape, (3, 2, 128, MIN_BLOCK_SIZE))
+    self.assertEqual(m.dtype, torch.float32)
 
 
 if __name__ == '__main__':

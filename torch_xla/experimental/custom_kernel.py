@@ -106,22 +106,25 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   def wrapped_kernel(kernel: Callable,
                      output_shape_dtype_fn: Callable,
                      *args,
-                     static_argnames=[],
+                     static_argnums=None,
+                     static_argnames=None,
                      **kwargs) -> Callable:
-    jax_args = []
+    jax_args = []  # for tracing
+    tensor_args = []  # for execution
     for i, arg in enumerate(args):
+      # TODO: Could the args be a tuple of tensors or a list of tensors? Flattern them?
       if torch.is_tensor(arg):
         # ShapeDtypeStruct doesn't have any storage and thus is very suitable for generating the payload.
         jax_meta_tensor = jax.ShapeDtypeStruct(
             arg.shape, convert_torch_dtype_to_jax(arg.dtype))
         jax_args.append(jax_meta_tensor)
+        tensor_args.append(arg)
       else:
-        # TODO: We can support more types here.
-        assert False, f"Unsupported argument type: {type(arg)}"
+        jax_args.append(arg)
 
     # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
     ir = jax.jit(
-        kernel, static_argnames=static_argnames).lower(*jax_args,
+        kernel, static_argnums=static_argnums, static_argnames=static_argnames).lower(*jax_args,
                                                        **kwargs).compiler_ir()
     payload = _extract_backend_config(ir)
     # TODO: We can consider supporting un-array output.
@@ -132,7 +135,7 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
     for output_shape, output_dtype in output_shape_dtype:
       outputs.append(
           torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device()))
-    torch_xla._XLAC._xla_tpu_custom_call_(outputs, args, payload)
+    torch_xla._XLAC._xla_tpu_custom_call_(outputs, tensor_args, payload)
 
     # Make the output easier to use.
     if len(outputs) == 1:
