@@ -6,6 +6,7 @@ import torch
 from torch import nn as nn
 
 import torch_xla
+import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -282,6 +283,158 @@ class PallasTest(unittest.TestCase):
     expected_o1 = x - x
     self.assertTrue(torch.allclose(o[0].cpu(), expected_o0.cpu()))
     self.assertTrue(torch.allclose(o[1].cpu(), expected_o1.cpu()))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test__flash_attention_impl(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
+    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    MIN_BLOCK_SIZE = 128
+
+    def shape_dtype(q, *arg):
+      res_shape = list(q.shape)
+      res_shape[-1] = MIN_BLOCK_SIZE
+      return [(q.shape, q.dtype), (res_shape, torch.float32),
+              (res_shape, torch.float32)]
+
+    flash_attention_kernel = make_kernel_from_pallas(_flash_attention_impl,
+                                                     shape_dtype)
+
+    q = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+    k = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+    v = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+
+    o, l, m = flash_attention_kernel(
+        q,
+        k,
+        v,
+        None,
+        None,
+        True,
+        False,
+        1.0,
+        2,
+        128,
+        128,
+        128,
+        False,
+        static_argnums=range(5, 13))
+    xm.mark_step()
+
+    # TODO: I don't really know how to test the value. Let's do the shape check for now.
+    self.assertEqual(l.shape, (3, 2, 128, MIN_BLOCK_SIZE))
+    self.assertEqual(l.dtype, torch.float32)
+    self.assertEqual(m.shape, (3, 2, 128, MIN_BLOCK_SIZE))
+    self.assertEqual(m.dtype, torch.float32)
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test__flash_attention_bwd_dkv(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dkv
+    from torch_xla.experimental.custom_kernel import trace_pallas
+    MIN_BLOCK_SIZE = 128
+    DEFAULT_MASK_VALUE = -0.7 * float(torch.finfo(torch.float32).max)
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    l = torch.randn(3, 2, 128).to("xla")
+    m = torch.randn(3, 2, 128).to("xla")
+    grad_i = torch.randn(3, 2, 128, dtype=torch.float32).to("xla")
+    grad_o = torch.randn(3, 2, 128, 4).to("xla")
+
+    payload, _ = trace_pallas(
+        _flash_attention_bwd_dkv,
+        q,
+        k,
+        v,
+        None,
+        None,
+        l,
+        m,
+        grad_o,
+        grad_i,
+        block_q_major=128,
+        block_k_major=128,
+        block_k=128,
+        block_q=128,
+        sm_scale=1.0,
+        causal=False,
+        mask_value=DEFAULT_MASK_VALUE,
+        debug=False,
+        static_argnames=[
+            "block_q_major", "block_k_major", "block_k", "block_q", "sm_scale",
+            "causal", "mask_value", "debug"
+        ])
+
+    # TODO: Because of the following reshapes, we can't use make_kernel_from_pallas directly.
+    l = l.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    m = m.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    grad_k = torch.randn(3, 2, 128, 4).to("xla")
+    grad_v = torch.randn(3, 2, 128, 4).to("xla")
+    torch_xla._XLAC._xla_tpu_custom_call_([grad_k, grad_v],
+                                          [q, k, v, l, m, grad_o, grad_i],
+                                          payload)
+
+    xm.mark_step()
+
+    # TODO: I don't really know how to test the value. Let's do the shape check for now.
+    self.assertEqual(grad_k.shape, (3, 2, 128, 4))
+    self.assertEqual(grad_v.shape, (3, 2, 128, 4))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test__flash_attention_bwd_dkv(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq
+    from torch_xla.experimental.custom_kernel import trace_pallas
+    MIN_BLOCK_SIZE = 128
+    DEFAULT_MASK_VALUE = -0.7 * float(torch.finfo(torch.float32).max)
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    l = torch.randn(3, 2, 128).to("xla")
+    m = torch.randn(3, 2, 128).to("xla")
+    grad_i = torch.randn(3, 2, 128, dtype=torch.float32).to("xla")
+    grad_o = torch.randn(3, 2, 128, 4).to("xla")
+
+    payload, _ = trace_pallas(
+        _flash_attention_bwd_dq,
+        q,
+        k,
+        v,
+        None,
+        None,
+        l,
+        m,
+        grad_o,
+        grad_i,
+        block_q_major=128,
+        block_k_major=128,
+        block_k=128,
+        sm_scale=1.0,
+        causal=False,
+        mask_value=DEFAULT_MASK_VALUE,
+        debug=False,
+        static_argnames=[
+            "block_q_major", "block_k_major", "block_k", "sm_scale", "causal",
+            "mask_value", "debug"
+        ])
+
+    # TODO: Because of the following reshapes, we can't use make_kernel_from_pallas directly.
+    l = l.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    m = m.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    grad_q = torch.randn(3, 2, 128, 4).to("xla")
+    torch_xla._XLAC._xla_tpu_custom_call_([grad_q],
+                                          [q, k, v, l, m, grad_o, grad_i],
+                                          payload)
+
+    xm.mark_step()
+
+    # TODO: I don't really know how to test the value. Let's do the shape check for now.
+    self.assertEqual(grad_q.shape, (3, 2, 128, 4))
 
 
 if __name__ == '__main__':
