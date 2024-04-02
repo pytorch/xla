@@ -245,7 +245,7 @@ class PallasTest(unittest.TestCase):
     expected_o = attention(q, k, v)
     self.assertTrue(torch.allclose(o_no_causal.cpu(), expected_o.cpu()))
     # The causal mask is turned on by default in the wrapper.
-    # It masks out the top right triangle of the attention matrix, 
+    # It masks out the top right triangle of the attention matrix,
     # therefore it speeds up the compute but also changes the output.
     self.assertFalse(torch.allclose(o_with_causal.cpu(), expected_o.cpu()))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
