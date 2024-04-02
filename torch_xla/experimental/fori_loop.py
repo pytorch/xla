@@ -13,17 +13,19 @@ from torch._higher_order_ops.while_loop import while_loop_op
 
 
 @while_loop_op.py_impl(DispatchKey.XLA)
-def while_loop(cond_fn, body_fn, operands):
+def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # cond_fn&body_fn: callable
-  # operands: (Tuple of possibly nested dict/list/tuple of tensors)
-  return _xla_while_loop(cond_fn, body_fn, operands)
+  # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
+  if additional_inputs is None:
+    additional_inputs = tuple()
+  return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
 
 
-def _xla_while_loop(cond_fn, body_fn, operands):
+def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs):
 
   # create inputs placeholder
   kwargs = {}
-  shapes = xb.tensor_shape(operands)
+  shapes = xb.tensor_shape(carried_inputs)
   builder = xb.create_builder('test_while')
   params = []
   for shape in shapes:
@@ -31,7 +33,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     params.append(p)
 
   # generate cond_fn xlacomputation
-  cond_result = cond_fn(operands[0], operands[1])
+  cond_result = cond_fn(carried_inputs[0], carried_inputs[1])
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
   cond_ctx.build([cond_result])
@@ -40,7 +42,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
                                                       cond_hlo)
 
   # generate body_fn xlacomputation
-  body_result = body_fn(operands[0], operands[1])
+  body_result = body_fn(carried_inputs[0], carried_inputs[1])
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
   body_ctx.build(list(body_result))
@@ -59,6 +61,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
   # gain final result with generated while xlacomputation
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
-                                                 tuple(operands), computation)
+                                                 tuple(carried_inputs),
+                                                 computation)
 
   return result
