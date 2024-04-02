@@ -68,7 +68,11 @@ def jax_import_guard():
   torch_xla._XLAC._init_computation_client()
 
 
-def trace_pallas(kernel: Callable, *args, static_argnums=None, static_argnames=None, **kwargs):
+def trace_pallas(kernel: Callable,
+                 *args,
+                 static_argnums=None,
+                 static_argnames=None,
+                 **kwargs):
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
@@ -117,8 +121,8 @@ def trace_pallas(kernel: Callable, *args, static_argnums=None, static_argnames=N
 
   # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
   ir = jax.jit(
-      kernel, static_argnums=static_argnums, static_argnames=static_argnames).lower(*jax_args,
-                                                      **kwargs).compiler_ir()
+      kernel, static_argnums=static_argnums,
+      static_argnames=static_argnames).lower(*jax_args, **kwargs).compiler_ir()
   payload = _extract_backend_config(ir)
   return payload, tensor_args
 
@@ -131,7 +135,12 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
                      static_argnums=None,
                      static_argnames=None,
                      **kwargs) -> Callable:
-    payload, tensor_args = trace_pallas(kernel, *args, static_argnums=static_argnums, static_argnames=static_argnames, **kwargs)
+    payload, tensor_args = trace_pallas(
+        kernel,
+        *args,
+        static_argnums=static_argnums,
+        static_argnames=static_argnames,
+        **kwargs)
     outputs = []
     output_shape_dtype = output_shape_dtype_fn(*args)
     assert isinstance(output_shape_dtype,
