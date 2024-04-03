@@ -7,12 +7,14 @@ import torch_xla2.functions
 import torch_xla2.tensor
 
 class TestTorchFunctions(parameterized.TestCase):
-  @parameterized.named_parameters([
-    ('tensor', lambda: torch.tensor([[0.1, 1.2], [2.2, 3.1], [4.9, 5.2]])),
+  @parameterized.named_parameters(
+    ('tensor_2d', lambda: torch.tensor([[0.1, 1.2], [2.2, 3.1], [4.9, 5.2]])),
     ('tensor_1d', lambda: torch.tensor([0, 1],)),
     ('tensor_scalar', lambda: torch.tensor(3.14159,)),
     ('tensor_empty', lambda: torch.tensor([],)),
-  ])
+    ('ones_2d', lambda: torch.ones(2, 3)),
+    ('ones_1d', lambda: torch.ones(5)),
+  )
   def test_tensor_constructor(self, func: Callable[[], torch.Tensor]):
     expected = func()
 

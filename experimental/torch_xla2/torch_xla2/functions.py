@@ -1,15 +1,20 @@
 """Tensor constructor overrides"""
 import logging
-from typing import Union
 import warnings
 
 import torch
 import jax.numpy as jnp
 from torch_xla2 import tensor
 
+# TODO: registry
+# TODO: correct types
+def ones(*size: int):
+  return jnp.ones(size)
+
+
 fns = {
   torch.tensor: jnp.array,
-  # torch.ones: jnp.ones,
+  torch.ones: ones,
   # torch.zeros: jnp.zeros,
   # torch.arange: jnp.arange,
   # torch.linspace: jnp.linspace,
@@ -24,7 +29,7 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
     jax_func = fns.get(func)
     if not jax_func:
       logging.warn(f'Falling back to default implementation of {func.__name__}')
-      func(*args, **kwargs)
+      return func(*args, **(kwargs or {}))
 
     if kwargs:
       warnings.warn(f'kwargs not implemented for {kwargs}')
