@@ -1,4 +1,6 @@
 """Tensor constructor overrides"""
+import logging
+from typing import Union
 import warnings
 
 import torch
@@ -18,10 +20,11 @@ fns = {
 }
 
 class XLAFunctionMode(torch.overrides.TorchFunctionMode):
-  def __torch_function__(self, func, types, args=(), kwargs=None):
+  def __torch_function__(self, func, types, args=(), kwargs=None) -> torch.Tensor:
     jax_func = fns.get(func)
     if not jax_func:
-      raise NotImplementedError(f'No jax function found for {func.__name__}')
+      logging.warn(f'Falling back to default implementation of {func.__name__}')
+      func(*args, **kwargs)
 
     if kwargs:
       warnings.warn(f'kwargs not implemented for {kwargs}')
