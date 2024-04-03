@@ -29,4 +29,4 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
     if kwargs:
       warnings.warn(f'kwargs not implemented for {kwargs}')
 
-    return tensor.wrap(jax_func(*args))
+    return tensor.wrap(jax_func(*tensor.unwrap(args)))
