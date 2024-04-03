@@ -160,47 +160,169 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
 
 
-# This is a simplified wrapper on top of https://github.com/google/jax/blob/b2058d72b7e1693a41303d5411572aabf99b7981/jax/experimental/pallas/ops/tpu/flash_attention.py#L139
-# where we only takes q, k, v, segment_ids and causal as input and set block_sizes for the users.
+class FlashAttention(torch.autograd.Function):
+  """
+  This is a simplified wrapper on top of https://github.com/google/jax/blob/b2058d72b7e1693a41303d5411572aabf99b7981/jax/experimental/pallas/ops/tpu/flash_attention.py#L139
+  where we only takes q, k, v and causal as input and set block_sizes for the users.
+  """
+
+  MIN_BLOCK_SIZE = 128
+  DEFAULT_MASK_VALUE = -0.7 * float(torch.finfo(torch.float32).max)
+  # The block_sizes configuration is copied from https://github.com/google/maxtext/blob/0fee320451738166c8e596dc63a57a4673671576/MaxText/layers/attentions.py#L215-L240
+  # It yields much better performance than the default block_sizes.
+  DEFAULT_BLOCK_SIZES = {
+    "block_q": 512,
+    "block_k_major": 512,
+    "block_k": 512,
+    "block_b": 2,
+    "block_q_major_dkv": 512,
+    "block_k_major_dkv": 512,
+    "block_q_dkv": 512,
+    "block_k_dkv": 512,
+    "block_q_dq": 1024,
+    "block_k_dq": 256,
+    "block_k_major_dq": 512,
+  }
+
+  @staticmethod
+  def forward(ctx, q, k, v, causal=False):
+    # Import JAX within the function such that we don't need to call the jax_import_guard()
+    # in the global scope which could cause problems for xmp.spawn.
+    jax_import_guard()
+    import jax.experimental.pallas.ops.tpu.flash_attention as tpu_flash_attention
+
+    ctx.causal = causal
+    save_residuals = q.requires_grad or k.requires_grad or v.requires_grad
+
+    # It returns the shape and type of o, l, m.
+    def shape_dtype(q, *arg):
+      if not save_residuals:
+        return [(q.shape, q.dtype)]
+      res_shape = list(q.shape)
+      res_shape[-1] = FlashAttention.MIN_BLOCK_SIZE
+      return [(q.shape, q.dtype), (res_shape, torch.float32),
+              (res_shape, torch.float32)]
+
+    # We can't directly use flash_attention as we need to override the save_residuals flag which returns
+    # l and m that is needed for the backward. Then we lose all the shape checks.
+    # TODO: replicate the shape checks on flash_attention.
+    _flash_attention_impl = make_kernel_from_pallas(tpu_flash_attention._flash_attention_impl,
+                                                     shape_dtype)
+    with torch.no_grad():
+      o, *aux = _flash_attention_impl(
+          q,
+          k,
+          v,
+          None,
+          None,
+          save_residuals,
+          causal,
+          1.0,
+          min(FlashAttention.DEFAULT_BLOCK_SIZES["block_b"], q.shape[0]),
+          min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q"], q.shape[2]),
+          min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], q.shape[2]),
+          min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], q.shape[2]),
+          False,
+          static_argnums=range(5, 13))
+      if not save_residuals:
+        return o
+      l, m = (v[..., 0] for v in aux[-2:])
+
+    ctx.save_for_backward(q, k, v, o, l, m)
+    return o
+
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    # Import JAX within the function such that we don't need to call the jax_import_guard()
+    # in the global scope which could cause problems for xmp.spawn.
+    jax_import_guard()
+    import jax.experimental.pallas.ops.tpu.flash_attention as _flash_attention_bwd_dq, _flash_attention_bwd_dkv
+
+    q, k, v, o, l, m = ctx.saved_tensors
+    causal = ctx.causal
+    grad_q = grad_k = grad_v = None
+
+    grad_i = torch.sum(
+        o.to(torch.float32) * grad_output.to(torch.float32), axis=-1
+    )  # [batch_size, num_heads, q_seq_len]
+
+    expanded_l = l.unsqueeze(-1).expand(3, 2, 128, FlashAttention.MIN_BLOCK_SIZE)
+    expanded_m = m.unsqueeze(-1).expand(3, 2, 128, FlashAttention.MIN_BLOCK_SIZE)
+    expanded_grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, FlashAttention.MIN_BLOCK_SIZE)
+
+    if ctx.needs_input_grad[0]:
+      payload, _ = trace_pallas(
+        _flash_attention_bwd_dq,
+        q,
+        k,
+        v,
+        None,
+        None,
+        l,
+        m,
+        grad_output,
+        grad_i,
+        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_major"], q.shape[2]),
+        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], q.shape[2]),
+        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], q.shape[2]),
+        sm_scale=1.0,
+        causal=causal,
+        mask_value=FlashAttention.DEFAULT_MASK_VALUE,
+        debug=False,
+        static_argnames=[
+            "block_q_major", "block_k_major", "block_k", "sm_scale", "causal",
+            "mask_value", "debug"
+        ])
+      grad_q = torch.empty(q.shape, dtype=q.dtype).to(xm.xla_device())
+      torch_xla._XLAC._xla_tpu_custom_call_([grad_q],
+                                          [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
+                                          payload)
+
+    if ctx.needs_input_grad[1] or ctx.needs_input_grad[2]:
+      payload, _ = trace_pallas(
+        _flash_attention_bwd_dkv,
+        q,
+        k,
+        v,
+        None,
+        None,
+        l,
+        m,
+        grad_output,
+        grad_i,
+        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_major"], q.shape[2]),
+        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], q.shape[2]),
+        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], q.shape[2]),
+        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q"], q.shape[2]),
+        sm_scale=1.0,
+        causal=causal,
+        mask_value=FlashAttention.DEFAULT_MASK_VALUE,
+        debug=False,
+        static_argnames=[
+            "block_q_major", "block_k_major", "block_k", "block_q", "sm_scale",
+            "causal", "mask_value", "debug"
+        ])
+      grad_k = torch.empty(k.shape, dtype=k.dtype).to(xm.xla_device())
+      grad_v = torch.empty(v.shape, dtype=v.dtype).to(xm.xla_device())
+      torch_xla._XLAC._xla_tpu_custom_call_([grad_k, grad_v],
+                                        [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
+                                          payload)
+    if not ctx.needs_input_grad[1]:
+      grad_k = None
+    if not ctx.needs_input_grad[2]:
+      grad_v = None
+
+    return grad_q, grad_k, grad_v, None
+
+
 def flash_attention(
     q,  # [batch_size, num_heads, q_seq_len, d_model]
     k,  # [batch_size, num_heads, kv_seq_len, d_model]
     v,  # [batch_size, num_heads, kv_seq_len, d_model]
-    segment_ids=None,  # q of [batch_size, q_seq_len] and kv of [batch_size, kv_seq_len]
     causal=False,
 ):
-  # Import JAX within the function such that we don't need to call the jax_import_guard()
-  # in the global scope which could cause problems for xmp.spawn.
-  jax_import_guard()
-  import jax
-  import jax.numpy as jnp
-  import jax.experimental.pallas.ops.tpu.flash_attention as tpu_flash_attention
-
-  # TODO: Support segment_ids.
-  flash_attention_kernel = make_kernel_from_pallas(
-      tpu_flash_attention.flash_attention, lambda q, k, v: [(q.shape, q.dtype)])
-
-  # The block_sizes configuration is copied from https://github.com/google/maxtext/blob/0fee320451738166c8e596dc63a57a4673671576/MaxText/layers/attentions.py#L215-L240
-  # It yields much better performance than the default block_sizes.
-  return flash_attention_kernel(
-      q,
-      k,
-      v,
-      static_argnames=["block_sizes", "causal"],
-      block_sizes=tpu_flash_attention.BlockSizes(
-          block_q=min(512, q.shape[2]),
-          block_k_major=min(512, k.shape[2]),
-          block_k=min(512, k.shape[2]),
-          block_b=min(2, q.shape[0]),
-          block_q_major_dkv=min(512, q.shape[2]),
-          block_k_major_dkv=min(512, k.shape[2]),
-          block_q_dkv=min(512, q.shape[2]),
-          block_k_dkv=min(512, k.shape[2]),
-          block_q_dq=min(1024, q.shape[2]),
-          block_k_dq=min(256, k.shape[2]),
-          block_k_major_dq=min(512, k.shape[2]),
-      ),
-      causal=causal)
+  return FlashAttention.apply(q, k, v, causal)
 
 
 XLA_LIB.define(
