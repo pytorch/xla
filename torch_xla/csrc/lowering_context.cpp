@@ -160,6 +160,8 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   if (!root_tuple_.empty() & (root_tuple_.size() == 1) &
       ((get_name_string() == "condctx") or (get_name_string() == "bodyctx"))) {
     xla = builder()->Build(root_tuple_.at(0));
+  // } else if (!root_tuple_.empty() & (root_tuple_.size() == 1) & ) {
+  //   xla = builder()->Build(root_tuple_.at(0));
   } else if (!root_tuple_.empty()) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     xla = builder()->Build(root);
