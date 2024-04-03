@@ -10,6 +10,7 @@
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -1252,16 +1253,24 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
 xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
                               const xla::Shape& output_shape,
                               const std::string& payload) {
+  // We need to enforce the default C-order (major-to-minor) layouts for inputs
+  // to Mosaic and outputs from Mosaic.
   std::vector<xla::Shape> input_shapes;
   input_shapes.reserve(inputs.size());
   for (const auto& input : inputs) {
-    input_shapes.push_back(ShapeHelper::ShapeOfXlaOp(input));
+    xla::Shape shape = ShapeHelper::ShapeOfXlaOp(input);
+    input_shapes.push_back(MakeTorchTensorLayout(
+        shape.dimensions(), shape.dynamic_dimensions(), shape.element_type()));
   }
+  xla::Shape output_shape_impl = MakeTorchTensorLayout(
+      output_shape.dimensions(), output_shape.dynamic_dimensions(),
+      output_shape.element_type());
 
   XLA_CHECK(inputs.size() > 0) << "inputs are empty";
   return xla::CustomCallWithLayout(inputs[0].builder(),
                                    /*call_target_name=*/"tpu_custom_call",
-                                   inputs, output_shape, input_shapes, payload);
+                                   inputs, output_shape_impl, input_shapes,
+                                   payload);
 }
 
 }  // namespace torch_xla

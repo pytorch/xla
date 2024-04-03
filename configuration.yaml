@@ -319,11 +319,6 @@ variables:
           dot.
       type: string
       default_value: ""
-    XLA_TPU_LAYOUT:
-      description:
-        - Determine to use TPU layout or not, where it will use sorted layout for TPU.
-      type: bool
-      default_value: true
     PT_XLA_DEBUG_FILE:
       description:
         - If set, filepath used for printing out reports.
