@@ -52,17 +52,12 @@ def _aten_unsafe_view(x, shape):
 
 
 @op(torch.ops.aten.add)
-def _aten_add(x, y):
+def _aten_add(x, y, *, alpha=1):
   """if isinstance(x, jnp.ndarray) and isinstance(y, jnp.ndarray):
 
   assert x.dtype == y.dtype, (x.dtype, y.dtype)
   """
-  try:
-    return x + y
-  except Exception as e:
-    import pdb
-
-    pdb.set_trace()
+  return x + y * alpha
 
 
 @op(torch.ops.aten.add_, is_jax_func=False)
@@ -239,6 +234,7 @@ def _aten_div(x, y, rounding_mode=""):
     res = jnp.trunc(res)
   return res
 
+
 @op(torch.ops.aten.div_, is_jax_func=False)
 def _aten_div_(x, y, rounding_mode=""):
   x._elem = _aten_div(x._elem, y._elem, rounding_mode)
@@ -376,14 +372,9 @@ def _aten_ne(x, y):
 
 @op(torch.ops.aten.cumsum)
 def _aten_cumsum(x, y, dtype=None):
-  try:
-    dtype = tensor.t2j_dtype(dtype)
-    res = jnp.cumsum(x, y, dtype)
-    return res
-  except Exception as e:
-    import pdb
-
-    pdb.set_trace()
+  dtype = tensor.t2j_dtype(dtype)
+  res = jnp.cumsum(x, y, dtype)
+  return res
 
 
 @op(torch.ops.aten.native_layer_norm)
