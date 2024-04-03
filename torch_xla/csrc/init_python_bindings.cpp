@@ -897,28 +897,28 @@ class PyLoweringContext {
     if (GetNameString() == "condctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       int64_t parameters_number_i = 2;
-      // for (at::Tensor input_argument : input_arguments) {
+      for (at::Tensor input_argument : input_arguments) {
       // for (int i = 0; i < 2; i++) {
-      //   xla::Shape shape =
-      //       xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
-      //   xla::XlaOp x = xla::Parameter(local_builder, parameters_number_i, shape,
-      //                                 "UnusedArgumentsPlaceholder");
-      //   parameters_number_i = parameters_number_i + 1;
-      // }
+        xla::Shape shape =
+            xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
+        xla::XlaOp x = xla::Parameter(local_builder, parameters_number_i, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameters_number_i = parameters_number_i + 1;
+      }
       // hard-code to meet requirement
       // f32[20], /*index=5*/f32[20,10], s32[10]
-      parameters_number_i = parameters_number_i + 1;
-      xla::Shape shape1 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      xla::XlaOp x1 = xla::Parameter(local_builder, parameters_number_i, shape1,
-                                      "OutPutTensor");
-      parameters_number_i = parameters_number_i + 1;
-      xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20, 10});
-      xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
-                                      "WeightTensor");
-      parameters_number_i = parameters_number_i + 1;
-      xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {10});
-      xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
-                                      "FinalOneTensor");
+      // parameters_number_i = parameters_number_i + 1;
+      // xla::Shape shape1 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
+      // xla::XlaOp x1 = xla::Parameter(local_builder, parameters_number_i, shape1,
+      //                                 "OutPutTensor");
+      // parameters_number_i = parameters_number_i + 1;
+      // xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20, 10});
+      // xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
+      //                                 "WeightTensor");
+      // parameters_number_i = parameters_number_i + 1;
+      // xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {10});
+      // xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
+      //                                 "FinalOneTensor");
     }
 
     // Get the backing XLA tensors from the output torch tensor handles
