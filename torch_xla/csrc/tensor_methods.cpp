@@ -1600,7 +1600,9 @@ XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
   }
   torch::lazy::Value res = LinalgVectorNorm(input->GetIrValue(), ord,
                                             canonical_dims, keep_dim, dtype);
-  if (!dtype) dtype = input->dtype_optional();
+  if (!dtype) {
+    dtype = input->dtype();
+  }
   xla::PrimitiveType res_intended_type =
       MakeXlaPrimitiveType(*dtype, &input->GetDevice());
   if (GetXlaShape(res).element_type() != res_intended_type) {
