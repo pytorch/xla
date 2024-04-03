@@ -1,4 +1,3 @@
-import functools
 from typing import Callable
 from absl.testing import absltest
 from absl.testing import parameterized
