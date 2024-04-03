@@ -100,9 +100,11 @@ NEED_LARGER_CACHE = {
 # File (inside PyTorch main repository): benchmarks/dynamo/torchbench.yaml
 DETECTRON2_MODELS = config_data()["detectron2_models"]
 
-FORCE_AMP_FOR_FP16_BF16_MODELS = config_data()["dtype"]["force_amp_for_fp16_bf16_models"]
+FORCE_AMP_FOR_FP16_BF16_MODELS = config_data(
+)["dtype"]["force_amp_for_fp16_bf16_models"]
 
-FORCE_FP16_FOR_BF16_MODELS = config_data()["dtype"]["force_fp16_for_bf16_models"]
+FORCE_FP16_FOR_BF16_MODELS = config_data(
+)["dtype"]["force_fp16_for_bf16_models"]
 
 
 @functools.lru_cache(maxsize=1)
