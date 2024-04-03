@@ -209,7 +209,7 @@ class FlashAttention(torch.autograd.Function):
     _flash_attention_impl = make_kernel_from_pallas(tpu_flash_attention._flash_attention_impl,
                                                      shape_dtype)
     with torch.no_grad():
-      o, *aux = _flash_attention_impl(
+      o = _flash_attention_impl(
           q,
           k,
           v,
@@ -226,6 +226,7 @@ class FlashAttention(torch.autograd.Function):
           static_argnums=range(5, 13))
       if not save_residuals:
         return o
+      o, *aux = o
       l, m = (v[..., 0] for v in aux[-2:])
 
     ctx.save_for_backward(q, k, v, o, l, m)
