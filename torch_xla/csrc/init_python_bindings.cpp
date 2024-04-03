@@ -705,7 +705,7 @@ runtime::ComputationClient::ComputationPtr CreateComputation(
   xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
                                       "WeightTensor");
   parameters_number_i = parameters_number_i + 1;
-  xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {10});
+  xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {10});
   xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
                                       "FinalOneTensor");
   xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
@@ -929,7 +929,7 @@ class PyLoweringContext {
       xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
                                       "WeightTensor");
       parameters_number_i = parameters_number_i + 1;
-      xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {10});
+      xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {10});
       xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
                                       "FinalOneTensor");
     }
