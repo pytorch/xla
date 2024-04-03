@@ -726,7 +726,9 @@ torch::lazy::NodePtr Div(const torch::lazy::Value& input,
     return node.ReturnOp(BuildDiv(xla_input, xla_divisor), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::div), {input, divisor},
-                   GetXlaShape(input), std::move(lower_fn));
+                   XlaHelpers::GetPromotedBinaryOpShape(GetXlaShape(input),
+                                                        GetXlaShape(divisor)),
+                   std::move(lower_fn));
 }
 
 torch::lazy::NodePtr MaxUnary(const torch::lazy::Value& input) {
