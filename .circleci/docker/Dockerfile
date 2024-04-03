@@ -5,7 +5,7 @@ FROM "${base_image}"
 
 ARG python_version="3.8"
 ARG cuda="1"
-ARG cuda_compute="7.5,8.6"
+ARG cuda_compute="8.6"
 ARG cc="clang"
 ARG cxx="clang++"
 ARG cxx_abi="1"
@@ -26,7 +26,7 @@ ENV PATH /usr/local/cuda:$PATH
 ENV LD_LIBRARY_PATH /usr/local/cuda/lib64:$LD_LIBRARY_PATH
 
 # AWS specific CUDA build guidance
-ENV TORCH_CUDA_ARCH_LIST Maxwell
+ENV TORCH_CUDA_ARCH_LIST "8.6"
 ENV TORCH_NVCC_FLAGS "-Xfatbin -compress-all"
 ENV CUDA_PATH /usr/local/cuda
 
