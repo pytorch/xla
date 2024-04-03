@@ -5,7 +5,7 @@ FROM "${base_image}"
 
 ARG python_version="3.8"
 ARG cuda="1"
-ARG cuda_compute="5.2,7.5"
+ARG cuda_compute="7.5,8.6"
 ARG cc="clang"
 ARG cxx="clang++"
 ARG cxx_abi="1"
