@@ -641,7 +641,7 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
 
     optfoo = torch.compile(backend="openxla")(foo)
 
-    t = torch.arange(10)
+    t = torch.arange(9)
     Xt = t.to(xm.xla_device())
 
     expected = foo(t)
