@@ -897,7 +897,7 @@ class PyLoweringContext {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       int64_t parameters_number_i = 2;
       // for (at::Tensor input_argument : input_arguments) {
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; i < 2; i++) {
         xla::Shape shape =
             xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
         xla::XlaOp x = xla::Parameter(local_builder, parameters_number_i, shape,
@@ -915,9 +915,9 @@ class PyLoweringContext {
       xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
                                       "WeightTensor");
       parameters_number_i = parameters_number_i + 1;
-      // xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {10});
-      // xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
-      //                                 "FinalOneTensor");
+      xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {10});
+      xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
+                                      "FinalOneTensor");
     }
 
     // Get the backing XLA tensors from the output torch tensor handles
