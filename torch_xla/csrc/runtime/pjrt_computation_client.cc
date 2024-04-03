@@ -58,8 +58,6 @@ xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
   xla::Shape shape = xla::ShapeUtil::MakeShape(
       buffer->element_type(), buffer->logical_dimensions().value());
   *shape.mutable_layout() = xla::GetXlaLayoutUnsafe(buffer->layout());
-  //     dynamic_cast<const xla::PjRtXlaLayout*>(buffer->layout().get())
-  //         ->xla_layout();
 
   return xla::ShapeUtil::DeviceShapeToHostShape(shape);
 }
