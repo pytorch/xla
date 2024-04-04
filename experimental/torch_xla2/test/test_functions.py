@@ -14,6 +14,11 @@ class TestTorchFunctions(parameterized.TestCase):
     ('tensor_empty', lambda: torch.tensor([],)),
     ('ones_2d', lambda: torch.ones(2, 3)),
     ('ones_1d', lambda: torch.ones(5)),
+    ('zeros_2d', lambda: torch.zeros(2, 3)),
+    ('zeros_1d', lambda: torch.zeros(5)),
+    ('eye_3x3', lambda: torch.eye(3)),
+    ('eye_4x2', lambda: torch.eye(4, 2)),
+    ('full_tuple', lambda: torch.full((2, 3), 3.141592)),
   )
   def test_tensor_constructor(self, func: Callable[[], torch.Tensor]):
     expected = func()
