@@ -247,9 +247,12 @@ class FlashAttention(torch.autograd.Function):
         o.to(torch.float32) * grad_output.to(torch.float32),
         axis=-1)  # [batch_size, num_heads, q_seq_len]
 
-    expanded_l = l.unsqueeze(-1).expand([-1 for _ in l.shape] + [FlashAttention.MIN_BLOCK_SIZE])
-    expanded_m = m.unsqueeze(-1).expand([-1 for _ in m.shape] + [FlashAttention.MIN_BLOCK_SIZE])
-    expanded_grad_i = grad_i.unsqueeze(-1).expand([-1 for _ in grad_i.shape] + [FlashAttention.MIN_BLOCK_SIZE])
+    expanded_l = l.unsqueeze(-1).expand([-1 for _ in l.shape] +
+                                        [FlashAttention.MIN_BLOCK_SIZE])
+    expanded_m = m.unsqueeze(-1).expand([-1 for _ in m.shape] +
+                                        [FlashAttention.MIN_BLOCK_SIZE])
+    expanded_grad_i = grad_i.unsqueeze(-1).expand(
+        [-1 for _ in grad_i.shape] + [FlashAttention.MIN_BLOCK_SIZE])
 
     if ctx.needs_input_grad[0]:
       payload, _ = trace_pallas(
