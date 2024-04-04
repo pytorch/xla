@@ -278,7 +278,7 @@ class FlashAttention(torch.autograd.Function):
               "block_q_major", "block_k_major", "block_k", "sm_scale", "causal",
               "mask_value", "debug"
           ])
-      grad_q = torch.empty(q.shape, dtype=q.dtype).to(q.device())
+      grad_q = torch.empty(q.shape, dtype=q.dtype).to(q.device)
       torch_xla._XLAC._xla_tpu_custom_call_(
           [grad_q],
           [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
@@ -314,8 +314,8 @@ class FlashAttention(torch.autograd.Function):
               "block_q_major", "block_k_major", "block_k", "block_q",
               "sm_scale", "causal", "mask_value", "debug"
           ])
-      grad_k = torch.empty(k.shape, dtype=k.dtype).to(k.device())
-      grad_v = torch.empty(v.shape, dtype=v.dtype).to(v.device())
+      grad_k = torch.empty(k.shape, dtype=k.dtype).to(k.device)
+      grad_v = torch.empty(v.shape, dtype=v.dtype).to(v.device)
       torch_xla._XLAC._xla_tpu_custom_call_(
           [grad_k, grad_v],
           [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
