@@ -449,9 +449,9 @@ class PallasTest(unittest.TestCase):
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
-    q = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
-    k = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
-    v = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -466,9 +466,9 @@ class PallasTest(unittest.TestCase):
     v_grad = v.grad
 
     torch.manual_seed(42)
-    q = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
-    k = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
-    v = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
