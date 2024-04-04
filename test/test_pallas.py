@@ -19,6 +19,11 @@ if xr.device_type() == 'TPU':
 
 
 class PallasTest(unittest.TestCase):
+  def _attention(self, q, k, v):
+    attn_weight = q @ k.transpose(-2, -1)
+    attn_weight = nn.functional.softmax(attn_weight, dim=-1)
+    attn_output = attn_weight @ v
+    return attn_output
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_add(self):
@@ -80,13 +85,7 @@ class PallasTest(unittest.TestCase):
     v = torch.ones(3, 2, 128, 4).to("xla")
     o = torch.zeros(3, 2, 128, 4).to("xla")
 
-    def attention(q, k, v):
-      attn_weight = q @ k.transpose(-2, -1)
-      attn_weight = nn.functional.softmax(attn_weight, dim=-1)
-      attn_output = attn_weight @ v
-      return attn_output
-
-    expected_o = attention(q, k, v)
+    expected_o = self._attention(q, k, v)
 
     torch_xla._XLAC._xla_tpu_custom_call_([o], [q, k, v], payload)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
@@ -182,12 +181,6 @@ class PallasTest(unittest.TestCase):
     flash_attention_kernel = make_kernel_from_pallas(
         flash_attention, lambda q, k, v: [(q.shape, q.dtype)])
 
-    def attention(q, k, v):
-      attn_weight = q @ k.transpose(-2, -1)
-      attn_weight = nn.functional.softmax(attn_weight, dim=-1)
-      attn_output = attn_weight @ v
-      return attn_output
-
     q_mini = torch.arange(128 * 4, dtype=torch.bfloat16).reshape(128, 4) / 13
     k_mini = torch.arange(
         1000, 1000 + 128 * 4, dtype=torch.bfloat16).reshape(128, 4) / 13
@@ -196,7 +189,7 @@ class PallasTest(unittest.TestCase):
     v = torch.ones(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
 
     o = flash_attention_kernel(q, k, v)
-    expected_o = attention(q, k, v)
+    expected_o = self._attention(q, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
@@ -205,18 +198,12 @@ class PallasTest(unittest.TestCase):
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     from torch_xla.experimental.custom_kernel import flash_attention
 
-    def attention(q, k, v):
-      attn_weight = q @ k.transpose(-2, -1)
-      attn_weight = nn.functional.softmax(attn_weight, dim=-1)
-      attn_output = attn_weight @ v
-      return attn_output
-
     q = torch.randn(3, 2, 128, 4).to("xla")
     k = torch.randn(3, 2, 128, 4).to("xla")
     v = torch.randn(3, 2, 128, 4).to("xla")
 
     o = flash_attention(q, k, v)
-    expected_o = attention(q, k, v)
+    expected_o = self._attention(q, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
@@ -257,12 +244,6 @@ class PallasTest(unittest.TestCase):
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     from torch_xla.experimental.custom_kernel import flash_attention
 
-    def attention(q, k, v):
-      attn_weight = q @ k.transpose(-2, -1)
-      attn_weight = nn.functional.softmax(attn_weight, dim=-1)
-      attn_output = attn_weight @ v
-      return attn_output
-
     q = torch.randn(3, 2, 128, 4).to("xla")
     k = torch.randn(3, 2, 128, 4).to("xla")
     v = torch.randn(3, 2, 128, 4).to("xla")
@@ -270,7 +251,7 @@ class PallasTest(unittest.TestCase):
     # The causal mask is turned on by default in the wrapper.
     # It masks out the top right triangle of the attention matrix, therefore it speeds up the compute but also changes the output.
     o = flash_attention(q, k, v, causal=True)
-    expected_o = attention(q, k, v)
+    expected_o = self._attention(q, k, v)
     self.assertFalse(torch.allclose(o.cpu(), expected_o.cpu()))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
@@ -466,6 +447,45 @@ class PallasTest(unittest.TestCase):
 
     # TODO: I don't really know how to test the value. Let's do the shape check for now.
     self.assertEqual(grad_q.shape, (3, 2, 128, 4))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_backward(self):
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    torch.manual_seed(42)
+    q = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
+    k = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
+    v = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = flash_attention(q, k, v)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
+
+    torch.manual_seed(42)
+    q = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
+    k = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
+    v = torch.randn(3, 2, 128, 4, requires_grad=True).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = self._attention(q, k, v)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    mse = torch.nn.MSELoss()
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(mse(i[0].grad.cpu(), i[1].cpu()) < 1e-4)
 
 
 if __name__ == '__main__':

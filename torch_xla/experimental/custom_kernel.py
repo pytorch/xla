@@ -189,7 +189,7 @@ class FlashAttention(torch.autograd.Function):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
-    import jax.experimental.pallas.ops.tpu.flash_attention as tpu_flash_attention
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
 
     ctx.causal = causal
     save_residuals = q.requires_grad or k.requires_grad or v.requires_grad
@@ -206,7 +206,7 @@ class FlashAttention(torch.autograd.Function):
     # We can't directly use flash_attention as we need to override the save_residuals flag which returns
     # l and m that is needed for the backward. Then we lose all the shape checks.
     # TODO: replicate the shape checks on flash_attention.
-    _flash_attention_impl = make_kernel_from_pallas(tpu_flash_attention._flash_attention_impl,
+    _flash_attention_impl = make_kernel_from_pallas(_flash_attention_impl,
                                                      shape_dtype)
     with torch.no_grad():
       o = _flash_attention_impl(
@@ -220,8 +220,8 @@ class FlashAttention(torch.autograd.Function):
           1.0,
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_b"], q.shape[0]),
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q"], q.shape[2]),
-          min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], q.shape[2]),
-          min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], q.shape[2]),
+          min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], k.shape[2]),
+          min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2]),
           False,
           static_argnums=range(5, 13))
       if not save_residuals:
@@ -238,7 +238,7 @@ class FlashAttention(torch.autograd.Function):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
-    import jax.experimental.pallas.ops.tpu.flash_attention as _flash_attention_bwd_dq, _flash_attention_bwd_dkv
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq, _flash_attention_bwd_dkv
 
     q, k, v, o, l, m = ctx.saved_tensors
     causal = ctx.causal
@@ -264,9 +264,9 @@ class FlashAttention(torch.autograd.Function):
         m,
         grad_output,
         grad_i,
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_major"], q.shape[2]),
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], q.shape[2]),
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], q.shape[2]),
+        block_q_major=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_dq"], q.shape[2]),
+        block_k_major=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major_dq"], k.shape[2]),
+        block_k=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_dq"], k.shape[2]),
         sm_scale=1.0,
         causal=causal,
         mask_value=FlashAttention.DEFAULT_MASK_VALUE,
@@ -292,10 +292,10 @@ class FlashAttention(torch.autograd.Function):
         m,
         grad_output,
         grad_i,
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_major"], q.shape[2]),
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], q.shape[2]),
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], q.shape[2]),
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q"], q.shape[2]),
+        block_q_major=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_major_dkv"], q.shape[2]),
+        block_k_major=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major_dkv"], k.shape[2]),
+        block_k=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_dkv"], k.shape[2]),
+        block_q=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_dkv"], q.shape[2]),
         sm_scale=1.0,
         causal=causal,
         mask_value=FlashAttention.DEFAULT_MASK_VALUE,
