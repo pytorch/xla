@@ -20,9 +20,25 @@ def attention(q, k, v):
   return attn_output
 
 
-def time_execution(q, k, v, func):
+def time_execution(seq_len, func):
+  # Let's make sure the q, k, v are completely isolated from last run.
+  # Simulates 70B Llama 2
+  # bs, num_heads, seq_len, head_dim
+  shape = (2, 64, seq_len, 128)
+  q = torch.randn(shape, dtype=torch.bfloat16).to(device)
+  k = torch.randn(shape, dtype=torch.bfloat16).to(device)
+  v = torch.randn(shape, dtype=torch.bfloat16).to(device)
+  # We can't do the following in the cpu tensors. Otherwise they will end up in
+  # the autograd graph.
+  q.requires_grad = True
+  k.requires_grad = True
+  v.requires_grad = True
+  q.retain_grad()
+  k.retain_grad()
+  v.retain_grad()
+
   o = func(q, k, v)
-  loss = o.sum()
+  loss = nn.MSELoss()(o, torch.ones_like(o))
   loss.backward()
   xm.mark_step()
   start_time = time.time()
@@ -51,27 +67,15 @@ def flash_attention_kernel(q, k, v):
   return flash_attention(q, k, v)
 
 
-xp.trace_detached('localhost:9012', '.', 120000)
+xp.trace_detached('localhost:9012', '.', 600000)
 
 for seq_len in [1024, 2048, 4096, 8192, 16384]:
   print(f"seq_len: {seq_len}")
-  # Simulates 70B Llama 2
-  # bs, num_heads, seq_len, head_dim
-  shape = (2, 64, seq_len, 128)
-  # shape = (3, 2, 128, 4)
-  q = torch.randn(shape, dtype=torch.bfloat16, requires_grad=True).to(device)
-  k = torch.randn(shape, dtype=torch.bfloat16, requires_grad=True).to(device)
-  v = torch.randn(shape, dtype=torch.bfloat16, requires_grad=True).to(device)
-  q.retain_grad()
-  k.retain_grad()
-  v.retain_grad()
 
-  # repeat_n(lambda: time_execution(q, k, v, attention), itr=5)
   if seq_len < 8192:
-    repeat_n(lambda: time_execution(q, k, v, attention))
+    repeat_n(lambda: time_execution(seq_len, attention))
 
-  # repeat_n(lambda: time_execution(q, k, v, flash_attention_kernel), itr=5)
-  repeat_n(lambda: time_execution(q, k, v, flash_attention_kernel))
+  repeat_n(lambda: time_execution(seq_len, flash_attention_kernel))
 
 # print(met.metrics_report())
 # o = flash_attention_kernel(q, k, v)
