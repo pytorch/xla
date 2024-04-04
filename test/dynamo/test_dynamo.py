@@ -636,6 +636,9 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
 
   def test_new_with_sizes(self):
 
+    # The addition operation is needed here, since the error only occurs when FakeTensorMode
+    # checks the device of the arguments of some operation. If there's no operation using the
+    # result of Tensor.new, this comparison never occurs.
     def foo(x):
       return x.new(*x.size()) + x
 
@@ -645,9 +648,13 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
     Xt = t.to(xm.xla_device())
 
     expected = foo(t)
-    actual = optfoo(Xt)
+    actual = optfoo(Xt).cpu()
 
-    self.assertEqual(expected, actual.cpu())
+    # Here, we don't expect the actual data to be the same. Reason being that Tensor.new
+    # returns uninitialized data.
+    self.assertEqual(expected.shape, actual.shape)
+    self.assertEqual(expected.dtype, actual.dtype)
+    self.assertEqual(expected.device, actual.device)
 
 
 if __name__ == '__main__':
