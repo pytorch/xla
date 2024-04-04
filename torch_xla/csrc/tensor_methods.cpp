@@ -529,6 +529,7 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
+
 void gpu_custom_call_(XLATensorPtr& output,
                       const std::vector<XLATensorPtr>& inputs,
                       const std::string& payload) {
@@ -540,15 +541,25 @@ void gpu_custom_call_(XLATensorPtr& output,
       values, output->shape().get(), payload));
 }
 
-void tpu_custom_call_(XLATensorPtr& output,
+void tpu_custom_call_(const std::vector<XLATensorPtr>& outputs,
                       const std::vector<XLATensorPtr>& inputs,
                       const std::string& payload) {
   std::vector<torch::lazy::Value> values;
   for (const auto& input : inputs) {
     values.push_back(input->GetIrValue());
   }
-  output->SetInPlaceIrValue(torch::lazy::MakeNode<TpuCustomCall>(
-      values, output->shape().get(), payload));
+
+  // TODO: Let's see if we can do some shape inference here.
+  std::vector<xla::Shape> output_shapes;
+  for (const auto& output : outputs) {
+    output_shapes.push_back(output->shape().get());
+  }
+
+  auto node = torch::lazy::MakeNode<TpuCustomCall>(
+      values, xla::ShapeUtil::MakeTupleShape(output_shapes), payload);
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    outputs[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
+  }
 }
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
@@ -1602,7 +1613,9 @@ XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
   }
   torch::lazy::Value res = LinalgVectorNorm(input->GetIrValue(), ord,
                                             canonical_dims, keep_dim, dtype);
-  if (!dtype) dtype = input->dtype_optional();
+  if (!dtype) {
+    dtype = input->dtype();
+  }
   xla::PrimitiveType res_intended_type =
       MakeXlaPrimitiveType(*dtype, &input->GetDevice());
   if (GetXlaShape(res).element_type() != res_intended_type) {
@@ -2091,19 +2104,14 @@ XLATensorPtr nll_loss_backward(const XLATensorPtr& grad_output,
       GetXlaReductionMode(reduction), ignore_index));
 }
 
-std::pair<XLATensorPtr, XLATensorPtr> nms(const XLATensorPtr& boxes,
-                                          const XLATensorPtr& scores,
-                                          const XLATensorPtr& score_threshold,
-                                          const XLATensorPtr& iou_threshold,
-                                          int64_t output_size) {
+XLATensorPtr nms(const XLATensorPtr& boxes, const XLATensorPtr& scores,
+                 double iou_threshold) {
+  const torch::lazy::BackendDevice& device = boxes->GetDevice();
+  torch::lazy::NodePtr xla_iou_threshold =
+      ScalarOp(iou_threshold, MakeXlaPrimitiveType(at::kDouble, &device));
   torch::lazy::NodePtr node = torch::lazy::MakeNode<Nms>(
-      boxes->GetIrValue(), scores->GetIrValue(), score_threshold->GetIrValue(),
-      iou_threshold->GetIrValue(), output_size);
-  return std::pair<XLATensorPtr, XLATensorPtr>(
-      XLATensor::Create(torch::lazy::Value(node, 0), boxes->GetDevice(),
-                        at::ScalarType::Int),
-      XLATensor::Create(torch::lazy::Value(node, 1), boxes->GetDevice(),
-                        at::ScalarType::Int));
+      boxes->GetIrValue(), scores->GetIrValue(), xla_iou_threshold);
+  return XLATensor::Create(node, device, at::ScalarType::Long);
 }
 
 XLATensorPtr nonzero(const XLATensorPtr& input) {

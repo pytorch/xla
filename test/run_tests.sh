@@ -240,6 +240,43 @@ function run_xla_op_tests3 {
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
   run_test "$CDIR/test_pallas.py"
+
+  # CUDA tests
+  if [ -x "$(command -v nvidia-smi)" ]; then
+    # Please keep PJRT_DEVICE and GPU_NUM_DEVICES explicit in the following test commands.
+    echo "single-host-single-process"
+    PJRT_DEVICE=CUDA GPU_NUM_DEVICES=1 python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_cores=1 --num_steps=25 --model=resnet18
+    PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
+
+    echo "single-host-multi-process"
+    num_devices=$(nvidia-smi --list-gpus | wc -l)
+    PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_steps=25 --model=resnet18
+    PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=$num_devices test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
+
+    echo "single-host-SPMD"
+    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
+    XLA_USE_SPMD=1 PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/spmd/test_train_spmd_imagenet.py --fake_data --batch_size 8 --sharding=batch --num_epochs=1 --num_steps=25 --model=resnet18
+
+    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
+    PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1 --batch_size 32 --test_set_batch_size 32
+    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
+    PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1 --batch_size 32 --test_set_batch_size 32
+    XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+    # Syncfree SGD optimizer tests
+    if [ -d ./torch_xla/amp/syncfree ]; then
+      echo "Running Syncfree Optimizer Test"
+      PJRT_DEVICE=CUDA python test/test_syncfree_optimizers.py
+
+      # Following test scripts are mainly useful for
+      # performance evaluation & comparison among different
+      # amp optimizers.
+      echo "Running ImageNet Test"
+      PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1 --batch_size 64 --num_steps=25 --model=resnet18
+
+      echo "Running MNIST Test"
+      PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1 --batch_size 64 --num_steps=25
+    fi
+  fi
 }
 
 #######################################################################################

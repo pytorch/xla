@@ -356,6 +356,34 @@ class XlaMarkPatternTest(unittest.TestCase):
     self.assertEqual(
         shlo_text.count("stablehlo.composite \"test.update_kv_cache\""), 1)
 
+  def test_composite_builder_list_attr_value(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x, y):
+        builder = StableHLOCompositeBuilder(
+            "test.add", {
+                "int_arr": [1, 2, 3],
+                "float_arr": [1.0, 1.1, 1.2],
+                "bool_arr": [True, False]
+            })
+        x, y = builder.mark_inputs(x, y)
+        z = x + y
+        z = builder.mark_outputs(z)
+        return z
+
+    input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
+    stablehlo = self.run_func_get_stablehlo(M(), input_args)
+    self.assertEqual(stablehlo.count("stablehlo.composite \"test.add\""), 1)
+    self.assertTrue(
+        stablehlo.count("bool_arr = dense<[true, false]> : tensor<2xi1>"), 1)
+    self.assertTrue(
+        stablehlo.count(
+            "float_arr = dense<[1.000000e+00, 1.100000e+00, 1.200000e+00]> : tensor<3xf32>"
+        ), 1)
+    self.assertTrue(
+        stablehlo.count("int_arr = dense<[1, 2, 3]> : tensor<3xi64>"), 1)
+
 
 if __name__ == '__main__':
   test = unittest.main()

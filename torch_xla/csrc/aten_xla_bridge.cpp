@@ -400,12 +400,14 @@ at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
   return tensor.to(tensor_options, /*non_blocking=*/false, /*copy=*/true);
 }
 
-at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor) {
+at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor,
+                             bool skip_functionalization) {
   if (xla_tensor) {
     auto out =
         at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
     // See Note [Lazy Tensor Functionalization]
-    if (c10::impl::tls_local_dispatch_key_set().excluded_.has(
+    if (skip_functionalization ||
+        c10::impl::tls_local_dispatch_key_set().excluded_.has(
             c10::DispatchKey::Functionalize)) {
       // Invariant: if the functionalization key is in the exclude set, then
       // we're expected to return an ordinary tensor, which will be "lifted"

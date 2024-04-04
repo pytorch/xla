@@ -666,28 +666,6 @@ py::object GetRevisions() {
   return py_dict;
 }
 
-py::object XlaNms(const at::Tensor& boxes, const at::Tensor& scores,
-                  const at::Tensor& score_threshold,
-                  const at::Tensor& iou_threshold, int64_t output_size) {
-  at::Tensor selected_indices;
-  at::Tensor num_valid;
-  {
-    NoGilSection nogil;
-    auto nms_result = tensor_methods::nms(
-        bridge::GetXlaTensor(boxes), bridge::GetXlaTensor(scores),
-        bridge::GetXlaTensor(score_threshold),
-        bridge::GetXlaTensor(iou_threshold), output_size);
-    selected_indices = bridge::AtenFromXlaTensor(std::move(nms_result.first));
-    num_valid = bridge::AtenFromXlaTensor(std::move(nms_result.second));
-  }
-  auto result_tuple = py::tuple(2);
-  result_tuple[0] =
-      torch::autograd::make_variable(selected_indices, /*requires_grad=*/false);
-  result_tuple[1] =
-      torch::autograd::make_variable(num_valid, /*requires_grad=*/false);
-  return result_tuple;
-}
-
 std::vector<at::Tensor> XlaUserComputation(
     const std::string& opname, const std::vector<at::Tensor>& inputs,
     runtime::ComputationClient::ComputationPtr computation) {
@@ -1086,11 +1064,6 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor, int dim) {
           return GetXlaTensorDimensionSize(tensor, dim);
         });
-  m.def("_xla_nms", [](const at::Tensor& boxes, const at::Tensor& scores,
-                       const at::Tensor& score_threshold,
-                       const at::Tensor& iou_threshold, int64_t output_size) {
-    return XlaNms(boxes, scores, score_threshold, iou_threshold, output_size);
-  });
   m.def("_xla_user_computation",
         [](const std::string& opname, const std::vector<at::Tensor>& inputs,
            const runtime::ComputationClient::ComputationPtr& computation) {
@@ -1745,6 +1718,12 @@ void InitXlaModuleBindings(py::module m) {
     return xla_data != nullptr ? py::cast<int64_t>(xla_data->Value())
                                : py::none();
   });
+  // TORCH_LAZY_COUNTER
+  m.def("_xla_increment_counter",
+        [](const std::string& name, uint64_t inc_val) {
+          torch::lazy::Counter* counter = new ::torch::lazy::Counter(name);
+          counter->AddValue(inc_val);
+        });
   m.def("_xla_metric_names", []() {
     auto metric_names = torch::lazy::GetMetricNames();
     auto xla_metric_names = runtime::metrics::GetMetricNames();
@@ -2253,11 +2232,11 @@ void InitXlaModuleBindings(py::module m) {
           return XLANativeFunctions::set_(self, source);
         });
   m.def("_xla_tpu_custom_call_",
-        [](at::Tensor& output, const std::vector<at::Tensor>& inputs,
-           const std::string& payload) {
-          auto x_output = bridge::GetXlaTensor(output);
+        [](const std::vector<at::Tensor>& outputs,
+           const std::vector<at::Tensor>& inputs, const std::string& payload) {
+          auto x_outputs = bridge::GetXlaTensors(outputs);
           return tensor_methods::tpu_custom_call_(
-              x_output, bridge::GetXlaTensors(inputs), payload);
+              x_outputs, bridge::GetXlaTensors(inputs), payload);
         });
   m.def("_xla_gpu_custom_call_",
         [](at::Tensor& output, const std::vector<at::Tensor>& inputs,

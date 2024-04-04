@@ -86,7 +86,7 @@ void gpu_custom_call_(XLATensorPtr& output,
                       const std::vector<XLATensorPtr>& inputs,
                       const std::string& payload);
 
-void tpu_custom_call_(XLATensorPtr& output,
+void tpu_custom_call_(const std::vector<XLATensorPtr>& output,
                       const std::vector<XLATensorPtr>& inputs,
                       const std::string& payload);
 
@@ -682,11 +682,8 @@ XLATensorPtr nll_loss_backward(const XLATensorPtr& grad_output,
                                int ignore_index,
                                const XLATensorPtr& total_weight);
 
-std::pair<XLATensorPtr, XLATensorPtr> nms(const XLATensorPtr& boxes,
-                                          const XLATensorPtr& scores,
-                                          const XLATensorPtr& score_threshold,
-                                          const XLATensorPtr& iou_threshold,
-                                          int64_t output_size);
+XLATensorPtr nms(const XLATensorPtr& boxes, const XLATensorPtr& scores,
+                 double iou_threshold);
 
 XLATensorPtr nonzero(const XLATensorPtr& input);
 

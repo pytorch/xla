@@ -1,5 +1,7 @@
 import functools
 import os
+import warnings
+
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -68,7 +70,11 @@ def jax_import_guard():
   torch_xla._XLAC._init_computation_client()
 
 
-def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
+def trace_pallas(kernel: Callable,
+                 *args,
+                 static_argnums=None,
+                 static_argnames=None,
+                 **kwargs):
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
@@ -102,32 +108,54 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
     else:
       raise ValueError(f"Unsupported dtype: {dtype}")
 
+  jax_args = []  # for tracing
+  tensor_args = []  # for execution
+  for i, arg in enumerate(args):
+    # TODO: Could the args be a tuple of tensors or a list of tensors? Flattern them?
+    if torch.is_tensor(arg):
+      # ShapeDtypeStruct doesn't have any storage and thus is very suitable for generating the payload.
+      jax_meta_tensor = jax.ShapeDtypeStruct(
+          arg.shape, convert_torch_dtype_to_jax(arg.dtype))
+      jax_args.append(jax_meta_tensor)
+      tensor_args.append(arg)
+    else:
+      jax_args.append(arg)
+
+  # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
+  ir = jax.jit(
+      kernel, static_argnums=static_argnums,
+      static_argnames=static_argnames).lower(*jax_args, **kwargs).compiler_ir()
+  payload = _extract_backend_config(ir)
+  return payload, tensor_args
+
+
+def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   # TODO: Maybe we can cache the payload for the same input.
   def wrapped_kernel(kernel: Callable,
                      output_shape_dtype_fn: Callable,
                      *args,
-                     static_argnames=[],
+                     static_argnums=None,
+                     static_argnames=None,
                      **kwargs) -> Callable:
-    jax_args = []
-    for i, arg in enumerate(args):
-      if torch.is_tensor(arg):
-        # ShapeDtypeStruct doesn't have any storage and thus is very suitable for generating the payload.
-        jax_meta_tensor = jax.ShapeDtypeStruct(
-            arg.shape, convert_torch_dtype_to_jax(arg.dtype))
-        jax_args.append(jax_meta_tensor)
-      else:
-        # TODO: We can support more types here.
-        assert False, f"Unsupported argument type: {type(arg)}"
+    payload, tensor_args = trace_pallas(
+        kernel,
+        *args,
+        static_argnums=static_argnums,
+        static_argnames=static_argnames,
+        **kwargs)
+    outputs = []
+    output_shape_dtype = output_shape_dtype_fn(*args)
+    assert isinstance(output_shape_dtype,
+                      list), "The output_shape_dtype_fn should return a list."
+    for output_shape, output_dtype in output_shape_dtype:
+      outputs.append(
+          torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device()))
+    torch_xla._XLAC._xla_tpu_custom_call_(outputs, tensor_args, payload)
 
-    # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
-    ir = jax.jit(
-        kernel, static_argnames=static_argnames).lower(*jax_args,
-                                                       **kwargs).compiler_ir()
-    payload = _extract_backend_config(ir)
-    output_shape, output_dtype = output_shape_dtype_fn(*args)
-    output = torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device())
-    torch_xla._XLAC._xla_tpu_custom_call_(output, args, payload)
-    return output
+    # Make the output easier to use.
+    if len(outputs) == 1:
+      return outputs[0]
+    return tuple(outputs)
 
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
 
@@ -150,7 +178,7 @@ def flash_attention(
 
   # TODO: Support segment_ids.
   flash_attention_kernel = make_kernel_from_pallas(
-      tpu_flash_attention.flash_attention, lambda q, k, v: (q.shape, q.dtype))
+      tpu_flash_attention.flash_attention, lambda q, k, v: [(q.shape, q.dtype)])
 
   # The block_sizes configuration is copied from https://github.com/google/maxtext/blob/0fee320451738166c8e596dc63a57a4673671576/MaxText/layers/attentions.py#L215-L240
   # It yields much better performance than the default block_sizes.
@@ -173,3 +201,34 @@ def flash_attention(
           block_k_major_dq=min(512, k.shape[2]),
       ),
       causal=causal)
+
+
+XLA_LIB.define(
+    "flash_attention(Tensor q, Tensor k, Tensor v, bool casual=False) -> Tensor",
+)
+
+
+@impl(XLA_LIB, "flash_attention", "XLA")
+def flash_attention_xla(q: torch.Tensor,
+                        k: torch.Tensor,
+                        v: torch.Tensor,
+                        causal: bool = False):
+  return flash_attention(q, k, v, causal=causal)
+
+
+@impl(XLA_LIB, "flash_attention", "CompositeExplicitAutograd")
+def flash_attention_non_xla(q: torch.Tensor,
+                            k: torch.Tensor,
+                            v: torch.Tensor,
+                            causal: bool = False):
+  # This will be called when dynamo use fake tensor to construct the fake output.
+  # We need to make sure output tensor's shape is correct.
+  if k.device != torch.device("meta"):
+    warnings.warn(
+        'XLA flash attention should only be applied to tensors on XLA device')
+
+  # perform a regular attention if input tensors are not on XLA device.
+  attn_weight = q @ k.transpose(-2, -1)
+  attn_weight = torch.nn.functional.softmax(attn_weight, dim=-1)
+  attn_output = attn_weight @ v
+  return attn_output
