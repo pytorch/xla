@@ -171,17 +171,17 @@ class FlashAttention(torch.autograd.Function):
   # The block_sizes configuration is copied from https://github.com/google/maxtext/blob/0fee320451738166c8e596dc63a57a4673671576/MaxText/layers/attentions.py#L215-L240
   # It yields much better performance than the default block_sizes.
   DEFAULT_BLOCK_SIZES = {
-    "block_q": 512,
-    "block_k_major": 512,
-    "block_k": 512,
-    "block_b": 2,
-    "block_q_major_dkv": 512,
-    "block_k_major_dkv": 512,
-    "block_q_dkv": 512,
-    "block_k_dkv": 512,
-    "block_q_dq": 1024,
-    "block_k_dq": 256,
-    "block_k_major_dq": 512,
+      "block_q": 512,
+      "block_k_major": 512,
+      "block_k": 512,
+      "block_b": 2,
+      "block_q_major_dkv": 512,
+      "block_k_major_dkv": 512,
+      "block_q_dkv": 512,
+      "block_k_dkv": 512,
+      "block_q_dq": 1024,
+      "block_k_dq": 256,
+      "block_k_major_dq": 512,
   }
 
   @staticmethod
@@ -207,7 +207,7 @@ class FlashAttention(torch.autograd.Function):
     # l and m that is needed for the backward. Then we lose all the shape checks.
     # TODO: replicate the shape checks on flash_attention.
     _flash_attention_impl = make_kernel_from_pallas(_flash_attention_impl,
-                                                     shape_dtype)
+                                                    shape_dtype)
     with torch.no_grad():
       o = _flash_attention_impl(
           q,
@@ -232,7 +232,6 @@ class FlashAttention(torch.autograd.Function):
     ctx.save_for_backward(q, k, v, o, l, m)
     return o
 
-
   @staticmethod
   def backward(ctx, grad_output):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
@@ -245,70 +244,85 @@ class FlashAttention(torch.autograd.Function):
     grad_q = grad_k = grad_v = None
 
     grad_i = torch.sum(
-        o.to(torch.float32) * grad_output.to(torch.float32), axis=-1
-    )  # [batch_size, num_heads, q_seq_len]
+        o.to(torch.float32) * grad_output.to(torch.float32),
+        axis=-1)  # [batch_size, num_heads, q_seq_len]
 
-    expanded_l = l.unsqueeze(-1).expand(3, 2, 128, FlashAttention.MIN_BLOCK_SIZE)
-    expanded_m = m.unsqueeze(-1).expand(3, 2, 128, FlashAttention.MIN_BLOCK_SIZE)
-    expanded_grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, FlashAttention.MIN_BLOCK_SIZE)
+    expanded_l = l.unsqueeze(-1).expand(3, 2, 128,
+                                        FlashAttention.MIN_BLOCK_SIZE)
+    expanded_m = m.unsqueeze(-1).expand(3, 2, 128,
+                                        FlashAttention.MIN_BLOCK_SIZE)
+    expanded_grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128,
+                                                  FlashAttention.MIN_BLOCK_SIZE)
 
     if ctx.needs_input_grad[0]:
       payload, _ = trace_pallas(
-        _flash_attention_bwd_dq,
-        q,
-        k,
-        v,
-        None,
-        None,
-        l,
-        m,
-        grad_output,
-        grad_i,
-        block_q_major=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_dq"], q.shape[2]),
-        block_k_major=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major_dq"], k.shape[2]),
-        block_k=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_dq"], k.shape[2]),
-        sm_scale=1.0,
-        causal=causal,
-        mask_value=FlashAttention.DEFAULT_MASK_VALUE,
-        debug=False,
-        static_argnames=[
-            "block_q_major", "block_k_major", "block_k", "sm_scale", "causal",
-            "mask_value", "debug"
-        ])
+          _flash_attention_bwd_dq,
+          q,
+          k,
+          v,
+          None,
+          None,
+          l,
+          m,
+          grad_output,
+          grad_i,
+          block_q_major=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_dq"],
+                            q.shape[2]),
+          block_k_major=min(
+              FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major_dq"],
+              k.shape[2]),
+          block_k=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_dq"],
+                      k.shape[2]),
+          sm_scale=1.0,
+          causal=causal,
+          mask_value=FlashAttention.DEFAULT_MASK_VALUE,
+          debug=False,
+          static_argnames=[
+              "block_q_major", "block_k_major", "block_k", "sm_scale", "causal",
+              "mask_value", "debug"
+          ])
       grad_q = torch.empty(q.shape, dtype=q.dtype).to(xm.xla_device())
-      torch_xla._XLAC._xla_tpu_custom_call_([grad_q],
-                                          [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
-                                          payload)
+      torch_xla._XLAC._xla_tpu_custom_call_(
+          [grad_q],
+          [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
+          payload)
 
     if ctx.needs_input_grad[1] or ctx.needs_input_grad[2]:
       payload, _ = trace_pallas(
-        _flash_attention_bwd_dkv,
-        q,
-        k,
-        v,
-        None,
-        None,
-        l,
-        m,
-        grad_output,
-        grad_i,
-        block_q_major=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_major_dkv"], q.shape[2]),
-        block_k_major=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major_dkv"], k.shape[2]),
-        block_k=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_dkv"], k.shape[2]),
-        block_q=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_dkv"], q.shape[2]),
-        sm_scale=1.0,
-        causal=causal,
-        mask_value=FlashAttention.DEFAULT_MASK_VALUE,
-        debug=False,
-        static_argnames=[
-            "block_q_major", "block_k_major", "block_k", "block_q", "sm_scale",
-            "causal", "mask_value", "debug"
-        ])
+          _flash_attention_bwd_dkv,
+          q,
+          k,
+          v,
+          None,
+          None,
+          l,
+          m,
+          grad_output,
+          grad_i,
+          block_q_major=min(
+              FlashAttention.DEFAULT_BLOCK_SIZES["block_q_major_dkv"],
+              q.shape[2]),
+          block_k_major=min(
+              FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major_dkv"],
+              k.shape[2]),
+          block_k=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_dkv"],
+                      k.shape[2]),
+          block_q=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_dkv"],
+                      q.shape[2]),
+          sm_scale=1.0,
+          causal=causal,
+          mask_value=FlashAttention.DEFAULT_MASK_VALUE,
+          debug=False,
+          static_argnames=[
+              "block_q_major", "block_k_major", "block_k", "block_q",
+              "sm_scale", "causal", "mask_value", "debug"
+          ])
       grad_k = torch.empty(k.shape, dtype=k.dtype).to(xm.xla_device())
       grad_v = torch.empty(v.shape, dtype=v.dtype).to(xm.xla_device())
-      torch_xla._XLAC._xla_tpu_custom_call_([grad_k, grad_v],
-                                        [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
-                                          payload)
+      torch_xla._XLAC._xla_tpu_custom_call_(
+          [grad_k, grad_v],
+          [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
+          payload)
     if not ctx.needs_input_grad[1]:
       grad_k = None
     if not ctx.needs_input_grad[2]:

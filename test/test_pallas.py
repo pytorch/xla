@@ -19,6 +19,7 @@ if xr.device_type() == 'TPU':
 
 
 class PallasTest(unittest.TestCase):
+
   def _attention(self, q, k, v):
     attn_weight = q @ k.transpose(-2, -1)
     attn_weight = nn.functional.softmax(attn_weight, dim=-1)
