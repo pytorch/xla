@@ -19,21 +19,6 @@ from benchmark_model import ModelLoader, BenchmarkModel
 
 logger = logging.getLogger(__name__)
 
-DETECTRON2_MODELS = {
-    "detectron2_fasterrcnn_r_101_c4",
-    "detectron2_fasterrcnn_r_101_dc5",
-    "detectron2_fasterrcnn_r_101_fpn",
-    "detectron2_fasterrcnn_r_50_c4",
-    "detectron2_fasterrcnn_r_50_dc5",
-    "detectron2_fasterrcnn_r_50_fpn",
-    "detectron2_maskrcnn_r_101_c4",
-    "detectron2_maskrcnn_r_101_fpn",
-    "detectron2_maskrcnn_r_50_c4",
-    "detectron2_maskrcnn_r_50_fpn",
-    "detectron2_maskrcnn",
-    "detectron2_fcos_r_50_fpn",
-}
-
 # torchbench models that might OOM using Adam.
 # This list was extracted from PyTorch's repository: benchmarks/dynamo/common.py
 TRAIN_WITH_SGD = {
@@ -111,20 +96,6 @@ NEED_LARGER_CACHE = {
     "hf_T5_generate",
 }
 
-# This list was extracted from PyTorch's repository: benchmarks/dynamo/torchbench.py
-FORCE_AMP_FOR_FP16_BF16_MODELS = {
-    "DALLE2_pytorch",
-    "doctr_det_predictor",
-    "doctr_reco_predictor",
-    "Super_SloMo",
-    "tts_angular",
-    "pyhpc_turbulent_kinetic_energy",
-    "detectron2_fcos_r_50_fpn",
-}
-
-# This list was extracted from PyTorch's repository: benchmarks/dynamo/torchbench.py
-FORCE_FP16_FOR_BF16_MODELS = {"vision_maskrcnn"}
-
 
 @functools.lru_cache(maxsize=1)
 def config_data():
@@ -157,6 +128,17 @@ def config_data():
     return obj
 
   return maybe_list_to_set(data)
+
+
+# List of models retrieved from the YAML configuration data.
+# File (inside PyTorch main repository): benchmarks/dynamo/torchbench.yaml
+DETECTRON2_MODELS = config_data()["detectron2_models"]
+
+FORCE_AMP_FOR_FP16_BF16_MODELS = config_data(
+)["dtype"]["force_amp_for_fp16_bf16_models"]
+
+FORCE_FP16_FOR_BF16_MODELS = config_data(
+)["dtype"]["force_fp16_for_bf16_models"]
 
 
 class TorchBenchModelLoader(ModelLoader):
