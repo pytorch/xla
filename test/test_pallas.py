@@ -214,12 +214,6 @@ class PallasTest(unittest.TestCase):
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     from torch_xla.experimental.custom_kernel import flash_attention
 
-    def attention(q, k, v):
-      attn_weight = q @ k.transpose(-2, -1)
-      attn_weight = nn.functional.softmax(attn_weight, dim=-1)
-      attn_output = attn_weight @ v
-      return attn_output
-
     def flash_attention_wrapper(q, k, v, causal=False):
       return torch.ops.xla.flash_attention(q, k, v, causal)
 
@@ -231,7 +225,7 @@ class PallasTest(unittest.TestCase):
         flash_attention_wrapper, backend="openxla")
     o_no_causal = compiled_flash_attention(q, k, v)
     o_with_causal = compiled_flash_attention(q, k, v, causal=True)
-    expected_o = attention(q, k, v)
+    expected_o = self._attention(q, k, v)
     self.assertTrue(torch.allclose(o_no_causal.cpu(), expected_o.cpu()))
     # The causal mask is turned on by default in the wrapper.
     # It masks out the top right triangle of the attention matrix,
