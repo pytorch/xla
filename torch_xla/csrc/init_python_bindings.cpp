@@ -695,18 +695,18 @@ std::vector<at::Tensor> XlaUserComputation(
 runtime::ComputationClient::ComputationPtr CreateComputation(
     const std::string& name, xla::XlaOp root) {
   xla::XlaBuilder* local_builder = root.builder();
-  int64_t parameters_number_i = 4;
-  xla::Shape shape1 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-  xla::XlaOp x1 = xla::Parameter(local_builder, parameters_number_i, shape1,
-                                      "OutPutTensor");
-  parameters_number_i = parameters_number_i + 1;
-  xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20, 10});
-  xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
-                                      "WeightTensor");
-  parameters_number_i = parameters_number_i + 1;
-  xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {10});
-  xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
-                                      "FinalOneTensor");
+  // int64_t parameters_number_i = 4;
+  // xla::Shape shape1 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
+  // xla::XlaOp x1 = xla::Parameter(local_builder, parameters_number_i, shape1,
+  //                                     "OutPutTensor");
+  // parameters_number_i = parameters_number_i + 1;
+  // xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20, 10});
+  // xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
+  //                                     "WeightTensor");
+  // parameters_number_i = parameters_number_i + 1;
+  // xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {10});
+  // xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
+  //                                     "FinalOneTensor");
   xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
   return std::make_shared<runtime::ComputationClient::Computation>(
       name, std::move(computation));
