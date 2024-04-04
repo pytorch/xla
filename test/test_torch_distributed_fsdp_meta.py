@@ -144,8 +144,7 @@ def _mp_fn(index):
   device = xm.xla_device()
   # This test fails on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
   if xm.xla_device_hw(device) in ('TPU'):
-    dist.init_process_group(
-        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+    dist.init_process_group('xla', init_method='xla://')
     test = TestFSDPWithMetaDevice()
     test.test_simple_model_with_meta_device_reset_params()
     test.test_simple_model_with_meta_default_reset_params()

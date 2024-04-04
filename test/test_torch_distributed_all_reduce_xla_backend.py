@@ -12,15 +12,17 @@ def _mp_fn(index):
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
     world_size = xm.xrt_world_size()
-    rank = xm.get_ordinal()
-
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
-
-    ones = torch.ones((2, 3))
-    xones = ones.to(device)
-    dist.all_reduce(xones)
-    expected = torch.ones((2, 3)) * world_size
-    assert torch.all(xones.cpu() == expected), f'{xones} != {expected}'
+    dist.init_process_group('xla', init_method='xla://')
+    # note that we can't use torch.tensor(torch.distributed.get_rank()) directly
+    # since 0 and 1 will be special case into constant. In collective ops we need
+    # can't have some of the tensors becomes constant while others are device data.
+    rank_tensor = torch.tensor([torch.distributed.get_rank()])
+    xla_rank_tensor = rank_tensor.to(device)
+    dist.all_reduce(xla_rank_tensor)
+    expected = torch.tensor([(world_size - 1) * world_size / 2])
+    xm.mark_step()
+    assert torch.all(
+        xla_rank_tensor.cpu() == expected), f'{xla_rank_tensor} != {expected}'
   else:
     print(
         'Default device {} is not a TPU or GPU device'.format(device),
