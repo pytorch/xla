@@ -207,19 +207,6 @@ You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel
 of a specified date. To get the companion pytorch and torchvision nightly wheel,
 replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
 
-#### Installing libtpu (before PyTorch/XLA 2.0)
-
-For PyTorch/XLA release r2.0 and older and when developing PyTorch/XLA, install
-the `libtpu` pip package with the following command:
-
-```
-pip3 install torch_xla[tpuvm]
-```
-
-This is only required on Cloud TPU VMs.
-
-</details>
-
 ### Docker
 
 | Version | Cloud TPU VMs Docker |
