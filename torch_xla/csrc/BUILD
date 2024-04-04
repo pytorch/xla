@@ -32,6 +32,7 @@ ptxla_cc_library(
     name = "tensor",
     srcs = [
         "aten_autograd_ops.cpp",
+        "aten_cpu_fallback.cpp",
         "aten_xla_bridge.cpp",
         "aten_xla_type.cpp",
         "autocast_mode.cpp",
@@ -74,6 +75,7 @@ ptxla_cc_library(
     ] + glob(["ops/*.cpp"]),
     hdrs = [
         "aten_autograd_ops.h",
+        "aten_cpu_fallback.h",
         "aten_xla_bridge.h",
         "batch_norm.h",
         "convert_ops.h",
@@ -113,10 +115,10 @@ ptxla_cc_library(
         ":XLANativeFunctions.h",
     ] + glob(["ops/*.h"]),
     deps = [
-        ":aten_cpu_fallback",
         ":device",
         ":dtype",
         ":einsum_utilities",
+        ":function_call_tracker",
         ":ir",
         ":ir_builder",
         ":layout_manager",
@@ -208,18 +210,6 @@ cc_library(
     hdrs = ["ops/einsum_utilities.h"],
     deps = [
         "//torch_xla/csrc/runtime:debug_macros",
-    ],
-)
-
-ptxla_cc_library(
-    name = "aten_cpu_fallback",
-    srcs = ["aten_cpu_fallback.cpp"],
-    hdrs = ["aten_cpu_fallback.h"],
-    deps = [
-        ":function_call_tracker",
-        "//torch_xla/csrc/runtime:debug_macros",
-        "//torch_xla/csrc/runtime:metrics",
-        "//torch_xla/csrc/runtime:tf_logging",
     ],
 )
 
