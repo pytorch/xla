@@ -20,15 +20,16 @@ def attention(q, k, v):
   return attn_output
 
 
-def time_execution(q, k, v, func):
+def time_execution(q, k, v, func, backward=False):
   start_time = time.time()
   q.grad = None
   k.grad = None
   v.grad = None
 
   o = func(q, k, v)
-  loss = nn.MSELoss()(o, torch.ones_like(o))
-  loss.backward()
+  if backward:
+    loss = nn.MSELoss()(o, torch.ones_like(o))
+    loss.backward()
   xm.mark_step()
   xm.wait_device_ops()
   end_time = time.time()
@@ -57,7 +58,7 @@ def flash_attention_kernel(q, k, v):
 
 # xp.trace_detached('localhost:9012', '.', 120000)
 
-for seq_len in [1024, 2048, 4096, 8192, 16384]:
+for seq_len in [1024, 2048, 4096]: #, 8192, 16384]:
   print(f"seq_len: {seq_len}")
 
   # Let's make sure the q, k, v are completely isolated from last run.
@@ -76,9 +77,13 @@ for seq_len in [1024, 2048, 4096, 8192, 16384]:
   k.retain_grad()
   v.retain_grad()
 
+  # Warm up
+  repeat_n(lambda: time_execution(q, k, v, attention), itr=1)
   if seq_len < 8192:
     repeat_n(lambda: time_execution(q, k, v, attention))
 
+  # Warm up
+  repeat_n(lambda: time_execution(q, k, v, flash_attention_kernel), itr=1)
   repeat_n(lambda: time_execution(q, k, v, flash_attention_kernel))
 
 # print(met.metrics_report())
