@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
 
+#include "absl/log/initialize.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/profiler.h"
@@ -110,6 +111,8 @@ InitializePjRt(const std::string& device_type) {
     client = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
   } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
+    // Init the absl logging to avoid the log spam.
+    absl::InitializeLog();
     // Prefer $TPU_LIBRARY_PATH if set
     auto tpu_library_path = sys_util::GetEnvString(
         env::kEnvTpuLibraryPath,
