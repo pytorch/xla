@@ -127,11 +127,6 @@ function run_pt_xla_debug {
   PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
-function run_xla_backend_mp {
-  echo "Running XLA backend multiprocessing test: $@"
-  MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
-}
-
 function run_torchrun {
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     echo "Running torchrun test for GPU $@"
@@ -298,14 +293,14 @@ function run_mp_op_tests {
   run_test "$CDIR/test_mp_save.py"
   run_test "$CDIR/test_mp_mesh_reduce.py"
   run_test "$CDIR/test_mp_sync_batch_norm.py"
+  run_test "$CDIR/test_fsdp_auto_wrap.py"
   run_pt_xla_debug "$CDIR/debug_tool/test_mp_pt_xla_debug.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_ddp.py"
-  run_xla_backend_mp "$CDIR/test_fsdp_auto_wrap.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_fsdp_meta.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_all_gather_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_all_reduce_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_multi_all_reduce_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_reduce_scatter_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_ddp.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_fsdp_meta.py"
 }
 
 function run_tests {

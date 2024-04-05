@@ -14,7 +14,7 @@ def _mp_fn(index):
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
+    dist.init_process_group('xla', init_method='xla://')
 
     num_all_reduces = 20
     xinputs_list = []
@@ -23,6 +23,7 @@ def _mp_fn(index):
       xinputs = inputs.to(device)
       xinputs_list.append(xinputs)
       dist.all_reduce(xinputs)
+    xm.mark_step()
     for i in range(num_all_reduces):
       expected = torch.ones((2, 3)) * i * world_size
       xinputs = xinputs_list[i]
