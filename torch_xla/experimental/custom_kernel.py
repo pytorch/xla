@@ -1,5 +1,7 @@
 import functools
 import os
+import warnings
+
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -173,3 +175,34 @@ def flash_attention(
           block_k_major_dq=min(512, k.shape[2]),
       ),
       causal=causal)
+
+
+XLA_LIB.define(
+    "flash_attention(Tensor q, Tensor k, Tensor v, bool casual=False) -> Tensor",
+)
+
+
+@impl(XLA_LIB, "flash_attention", "XLA")
+def flash_attention_xla(q: torch.Tensor,
+                        k: torch.Tensor,
+                        v: torch.Tensor,
+                        causal: bool = False):
+  return flash_attention(q, k, v, causal=causal)
+
+
+@impl(XLA_LIB, "flash_attention", "CompositeExplicitAutograd")
+def flash_attention_non_xla(q: torch.Tensor,
+                            k: torch.Tensor,
+                            v: torch.Tensor,
+                            causal: bool = False):
+  # This will be called when dynamo use fake tensor to construct the fake output.
+  # We need to make sure output tensor's shape is correct.
+  if k.device != torch.device("meta"):
+    warnings.warn(
+        'XLA flash attention should only be applied to tensors on XLA device')
+
+  # perform a regular attention if input tensors are not on XLA device.
+  attn_weight = q @ k.transpose(-2, -1)
+  attn_weight = torch.nn.functional.softmax(attn_weight, dim=-1)
+  attn_output = attn_weight @ v
+  return attn_output

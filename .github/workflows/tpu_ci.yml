@@ -21,7 +21,7 @@ jobs:
         env:
           _GLIBCXX_USE_CXX11_ABI: 0
         run: |
-          git clone --recursive https://github.com/pytorch/pytorch
+          git clone -b release/2.3 --recursive https://github.com/pytorch/pytorch
           cd pytorch/
           python3 setup.py install --user
       - name: Install torchvision
