@@ -20,7 +20,7 @@ def attention(q, k, v):
   return attn_output
 
 
-def time_execution(q, k, v, func, backward=False):
+def time_execution(q, k, v, func, backward=True):
   start_time = time.time()
   q.grad = None
   k.grad = None
