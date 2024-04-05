@@ -206,6 +206,7 @@ wheels for `torch` and `torch_xla` at
 You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel
 of a specified date. To get the companion pytorch and torchvision nightly wheel,
 replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
+</details>
 
 ### Docker
 
