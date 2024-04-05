@@ -206,6 +206,7 @@ wheels for `torch` and `torch_xla` at
 You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel
 of a specified date. To get the companion pytorch and torchvision nightly wheel,
 replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
+</details>
 
 ### Docker
 
@@ -300,3 +301,9 @@ You can find additional useful reading materials in
   VM](https://cloud.google.com/blog/topics/developers-practitioners/scaling-deep-learning-workloads-pytorch-xla-and-cloud-tpu-vm)
 * [Scaling PyTorch models on Cloud TPUs with
   FSDP](https://pytorch.org/blog/scaling-pytorch-models-on-cloud-tpus-with-fsdp/)
+
+## Related Projects
+
+* [OpenXLA](https://github.com/openxla)
+* [HuggingFace](https://huggingface.co/docs/accelerate/en/basic_tutorials/tpu)
+* [JetStream](https://github.com/google/JetStream-pytorch)
