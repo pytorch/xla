@@ -115,6 +115,7 @@ def t2j_dtype(dtype):
 
 def j2t_dtype(dtype):
   return {
+      jnp.float16: torch.float16,
       jnp.bfloat16: torch.bfloat16,
       jnp.double: torch.double,
       jnp.float32: torch.float32,
