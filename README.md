@@ -301,3 +301,9 @@ You can find additional useful reading materials in
   VM](https://cloud.google.com/blog/topics/developers-practitioners/scaling-deep-learning-workloads-pytorch-xla-and-cloud-tpu-vm)
 * [Scaling PyTorch models on Cloud TPUs with
   FSDP](https://pytorch.org/blog/scaling-pytorch-models-on-cloud-tpus-with-fsdp/)
+
+## Related Projects
+
+* [OpenXLA](https://github.com/openxla)
+* [HuggingFace](https://huggingface.co/docs/accelerate/en/basic_tutorials/tpu)
+* [JetStream](https://github.com/google/JetStream-pytorch)
