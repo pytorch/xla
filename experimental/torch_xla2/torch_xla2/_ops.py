@@ -60,20 +60,11 @@ def _aten_add(x, y, *, alpha=1):
   return x + y * alpha
 
 
-@op(torch.ops.aten.add_, is_jax_func=False)
-def _aten_add_inplace(self, other, *, alpha):
-  if isinstance(other, XLATensor2):
-    self._elem += alpha * other._elem
-  else:
-    self._elem += alpha * other
-  return self
-
-
 @op(torch.ops.aten.copy_, is_jax_func=False)
 def _aten_copy(x, y, memory_format=None):
-  if isinstance(x, XLATensor2):
+  if isinstance(x, tensor.XLATensor2):
     x._elem = y._elem
-  elif isinstance(x, SliceView):
+  elif isinstance(x, tensor.SliceView):
     x.mutate(y)
   return x
 
