@@ -16,14 +16,8 @@ P = ParamSpec('P')
 def register_function(torch_func: Callable[P, torch.Tensor]):
 
   def decorator(jax_impl: Callable[P, jax.Array]):
-
-    @functools.wraps(torch_func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs):
-      return jax_impl(*args, **kwargs)
-
     registry[torch_func] = jax_impl
-
-    return wrapper
+    return jax_impl
 
   return decorator
 
