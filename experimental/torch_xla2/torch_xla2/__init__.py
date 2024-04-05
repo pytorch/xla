@@ -5,7 +5,7 @@ from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
 from torch_xla2 import export, _ops, ops_registry, tensor, tf_integration
 
-
+jax.config.update('jax_enable_x64', True)
 
 def extract_jax(mod: torch.nn.Module):
   """Returns a pytree of jax.ndarray and a jax callable."""

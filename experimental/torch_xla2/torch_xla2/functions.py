@@ -2,7 +2,6 @@
 import functools
 import logging
 from typing import Callable, Optional, ParamSpec, Sequence
-import warnings
 
 import jax
 import torch
@@ -24,27 +23,56 @@ def register_function(torch_func: Callable[P, torch.Tensor]):
     return wrapper
   return decorator
 
+def convert_dtype(use_default_dtype: bool = True):
+  def decorator(func: Callable[P, torch.Tensor]):
+    @functools.wraps(func)
+    def wrapper(*args: P.args, dtype: Optional[torch.dtype] = None, **kwargs: P.kwargs):
+      if not dtype and use_default_dtype:
+        dtype = torch.get_default_dtype()
+      jax_dtype = tensor.t2j_dtype(dtype)
+
+      return func(*args, dtype=jax_dtype, **kwargs)
+
+    return wrapper
+
+  return decorator
 
 @register_function(torch.tensor)
-def _tensor(data, *args, **kwargs):
-  return jnp.array(data)
+@convert_dtype(use_default_dtype=False) # Attempt to infer type from elements
+def _tensor(data, *, dtype=None, **kwargs):
+  python_types_to_torch_types = {
+    bool: jnp.bool,
+    int: jnp.int64,
+    float: jnp.float32,
+    complex: jnp.complex64,
+  }
+  if not dtype:
+    leaves = jax.tree_util.tree_leaves(data)
+    if len(leaves) > 0:
+      dtype = python_types_to_torch_types.get(type(leaves[0]))
+
+  return jnp.array(data, dtype=dtype or tensor.t2j_dtype(torch.get_default_dtype()))
 
 @register_function(torch.ones)
-def _ones(*size: int, **kwargs):
-  return jnp.ones(size)
+@convert_dtype()
+def _ones(*size: int, dtype=None, **kwargs):
+  return jnp.ones(size, dtype)
 
 @register_function(torch.zeros)
-def _zeros(*size: int, **kwargs):
-  return jnp.zeros(size)
+@convert_dtype()
+def _zeros(*size: int, dtype=None, **kwargs):
+  return jnp.zeros(size, dtype)
 
 @register_function(torch.eye)
-def _eye(n: int, m: Optional[int] = None, **kwargs):
-  return jnp.eye(n, m)
+@convert_dtype()
+def _eye(n: int, m: Optional[int] = None, *, dtype=None, **kwargs):
+  return jnp.eye(n, m, dtype=dtype)
 
 @register_function(torch.full)
-def _full(size: Sequence[int], fill_value, **kwargs):
+@convert_dtype()
+def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
   # TODO: handle torch.Size
-  return jnp.full(size, fill_value)
+  return jnp.full(size, fill_value, dtype=dtype)
 
 class XLAFunctionMode(torch.overrides.TorchFunctionMode):
   def __torch_function__(self, func, types, args=(), kwargs=None) -> torch.Tensor:
@@ -53,8 +81,5 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
       logging.warn(f'Falling back to default implementation of {func.__name__}')
       return func(*args, **(kwargs or {}))
 
-    if kwargs:
-      warnings.warn(f'kwargs not implemented for {kwargs}')
-
     # TODO: unwrap args here or in implementations?
-    return tensor.wrap(jax_func(*args))
+    return tensor.wrap(jax_func(*args, **(kwargs or {})))

@@ -20,7 +20,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
       args, kwargs = unwrap((args, kwargs))
       res = constructors[fn](*args, **kwargs)
       return wrap(res)
-    
+
     return fn(*args, **kwargs)
 
 
@@ -97,6 +97,7 @@ def j2t(x):
 
 def t2j_dtype(dtype):
   return {
+      torch.float16: jnp.float16,
       torch.bfloat16: jnp.bfloat16,
       torch.half: jnp.float16,
       torch.float32: jnp.float32,
@@ -192,10 +193,10 @@ class XLATensor2(torch.Tensor):
     with jax.named_scope(func.name()):
       if isinstance(func, torch._ops.OpOverloadPacket):
         return func(*args, **kwargs)
-      
+
       if func in jaten.all_ops:
         return jaten.all_ops[func](*args, **kwargs)
-      
+
       lowering = ops_registry.lowerings.lookup(func)
 
       if lowering is None:
