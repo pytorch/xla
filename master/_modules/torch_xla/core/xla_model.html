@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git77be46b )
+                  master (2.4.0+git44bf47c )
                 </div>
               
             
@@ -591,7 +591,7 @@
         <span class="s1">&#39;Cannot replicate across different device types: devices=</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">local_devices</span><span class="p">,</span> <span class="n">real_devices</span><span class="p">))</span>
   <span class="n">device_type</span> <span class="o">=</span> <span class="n">device_types</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-  <span class="n">kind_devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="n">device_type</span><span class="p">)</span>
+  <span class="n">kind_devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">()</span>
   <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kind_devices</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">local_devices</span><span class="p">):</span>
     <span class="c1"># Replication can only happen among all devices of one kind.</span>
     <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
