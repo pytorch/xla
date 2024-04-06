@@ -143,14 +143,12 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
         static_argnums=static_argnums,
         static_argnames=static_argnames,
         **kwargs)
-    outputs = []
     output_shape_dtype = output_shape_dtype_fn(*args)
     assert isinstance(output_shape_dtype,
                       list), "The output_shape_dtype_fn should return a list."
-    for output_shape, output_dtype in output_shape_dtype:
-      outputs.append(
-          torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device()))
-    torch_xla._XLAC._xla_tpu_custom_call_(outputs, tensor_args, payload)
+    output_shapes = [shape for shape, _ in output_shape_dtype]
+    output_dtypes = [dtype for _, dtype in output_shape_dtype]
+    torch_xla._XLAC._xla_tpu_custom_call(tensor_args, payload, output_shapes, output_dtypes)
 
     # Make the output easier to use.
     if len(outputs) == 1:

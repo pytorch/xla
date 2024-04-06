@@ -37,10 +37,10 @@ class PallasTest(unittest.TestCase):
     x = torch.arange(8, dtype=torch.int).to("xla")
     y = torch.arange(8, dtype=torch.int).to("xla")
     expected_output = x + y
-    output = torch.arange(8, dtype=torch.int).to("xla")
 
-    torch_xla._XLAC._xla_tpu_custom_call_([output], [x, y], payload)
-    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+    print(type(torch.int32))
+    output = torch_xla._XLAC._xla_tpu_custom_call([x, y], payload, [x.shape], [x.dtype])
+    self.assertTrue(torch.allclose(output[0].cpu(), expected_output.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_add_one(self):
@@ -53,8 +53,8 @@ class PallasTest(unittest.TestCase):
     expected_output = x + 1
     output = torch.arange(8, dtype=torch.int).to("xla")
 
-    torch_xla._XLAC._xla_tpu_custom_call_([output], [x], payload)
-    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+    output = torch_xla._XLAC._xla_tpu_custom_call([x], payload, [x.shape], [x.dtype])
+    self.assertTrue(torch.allclose(output[0].cpu(), expected_output.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_raise(self):
