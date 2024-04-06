@@ -529,6 +529,8 @@ void custom_sharding_(
 }
 
 std::vector<XLATensorPtr> tpu_custom_call(const std::vector<XLATensorPtr>& inputs, const std::string& payload, const std::vector<std::vector<int64_t>>& output_shapes, const std::vector<at::ScalarType>& output_dtypes) {
+  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+
   std::vector<torch::lazy::Value> values;
   values.reserve(inputs.size());
   for (const auto& input : inputs) {
