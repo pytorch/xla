@@ -148,7 +148,8 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
                       list), "The output_shape_dtype_fn should return a list."
     output_shapes = [shape for shape, _ in output_shape_dtype]
     output_dtypes = [dtype for _, dtype in output_shape_dtype]
-    outputs = torch_xla._XLAC._xla_tpu_custom_call(tensor_args, payload, output_shapes, output_dtypes)
+    outputs = torch_xla._XLAC._xla_tpu_custom_call(tensor_args, payload,
+                                                   output_shapes, output_dtypes)
 
     # Make the output easier to use.
     if len(outputs) == 1:

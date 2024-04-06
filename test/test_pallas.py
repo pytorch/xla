@@ -38,7 +38,8 @@ class PallasTest(unittest.TestCase):
     y = torch.arange(8, dtype=torch.int).to("xla")
     expected_output = x + y
 
-    output = torch_xla._XLAC._xla_tpu_custom_call([x, y], payload, [x.shape], [x.dtype])
+    output = torch_xla._XLAC._xla_tpu_custom_call([x, y], payload, [x.shape],
+                                                  [x.dtype])
     self.assertTrue(torch.allclose(output[0].cpu(), expected_output.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
@@ -51,7 +52,8 @@ class PallasTest(unittest.TestCase):
     x = torch.arange(8, dtype=torch.int).to("xla")
     expected_output = x + 1
 
-    output = torch_xla._XLAC._xla_tpu_custom_call([x], payload, [x.shape], [x.dtype])
+    output = torch_xla._XLAC._xla_tpu_custom_call([x], payload, [x.shape],
+                                                  [x.dtype])
     self.assertTrue(torch.allclose(output[0].cpu(), expected_output.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
@@ -83,7 +85,8 @@ class PallasTest(unittest.TestCase):
 
     expected_o = self._attention(q, k, v)
 
-    o = torch_xla._XLAC._xla_tpu_custom_call([q, k, v], payload, [q.shape], [q.dtype])
+    o = torch_xla._XLAC._xla_tpu_custom_call([q, k, v], payload, [q.shape],
+                                             [q.dtype])
     self.assertTrue(torch.allclose(o[0].cpu(), expected_o.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
@@ -374,8 +377,9 @@ class PallasTest(unittest.TestCase):
     l = l.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
     m = m.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
     grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
-    output = torch_xla._XLAC._xla_tpu_custom_call([q, k, v, l, m, grad_o, grad_i],
-                                          payload, [k.shape, v.shape], [k.dtype, v.dtype])
+    output = torch_xla._XLAC._xla_tpu_custom_call(
+        [q, k, v, l, m, grad_o, grad_i], payload, [k.shape, v.shape],
+        [k.dtype, v.dtype])
 
     xm.mark_step()
 
@@ -427,8 +431,7 @@ class PallasTest(unittest.TestCase):
     m = m.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
     grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
     output = torch_xla._XLAC._xla_tpu_custom_call(
-                                          [q, k, v, l, m, grad_o, grad_i],
-                                          payload, [q.shape], [q.dtype])
+        [q, k, v, l, m, grad_o, grad_i], payload, [q.shape], [q.dtype])
 
     xm.mark_step()
 
