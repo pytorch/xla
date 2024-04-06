@@ -2232,14 +2232,19 @@ void InitXlaModuleBindings(py::module m) {
           return XLANativeFunctions::set_(self, source);
         });
   m.def("_xla_tpu_custom_call",
-        [](const std::vector<at::Tensor>& inputs, const std::string& payload, const std::vector<std::vector<int64_t>>& output_shapes, const std::vector<py::object>& output_dtypes) -> std::vector<at::Tensor> {
+        [](const std::vector<at::Tensor>& inputs, const std::string& payload,
+           const std::vector<std::vector<int64_t>>& output_shapes,
+           const std::vector<py::object>& output_dtypes)
+            -> std::vector<at::Tensor> {
           std::vector<at::ScalarType> dtypes;
           dtypes.reserve(output_dtypes.size());
           for (auto& dtype : output_dtypes) {
-            dtypes.push_back(reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
+            dtypes.push_back(
+                reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
           }
 
-          auto xtensors = tensor_methods::tpu_custom_call(bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes);
+          auto xtensors = tensor_methods::tpu_custom_call(
+              bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes);
           return bridge::AtenFromXlaTensors(xtensors);
         });
   m.def("_set_xla_custom_op_name_prefix",
