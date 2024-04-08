@@ -261,7 +261,7 @@ def xla_replication_devices(local_devices):
         'Cannot replicate across different device types: devices={}/{}'.format(
             local_devices, real_devices))
   device_type = device_types.pop()
-  kind_devices = get_xla_supported_devices(devkind=device_type)
+  kind_devices = get_xla_supported_devices()
   if len(kind_devices) != len(local_devices):
     # Replication can only happen among all devices of one kind.
     raise RuntimeError(
