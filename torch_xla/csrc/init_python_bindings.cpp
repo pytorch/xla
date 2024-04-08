@@ -120,6 +120,8 @@ void PrepareToExit() {
   runtime::ComputationClient* client =
       runtime::GetComputationClientIfInitialized();
   if (client != nullptr) {
+    auto xla_device = GetDeviceOrCurrent("");
+    SetAllReduceToken(xla_device, nullptr);
     XLAGraphExecutor::Get()->WaitDeviceOps({});
   }
 }
