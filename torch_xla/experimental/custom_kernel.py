@@ -143,14 +143,13 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
         static_argnums=static_argnums,
         static_argnames=static_argnames,
         **kwargs)
-    outputs = []
     output_shape_dtype = output_shape_dtype_fn(*args)
     assert isinstance(output_shape_dtype,
                       list), "The output_shape_dtype_fn should return a list."
-    for output_shape, output_dtype in output_shape_dtype:
-      outputs.append(
-          torch.empty(output_shape, dtype=output_dtype).to(xm.xla_device()))
-    torch_xla._XLAC._xla_tpu_custom_call_(outputs, tensor_args, payload)
+    output_shapes = [shape for shape, _ in output_shape_dtype]
+    output_dtypes = [dtype for _, dtype in output_shape_dtype]
+    outputs = torch_xla._XLAC._xla_tpu_custom_call(tensor_args, payload,
+                                                   output_shapes, output_dtypes)
 
     # Make the output easier to use.
     if len(outputs) == 1:
@@ -278,11 +277,9 @@ class FlashAttention(torch.autograd.Function):
               "block_q_major", "block_k_major", "block_k", "sm_scale", "causal",
               "mask_value", "debug"
           ])
-      grad_q = torch.empty(q.shape, dtype=q.dtype).to(q.device)
-      torch_xla._XLAC._xla_tpu_custom_call_(
-          [grad_q],
+      grad_q = torch_xla._XLAC._xla_tpu_custom_call(
           [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
-          payload)
+          payload, [q.shape], [q.dtype])[0]
 
     if ctx.needs_input_grad[1] or ctx.needs_input_grad[2]:
       payload, _ = trace_pallas(
@@ -314,16 +311,13 @@ class FlashAttention(torch.autograd.Function):
               "block_q_major", "block_k_major", "block_k", "block_q",
               "sm_scale", "causal", "mask_value", "debug"
           ])
-      grad_k = torch.empty(k.shape, dtype=k.dtype).to(k.device)
-      grad_v = torch.empty(v.shape, dtype=v.dtype).to(v.device)
-      torch_xla._XLAC._xla_tpu_custom_call_(
-          [grad_k, grad_v],
+      grads = torch_xla._XLAC._xla_tpu_custom_call(
           [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
-          payload)
-    if not ctx.needs_input_grad[1]:
-      grad_k = None
-    if not ctx.needs_input_grad[2]:
-      grad_v = None
+          payload, [k.shape, v.shape], [k.dtype, v.dtype])
+    if ctx.needs_input_grad[1]:
+      grad_k = grads[0]
+    if ctx.needs_input_grad[2]:
+      grad_v = grads[1]
 
     return grad_q, grad_k, grad_v, None
 

@@ -37,10 +37,10 @@ class PallasTest(unittest.TestCase):
     x = torch.arange(8, dtype=torch.int).to("xla")
     y = torch.arange(8, dtype=torch.int).to("xla")
     expected_output = x + y
-    output = torch.arange(8, dtype=torch.int).to("xla")
 
-    torch_xla._XLAC._xla_tpu_custom_call_([output], [x, y], payload)
-    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+    output = torch_xla._XLAC._xla_tpu_custom_call([x, y], payload, [x.shape],
+                                                  [x.dtype])
+    self.assertTrue(torch.allclose(output[0].cpu(), expected_output.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_add_one(self):
@@ -51,10 +51,10 @@ class PallasTest(unittest.TestCase):
 
     x = torch.arange(8, dtype=torch.int).to("xla")
     expected_output = x + 1
-    output = torch.arange(8, dtype=torch.int).to("xla")
 
-    torch_xla._XLAC._xla_tpu_custom_call_([output], [x], payload)
-    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+    output = torch_xla._XLAC._xla_tpu_custom_call([x], payload, [x.shape],
+                                                  [x.dtype])
+    self.assertTrue(torch.allclose(output[0].cpu(), expected_output.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_raise(self):
@@ -63,11 +63,9 @@ class PallasTest(unittest.TestCase):
     #   o_ref[...] = x_ref[...] + 1
     payload = "{\"custom_call_config\": {\"body\": \"TUzvUgFNTElSMTguMC4wZ2l0AAEtCwEDBQcJAQMLAwUDDQcFDxEJBxMVFwNlSQ0BRwcPCw8PDxMLDzMLCwsLZQsLCwsPCw8LEw8PCxMPCxMTDwsLBQNhAQ0bDxMHFw8CpgIfFSsxBRkdQwMdRQMRCwEDAw8nBRsdKQMDCxUXGRsfCyELIyUFHQEBBR8NCWFmZmluZV9tYXA8KGQwKSAtPiAoZDApPgAFIQUjBSUFJxEHAQUpHS0vBSsXBRsBFTM5HTU3BS0XBS8BHTs9BS8XBUUBAwMPQREDBQUxBTMjdHB1Lm1lbW9yeV9zcGFjZTx2bWVtPgAXRwMhAx0BAgInAyEDAwUFAQEBAQIEBKEFARABBwMBBQMRARMHAxMnBQEBAQEHAxENAwcLBhEDBQUBBQcDBz8DAw0GBwMFAwkJBgcDBQUHCwcDCQ0DBwsGCQMFBQMPDwQJBw0DDwUAAQYDAQUBAMIHNdsLEyEv2QsTIyEdKQ1DDRULCxMPDw8NCQsRYnVpbHRpbgBmdW5jAHRwdQBhcml0aAB2ZWN0b3IAbW9kdWxlAHJldHVybgBjb25zdGFudABhZGRpAGxvYWQAYnJvYWRjYXN0AHN0b3JlAC9ob21lL2p3dGFuL3BhbGxhcy9wYWxsYXNfYWRkLnB5AHZhbHVlAGRpbWVuc2lvbl9zZW1hbnRpY3MAZnVuY3Rpb25fdHlwZQBzY2FsYXJfcHJlZmV0Y2gAc2NyYXRjaF9vcGVyYW5kcwBzeW1fbmFtZQBtYWluAC9nZXRbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAGFkZF9vbmVfdmVjdG9yc19rZXJuZWwAYWRkX3ZlY3RvcnNfb25lADxtb2R1bGU+AC9hZGQAL3N3YXBbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAA==\", \"needs_layout_passes\": true}}"
 
-    output = torch.arange(8, dtype=torch.int).to("xla")
-
-    # _xla_tpu_custom_call_ requires at least one input.
+    # _xla_tpu_custom_call requires at least one input.
     with self.assertRaises(RuntimeError):
-      torch_xla._XLAC._xla_tpu_custom_call_([output], [], payload)
+      torch_xla._XLAC._xla_tpu_custom_call([], payload, [(8, 1)], [torch.int32])
       output.cpu()
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
@@ -84,12 +82,12 @@ class PallasTest(unittest.TestCase):
     q = q_mini.broadcast_to(3, 2, 128, 4).to("xla")
     k = k_mini.broadcast_to(3, 2, 128, 4).to("xla")
     v = torch.ones(3, 2, 128, 4).to("xla")
-    o = torch.zeros(3, 2, 128, 4).to("xla")
 
     expected_o = self._attention(q, k, v)
 
-    torch_xla._XLAC._xla_tpu_custom_call_([o], [q, k, v], payload)
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
+    o = torch_xla._XLAC._xla_tpu_custom_call([q, k, v], payload, [q.shape],
+                                             [q.dtype])
+    self.assertTrue(torch.allclose(o[0].cpu(), expected_o.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   @unittest.skip("TODO: Make the tpu_custom_call_ as functional.")
@@ -379,17 +377,15 @@ class PallasTest(unittest.TestCase):
     l = l.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
     m = m.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
     grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
-    grad_k = torch.randn(3, 2, 128, 4).to("xla")
-    grad_v = torch.randn(3, 2, 128, 4).to("xla")
-    torch_xla._XLAC._xla_tpu_custom_call_([grad_k, grad_v],
-                                          [q, k, v, l, m, grad_o, grad_i],
-                                          payload)
+    output = torch_xla._XLAC._xla_tpu_custom_call(
+        [q, k, v, l, m, grad_o, grad_i], payload, [k.shape, v.shape],
+        [k.dtype, v.dtype])
 
     xm.mark_step()
 
     # TODO: I don't really know how to test the value. Let's do the shape check for now.
-    self.assertEqual(grad_k.shape, (3, 2, 128, 4))
-    self.assertEqual(grad_v.shape, (3, 2, 128, 4))
+    self.assertEqual(output[0].shape, (3, 2, 128, 4))
+    self.assertEqual(output[1].shape, (3, 2, 128, 4))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -434,15 +430,13 @@ class PallasTest(unittest.TestCase):
     l = l.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
     m = m.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
     grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
-    grad_q = torch.randn(3, 2, 128, 4).to("xla")
-    torch_xla._XLAC._xla_tpu_custom_call_([grad_q],
-                                          [q, k, v, l, m, grad_o, grad_i],
-                                          payload)
+    output = torch_xla._XLAC._xla_tpu_custom_call(
+        [q, k, v, l, m, grad_o, grad_i], payload, [q.shape], [q.dtype])
 
     xm.mark_step()
 
     # TODO: I don't really know how to test the value. Let's do the shape check for now.
-    self.assertEqual(grad_q.shape, (3, 2, 128, 4))
+    self.assertEqual(output[0].shape, (3, 2, 128, 4))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
