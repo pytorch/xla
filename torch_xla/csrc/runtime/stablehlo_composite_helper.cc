@@ -115,12 +115,14 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     llvm::SmallVector<mlir::func::FuncOp> func_ops(
         module_op.getOps<mlir::func::FuncOp>());
     for (mlir::func::FuncOp& func_op : func_ops) {
-      llvm::DenseMap<const mlir::Operation*, size_t> op_order_map =
-          BuildOpOrderMap(func_op);
       std::unordered_map<std::string, llvm::SmallVector<mlir::Operation*>>
           boundary_output_ops_map = BuildBoundaryOutputOpsMap(func_op);
 
       for (const auto& [unused, ops] : boundary_output_ops_map) {
+        // Rebuilds op_order_map to include the composite ops added in loops.
+        llvm::DenseMap<const mlir::Operation*, size_t> op_order_map =
+            BuildOpOrderMap(func_op);
+
         if (mlir::failed(BuildStableHLOComposite(ops, op_order_map))) {
           func_op.emitError() << "failed to build composite.";
           return signalPassFailure();

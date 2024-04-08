@@ -310,34 +310,38 @@ class XlaMarkPatternTest(unittest.TestCase):
     self.assertEqual(stablehlo.count("stablehlo.composite \"test.p\""), 1)
     self.assertEqual(stablehlo.count('{decomposition = @test.p.impl}'), 1)
 
-  @unittest.skip("Nested pattern is not supported now.")
   def test_nested_pattern(self):
 
     def f(x):
-      x = torch.ops.xla.mark_tensor(x, "test.p_outter", 0, "0", True)
-      x = x + 1
-      x = torch.ops.xla.mark_tensor(x, "test.p_inner", 0, "0", True)
-      x = x + 1
-      x = torch.ops.xla.mark_tensor(x, "test.p_inner", 0, "0", False)
-      x = x * 2
-      x = torch.ops.xla.mark_tensor(x, "test.p_outter", 0, "0", False)
+      outer = StableHLOCompositeBuilder("test.outer")
+      inner = StableHLOCompositeBuilder("test.inner")
 
-    input_args = (torch.ones(5),)
+      x = outer.mark_inputs(x)
+      x = x + 1
+      x = inner.mark_inputs(x)
+      x = x + 1
+      x = inner.mark_outputs(x)
+      x = x * 2
+      x = outer.mark_inputs(x)
+      return x
+
+    input_args = (torch.rand(5, 5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
 
-  @unittest.skip("Nested pattern is not supported now.")
-  def test_tangent_output(self):
+  def test_tangent_input_output(self):
     # Special case of nested pattern, outputs don't have dependencies.
     def f(x):
-      x = torch.ops.xla.mark_tensor(x, "test.p_outter", 0, "0", True)
-      x = x + 1
-      x = torch.ops.xla.mark_tensor(x, "test.p_inner", 0, "0", True)
-      x = x + 1
-      y = x - 1
-      x = torch.ops.xla.mark_tensor(x, "test.p_inner", 0, "0", False)
-      y = torch.ops.xla.mark_tensor(y, "test.p_outter", 0, "0", False)
+      outer = StableHLOCompositeBuilder("test.outer")
+      inner = StableHLOCompositeBuilder("test.inner")
 
-    input_args = (torch.ones(5),)
+      x = outer.mark_inputs(x)
+      x = inner.mark_inputs(x)
+      x = x + 1
+      x = inner.mark_outputs(x)
+      x = outer.mark_inputs(x)
+      return x
+
+    input_args = (torch.rand(5, 5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
 
   def test_update_kv_cache(self):
