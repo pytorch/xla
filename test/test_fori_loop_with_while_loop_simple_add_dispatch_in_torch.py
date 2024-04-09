@@ -6,15 +6,24 @@ import torch
 import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
+from torch_xla.experimental.fori_loop import fori_loop
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
 
 
 def _fake_while_loop(cond_fn, body_fn, operands):
-  while cond_fn(operands[0], operands[1]):
-    operands = body_fn(operands[0], operands[1])
+  # operands need to be more than one here
+  while cond_fn(*operands):
+    operands = body_fn(*operands)
   return operands
+
+
+def _fake_fori_loop(lower, upper, body_fun, *init_val):
+  (plus_value, init_val) = init_val
+  for i in range((upper - lower)[0]):
+    plus_value, init_val = body_fun(plus_value, init_val)
+  return init_val
 
 
 class WhileLoopTest(unittest.TestCase):
@@ -72,6 +81,24 @@ class WhileLoopTest(unittest.TestCase):
     res = while_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
+
+  def test_fori_loop_tpu_addition(self):
+
+    xm.mark_step()
+    device = xm.xla_device()
+
+    lower = torch.tensor([2], dtype=torch.int32, device=device)
+    upper = torch.tensor([52], dtype=torch.int32, device=device)
+    plus_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device)
+
+    def body_fun(*argus):
+      plus_value, init_val = argus
+      return plus_value, torch.add(plus_value, init_val)
+
+    _, _, _, actual = fori_loop(upper, lower, body_fun, plus_value, init_val)
+    expected = _fake_fori_loop(lower, upper, body_fun, plus_value, init_val)
+    self.assertEqual(expected, actual)
 
 
 if __name__ == '__main__':
