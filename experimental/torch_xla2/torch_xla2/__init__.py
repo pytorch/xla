@@ -5,7 +5,7 @@ from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
 from torch_xla2 import export, _ops, ops_registry, tensor, tf_integration
 
-jax.config.update('jax_enable_x64', True)
+jax.config.update("jax_enable_x64", True)
 
 
 def extract_jax(mod: torch.nn.Module):
@@ -14,7 +14,7 @@ def extract_jax(mod: torch.nn.Module):
   states = (weights, buffer)
   states = pytree.tree_map_only(torch.Tensor, tensor.t2j, states)
 
-  #@jax.jit
+  # @jax.jit
   def jax_func(states, inputs):
     (states, inputs) = tensor.wrap((states, inputs))
     weights, buffer = states

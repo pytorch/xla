@@ -14,7 +14,6 @@ from torch_xla2.ops import jaten
 
 
 class XLADispatchMode(torch_dispatch.TorchDispatchMode):
-
   def __torch_dispatch__(self, fn, types, args=(), kwargs=None):
     if fn in constructors:
       args, kwargs = unwrap((args, kwargs))
@@ -24,26 +23,28 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
     return fn(*args, **kwargs)
 
 
-def _aten_arange(start,
-                 end,
-                 *,
-                 dtype=None,
-                 layout=None,
-                 requires_grad=False,
-                 device=None,
-                 pin_memory=False):
+def _aten_arange(
+  start,
+  end,
+  *,
+  dtype=None,
+  layout=None,
+  requires_grad=False,
+  device=None,
+  pin_memory=False,
+):
   return jnp.arange(start, end, 1)
 
 
 def _aten_scalar_tensor(val, **kwargs):
-    p = torch.ops.aten.scalar_tensor(val)
-    return wrap(t2j(p))
+  p = torch.ops.aten.scalar_tensor(val)
+  return wrap(t2j(p))
 
 
 constructors = {
-    torch.ops.aten.scalar_tensor.default: _aten_scalar_tensor,
-    torch.ops.aten.arange.default: functools.partial(_aten_arange, 0),
-    torch.ops.aten.arange.start: _aten_arange,
+  torch.ops.aten.scalar_tensor.default: _aten_scalar_tensor,
+  torch.ops.aten.arange.default: functools.partial(_aten_arange, 0),
+  torch.ops.aten.arange.start: _aten_arange,
 }
 
 
@@ -71,8 +72,9 @@ def t2j(t):
     # https://github.com/google/jax/issues/7657
     # https://github.com/google/jax/issues/17784
     if t.dtype == torch.bfloat16:
-      nparray = (t.cpu().detach().to(torch.float32).numpy()
-                )  # numpy don't support bfloat16
+      nparray = (
+        t.cpu().detach().to(torch.float32).numpy()
+      )  # numpy don't support bfloat16
     else:
       nparray = t.cpu().detach().numpy()
     res = jnp.asarray(nparray)
@@ -97,34 +99,34 @@ def j2t(x):
 
 def t2j_dtype(dtype):
   return {
-      torch.float16: jnp.float16,
-      torch.bfloat16: jnp.bfloat16,
-      torch.half: jnp.float16,
-      torch.float32: jnp.float32,
-      torch.double: jnp.double,
-      torch.long: jnp.int64,
-      torch.int32: jnp.int32,
-      torch.int16: jnp.int16,
-      torch.int8: jnp.int8,
-      torch.uint8: jnp.uint8,
-      torch.bool: jnp.bool_,
-      torch.complex64: jnp.complex64,
-      torch.complex128: jnp.complex128,
+    torch.float16: jnp.float16,
+    torch.bfloat16: jnp.bfloat16,
+    torch.half: jnp.float16,
+    torch.float32: jnp.float32,
+    torch.double: jnp.double,
+    torch.long: jnp.int64,
+    torch.int32: jnp.int32,
+    torch.int16: jnp.int16,
+    torch.int8: jnp.int8,
+    torch.uint8: jnp.uint8,
+    torch.bool: jnp.bool_,
+    torch.complex64: jnp.complex64,
+    torch.complex128: jnp.complex128,
   }.get(dtype)
 
 
 def j2t_dtype(dtype):
   return {
-      jnp.float16: torch.float16,
-      jnp.bfloat16: torch.bfloat16,
-      jnp.double: torch.double,
-      jnp.float32: torch.float32,
-      jnp.float16: torch.half,
-      jnp.int64: torch.long,
-      jnp.int32: torch.int32,
-      jnp.int16: torch.int16,
-      jnp.bool_: torch.bool,
-      jnp.complex64: torch.complex64,
+    jnp.float16: torch.float16,
+    jnp.bfloat16: torch.bfloat16,
+    jnp.double: torch.double,
+    jnp.float32: torch.float32,
+    jnp.float16: torch.half,
+    jnp.int64: torch.long,
+    jnp.int32: torch.int32,
+    jnp.int16: torch.int16,
+    jnp.bool_: torch.bool,
+    jnp.complex64: torch.complex64,
   }.get(dtype)
 
 
@@ -133,7 +135,6 @@ def move_to_device(t):
 
 
 class XLATensor2(torch.Tensor):
-
   @staticmethod
   def __new__(cls, elem):
     dtype = j2t_dtype(elem.dtype)
@@ -144,11 +145,11 @@ class XLATensor2(torch.Tensor):
     if dtype is None:
       dtype = torch.float32
     return torch.Tensor._make_wrapper_subclass(
-        cls,
-        shape,
-        dtype=dtype,
-        device='meta',
-        requires_grad=False,
+      cls,
+      shape,
+      dtype=dtype,
+      device="meta",
+      requires_grad=False,
     )
 
   def __init__(self, elem: jax.Array):
@@ -173,7 +174,8 @@ class XLATensor2(torch.Tensor):
     if end_dim == -1:
       end_dim = self.ndim
     new_shape = (
-        self._elem.shape[:start_dim] + (-1,) + self._elem.shape[end_dim:])
+      self._elem.shape[:start_dim] + (-1,) + self._elem.shape[end_dim:]
+    )
     new_elem = jnp.reshape(self._elem, new_shape)
     return XLATensor2(new_elem)
     # return torch.reshape(self, new_shape)
@@ -225,7 +227,6 @@ class XLATensor2(torch.Tensor):
 
 # TODO: slice of slice should also be another slice
 class SliceView(XLATensor2):
-
   def __init__(self, orig_tensor, slice):
     self._orig_tensor = orig_tensor
     self._slice = slice
@@ -251,7 +252,8 @@ def debug_accuracy(func, args, kwargs, current_output):
     return True
 
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
-      torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output))
+    torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output)
+  )
   expected_out = func(*args_torch, **kwargs_torch)
 
   flattened_current_out, _ = torch_pytree.tree_flatten(out_torch)
@@ -261,8 +263,11 @@ def debug_accuracy(func, args, kwargs, current_output):
     if ex.dtype != real.dtype:
       ex = ex.to(real.dtype)
     try:
-      if (_DEBUG_ACCURACY and isinstance(ex, torch.Tensor) and
-          not torch.allclose(ex, real, atol=1e-3, equal_nan=True)):
+      if (
+        _DEBUG_ACCURACY
+        and isinstance(ex, torch.Tensor)
+        and not torch.allclose(ex, real, atol=1e-3, equal_nan=True)
+      ):
         import pdb
 
         pdb.set_trace()

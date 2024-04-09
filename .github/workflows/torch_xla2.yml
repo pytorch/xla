@@ -30,14 +30,25 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      - name: Install
+      - name: Install requirements
         shell: bash
         working-directory: experimental/torch_xla2
         run: |
-          pip install -r test-requirements.txt
+          pip install -r dev-requirements.txt
+      - name: Lint
+        shell: bash
+        working-directory: experimental/torch_xla2
+        run: |
+          ruff format --diff
+          ruff check || echo "Not checking `ruff` status for now
+      - name: Install torch_xla2
+        shell: bash
+        working-directory: experimental/torch_xla2
+        run: |
           pip install -e .[cpu]
       - name: Run tests
         working-directory: experimental/torch_xla2
         shell: bash
         run: |
+          pip install -r test-requirements.txt
           pytest test/

@@ -1,4 +1,5 @@
 """Tensor constructor overrides"""
+
 import functools
 import logging
 from typing import Callable, Optional, ParamSpec, Sequence
@@ -10,7 +11,7 @@ from torch_xla2 import tensor
 
 registry = {}
 
-P = ParamSpec('P')
+P = ParamSpec("P")
 
 
 def register_function(torch_func: Callable[P, torch.Tensor]):
@@ -34,11 +35,10 @@ def convert_dtype(use_default_dtype: bool = True):
   """
 
   def decorator(func: Callable[P, torch.Tensor]):
-
     @functools.wraps(func)
-    def wrapper(*args: P.args,
-                dtype: Optional[torch.dtype] = None,
-                **kwargs: P.kwargs):
+    def wrapper(
+      *args: P.args, dtype: Optional[torch.dtype] = None, **kwargs: P.kwargs
+    ):
       if not dtype and use_default_dtype:
         dtype = torch.get_default_dtype()
       jax_dtype = tensor.t2j_dtype(dtype)
@@ -54,10 +54,10 @@ def convert_dtype(use_default_dtype: bool = True):
 @convert_dtype(use_default_dtype=False)  # Attempt to infer type from elements
 def _tensor(data, *, dtype=None, **kwargs):
   python_types_to_torch_types = {
-      bool: jnp.bool,
-      int: jnp.int64,
-      float: jnp.float32,
-      complex: jnp.complex64,
+    bool: jnp.bool,
+    int: jnp.int64,
+    float: jnp.float32,
+    complex: jnp.complex64,
   }
   if not dtype:
     leaves = jax.tree_util.tree_leaves(data)
@@ -65,7 +65,8 @@ def _tensor(data, *, dtype=None, **kwargs):
       dtype = python_types_to_torch_types.get(type(leaves[0]))
 
   return jnp.array(
-      data, dtype=dtype or tensor.t2j_dtype(torch.get_default_dtype()))
+    data, dtype=dtype or tensor.t2j_dtype(torch.get_default_dtype())
+  )
 
 
 @register_function(torch.ones)
@@ -96,14 +97,14 @@ def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
 class XLAFunctionMode(torch.overrides.TorchFunctionMode):
   """Context manager that dispatches torch function calls to JAX."""
 
-  def __torch_function__(self,
-                         func,
-                         types,
-                         args=(),
-                         kwargs=None) -> torch.Tensor:
+  def __torch_function__(
+    self, func, types, args=(), kwargs=None
+  ) -> torch.Tensor:
     jax_func = registry.get(func)
     if not jax_func:
-      logging.warning(f'Falling back to default implementation of {func.__name__}')
+      logging.warning(
+        f"Falling back to default implementation of {func.__name__}"
+      )
       return func(*args, **(kwargs or {}))
 
     # TODO: unwrap args here or in implementations?

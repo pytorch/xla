@@ -2,8 +2,8 @@ import torch
 import torch._decomp as decomp
 import torch_xla2.decompositions
 
-class LoweringRegistry:
 
+class LoweringRegistry:
   def __init__(self):
     self.registered_ops = {}
     self.decomps = {}
@@ -25,13 +25,14 @@ class LoweringRegistry:
 
   def register(self, op, lowering):
     if isinstance(op, torch._ops.OpOverloadPacket):
-      if hasattr(op, 'default'):
+      if hasattr(op, "default"):
         self.registered_ops[op.default] = lowering
     self.registered_ops[op] = lowering
 
 
 lowerings = LoweringRegistry()
-EXTRA_DECOMP = decomp.get_decompositions([
+EXTRA_DECOMP = decomp.get_decompositions(
+  [
     torch.ops.aten.upsample_nearest2d,
     torch.ops.aten._native_batch_norm_legit.no_stats,
     torch.ops.aten._adaptive_avg_pool2d,
@@ -44,7 +45,8 @@ EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten.replication_pad1d,
     torch.ops.aten.replication_pad2d,
     torch.ops.aten.replication_pad3d,
-])
+  ]
+)
 CORE_ATEN_DECOMP = decomp.core_aten_decompositions()
 CORE_ATEN_DECOMP.update(EXTRA_DECOMP)
 lowerings.decomp = CORE_ATEN_DECOMP
@@ -55,9 +57,9 @@ def _all_core_ops():
   import torch._ops
 
   for k, v in torch.ops.aten.__dict__.items():
-    if k.startswith('__'):
+    if k.startswith("__"):
       continue
-    if k.startswith('_'):
+    if k.startswith("_"):
       continue
     if isinstance(v, torch._ops.OpOverloadPacket):
       for overload in v.overloads():
