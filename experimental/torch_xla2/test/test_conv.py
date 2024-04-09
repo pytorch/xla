@@ -5,14 +5,13 @@ from . import test_base
 
 
 class CustomConv1(torch.nn.Module):
-
   def __init__(
-      self,
-      channels_conv1=3,
-      width_conv1=3,
-      channels_conv2=5,
-      width_conv2=5,
-      hidden_layer_size=50,
+    self,
+    channels_conv1=3,
+    width_conv1=3,
+    channels_conv2=5,
+    width_conv2=5,
+    hidden_layer_size=50,
   ):
     super(CustomConv1, self).__init__()
     self.conv1 = nn.Conv1d(1, channels_conv1, width_conv1)
@@ -28,7 +27,6 @@ class CustomConv1(torch.nn.Module):
 
 
 class CustomConv2(nn.Module):
-
   def __init__(self):
     super().__init__()
     inp = 4
@@ -53,7 +51,6 @@ class CustomConv2(nn.Module):
 
 
 class ConvTest(test_base.TestCase):
-
   def test_conv1(self):
     m = CustomConv1()
     arg = torch.randn((20, 1, 50))
@@ -76,5 +73,5 @@ class ConvTest(test_base.TestCase):
     self.assertTrue(torch.allclose(res, res2_torch, atol=1e-4, rtol=1e-4))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   test_base.main()

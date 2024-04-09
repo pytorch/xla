@@ -8,7 +8,6 @@ from torch_xla2 import tensor, extra
 
 
 class ExtraTest(unittest.TestCase):
-
   def setUp(self):
     torch.manual_seed(0)
 
@@ -16,8 +15,8 @@ class ExtraTest(unittest.TestCase):
     def f(a, b):
       return torch.add(a, b)
 
-    a = jnp.ones((10, ))
-    b = jnp.ones((10, ))
+    a = jnp.ones((10,))
+    b = jnp.ones((10,))
 
     c = extra.jax_view(f)(a, b)
     self.assertTrue(jnp.allclose(c, a + b))
@@ -25,13 +24,11 @@ class ExtraTest(unittest.TestCase):
     def f2(a, b):
       return jnp.add(a, b)
 
-    a = tensor.move_to_device(torch.ones((10, )))
-    b = tensor.move_to_device(torch.ones((10, )))
+    a = tensor.move_to_device(torch.ones((10,)))
+    b = tensor.move_to_device(torch.ones((10,)))
     c2 = extra.torch_view(f2)(a, b)
 
     self.assertTrue(jnp.allclose(c2._elem, c))
-
-
 
   def test_fori_loop(self):
     a = tensor.move_to_device(torch.ones((10, 10)))
@@ -45,11 +42,10 @@ class ExtraTest(unittest.TestCase):
     self.assertTrue(torch.allclose(tensor.j2t(res._elem), expect))
 
   def test_jax_jit(self):
-
     # functions that acts on torch tensor
     def f(a, b):
       return torch.sin(a) + torch.cos(b)
-    
+
     fjitted = extra.jax_jit(f)
     a = torch.rand((10, 10))
     b = torch.rand((10, 10))
@@ -60,5 +56,5 @@ class ExtraTest(unittest.TestCase):
     self.assertTrue(torch.allclose(res, tensor.j2t(res2._elem)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   unittest.main()

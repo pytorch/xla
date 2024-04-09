@@ -7,19 +7,17 @@ from torch_xla2 import tensor
 
 
 class Interpolate(torch.nn.Module):
-
   def forward(self, masks: torch.Tensor) -> torch.Tensor:
     masks = F.interpolate(
-        masks,
-        size=(500, 500),
-        mode="bilinear",
-        align_corners=False,
+      masks,
+      size=(500, 500),
+      mode="bilinear",
+      align_corners=False,
     )
     return masks
 
 
 class TensorConstant(torch.nn.Module):
-
   def __init__(self):
     super().__init__()
 
@@ -28,12 +26,10 @@ class TensorConstant(torch.nn.Module):
 
 
 class ExportTest(unittest.TestCase):
-
   def setUp(self):
     torch.manual_seed(0)
 
   def test_interpolate(self):
-
     arg = (torch.randn(3, 3, 200, 200),)
     model = Interpolate()
 
@@ -48,7 +44,6 @@ class ExportTest(unittest.TestCase):
       self.assertTrue(torch.allclose(ans, ans2, atol=1e-3))
 
   def test_constant(self):
-
     arg = (torch.randn(10, 10),)
     model = TensorConstant()
 
@@ -63,5 +58,5 @@ class ExportTest(unittest.TestCase):
       self.assertTrue(torch.allclose(ans, ans2, atol=1e-5))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   unittest.main()
