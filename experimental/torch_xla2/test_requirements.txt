@@ -1,5 +1,0 @@
-pytest
-immutabledict
-sentencepiece
-pytest-xdist
-expecttest

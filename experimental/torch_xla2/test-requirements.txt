@@ -1,0 +1,3 @@
+-r dev-requirements.txt
+sentencepiece
+expecttest
