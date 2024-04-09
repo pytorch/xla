@@ -12,8 +12,6 @@ class TestContext(unittest.TestCase):
       self.assertIsInstance(x, tensor.XLATensor2)
       y = x.abs()
       self.assertIsInstance(y, tensor.XLATensor2)
-      # TODO: remove print
-      print(y)
 
   @staticmethod
   @torch_xla2.mode()
@@ -27,8 +25,6 @@ class TestContext(unittest.TestCase):
     x, y = self._test_mode_decorator()
     self.assertIsInstance(x, tensor.XLATensor2)
     self.assertIsInstance(y, tensor.XLATensor2)
-    # TODO: remove print
-    print(x, y)
 
 
 if __name__ == "__main__":
