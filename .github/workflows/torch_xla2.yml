@@ -40,7 +40,7 @@ jobs:
         working-directory: experimental/torch_xla2
         run: |
           ruff format --diff
-          ruff check || echo "Not checking `ruff` status for now
+          ruff check || echo "Not checking `ruff` status for now"
       - name: Install torch_xla2
         shell: bash
         working-directory: experimental/torch_xla2
