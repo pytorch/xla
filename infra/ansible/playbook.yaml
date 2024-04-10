@@ -16,7 +16,7 @@
           "Pass the required variable with: --e \"{{ item.name }}=<value>\""
       loop:
         - name: stage
-          pattern: ^(build|release)$
+          pattern: ^(build|build_plugin|release)$
         - name: arch
           pattern: ^(aarch64|amd64)$
         - name: accelerator
@@ -73,6 +73,7 @@
         src_root: "/src"
       tags: fetch_srcs
 
+    # TODO: better name now that there are two builds
     - role: build_srcs
       vars:
         src_root: "/src"
@@ -81,7 +82,19 @@
             combine(build_env[arch] | default({}, true)) |
             combine(build_env[accelerator] | default({}, true))
           }}"
+      when: stage == "build"
       tags: build_srcs
+
+    - role: build_plugin
+      vars:
+        src_root: "/src"
+        env_vars: "{{
+            build_env.common | default({}, true) |
+            combine(build_env[arch] | default({}, true)) |
+            combine(build_env[accelerator] | default({}, true))
+          }}"
+      when: stage == "build_plugin"
+      tags: build_plugin
 
     - role: configure_env
       vars:

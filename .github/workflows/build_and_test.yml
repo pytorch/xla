@@ -28,6 +28,14 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
+  build-cuda-plugin:
+    name: "Build XLA CUDA plugin"
+    uses: ./.github/workflows/_build_plugin.yml
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
   test-cpu:
     name: "CPU tests"
     uses: ./.github/workflows/_test.yml
