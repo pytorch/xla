@@ -42,7 +42,7 @@ jobs:
       - name: Setup gcloud
         shell: bash
         run: |
-          echo "${GCLOUD_SERVICE_KEY}" > "${GOOGLE_APPLICATION_CREDENTIALS}"
+          echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS}
       - name: Build
         shell: bash
         run: |
