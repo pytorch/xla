@@ -2034,45 +2034,44 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_get_local_shards",
         [](const std::vector<at::Tensor>& input)
             -> std::vector<std::vector<std::pair<at::Tensor, std::string>>> {
-          std::vector<runtime::ComputationClient::DataPtr> handles;
-          std::vector<at::ScalarType> element_types;
-          // Find all shard handles for transfer
+          std::vector<std::vector<std::pair<at::Tensor, std::string>>> result;
           for (auto& tensor : input) {
+            // Find all shard handles for transfer
             XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
             XLA_CHECK(xtensor->GetXlaData() != nullptr)
                 << "Shard data is not available";
-            XLA_CHECK(xtensor->sharding_spec() != nullptr)
+            auto sharding_spec = xtensor->sharding_spec();
+            XLA_CHECK(sharding_spec != nullptr)
                 << "Tensor is not sharded";
             auto handle =
                 std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
                     xtensor->GetXlaData());
             std::vector<runtime::ComputationClient::DataPtr> shard_handles =
                 runtime::GetComputationClient()->GetDataShards(handle);
-            handles.insert(handles.end(), shard_handles.begin(),
-                           shard_handles.end());
+            std::vector<at::ScalarType> element_types;
             element_types.insert(element_types.end(), shard_handles.size(),
                                  MaybeUpcastToHostTorchType(
                                      shard_handles[0]->shape().element_type()));
-          }
+            std::vector<at::Tensor> cpu_shards =
+                XlaDataToTensors(WrapXlaData(shard_handles), element_types);
 
-          std::vector<at::Tensor> cpu_shards =
-              XlaDataToTensors(WrapXlaData(handles), element_types);
-          // Populate the resulting vector of shards and device strings
-          std::vector<std::vector<std::pair<at::Tensor, std::string>>> result;
-          int shards_per_tensor =
-              runtime::GetComputationClient()->GetLocalDevices().size();
-          result.reserve(cpu_shards.size() / shards_per_tensor);
-          for (int i = 0; i < cpu_shards.size(); i += shards_per_tensor) {
+            // Populate the resulting vector of shards and device strings
+            int shards_per_tensor =
+                runtime::GetComputationClient()->GetLocalDevices().size();
+            if (sharding_spec->sharding.type() == xla::OpSharding::MANUAL) {
+              shards_per_tensor = 1;
+            }
             std::vector<std::pair<at::Tensor, std::string>> shard_devices;
             for (int shard = 0; shard < shards_per_tensor; ++shard) {
-              at::Tensor cpu_shard = cpu_shards[i + shard];
-              std::string source_device = handles[i + shard]->device();
+              at::Tensor cpu_shard = cpu_shards[shard];
+              std::string source_device = shard_handles[shard]->device();
               std::pair<at::Tensor, std::string> shard_dev(cpu_shard,
-                                                           source_device);
+                                                          source_device);
               shard_devices.push_back(shard_dev);
             }
             result.push_back(shard_devices);
           }
+
           return result;
         });
   // For each input tensors' local shards, returns the tuple:
