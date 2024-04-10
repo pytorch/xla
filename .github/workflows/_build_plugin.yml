@@ -36,21 +36,19 @@ jobs:
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
-      # TODO: Should also come from ansible
-      TF_CUDA_COMPUTE_CAPABILITIES: 7.0,7.5,8.0,9.0
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
       - name: Setup gcloud
         shell: bash
         run: |
           echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
       - name: Build
         shell: bash
         run: |
-          mkdir dist
-          # TODO: Use current checkout with ansible instead
-          pip wheel --no-deps -w dist -v plugins/cuda
+          ansible-playbook playbook.yaml -e "stage=build_cuda arch=amd64 accelerator=cuda src_root=${GITHUB_WORKSPACE}" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
