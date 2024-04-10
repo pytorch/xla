@@ -26,25 +26,28 @@ class PallasTest(unittest.TestCase):
     attn_output = attn_weight @ v
     return attn_output
 
-  # The following helper functions prefixed with _pagedattention are used to help test PagedAttention
+  # The following helper functions prefixed with _pagedattention are used for PagedAttention unit tests
   # Reference: https://github.com/google/jax/blob/main/jax/experimental/pallas/ops/tpu/paged_attention/paged_attention_kernel.py
   def _pagedattention_generate_qkv(
-    seq_lens,
-    page_size,
-    max_seq_len,
-    num_kv_heads,
-    num_heads,
-    head_dim,
-    dtype = torch.float32,
+      seq_lens,
+      page_size,
+      max_seq_len,
+      num_kv_heads,
+      num_heads,
+      head_dim,
+      dtype=torch.float32,
   ):
     assert max_seq_len % page_size == 0
     pages_per_sequence = max_seq_len // page_size
     batch_size = len(seq_lens)
     total_pages = batch_size * pages_per_sequence
     k1, k2, k3, k4 = jax.random.split(prng_key, 4)
-    k_pages = torch.randn(num_kv_heads, total_pages, page_size, head_dim, dtype=dtype)
-    v_pages = torch.randn(num_kv_heads, total_pages, page_size, head_dim, dtype=dtype)
-    page_indices = torch.randperm(batch_size * pages_per_sequence, dtype=torch.int32)
+    k_pages = torch.randn(
+        num_kv_heads, total_pages, page_size, head_dim, dtype=dtype)
+    v_pages = torch.randn(
+        num_kv_heads, total_pages, page_size, head_dim, dtype=dtype)
+    page_indices = torch.randperm(
+        batch_size * pages_per_sequence, dtype=torch.int32)
     page_indices = page_indices.reshape(batch_size, pages_per_sequence)
     q = torch.randn(batch_size, num_heads, head_dim, dtype=dtype)
     return q, k_pages, v_pages, page_indices
@@ -54,11 +57,11 @@ class PallasTest(unittest.TestCase):
     num_heads, _, _, head_dim = pages.shape
 
     def per_sequence_page_gather(pages, page_indices):
-      return torch.gather(torch_pages, dim=1, index=torch_page_indices.unsqueeze(1))
+      return torch.gather(
+          torch_pages, dim=1, index=torch_page_indices.unsqueeze(1))
 
-    gathered = torch.vmap(per_sequence_page_gather, in_dims=(None, 0))(
-        pages, page_indices
-    )
+    gathered = torch.vmap(
+        per_sequence_page_gather, in_dims=(None, 0))(pages, page_indices)
     return gathered.reshape(batch_size, num_heads, -1, head_dim)
 
   def _pagedattention_grouped_query_attention_reference(q, k, v, lengths):
@@ -67,10 +70,10 @@ class PallasTest(unittest.TestCase):
     assert k.shape == v.shape
     assert num_heads % num_kv_heads == 0
     q = q.reshape(batch_size, num_kv_heads, num_heads // num_kv_heads, head_dim)
-    logits = torch.einsum("bhgd, bhtd -> bhgt", q.float(), k.float()) 
+    logits = torch.einsum("bhgd, bhtd -> bhgt", q.float(), k.float())
     mask = torch.arange(max_seq_len)[None, :] < lengths[:, None]
     mask_value = -0.7 * torch.finfo(torch.float32).max
-    logits = logits.masked_fill(~mask, mask_value)  
+    logits = logits.masked_fill(~mask, mask_value)
     weights = torch.softmax(logits, dim=-1)
     o = torch.einsum("bhgt, bhtd -> bhgd", weights, v.to(weights.dtype))
     return o.reshape(batch_size, num_heads, head_dim)
