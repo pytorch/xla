@@ -2041,8 +2041,7 @@ void InitXlaModuleBindings(py::module m) {
             XLA_CHECK(xtensor->GetXlaData() != nullptr)
                 << "Shard data is not available";
             auto sharding_spec = xtensor->sharding_spec();
-            XLA_CHECK(sharding_spec != nullptr)
-                << "Tensor is not sharded";
+            XLA_CHECK(sharding_spec != nullptr) << "Tensor is not sharded";
             auto handle =
                 std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
                     xtensor->GetXlaData());
@@ -2066,7 +2065,7 @@ void InitXlaModuleBindings(py::module m) {
               at::Tensor cpu_shard = cpu_shards[shard];
               std::string source_device = shard_handles[shard]->device();
               std::pair<at::Tensor, std::string> shard_dev(cpu_shard,
-                                                          source_device);
+                                                           source_device);
               shard_devices.push_back(shard_dev);
             }
             result.push_back(shard_devices);

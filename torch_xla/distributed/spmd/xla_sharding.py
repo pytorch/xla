@@ -474,7 +474,8 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
   return tuple(_partition_spec)
 
 
-def _mark_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> XLAShardedTensor:
+def _mark_manual_sharding(
+    t: Union[torch.Tensor, XLAShardedTensor]) -> XLAShardedTensor:
   manual_sharding = torch_xla._XLAC.OpSharding([], [], [], ShardingType.MANUAL)
   torch_xla._XLAC._xla_mark_sharding(unwrap_sharded_tensor(t), manual_sharding)
   return wrap_as_sharded_tensor(t)
