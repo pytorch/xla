@@ -4,6 +4,7 @@ from absl.testing import absltest, parameterized
 import torch
 import torch_xla as xla
 import torch_xla.runtime as xr
+import torch_xla.debug.metrics as met
 
 
 class TestDevices(parameterized.TestCase):
@@ -11,6 +12,9 @@ class TestDevices(parameterized.TestCase):
   def setUpClass():
     xr.set_device_type('CPU')
     os.environ['CPU_NUM_DEVICES'] = '4'
+
+  def tearDown():
+    met.clear_metrics()
 
   @parameterized.parameters((None, torch.device('xla:0')),
                             (0, torch.device('xla:0')),
@@ -28,6 +32,12 @@ class TestDevices(parameterized.TestCase):
 
   def test_device_count(self):
     self.assertEqual(xla.device_count(), 4)
+
+  def test_sync(self):
+    torch.ones((3, 3), device=xla.device())
+    xla.sync()
+
+    self.assertEqual(met.counter_value('MarkStep'), 1)
 
 
 if __name__ == "__main__":
