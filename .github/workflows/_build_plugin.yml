@@ -50,7 +50,8 @@ jobs:
           cd infra/ansible
           # TODO: don't clone everything again
           ansible-playbook playbook.yaml -e "stage=build_cuda arch=amd64 accelerator=cuda" --skip-tags=install_deps
-      - name: actions/upload-artifact@v4
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
         with:
           name: cuda-plugin
           path: ${GITHUB_WORKSPACE}/dist/*.whl
