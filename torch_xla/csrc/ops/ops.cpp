@@ -593,6 +593,36 @@ torch::lazy::NodePtr Pdist_forward(const torch::lazy::Value& input,
       std::move(lower_fn), 1);
 }
 
+torch::lazy::NodePtr PixelShuffle(const torch::lazy::Value& input, int64_t upscale_factor) {
+  auto lower_fn = [=](const XlaNode& node, LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildPixelShuffle(xla_input, upscale_factor), loctx);
+  };
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildPixelShuffle(operands[0], upscale_factor);
+  };
+  const xla::Shape& input_shape = GetXlaShape(input);
+  absl::Span<const int64_t> dimensions = input_shape.dimensions();
+  int64_t batch_size = dimensions[0];
+  int64_t channels = dimensions[1];
+  int64_t height = dimensions[2];
+  int64_t width = dimensions[3];
+  
+  if (channels % (upscale_factor * upscale_factor) != 0) {
+      XLA_ERROR() << "Number of channels must be divisible by the square of the upscale factor.";
+  }
+
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::pixel_shuffle), {input},
+      [&]() {
+        return InferOutputShape({GetXlaShape(input)},
+                                lower_for_shape_fn);
+      },
+      std::move(lower_fn), 1);
+}
+
+
 torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
                                       const at::Scalar& ord,
                                       std::vector<int64_t> dimensions,

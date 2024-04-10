@@ -1226,7 +1226,6 @@ TEST_F(AtenXlaTensorTest, TestPixelShuffle) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::permute_copy", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSumToSize) {

@@ -1194,6 +1194,24 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
   }
 }
 
+xla::XlaOp BuildPixelShuffle(xla::XlaOp input, int64_t upscale_factor) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  absl::Span<const int64_t> dimensions = input_shape.dimensions();
+  int64_t batch_size = dimensions[0];
+  int64_t channels = dimensions[1];
+  int64_t height = dimensions[2];
+  int64_t width = dimensions[3];
+
+  int64_t new_channels = channels / (upscale_factor*upscale_factor);
+  int64_t new_height = height * upscale_factor;
+  int64_t new_width = width * upscale_factor;
+
+  xla::XlaOp tmp = xla::Reshape(input, {batch_size, new_channels, upscale_factor, upscale_factor, height, width});
+  tmp = xla::Transpose(tmp, {0, 1, 4, 2, 5, 3});
+  xla::XlaOp output = xla::Reshape(tmp, {batch_size, new_channels, new_height, new_width});
+  return output;
+}
+
 xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
                             bool replacement, xla::XlaOp seed) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);

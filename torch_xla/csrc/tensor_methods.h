@@ -286,6 +286,8 @@ XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
 
 XLATensorPtr pdist_forward(const XLATensorPtr& input, double p);
 
+XLATensorPtr pixel_shuffle(const XLATensorPtr& self, int64_t upscale_factor);
+
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
 void celu_(XLATensorPtr& input, const at::Scalar& alpha);
 
