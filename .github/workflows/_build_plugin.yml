@@ -46,11 +46,11 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          cd infra/ansible
-          # TODO: don't clone everything again
-          ansible-playbook playbook.yaml -e "stage=build_cuda arch=amd64 accelerator=cuda" --skip-tags=install_deps
+          mkdir dist
+          # TODO: Use current checkout with ansible instead
+          pip wheel --no-deps -w dist -v plugins/cuda
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
           name: cuda-plugin
-          path: /dist/*.whl
+          path: ${{ github.workspace }}/dist/*.whl
