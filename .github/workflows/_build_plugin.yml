@@ -33,6 +33,7 @@ jobs:
       image: ${{ inputs.dev-image }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
+      GOOGLE_APPLICATION_CREDENTIALS: ~/default_credentials.json
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
     steps:
@@ -41,8 +42,7 @@ jobs:
       - name: Setup gcloud
         shell: bash
         run: |
-          mkdir -p $HOME/.config/gcloud/
-          echo "${GCLOUD_SERVICE_KEY}" >> $HOME/.config/gcloud/application_default_credentials.json
+          echo "${GCLOUD_SERVICE_KEY}" > "${GOOGLE_APPLICATION_CREDENTIALS}"
       - name: Build
         shell: bash
         run: |
