@@ -11,13 +11,13 @@
   environment: "{{ env_vars }}"
   when: accelerator == "cuda"
 
-- name: Find XLA *.whl files in pytorch/xla/dist
+- name: Find plugin *.whl files in pytorch/xla/dist
   ansible.builtin.find:
     path: "/dist"
     pattern: "torch_xla_cuda_plugin*.whl"
-  register: cuda_plugin_wheels
+  register: plugin_wheels
 
-- name: Install XLA wheels
+- name: Install plugin wheels
   ansible.builtin.pip:
-    name: "{{ cuda_plugin_wheels.files | map(attribute='path') }}"
+    name: "{{ plugin_wheels.files | map(attribute='path') }}"
     state: "forcereinstall"
