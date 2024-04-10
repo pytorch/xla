@@ -9,11 +9,12 @@ import torch_xla.debug.metrics as met
 
 class TestDevices(parameterized.TestCase):
 
-  def setUpClass():
+  @classmethod
+  def setUpClass(cls):
     xr.set_device_type('CPU')
     os.environ['CPU_NUM_DEVICES'] = '4'
 
-  def tearDown():
+  def tearDown(self):
     met.clear_metrics()
 
   @parameterized.parameters((None, torch.device('xla:0')),
