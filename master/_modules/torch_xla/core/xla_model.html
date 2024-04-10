@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git756b0ec )
+                  master (2.4.0+gita816c42 )
                 </div>
               
             
@@ -821,8 +821,7 @@
     <span class="k">if</span> <span class="n">scale</span> <span class="o">==</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="n">groups</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">and</span> <span class="n">pin_layout</span><span class="p">:</span>
       <span class="c1"># TODO(alanwaketan): Support groups.</span>
       <span class="c1"># Only c10d_functional version cc ops are traceable by Dynamo.</span>
-      <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">c10d_functional</span><span class="o">.</span><span class="n">all_reduce</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">reduce_type</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="p">[],</span>
-                                                    <span class="mi">0</span><span class="p">)</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">_c10d_functional</span><span class="o">.</span><span class="n">all_reduce</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">reduce_type</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
                                                <span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="p">)</span>
