@@ -49,6 +49,8 @@ def body_fun(y, x, l_in_i):
 # TODO(@manfei), need to create new variable to seperate old/formal HLO/IR
 l_in_0 = torch.randn(10, device=xm.xla_device())
 
+print("body_fun.weight: ", body_fun.weight)
+print("body_fun.weight_: ", body_fun.weight_)
 # def body_fun(x, y, l_in):
 #   # l_in = torch.randn(10, device=xm.xla_device())
 #   linear = torch.nn.Linear(10, 20).to(xm.xla_device())
