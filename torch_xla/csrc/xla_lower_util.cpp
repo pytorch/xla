@@ -1202,13 +1202,16 @@ xla::XlaOp BuildPixelShuffle(xla::XlaOp input, int64_t upscale_factor) {
   int64_t height = dimensions[2];
   int64_t width = dimensions[3];
 
-  int64_t new_channels = channels / (upscale_factor*upscale_factor);
+  int64_t new_channels = channels / (upscale_factor * upscale_factor);
   int64_t new_height = height * upscale_factor;
   int64_t new_width = width * upscale_factor;
 
-  xla::XlaOp tmp = xla::Reshape(input, {batch_size, new_channels, upscale_factor, upscale_factor, height, width});
+  xla::XlaOp tmp =
+      xla::Reshape(input, {batch_size, new_channels, upscale_factor,
+                           upscale_factor, height, width});
   tmp = xla::Transpose(tmp, {0, 1, 4, 2, 5, 3});
-  xla::XlaOp output = xla::Reshape(tmp, {batch_size, new_channels, new_height, new_width});
+  xla::XlaOp output =
+      xla::Reshape(tmp, {batch_size, new_channels, new_height, new_width});
   return output;
 }
 

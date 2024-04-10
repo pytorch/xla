@@ -3748,7 +3748,8 @@ at::Tensor XLANativeFunctions::narrow_copy_symint(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::pixel_shuffle(const at::Tensor& self,
                                              int64_t upscale_factor) {
-  return bridge::AtenFromXlaTensor(tensor_methods::pixel_shuffle(bridge::GetXlaTensor(self), upscale_factor));
+  return bridge::AtenFromXlaTensor(tensor_methods::pixel_shuffle(
+      bridge::GetXlaTensor(self), upscale_factor));
 }
 
 at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
