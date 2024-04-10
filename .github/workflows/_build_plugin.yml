@@ -48,9 +48,10 @@ jobs:
       - name: Build
         shell: bash
         run: |
+          cd pytorch/xla/infra/ansible
           ansible-playbook playbook.yaml -e "stage=build_cuda arch=amd64 accelerator=cuda src_root=${GITHUB_WORKSPACE}" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
           name: cuda-plugin
-          path: ${{ github.workspace }}/dist/*.whl
+          path: /dist/*.whl
