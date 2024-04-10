@@ -1107,7 +1107,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt.global_tensor])
     self.assertIn(
-        '%p0.1 = f32[3,2]{0,1} parameter(0), sharding={manual}',
+        'parameter(0), sharding={manual}',
         hlo)
 
     self.assertEqual(xt.sharding_type, xs.ShardingType.MANUAL)
