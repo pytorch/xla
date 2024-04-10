@@ -371,8 +371,25 @@ def flash_attention(
   return FlashAttention.apply(q, k, v, causal, partition_spec, mesh)
 
 
+def paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block):
+    # Import JAX within the function such that we don't need to call the jax_import_guard()
+    # in the global scope which could cause problems for xmp.spawn.
+    jax_import_guard()
+    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
+
+    # It returns the shape and type of o, l, m.
+    def shape_dtype(q, *arg):
+      return [(q.shape, q.dtype)]
+
+    paged_attention_kernel = make_kernel_from_pallas(paged_attention, shape_dtype)
+    o = paged_attention_kernel(q, k_pages, v_pages, lengths, page_indices, pages_per_compute_block)
+
+    return o
+
+
 XLA_LIB.define(
     "flash_attention(Tensor q, Tensor k, Tensor v, bool casual=False) -> Tensor",
+    "paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block) -> Tensor[]",
 )
 
 
@@ -389,6 +406,26 @@ def flash_attention_non_xla(q: torch.Tensor,
                             k: torch.Tensor,
                             v: torch.Tensor,
                             causal: bool = False):
+  # This will be called when dynamo use fake tensor to construct the fake output.
+  # We need to make sure output tensor's shape is correct.
+  if k.device != torch.device("meta"):
+    warnings.warn(
+        'XLA flash attention should only be applied to tensors on XLA device')
+
+  # perform a regular attention if input tensors are not on XLA device.
+  attn_weight = q @ k.transpose(-2, -1)
+  attn_weight = torch.nn.functional.softmax(attn_weight, dim=-1)
+  attn_output = attn_weight @ v
+  return attn_output
+
+
+@impl(XLA_LIB, "paged_attention", "XLA")
+def paged_attention_xla(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block):
+  return flash_attention(q, k, v, causal=causal)
+
+
+@impl(XLA_LIB, "paged_attention", "CompositeExplicitAutograd")
+def paged_attention_non_xla(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block):
   # This will be called when dynamo use fake tensor to construct the fake output.
   # We need to make sure output tensor's shape is correct.
   if k.device != torch.device("meta"):
