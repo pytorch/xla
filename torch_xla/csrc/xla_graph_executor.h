@@ -134,7 +134,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
   // Override to use our own DeviceContextArena.
-  void MarkStep(const torch::lazy::BackendDevice& device) final;
+  void MarkStep(const torch::lazy::BackendDevice& device, bool reset_scope);
 
   // Waits for all the outstanding operations on all the supplied devices.
   // If devices is empty, the wait will happen for all local devices.
