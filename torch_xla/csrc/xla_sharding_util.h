@@ -60,7 +60,7 @@ class ShardingUtil {
 
   // Uses the provided `sharding` spec and expected shard shape to determine the
   // index slices for the shards which belong on `devices`. Only supports
-  // `REPLICATED` and `OTHER` sharding types.
+  // `REPLICATED`, `MANUAL` and `OTHER` sharding types.
   // For each input device, returns a pair of the shard's replica_id and a
   // vector of TensorIndex denoting the offset of the device's shard into the
   // global tensor.
