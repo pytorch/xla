@@ -24,4 +24,5 @@ __all__ = [
     "set_global_mesh",
     "get_global_mesh",
     "_mark_manual_sharding",
+    "_mark_manual_sharding",
 ]
