@@ -606,10 +606,7 @@ torch::lazy::NodePtr PixelShuffle(const torch::lazy::Value& input,
   };
   const xla::Shape& input_shape = GetXlaShape(input);
   absl::Span<const int64_t> dimensions = input_shape.dimensions();
-  int64_t batch_size = dimensions[0];
   int64_t channels = dimensions[1];
-  int64_t height = dimensions[2];
-  int64_t width = dimensions[3];
 
   if (channels % (upscale_factor * upscale_factor) != 0) {
     XLA_ERROR() << "Number of channels must be divisible by the square of the "
