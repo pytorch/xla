@@ -114,7 +114,10 @@ def trace_pallas(kernel: Callable,
   return payload, tensor_args
 
 
-def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
+def make_kernel_from_pallas(kernel: Callable,
+                            output_shape_dtype_fn: Callable,
+                            static_argnums: List[int] = None,
+                            static_argnames: List[str] = None):
   # TODO: Maybe we can cache the payload for the same input.
   def wrapped_kernel(kernel: Callable,
                      output_shape_dtype_fn: Callable,
@@ -141,7 +144,12 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
       return outputs[0]
     return tuple(outputs)
 
-  return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
+  return functools.partial(
+      wrapped_kernel,
+      kernel,
+      output_shape_dtype_fn,
+      static_argnums=static_argnums,
+      static_argnames=static_argnames)
 
 
 class FlashAttention(torch.autograd.Function):
@@ -379,19 +387,26 @@ def paged_attention(q, k_pages, v_pages, lengths, page_indices,
   from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
 
   # It returns the shape and type of o, l, m.
-  def shape_dtype(q, *arg):
+  def shape_dtype(q, *args):
     return [(q.shape, q.dtype)]
 
-  paged_attention_kernel = make_kernel_from_pallas(paged_attention, shape_dtype)
-  o = paged_attention_kernel(q, k_pages, v_pages, lengths, page_indices,
-                             pages_per_compute_block)
+  paged_attention_kernel = make_kernel_from_pallas(
+      paged_attention, shape_dtype, static_argnames=['pages_per_compute_block'])
+
+  o = paged_attention_kernel(
+      q,
+      k_pages,
+      v_pages,
+      lengths,
+      page_indices,
+      pages_per_compute_block=pages_per_compute_block,
+  )
 
   return o
 
 
 XLA_LIB.define(
     "flash_attention(Tensor q, Tensor k, Tensor v, bool casual=False) -> Tensor",
-    "paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block) -> Tensor[]",
 )
 
 
@@ -421,12 +436,18 @@ def flash_attention_non_xla(q: torch.Tensor,
   return attn_output
 
 
+XLA_LIB.define(
+    "paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block) -> Tensor",
+)
+
+
 @impl(XLA_LIB, "paged_attention", "XLA")
 def paged_attention_xla(q: torch.Tensor, k_pages: torch.Tensor,
                         v_pages: torch.Tensor, lengths: torch.Tensor,
                         page_indices: torch.Tensor,
                         pages_per_compute_block: int):
-  return flash_attention(q, k, v, causal=causal)
+  return paged_attention(q, k_pages, v_pages, lengths, page_indices,
+                         pages_per_compute_block)
 
 
 @impl(XLA_LIB, "paged_attention", "CompositeExplicitAutograd")
@@ -438,7 +459,7 @@ def paged_attention_non_xla(q: torch.Tensor, k_pages: torch.Tensor,
   # We need to make sure output tensor's shape is correct.
   if k.device != torch.device("meta"):
     warnings.warn(
-        'XLA flash attention should only be applied to tensors on XLA device')
+        'XLA paged attention should only be applied to tensors on XLA device')
 
   # perform a regular attention if input tensors are not on XLA device.
   attn_weight = q @ k.transpose(-2, -1)
