@@ -41,7 +41,7 @@ jobs:
       - name: Setup gcloud
         shell: bash
         run: |
-          echo "${GCLOUD_SERVICE_KEY}" >> default_credentials.json
+          echo "${GCLOUD_SERVICE_KEY}" >> ~/.config/gcloud/application_default_credentials.json
       - name: Build
         shell: bash
         run: |
