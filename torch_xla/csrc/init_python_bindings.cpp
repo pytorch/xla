@@ -991,7 +991,7 @@ class PyLoweringContext {
 
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      int64_t parameters_number_i = 7;
+      int64_t parameters_number_i = 6; // 7;
       xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
       xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
                                       "WeightTensor");
