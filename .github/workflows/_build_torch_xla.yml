@@ -11,21 +11,11 @@ on:
         type: string
         description: Runner type for the test
         default: linux.12xlarge
-      cuda:
-        required: false
-        type: string
-        description: Whether to build XLA with CUDA
-        default: 1
 
     secrets:
       gcloud-service-key:
         required: true
         description: Secret to access Bazel build cache
-
-    outputs:
-      docker-image:
-        value: ${{ jobs.build.outputs.docker-image }}
-        description: The docker image containing the built PyTorch.
 jobs:
   build:
     runs-on: ${{ inputs.runner }}
