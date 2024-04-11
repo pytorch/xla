@@ -9,6 +9,7 @@ COPY . /ansible
 
 ARG ansible_vars
 RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}"
+RUN ansible-playbook -vvv playbook.yaml -e "stage=build_plugin" -e "${ansible_vars}"
 
 FROM python:${python_version}-${debian_version} AS release
 
