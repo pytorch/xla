@@ -73,8 +73,6 @@ jobs:
     uses: ./.github/workflows/_tpu_ci.yml
     needs: build-torch-xla
     # TODO: don't run this except for HEAD and release branches
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   push-docs:
     name: "Build & publish docs"
