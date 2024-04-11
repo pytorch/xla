@@ -458,12 +458,13 @@ void SyncLiveTensors(const std::string& device_str,
 }
 
 void StepMarker(const std::string& device_str,
-                const std::vector<std::string>& devices, bool wait) {
+                const std::vector<std::string>& devices, bool wait,
+                bool reset_scope) {
   tsl::profiler::TraceMe activity("StepMarker",
                                   tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
-  XLAGraphExecutor::Get()->MarkStep(device);
+  XLAGraphExecutor::Get()->MarkStep(device, reset_scope);
   bool debug_mode = runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
     std::string report = runtime::metrics::CreatePerformanceReport(
@@ -1649,11 +1650,12 @@ void InitXlaModuleBindings(py::module m) {
   m.def(
       "_xla_step_marker",
       [](const std::string& device, const std::vector<std::string>& devices,
-         bool wait) {
+         bool wait, bool reset_scope) {
         NoGilSection nogil;
-        StepMarker(device, devices, wait);
+        StepMarker(device, devices, wait, reset_scope);
       },
-      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true,
+      py::arg("reset_scope") = true);
   m.def("_get_stablehlo",
         [](const std::vector<at::Tensor>& tensors, const std::string& device,
            const std::vector<std::string>& devices,

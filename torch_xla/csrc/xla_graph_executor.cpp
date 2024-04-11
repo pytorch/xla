@@ -404,14 +404,17 @@ void XLAGraphExecutor::SyncLiveTensorsGraph(
   SyncTensorsGraph(&tensors, devices, wait, /*sync_ltc_data=*/true);
 }
 
-void XLAGraphExecutor::MarkStep(const torch::lazy::BackendDevice& device) {
+void XLAGraphExecutor::MarkStep(const torch::lazy::BackendDevice& device,
+                                bool reset_scope) {
   // TODO(jwtan): Replace this with TORCH_LAZY_COUNTER. We need MarkStep to
   // remain as XLA_COUNTER to support
   // runtime::metrics::CreatePerformanceReport(). For more information, see
   // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->MarkStep(device);
-  torch::lazy::ScopePusher::ResetScopes();
+  if (reset_scope) {
+    torch::lazy::ScopePusher::ResetScopes();
+  }
   ResetTrimCounter();
 }
 
