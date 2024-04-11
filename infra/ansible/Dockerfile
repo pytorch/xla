@@ -16,9 +16,6 @@ WORKDIR /ansible
 RUN pip install ansible
 COPY . /ansible
 
-ARG ansible_vars
-RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
-
 WORKDIR /tmp/wheels
 COPY --from=build /src/pytorch/dist/*.whl ./
 COPY --from=build /src/pytorch/xla/dist/*.whl ./
@@ -26,6 +23,10 @@ COPY --from=build /dist/torchvision*.whl ./
 
 RUN echo "Installing the following wheels" && ls *.whl
 RUN pip install *.whl
+
+# Install the dependencies including libtpu, that's why this needs to happen after wheels are installed.
+ARG ansible_vars
+RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
 
 WORKDIR /
 
