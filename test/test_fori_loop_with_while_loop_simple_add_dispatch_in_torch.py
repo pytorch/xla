@@ -95,6 +95,7 @@ class WhileLoopTest(unittest.TestCase):
 
     xm.mark_step()
     device = xm.xla_device()
+    torch.set_grad_enabled(False)
 
     lower = torch.tensor([2], dtype=torch.int32, device=device)
     upper = torch.tensor([52], dtype=torch.int32, device=device)
