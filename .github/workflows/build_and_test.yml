@@ -1,3 +1,4 @@
+name: Build and test
 on:
   pull_request:
     branches:
@@ -19,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    name: "Build XLA"
+    name: "Build PyTorch/XLA (GPU)"
     uses: ./.github/workflows/_build.yml
     with:
       ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
@@ -29,7 +30,7 @@ jobs:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   build-torch-xla:
-    name: "Build PyTorch/XLA"
+    name: "Build PyTorch/XLA (TPU)"
     uses: ./.github/workflows/_build_torch_xla.yml
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
