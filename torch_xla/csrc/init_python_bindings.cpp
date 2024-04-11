@@ -1899,17 +1899,17 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& input, xla::OpSharding sharding) {
           ShardingUtil::XlaMarkSharding(input, sharding);
         });
-  m.def("_mark_manual_sharding",
-      [](const at::Tensor& input, xla::OpSharding sharding) {
-        XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-        bool is_ir = xtensor->CurrentIrValue();
-        if (is_ir) {
-          is_ir = !DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-        }
-        XLA_CHECK(is_ir) << "Marking any data tensors as manual is not supported";
+  m.def("_mark_manual_sharding", [](const at::Tensor& input,
+                                    xla::OpSharding sharding) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    bool is_ir = xtensor->CurrentIrValue();
+    if (is_ir) {
+      is_ir = !DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+    }
+    XLA_CHECK(is_ir) << "Marking any data tensors as manual is not supported";
 
-        ShardingUtil::XlaMarkSharding(input, sharding);
-      });
+    ShardingUtil::XlaMarkSharding(input, sharding);
+  });
   m.def("_xla_mark_sharding_dynamo_custom_op",
         [](const at::Tensor& input, const py::list& tile_assignment,
            const py::list& group_assignment, const py::list& replication_groups,
