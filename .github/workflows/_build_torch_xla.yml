@@ -31,7 +31,13 @@ jobs:
         shell: bash
         run: |
           echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
-      - name: Checkout repo
+      - name: Checkout PyTorch Repo
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/pytorch
+          path: pytorch
+          # TODO: correct pin
+      - name: Checkout PyTorch/XLA Repo
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
@@ -39,9 +45,9 @@ jobs:
         shell: bash
         run: |
           cd pytorch/xla/infra/ansible
-          ansible-playbook playbook.yaml -vvv -e "stage=build_plugin arch=amd64 accelerator=cuda src_root=${GITHUB_WORKSPACE}" --skip-tags=fetch_srcs,install_deps
+          ansible-playbook playbook.yaml -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: cuda-plugin
+          name: torch-xla-wheels
           path: /dist/*.whl
