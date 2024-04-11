@@ -103,7 +103,6 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
                          kwargs=None) -> torch.Tensor:
     jax_func = registry.get(func)
     if not jax_func:
-      logging.warning(f'Falling back to default implementation of {func.__name__}')
       return func(*args, **(kwargs or {}))
 
     # TODO: unwrap args here or in implementations?
