@@ -1101,24 +1101,22 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(id(mesh), id(expected_mesh))
 
   def test_mark_manual_sharding(self):
-    x = torch.randn(3, 2)
-    xx = x.to(xm.xla_device())
+    x = torch.zeros(3, 2).to(xm.xla_device())
+    with self.assertRaises(RuntimeError):
+      xt = xs._mark_manual_sharding(x)
+
+    xx = x + 1
     xt = xs._mark_manual_sharding(xx)
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt.global_tensor])
-    self.assertIn('parameter(0), sharding={manual}', hlo)
-
+    self.assertIn(', sharding={manual}', hlo)
     self.assertEqual(xt.sharding_type, xs.ShardingType.MANUAL)
     self.assertEqual(xt.sharding_spec, "{manual}")
 
-    shards = xt.local_shards
-    self.assertEqual(len(shards), 1)
-    # Only one shard on device 0.
-    for i, shard in enumerate(shards):
-      self.assertEqual(shard.data.device, torch.device('cpu'))
-      self.assertTrue(torch.allclose(shard.data, x))
-      self.assertIsInstance(shard.indices, type(Ellipsis))
-      self.assertEqual(shard.replica_id, i)
+    # It looks like XLA does't like only having manual sharding in the HLO.
+    # It needs to be paired with SPMDFullToShardShape/SPMDShardToFullShape.
+    # The following exception cannot be caught somehow.
+    # xt.global_tensor.cpu()
 
 
 if __name__ == '__main__':

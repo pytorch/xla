@@ -60,7 +60,7 @@ class ShardingUtil {
 
   // Uses the provided `sharding` spec and expected shard shape to determine the
   // index slices for the shards which belong on `devices`. Only supports
-  // `REPLICATED`, `MANUAL` and `OTHER` sharding types.
+  // `REPLICATED` and `OTHER` sharding types.
   // For each input device, returns a pair of the shard's replica_id and a
   // vector of TensorIndex denoting the offset of the device's shard into the
   // global tensor.
@@ -80,8 +80,7 @@ class ShardingUtil {
   // based on the `sharding` spec. REPLICATED sharding should result in shards
   // identical to the input; OTHERS (tiled) sharding result in shards where
   // each data dimension is sharded across devices along the same dimension in
-  // the `tile_assignment`; MANUAL sharding result in shards where only the
-  // first device holds the full data; the returned tensor shards vector is
+  // the `tile_assignment`; the returned tensor shards vector is
   // indexed by the device IDs. There is no data duplication. Shards are not
   // padded in case the input tensor is not evenly partitionable, unless
   // `padded` is set. The the returned tensors will be in 1:1 correspondence

@@ -304,8 +304,7 @@ std::vector<int64_t> ShardingUtil::GetShardShape(
   auto sharding = shardings->sharding;
   auto global_shape = shardings->shape.dimensions();
   if (sharding.type() == xla::OpSharding::REPLICATED ||
-      sharding.type() == xla::OpSharding::UNKNOWN ||
-      sharding.type() == xla::OpSharding::MANUAL) {
+      sharding.type() == xla::OpSharding::UNKNOWN) {
     std::vector<int64_t> globalShape;
     globalShape.assign(global_shape.begin(), global_shape.end());
     return globalShape;
@@ -323,7 +322,7 @@ std::vector<int64_t> ShardingUtil::GetShardShape(
 
     return shard_shape;
   } else {
-    TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
+    XLA_CHECK(false) << "Unsupported OpSharding type " << sharding.type();
   }
 }
 
@@ -365,8 +364,7 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
       devices.size());
   auto tile_shape = sharding.tile_assignment_dimensions();
   if (sharding.type() == xla::OpSharding::REPLICATED ||
-      sharding.type() == xla::OpSharding::UNKNOWN ||
-      sharding.type() == xla::OpSharding::MANUAL) {
+      sharding.type() == xla::OpSharding::UNKNOWN) {
     // Use Ellipsis to indicate all dimensions are replicated
     auto ellipsis = TensorIndex(Ellipsis);
     auto indices = std::vector<TensorIndex>({ellipsis});
@@ -430,7 +428,7 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
       shard_indices[device_index[core]] = std::make_pair(replica_id, indices);
     }
   } else {
-    TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
+    XLA_CHECK(false) << "Unsupported OpSharding type " << sharding.type();
   }
   return shard_indices;
 }
@@ -489,12 +487,8 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
             shards[i], c10::IntArrayRef(pads.data(), pads.size()), 0);
       }
     }
-  } else if ((sharding.type() == xla::OpSharding::MANUAL)) {
-    // Just put the full tensor on the first device.
-    shards[0] = tensor;
-    shards.resize(1);
-  } else if ((sharding.type() == xla::OpSharding::TUPLE)) {
-    TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
+  } else {
+    XLA_CHECK(false) << "Unsupported OpSharding type " << sharding.type();
   }
   return shards;
 }
@@ -602,9 +596,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     const std::vector<at::Tensor>& local_shards,
     const std::vector<std::string>& devices,
     const XLATensor::ShardingSpecPtr& sharding_spec) {
-  XLA_CHECK(local_shards.size() == devices.size() ||
-            (sharding_spec->sharding.type() == xla::OpSharding::MANUAL &&
-             local_shards.size() == 1))
+  XLA_CHECK(local_shards.size() == devices.size())
       << "A device must be speficied for each shard";
   std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   xla::Shape global_shape;
@@ -625,7 +617,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     global_shape = sharding_spec->shape;
     sharding = sharding_spec->sharding;
   }
-  for (int64_t j = 0; j < local_shards.size(); ++j) {
+  for (int64_t j = 0; j < devices.size(); ++j) {
     auto shard_device = ParseDeviceString(devices[j]);
     auto shard_shape =
         CreateComputationShapeFromTensor(local_shards[j], &shard_device);
