@@ -72,7 +72,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=None):
 
   # generate cond_fn xlacomputation
   # TODO(@manfei): specify which element is for which argument like a,b,c
-  cond_result = cond_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-3], output_value=fake_carried_inputs[-2], bias_0=fake_carried_inputs[-1])
+  cond_result = cond_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-3], bias_0=fake_carried_inputs[-2], output_value=fake_carried_inputs[-1])
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
   additional_inputs_list = list(fake_carried_inputs[2:])
@@ -87,7 +87,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=None):
   print(cond_hlo_print)
 
   # generate body_fn xlacomputation
-  body_result = body_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-3], output_value=fake_carried_inputs[-2], bias_0=fake_carried_inputs[-1])
+  body_result = body_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-3], bias_0=fake_carried_inputs[-2], output_value=fake_carried_inputs[-1])
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
   body_ctx.buildforiloop(list(body_result), [])
