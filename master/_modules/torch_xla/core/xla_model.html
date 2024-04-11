@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+gita170ffe )
+                  master (2.4.0+git7dfbef0 )
                 </div>
               
             
@@ -1375,7 +1375,7 @@
   <span class="k">return</span> <span class="n">devctx</span>
 
 
-<span class="k">def</span> <span class="nf">mark_step</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">mark_step</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">reset_scope</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
   <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_EMIT_STEPLOG&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span>
         <span class="s1">&#39;torch_xla.core.xla_model::mark_step</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span>
@@ -1384,7 +1384,8 @@
         <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_step_marker</span><span class="p">(</span>
       <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[],</span>
-      <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_SYNC_WAIT&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">wait</span><span class="p">))</span>
+      <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_SYNC_WAIT&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">wait</span><span class="p">),</span>
+      <span class="n">reset_scope</span><span class="o">=</span><span class="n">reset_scope</span><span class="p">)</span>
   <span class="c1"># Only emit metrics from the first local device index, to avoid emitting the</span>
   <span class="c1"># same values from different threads.</span>
   <span class="k">if</span> <span class="n">is_master_ordinal</span><span class="p">():</span>
