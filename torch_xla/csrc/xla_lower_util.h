@@ -152,7 +152,7 @@ xla::XlaOp BuildPixelShuffle(xla::XlaOp input, int64_t upscale_factor);
 
 xla::XlaOp BuildUpperTriangle(xla::XlaOp input);
 
-xla::XlaOp BuildCustomSharding(const xla::XlaOp& input);
+xla::XlaOp BuildCustomSharding(const xla::XlaOp& input, const std::string& type);
 
 std::vector<xla::XlaOp> BuildTpuCustomCall(
     const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
