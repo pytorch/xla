@@ -45,3 +45,8 @@ def real_devices() -> List[str]:
 def device_count() -> int:
   """Returns number of addressable devices in the current process."""
   return len(real_devices())
+
+
+def sync():
+  """Launches all pending graph operations."""
+  xm.mark_step()
