@@ -28,6 +28,14 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
+  build-torch-xla:
+    name: "Build PyTorch/XLA"
+    uses: ./.github/workflows/_build_torch_xla.yml
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
   build-cuda-plugin:
     name: "Build XLA CUDA plugin"
     uses: ./.github/workflows/_build_plugin.yml
