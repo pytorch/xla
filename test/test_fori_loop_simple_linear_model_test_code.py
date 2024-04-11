@@ -20,7 +20,11 @@ device = xm.xla_device()
 # l_in = torch.randn(10, device=xm.xla_device())
 # linear = torch.nn.Linear(10, 20).to(xm.xla_device())
 # l_out = linear(l_in)
+<<<<<<< HEAD
 # print("linear one: ", l_out)
+=======
+# print("$$$ linear one: ", l_out)
+>>>>>>> test
 
 # --- while test case ---
 
