@@ -1010,6 +1010,12 @@ XLATensorPtr pdist_forward(const XLATensorPtr& input, double p) {
   return input->CreateFrom(Pdist_forward(input->GetIrValue(), p, dtype));
 }
 
+XLATensorPtr pixel_shuffle(const XLATensorPtr& input, int64_t upscale_factor) {
+  c10::optional<at::ScalarType> dtype = input->dtype_optional();
+  torch::lazy::NodePtr node = PixelShuffle(input->GetIrValue(), upscale_factor);
+  return input->CreateFrom(node, dtype);
+}
+
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha) {
   return input->CreateFrom(Celu(input->GetIrValue(), alpha));
 }
