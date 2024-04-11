@@ -72,7 +72,8 @@ jobs:
     name: "TPU tests"
     uses: ./.github/workflows/_tpu_ci.yml
     needs: build-torch-xla
-    # TODO: don't run this except for HEAD and release branches
+    # Only run this for HEAD and releases
+    # if: github.event_name == 'push'
 
   push-docs:
     name: "Build & publish docs"

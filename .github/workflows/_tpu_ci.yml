@@ -5,6 +5,10 @@ jobs:
   tpu-test:
     runs-on: v4-runner-set
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
       - name: Fetch wheels
         uses: actions/download-artifact@v4
         with:
