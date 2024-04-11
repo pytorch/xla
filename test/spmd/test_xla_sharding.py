@@ -1100,7 +1100,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     self.assertEqual(id(mesh), id(expected_mesh))
 
-  def test__mark_manual_sharding(self):
+  def test_mark_manual_sharding(self):
     x = torch.randn(3, 2)
     xx = x.to(xm.xla_device())
     xt = xs._mark_manual_sharding(xx)
