@@ -8,13 +8,13 @@ namespace torch_xla {
 class CustomSharding : public XlaNode {
  public:
   enum class Type {
-    kCustomSharding,
+    kSharding,
     kSPMDFullToShardShape,
     kSPMDShardToFullShape,
   };
 
   // Make a custom call to Sharding.
-  CustomSharding(const torch::lazy::Value& input, const Type& type);
+  CustomSharding(const torch::lazy::Value& input, const xla::Shape& output_shape, const Type& type);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
@@ -23,6 +23,7 @@ class CustomSharding : public XlaNode {
   std::string ToString() const override;
 
   Type type;
+  xla::Shape output_shape;
 };
 
 }  // namespace torch_xla

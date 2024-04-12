@@ -489,9 +489,6 @@ def _mark_manual_sharding(
       unwrap_sharded_tensor(t), manual_sharding)
   return wrap_as_sharded_tensor(t)
 
-# def _spmd_full_to_shard_shape(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
-
-
 
 @xr.requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],

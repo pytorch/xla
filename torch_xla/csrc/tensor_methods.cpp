@@ -523,7 +523,7 @@ void custom_sharding_(
     const XLATensorPtr& input,
     const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec, const CustomSharding::Type& type) {
   input->SetInPlaceIrValue(
-      torch::lazy::MakeNode<CustomSharding>(input->GetIrValue(), type));
+      torch::lazy::MakeNode<CustomSharding>(input->GetIrValue(), input->shape().get(), type));
   input->SetShardingSpec(*sharding_spec);
 }
 

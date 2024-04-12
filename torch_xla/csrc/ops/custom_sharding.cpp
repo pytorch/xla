@@ -8,7 +8,7 @@ namespace torch_xla {
 namespace {
 std::string TypeToString(const CustomSharding::Type& type) {
   switch (type) {
-    case CustomSharding::Type::kCustomSharding:
+    case CustomSharding::Type::kSharding:
       return "Sharding";
     case CustomSharding::Type::kSPMDFullToShardShape:
       return "SPMDFullToShardShape";
@@ -18,13 +18,14 @@ std::string TypeToString(const CustomSharding::Type& type) {
 }
 }
 
-CustomSharding::CustomSharding(const torch::lazy::Value& input, const CustomSharding::Type& type)
-    : XlaNode(xla_custom_sharding, {input}, GetXlaShape(input),
+CustomSharding::CustomSharding(const torch::lazy::Value& input, const xla::Shape& output_shape, const CustomSharding::Type& type)
+    : XlaNode(xla_custom_sharding, {input}, output_shape,
               /*num_outputs=*/1, torch::lazy::MHash(static_cast<int>(type)))
-    , type(type) {}
+    , type(type)
+    , output_shape(output_shape) {}
 
 torch::lazy::NodePtr CustomSharding::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CustomSharding>(operands.at(0), type);
+  return torch::lazy::MakeNode<CustomSharding>(operands.at(0), output_shape, type);
 }
 
 XlaOpVector CustomSharding::Lower(LoweringContext* loctx) const {
