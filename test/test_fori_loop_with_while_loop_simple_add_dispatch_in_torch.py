@@ -132,9 +132,11 @@ class WhileLoopTest(unittest.TestCase):
     # return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
     # return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
     print("start test 5 !!!")
+    aaa = {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
+    print("aaa: ", aaa)
+    print("start test 6 !!!")
     res = simple_with_linear.apply((upper, lower, one_value, init_val, l_in_0, output_value))
     print("res: ", res)
-    print("start test 6 !!!")
     import pdb; pdb.set_trace()
     return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
 
