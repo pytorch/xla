@@ -541,25 +541,37 @@ void gpu_custom_call_(XLATensorPtr& output,
       values, output->shape().get(), payload));
 }
 
-void tpu_custom_call_(const std::vector<XLATensorPtr>& outputs,
-                      const std::vector<XLATensorPtr>& inputs,
-                      const std::string& payload) {
+std::vector<XLATensorPtr> tpu_custom_call(
+    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<at::ScalarType>& output_dtypes) {
+  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+
   std::vector<torch::lazy::Value> values;
+  values.reserve(inputs.size());
   for (const auto& input : inputs) {
     values.push_back(input->GetIrValue());
   }
 
-  // TODO: Let's see if we can do some shape inference here.
-  std::vector<xla::Shape> output_shapes;
-  for (const auto& output : outputs) {
-    output_shapes.push_back(output->shape().get());
+  XLA_CHECK_EQ(output_shapes.size(), output_dtypes.size());
+  std::vector<xla::Shape> output_xla_shapes;
+  output_xla_shapes.reserve(output_shapes.size());
+  for (size_t i = 0; i < output_shapes.size(); ++i) {
+    output_xla_shapes.push_back(xla::ShapeUtil::MakeShape(
+        MakeXlaPrimitiveType(output_dtypes[i], &(inputs[0]->GetDevice())),
+        output_shapes[i]));
   }
 
   auto node = torch::lazy::MakeNode<TpuCustomCall>(
-      values, xla::ShapeUtil::MakeTupleShape(output_shapes), payload);
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    outputs[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
+      values, xla::ShapeUtil::MakeTupleShape(output_xla_shapes), payload);
+
+  std::vector<XLATensorPtr> outputs;
+  outputs.reserve(output_shapes.size());
+  for (size_t i = 0; i < output_shapes.size(); ++i) {
+    outputs.push_back(
+        inputs[0]->CreateFrom(torch::lazy::Value(node, i), output_dtypes[i]));
   }
+  return outputs;
 }
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
@@ -1009,6 +1021,12 @@ XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
 XLATensorPtr pdist_forward(const XLATensorPtr& input, double p) {
   c10::optional<at::ScalarType> dtype = input->dtype_optional();
   return input->CreateFrom(Pdist_forward(input->GetIrValue(), p, dtype));
+}
+
+XLATensorPtr pixel_shuffle(const XLATensorPtr& input, int64_t upscale_factor) {
+  c10::optional<at::ScalarType> dtype = input->dtype_optional();
+  torch::lazy::NodePtr node = PixelShuffle(input->GetIrValue(), upscale_factor);
+  return input->CreateFrom(node, dtype);
 }
 
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha) {

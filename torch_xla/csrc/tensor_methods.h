@@ -86,9 +86,10 @@ void gpu_custom_call_(XLATensorPtr& output,
                       const std::vector<XLATensorPtr>& inputs,
                       const std::string& payload);
 
-void tpu_custom_call_(const std::vector<XLATensorPtr>& output,
-                      const std::vector<XLATensorPtr>& inputs,
-                      const std::string& payload);
+std::vector<XLATensorPtr> tpu_custom_call(
+    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<at::ScalarType>& output_dtypes);
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
                                  std::vector<int64_t> dimensions);
@@ -289,6 +290,8 @@ XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                            double p);
 
 XLATensorPtr pdist_forward(const XLATensorPtr& input, double p);
+
+XLATensorPtr pixel_shuffle(const XLATensorPtr& self, int64_t upscale_factor);
 
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
 void celu_(XLATensorPtr& input, const at::Scalar& alpha);

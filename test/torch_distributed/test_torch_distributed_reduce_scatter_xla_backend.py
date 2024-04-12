@@ -14,13 +14,17 @@ def _mp_fn(index):
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
+    dist.init_process_group('xla', init_method='xla://')
 
-    ones = torch.ones((2, 3))
-    xones = ones.to(device)
-    dist.all_reduce(xones)
-    expected = torch.ones((2, 3)) * world_size
-    assert torch.all(xones.cpu() == expected), f'{xones} != {expected}'
+    input_size = (32, 3)
+    inputs = torch.ones(input_size).split(input_size[0] // world_size)
+    output = torch.zeros_like(inputs[0])
+    xinputs = [i.to(device) for i in inputs]
+    xoutput = output.to(device)
+    dist.reduce_scatter(xoutput, xinputs)
+    expected = torch.ones_like(inputs[0]) * world_size
+    xm.mark_step()
+    assert torch.all(xoutput.cpu() == expected), f'{xoutput} != {expected}'
   else:
     print(
         'Default device {} is not a TPU or GPU device'.format(device),

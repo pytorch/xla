@@ -58,9 +58,9 @@ http_archive(
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
     ],
-    strip_prefix = "xla-01c52f2921c0eda9fdcc15d13227fbde08cbaca4",
+    strip_prefix = "xla-1acf05ef0d41181caaf0cd691aa9d453ffc41a73",
     urls = [
-        "https://github.com/openxla/xla/archive/01c52f2921c0eda9fdcc15d13227fbde08cbaca4.tar.gz",
+        "https://github.com/openxla/xla/archive/1acf05ef0d41181caaf0cd691aa9d453ffc41a73.tar.gz",
     ],
 )
 

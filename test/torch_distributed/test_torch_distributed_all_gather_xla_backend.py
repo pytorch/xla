@@ -14,7 +14,7 @@ def _mp_fn(index):
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
+    dist.init_process_group('xla', init_method='xla://')
 
     input = torch.ones((2, 3)) * rank
     outputs = [torch.zeros_like(input)] * world_size
@@ -22,6 +22,7 @@ def _mp_fn(index):
     xoutputs = [o.to(device) for o in outputs]
     xoutput0 = xoutputs[0]
     dist.all_gather(xoutputs, xinput)
+    xm.mark_step()
     for i, o in enumerate(xoutputs):
       expected = torch.ones((2, 3)) * i
       assert torch.all(o.cpu() == expected), f'{o} != {expected}'

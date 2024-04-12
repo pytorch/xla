@@ -474,6 +474,18 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
   return tuple(_partition_spec)
 
 
+def _mark_manual_sharding(
+    t: Union[torch.Tensor, XLAShardedTensor]) -> XLAShardedTensor:
+  """
+  This API is meant to be paired with the upcoming pause_spmd&resume_spmd APIs.
+  Don't use it alone.
+  """
+  manual_sharding = torch_xla._XLAC.OpSharding([], [], [], ShardingType.MANUAL)
+  torch_xla._XLAC._mark_manual_sharding(
+      unwrap_sharded_tensor(t), manual_sharding)
+  return wrap_as_sharded_tensor(t)
+
+
 @xr.requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                   mesh: Mesh,

@@ -429,7 +429,8 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     for xla_arg in xla_model.xla_args:
       if isinstance(xla_arg, torch.Tensor):
         print(torch_xla._XLAC._get_xla_tensor_debug_info(xla_arg))
-  xm.mark_step()
+  # Don't reset the scope as we might be under some profiler trace scope.
+  xm.mark_step(reset_scope=False)
   (xla_args_sharding_spec, args_and_out, graph_hash,
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
    dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
@@ -614,8 +615,9 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     if isinstance(a, torch.Tensor) and torch._is_functional_tensor(a):
       torch._functionalize_sync(a)
 
-  # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
-  xm.mark_step()
+  # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids.
+  # Don't reset the scope as we might be under some profiler trace scope.
+  xm.mark_step(reset_scope=False)
 
   # Find tensor constructor nodes that create CPU tensors, and make
   # them create XLA tensors, where possible, instead. i.e. replace the

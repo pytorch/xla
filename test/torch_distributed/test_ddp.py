@@ -1,7 +1,12 @@
 from absl.testing import absltest, parameterized
+import os
 import sys
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
+
+# Setup import folders.
+xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(xla_test_folder)
 
 import args_parse
 import distributed_util as util
@@ -21,7 +26,8 @@ class TestXrtDistributedDataParallel(parameterized.TestCase):
           'Default device {} is not a TPU device'.format(device),
           file=sys.stderr)
       return
-    util.ddp_correctness(use_large_net=use_large_net, debug=debug)
+    util.ddp_correctness(
+        init_method="xla://", use_large_net=use_large_net, debug=debug)
 
   def test_ddp_correctness(self):
     xmp.spawn(self._ddp_correctness, args=(False, FLAGS.debug))

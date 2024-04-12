@@ -7,6 +7,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla.debug.metrics as met
 from torch_xla import runtime as xr
+import torch_xla.debug.profiler as xp
 import torch.optim as optim
 import torch.nn as nn
 import torch._dynamo as dynamo
@@ -89,6 +90,20 @@ class DynamoLTCInteractionTest(unittest.TestCase):
       xm.mark_step()
       xm.wait_device_ops()
       self.assertEqual(current_execute_time, met.metric_data('ExecuteTime')[0])
+
+
+class DynamoProfilerTest(unittest.TestCase):
+
+  def dummy_fn(self, a):
+    return torch.sin(a) + a
+
+  def test_dynamo_with_trace(self):
+    dynamo_dummy = torch.compile(
+        self.dummy_fn, backend="openxla", fullgraph=True)
+    t = torch.randn(2, 3, 4, device=xm.xla_device())
+    for i in range(10):
+      with xp.Trace('build_graph'):
+        t = dynamo_dummy(t)
 
 
 class DynamoInferenceBasicTest(unittest.TestCase):
@@ -630,6 +645,46 @@ class DynamoErrorMessageTest(unittest.TestCase):
     # ops to CPU.
     self.assertEqual(len(met.counter_names()), 1)
     self.assertIn('MarkStep', met.counter_names())
+
+
+class DynamoOperationsTests(test_utils.XlaTestCase):
+
+  def test_new_with_sizes(self):
+
+    # The addition operation is needed here, since the error only occurs when FakeTensorMode
+    # checks the device of the arguments of some operation. If there's no operation using the
+    # result of Tensor.new, this comparison never occurs.
+    def foo(x):
+      return x.new(*x.size()) + x
+
+    optfoo = torch.compile(backend="openxla")(foo)
+
+    t = torch.arange(9)
+    Xt = t.to(xm.xla_device())
+
+    expected = foo(t)
+    actual = optfoo(Xt).cpu()
+
+    # Here, we don't expect the actual data to be the same. Reason being that Tensor.new
+    # returns uninitialized data.
+    self.assertEqual(expected.shape, actual.shape)
+    self.assertEqual(expected.dtype, actual.dtype)
+    self.assertEqual(expected.device, actual.device)
+
+  def test_return_expand(self):
+
+    def foo(x):
+      return x.expand(2, -1)
+
+    optfoo = torch.compile(backend="openxla")(foo)
+
+    t = torch.arange(10)
+    Xt = t.to(xm.xla_device())
+
+    expected = foo(t)
+    actual = optfoo(Xt)
+
+    self.assertEqual(expected, actual.cpu())
 
 
 if __name__ == '__main__':

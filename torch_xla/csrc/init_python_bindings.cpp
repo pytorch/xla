@@ -120,6 +120,8 @@ void PrepareToExit() {
   runtime::ComputationClient* client =
       runtime::GetComputationClientIfInitialized();
   if (client != nullptr) {
+    auto xla_device = GetDeviceOrCurrent("");
+    SetAllReduceToken(xla_device, nullptr);
     XLAGraphExecutor::Get()->WaitDeviceOps({});
   }
 }
@@ -456,12 +458,13 @@ void SyncLiveTensors(const std::string& device_str,
 }
 
 void StepMarker(const std::string& device_str,
-                const std::vector<std::string>& devices, bool wait) {
+                const std::vector<std::string>& devices, bool wait,
+                bool reset_scope) {
   tsl::profiler::TraceMe activity("StepMarker",
                                   tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
-  XLAGraphExecutor::Get()->MarkStep(device);
+  XLAGraphExecutor::Get()->MarkStep(device, reset_scope);
   bool debug_mode = runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
     std::string report = runtime::metrics::CreatePerformanceReport(
@@ -899,6 +902,43 @@ class PyLoweringContext {
       lowering_ctx.AddResult(root);
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
+  }
+
+  // Builds a HLO graph given a set of output tensors, and add unused parameters
+  // needed in xlacomputation.
+  void BuildForiLoop(std::vector<at::Tensor> tensors,
+                     std::vector<at::Tensor> input_arguments = {}) {
+    if (GetNameString() == "condctx") {
+      xla::XlaBuilder* local_builder = lowering_ctx.builder();
+      // hard-code parameter_idx to 2 to skip existing upper/lower arguments
+      int64_t parameter_idx = 2;
+      for (at::Tensor input_argument : input_arguments) {
+        xla::Shape shape =
+            xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameter_idx += 1;
+      }
+    }
+
+    // Get the backing XLA tensors from the output torch tensor handles
+    std::vector<XLATensorPtr> xtensors =
+        GetXlaTensors(tensors, /*want_all=*/true);
+
+    // Get the lazy IR value from the output XLA tensors
+    std::vector<torch::lazy::Value> ir_values;
+    for (auto& xtensor : xtensors) {
+      torch::lazy::Value value = xtensor->GetIrValue();
+      ir_values.push_back(value);
+    }
+
+    // Lower the graph using the output IR values
+    for (auto& ir_value : ir_values) {
+      xla::XlaOp root = lowering_ctx.GetOutputOp(
+          torch::lazy::Output(ir_value.node.get(), ir_value.index));
+      lowering_ctx.AddResult(root);
+    }
+    computation = ConsumeValue(lowering_ctx.BuildXla());
 
     // wrap inputs of cond/body_computation
     if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
@@ -1041,6 +1081,7 @@ void BuildLoweringContextSubmodule(py::module* m) {
 
   lowering_context_class.def(py::init<>())
       .def("build", &PyLoweringContext::Build)
+      .def("buildforiloop", &PyLoweringContext::BuildForiLoop)
       .def("hlo", &PyLoweringContext::GetHlo)
       .def("hlo_text", &PyLoweringContext::GetHloText)
       .def("hlo_json", &PyLoweringContext::GetHloJsonText)
@@ -1647,11 +1688,12 @@ void InitXlaModuleBindings(py::module m) {
   m.def(
       "_xla_step_marker",
       [](const std::string& device, const std::vector<std::string>& devices,
-         bool wait) {
+         bool wait, bool reset_scope) {
         NoGilSection nogil;
-        StepMarker(device, devices, wait);
+        StepMarker(device, devices, wait, reset_scope);
       },
-      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true,
+      py::arg("reset_scope") = true);
   m.def("_get_stablehlo",
         [](const std::vector<at::Tensor>& tensors, const std::string& device,
            const std::vector<std::string>& devices,
@@ -1897,6 +1939,17 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& input, xla::OpSharding sharding) {
           ShardingUtil::XlaMarkSharding(input, sharding);
         });
+  m.def("_mark_manual_sharding", [](const at::Tensor& input,
+                                    xla::OpSharding sharding) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    bool is_ir = xtensor->CurrentIrValue();
+    if (is_ir) {
+      is_ir = !DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+    }
+    XLA_CHECK(is_ir) << "Marking any data tensors as manual is not supported";
+
+    ShardingUtil::XlaMarkSharding(input, sharding);
+  });
   m.def("_xla_mark_sharding_dynamo_custom_op",
         [](const at::Tensor& input, const py::list& tile_assignment,
            const py::list& group_assignment, const py::list& replication_groups,
@@ -2231,12 +2284,21 @@ void InitXlaModuleBindings(py::module m) {
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
         });
-  m.def("_xla_tpu_custom_call_",
-        [](const std::vector<at::Tensor>& outputs,
-           const std::vector<at::Tensor>& inputs, const std::string& payload) {
-          auto x_outputs = bridge::GetXlaTensors(outputs);
-          return tensor_methods::tpu_custom_call_(
-              x_outputs, bridge::GetXlaTensors(inputs), payload);
+  m.def("_xla_tpu_custom_call",
+        [](const std::vector<at::Tensor>& inputs, const std::string& payload,
+           const std::vector<std::vector<int64_t>>& output_shapes,
+           const std::vector<py::object>& output_dtypes)
+            -> std::vector<at::Tensor> {
+          std::vector<at::ScalarType> dtypes;
+          dtypes.reserve(output_dtypes.size());
+          for (auto& dtype : output_dtypes) {
+            dtypes.push_back(
+                reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
+          }
+
+          auto xtensors = tensor_methods::tpu_custom_call(
+              bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes);
+          return bridge::AtenFromXlaTensors(xtensors);
         });
   m.def("_xla_gpu_custom_call_",
         [](at::Tensor& output, const std::vector<at::Tensor>& inputs,

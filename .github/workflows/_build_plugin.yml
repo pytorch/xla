@@ -1,0 +1,47 @@
+name: build-cuda-plugin
+on:
+  workflow_call:
+    inputs:
+      dev-image:
+        required: true
+        type: string
+        description: Base image for builds
+      runner:
+        required: false
+        type: string
+        description: Runner type for the test
+        default: linux.12xlarge
+
+    secrets:
+      gcloud-service-key:
+        required: true
+        description: Secret to access Bazel build cache
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.dev-image }}
+    env:
+      GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
+      BAZEL_JOBS: 16
+      BAZEL_REMOTE_CACHE: 1
+    steps:
+      - name: Setup gcloud
+        shell: bash
+        run: |
+          echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
+      - name: Build
+        shell: bash
+        run: |
+          cd pytorch/xla/infra/ansible
+          ansible-playbook playbook.yaml -vvv -e "stage=build_plugin arch=amd64 accelerator=cuda src_root=${GITHUB_WORKSPACE}" --skip-tags=fetch_srcs,install_deps
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: cuda-plugin
+          path: /dist/*.whl

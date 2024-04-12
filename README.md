@@ -158,7 +158,7 @@ bucket.
 | Version | Cloud TPU VMs Wheel |
 |---------|-------------------|
 | 2.1 (XRT + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/xrt/tpuvm/torch_xla-2.1.0%2Bxrt-cp310-cp310-manylinux_2_28_x86_64.whl` |
-| 2.1 (Python 3.8) | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.1-cp38-cp38-linux_x86_64.whl` |
+| 2.1 (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.1.0-cp38-cp38-linux_x86_64.whl` |
 | 2.0 (Python 3.8) | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
 | 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
 | 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp38-cp38-linux_x86_64.whl` |
@@ -195,7 +195,6 @@ wheels for `torch` and `torch_xla` at
 | 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` |
 | 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` |
 | 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` |
-| nightly | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-nightly-cp37-cp37-linux_x86_64.whl` |
 
 <br/>
 
@@ -206,18 +205,6 @@ wheels for `torch` and `torch_xla` at
 You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel
 of a specified date. To get the companion pytorch and torchvision nightly wheel,
 replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
-
-#### Installing libtpu (before PyTorch/XLA 2.0)
-
-For PyTorch/XLA release r2.0 and older and when developing PyTorch/XLA, install
-the `libtpu` pip package with the following command:
-
-```
-pip3 install torch_xla[tpuvm]
-```
-
-This is only required on Cloud TPU VMs.
-
 </details>
 
 ### Docker
@@ -313,3 +300,9 @@ You can find additional useful reading materials in
   VM](https://cloud.google.com/blog/topics/developers-practitioners/scaling-deep-learning-workloads-pytorch-xla-and-cloud-tpu-vm)
 * [Scaling PyTorch models on Cloud TPUs with
   FSDP](https://pytorch.org/blog/scaling-pytorch-models-on-cloud-tpus-with-fsdp/)
+
+## Related Projects
+
+* [OpenXLA](https://github.com/openxla)
+* [HuggingFace](https://huggingface.co/docs/accelerate/en/basic_tutorials/tpu)
+* [JetStream](https://github.com/google/JetStream-pytorch)

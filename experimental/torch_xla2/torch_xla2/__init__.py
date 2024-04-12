@@ -1,10 +1,17 @@
+import contextlib
 import jax
 import torch
 from torch._functorch import make_functional
 from torch.utils import _pytree as pytree
-from torch_xla2 import tensor
-from torch_xla2 import export, _ops, ops_registry, tensor, tf_integration
+from torch_xla2 import export, _ops, ops_registry, tensor, tf_integration, functions
 
+jax.config.update('jax_enable_x64', True)
+
+
+@contextlib.contextmanager
+def mode():
+  with tensor.XLADispatchMode(), functions.XLAFunctionMode():
+    yield
 
 
 def extract_jax(mod: torch.nn.Module):

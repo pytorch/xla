@@ -261,7 +261,7 @@ def xla_replication_devices(local_devices):
         'Cannot replicate across different device types: devices={}/{}'.format(
             local_devices, real_devices))
   device_type = device_types.pop()
-  kind_devices = get_xla_supported_devices(devkind=device_type)
+  kind_devices = get_xla_supported_devices()
   if len(kind_devices) != len(local_devices):
     # Replication can only happen among all devices of one kind.
     raise RuntimeError(
@@ -491,8 +491,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
     if scale == 1.0 and groups == [] and pin_layout:
       # TODO(alanwaketan): Support groups.
       # Only c10d_functional version cc ops are traceable by Dynamo.
-      result = torch.ops.c10d_functional.all_reduce(inputs, reduce_type, "", [],
-                                                    0)
+      result = torch.ops._c10d_functional.all_reduce(inputs, reduce_type, "")
     else:
       result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, scale,
                                                groups, pin_layout)
@@ -1046,7 +1045,7 @@ def _run_step_closures():
   return devctx
 
 
-def mark_step(wait=False):
+def mark_step(wait=False, reset_scope=True):
   if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
     print(
         'torch_xla.core.xla_model::mark_step\n',
@@ -1055,7 +1054,8 @@ def mark_step(wait=False):
         flush=True)
   torch_xla._XLAC._xla_step_marker(
       torch_xla._XLAC._xla_get_default_device(), [],
-      wait=xu.getenv_as('XLA_SYNC_WAIT', bool, wait))
+      wait=xu.getenv_as('XLA_SYNC_WAIT', bool, wait),
+      reset_scope=reset_scope)
   # Only emit metrics from the first local device index, to avoid emitting the
   # same values from different threads.
   if is_master_ordinal():
