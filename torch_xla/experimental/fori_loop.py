@@ -44,12 +44,14 @@ def while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=None):
   # TODO(@manfei): PyTorch require carried_inputs to be list/tuple, PyTorch/XLA _xla_while_loop only accept *operands, *operands would tuple items again: (a, '')
   # cond_fn&body_fn: callable
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
+  print("!!! arrive here too !!!")
   if additional_inputs is None:
     additional_inputs = tuple()
   return _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=additional_inputs) #  a=a, b=b, c=c,
 
 
 def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
+  print("!!! arrive here too too !!!")
   # untuple carried_inputs from while_loop
   carried_inputs = carried_inputs[0]
   # fake carried_inputs to split formal code
