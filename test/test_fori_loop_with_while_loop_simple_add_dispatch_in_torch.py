@@ -109,7 +109,8 @@ class WhileLoopTest(unittest.TestCase):
                 output_value_real = linear_0(input_value)
                 weight = linear_0.weight
                 bias = linear_0.bias
-                return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value_real
+                # return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value_real
+                return upper, new_lower, one_value, torch.add(one_value, x), input_value, output_value_real
             # return while_loop(cond_fn, body_fn, (iter, x))
             # return while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
             # return 1
