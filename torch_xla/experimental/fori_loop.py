@@ -67,7 +67,8 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
   cond_result = cond_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-3], output_value=fake_carried_inputs[-2], bias_0=fake_carried_inputs[-1])
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
-  additional_inputs_list = list(fake_carried_inputs[2:])
+  additional_inputs_list = list(fake_carried_inputs[2:]) # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
+  # treat and pass additional_inputs to cond_fn
   for i in range(len(additional_inputs)):
     additional_inputs_list.append(additional_inputs[i])
   cond_ctx.buildforiloop([cond_result], additional_inputs_list)
@@ -79,7 +80,11 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
   body_result = body_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-3], output_value=fake_carried_inputs[-2], bias_0=fake_carried_inputs[-1])
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
-  body_ctx.buildforiloop(list(body_result), [])
+  additional_inputs_list = list(fake_carried_inputs[-2]) # missed arguments due to given output_value was not used and PyTorch/XLA trace xlacomputation from output tensor
+  # TODO(@manfei): treat and pass additional_inputs to body_fn too
+  for i in range(len(additional_inputs)):
+    additional_inputs_list.append(additional_inputs[i])
+  body_ctx.buildforiloop(list(body_result), additional_inputs_list)
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
