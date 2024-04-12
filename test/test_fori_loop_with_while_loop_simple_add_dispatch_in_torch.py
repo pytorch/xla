@@ -117,7 +117,8 @@ class WhileLoopTest(unittest.TestCase):
     lower = torch.tensor([0], dtype=torch.int32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     init_val = torch.tensor([1], dtype=torch.int32, device=device) # x
-    l_in_0 = torch.randn(10, device=xm.xla_device()) # input_value
+    # l_in_0 = torch.randn(10, device=xm.xla_device()) # input_value
+    l_in_0 = torch.ones(10, device=xm.xla_device()) # input_value
     output_value = torch.zeros([20], dtype=torch.float32, device=device)
 
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
