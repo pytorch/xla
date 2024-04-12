@@ -929,28 +929,28 @@ class PyLoweringContext {
         parameter_idx += 1;
       }
       xla::Shape shape1 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {10});
-      xla::XlaOp x1 = xla::Parameter(local_builder, parameters_number_i, shape1,
+      xla::XlaOp x1 = xla::Parameter(local_builder, parameter_idx, shape1,
                                       "LInITensor");
-      parameters_number_i = parameters_number_i + 1;
+      parameter_idx = parameter_idx + 1;
       xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20, 10});
-      xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
+      xla::XlaOp x2 = xla::Parameter(local_builder, parameter_idx, shape2,
                                       "WeightTensor");
-      parameters_number_i = parameters_number_i + 1;
+      parameter_idx = parameter_idx + 1;
       xla::Shape shape4 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      xla::XlaOp x4 = xla::Parameter(local_builder, parameters_number_i, shape4,
+      xla::XlaOp x4 = xla::Parameter(local_builder, parameter_idx, shape4,
                                       "BiasTensor");
-      parameters_number_i = parameters_number_i + 1;
+      parameter_idx = parameter_idx + 1;
       xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
+      xla::XlaOp x3 = xla::Parameter(local_builder, parameter_idx, shape3,
                                       "LOutTensor");
     }
 
     // hard-code modify body xlacomputation input arguments
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      int64_t parameters_number_i = 7;
+      int64_t parameter_idx = 7;
       xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
+      xla::XlaOp x2 = xla::Parameter(local_builder, parameter_idx, shape2,
                                       "WeightTensor");
     }
 
