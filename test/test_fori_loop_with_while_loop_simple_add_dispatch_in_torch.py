@@ -104,15 +104,15 @@ class WhileLoopTest(unittest.TestCase):
     weight_0 = linear_0.weight
     bias_0 = linear_0.bias
 
-    def cond_fn(upper, lower, one_value, x, *input_value, weight_0, output_value, bias_0):
+    def cond_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
       return lower[0] < upper[0]
 
-    def body_fn(upper, lower, one_value, x, *input_value, weight_0, output_value, bias_0):
+    def body_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
       new_lower = torch.add(one_value, lower)
-      output_value = body_fun(*input_value)
+      output_value = body_fun(input_value)
       weight = body_fun.weight
       bias = body_fun.bias
-      return upper, new_lower, one_value, torch.add(one_value, x), *input_value, weight, bias, output_value
+      return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value
 
     print("!!! arrive here !!!")
     upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = while_loop(
