@@ -927,48 +927,26 @@ class PyLoweringContext {
       // !!! --- next step: we add dump paras according to additional_inputs_list
       // ??? --- could we get IRvalue of `additional_inputs_list` in this function to complete xlacomputation?
       int64_t parameter_idx = 2; // parameter_idx start from 2 after upper and lower
-      // ? type, ? shape,
-      // for (int i = 0; i < additional_inputs_list.size(); i++) {
       for (auto& additional_input_tensor : additional_inputs_list) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
-        xla::Shape shape = xtensor->shape().get(); // .ToString();
+        xla::Shape shape = xtensor->shape().get();
         xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
                                       "UnusedArgumentsPlaceholder");
         parameter_idx += 1;
-        // xtensor->shape().get().ToString()
-        // xla_tensor->shaped_buffer().on_device_shape();
       }
-      // for (int i = 0; i < 2; i++) {
-      //   xla::Shape shape =
-      //       xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
-      //   xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-      //                                 "UnusedArgumentsPlaceholder");
-      //   parameter_idx += 1;
-      // }
-      // xla::Shape shape1 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {10});
-      // xla::XlaOp x1 = xla::Parameter(local_builder, parameter_idx, shape1,
-      //                                 "LInITensor");
-      // parameter_idx = parameter_idx + 1;
-      // xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20, 10});
-      // xla::XlaOp x2 = xla::Parameter(local_builder, parameter_idx, shape2,
-      //                                 "WeightTensor");
-      // parameter_idx = parameter_idx + 1;
-      // xla::Shape shape4 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      // xla::XlaOp x4 = xla::Parameter(local_builder, parameter_idx, shape4,
-      //                                 "BiasTensor");
-      // parameter_idx = parameter_idx + 1;
-      // xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      // xla::XlaOp x3 = xla::Parameter(local_builder, parameter_idx, shape3,
-      //                                 "LOutTensor");
     }
 
     // hard-code modify body xlacomputation input arguments
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      int64_t parameter_idx = 7;
-      xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      xla::XlaOp x2 = xla::Parameter(local_builder, parameter_idx, shape2,
-                                      "WeightTensor");
+      int64_t parameter_idx = tensors.size();
+      for (auto& additional_input_tensor : additional_inputs_list) {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
+        xla::Shape shape = xtensor->shape().get();
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameter_idx += 1;
+      }
     }
 
     // Get the backing XLA tensors from the output torch tensor handles
