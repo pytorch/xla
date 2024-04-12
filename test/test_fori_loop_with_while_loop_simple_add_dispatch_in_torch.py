@@ -122,6 +122,8 @@ class WhileLoopTest(unittest.TestCase):
     l_in_0 = torch.randn(10, device=xm.xla_device()) # input_value
     output_value = torch.zeros([20], dtype=torch.float32, device=device)
 
+    print("start test 3 !!!")
+
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
     weight_0 = linear_0.weight
     bias_0 = linear_0.bias
