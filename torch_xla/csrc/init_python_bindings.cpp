@@ -932,7 +932,7 @@ class PyLoweringContext {
       // for (int i = 0; i < additional_inputs_list.size(); i++) {
       for (auto& additional_input_tensor : additional_inputs_list) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
-        xla::Shape shape = xtensor->shape().get().ToString();
+        xla::Shape shape = xtensor->shape().get(); // .ToString();
         xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
                                       "UnusedArgumentsPlaceholder");
         parameter_idx += 1;
