@@ -135,10 +135,11 @@ class WhileLoopTest(unittest.TestCase):
     aaa = {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
     print("aaa: ", aaa)
     print("start test 6 !!!")
-    res = simple_with_linear.apply((upper, lower, one_value, init_val, l_in_0, output_value))
-    print("res: ", res)
-    import pdb; pdb.set_trace()
-    return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
+    return aaa
+    # res = simple_with_linear.apply((upper, lower, one_value, init_val, l_in_0, output_value))
+    # print("res: ", res)
+    # import pdb; pdb.set_trace()
+    # return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
 
   def test_fori_loop_tpu_addition(self):
 
