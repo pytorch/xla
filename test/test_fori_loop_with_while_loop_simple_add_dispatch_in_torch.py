@@ -92,7 +92,6 @@ class WhileLoopTest(unittest.TestCase):
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
-    print("start test !!!")
 
     class SimpleWithLinear(torch.nn.Module):
         def __init__(self):
@@ -113,6 +112,7 @@ class WhileLoopTest(unittest.TestCase):
             # return while_loop(cond_fn, body_fn, (iter, x))
             return while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
+    print("start test !!!")
     simple_with_linear = SimpleWithLinear()
     upper = torch.tensor([52], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
