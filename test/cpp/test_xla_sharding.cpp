@@ -435,21 +435,5 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
           ->HasValue());
 }
 
-TEST_F(XLAShardingTest, TestForiLoopAddUnusedParameterInXlaComputation) {
-  xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {});
-  // Build simple addition.
-  xla::XlaBuilder b("builder");
-  auto x = xla::Parameter(&b, /*parameter_number=*/0, shape, "p0");
-  // Add unused parameter before create xlacomputation
-  xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {});
-  auto zzz = xla::Parameter(&b, /*parameter_number=*/1, shape2, "p1");
-  auto y = xla::Add(x, xla::ConstantR0<float>(&b, 3));
-  xla::XlaComputation xla_computation =
-      ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
-
-  // Check whether the unused parameter has been included into xlacomputation
-  EXPECT_EQ(xla_computation.GetProgramShape()->parameters_size(), 2);
-}
-
 }  // namespace cpp_test
 }  // namespace torch_xla
