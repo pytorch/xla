@@ -109,9 +109,9 @@ class WhileLoopTest(unittest.TestCase):
 
     def body_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
       new_lower = torch.add(one_value, lower)
-      output_value = body_fun(input_value)
-      weight = body_fun.weight
-      bias = body_fun.bias
+      output_value = linear_0(input_value)
+      weight = linear_0.weight
+      bias = linear_0.bias
       return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value
 
     print("!!! arrive here !!!")
