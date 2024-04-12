@@ -145,6 +145,25 @@ class WhileLoopTest(unittest.TestCase):
             # return while_loop(cond_fn, body_fn, (iter, x))
             return while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
+    simple_with_linear = SimpleWithLinear()
+    upper = torch.tensor([52], dtype=torch.int32, device=device)
+    lower = torch.tensor([0], dtype=torch.int32, device=device)
+    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device) # x
+    l_in_0 = torch.randn(10, device=xm.xla_device()) # input_value
+    output_value = torch.zeros([20], dtype=torch.float32, device=device)
+
+    linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+    weight_0 = linear_0.weight
+    bias_0 = linear_0.bias
+
+    return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
+
+#     x = torch.zeros(1)
+#     y = torch.zeros(1)
+#     z = torch.zeros(1)
+#     return {"simple_with_linear": (simple_with_linear, (torch.tensor(3), torch.randn(2, 2)))}
+
     # xm.mark_step()
     # device = xm.xla_device()
     # torch.set_grad_enabled(False)
