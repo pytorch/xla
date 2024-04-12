@@ -122,6 +122,8 @@ void PrepareToExit() {
   runtime::ComputationClient* client =
       runtime::GetComputationClientIfInitialized();
   if (client != nullptr) {
+    auto xla_device = GetDeviceOrCurrent("");
+    SetAllReduceToken(xla_device, nullptr);
     XLAGraphExecutor::Get()->WaitDeviceOps({});
   }
 }
@@ -464,12 +466,13 @@ void SyncLiveTensors(const std::string& device_str,
 }
 
 void StepMarker(const std::string& device_str,
-                const std::vector<std::string>& devices, bool wait) {
+                const std::vector<std::string>& devices, bool wait,
+                bool reset_scope) {
   tsl::profiler::TraceMe activity("StepMarker",
                                   tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
-  XLAGraphExecutor::Get()->MarkStep(device);
+  XLAGraphExecutor::Get()->MarkStep(device, reset_scope);
   bool debug_mode = runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
     std::string report = runtime::metrics::CreatePerformanceReport(
@@ -691,19 +694,6 @@ std::vector<at::Tensor> XlaUserComputation(
 
 runtime::ComputationClient::ComputationPtr CreateComputation(
     const std::string& name, xla::XlaOp root) {
-  xla::XlaBuilder* local_builder = root.builder();
-  // int64_t parameters_number_i = 4;
-  // xla::Shape shape1 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-  // xla::XlaOp x1 = xla::Parameter(local_builder, parameters_number_i, shape1,
-  //                                     "OutPutTensor");
-  // parameters_number_i = parameters_number_i + 1;
-  // xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20, 10});
-  // xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
-  //                                     "WeightTensor");
-  // parameters_number_i = parameters_number_i + 1;
-  // xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {10});
-  // xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
-  //                                     "FinalOneTensor");
   xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
   return std::make_shared<runtime::ComputationClient::Computation>(
       name, std::move(computation));
@@ -928,41 +918,22 @@ class PyLoweringContext {
                      std::vector<at::Tensor> input_arguments = {}) {
     if (GetNameString() == "condctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      int64_t parameters_number_i = 2;
-      // for (at::Tensor input_argument : input_arguments) {
+      // hard-code parameter_idx to 2 to skip existing upper/lower arguments
+      int64_t parameter_idx = 2;
       for (int i = 0; i < 2; i++) {
         xla::Shape shape =
             xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
-        xla::XlaOp x = xla::Parameter(local_builder, parameters_number_i, shape,
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
                                       "UnusedArgumentsPlaceholder");
-        parameters_number_i = parameters_number_i + 1;
+        parameter_idx += 1;
       }
-      // hard-code to meet requirement by change cond xlacomputation
-      // f32[20], /*index=5*/f32[20,10], s32[10]
-      // parameters_number_i = parameters_number_i + 1;
-
       xla::Shape shape1 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {10});
       xla::XlaOp x1 = xla::Parameter(local_builder, parameters_number_i, shape1,
                                       "LInITensor");
-      // xla::Shape shape1 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      // xla::XlaOp x1 = xla::Parameter(local_builder, parameters_number_i, shape1,
-      //                                 "BiasTensor");
       parameters_number_i = parameters_number_i + 1;
       xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20, 10});
       xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
                                       "WeightTensor");
-      // parameters_number_i = parameters_number_i + 1;
-      // xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      // xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
-      //                                 "LOutTensor");
-      // parameters_number_i = parameters_number_i + 1;
-      // xla::Shape shape4 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {10});
-      // xla::XlaOp x4 = xla::Parameter(local_builder, parameters_number_i, shape4,
-      //                                 "LInITensor");
-      // parameters_number_i = parameters_number_i + 1;
-      // xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-      // xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
-      //                                 "LOutTensor");
       parameters_number_i = parameters_number_i + 1;
       xla::Shape shape4 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
       xla::XlaOp x4 = xla::Parameter(local_builder, parameters_number_i, shape4,
@@ -971,17 +942,16 @@ class PyLoweringContext {
       xla::Shape shape3 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
       xla::XlaOp x3 = xla::Parameter(local_builder, parameters_number_i, shape3,
                                       "LOutTensor");
-      //                                 // input_value!!!, weight_0, output_value, bias!!!
     }
 
-    // // hard-code modify body xlacomputation input arguments
-    // if (GetNameString() == "bodyctx") {
-    //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    //   int64_t parameters_number_i = 7;
-    //   xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
-    //   xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
-    //                                   "WeightTensor");
-    // }
+    // hard-code modify body xlacomputation input arguments
+    if (GetNameString() == "bodyctx") {
+      xla::XlaBuilder* local_builder = lowering_ctx.builder();
+      int64_t parameters_number_i = 7;
+      xla::Shape shape2 = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {20});
+      xla::XlaOp x2 = xla::Parameter(local_builder, parameters_number_i, shape2,
+                                      "WeightTensor");
+    }
 
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
@@ -1780,11 +1750,12 @@ void InitXlaModuleBindings(py::module m) {
   m.def(
       "_xla_step_marker",
       [](const std::string& device, const std::vector<std::string>& devices,
-         bool wait) {
+         bool wait, bool reset_scope) {
         NoGilSection nogil;
-        StepMarker(device, devices, wait);
+        StepMarker(device, devices, wait, reset_scope);
       },
-      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true,
+      py::arg("reset_scope") = true);
   m.def("_get_stablehlo",
         [](const std::vector<at::Tensor>& tensors, const std::string& device,
            const std::vector<std::string>& devices,
