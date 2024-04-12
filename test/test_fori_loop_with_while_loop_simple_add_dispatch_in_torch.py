@@ -7,7 +7,7 @@ import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
 from torch_xla.experimental.fori_loop import fori_loop
-from torch_xla.experimental.fori_loop import _xla_while_loop
+# from torch_xla.experimental.fori_loop import _xla_while_loop
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
@@ -112,7 +112,8 @@ class WhileLoopTest(unittest.TestCase):
                 return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value_real
             # return while_loop(cond_fn, body_fn, (iter, x))
             # return while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
-            return 1
+            # return 1
+            return upper, lower, one_value, x, input_value, output_value
             # return _xla_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
     simple_with_linear = SimpleWithLinear()
