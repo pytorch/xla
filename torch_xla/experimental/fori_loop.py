@@ -82,9 +82,11 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
   body_ctx.set_name_string("bodyctx")
   additional_inputs_list = list(fake_carried_inputs[-2]) # missed arguments due to given output_value was not used and PyTorch/XLA trace xlacomputation from output tensor
   # TODO(@manfei): treat and pass additional_inputs to body_fn too
+  print("len0!!!: ", len(additional_inputs_list))
   for i in range(len(additional_inputs)):
     additional_inputs_list.append(additional_inputs[i])
   print("len!!!: ", len(additional_inputs_list))
+  print("additional_inputs_list: ", additional_inputs_list)
   body_ctx.buildforiloop(list(body_result), additional_inputs_list)
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
