@@ -1139,7 +1139,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # xx.cpu()
 
     # Replicated shape
-    xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), (None, None))
+    x = torch.zeros(8, 4).to(xm.xla_device())
+    xt = xs.mark_sharding(x, self._get_mesh((self.n_devices, 1)), (None, None))
     xx = torch_xla._XLAC._spmd_full_to_shard_shape(xt.global_tensor)
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
