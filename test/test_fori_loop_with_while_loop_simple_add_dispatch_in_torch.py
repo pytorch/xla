@@ -126,30 +126,53 @@ class WhileLoopTest(unittest.TestCase):
     device = xm.xla_device()
     torch.set_grad_enabled(False)
 
-    upper = torch.tensor([52], dtype=torch.int32, device=device)
-    lower = torch.tensor([0], dtype=torch.int32, device=device)
-    one_value = torch.tensor([1], dtype=torch.int32, device=device)
-    init_val = torch.tensor([1], dtype=torch.int32, device=device) # x
-    l_in_0 = torch.randn(10, device=xm.xla_device()) # input_value
-    output_value = torch.zeros([20], dtype=torch.float32, device=device)
+    class SimpleWithLinear(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+            # self.register_buffer("dec", torch.tensor(1))
 
-    linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-    weight_0 = linear_0.weight
-    bias_0 = linear_0.bias
+        def forward(self, upper, lower, one_value, x, input_value, output_value):
+            def cond_fn(upper, lower, one_value, x, input_value, output_value):
+                return lower[0] < upper[0]
 
-    # def cond_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
-    def cond_fn(upper, lower, one_value, x, input_value, output_value):
-      return lower[0] < upper[0]
+            def body_fn(upper, lower, one_value, x, input_value, output_value):
+                new_lower = torch.add(one_value, lower)
+                output_value = linear_0(input_value)
+                weight = linear_0.weight
+                bias = linear_0.bias
+                return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value
+            # return while_loop(cond_fn, body_fn, (iter, x))
+            return while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
-    def body_fn(upper, lower, one_value, x, input_value, output_value):
-      new_lower = torch.add(one_value, lower)
-      output_value = linear_0(input_value)
-      weight = linear_0.weight
-      bias = linear_0.bias
-      return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value
+    # xm.mark_step()
+    # device = xm.xla_device()
+    # torch.set_grad_enabled(False)
 
-    # print("!!! arrive here !!!")
-    upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
+    # upper = torch.tensor([52], dtype=torch.int32, device=device)
+    # lower = torch.tensor([0], dtype=torch.int32, device=device)
+    # one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    # init_val = torch.tensor([1], dtype=torch.int32, device=device) # x
+    # l_in_0 = torch.randn(10, device=xm.xla_device()) # input_value
+    # output_value = torch.zeros([20], dtype=torch.float32, device=device)
+
+    # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+    # weight_0 = linear_0.weight
+    # bias_0 = linear_0.bias
+
+    # # def cond_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
+    # def cond_fn(upper, lower, one_value, x, input_value, output_value):
+    #   return lower[0] < upper[0]
+
+    # def body_fn(upper, lower, one_value, x, input_value, output_value):
+    #   new_lower = torch.add(one_value, lower)
+    #   output_value = linear_0(input_value)
+    #   weight = linear_0.weight
+    #   bias = linear_0.bias
+    #   return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value
+
+    # # print("!!! arrive here !!!")
+    # upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
 
