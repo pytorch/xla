@@ -480,10 +480,6 @@ def _mark_manual_sharding(
   This API is meant to be paired with the upcoming pause_spmd&resume_spmd APIs.
   Don't use it alone.
   """
-  """
-  This API is meant to be paired with the upcoming pause_spmd&resume_spmd APIs.
-  Don't use it alone.
-  """
   manual_sharding = torch_xla._XLAC.OpSharding([], [], [], ShardingType.MANUAL)
   torch_xla._XLAC._mark_manual_sharding(
       unwrap_sharded_tensor(t), manual_sharding)

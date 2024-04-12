@@ -241,7 +241,6 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
   switch (sharding_type) {
     case ShardingType::MANUAL: {
       sharding = xla::HloSharding::Manual().ToProto();
-      sharding = xla::HloSharding::Manual().ToProto();
       break;
     }
     case ShardingType::TUPLE: {
