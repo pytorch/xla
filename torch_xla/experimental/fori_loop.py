@@ -68,7 +68,7 @@ def _xla_while_loop(cond_fn, body_fn, *original_carried_inputs, additional_input
         torch.randint(10, carried_input.size(),
                       dtype=carried_input.dtype).to(device))
   # fake_carried_inputs = tuple(fake_carried_inputs)
-  print("fake_carried_inputs first: ", fake_carried_inputs)
+  # print("fake_carried_inputs first: ", fake_carried_inputs)
   for additional_input in additional_inputs:
     device = additional_input.device
     #TODO(@manfei) type = carried_input.type
@@ -76,7 +76,7 @@ def _xla_while_loop(cond_fn, body_fn, *original_carried_inputs, additional_input
         torch.randint(10, additional_input.size(),
                       dtype=additional_input.dtype).to(device))
   fake_carried_inputs = tuple(fake_carried_inputs)
-  print("fake_carried_inputs second: ", fake_carried_inputs)
+  # print("fake_carried_inputs second: ", fake_carried_inputs)
 
   # generate cond_fn xlacomputation
   # TODO(@manfei): specify which element is for which argument like a,b,c
