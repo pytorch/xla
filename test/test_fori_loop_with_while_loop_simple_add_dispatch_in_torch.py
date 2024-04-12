@@ -92,7 +92,6 @@ class WhileLoopTest(unittest.TestCase):
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
-    print("start test 1 !!!")
 
     class SimpleWithLinear(torch.nn.Module):
         def __init__(self):
@@ -113,7 +112,6 @@ class WhileLoopTest(unittest.TestCase):
             # return while_loop(cond_fn, body_fn, (iter, x))
             return while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
-    print("start test 2 !!!")
     simple_with_linear = SimpleWithLinear()
     upper = torch.tensor([52], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
@@ -122,20 +120,19 @@ class WhileLoopTest(unittest.TestCase):
     l_in_0 = torch.randn(10, device=xm.xla_device()) # input_value
     output_value = torch.zeros([20], dtype=torch.float32, device=device)
 
-    print("start test 3 !!!")
-
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
     weight_0 = linear_0.weight
     bias_0 = linear_0.bias
 
-    print("start test 4 !!!")
-    # return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
-    # return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
-    print("start test 5 !!!")
     aaa = {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
+    upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = aaa
     print("aaa: ", aaa)
-    print("start test 6 !!!")
+    # print("start test 6 !!!")
     return aaa
+
+    expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
+
+    self.assertTrue(torch.all(torch.eq(expected, l_out_)))
     # res = simple_with_linear.apply((upper, lower, one_value, init_val, l_in_0, output_value))
     # print("res: ", res)
     # import pdb; pdb.set_trace()
