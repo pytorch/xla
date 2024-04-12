@@ -240,8 +240,7 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
   xla::OpSharding sharding;
   switch (sharding_type) {
     case ShardingType::MANUAL: {
-      TF_LOG(ERROR) << "Invalid arguments: sharding_type (MANUAL) is "
-                    << "currently not supported";
+      sharding = xla::HloSharding::Manual().ToProto();
       break;
     }
     case ShardingType::TUPLE: {
@@ -323,7 +322,7 @@ std::vector<int64_t> ShardingUtil::GetShardShape(
 
     return shard_shape;
   } else {
-    TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
+    XLA_CHECK(false) << "Unsupported OpSharding type " << sharding.type();
   }
 }
 
@@ -429,7 +428,7 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
       shard_indices[device_index[core]] = std::make_pair(replica_id, indices);
     }
   } else {
-    TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
+    XLA_CHECK(false) << "Unsupported OpSharding type " << sharding.type();
   }
   return shard_indices;
 }
@@ -488,9 +487,8 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
             shards[i], c10::IntArrayRef(pads.data(), pads.size()), 0);
       }
     }
-  } else if ((sharding.type() == xla::OpSharding::MANUAL) ||
-             (sharding.type() == xla::OpSharding::TUPLE)) {
-    TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
+  } else {
+    XLA_CHECK(false) << "Unsupported OpSharding type " << sharding.type();
   }
   return shards;
 }
