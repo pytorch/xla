@@ -113,8 +113,8 @@ class WhileLoopTest(unittest.TestCase):
             # return while_loop(cond_fn, body_fn, (iter, x))
             # return while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
             # return 1
-            # return upper, lower, one_value, x, input_value, output_value
-            return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, output_value))
+            return upper, lower, one_value, x, input_value, output_value
+            # return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, output_value))
             # return _xla_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
     simple_with_linear = SimpleWithLinear()
