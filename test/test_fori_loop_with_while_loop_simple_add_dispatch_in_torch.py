@@ -29,11 +29,6 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
       a = body_fun(*init_val)
   return a
 
-def _fake_fori_loop(lower, upper, body_fun, *init_val):
-  (plus_value, init_val) = init_val
-  for i in range((upper - lower)[0]):
-    plus_value, init_val = body_fun(plus_value, init_val)
-  return init_val
 
 class WhileLoopTest(unittest.TestCase):
 
@@ -91,25 +86,24 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
     self.assertEqual(expected, res_)
 
-  def test_fori_loop_tpu_addition(self):
+  def test_fori_loop_tpu_simple_linear(self):
 
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
 
-    lower = torch.tensor([2], dtype=torch.int32, device=device)
     upper = torch.tensor([52], dtype=torch.int32, device=device)
-    plus_value = torch.tensor([1], dtype=torch.int32, device=device)
+    lower = torch.tensor([0], dtype=torch.int32, device=device)
     init_val = torch.tensor([1], dtype=torch.int32, device=device)
+    l_in_0 = torch.randn(10, device=xm.xla_device())
+    
+    linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
 
-    def body_fun(*argus):
-      plus_value, init_val = argus
-      return plus_value, torch.add(plus_value, init_val)
+    upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_= fori_loop(upper, lower, linear_0, init_val, l_in_0)
+    
+    expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
 
-    _, _, _, actual = fori_loop(upper, lower, body_fun, plus_value, init_val)
-    expected = _fake_fori_loop(lower, upper, body_fun, plus_value, init_val)
-    self.assertEqual(expected, actual)
-
+    self.assertTrue(torch.all(torch.eq(expected, l_out_)))
 
 if __name__ == '__main__':
   test = unittest.main()
