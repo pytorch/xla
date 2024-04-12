@@ -915,11 +915,29 @@ class PyLoweringContext {
   // Builds a HLO graph given a set of output tensors, and add unused parameters
   // needed in xlacomputation.
   void BuildForiLoop(std::vector<at::Tensor> tensors,
-                     std::vector<at::Tensor> input_arguments = {}) {
+                     std::vector<at::Tensor> additional_inputs_list = {}) {
     if (GetNameString() == "condctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // hard-code parameter_idx to 2 to skip existing upper/lower arguments
-      int64_t parameter_idx = 2;
+      // !!! since cond_fn only compare upper and lower, so it would only use two arguments, due to PyTorch/XLA
+      // !!! trace xlacomputation from result tensor, so all the other arguments would not be included or generated;
+      // !!! but to meet xla::while requirement, we would skip first two arguments,
+      // !!! then add all other arguments like body_fn/init
+      // !!! --- additional_inputs_list: this list include all other arguments like body_fn/init except upper and lower
+      // !!! --- next step: we add dump paras according to additional_inputs_list
+      // ??? --- could we get IRvalue of `additional_inputs_list` in this function to complete xlacomputation?
+      int64_t parameter_idx = 2; // parameter_idx start from 2 after upper and lower
+      // ? type, ? shape,
+      // for (int i = 0; i < additional_inputs_list.size(); i++) {
+      for (auto& additional_input_tensor : additional_inputs_list) {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
+        xla::Shape shape = xtensor->shape().get().ToString();
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameter_idx += 1;
+        // xtensor->shape().get().ToString()
+        // xla_tensor->shaped_buffer().on_device_shape();
+      }
       for (int i = 0; i < 2; i++) {
         xla::Shape shape =
             xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
