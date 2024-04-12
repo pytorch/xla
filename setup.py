@@ -220,7 +220,7 @@ class BuildBazelExtension(build_ext.build_ext):
 
     bazel_argv = [
         'bazel', 'build', ext.bazel_target,
-        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
+        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
     ]
 
     import torch
@@ -282,6 +282,7 @@ setup(
     packages=find_packages(include=['torch_xla*']),
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
+        BazelExtension('//torch_xla/csrc/triton:_triton.so'),
     ],
     install_requires=[
         'absl-py>=1.0.0',

@@ -91,3 +91,59 @@ cc_library(
         "@com_google_absl//absl/synchronization",
     ],
 )
+
+cc_library(
+    name = "kernel_nanobind_helpers",
+    hdrs = ["kernel_nanobind_helpers.h"],
+    copts = [
+        "-fexceptions",
+        "-fno-strict-aliasing",
+    ],
+    features = ["-use_header_modules"],
+    deps = [
+        "@com_google_absl//absl/base",
+        "@nanobind",
+    ],
+)
+
+cc_library(
+    name = "absl_status_casters",
+    hdrs = ["absl_status_casters.h"],
+    copts = [
+        "-fexceptions",
+        "-fno-strict-aliasing",
+    ],
+    features = ["-use_header_modules"],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_binary(
+    name = "_triton.so",
+    srcs = ["triton.cc"],
+    copts = [
+        "-DTORCH_API_INCLUDE_EXTENSION_H",
+        "-DTORCH_EXTENSION_NAME=_triton",
+        "-fexceptions",
+        "-fno-strict-aliasing",
+    ],
+    features = ["-use_header_modules", "-parse_headers",],
+    linkopts = select({
+        "//conditions:default": ["-Wl,-Bsymbolic","-Wl,-soname,_triton.so",],
+    }),
+    linkshared = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":cuda_gpu_kernel_helpers",
+        ":cuda_vendor",
+        ":triton_kernels",
+        ":triton_utils",
+        ":absl_status_casters",
+        ":kernel_nanobind_helpers",
+        ":triton_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+        "@nanobind",
+    ],
+)
