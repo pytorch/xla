@@ -16,7 +16,7 @@ Patch file are alphabetically ordered, so PyTorch PR patches are always applied
 before the non PyTorch ones.
 
 
-There's a special file `torch_patches/.torch_pin`, which is used to coordinate landing PRs in
+There's a special file `.torch_pin`, which is used to coordinate landing PRs in
 `pytorch/pytorch` and `pytorch/xla`.
 
 To test a `pytorch/xla` PR against a `pytorch/pytorch` PR or branch,

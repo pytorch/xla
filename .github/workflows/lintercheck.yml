@@ -24,7 +24,7 @@ jobs:
         if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
         shell: bash
         run: |
-          TORCH_PIN=./torch_patches/.torch_pin
+          TORCH_PIN=./.github/.torch_pin
           if [[ -f "${TORCH_PIN}" ]]; then
             echo "Please remove ${TORCH_PIN} before landing."
             exit 1

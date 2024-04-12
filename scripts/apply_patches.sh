@@ -7,7 +7,7 @@ XDIR=$CDIR/..
 PTDIR=$XDIR/..
 OPENXLADIR=$XDIR/third_party/xla
 
-TORCH_PIN="$XDIR/torch_patches/.torch_pin"
+TORCH_PIN="$XDIR/.github/.torch_pin"
 if [ -f "$TORCH_PIN" ]; then
   CID=$(cat "$TORCH_PIN")
   # If starts with # and it's not merged into master, fetch from origin

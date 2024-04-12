@@ -236,7 +236,7 @@ function build_armcomputelibrary() {
 
 function build_and_install_torch() {
   # Checkout the PT commit ID or branch if we have one.
-  COMMITID_FILE="xla/.torch_pin"
+  COMMITID_FILE="xla/.github/.torch_pin"
   if [ -e "$COMMITID_FILE" ]; then
     git checkout $(cat "$COMMITID_FILE")
   fi

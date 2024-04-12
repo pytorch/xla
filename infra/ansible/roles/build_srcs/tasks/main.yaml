@@ -1,5 +1,5 @@
 - name: Read PyTorch pin
-  ansible.builtin.command: cat {{ (src_root, 'pytorch/xla/.torch_pin') | path_join }}
+  ansible.builtin.command: cat {{ (src_root, 'pytorch/xla/.github/.torch_pin') | path_join }}
   register: torch_pin
   # Pin may not exist
   ignore_errors: true

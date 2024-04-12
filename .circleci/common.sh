@@ -48,7 +48,7 @@ function rebase_pull_request_on_target_branch() {
 }
 
 function checkout_torch_pin_if_available() {
-  COMMITID_FILE="xla/.torch_pin"
+  COMMITID_FILE="xla/.github/.torch_pin"
   if [ -e "$COMMITID_FILE" ]; then
     git checkout $(cat "$COMMITID_FILE")
   fi
