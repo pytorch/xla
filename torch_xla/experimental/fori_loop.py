@@ -16,9 +16,6 @@ from torch._higher_order_ops.while_loop import while_loop_op
 def fori_loop(upper, lower, body_fun, init_val, *input_value):
 
   device = xm.xla_device()
-  # weight_0 = body_fun.weight
-  # bias_0 = body_fun.bias
-  # one_value = torch.tensor([1], dtype=torch.int32, device=device)
 
   def cond_fn(upper, lower, one_value, x, *input_value, weight_0, output_value, bias_0): # , bias_0): # , output_value):
     return lower[0] < upper[0]
