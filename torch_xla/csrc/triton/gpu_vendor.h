@@ -20,6 +20,8 @@ limitations under the License.
 #ifndef XLA_TORCH_XLA_CSRC_GPU_VENDOR_H_
 #define XLA_TORCH_XLA_CSRC_GPU_VENDOR_H_
 
+#ifdef XLA_CUDA
+
 #include "third_party/gpus/cuda/extras/CUPTI/include/cupti.h"  // IWYU pragma: export
 #include "third_party/gpus/cuda/include/cuComplex.h"  // IWYU pragma: export
 #include "third_party/gpus/cuda/include/cublas_v2.h"  // IWYU pragma: export
@@ -291,3 +293,5 @@ constexpr uint32_t kNumThreadsPerWarp = 32;
 }
 }  // namespace torch_xla::XLA_GPU_NAMESPACE
 #endif  // XLA_TORCH_XLA_CSRC_GPU_VENDOR_H_
+
+#endif  // XLA_CUDA

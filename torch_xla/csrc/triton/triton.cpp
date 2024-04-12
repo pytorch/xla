@@ -1,3 +1,5 @@
+#ifdef XLA_CUDA
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -143,3 +145,5 @@ NB_MODULE(_triton, m) {
 }
 
 }  // namespace torch_xla::XLA_GPU_NAMESPACE
+
+#endif  // XLA_CUDA

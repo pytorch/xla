@@ -122,7 +122,7 @@ cc_library(
 
 cc_binary(
     name = "_triton.so",
-    srcs = ["triton.cc"],
+    srcs = ["triton.cpp"],
     copts = [
         "-DTORCH_API_INCLUDE_EXTENSION_H",
         "-DTORCH_EXTENSION_NAME=_triton",

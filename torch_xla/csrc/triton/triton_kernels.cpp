@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/triton/triton_kernels.h"
 
+#ifdef XLA_CUDA
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -633,3 +635,5 @@ void TritonKernelCall(gpuStream_t stream, void** buffers, const char* opaque,
 }
 
 }  // namespace torch_xla::XLA_GPU_NAMESPACE
+
+#endif  // XLA_CUDA

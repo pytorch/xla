@@ -1,6 +1,8 @@
 #ifndef TORCH_XLA_CSRC_TRITON_H_
 #define TORCH_XLA_CSRC_TRITON_H_
 
+#ifdef XLA_CUDA
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -114,4 +116,7 @@ class AutotunedKernelCall {
 
 }  // namespace torch_xla::XLA_GPU_NAMESPACE
 
+#endif  // XLA_CUDA
+
 #endif  // TORCH_XLA_CSRC_TRITON_H_
+

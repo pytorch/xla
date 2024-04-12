@@ -15,6 +15,8 @@ limitations under the License.
 
 #include "torch_xla/csrc/triton/gpu_kernel_helpers.h"
 
+#ifdef XLA_CUDA
+
 #include "absl/base/optimization.h"
 #include "absl/log/check.h"
 #include "absl/memory/memory.h"
@@ -232,3 +234,5 @@ absl::StatusOr<std::unique_ptr<void* []>> MakeBatchPointers(
 
 }  // namespace XLA_GPU_NAMESPACE
 }  // namespace torch_xla
+
+#endif  // XLA_CUDA

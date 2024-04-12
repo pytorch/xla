@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef TORCH_XLA_CSRC_GPU_KERNEL_HELPERS_H_
 #define TORCH_XLA_CSRC_GPU_KERNEL_HELPERS_H_
 
+#ifdef XLA_CUDA
+
 #include <memory>
 
 #include "absl/base/optimization.h"
@@ -78,5 +80,7 @@ absl::StatusOr<std::unique_ptr<void*[]>> MakeBatchPointers(gpuStream_t stream,
 
 }  // namespace XLA_GPU_NAMESPACE
 }  // namespace torch_xla
+
+#endif  // XLA_CUDA
 
 #endif  // TORCH_XLA_CSRC_GPU_KERNEL_HELPERS_H_

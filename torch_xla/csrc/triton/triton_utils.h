@@ -1,6 +1,8 @@
 #ifndef TORCH_XLA_CSRC_TRITON_UTILS_H_
 #define TORCH_XLA_CSRC_TRITON_UTILS_H_
 
+#ifdef XLA_CUDA
+
 #include <string>
 
 #include "absl/status/status.h"
@@ -16,5 +18,7 @@ absl::StatusOr<std::string> GetTritonKernelCallSerializedMetadata(
     absl::string_view opaque);
 
 }  // namespace torch_xla::XLA_GPU_NAMESPACE
+
+#endif  // XLA_CUDA
 
 #endif  // TORCH_XLA_CSRC_TRITON_UTILS_H_

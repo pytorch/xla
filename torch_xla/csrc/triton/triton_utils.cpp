@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/triton/triton_utils.h"
 
+#ifdef XLA_CUDA
+
 #include <zlib.h>
 
 #include <string>
@@ -53,3 +55,5 @@ absl::StatusOr<std::string> GetTritonKernelCallSerializedMetadata(
 }
 
 }  // namespace torch_xla::XLA_GPU_NAMESPACE
+
+#endif  // XLA_CUDA
