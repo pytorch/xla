@@ -52,6 +52,8 @@ def while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=None):
 
 def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   print("!!! arrive here too too !!!")
+  print("carried_inputs: ", carried_inputs)
+  print("additional_inputs: ", additional_inputs)
   # import pdb; pdb.set_trace()
   # untuple carried_inputs from while_loop
   carried_inputs = carried_inputs[0]
