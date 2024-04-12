@@ -14,7 +14,8 @@ class CustomSharding : public XlaNode {
   };
 
   // Make a custom call to Sharding.
-  CustomSharding(const torch::lazy::Value& input, const xla::Shape& output_shape, const Type& type);
+  CustomSharding(const torch::lazy::Value& input,
+                 const xla::Shape& output_shape, const Type& type);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 

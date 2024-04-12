@@ -1130,7 +1130,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
     self.assertEqual(xx.shape, (8, 4 // self.n_devices))
     self.assertIn(f'%custom-call.2 = f32[8,{4//self.n_devices}]{{1,0}}', hlo)
-    self.assertIn(f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
+    self.assertIn(
+        f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
 
     # It looks like XLA does't like only having manual sharding in the HLO.
@@ -1146,7 +1147,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
     self.assertEqual(xx.shape, (8, 4))
     self.assertIn(f'%custom-call.2 = f32[8,4]{{1,0}}', hlo)
-    self.assertIn(f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
+    self.assertIn(
+        f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
 
 

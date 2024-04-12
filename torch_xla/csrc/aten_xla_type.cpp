@@ -2503,7 +2503,8 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
   XLATensor::ShardingSpecPtr sharding = input_tensor->sharding_spec();
   if (sharding && sharding->sharding.type() != xla::OpSharding::UNKNOWN) {
     tensor_methods::custom_sharding_(output_tensor,
-                                     input_tensor->sharding_spec(), CustomSharding::Type::kSharding);
+                                     input_tensor->sharding_spec(),
+                                     CustomSharding::Type::kSharding);
   }
 }
 
