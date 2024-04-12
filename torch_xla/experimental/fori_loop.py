@@ -84,6 +84,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
   # TODO(@manfei): treat and pass additional_inputs to body_fn too
   for i in range(len(additional_inputs)):
     additional_inputs_list.append(additional_inputs[i])
+  print("len!!!: ", len(additional_inputs_list))
   body_ctx.buildforiloop(list(body_result), additional_inputs_list)
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
