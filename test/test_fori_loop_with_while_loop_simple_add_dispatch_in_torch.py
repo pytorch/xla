@@ -114,6 +114,7 @@ class WhileLoopTest(unittest.TestCase):
       bias = body_fun.bias
       return upper, new_lower, one_value, torch.add(one_value, x), *input_value, weight, bias, output_value
 
+    print("!!! arrive here !!!")
     upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = 
       while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value))
 
