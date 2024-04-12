@@ -116,7 +116,7 @@ class WhileLoopTest(unittest.TestCase):
 
     print("!!! arrive here !!!")
     upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = while_loop(
-      cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value))
+      cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, weight_0, output_value, bias_0))
 
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
 
