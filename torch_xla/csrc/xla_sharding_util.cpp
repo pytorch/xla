@@ -794,7 +794,7 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
   if (xtensor->CurrentIrValue()) {
     device_data_node = DeviceData::Cast(xtensor->CurrentIrValue().node.get());
     if (!device_data_node) {
-      tensor_methods::custom_sharding_(xtensor, new_sharding_spec);
+      tensor_methods::custom_sharding_(xtensor, new_sharding_spec, CustomSharding::Type::kCustomSharding);
       return;
     }
   }

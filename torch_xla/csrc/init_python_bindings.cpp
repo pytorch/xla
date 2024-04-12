@@ -182,6 +182,11 @@ std::vector<XLATensorPtr> GetXlaTensors(const std::vector<at::Tensor>& tensors,
   return xtensors;
 }
 
+bool IsIr(const at::Tensor& tensor) {
+  XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+  return xtensor->CurrentIrValue() && !DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+}
+
 std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   std::vector<std::vector<int64_t>> replica_groups;
   for (auto& group : groups) {
@@ -1941,14 +1946,20 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_mark_manual_sharding", [](const at::Tensor& input,
                                     xla::OpSharding sharding) {
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    bool is_ir = xtensor->CurrentIrValue();
-    if (is_ir) {
-      is_ir = !DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-    }
-    XLA_CHECK(is_ir) << "Marking any data tensors as manual is not supported";
-
+    XLA_CHECK(IsIr(input)) << "Marking any data tensors as manual is not supported";
     ShardingUtil::XlaMarkSharding(input, sharding);
+  });
+  m.def("_mark_custom_sharding", [](const at::Tensor& input,
+                                    xla::OpSharding sharding, int type) {
+    XLA_CHECK(IsIr(input)) << "Marking any data tensors as manual is not supported";
+
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    XLATensor::ShardingSpecPtr new_sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(
+          sharding, MakeShapeWithDeviceLayout(
+                        xtensor->shape(), static_cast<XlaDeviceType>(
+                                              xtensor->GetDevice().type())));
+    tensor_methods::custom_sharding_(xtensor, new_sharding_spec, static_cast<CustomSharding::Type>(type));
   });
   m.def("_xla_mark_sharding_dynamo_custom_op",
         [](const at::Tensor& input, const py::list& tile_assignment,

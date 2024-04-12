@@ -2,6 +2,7 @@
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
 #include "torch_xla/csrc/cross_replica_reduces.h"
+#include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 
@@ -80,7 +81,7 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
 void custom_sharding_(const XLATensorPtr& input,
-                      const std::shared_ptr<XLATensor::ShardingSpec>& spec);
+                      const std::shared_ptr<XLATensor::ShardingSpec>& spec, const CustomSharding::Type& type);
 
 std::vector<XLATensorPtr> tpu_custom_call(
     const std::vector<XLATensorPtr>& inputs, const std::string& payload,
