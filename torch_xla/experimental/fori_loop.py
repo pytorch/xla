@@ -50,7 +50,7 @@ def while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=None):
   return _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=additional_inputs) #  a=a, b=b, c=c,
 
 
-def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
+def _xla_while_loop(cond_fn, body_fn, *carried_inputs, *additional_inputs):
   print("!!! arrive here too too !!!")
   # untuple carried_inputs from while_loop
   carried_inputs = carried_inputs[0]
@@ -62,11 +62,18 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
     fake_carried_inputs.append(
         torch.randint(10, carried_input.size(),
                       dtype=carried_input.dtype).to(device))
+  # fake_carried_inputs = tuple(fake_carried_inputs)
+  for additional_input in additional_inputs:
+    device = additional_input.device
+    #TODO(@manfei) type = carried_input.type
+    fake_carried_inputs.append(
+        torch.randint(10, additional_input.size(),
+                      dtype=additional_input.dtype).to(device))
   fake_carried_inputs = tuple(fake_carried_inputs)
 
   # generate cond_fn xlacomputation
   # TODO(@manfei): specify which element is for which argument like a,b,c
-  cond_result = cond_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-3], output_value=fake_carried_inputs[-2], bias_0=fake_carried_inputs[-1])
+  cond_result = cond_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-2], output_value=fake_carried_inputs[-3], bias_0=fake_carried_inputs[-1])
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
   additional_inputs_list_cond = list(fake_carried_inputs[2:]) # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
@@ -79,7 +86,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
                                                       cond_hlo)
 
   # generate body_fn xlacomputation
-  body_result = body_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-3], output_value=fake_carried_inputs[-2], bias_0=fake_carried_inputs[-1])
+  body_result = body_fn(*fake_carried_inputs[:-3], weight_0=fake_carried_inputs[-2], output_value=fake_carried_inputs[-3], bias_0=fake_carried_inputs[-1])
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
   additional_inputs_list_body = [fake_carried_inputs[-2]] # missed arguments due to given output_value was not used and PyTorch/XLA trace xlacomputation from output tensor

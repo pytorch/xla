@@ -87,6 +87,39 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+# //////
+#     class SimpleWithLinear(torch.nn.Module):
+#         def __init__(self):
+#             super().__init__()
+#             self.linear = torch.nn.Linear(2, 2)
+#             self.register_buffer("dec", torch.tensor(1))
+
+#         def forward(self, iter, x):
+#             def cond_fn(it, x):
+#                 return it - self.dec > 0
+
+#             def body_fn(it, x):
+#                 return it - 1, self.linear(x)
+#             return while_loop(cond_fn, body_fn, (iter, x))
+
+#     class NestedWithLinear(torch.nn.Module):
+#             return while_loop(cond_fn, body_fn, (iter, x))
+
+#     nested2 = Nested()
+#     simple_with_linear = SimpleWithLinear()
+#     nested_with_linear = NestedWithLinear()
+
+#     x = torch.zeros(1)
+#     y = torch.zeros(1)
+#     z = torch.zeros(1)
+#     return {"simple": (simple, (x,)),
+#             "nested": (nested, (x, y, z)),
+#             "nested2": (nested2, (torch.tensor(2), torch.tensor(2), torch.ones(2, 2), torch.ones(2, 2))),
+#             "simple_with_mutation": (simple_with_mutation, (x,)),
+#             "simple_with_linear": (simple_with_linear, (torch.tensor(3), torch.randn(2, 2))),
+#             "nested_with_linear": (nested_with_linear, (torch.tensor(3), torch.randn(2, 2)))}
+# //////
+
   def test_while_loop_tpu_simple_linear(self):
 
     xm.mark_step()
@@ -104,10 +137,11 @@ class WhileLoopTest(unittest.TestCase):
     weight_0 = linear_0.weight
     bias_0 = linear_0.bias
 
-    def cond_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
+    # def cond_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
+    def cond_fn(upper, lower, one_value, x, input_value, output_value):
       return lower[0] < upper[0]
 
-    def body_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
+    def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
       output_value = linear_0(input_value)
       weight = linear_0.weight
