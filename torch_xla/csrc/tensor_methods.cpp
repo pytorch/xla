@@ -529,7 +529,6 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
-
 void gpu_custom_call_(XLATensorPtr& output,
                       const std::vector<XLATensorPtr>& inputs,
                       const std::string& payload) {

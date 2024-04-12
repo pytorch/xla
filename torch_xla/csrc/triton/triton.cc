@@ -5,20 +5,20 @@
 #include <tuple>
 #include <vector>
 
+#include "absl/status/statusor.h"
 #include "nanobind/nanobind.h"
 #include "nanobind/stl/pair.h"
 #include "nanobind/stl/string.h"
 #include "nanobind/stl/string_view.h"
 #include "nanobind/stl/tuple.h"
 #include "nanobind/stl/vector.h"
-#include "absl/status/statusor.h"
 #include "torch_xla/csrc/triton/absl_status_casters.h"
 #include "torch_xla/csrc/triton/gpu_kernel_helpers.h"
+#include "torch_xla/csrc/triton/gpu_vendor.h"
+#include "torch_xla/csrc/triton/kernel_nanobind_helpers.h"
 #include "torch_xla/csrc/triton/triton.pb.h"
 #include "torch_xla/csrc/triton/triton_kernels.h"
 #include "torch_xla/csrc/triton/triton_utils.h"
-#include "torch_xla/csrc/triton/gpu_vendor.h"
-#include "torch_xla/csrc/triton/kernel_nanobind_helpers.h"
 
 #define GPU_RETURN_IF_ERROR(expr) JAX_RETURN_IF_ERROR(JAX_AS_STATUS(expr))
 
@@ -133,14 +133,13 @@ NB_MODULE(_triton, m) {
         }));
 
   m.def("get_serialized_metadata",
-        ValueOrThrowWrapper(
-            [](nb::bytes opaque) -> absl::StatusOr<nb::bytes> {
-              JAX_ASSIGN_OR_RETURN(
-                  std::string metadata,
-                  GetTritonKernelCallSerializedMetadata(
-                      absl::string_view(opaque.c_str(), opaque.size())));
-              return nb::bytes(metadata.c_str(), metadata.size());
-            }));
+        ValueOrThrowWrapper([](nb::bytes opaque) -> absl::StatusOr<nb::bytes> {
+          JAX_ASSIGN_OR_RETURN(
+              std::string metadata,
+              GetTritonKernelCallSerializedMetadata(
+                  absl::string_view(opaque.c_str(), opaque.size())));
+          return nb::bytes(metadata.c_str(), metadata.size());
+        }));
 }
 
 }  // namespace torch_xla::XLA_GPU_NAMESPACE
