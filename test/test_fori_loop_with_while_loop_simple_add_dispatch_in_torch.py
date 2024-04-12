@@ -125,7 +125,7 @@ class WhileLoopTest(unittest.TestCase):
     bias_0 = linear_0.bias
 
     aaa = {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
-    upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = aaa
+    # upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = aaa
     print("aaa: ", aaa)
     # print("start test 6 !!!")
     return aaa
