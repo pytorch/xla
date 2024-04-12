@@ -973,6 +973,8 @@ class PyLoweringContext {
       xla::ProgramShape program_shape =
           ConsumeValue(computation.GetProgramShape());
       // // hard-code modify body xlacomputation input arguments
+      // // xxx: failed due to not change body_xlacomputation, might becase has been traced
+      // // xxx: after `computation = ConsumeValue(lowering_ctx.BuildXla());`
       // if (GetNameString() == "bodyctx") {
       //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
       //   int64_t parameter_idx = program_shape.parameters_size(); // tensors.size();
