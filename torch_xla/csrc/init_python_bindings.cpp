@@ -1949,17 +1949,18 @@ void InitXlaModuleBindings(py::module m) {
     XLA_CHECK(IsIr(input)) << "Marking any data tensors as manual is not supported";
     ShardingUtil::XlaMarkSharding(input, sharding);
   });
-  m.def("_mark_custom_sharding", [](const at::Tensor& input,
-                                    xla::OpSharding sharding, int type) {
-    XLA_CHECK(IsIr(input)) << "Marking any data tensors as manual is not supported";
-
+  m.def("_spmd_full_to_shard_shape", [](const at::Tensor& input) -> at::Tensor {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    XLATensor::ShardingSpecPtr new_sharding_spec =
-      std::make_shared<XLATensor::ShardingSpec>(
-          sharding, MakeShapeWithDeviceLayout(
-                        xtensor->shape(), static_cast<XlaDeviceType>(
-                                              xtensor->GetDevice().type())));
-    tensor_methods::custom_sharding_(xtensor, new_sharding_spec, static_cast<CustomSharding::Type>(type));
+    auto sharding_spec = xtensor->sharding_spec();
+    XLA_CHECK(sharding_spec != nullptr)
+        << "Input tensor is not sharded";
+
+    auto shard_shape = xla::ShapeUtil::MakeShape(
+        MakeXlaPrimitiveType(xtensor->dtype(), &(xtensor->GetDevice())), ShardingUtil::GetShardShape(sharding_spec));
+    auto output = xtensor->CreateFrom(torch::lazy::MakeNode<CustomSharding>(
+        xtensor->GetIrValue(), shard_shape, CustomSharding::Type::kSPMDFullToShardShape));
+    output->SetShardingSpec(XLATensor::ShardingSpec(xla::HloSharding::Manual().ToProto(), shard_shape));
+    return bridge::AtenFromXlaTensor(output);
   });
   m.def("_xla_mark_sharding_dynamo_custom_op",
         [](const at::Tensor& input, const py::list& tile_assignment,

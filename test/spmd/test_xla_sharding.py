@@ -1118,6 +1118,36 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # The following exception cannot be caught somehow.
     # xt.global_tensor.cpu()
 
+  def test_spmd_full_to_shard_shape(self):
+    x = torch.zeros(8, 4).to(xm.xla_device())
+    with self.assertRaises(RuntimeError):
+      x = torch_xla._XLAC._spmd_full_to_shard_shape(x)
+
+    # Sharded shape
+    xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), (0, 1))
+    xx = torch_xla._XLAC._spmd_full_to_shard_shape(xt.global_tensor)
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
+    self.assertEqual(xx.shape, (8, 4 // self.n_devices))
+    self.assertIn(f'%custom-call.2 = f32[8,{4//self.n_devices}]{{1,0}}', hlo)
+    self.assertIn(f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
+
+    # It looks like XLA does't like only having manual sharding in the HLO.
+    # It needs to be paired with SPMDFullToShardShape/SPMDShardToFullShape.
+    # The following exception cannot be caught somehow.
+    # xx.cpu()
+
+    # Replicated shape
+    xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), (None, None))
+    xx = torch_xla._XLAC._spmd_full_to_shard_shape(xt.global_tensor)
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
+    self.assertEqual(xx.shape, (8, 4))
+    self.assertIn(f'%custom-call.2 = f32[8,4]{{1,0}}', hlo)
+    self.assertIn(f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
+
 
 if __name__ == '__main__':
   test = unittest.main()

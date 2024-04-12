@@ -1266,9 +1266,9 @@ xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
   return output;
 }
 
-xla::XlaOp BuildCustomSharding(const xla::XlaOp& input, const std::string& type) {
+xla::XlaOp BuildCustomSharding(const xla::XlaOp& input, const std::string& type, const xla::Shape& output_shape) {
   return xla::CustomCall(input.builder(), /*call_target_name=*/type,
-                         {input}, ShapeHelper::ShapeOfXlaOp(input));
+                         {input}, output_shape);
 }
 
 std::vector<xla::XlaOp> BuildTpuCustomCall(

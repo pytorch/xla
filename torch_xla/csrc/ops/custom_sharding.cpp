@@ -30,7 +30,7 @@ torch::lazy::NodePtr CustomSharding::Clone(torch::lazy::OpList operands) const {
 
 XlaOpVector CustomSharding::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp output = BuildCustomSharding(input, TypeToString(type));
+  xla::XlaOp output = BuildCustomSharding(input, TypeToString(type), output_shape);
   return ReturnOp(output, loctx);
 }
 
