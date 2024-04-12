@@ -11,13 +11,22 @@
   environment: "{{ env_vars }}"
   when: accelerator == "cuda"
 
-- name: Find plugin *.whl files in pytorch/xla/dist
+- name: Find CUDA plugin wheel pytorch/xla/dist
   ansible.builtin.find:
     path: "/dist"
     pattern: "torch_xla_cuda_plugin*.whl"
+  when: accelerator == "cuda"
   register: plugin_wheels
 
-- name: Install plugin wheels
+- name: Install CUDA plugin wheels
   ansible.builtin.pip:
     name: "{{ plugin_wheels.files | map(attribute='path') }}"
     state: "forcereinstall"
+  when: accelerator == "cuda"
+
+# TODO: Pass libtpu to next release stage somehow. This only runs during build
+- name: Install libtpu
+  ansible.builtin.pip:
+    name: torch_xla[tpu]
+    extra_args: -f https://storage.googleapis.com/libtpu-releases/index.html
+  when: accelerator == "tpuvm"
