@@ -128,8 +128,11 @@ class WhileLoopTest(unittest.TestCase):
     weight_0 = linear_0.weight
     bias_0 = linear_0.bias
 
+    print("start test 4 !!!")
+
     # return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
-    return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
+    # return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
+    print("start test 5 !!!")
     res = simple_with_linear.apply(upper, lower, one_value, init_val, l_in_0, output_value)
     print("res: ", res)
     import pdb; pdb.set_trace()
