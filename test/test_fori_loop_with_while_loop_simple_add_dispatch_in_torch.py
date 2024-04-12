@@ -95,10 +95,10 @@ class WhileLoopTest(unittest.TestCase):
 
     upper = torch.tensor([52], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
-    init_val = torch.tensor([1], dtype=torch.int32, device=device)
-    l_in_0 = torch.randn(10, device=xm.xla_device())
-    output_value = torch.zeros([20], dtype=torch.float32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device) # x
+    l_in_0 = torch.randn(10, device=xm.xla_device()) # input_value
+    output_value = torch.zeros([20], dtype=torch.float32, device=device)
 
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
     weight_0 = linear_0.weight
@@ -114,7 +114,7 @@ class WhileLoopTest(unittest.TestCase):
       bias = body_fun.bias
       return upper, new_lower, one_value, torch.add(one_value, x), *input_value, weight, bias, output_value
 
-    upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_=  = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, *input_value, weight_0, bias_0, output_value))
+    upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value))
 
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
 
