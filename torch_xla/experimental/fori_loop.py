@@ -69,7 +69,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
   cond_ctx.set_name_string("condctx")
   additional_inputs_list = list(fake_carried_inputs[2:])
   for i in range(len(additional_inputs)):
-    additional_inputs_list.append(additional_inputs[0])
+    additional_inputs_list.append(additional_inputs[i])
   cond_ctx.buildforiloop([cond_result], additional_inputs_list)
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
