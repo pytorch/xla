@@ -161,6 +161,7 @@ class WhileLoopTest(unittest.TestCase):
     return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
     res = simple_with_linear.apply(upper, lower, one_value, init_val, l_in_0, output_value)
     print("res: ", res)
+    import pdb; pdb.set_trace()
 
 #     x = torch.zeros(1)
 #     y = torch.zeros(1)
