@@ -108,9 +108,9 @@ class WhileLoopTest(unittest.TestCase):
 
             def body_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
                 new_lower = torch.add(one_value, lower)
-                output_value_real = linear_0(input_value)
-                weight = linear_0.weight
-                bias = linear_0.bias
+                output_value_real = self.linear(input_value)
+                weight = self.linear.weight
+                bias = self.linear.bias
                 # new_upper = upper
                 # new_one_value = one_value
                 # new_input_value = input_value
@@ -120,7 +120,7 @@ class WhileLoopTest(unittest.TestCase):
             # return while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
             # return 1
             # return upper, lower, one_value, x, input_value, output_value
-            return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, weight_0, bias_0, output_value), (weight_1, bias_1))
+            return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, weight_0, bias_0, output_value))
             # return _xla_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
     simple_with_linear = SimpleWithLinear()
