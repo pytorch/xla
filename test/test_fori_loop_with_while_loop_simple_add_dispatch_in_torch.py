@@ -132,15 +132,15 @@ class WhileLoopTest(unittest.TestCase):
     l_in_0 = torch.ones(10, device=xm.xla_device()) # input_value
     output_value = torch.zeros([20], dtype=torch.float32, device=device)
 
-    linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-    weight_0 = linear_0.weight
-    bias_0 = linear_0.bias
+    # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+    weight_0 = simple_with_linear.linear.weight
+    bias_0 = simple_with_linear.linear.bias
 
     aaa = {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
     # upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = aaa
     # print("aaa: ", aaa)
     # bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, output_value)
-    bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value)
+    bbb = simple_with_linear((upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value), (weight_0, bias_0))
     print("bbb: ", bbb)
     # print("start test 6 !!!")
     return aaa
