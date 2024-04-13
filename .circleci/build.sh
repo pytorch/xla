@@ -42,7 +42,7 @@ apply_patches
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
 export USE_CUDA=1
-export TORCH_CUDA_ARCH_LIST="compute_86"
+export TORCH_CUDA_ARCH_LIST="8.6"
 python setup.py install
 
 sccache --show-stats
