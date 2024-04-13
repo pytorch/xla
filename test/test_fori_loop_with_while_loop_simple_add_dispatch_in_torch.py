@@ -100,7 +100,10 @@ class WhileLoopTest(unittest.TestCase):
             self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
             # self.register_buffer("dec", torch.tensor(1))
 
-        def forward(self, upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
+        def forward(self, upper, lower, one_value, x, input_value, output_value):
+            weight_0 = linear_0.weight
+            bias_0 = linear_0.bias
+
             def cond_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
                 return lower[0] < upper[0]
 
