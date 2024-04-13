@@ -207,6 +207,7 @@ function run_xla_op_tests2 {
 function run_xla_op_tests3 {
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
+  run_test "$CDIR/test_triton.py"
   run_test "$CDIR/stablehlo/test_exports.py"
   run_test "$CDIR/stablehlo/test_export_fx_passes.py"
   run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
@@ -235,7 +236,6 @@ function run_xla_op_tests3 {
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
   run_test "$CDIR/test_pallas.py"
-  run_test "$CDIR/test_triton.py"
 
   # CUDA tests
   if [ -x "$(command -v nvidia-smi)" ]; then
