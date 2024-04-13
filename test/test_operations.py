@@ -53,6 +53,7 @@ DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 XLA_DISABLE_FUNCTIONALIZATION = bool(
     os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', False))
 
+
 def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
@@ -1974,6 +1975,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     for dtype in test_dtypes:
       test(dtype)
+
 
 class MNISTComparator(nn.Module):
 
