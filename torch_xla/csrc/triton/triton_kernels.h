@@ -119,4 +119,3 @@ class AutotunedKernelCall {
 #endif  // XLA_CUDA
 
 #endif  // TORCH_XLA_CSRC_TRITON_H_
-
