@@ -14,7 +14,7 @@ on:
         required: false
         type: string
         description: Runner type for the test
-        default: linux.12xlarge
+        default: linux.24xlarge
       cuda:
         required: false
         type: string
