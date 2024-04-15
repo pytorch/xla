@@ -100,8 +100,8 @@ class WhileLoopTest(unittest.TestCase):
             self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
             # self.register_buffer("dec", torch.tensor(1))
 
-        # def forward(self, upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
-        def forward(self, upper, lower, one_value, x, input_value, output_value):
+        def forward(self, upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
+        # def forward(self, upper, lower, one_value, x, input_value, output_value):
             weight_1 = self.linear.weight
             bias_1 = self.linear.bias
             def cond_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
@@ -141,7 +141,8 @@ class WhileLoopTest(unittest.TestCase):
     # upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = aaa
     # print("aaa: ", aaa)
     # bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, output_value)
-    bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value) # , weight_0, bias_0)
+    # bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value) # , weight_0, bias_0)
+    bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, output_value)
     print("bbb: ", bbb)
     # print("start test 6 !!!")
     return aaa
