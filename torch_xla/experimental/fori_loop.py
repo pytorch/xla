@@ -98,11 +98,11 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   additional_inputs_list_cond = list(fake_carried_inputs[2:]) # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
 
   tmp_bias = additional_inputs_list_cond[-2] # not used, change order doesn't affect logic
-  tmp_output_value = additional_inputs_list_cond[-3] # not used, change order doesn't affect logic
-  del additional_inputs_list_cond[-3] # not used, change order doesn't affect logic
+  # tmp_output_value = additional_inputs_list_cond[-3] # not used, change order doesn't affect logic
+  # del additional_inputs_list_cond[-3] # not used, change order doesn't affect logic
   del additional_inputs_list_cond[-2] # not used, change order doesn't affect logic
   additional_inputs_list_cond.append(tmp_bias) # not used, change order doesn't affect logic
-  additional_inputs_list_cond.append(tmp_output_value) # not used, change order doesn't affect logic
+  # additional_inputs_list_cond.append(tmp_output_value) # not used, change order doesn't affect logic
 
   # treat and pass additional_inputs to cond_fn
   print("additional_inputs_list_cond one: ", additional_inputs_list_cond)
@@ -148,11 +148,12 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   for shape in shapes:
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
-  # tmp_bias = params[-2]
+
+  tmp_bias = params[-2]
   # tmp_output_value = params[-3]
   # del params[-3]
-  # del params[-2]
-  # params.append(tmp_bias)
+  del params[-2]
+  params.append(tmp_bias)
   # params.append(tmp_output_value)
 
   print("args params: ", params)
