@@ -53,8 +53,3 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /dist/*.whl
-      - name: Upload workspace
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-workspace
-          path: ${{ github.workspace }}/pytorch
