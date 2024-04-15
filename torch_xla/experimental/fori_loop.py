@@ -40,7 +40,7 @@ def fori_loop(upper, lower, body_fun, init_val, *input_value):
 
 
 @while_loop_op.py_impl(DispatchKey.XLA)
-def while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=None):
+def while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs):
   # TODO(@manfei): PyTorch require carried_inputs to be list/tuple, PyTorch/XLA _xla_while_loop only accept *operands, *operands would tuple items again: (a, '')
   # cond_fn&body_fn: callable
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
