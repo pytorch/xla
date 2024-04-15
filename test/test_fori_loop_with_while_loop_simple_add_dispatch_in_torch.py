@@ -170,7 +170,8 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
     print("expected: ", expected)
 
-    return self.assertTrue(torch.all(torch.eq(expected, l_out_)))
+    self.assertTrue(torch.all(torch.eq(expected, l_out_)))
+    return aaa
     # res = simple_with_linear.apply((upper, lower, one_value, init_val, l_in_0, output_value))
     # print("res: ", res)
     # import pdb; pdb.set_trace()
