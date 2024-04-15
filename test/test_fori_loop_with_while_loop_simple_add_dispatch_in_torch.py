@@ -92,7 +92,7 @@ class WhileLoopTest(unittest.TestCase):
 
     xm.mark_step()
     device = xm.xla_device()
-    # torch.set_grad_enabled(False)
+    torch.set_grad_enabled(False)
 
     class SimpleWithLinear(torch.nn.Module):
         def __init__(self):
