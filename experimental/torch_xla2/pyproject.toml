@@ -23,8 +23,8 @@ dependencies = [
     # "torch",
 ]
 
-[tool.pytest.ini_options]
-addopts="-n auto"
-
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
+
+[tool.pytest.ini_options]
+addopts="-n auto"

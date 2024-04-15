@@ -35,7 +35,7 @@ source my_venv/bin/activate
 #### 1.1 Install torch CPU, even if your device has GPU or TPU:
 
 ```bash
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 ```
 
 Or, follow official instructions in [pytorch.org](https://pytorch.org/get-started/locally/) to install for your OS.
