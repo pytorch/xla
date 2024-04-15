@@ -136,14 +136,9 @@ class WhileLoopTest(unittest.TestCase):
     linear_0.bias.data = bias__
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
     print("expected: ", expected)
-    # print("l_in_0: ", l_in_0)
 
-    self.assertTrue(torch.all(torch.eq(expected, l_in_0)))
+    self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
     return aaa
-    # res = simple_with_linear.apply((upper, lower, one_value, init_val, l_in_0, output_value))
-    # print("res: ", res)
-    # import pdb; pdb.set_trace()
-    # return {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
 
   def test_fori_loop_tpu_addition(self):
 
