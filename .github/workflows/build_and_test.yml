@@ -70,7 +70,7 @@ jobs:
   
   test-triton:
     name: "Triton tests"
-    uses: .github/workflows/_triton.yml
+    uses: ./.github/workflows/_triton.yml
     needs: build
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
