@@ -63,6 +63,11 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   # if len(original_carried_inputs) == 2:
   #   print("use original_carried_inputs for additional_inputs")
   #   additional_inputs = original_carried_inputs[1]
+
+  # exchange order of bias and weight in additional_inputs
+  (bias_p, weight_p) = additional_inputs
+  additional_inputs = (weight_p, bias_p)
+
   # fake carried_inputs to split formal code
   fake_carried_inputs = []
   for carried_input in carried_inputs:
