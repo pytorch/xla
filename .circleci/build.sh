@@ -42,7 +42,7 @@ apply_patches
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
 export USE_CUDA=1
-export TORCH_CUDA_ARCH_LIST="8.6"
+export TORCH_CUDA_ARCH_LIST="8.6,$TORCH_CUDA_ARCH_LIST"
 python setup.py install
 
 sccache --show-stats
@@ -51,7 +51,7 @@ source $XLA_DIR/xla_env
 export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
 export SILO_NAME='cache-silo-ci-dev-3.8_cuda_12.1'  # cache bucket for CI
 export BUILD_CPP_TESTS='1'
-export TF_CUDA_COMPUTE_CAPABILITIES="compute_86,$TF_CUDA_COMPUTE_CAPABILITIES"
+export TF_CUDA_COMPUTE_CAPABILITIES="sm_50,sm_70,sm_75,compute_80,compute_86,$TF_CUDA_COMPUTE_CAPABILITIES"
 build_torch_xla $XLA_DIR
 
 popd
