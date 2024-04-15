@@ -122,6 +122,8 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   print("!!! arrive here too after body !!!")
 
   print("!!! arrive here too before args!!!")
+  total_inputs = carried_inputs + additional_inputs
+  print("total_inputs: ", total_inputs)
   # trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
   kwargs = {}
   if type(carried_inputs) is tuple:
