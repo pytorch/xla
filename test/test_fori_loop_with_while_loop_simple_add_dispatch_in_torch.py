@@ -142,7 +142,7 @@ class WhileLoopTest(unittest.TestCase):
     # print("aaa: ", aaa)
     # bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, output_value)
     # bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value) # , weight_0, bias_0)
-    bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, output_value)
+    bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value)
     print("bbb: ", bbb)
     # print("start test 6 !!!")
     return aaa
