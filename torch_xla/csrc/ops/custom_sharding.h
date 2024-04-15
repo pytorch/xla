@@ -7,6 +7,9 @@ namespace torch_xla {
 
 class CustomSharding : public XlaNode {
  public:
+  // The following enum represents the custom_call_target being
+  // passed to xla builder. The actual sharding will still be
+  // attached to the XLATensor.
   enum class Type {
     kSharding,
     kSPMDFullToShardShape,

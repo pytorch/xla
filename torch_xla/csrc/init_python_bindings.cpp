@@ -182,7 +182,7 @@ std::vector<XLATensorPtr> GetXlaTensors(const std::vector<at::Tensor>& tensors,
   return xtensors;
 }
 
-bool IsIr(const at::Tensor& tensor) {
+bool IsNonDeviceDataIR(const at::Tensor& tensor) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
   return xtensor->CurrentIrValue() &&
          !DeviceData::Cast(xtensor->CurrentIrValue().node.get());
@@ -1947,7 +1947,7 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_mark_manual_sharding",
         [](const at::Tensor& input, xla::OpSharding sharding) {
-          XLA_CHECK(IsIr(input))
+          XLA_CHECK(IsNonDeviceDataIR(input))
               << "Marking any data tensors as manual is not supported";
           ShardingUtil::XlaMarkSharding(input, sharding);
         });
