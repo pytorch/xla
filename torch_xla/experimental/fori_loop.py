@@ -44,7 +44,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs):
   # TODO(@manfei): PyTorch require carried_inputs to be list/tuple, PyTorch/XLA _xla_while_loop only accept *operands, *operands would tuple items again: (a, '')
   # cond_fn&body_fn: callable
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
-  print("!!! arrive here too !!!")
+  print("!!! arrive here @while_loop_op.py_impl(DispatchKey.XLA) !!!")
   # print("while_loop additional_inputs: ", additional_inputs)
   if additional_inputs is None:
     additional_inputs = tuple()
@@ -52,7 +52,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs):
 
 
 def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
-  print("!!! arrive here too too !!!")
+  print("!!! arrive here def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()): !!!")
   # print("original_carried_inputs: ", original_carried_inputs)
   # print("additional_inputs: ", additional_inputs)
   # import pdb; pdb.set_trace()
@@ -72,7 +72,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
         torch.randint(10, carried_input.size(),
                       dtype=carried_input.dtype).to(device))
   # fake_carried_inputs = tuple(fake_carried_inputs)
-  print("fake_carried_inputs first: ", fake_carried_inputs)
+  # print("fake_carried_inputs first: ", fake_carried_inputs)
   for additional_input in additional_inputs:
     device = additional_input.device
     #TODO(@manfei) type = carried_input.type
@@ -80,14 +80,14 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
         torch.randint(10, additional_input.size(),
                       dtype=additional_input.dtype).to(device))
   # fake_carried_inputs = tuple(fake_carried_inputs)
-  print("fake_carried_inputs second: ", fake_carried_inputs)
+  # print("fake_carried_inputs second: ", fake_carried_inputs)
 
   print("!!! arrive here too before cond !!!")
   # generate cond_fn xlacomputation
-  print("print fake_carried_inputs: ", fake_carried_inputs)
+  # print("print fake_carried_inputs: ", fake_carried_inputs)
   # TODO(@manfei): specify which element is for which argument like a,b,c
   cond_result = cond_fn(*fake_carried_inputs) # [:-3], weight_0=fake_carried_inputs[-2], output_value=fake_carried_inputs[-3], bias_0=fake_carried_inputs[-1])
-  print("nnn here ???")
+  # print("nnn here ???")
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
   additional_inputs_list_cond = list(fake_carried_inputs[2:]) # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
@@ -135,6 +135,13 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   for shape in shapes:
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
+  tmp_bias = params[-2]
+  tmp_output_value = params[-3]
+  del params[-3]
+  del params[-2]
+  params.append(tmp_bias)
+  params.append(tmp_output_value)
+
   print("args params: ", params)
   print("!!! arrive here too after args!!!")
 
