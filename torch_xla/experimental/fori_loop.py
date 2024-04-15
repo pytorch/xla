@@ -173,7 +173,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
 
   # gain final result with generated while xlacomputation
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
-                                                 (carried_inputs),
+                                                 (total_inputs), # (carried_inputs),
                                                  computation)
   print("!!! arrive here too after while!!!")
 
