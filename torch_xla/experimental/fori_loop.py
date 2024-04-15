@@ -97,12 +97,12 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   cond_ctx.set_name_string("condctx")
   additional_inputs_list_cond = list(fake_carried_inputs[2:]) # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
 
-  tmp_bias = additional_inputs_list_cond[-2]
-  tmp_output_value = additional_inputs_list_cond[-3]
-  del additional_inputs_list_cond[-3]
-  del additional_inputs_list_cond[-2]
-  additional_inputs_list_cond.append(tmp_bias)
-  additional_inputs_list_cond.append(tmp_output_value)
+  tmp_bias = additional_inputs_list_cond[-2] # not used, change order doesn't affect logic
+  tmp_output_value = additional_inputs_list_cond[-3] # not used, change order doesn't affect logic
+  del additional_inputs_list_cond[-3] # not used, change order doesn't affect logic
+  del additional_inputs_list_cond[-2] # not used, change order doesn't affect logic
+  additional_inputs_list_cond.append(tmp_bias) # not used, change order doesn't affect logic
+  additional_inputs_list_cond.append(tmp_output_value) # not used, change order doesn't affect logic
 
   # treat and pass additional_inputs to cond_fn
   print("additional_inputs_list_cond one: ", additional_inputs_list_cond)
