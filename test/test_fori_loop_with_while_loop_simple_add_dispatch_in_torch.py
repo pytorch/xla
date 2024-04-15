@@ -128,7 +128,6 @@ class WhileLoopTest(unittest.TestCase):
     linear_0.weight.data = weight__
     linear_0.bias.data = bias__
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
-    print("expected: ", expected)
 
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
     return aaa
