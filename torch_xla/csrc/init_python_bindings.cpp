@@ -925,26 +925,26 @@ class PyLoweringContext {
       // !!! --- next step: we add dump paras according to additional_inputs_list
       // ??? --- could we get IRvalue of `additional_inputs_list` in this function to complete xlacomputation?
       int64_t parameter_idx = 2; // parameter_idx start from 2 after upper and lower
-      // for (auto& additional_input_tensor : additional_inputs_list) {
-      //   XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
-      //   xla::Shape shape = xtensor->shape().get();
-      //   xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-      //                                 "UnusedArgumentsPlaceholder");
-      //   parameter_idx += 1;
-      // }
+      for (auto& additional_input_tensor : additional_inputs_list) {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
+        xla::Shape shape = xtensor->shape().get();
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameter_idx += 1;
+      }
     }
 
     // hard-code modify body xlacomputation input arguments
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       int64_t parameter_idx = 7; // tensors.size();
-      // for (auto& additional_input_tensor : additional_inputs_list) {
-      //   XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
-      //   xla::Shape shape = xtensor->shape().get();
-      //   xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-      //                                 "UnusedArgumentsPlaceholder");
-      //   parameter_idx += 1;
-      // }
+      for (auto& additional_input_tensor : additional_inputs_list) {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
+        xla::Shape shape = xtensor->shape().get();
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameter_idx += 1;
+      }
     }
 
     // Get the backing XLA tensors from the output torch tensor handles
