@@ -68,21 +68,30 @@ jobs:
         shell: bash
         run: |
           echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
-      - name: Checkout PyTorch Repo
-        uses: actions/checkout@v4
-        with:
-          repository: pytorch/pytorch
-          path: pytorch
-          # TODO: match commit to build step
-      - name: Checkout PyTorch/XLA Repo
-        uses: actions/checkout@v4
-        with:
-          path: pytorch/xla
+      # - name: Checkout PyTorch Repo
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: pytorch/pytorch
+      #     path: pytorch
+      #     # TODO: match commit to build step
+      # - name: Checkout PyTorch/XLA Repo
+      #   uses: actions/checkout@v4
+      #   with:
+      #     path: pytorch/xla
       - name: Fetch wheels
         uses: actions/download-artifact@v4
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
+      - name: Fetch build workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: build-workspace
+          path: ${{ github.workspace }}/pytorch
+      - name: ls
+        shell: bash
+        run: |
+          ls
       - name: Install wheels
         shell: bash
         run: |
