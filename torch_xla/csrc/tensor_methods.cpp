@@ -40,7 +40,6 @@
 #include "torch_xla/csrc/ops/count_nonzero.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
-#include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/ops/dequant_tensor.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
@@ -522,9 +521,10 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
 
 void custom_sharding_(
     const XLATensorPtr& input,
-    const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec) {
-  input->SetInPlaceIrValue(
-      torch::lazy::MakeNode<CustomSharding>(input->GetIrValue()));
+    const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec,
+    const CustomSharding::Type& type) {
+  input->SetInPlaceIrValue(torch::lazy::MakeNode<CustomSharding>(
+      input->GetIrValue(), input->shape().get(), type));
   input->SetShardingSpec(*sharding_spec);
 }
 
