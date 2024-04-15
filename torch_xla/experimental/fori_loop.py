@@ -107,7 +107,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   body_result = body_fn(*fake_carried_inputs) # [:-3], weight_0=fake_carried_inputs[-1], output_value=fake_carried_inputs[-3], bias_0=fake_carried_inputs[-2])
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
-  additional_inputs_list_body = [fake_carried_inputs[-2]] # missed arguments due to given output_value was not used and PyTorch/XLA trace xlacomputation from output tensor
+  additional_inputs_list_body = [fake_carried_inputs[-3]] # missed arguments due to given output_value was not used and PyTorch/XLA trace xlacomputation from output tensor
   # TODO(@manfei): treat and pass additional_inputs to body_fn too
   # print("list(fake_carried_inputs[-2]: ", fake_carried_inputs[-2])
   # print("len0!!!: ", len(additional_inputs_list_body))
