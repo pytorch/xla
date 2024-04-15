@@ -39,10 +39,14 @@ function run_make_tests {
 }
 
 function run_python_tests {
+  echo Working dir $PWD
+  # HACK: don't confuse local `torch_xla` folder with installed package
+  pushd $(mktemp -d)
   python3 "$CDIR/test_experiment_runner.py"
   python3 "$CDIR/test_benchmark_experiment.py"
   python3 "$CDIR/test_benchmark_model.py"
   python3 "$CDIR/test_result_analyzer.py"
+  popd
 }
 
 function run_tests {
