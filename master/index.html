@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git58a412c )
+                  master (2.4.0+gita7a1357 )
                 </div>
               
             
@@ -3169,8 +3169,8 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 <div class="section" id="check-environment-variable">
 <h3>Check environment variable<a class="headerlink" href="#check-environment-variable" title="Permalink to this headline">¶</a></h3>
 <p>Make sure <code class="docutils literal notranslate"><span class="pre">PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">LD_LIBRARY_PATH</span></code> environment variables account for cuda. Please do a <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$LD_LIBRARY_PATH</span></code> to verify. If not, please follow <a class="reference external" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#mandatory-actions">link</a> to do so. Example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">echo</span> <span class="s2">&quot;export PATH=/usr/local/cuda-12.1/bin${PATH:+:$</span><span class="si">{PATH}</span><span class="s2">}&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
-<span class="n">echo</span> <span class="s2">&quot;export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:$</span><span class="si">{LD_LIBRARY_PATH}</span><span class="s2">}&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">echo</span> <span class="s2">&quot;export PATH=\$PATH:/usr/local/cuda-12.1/bin&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
+<span class="n">echo</span> <span class="s2">&quot;export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
 <span class="n">source</span> <span class="o">~/.</span><span class="n">bashrc</span>
 </pre></div>
 </div>
