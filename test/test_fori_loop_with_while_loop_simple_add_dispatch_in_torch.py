@@ -100,20 +100,20 @@ class WhileLoopTest(unittest.TestCase):
             self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
             # self.register_buffer("dec", torch.tensor(1))
 
-        # def forward(self, upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
+        def forward(self, upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
         # def forward(self, upper, lower, one_value, x, input_value, output_value):
-        def forward(self, upper, lower, one_value, x, input_value, output_value, bias_0, weight_0):
+        # def forward(self, upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
             # weight_1 = self.linear.weight
             # bias_1 = self.linear.bias
 
-            # def cond_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
+            def cond_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
             # def cond_fn(upper, lower, one_value, x, input_value, weight_1, bias_1, output_value):
-            def cond_fn(upper, lower, one_value, x, input_value, output_value):
+            # def cond_fn(upper, lower, one_value, x, input_value, output_value):
                 return lower[0] < upper[0]
 
-            # def body_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
+            def body_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
             # def body_fn(upper, lower, one_value, x, input_value, weight_1, bias_1, output_value):
-            def body_fn(upper, lower, one_value, x, input_value, output_value):
+            # def body_fn(upper, lower, one_value, x, input_value, output_value):
                 new_lower = torch.add(one_value, lower)
                 output_value_real = self.linear(input_value)
                 weight = self.linear.weight
