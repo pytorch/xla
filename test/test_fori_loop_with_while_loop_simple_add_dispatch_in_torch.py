@@ -168,8 +168,8 @@ class WhileLoopTest(unittest.TestCase):
     # return aaa
 
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-    linear_0.weight_.data = weight__
-    linear_0.bias_.data = bias__
+    linear_0.weight.data = weight__
+    linear_0.bias.data = bias__
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
     print("expected: ", expected)
 
