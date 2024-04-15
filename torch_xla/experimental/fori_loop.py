@@ -133,7 +133,10 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   for shape in shapes:
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
+  print("args params: ", params)
+  print("!!! arrive here too after args!!!")
 
+  print("!!! arrive here too before while!!!")
   # generate while xlacomputation
   input_tuple = xb.Op.tuple(tuple(params))
   w = xb.mkop(
@@ -142,9 +145,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
       body_computation=body_computation)
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
-  print("!!! arrive here too after args!!!")
 
-  print("!!! arrive here too before while!!!")
   # gain final result with generated while xlacomputation
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
                                                  (carried_inputs),
