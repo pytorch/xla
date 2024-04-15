@@ -80,9 +80,10 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
-void custom_sharding_(const XLATensorPtr& input,
-                      const std::shared_ptr<XLATensor::ShardingSpec>& spec,
-                      const CustomSharding::Type& type = CustomSharding::Type::kSharding);
+void custom_sharding_(
+    const XLATensorPtr& input,
+    const std::shared_ptr<XLATensor::ShardingSpec>& spec,
+    const CustomSharding::Type& type = CustomSharding::Type::kSharding);
 
 std::vector<XLATensorPtr> tpu_custom_call(
     const std::vector<XLATensorPtr>& inputs, const std::string& payload,
