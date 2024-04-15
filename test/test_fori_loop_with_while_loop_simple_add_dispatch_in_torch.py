@@ -7,7 +7,6 @@ import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
 from torch_xla.experimental.fori_loop import fori_loop
-# from torch_xla.experimental.fori_loop import _xla_while_loop
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
@@ -24,7 +23,6 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
   if len(init_val) > 1:
     (a, b) = init_val
     for i in range((upper - lower)[0]):
-      # a = body_fun(a, b)
       a = body_fun(*init_val)
   else:
     for i in range((upper - lower)[0]):
@@ -180,44 +178,3 @@ class WhileLoopTest(unittest.TestCase):
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
-
-
-######## ---------------------------------------------------------
-
-#     x = torch.zeros(1)
-#     y = torch.zeros(1)
-#     z = torch.zeros(1)
-#     return {"simple_with_linear": (simple_with_linear, (torch.tensor(3), torch.randn(2, 2)))}
-
-    # xm.mark_step()
-    # device = xm.xla_device()
-    # torch.set_grad_enabled(False)
-
-    # upper = torch.tensor([52], dtype=torch.int32, device=device)
-    # lower = torch.tensor([0], dtype=torch.int32, device=device)
-    # one_value = torch.tensor([1], dtype=torch.int32, device=device)
-    # init_val = torch.tensor([1], dtype=torch.int32, device=device) # x
-    # l_in_0 = torch.randn(10, device=xm.xla_device()) # input_value
-    # output_value = torch.zeros([20], dtype=torch.float32, device=device)
-
-    # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-    # weight_0 = linear_0.weight
-    # bias_0 = linear_0.bias
-
-    # # def cond_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
-    # def cond_fn(upper, lower, one_value, x, input_value, output_value):
-    #   return lower[0] < upper[0]
-
-    # def body_fn(upper, lower, one_value, x, input_value, output_value):
-    #   new_lower = torch.add(one_value, lower)
-    #   output_value = linear_0(input_value)
-    #   weight = linear_0.weight
-    #   bias = linear_0.bias
-    #   return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value
-
-    # # print("!!! arrive here !!!")
-    # upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
-
-    # expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
-
-    # self.assertTrue(torch.all(torch.eq(expected, l_out_)))
