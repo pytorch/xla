@@ -93,7 +93,7 @@ jobs:
       - name: Extra CI deps
         shell: bash
         run: |
-          pip install expecttest unittest-xml-reporting
+          pip install expecttest unittest-xml-reporting tabulate
       - name: Test
         shell: bash
         run: |
