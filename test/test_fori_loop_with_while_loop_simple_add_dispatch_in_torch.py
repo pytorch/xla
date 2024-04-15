@@ -101,7 +101,8 @@ class WhileLoopTest(unittest.TestCase):
             # self.register_buffer("dec", torch.tensor(1))
 
         # def forward(self, upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
-        def forward(self, upper, lower, one_value, x, input_value, output_value):
+        # def forward(self, upper, lower, one_value, x, input_value, output_value):
+        def forward(self, upper, lower, one_value, x, input_value, output_value, bias_0, weight_0):
             # weight_1 = self.linear.weight
             # bias_1 = self.linear.bias
 
