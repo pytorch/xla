@@ -58,7 +58,8 @@ def _xla_while_loop(cond_fn, body_fn, *original_carried_inputs, additional_input
   # untuple carried_inputs from while_loop
   carried_inputs = original_carried_inputs[0]
   # TODO(@manfei): please clear pass additional_inputs in `while_loop`'s defination in this file
-  additional_inputs = original_carried_inputs[1]
+  if len(original_carried_inputs) == 2:
+    additional_inputs = original_carried_inputs[1]
   # fake carried_inputs to split formal code
   fake_carried_inputs = []
   for carried_input in carried_inputs:
