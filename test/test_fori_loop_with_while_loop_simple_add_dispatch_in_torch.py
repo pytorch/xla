@@ -162,8 +162,8 @@ class WhileLoopTest(unittest.TestCase):
     print("torch_add_res__: ", torch_add_res__)
     print("input_value__: ", input_value__)
     print("output_value_real__: ", output_value_real__)
-    print("weight__: ", weight__)
-    print("bias__: ", bias__)
+    # print("weight__: ", weight__)
+    # print("bias__: ", bias__)
     # print("start test 6 !!!")
     return aaa
 
