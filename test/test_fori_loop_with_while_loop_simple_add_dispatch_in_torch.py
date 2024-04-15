@@ -109,7 +109,7 @@ class WhileLoopTest(unittest.TestCase):
             # def cond_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
             # def cond_fn(upper, lower, one_value, x, input_value, weight_1, bias_1, output_value):
             def cond_fn(upper, lower, one_value, x, input_value, output_value):
-                return lower[0] <= upper[0]
+                return lower[0] < upper[0]
 
             # def body_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
             # def body_fn(upper, lower, one_value, x, input_value, weight_1, bias_1, output_value):
