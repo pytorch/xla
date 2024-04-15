@@ -919,6 +919,7 @@ class PyLoweringContext {
     if (GetNameString() == "condctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // hard-code parameter_idx to 2 to skip existing upper/lower arguments
+      // TODO(@manfei): get body xlacomputation arguments' number first then decide items in `additional_inputs_list`, maybe implement in python level
       // !!! since cond_fn only compare upper and lower, so it would only use two arguments, due to PyTorch/XLA
       // !!! trace xlacomputation from result tensor, so all the other arguments would not be included or generated;
       // !!! but to meet xla::while requirement, we would skip first two arguments,
@@ -937,6 +938,7 @@ class PyLoweringContext {
     }
 
     // hard-code modify body xlacomputation input arguments
+    // TODO(@manfei): get body xlacomputation arguments' number first then decide items in `additional_inputs_list`, maybe implement in python level
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       int64_t parameter_idx = 7; // tensors.size();
