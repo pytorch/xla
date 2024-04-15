@@ -98,7 +98,7 @@ jobs:
         shell: bash
         run: |
           # TODO: requirements file
-          pip install expecttest unittest-xml-reporting tabulate scipy
+          pip install expecttest unittest-xml-reporting tabulate scipy pandas
       - name: Test
         shell: bash
         run: |
