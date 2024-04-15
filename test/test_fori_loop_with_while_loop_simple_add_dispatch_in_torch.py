@@ -154,8 +154,16 @@ class WhileLoopTest(unittest.TestCase):
     # bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, output_value)
     # bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value) # , weight_0, bias_0)
     # bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, weight_0, bias_0, output_value)
-    bbb = simple_with_linear(upper, lower, one_value, init_val, l_in_0, output_value)
-    print("bbb: ", bbb)
+    upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = simple_with_linear(upper, lower, one_value, init_val, l_in_0, output_value)
+    # print("bbb: ", bbb)
+    print("upper__: ", upper__)
+    print("lower__: ", lower__)
+    print("one_value__: ", one_value__)
+    print("torch_add_res__: ", torch_add_res__)
+    print("input_value__: ", input_value__)
+    print("output_value_real__: ", output_value_real__)
+    print("weight__: ", weight__)
+    print("bias__: ", bias__)
     # print("start test 6 !!!")
     return aaa
 
