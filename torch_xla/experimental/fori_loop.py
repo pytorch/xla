@@ -170,7 +170,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   computation = w.build(name)
 
   # print("carried_inputs: ", carried_inputs)
-  print("total_inputs: ", total_inputs)
+  # print("total_inputs: ", total_inputs)
 
   # gain final result with generated while xlacomputation
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
