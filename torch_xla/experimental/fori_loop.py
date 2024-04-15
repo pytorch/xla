@@ -44,7 +44,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs):
   # TODO(@manfei): PyTorch require carried_inputs to be list/tuple, PyTorch/XLA _xla_while_loop only accept *operands, *operands would tuple items again: (a, '')
   # cond_fn&body_fn: callable
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
-  print("!!! arrive here @while_loop_op.py_impl(DispatchKey.XLA) !!!")
+  # print("!!! arrive here @while_loop_op.py_impl(DispatchKey.XLA) !!!")
   # print("while_loop additional_inputs: ", additional_inputs)
   if additional_inputs is None:
     additional_inputs = tuple()
@@ -52,7 +52,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs):
 
 
 def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
-  print("!!! arrive here def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()): !!!")
+  # print("!!! arrive here def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()): !!!")
   # print("original_carried_inputs: ", original_carried_inputs)
   # print("additional_inputs: ", additional_inputs)
   # import pdb; pdb.set_trace()
@@ -85,9 +85,9 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
         torch.randint(10, additional_input.size(),
                       dtype=additional_input.dtype).to(device))
   # fake_carried_inputs = tuple(fake_carried_inputs)
-  print("fake_carried_inputs second: ", fake_carried_inputs)
+  # print("fake_carried_inputs second: ", fake_carried_inputs)
 
-  print("!!! arrive here too before cond !!!")
+  # print("!!! arrive here too before cond !!!")
   # generate cond_fn xlacomputation
   # print("print fake_carried_inputs: ", fake_carried_inputs)
   # TODO(@manfei): specify which element is for which argument like a,b,c
@@ -105,7 +105,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   # additional_inputs_list_cond.append(tmp_output_value) # not used, change order doesn't affect logic
 
   # treat and pass additional_inputs to cond_fn
-  print("additional_inputs_list_cond one: ", additional_inputs_list_cond)
+  # print("additional_inputs_list_cond one: ", additional_inputs_list_cond)
   # for i in range(len(additional_inputs)):
   #   additional_inputs_list_cond.append(additional_inputs[i])
   # print("additional_inputs_list_cond two: ", additional_inputs_list_cond)
@@ -113,9 +113,9 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
-  print("!!! arrive here too after cond !!!")
+  # print("!!! arrive here too after cond !!!")
 
-  print("!!! arrive here too before body !!!")
+  # print("!!! arrive here too before body !!!")
   # generate body_fn xlacomputation
   body_result = body_fn(*fake_carried_inputs) # [:-3], weight_0=fake_carried_inputs[-1], output_value=fake_carried_inputs[-3], bias_0=fake_carried_inputs[-2])
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
@@ -132,11 +132,11 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
-  print("!!! arrive here too after body !!!")
+  # print("!!! arrive here too after body !!!")
 
-  print("!!! arrive here too before args!!!")
+  # print("!!! arrive here too before args!!!")
   total_inputs = carried_inputs + additional_inputs
-  print("total_inputs: ", total_inputs)
+  # print("total_inputs: ", total_inputs)
   # trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
   kwargs = {}
   if type(total_inputs) is tuple:
@@ -156,10 +156,10 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   params.append(tmp_bias)
   # params.append(tmp_output_value)
 
-  print("args params: ", params)
-  print("!!! arrive here too after args!!!")
+  # print("args params: ", params)
+  # print("!!! arrive here too after args!!!")
 
-  print("!!! arrive here too before while!!!")
+  # print("!!! arrive here too before while!!!")
   # generate while xlacomputation
   input_tuple = xb.Op.tuple(tuple(params))
   w = xb.mkop(
@@ -169,7 +169,7 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
 
-  print("carried_inputs: ", carried_inputs)
+  # print("carried_inputs: ", carried_inputs)
 
   # gain final result with generated while xlacomputation
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
