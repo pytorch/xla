@@ -45,7 +45,7 @@ class ExportTest(unittest.TestCase):
       exported = torch.export.export(model, arg)
       shlo = exported_program_to_stablehlo(exported)
       ans2 = shlo(*arg).cpu().to(torch.float32)
-      self.assertTrue(torch.allclose(ans, ans2, atol=1e-5))
+      torch.testing.assert_close(ans, ans2, atol=1e-5)
 
   def test_constant(self):
 
