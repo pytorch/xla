@@ -128,9 +128,10 @@ class WhileLoopTest(unittest.TestCase):
             # return upper, lower, one_value, x, input_value, output_value
             # return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, weight_0, bias_0, output_value))
             # return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, weight_1, bias_1, output_value))
-            weight_1 = self.linear.weight
-            bias_1 = self.linear.bias
-            return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, output_value), (bias_1, weight_1))
+            # weight_1 = self.linear.weight
+            # bias_1 = self.linear.bias
+            # return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, output_value), (bias_1, weight_1))
+            return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, output_value))
             # return _xla_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
     simple_with_linear = SimpleWithLinear()
