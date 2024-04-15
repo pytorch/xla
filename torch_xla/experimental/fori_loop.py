@@ -79,6 +79,7 @@ def _xla_while_loop(cond_fn, body_fn, *original_carried_inputs, additional_input
   # fake_carried_inputs = tuple(fake_carried_inputs)
   # # print("fake_carried_inputs second: ", fake_carried_inputs)
 
+  print("!!! arrive here too before cond !!!")
   # generate cond_fn xlacomputation
   # TODO(@manfei): specify which element is for which argument like a,b,c
   cond_result = cond_fn(*fake_carried_inputs) # [:-3], weight_0=fake_carried_inputs[-2], output_value=fake_carried_inputs[-3], bias_0=fake_carried_inputs[-1])
@@ -92,7 +93,9 @@ def _xla_while_loop(cond_fn, body_fn, *original_carried_inputs, additional_input
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
+  print("!!! arrive here too after cond !!!")
 
+  print("!!! arrive here too before body !!!")
   # generate body_fn xlacomputation
   body_result = body_fn(*fake_carried_inputs) # [:-3], weight_0=fake_carried_inputs[-1], output_value=fake_carried_inputs[-3], bias_0=fake_carried_inputs[-2])
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
@@ -109,7 +112,9 @@ def _xla_while_loop(cond_fn, body_fn, *original_carried_inputs, additional_input
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
+  print("!!! arrive here too after body !!!")
 
+  print("!!! arrive here too before args!!!")
   # trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
   kwargs = {}
   if type(carried_inputs) is tuple:
@@ -130,10 +135,13 @@ def _xla_while_loop(cond_fn, body_fn, *original_carried_inputs, additional_input
       body_computation=body_computation)
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
+  print("!!! arrive here too after args!!!")
 
+  print("!!! arrive here too before while!!!")
   # gain final result with generated while xlacomputation
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
                                                  (carried_inputs),
                                                  computation)
+  print("!!! arrive here too after while!!!")
 
   return result
