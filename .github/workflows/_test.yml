@@ -91,7 +91,7 @@ jobs:
           pip install fsspec
           pip install rich
       - name: Extra CI deps
-        shell:
+        shell: bash
         run: |
           pip install expecttest unittest-xml-reporting
       - name: Test
