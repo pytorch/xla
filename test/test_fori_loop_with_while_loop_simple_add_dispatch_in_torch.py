@@ -122,13 +122,8 @@ class WhileLoopTest(unittest.TestCase):
 
     aaa = {"simple_with_linear": (simple_with_linear, (upper, lower, one_value, init_val, l_in_0, output_value))}
     upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = simple_with_linear(upper, lower, one_value, init_val, l_in_0, output_value)
-    print("upper__: ", upper__)
-    print("lower__: ", lower__)
-    print("one_value__: ", one_value__)
-    print("torch_add_res__: ", torch_add_res__)
-    print("input_value__: ", input_value__)
-    print("output_value_real__: ", output_value_real__)
 
+    # same weight/bias liear model
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
     linear_0.weight.data = weight__
     linear_0.bias.data = bias__
