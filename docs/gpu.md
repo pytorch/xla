@@ -64,8 +64,8 @@ Thu Dec  8 06:24:29 2022
 Make sure `PATH` and `LD_LIBRARY_PATH` environment variables account for cuda. Please do a `echo $PATH` and `echo $LD_LIBRARY_PATH` to verify. If not, please follow [link](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#mandatory-actions) to do so. Example:
 
 ```
-echo "export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}" >> ~/.bashrc
-echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> ~/.bashrc
+echo "export PATH=\$PATH:/usr/local/cuda-12.1/bin" >> ~/.bashrc
+echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> ~/.bashrc
 source ~/.bashrc
 ```
 
