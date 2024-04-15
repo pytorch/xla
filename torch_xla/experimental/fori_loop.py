@@ -93,9 +93,9 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   additional_inputs_list_cond = list(fake_carried_inputs[2:]) # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
   # treat and pass additional_inputs to cond_fn
   print("additional_inputs_list_cond one: ", additional_inputs_list_cond)
-  for i in range(len(additional_inputs)):
-    additional_inputs_list_cond.append(additional_inputs[i])
-  print("additional_inputs_list_cond two: ", additional_inputs_list_cond)
+  # for i in range(len(additional_inputs)):
+  #   additional_inputs_list_cond.append(additional_inputs[i])
+  # print("additional_inputs_list_cond two: ", additional_inputs_list_cond)
   cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
@@ -111,8 +111,8 @@ def _xla_while_loop(cond_fn, body_fn, *carried_inputs, additional_inputs=()):
   # TODO(@manfei): treat and pass additional_inputs to body_fn too
   # print("list(fake_carried_inputs[-2]: ", fake_carried_inputs[-2])
   # print("len0!!!: ", len(additional_inputs_list_body))
-  for i in range(len(additional_inputs)):
-    additional_inputs_list_body.append(additional_inputs[i])
+  # for i in range(len(additional_inputs)):
+  #   additional_inputs_list_body.append(additional_inputs[i])
   # print("len!!!: ", len(additional_inputs_list_body))
   # print("additional_inputs_list_body: ", additional_inputs_list_body)
   body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
