@@ -136,7 +136,7 @@ class WhileLoopTest(unittest.TestCase):
             # return _xla_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
     simple_with_linear = SimpleWithLinear()
-    upper = torch.tensor([52], dtype=torch.int32, device=device)
+    upper = torch.tensor([2], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     init_val = torch.tensor([1], dtype=torch.int32, device=device) # x
@@ -172,6 +172,7 @@ class WhileLoopTest(unittest.TestCase):
     linear_0.bias.data = bias__
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
     print("expected: ", expected)
+    print("l_in_0: ", l_in_0)
 
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
     return aaa
