@@ -73,7 +73,8 @@ jobs:
     uses: ./.github/workflows/_tpu_ci.yml
     needs: build-torch-xla
     # Only run this for HEAD and releases
-    if: github.event_name == 'push'
+    # DO NOT MERGE
+    # if: github.event_name == 'push'
 
   push-docs:
     name: "Build & publish docs"

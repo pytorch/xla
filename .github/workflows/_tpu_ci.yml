@@ -4,6 +4,14 @@ on:
 jobs:
   tpu-test:
     runs-on: v4-runner-set
+    strategy:
+      fail-fast: false
+      matrix:
+        topology:
+          # default, 4 processes per host
+          - ""
+          # multithreaded, 1 process per host
+          - "TPU_PROCESS_BOUNDS=1,1,1 TPU_CHIPS_PER_PROCESS_BOUNDS=2,2,1"
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -31,5 +39,8 @@ jobs:
         env:
           PJRT_DEVICE: TPU
         run: |
+          if [[ -z "${{ matrix.topology }}" ]]; then
+            export ${{ matrix.topology }}
+          fi;
           cd pytorch/xla
           test/tpu/run_tests.sh
