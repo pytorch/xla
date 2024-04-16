@@ -1152,7 +1152,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
 
   def test_spmd_shard_to_full_shape(self):
-    x = torch.zeros(8, 4).to(xm.xla_device())
+    x = torch.zeros(8, 8).to(xm.xla_device())
     x += 1
     # No sharding spec attached.
     with self.assertRaises(RuntimeError):
@@ -1169,10 +1169,26 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
     self.assertEqual(xx.shape, x.shape)
-    self.assertIn('%custom-call.9 = f32[8,4]{1,0}', hlo)
+    self.assertIn('%custom-call.9 = f32[8,8]{1,0}', hlo)
     self.assertIn(
         'custom_call_target="SPMDShardToFullShape", sharding={replicated}', hlo)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{replicated}")
+
+  def test_manual_sharding_e2e(self):
+    x = torch.zeros(8, 8).to(xm.xla_device())
+    mesh = self._get_mesh((1, self.n_devices))
+    partition_spec = (0, 1)
+    xt = xs.mark_sharding(x, mesh, partition_spec)
+
+    xx = torch_xla._XLAC._spmd_full_to_shard_shape(xt.global_tensor)
+    self.assertEqual(xx.shape, (8, 8 // self.n_devices))
+
+    xx = xx + 1
+    xxt = xs._mark_manual_sharding(xx)
+    xxx = torch_xla._XLAC._spmd_shard_to_full_shape(xxt.global_tensor, mesh.get_op_sharding(partition_spec), x.shape, x.dtype)
+    self.assertEqual(xxx.shape, (8, 8))
+
+    self.assertTrue(torch.allclose(x.cpu() + 1, xxx.cpu()))
 
 
 if __name__ == '__main__':
