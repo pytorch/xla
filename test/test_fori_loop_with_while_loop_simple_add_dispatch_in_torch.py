@@ -116,6 +116,7 @@ class WhileLoopTest(unittest.TestCase):
 
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
 
+    print("torch_add_res__: ", torch_add_res__)
     print("output_value_real__: ", output_value_real__)
     print("expected: ", expected)
 
