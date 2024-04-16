@@ -22,6 +22,12 @@ on:
         default: 270
         description: |
           Set the maximum (in minutes) how long the workflow should take to finish
+            timeout-minutes:
+      install-cuda-plugin:
+        required: false
+        type: boolean
+        default: false
+        description: Whether to install CUDA plugin package
 
     secrets:
       gcloud-service-key:
@@ -59,6 +65,7 @@ jobs:
       RUN_TORCH_MP_OP_TESTS: ${{ matrix.run_torch_mp_op_tests }}
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
+      XLA_REGISTER_INSTALLED_PLUGINS: 1
     steps:
       - name: Setup gcloud
         shell: bash
@@ -79,6 +86,12 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
+      - name: Fetch CUDA plugin
+        uses: actions/download-artifact@v4
+        with:
+          name: cuda-plugin
+          path: /tmp/wheels/
+        if: ${{ inputs.install_cuda_plugin }}
       - name: Install wheels
         shell: bash
         run: |
