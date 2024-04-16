@@ -1119,7 +1119,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # xt.global_tensor.cpu()
 
   def test_spmd_full_to_shard_shape(self):
-    x = torch.zeros(8, 4).to(xm.xla_device())
+    x = torch.zeros(8, 8).to(xm.xla_device())
     with self.assertRaises(RuntimeError):
       x = torch_xla._XLAC._spmd_full_to_shard_shape(x)
 
@@ -1128,8 +1128,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     xx = torch_xla._XLAC._spmd_full_to_shard_shape(xt.global_tensor)
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
-    self.assertEqual(xx.shape, (8, 4 // self.n_devices))
-    self.assertIn(f'%custom-call.2 = f32[8,{4//self.n_devices}]{{1,0}}', hlo)
+    self.assertEqual(xx.shape, (8, 8 // self.n_devices))
+    self.assertIn(f'%custom-call.2 = f32[8,{8//self.n_devices}]{{1,0}}', hlo)
     self.assertIn(
         f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
