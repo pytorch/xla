@@ -1156,16 +1156,24 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     x += 1
     # No sharding spec attached.
     with self.assertRaises(RuntimeError):
-      x = torch_xla._XLAC._spmd_shard_to_full_shape(x, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED), x.shape, x.dtype)
+      x = torch_xla._XLAC._spmd_shard_to_full_shape(
+          x, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED),
+          x.shape, x.dtype)
 
     xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), (0, 1))
     # Not manual sharding.
     with self.assertRaises(RuntimeError):
-      x = torch_xla._XLAC._spmd_shard_to_full_shape(xt.global_tensor, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED), x.shape, x.dtype)
+      x = torch_xla._XLAC._spmd_shard_to_full_shape(
+          xt.global_tensor,
+          torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED),
+          x.shape, x.dtype)
 
     xs.clear_sharding(xt)
     xt = xs._mark_manual_sharding(xt)
-    xx = torch_xla._XLAC._spmd_shard_to_full_shape(xt.global_tensor, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED), x.shape, x.dtype)
+    xx = torch_xla._XLAC._spmd_shard_to_full_shape(
+        xt.global_tensor,
+        torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED),
+        x.shape, x.dtype)
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
     self.assertEqual(xx.shape, x.shape)
@@ -1185,7 +1193,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     xx = xx + 1
     xxt = xs._mark_manual_sharding(xx)
-    xxx = torch_xla._XLAC._spmd_shard_to_full_shape(xxt.global_tensor, mesh.get_op_sharding(partition_spec), x.shape, x.dtype)
+    xxx = torch_xla._XLAC._spmd_shard_to_full_shape(
+        xxt.global_tensor, mesh.get_op_sharding(partition_spec), x.shape,
+        x.dtype)
     self.assertEqual(xxx.shape, (8, 8))
 
     self.assertTrue(torch.allclose(x.cpu() + 1, xxx.cpu()))
