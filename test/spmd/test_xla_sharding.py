@@ -1163,7 +1163,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     with self.assertRaises(RuntimeError):
       x = torch_xla._XLAC._spmd_shard_to_full_shape(xt.global_tensor, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED), x.shape, x.dtype)
 
-
     xs.clear_sharding(xt)
     xt = xs._mark_manual_sharding(xt)
     xx = torch_xla._XLAC._spmd_shard_to_full_shape(xt.global_tensor, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED), x.shape, x.dtype)
