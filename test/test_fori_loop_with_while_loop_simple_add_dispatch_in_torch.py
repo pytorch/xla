@@ -117,6 +117,9 @@ class WhileLoopTest(unittest.TestCase):
 
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
 
+    print("output_value_real__: ", output_value_real__)
+    print("expected: ", expected)
+
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
     return aaa
 
