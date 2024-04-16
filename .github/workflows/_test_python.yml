@@ -70,16 +70,6 @@ jobs:
         shell: bash
         run: |
           echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
-      - name: Checkout PyTorch Repo
-        uses: actions/checkout@v4
-        with:
-          repository: pytorch/pytorch
-          path: pytorch
-          # TODO: match commit to build step
-      - name: Checkout PyTorch/XLA Repo
-        uses: actions/checkout@v4
-        with:
-          path: pytorch/xla
       - name: Fetch wheels
         uses: actions/download-artifact@v4
         with:
@@ -102,6 +92,18 @@ jobs:
           # TODO: Add these in setup.py
           pip install fsspec
           pip install rich
+      - name: Record PyTorch commit
+        run: echo "PYTORCH_COMMIT=$(python -c 'import torch_xla.version; print(torch_xla.version.__torch_gitrev__)')" >> $GITHUB_ENV
+      - name: Checkout PyTorch Repo
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/pytorch
+          path: pytorch
+          rev: ${{ env.PYTORCH_COMMIT }}
+      - name: Checkout PyTorch/XLA Repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
       - name: Extra CI deps
         shell: bash
         run: |
