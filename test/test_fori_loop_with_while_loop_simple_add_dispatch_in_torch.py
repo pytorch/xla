@@ -103,7 +103,7 @@ class WhileLoopTest(unittest.TestCase):
       output_value_real = linear_0(input_value)
       weight = linear_0.weight # not be used actually, initialized as placeholder xlacomputation requirement 
       bias = linear_0.bias # not be used actually, initialized as placeholder xlacomputation requirement 
-      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), weight.clone(), bias.clone(), output_value_real
+      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), output_value_real, weight.clone(), bias.clone()
 
     upper = torch.tensor([52], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
