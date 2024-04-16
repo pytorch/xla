@@ -98,10 +98,10 @@ class WhileLoopTest(unittest.TestCase):
     weight_0 = linear_0.weight
     bias_0 = linear_0.bias
 
-    def cond_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
+    def cond_fn(upper, lower, one_value, x, input_value, output_value):
       return lower[0] < upper[0]
 
-    def body_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
+    def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
       output_value_real = linear_0(input_value)
       weight = linear_0.weight # not be used actually, initialized as placeholder xlacomputation requirement 
