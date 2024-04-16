@@ -14,7 +14,7 @@ on:
         required: false
         type: string
         description: Runner type for the test
-        default: linux.24xlarge
+        default: linux.12xlarge
       cuda:
         required: false
         type: string
@@ -68,8 +68,8 @@ jobs:
             # if image layers are not present in the repo.
             # Note: disable the following 2 lines while testing a new image, so we do not
             # push to the upstream.
-            # docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite" >/dev/null
-            # docker push "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite" >/dev/null
+            docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite" >/dev/null
+            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite" >/dev/null
       - name: Start the container
         shell: bash
         run: |
