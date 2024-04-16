@@ -32,14 +32,26 @@ class ZeroRedundancyOptimizer(Optimizer):
             collective ops (all_gather and reduce_scatter). See `xm.all_reduce`
             for details on pinning layout. Default: True
         sharding_groups (list, Optional):
-          If specified, ZeRO-1 will use this ``sharding_groups`` for all-gather
-          and reduce-scatter ops in full parameter construction and gradient
-          sharding. This can be useful for mixing ZeRO-1 with model parallelism
-          such as Megatron.
+            If specified, ZeRO-1 will use this ``sharding_groups`` for all-gather
+            and reduce-scatter ops in full parameter construction and gradient
+            sharding. This can be useful for mixing ZeRO-1 with model parallelism
+            such as Megatron.
         grad_norm_groups (list, Optional):
-          If specified, ZeRO-1 will use this ``grad_norm_groups`` for the
-          EXTRA all-reduce op in grad norm calculation. This can be model parallel
-          groups when mixing ZeRO-1 with model parallelism such as Megatron.
+            If specified, ZeRO-1 will use this ``grad_norm_groups`` for the
+            EXTRA all-reduce op in grad norm calculation. This can be model parallel
+            groups when mixing ZeRO-1 with model parallelism such as Megatron.
+        lazy_init (bool, Optional): if ``True``, the class will not shard paramaters
+            during initialization. Users need to call ``optimizer.init_zero()`` by themselves.
+            Default: False
+        coalesce_cc (bool, Optional): if ``True``, use coalesce collective communication operators.
+            Default: False
+        use_grad_acc_hook (bool, Optional): if ``True``, use hooks for gradients accumulation, then
+            ``dtype`` of grad accumulation will be the same as ``optimizer_dtype``. Users can set this
+            to True to use higher precision for gradients accumulation. Default: False
+        save_master_weights (bool, Optional):
+            if ``True``, also save sharded master weights. Default: False
+        higher_cc_precision (bool, Optional): if ``True``, use higher precision for collective communication
+            operators (the same as ``optimizer_dtype``). Default: False
         **defaults: any trailing arguments, which are forwarded to the local
             optimizer.
 
@@ -57,11 +69,13 @@ class ZeroRedundancyOptimizer(Optimizer):
       grad_clipping: bool = True,
       max_norm: Optional[float] = None,
       pin_layout: bool = True,
-      use_grad_acc_hook: bool = False,
       sharding_groups: Optional[Any] = None,
       grad_norm_groups: Optional[Any] = None,
       lazy_init: bool = False,
       coalesce_cc: bool = False,
+      use_grad_acc_hook: bool = False,
+      save_master_weights: bool = False,
+      higher_cc_precision: bool = False,
       **defaults: Any,
   ):
     super().__init__(params, defaults)
@@ -79,6 +93,8 @@ class ZeroRedundancyOptimizer(Optimizer):
     self.max_norm = max_norm if max_norm is not None else 1.0
     self.pin_layout = pin_layout
     self.coalesce_cc = coalesce_cc
+    self.save_master_weights = save_master_weights
+    self.higher_cc_precision = higher_cc_precision
     self.use_grad_acc_hook = use_grad_acc_hook
     self.grad_accs = []
     self.grad_acc_hooks = []
@@ -322,8 +338,10 @@ class ZeroRedundancyOptimizer(Optimizer):
           padded_grad = self._pad_to_world_size(
               shard.main_grad if self.use_grad_acc_hook else param.grad,
               self.local_world_size)
+          if self.higher_cc_precision:
+            padded_grad = padded_grad.to(dtype=self.optimizer_dtype)
           if self.coalesce_cc:
-            padded_grads.append(padded_grad.to(dtype=self.optimizer_dtype))
+            padded_grads.append(padded_grad)
           else:
             grad_shard = xm.reduce_scatter(
                 xm.REDUCE_SUM,
@@ -356,6 +374,8 @@ class ZeroRedundancyOptimizer(Optimizer):
           if param.grad is not None or (self.use_grad_acc_hook and
                                         hasattr(shard, 'main_grad')):
             grad_shard = grad_shards[index]
+            if grad_shard.dtype != self.optimizer_dtype:
+              grad_shard = grad_shard.to(dtype=self.optimizer_dtype)
             shard.grad = grad_shard
             index += 1
 
@@ -385,6 +405,8 @@ class ZeroRedundancyOptimizer(Optimizer):
         if param.grad is not None or (self.use_grad_acc_hook and
                                       hasattr(shard, 'main_grad')):
           shard_data = shard.data
+          if not self.higher_cc_precision:
+            shard_data = shard_data.to(dtype=param.dtype)
           if self.coalesce_cc:
             sharded_data.append(shard_data)
           else:
@@ -394,6 +416,8 @@ class ZeroRedundancyOptimizer(Optimizer):
                 pin_layout=self.pin_layout,
                 groups=self.sharding_groups,
             )
+            if padded_param != param.dtype:
+              padded_param = padded_param.to(dtype=param.dtype)
             param.data.copy_(padded_param.data[:param.size(0)])
 
     if self.coalesce_cc:
@@ -411,7 +435,7 @@ class ZeroRedundancyOptimizer(Optimizer):
           if param.grad is not None or (self.use_grad_acc_hook and
                                         hasattr(shard, 'main_grad')):
             padded_param = padded_params[index]
-            if param.dtype != self.optimizer_dtype:
+            if padded_param != param.dtype:
               padded_param = padded_params[index].to(dtype=param.dtype)
             param.data.copy_(padded_param.data[:param.size(0)])
             index += 1
@@ -429,12 +453,14 @@ class ZeroRedundancyOptimizer(Optimizer):
     base_state = self.base_optimizer.state_dict()['state']
     state_dict['base_state'] = base_state
     state_dict['shape_info'] = self.get_shape_info()
-    master_weights = []
-    for sharded_param_group in self.base_optimizer.param_groups:
-      for shard in sharded_param_group['params']:
-        master_weights.append(shard.data)
-
-    state_dict['sharded_master_weights'] = master_weights
+    if self.save_master_weights:
+      index = 0
+      master_weights = {}
+      for sharded_param_group in self.base_optimizer.param_groups:
+        for shard in sharded_param_group['params']:
+          master_weights[index] = shard.data
+          index += 1
+      state_dict['sharded_master_weights'] = master_weights
 
     return state_dict
 
