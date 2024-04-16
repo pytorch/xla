@@ -11,7 +11,7 @@ jobs:
           # default, 4 processes per host
           - ""
           # multithreaded, 1 process per host
-          - "TPU_PROCESS_BOUNDS=1,1,1 TPU_CHIPS_PER_PROCESS_BOUNDS=2,2,1"
+          - "TPU_PROCESS_BOUNDS=1,1,1 TPU_CHIPS_PER_PROCESS_BOUNDS=2,2,1 TPU_VISIBLE_CHIPS=0,1,2,3"
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
