@@ -89,8 +89,11 @@ jobs:
       - name: Extra CI deps
         shell: bash
         run: |
-          # TODO: requirements file
-          pip install expecttest unittest-xml-reporting tabulate scipy pandas
+          pip install expecttest unittest-xml-reporting
+
+          if [[ -z "$RUN_BENCHMARK_TESTS" ]]; then
+            pip install -r pytorch/xla/benchmarks/requirements.txt
+          fi;
       - name: Test
         shell: bash
         run: |
