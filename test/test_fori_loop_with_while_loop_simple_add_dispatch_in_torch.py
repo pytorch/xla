@@ -148,7 +148,7 @@ class WhileLoopTest(unittest.TestCase):
             return while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, output_value))
 
     simple_with_linear = SimpleWithLinear()
-    upper = torch.tensor([2], dtype=torch.int32, device=device)
+    upper = torch.tensor([52], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     init_val = torch.tensor([1], dtype=torch.int32, device=device)
