@@ -67,17 +67,6 @@ jobs:
       collect-coverage: false  # TODO(yeounoh) separate from CPU coverage metrics
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
-  
-  test-triton:
-    name: "Triton tests"
-    uses: ./.github/workflows/_triton.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      runner: linux.g5.4xlarge.nvidia.gpu
-      timeout-minutes: 300
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   test-tpu:
     name: "TPU tests"

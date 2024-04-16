@@ -1,0 +1,57 @@
+on:
+  pull_request:
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
+    paths:
+      - 'torch_xla/experimental/torch_triton.py'
+      - 'torch_xla/csrc/triton/**'
+  push:
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
+    paths:
+      - 'torch_xla/experimental/torch_triton.py'
+      - 'torch_xla/csrc/triton/**'
+    workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}-${{ github.event_name == 'workflow_dispatch' }}-${{ github.event_name == 'schedule' }}
+  cancel-in-progress: true
+
+jobs:
+  test-triton:
+    runs-on: linux.g5.4xlarge.nvidia.gpu
+    timeout-minutes: 300
+    env:
+      DOCKER_IMAGE: gcr.io/tpu-pytorch/xla_base:dev-3.8_cuda_12.1
+      WORKDIR: /triton_dir
+    steps:
+      - name: Setup Linux
+        uses: pytorch/test-infra/.github/actions/setup-linux@main
+      - name: Setup SSH (Click me for login details)
+        uses: pytorch/test-infra/.github/actions/setup-ssh@main
+        with:
+          github-secret: ${{ secrets.GITHUB_TOKEN }}
+          instructions: |
+            Tests are done inside the container, to start an interactive session run:
+              docker exec -it $(docker container ps --format '{{.ID}}') bash
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Download docker image from GCR
+        shell: bash
+        run: docker pull "${DOCKER_IMAGE}"
+      - name: Start the container
+        shell: bash
+        run: |
+          pid=$(docker run --privileged --shm-size=16g --net=host --gpus all -it -d -w "${WORKDIR}" "${DOCKER_IMAGE}")
+          docker exec -u jenkins "${pid}" sudo chown -R jenkins "${WORKDIR}"
+          docker cp "${GITHUB_WORKSPACE}/." "$pid:$WORKDIR"
+          echo "pid=${pid}" >> "${GITHUB_ENV}"
+      - name: Build and Test
+        shell: bash
+        run: |
+          docker exec --privileged -u jenkins "${pid}" bash -c ".circleci/triton.sh"
+      - name: Teardown Linux
+        uses: pytorch/test-infra/.github/actions/teardown-linux@main
+        if: always()
