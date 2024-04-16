@@ -117,8 +117,7 @@ class WhileLoopTest(unittest.TestCase):
     # weight_0 = simple_with_linear.linear.weight
     # bias_0 = simple_with_linear.linear.bias
 
-    upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = 
-      while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, output_value))
+    upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, output_value))
 
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
 
