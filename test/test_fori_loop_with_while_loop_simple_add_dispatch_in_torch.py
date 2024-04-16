@@ -86,7 +86,47 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+# passed
   def test_while_loop_tpu_simple_linear(self):
+
+    xm.mark_step()
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    # def forward(self, upper, lower, one_value, x, input_value, output_value):
+    linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+
+    def cond_fn(upper, lower, one_value, x, input_value, output_value):
+      return lower[0] < upper[0]
+
+    def body_fn(upper, lower, one_value, x, input_value, output_value):
+      new_lower = torch.add(one_value, lower)
+      output_value_real = linear_0(input_value)
+      weight = linear_0.weight # not be used actually, initialized as placeholder xlacomputation requirement 
+      bias = linear_0.bias # not be used actually, initialized as placeholder xlacomputation requirement 
+      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), output_value_real, weight.clone(), bias.clone()
+
+    simple_with_linear = SimpleWithLinear()
+    upper = torch.tensor([2], dtype=torch.int32, device=device)
+    lower = torch.tensor([0], dtype=torch.int32, device=device)
+    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device)
+    l_in_0 = torch.ones(10, device=xm.xla_device()) # input_value
+    output_value = torch.zeros([20], dtype=torch.float32, device=device)
+
+    # weight_0 = simple_with_linear.linear.weight
+    # bias_0 = simple_with_linear.linear.bias
+
+    upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = 
+      while_loop(cond_fn, body_fn, (upper, lower, one_value, x, input_value, output_value))
+
+    expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
+
+    self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
+    return aaa
+
+# passed
+  def test_while_loop_tpu_simple_linear_class(self):
 
     xm.mark_step()
     device = xm.xla_device()
