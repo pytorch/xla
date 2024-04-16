@@ -1151,6 +1151,30 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
 
+  def test_spmd_shard_to_full_shape(self):
+    x = torch.zeros(8, 4).to(xm.xla_device())
+    x += 1
+    # No sharding spec attached.
+    with self.assertRaises(RuntimeError):
+      x = torch_xla._XLAC._spmd_shard_to_full_shape(x, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED), x.shape, x.dtype)
+
+    xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), (0, 1))
+    # Not manual sharding.
+    with self.assertRaises(RuntimeError):
+      x = torch_xla._XLAC._spmd_shard_to_full_shape(xt.global_tensor, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED), x.shape, x.dtype)
+
+
+    xs.clear_sharding(xt)
+    xt = xs._mark_manual_sharding(xt)
+    xx = torch_xla._XLAC._spmd_shard_to_full_shape(xt.global_tensor, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED), x.shape, x.dtype)
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
+    self.assertEqual(xx.shape, x.shape)
+    self.assertIn('%custom-call.9 = f32[8,4]{1,0}', hlo)
+    self.assertIn(
+        'custom_call_target="SPMDShardToFullShape", sharding={replicated}', hlo)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{replicated}")
+
 
 if __name__ == '__main__':
   test = unittest.main()
