@@ -86,8 +86,8 @@ jobs:
           # TODO: Make PJRT_DEVICE=CPU work with XLA_REGISTER_INSTALLED_PLUGINS=1
           echo "XLA_REGISTER_INSTALLED_PLUGINS=1" >> $GITHUB_ENV
 
-          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> ~/.bashrc
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> ~/.bashrc
+          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
         if: ${{ inputs.install-cuda-plugin }}
       - name: Install wheels
         shell: bash
@@ -103,7 +103,7 @@ jobs:
         with:
           repository: pytorch/pytorch
           path: pytorch
-          rev: ${{ env.PYTORCH_COMMIT }}
+          ref: ${{ env.PYTORCH_COMMIT }}
       - name: Checkout PyTorch/XLA Repo
         uses: actions/checkout@v4
         with:
