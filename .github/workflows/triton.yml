@@ -45,7 +45,7 @@ jobs:
       - name: Start the container
         shell: bash
         run: |
-          pid=$(docker run --privileged --shm-size=16g --net=host --gpus all -it -d -w "${WORKDIR}" "${DOCKER_IMAGE}")
+          pid=$(docker run --privileged -t -d -w "${WORKDIR}" "${DOCKER_IMAGE}")
           docker exec -u jenkins "${pid}" sudo chown -R jenkins "${WORKDIR}"
           docker cp "${GITHUB_WORKSPACE}/." "$pid:$WORKDIR"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
