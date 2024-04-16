@@ -39,7 +39,7 @@ jobs:
         env:
           PJRT_DEVICE: TPU
         run: |
-          if [[ -z "${{ matrix.topology }}" ]]; then
+          if [[ ! -z "${{ matrix.topology }}" ]]; then
             export ${{ matrix.topology }}
           fi;
           cd pytorch/xla
