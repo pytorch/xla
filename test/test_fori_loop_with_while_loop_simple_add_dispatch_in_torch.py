@@ -94,16 +94,18 @@ class WhileLoopTest(unittest.TestCase):
 
     # def forward(self, upper, lower, one_value, x, input_value, output_value):
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+    weight_0 = linear_0.weight_
+    bias_0 = linear_0.bias_
 
-    def cond_fn(upper, lower, one_value, x, input_value, output_value):
+    def cond_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
       return lower[0] < upper[0]
 
-    def body_fn(upper, lower, one_value, x, input_value, output_value):
+    def body_fn(upper, lower, one_value, x, input_value, weight_0, bias_0, output_value):
       new_lower = torch.add(one_value, lower)
       output_value_real = linear_0(input_value)
       weight = linear_0.weight # not be used actually, initialized as placeholder xlacomputation requirement 
       bias = linear_0.bias # not be used actually, initialized as placeholder xlacomputation requirement 
-      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), output_value_real, weight.clone(), bias.clone()
+      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), weight.clone(), output_value_real, bias.clone()
 
     upper = torch.tensor([52], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
