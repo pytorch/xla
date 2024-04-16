@@ -91,7 +91,7 @@ jobs:
         with:
           name: cuda-plugin
           path: /tmp/wheels/
-        if: ${{ inputs.install_cuda_plugin }}
+        if: ${{ inputs.install-cuda-plugin }}
       - name: Install wheels
         shell: bash
         run: |
@@ -102,6 +102,8 @@ jobs:
       - name: Extra CI deps
         shell: bash
         run: |
+          set -x
+
           pip install expecttest unittest-xml-reporting
 
           if [[ -z "$RUN_BENCHMARK_TESTS" ]]; then
