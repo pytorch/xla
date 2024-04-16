@@ -81,9 +81,13 @@ jobs:
           name: cuda-plugin
           path: /tmp/wheels/
         if: ${{ inputs.install-cuda-plugin }}
-      # TODO: Make PJRT_DEVICE=CPU work with XLA_REGISTER_INSTALLED_PLUGINS=1
-      - name: Enable CUDA plugin
-        run: echo "XLA_REGISTER_INSTALLED_PLUGINS=1" >> $GITHUB_ENV
+      - name: Setup CUDA environment
+        run: |
+          # TODO: Make PJRT_DEVICE=CPU work with XLA_REGISTER_INSTALLED_PLUGINS=1
+          echo "XLA_REGISTER_INSTALLED_PLUGINS=1" >> $GITHUB_ENV
+
+          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> ~/.bashrc
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> ~/.bashrc
         if: ${{ inputs.install-cuda-plugin }}
       - name: Install wheels
         shell: bash
