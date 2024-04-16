@@ -48,6 +48,9 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   KERNEL_XLA(prelu, lower_precision_fp)
   KERNEL_XLA(relu, lower_precision_fp)
   KERNEL_XLA(max_pool2d, lower_precision_fp)
+  // Enable einsum autocasting for torch_xla.
+  // This is not in the AutoCastCPU Policy.
+  KERNEL_XLA(einsum, lower_precision_fp)
 
   // fp32 cast policy
   // Commented out ops are included in the AutoCastCPU Policy,
