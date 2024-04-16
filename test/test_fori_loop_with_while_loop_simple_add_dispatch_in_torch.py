@@ -155,7 +155,7 @@ class WhileLoopTest(unittest.TestCase):
     lower = torch.tensor([0], dtype=torch.int32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     init_val = torch.tensor([1], dtype=torch.int32, device=device)
-    l_in_0 = torch.ones(10, device=xm.xla_device()) # input_value
+    l_in_0 = torch.randint(10, device=xm.xla_device()) # input_value
     output_value = torch.zeros([20], dtype=torch.float32, device=device)
 
     weight_0 = simple_with_linear.linear.weight
