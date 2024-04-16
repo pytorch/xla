@@ -105,7 +105,7 @@ class WhileLoopTest(unittest.TestCase):
       bias = linear_0.bias # not be used actually, initialized as placeholder xlacomputation requirement 
       return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), output_value_real, weight.clone(), bias.clone()
 
-    upper = torch.tensor([1], dtype=torch.int32, device=device)
+    upper = torch.tensor([52], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     init_val = torch.tensor([1], dtype=torch.int32, device=device)
