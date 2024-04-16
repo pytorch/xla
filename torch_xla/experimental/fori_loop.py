@@ -41,6 +41,8 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # cond_fn&body_fn: callable
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
   print("arrive here @while_loop_op.py_impl(DispatchKey.XLA) !!!")
+  print("carried_inputs: ", carried_inputs)
+  print("additional_inputs: ", additional_inputs)
   if additional_inputs is None:
     additional_inputs = tuple()
   return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
