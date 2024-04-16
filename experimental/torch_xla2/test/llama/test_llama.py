@@ -33,7 +33,6 @@ class LlamaTest(test_base.TestCase):
 
     # NOTE: this API does NOT use torch export
     weights, jax_func = torch_xla2.extract_jax(m)
-
     print(jax_func(weights, sample_args))
 
   def test_can_run_exportable(self):
