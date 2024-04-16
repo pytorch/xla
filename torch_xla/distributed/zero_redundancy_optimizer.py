@@ -435,7 +435,7 @@ class ZeroRedundancyOptimizer(Optimizer):
           if param.grad is not None or (self.use_grad_acc_hook and
                                         hasattr(shard, 'main_grad')):
             padded_param = padded_params[index]
-            if padded_param != param.dtype:
+            if padded_param.dtype != param.dtype:
               padded_param = padded_params[index].to(dtype=param.dtype)
             param.data.copy_(padded_param.data[:param.size(0)])
             index += 1
