@@ -208,6 +208,7 @@ class WhileLoopTest(unittest.TestCase):
     print("add_res_x_: ", add_res_x_)
     print("res_: ", res_)
     expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
+    print("expected: ", expected)
     self.assertEqual(expected, res_)
 
 # passed
