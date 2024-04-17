@@ -12,6 +12,7 @@ from torch_xla.core.xla_model import XLA_LIB
 
 _XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
 
+
 def _extract_backend_config(
     module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> str | None:
   """
