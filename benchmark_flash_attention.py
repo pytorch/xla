@@ -7,6 +7,10 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.debug.metrics as met
+import torch_xla.distributed.spmd as xs
+from torch_xla import runtime as xr
+
+xr.use_spmd()
 
 device = xm.xla_device()
 server = xp.start_server(9012)
@@ -20,13 +24,13 @@ def attention(q, k, v):
   return attn_output
 
 
-def time_execution(q, k, v, func, backward=True):
+def time_execution(q, k, v, func, backward=True, sharding_spec=None):
   start_time = time.time()
   q.grad = None
   k.grad = None
   v.grad = None
 
-  o = func(q, k, v)
+  o = func(q, k, v, sharding_spec=sharding_spec)
   if backward:
     loss = nn.MSELoss()(o, torch.ones_like(o))
     loss.backward()
@@ -52,19 +56,19 @@ def shape_fn(q, k, v):
 
 
 @xp.trace_me("Flash Attention")
-def flash_attention_kernel(q, k, v):
-  return flash_attention(q, k, v, causal=False)
+def flash_attention_kernel(q, k, v, sharding_spec=None):
+  return flash_attention(q, k, v, causal=False, sharding_spec=sharding_spec)
 
 
-# xp.trace_detached('localhost:9012', '.', 120000)
+xp.trace_detached('localhost:9012', '.', 120000)
 
-for seq_len in [1024, 2048, 4096]: #, 8192, 16384]:
+for seq_len in [1024, 2048, 4096, 8192, 16384]:
   print(f"seq_len: {seq_len}")
 
   # Let's make sure the q, k, v are completely isolated from last run.
   # Simulates 70B Llama 2
   # bs, num_heads, seq_len, head_dim
-  shape = (2, 64, seq_len, 128)
+  shape = (8, 64, seq_len, 128)
   q = torch.randn(shape).to(device)
   k = torch.randn(shape).to(device)
   v = torch.randn(shape).to(device)
@@ -78,13 +82,16 @@ for seq_len in [1024, 2048, 4096]: #, 8192, 16384]:
   v.retain_grad()
 
   # Warm up
-  repeat_n(lambda: time_execution(q, k, v, attention), itr=1)
-  if seq_len < 8192:
-    repeat_n(lambda: time_execution(q, k, v, attention))
+  # repeat_n(lambda: time_execution(q, k, v, attention), itr=1)
+  # if seq_len < 8192:
+  #   repeat_n(lambda: time_execution(q, k, v, attention))
 
   # Warm up
-  repeat_n(lambda: time_execution(q, k, v, flash_attention_kernel), itr=1)
-  repeat_n(lambda: time_execution(q, k, v, flash_attention_kernel))
+  n_devices = xr.global_runtime_device_count()
+  xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
+
+  repeat_n(lambda: time_execution(q, k, v, flash_attention_kernel, sharding_spec=range(n_devices)), itr=1)
+  repeat_n(lambda: time_execution(q, k, v, flash_attention_kernel,  sharding_spec=range(n_devices)))
 
 # print(met.metrics_report())
 # o = flash_attention_kernel(q, k, v)
