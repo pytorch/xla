@@ -50,8 +50,8 @@ class WhileLoopTest(unittest.TestCase):
     limit_value = torch.tensor([0], dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
-    print("expected: ", expected)
-    print("res: ", res)
+    # print("expected: ", expected)
+    # print("res: ", res)
     self.assertEqual(expected, res)
 
 # passed
@@ -72,8 +72,8 @@ class WhileLoopTest(unittest.TestCase):
     res = while_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
-    print("expected: ", expected)
-    print("res: ", res)
+    # print("expected: ", expected)
+    # print("res: ", res)
 
 # passed
   def test_while_loop_tpu_subtraction_nested(self):
@@ -188,6 +188,7 @@ class WhileLoopTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
     return aaa
 
+# passed
   def test_fori_loop_tpu_addition(self):
 
     xm.mark_step()
@@ -203,13 +204,13 @@ class WhileLoopTest(unittest.TestCase):
 
     # lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
     upper_, new_lower_, one_value_, add_res_x_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
-    print("upper_: ", upper_)
-    print("new_lower_: ", new_lower_)
-    print("one_value_: ", one_value_)
-    print("add_res_x_: ", add_res_x_)
-    print("res_: ", res_)
+    # print("upper_: ", upper_)
+    # print("new_lower_: ", new_lower_)
+    # print("one_value_: ", one_value_)
+    # print("add_res_x_: ", add_res_x_)
+    # print("res_: ", res_)
     expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
-    print("expected: ", expected)
+    # print("expected: ", expected)
     self.assertEqual(expected, res_)
 
 # passed
