@@ -121,14 +121,14 @@ class WhileLoopTest(unittest.TestCase):
     # weight_0 = linear_0.weight
     # bias_0 = linear_0.bias
 
-    upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
+    upper__, lower__, one_value__, torch_add_res__, input_value__, bias__, weight__, output_value_real__, = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
 
-    print("torch_add_res__: ", torch_add_res__)
-    print("output_value_real__: ", output_value_real__)
-    print("bias__: ", bias__)
-    print("expected: ", expected)
+    # print("torch_add_res__: ", torch_add_res__)
+    # print("output_value_real__: ", output_value_real__)
+    # print("bias__: ", bias__)
+    # print("expected: ", expected)
 
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
     return aaa
