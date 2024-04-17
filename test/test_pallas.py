@@ -509,17 +509,8 @@ class PallasTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
-  def test_tpu_custom_call_pallas_wrap_paged_attention(self):
-    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
-    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
-
-    def shape_dtype(q, *args):
-      return [(q.shape, q.dtype)]
-
-    paged_attention_kernel = make_kernel_from_pallas(
-        paged_attention,
-        shape_dtype,
-        static_argnames=['pages_per_compute_block'])
+  def test_paged_attention_wrapper(self):
+    from torch_xla.experimental.custom_kernel import paged_attention
 
     batch_size = 4
     max_kv_len = 2048
@@ -548,55 +539,6 @@ class PallasTest(unittest.TestCase):
     v_pages_xla = v_pages.to("xla")
     seq_lens_xla = seq_lens.to("xla")
     page_indices_xla = page_indices.to("xla")
-    pages_per_compute_block = (block_size // page_size)
-
-    o = paged_attention_kernel(
-        q_xla,
-        k_pages_xla,
-        v_pages_xla,
-        seq_lens_xla,
-        page_indices_xla,
-        pages_per_compute_block=pages_per_compute_block,
-    )
-    k = self._pagedattention_reconstruct_kv(page_indices, k_pages)
-    v = self._pagedattention_reconstruct_kv(page_indices, v_pages)
-
-    o_expected = self._pagedattention_grouped_query_attention_reference(
-        q, k, v, seq_lens)
-
-    self.assertEqual(o.shape, o_expected.shape)
-
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
-                   "This test only works on TPUv4+.")
-  def test_paged_attention_wrapper(self):
-    from torch_xla.experimental.custom_kernel import paged_attention
-
-    batch_size = 4
-    max_kv_len = 2048
-    block_size = 512
-    page_size = 16
-    num_kv_heads = 1
-    q_kv_head_ratio = 1
-    head_dim = 128
-    dtype = torch.float32
-    seq_lens = torch.tensor(
-        [max_kv_len // batch_size * (i + 1) for i in range(batch_size)])
-
-    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
-        seq_lens,
-        page_size,
-        max_kv_len,
-        num_kv_heads,
-        num_kv_heads * q_kv_head_ratio,
-        head_dim,
-        dtype=dtype,
-    )
-
-    q_xla = q.to("xla")
-    k_pages_xla = k_pages.to("xla")
-    v_pages_xla = v_pages.to("xla")
-    seq_lens_xla = seq_lens.to("xla")
-    page_indices_xla = page_indices.to("xla")
 
     o = paged_attention(
         q_xla,
@@ -606,13 +548,14 @@ class PallasTest(unittest.TestCase):
         page_indices_xla,
         pages_per_compute_block=block_size // page_size,
     )
+
     k = self._pagedattention_reconstruct_kv(page_indices, k_pages)
     v = self._pagedattention_reconstruct_kv(page_indices, v_pages)
-
     o_expected = self._pagedattention_grouped_query_attention_reference(
         q, k, v, seq_lens)
 
-    self.assertEqual(o.shape, o_expected.shape)
+    self.assertEqual(o[0].shape, o_expected.shape)
+    self.assertTrue(torch.allclose(o[0].cpu(), expected_output.cpu()))
 
 
 if __name__ == '__main__':

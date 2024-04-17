@@ -386,23 +386,31 @@ def paged_attention(q, k_pages, v_pages, lengths, page_indices,
   jax_import_guard()
   from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
 
-  # It returns the shape and type of o, l, m.
-  def shape_dtype(q, *args):
-    return [(q.shape, q.dtype)]
-
-  paged_attention_kernel = make_kernel_from_pallas(
-      paged_attention, shape_dtype, static_argnames=['pages_per_compute_block'])
-
-  o = paged_attention_kernel(
+  payload, tensor_args = trace_pallas(
+      paged_attention,
       q,
       k_pages,
       v_pages,
       lengths,
       page_indices,
       pages_per_compute_block=pages_per_compute_block,
+      static_argnames=["pages_per_compute_block"],
   )
 
-  return o
+  page_indices_reshaped = page_indices.reshape(-1)
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
+  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  output = torch_xla._XLAC._xla_tpu_custom_call([
+      lengths,
+      page_indices_reshaped,
+      buffer_index,
+      step,
+      q,
+      k_pages,
+      v_pages,
+  ], payload, [q.shape], [q.dtype])
+
+  return output
 
 
 XLA_LIB.define(
