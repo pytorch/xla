@@ -97,7 +97,7 @@ class WhileLoopTest(unittest.TestCase):
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
     # weight_0 = linear_0.weight
     bias_0 = linear_0.bias
-    print("original bias: ", bias_0)
+    # print("original bias: ", bias_0)
 
     def cond_fn(upper, lower, one_value, x, input_value, output_value):
       return lower[0] < upper[0]
