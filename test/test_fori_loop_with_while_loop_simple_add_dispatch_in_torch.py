@@ -126,6 +126,7 @@ class WhileLoopTest(unittest.TestCase):
 
     print("torch_add_res__: ", torch_add_res__)
     print("output_value_real__: ", output_value_real__)
+    print("bias__: ", bias__)
     print("expected: ", expected)
 
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
