@@ -45,12 +45,11 @@ def fori_loop(upper, lower, body_fun, init_val, *input_value):
   output_value = torch.zeros([20], dtype=torch.float32, device=device)
   one_value = torch.tensor([1], dtype=torch.int32, device=device)
 
-  def cond_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
-    return lower[0] < upper[0]
-
   if (hasattr(body_fun, 'weight') or hasattr(body_fun, 'bias')):
     # print("body_fun.weight: ", body_fun.weight)
     # print("body_fun.bias: ", body_fun.bias)
+    def cond_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
+      return lower[0] < upper[0]
     def body_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
       new_lower = torch.add(one_value, lower)
       output_value = body_fun(input_value)
@@ -61,10 +60,12 @@ def fori_loop(upper, lower, body_fun, init_val, *input_value):
     bias_0 = body_fun.bias
     res = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, input_value, output_value))
   else:
-    def body_fn(upper, lower, one_value, x, *input_value, weight_0, output_value, bias_0):
+    def cond_fn(upper, lower, one_value, x, input_value, output_value):
+      return lower[0] < upper[0]
+    def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
-      output_value = body_fun(*input_value)
-      return upper, new_lower, one_value, torch.add(one_value, x), *input_value, output_value
+      output_value = body_fun(input_value)
+      return upper, new_lower, one_value, torch.add(one_value, x), input_value, output_value
     res = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, *input_value, output_value))
 
   # output_value = torch.zeros([20], dtype=torch.float32, device=device)
