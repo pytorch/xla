@@ -1966,6 +1966,28 @@ void InitXlaModuleBindings(py::module m) {
         xla::HloSharding::Manual().ToProto(), shard_shape));
     return bridge::AtenFromXlaTensor(output);
   });
+  m.def(
+      "_spmd_shard_to_full_shape",
+      [](const at::Tensor& input, const xla::OpSharding& sharding,
+         const std::vector<int64_t>& output_shape,
+         const py::object& output_dtype) -> at::Tensor {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+        auto sharding_spec = xtensor->sharding_spec();
+        XLA_CHECK(sharding_spec != nullptr &&
+                  sharding_spec->sharding.type() == xla::OpSharding::MANUAL)
+            << "Input tensor is not manual sharded";
+
+        auto full_shape = xla::ShapeUtil::MakeShape(
+            MakeXlaPrimitiveType(
+                reinterpret_cast<THPDtype*>(output_dtype.ptr())->scalar_type,
+                &(xtensor->GetDevice())),
+            output_shape);
+        auto output = xtensor->CreateFrom(torch::lazy::MakeNode<CustomSharding>(
+            xtensor->GetIrValue(), full_shape,
+            CustomSharding::Type::kSPMDShardToFullShape));
+        output->SetShardingSpec(XLATensor::ShardingSpec(sharding, full_shape));
+        return bridge::AtenFromXlaTensor(output);
+      });
   m.def("_xla_mark_sharding_dynamo_custom_op",
         [](const at::Tensor& input, const py::list& tile_assignment,
            const py::list& group_assignment, const py::list& replication_groups,
