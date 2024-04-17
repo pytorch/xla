@@ -72,14 +72,14 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   for carried_input in carried_inputs:
     device = carried_input.device
     fake_carried_inputs.append(
-        torch.randint(
-            10, carried_input.size(),
-            dtype=carried_input.dtype).to(device))
+        torch.randint(10, carried_input.size(),
+                      dtype=carried_input.dtype).to(device))
   for additional_input in additional_inputs:
     device = additional_input.device
     fake_carried_inputs.append(
-        torch.randint(10, additional_input.size(),
-                      dtype=additional_input.dtype).to(device))
+        torch.randint(
+            10, additional_input.size(),
+            dtype=additional_input.dtype).to(device))
 
   # TODO(@manfei): specify which element is for which argument like a,b,c
   cond_result = cond_fn(*fake_carried_inputs)
@@ -89,14 +89,14 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # TODO(@manfei): treat hard-code cond xlacomputation change: currently switch output_value and weight position if additional_inputs(weight/bias) exists
   additional_inputs_list_cond = list(
       fake_carried_inputs[2:]
-  ) # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
+  )  # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
   if additional_inputs:
     tmp_bias = additional_inputs_list_cond[
-        -3] # not used, change order doesn't affect logic
+        -3]  # not used, change order doesn't affect logic
     del additional_inputs_list_cond[
-        -3] # not used, change order doesn't affect logic
+        -3]  # not used, change order doesn't affect logic
     additional_inputs_list_cond.append(
-        tmp_bias) # not used, change order doesn't affect logic
+        tmp_bias)  # not used, change order doesn't affect logic
 
   cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
   cond_hlo = cond_ctx.hlo()

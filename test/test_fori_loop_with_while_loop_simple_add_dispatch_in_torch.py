@@ -100,11 +100,11 @@ class WhileLoopTest(unittest.TestCase):
     def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
       output_value = linear_0(input_value)
-      weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement 
-      bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement 
+      weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+      bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
       return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
           one_value, x), input_value.clone(), bias.clone(), weight.clone(
-          ), output_value.clone() # , output_value_real
+          ), output_value.clone()
 
     upper = torch.tensor([1], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
@@ -141,8 +141,8 @@ class WhileLoopTest(unittest.TestCase):
         def body_fn(upper, lower, one_value, x, input_value, output_value):
           new_lower = torch.add(one_value, lower)
           output_value_real = self.linear(input_value)
-          weight = self.linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement 
-          bias = self.linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement 
+          weight = self.linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+          bias = self.linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
           return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
               one_value, x), input_value.clone(
               ), output_value_real, weight.clone(), bias.clone()
@@ -156,7 +156,7 @@ class WhileLoopTest(unittest.TestCase):
     lower = torch.tensor([0], dtype=torch.int32, device=device)
     one_value = torch.tensor([1], dtype=torch.int32, device=device)
     init_val = torch.tensor([1], dtype=torch.int32, device=device)
-    l_in_0 = torch.rand(10, device=xm.xla_device())  # input_value
+    l_in_0 = torch.rand(10, device=xm.xla_device())
     output_value = torch.zeros([20], dtype=torch.float32, device=device)
 
     weight_0 = simple_with_linear.linear.weight
@@ -171,7 +171,7 @@ class WhileLoopTest(unittest.TestCase):
     upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = simple_with_linear(
         upper, lower, one_value, init_val, l_in_0, output_value)
 
-    # same weight/bias liear model
+    # create same weight/bias liear model for compare
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
     linear_0.weight.data = weight__
     linear_0.bias.data = bias__
@@ -211,7 +211,7 @@ class WhileLoopTest(unittest.TestCase):
 
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
 
-    upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_= fori_loop(
+    upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = fori_loop(
         upper, lower, linear_0, init_val, l_in_0)
 
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
