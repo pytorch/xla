@@ -152,7 +152,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
 
   # Tests that the dynamo bridge automatically moves tensors to XLA device,
   # then back to the original device.
-  @unittest.skipIf(xr.device_type() != "CUDA" or torch.cuda.is_available(),
+  @unittest.skipIf(xr.device_type() != "CUDA" or not torch.cuda.is_available(),
                    f"GPU tests should only run on GPU devices.")
   def test_simple_model_automoves_tensors(self):
     x = torch.tensor(100.0).to(device="cuda")
