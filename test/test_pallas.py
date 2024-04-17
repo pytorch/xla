@@ -7,7 +7,6 @@ from torch import nn as nn
 
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 

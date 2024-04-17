@@ -42,7 +42,9 @@ class PallasTest(unittest.TestCase):
     v = torch.randn(4, 2, 128, 4).to("xla")
 
     o = flash_attention(q, k, v, sharding_spec=range(n_devices))
-    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(o), f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(o),
+        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
 
     expected_o = self._attention(q, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
@@ -74,9 +76,15 @@ class PallasTest(unittest.TestCase):
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
-    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(q_grad), f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
-    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(k_grad), f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
-    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(v_grad), f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(q_grad),
+        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(k_grad),
+        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(v_grad),
+        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
 
     torch.manual_seed(42)
     q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
@@ -94,6 +102,7 @@ class PallasTest(unittest.TestCase):
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
