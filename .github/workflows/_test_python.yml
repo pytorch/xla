@@ -38,7 +38,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
-      options: ${{ inputs.install-cuda-plugin && '--gpus all' || '' }}
+      options: "${{ inputs.install-cuda-plugin && '--gpus all' || '' }} --shm-size 16g"
     strategy:
       fail-fast: false
       matrix:
