@@ -1200,6 +1200,19 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     self.assertTrue(torch.allclose(x.cpu() + 1, xxx.cpu()))
 
+  def test_manual_sharding_api_e2e(self):
+    xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
+    x = torch.zeros(8, 8).to(xm.xla_device())
+    partition_spec = (0, 1)
+
+    xx = xs.enable_manual_sharding(x, partition_spec)
+    self.assertEqual(xx.shape, (8, 8 // self.n_devices))
+
+    xx = xx + 1
+    xxx = xs.disable_manual_sharding(xx, partition_spec, x.shape)
+    self.assertEqual(xxx.shape, (8, 8))
+    self.assertTrue(torch.allclose(x.cpu() + 1, xxx.cpu()))
+
 
 if __name__ == '__main__':
   test = unittest.main()
