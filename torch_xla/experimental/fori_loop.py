@@ -12,6 +12,32 @@ import torch._higher_order_ops.while_loop
 from torch._higher_order_ops.while_loop import while_loop_op
 from torch._higher_order_ops.while_loop import while_loop as torch_while_loop
 
+/////////
+  def test_while_loop_tpu_addition(self):
+    device = xm.xla_device()
+    def cond_fn(init, limit_value):
+      return limit_value[0] >= init[0]
+    def body_fn(init, limit_value):
+      one_value = torch.ones(1, dtype=torch.int32, device=device)
+      return (torch.add(init, one_value), limit_value.clone())
+    # TODO(@manfei): init and limit_value has to be torch.tensor.
+    init = torch.tensor([0], dtype=torch.int32, device=device)
+    limit_value = torch.tensor([10], dtype=torch.int32, device=device)
+    res = while_loop(cond_fn, body_fn, (init, limit_value))
+/////////
+def fori_loop(lower, upper, user_body_func, *init_val):
+  device = xm.xla_device()
+  def cond_fn(upper, lower, *init_val):
+    return lower[0] < upper[0]
+  def body_fn(upper, lower, *init_val):
+    one_value_i = torch.ones(1, dtype=torch.int32, device=device)
+    res_list = list(user_body_func(*init_val))
+    res_list.insert(0, lower)
+    res_list.insert(0, torch.sub(upper, one_value_i))
+    return res_list
+  res = while_loop(cond_fn, body_fn, (lower, upper, *init_val))
+  return res
+/////////
 
 ### TODO(@manfei): treat *input_value
 def fori_loop(upper, lower, body_fun, init_val, input_value):
@@ -37,7 +63,7 @@ def fori_loop(upper, lower, body_fun, init_val, input_value):
     def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
       output_value = body_fun(one_value, input_value)
-      return upper, new_lower, one_value, torch.add(one_value, x), input_value, output_value
+      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), output_value.clone()
     res = torch_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, input_value, output_value))
 
   return res
