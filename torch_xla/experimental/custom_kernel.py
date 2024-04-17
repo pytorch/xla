@@ -5,6 +5,7 @@ import warnings
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.distributed.spmd as xs
 
 from typing import List, Callable
 from torch.library import impl
@@ -184,14 +185,23 @@ class FlashAttention(torch.autograd.Function):
   }
 
   @staticmethod
-  def forward(ctx, q, k, v, causal=False):
+  def forward(ctx, q, k, v, causal=False, sharding_spec=None, mesh=None):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
     from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
 
     ctx.causal = causal
+    ctx.sharding_spec = sharding_spec
+    ctx.mesh = mesh
     save_residuals = q.requires_grad or k.requires_grad or v.requires_grad
+
+    # SPMD integration
+    if sharding_spec is not None:
+      ctx.full_shape = q.shape
+      q = xs.enable_manual_sharding(q, sharding_spec, mesh=mesh).global_tensor
+      k = xs.enable_manual_sharding(k, sharding_spec, mesh=mesh).global_tensor
+      v = xs.enable_manual_sharding(v, sharding_spec, mesh=mesh).global_tensor
 
     # It returns the shape and type of o, l, m.
     def shape_dtype(q, *arg):
@@ -224,9 +234,18 @@ class FlashAttention(torch.autograd.Function):
           False,
           static_argnums=range(5, 13))
       if not save_residuals:
+         # SPMD integration
+        if sharding_spec is not None:
+          o = xs.disable_manual_sharding(o, sharding_spec, ctx.full_shape, mesh=mesh).global_tensor
         return o
       o, *aux = o
       l, m = (v[..., 0] for v in aux[-2:])
+
+    # SPMD integration
+    if sharding_spec is not None:
+      o = xs.disable_manual_sharding(o, sharding_spec, ctx.full_shape, mesh=mesh).global_tensor
+      l = xs.disable_manual_sharding(l, sharding_spec, ctx.full_shape[..., 0], mesh=mesh).global_tensor
+      m = xs.disable_manual_sharding(m, sharding_spec, ctx.full_shape[..., 0], mesh=mesh).global_tensor
 
     ctx.save_for_backward(q, k, v, o, l, m)
     return o
@@ -327,8 +346,11 @@ def flash_attention(
     k,  # [batch_size, num_heads, kv_seq_len, d_model]
     v,  # [batch_size, num_heads, kv_seq_len, d_model]
     causal=False,
+    *,
+    sharding_spec=None,
+    mesh=None
 ):
-  return FlashAttention.apply(q, k, v, causal)
+  return FlashAttention.apply(q, k, v, causal, sharding_spec, mesh)
 
 
 XLA_LIB.define(

@@ -7,6 +7,7 @@ from torch import nn as nn
 
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -476,6 +477,27 @@ class PallasTest(unittest.TestCase):
     mse = torch.nn.MSELoss()
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(mse(i[0].grad.cpu(), i[1].cpu()) < 1e-4)
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_spmd_data_parallel(self):
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    xr.use_spmd()
+    n_devices = xr.global_runtime_device_count()
+    xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
+
+    q = torch.randn(4, 2, 128, 4).to("xla")
+    k = torch.randn(4, 2, 128, 4).to("xla")
+    v = torch.randn(4, 2, 128, 4).to("xla")
+
+    o = flash_attention(q, k, v, sharding_spec=range(n_devices))
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(o), f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+
+    expected_o = self._attention(q, k, v)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
 
 if __name__ == '__main__':
