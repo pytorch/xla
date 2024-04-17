@@ -71,10 +71,16 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
 
-  # !!! cond xlacomputation change !!! switch bias and weight position
+  # # !!! cond xlacomputation change !!! switch bias and weight position
+  # additional_inputs_list_cond = list(fake_carried_inputs[2:]) ### all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
+  # tmp_bias = additional_inputs_list_cond[-2] ### not used, change order doesn't affect logic
+  # del additional_inputs_list_cond[-2] ### not used, change order doesn't affect logic
+  # additional_inputs_list_cond.append(tmp_bias) ### not used, change order doesn't affect logic
+
+  # !!! cond xlacomputation change !!! switch output_value and weight position
   additional_inputs_list_cond = list(fake_carried_inputs[2:]) ### all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
-  tmp_bias = additional_inputs_list_cond[-2] ### not used, change order doesn't affect logic
-  del additional_inputs_list_cond[-2] ### not used, change order doesn't affect logic
+  tmp_bias = additional_inputs_list_cond[-3] ### not used, change order doesn't affect logic
+  del additional_inputs_list_cond[-3] ### not used, change order doesn't affect logic
   additional_inputs_list_cond.append(tmp_bias) ### not used, change order doesn't affect logic
 
   cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
