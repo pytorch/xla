@@ -39,9 +39,9 @@ class PallasTest(unittest.TestCase):
     k = torch.randn(4, 2, 128, 4).to("xla")
     v = torch.randn(4, 2, 128, 4).to("xla")
 
-    o = flash_attention(q, k, v, sharding_spec=range(n_devices))
+    o = flash_attention(q, k, v, partition_spec=range(n_devices))
     self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(o),
+        torch_xla._XLAC._get_xla_partition_spec(o),
         f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
 
     expected_o = self._attention(q, k, v)
@@ -63,7 +63,7 @@ class PallasTest(unittest.TestCase):
     k.retain_grad()
     v.retain_grad()
 
-    o = flash_attention(q, k, v, sharding_spec=range(n_devices))
+    o = flash_attention(q, k, v, partition_spec=range(n_devices))
     loss = o.sum()
     loss.backward()
     xm.mark_step()
@@ -72,13 +72,13 @@ class PallasTest(unittest.TestCase):
     k_grad = k.grad
     v_grad = v.grad
     self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(q_grad),
+        torch_xla._XLAC._get_xla_partition_spec(q_grad),
         f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
     self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(k_grad),
+        torch_xla._XLAC._get_xla_partition_spec(k_grad),
         f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
     self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(v_grad),
+        torch_xla._XLAC._get_xla_partition_spec(v_grad),
         f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
 
     torch.manual_seed(42)
