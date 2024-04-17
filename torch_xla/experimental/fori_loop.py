@@ -38,7 +38,7 @@ from torch._higher_order_ops.while_loop import while_loop_op
 
 
 ### TODO(@manfei): treat *input_value
-def fori_loop(upper, lower, body_fun, init_val, *input_value):
+def fori_loop(upper, lower, body_fun, init_val, input_value):
 
   device = xm.xla_device()
 
