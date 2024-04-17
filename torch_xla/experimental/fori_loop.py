@@ -31,10 +31,13 @@ def fori_loop(upper, lower, body_fun, init_val, *input_value):
       return upper, new_lower, one_value, torch.add(one_value, x), *input_value, output_value
 
   output_value = torch.zeros([20], dtype=torch.float32, device=device)
-  weight_0 = body_fun.weight
-  bias_0 = body_fun.bias
   one_value = torch.tensor([1], dtype=torch.int32, device=device)
-  res = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, *input_value, weight_0, bias_0, output_value))
+  if (hasattr(body_fun, 'weight') and hasattr(body_fun, 'bias')):
+    weight_0 = body_fun.weight
+    bias_0 = body_fun.bias
+    res = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, *input_value, weight_0, bias_0, output_value))
+  else:
+    res = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, *input_value, output_value))
   return res
 
 
