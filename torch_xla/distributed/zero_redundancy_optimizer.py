@@ -416,7 +416,7 @@ class ZeroRedundancyOptimizer(Optimizer):
                 pin_layout=self.pin_layout,
                 groups=self.sharding_groups,
             )
-            if padded_param != param.dtype:
+            if padded_param.dtype != param.dtype:
               padded_param = padded_param.to(dtype=param.dtype)
             param.data.copy_(padded_param.data[:param.size(0)])
 
