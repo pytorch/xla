@@ -23,7 +23,8 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
   if len(init_val) > 1:
     (a, b) = init_val
     for i in range((upper - lower)[0]):
-      a = body_fun(*init_val)
+      # a = body_fun(*init_val)
+      a = body_fun(a, b)
   else:
     for i in range((upper - lower)[0]):
       a = body_fun(*init_val)
