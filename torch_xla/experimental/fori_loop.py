@@ -26,7 +26,7 @@ def fori_loop(upper, lower, body_fun, init_val, input_value):
       return lower[0] < upper[0]
     def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
-      output_value = body_fun(input_value, one_value)
+      output_value = body_fun(input_value)
       weight = body_fun.weight  ### not be used actually, initialized as placeholder xlacomputation requirement
       bias = body_fun.bias  ### not be used actually, initialized as placeholder xlacomputation requirement
       return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), bias.clone(), weight.clone(), output_value.clone() 
@@ -36,7 +36,7 @@ def fori_loop(upper, lower, body_fun, init_val, input_value):
       return lower[0] < upper[0]
     def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
-      output_value = body_fun(input_value)
+      output_value = body_fun(input_value, one_value)
       return upper, new_lower, one_value, torch.add(one_value, x), input_value, output_value
     res = torch_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, input_value, output_value))
 
