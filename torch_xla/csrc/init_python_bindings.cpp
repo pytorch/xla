@@ -969,20 +969,6 @@ class PyLoweringContext {
       std::vector<size_t> buffer_donor_indices;
       xla::ProgramShape program_shape =
           ConsumeValue(computation.GetProgramShape());
-      // // hard-code modify body xlacomputation input arguments
-      // // xxx: failed due to not change body_xlacomputation, might becase has been traced
-      // // xxx: after `computation = ConsumeValue(lowering_ctx.BuildXla());`
-      // if (GetNameString() == "bodyctx") {
-      //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      //   int64_t parameter_idx = program_shape.parameters_size(); // tensors.size();
-      //   for (auto& additional_input_tensor : additional_inputs_list) {
-      //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
-      //     xla::Shape shape = xtensor->shape().get();
-      //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-      //                                 "UnusedArgumentsPlaceholder");
-      //     parameter_idx += 1;
-      //   }
-      // }
       // TODO(@manfei): please confirm whether we check for more than two or use
       // default value true
       bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
