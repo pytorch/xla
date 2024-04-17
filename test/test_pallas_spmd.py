@@ -12,6 +12,7 @@ from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
 if xr.device_type() == 'TPU':
+  from torch_xla.experimental.custom_kernel import flash_attention
   from torch_xla.experimental.custom_kernel import jax_import_guard
   jax_import_guard()
   import jax
@@ -31,9 +32,6 @@ class PallasTest(unittest.TestCase):
                    "This test only works on TPUv3+.")
   def test_flash_attention_spmd_data_parallel(self):
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
-    from torch_xla.experimental.custom_kernel import flash_attention
-
-    xr.use_spmd()
     n_devices = xr.global_runtime_device_count()
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
@@ -54,9 +52,6 @@ class PallasTest(unittest.TestCase):
                    "This test only works on TPUv3+.")
   def test_flash_attention_backward_spmd_data_parallel(self):
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
-    from torch_xla.experimental.custom_kernel import flash_attention
-
-    xr.use_spmd()
     n_devices = xr.global_runtime_device_count()
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
@@ -110,5 +105,6 @@ if __name__ == '__main__':
   torch.manual_seed(42)
   torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
       use_full_mat_mul_precision=True)
+  xr.use_spmd()
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
