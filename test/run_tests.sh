@@ -104,7 +104,7 @@ function run_xla_hlo_debug {
 
 function run_dynamic {
   echo "Running in DynamicShape mode: $@"
-  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
+  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter:nms" run_test "$@"
 }
 
 function run_eager_debug {
