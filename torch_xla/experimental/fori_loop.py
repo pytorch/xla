@@ -64,11 +64,13 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     fake_carried_inputs.append(
         torch.randint(10, additional_input.size(),
                       dtype=additional_input.dtype).to(device))
+  print("fake_carried_inputs: ", fake_carried_inputs)
 
   ### TODO(@manfei): specify which element is for which argument like a,b,c
   cond_result = cond_fn(*fake_carried_inputs)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
+
   # !!! cond xlacomputation change !!! switch bias and weight position
   additional_inputs_list_cond = list(fake_carried_inputs[2:]) ### all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
   tmp_bias = additional_inputs_list_cond[-2] ### not used, change order doesn't affect logic
@@ -87,6 +89,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   body_result = body_fn(*fake_carried_inputs)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
+
   # !!! body xlacomputation change !!! add output_value argument
   additional_inputs_list_body = [fake_carried_inputs[-3]]
   ### TODO(@manfei): treat hard-code parameters: additional_inputs_list_body
