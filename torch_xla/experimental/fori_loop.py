@@ -60,7 +60,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
 
 def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
-  print("arrive here _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None): !!!")
+  # print("arrive here _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None): !!!")
   ### fake carried_inputs to split formal code
   fake_carried_inputs = []
   for carried_input in carried_inputs:
