@@ -10,6 +10,7 @@ from torch._C import DispatchKey
 from torch._ops import HigherOrderOperator
 import torch._higher_order_ops.while_loop
 from torch._higher_order_ops.while_loop import while_loop_op
+from torch._higher_order_ops.while_loop import while_loop
 
 
 ### TODO(@manfei): treat *input_value
