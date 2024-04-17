@@ -48,9 +48,9 @@ def fori_loop(upper, lower, body_fun, init_val, input_value):
   if (hasattr(body_fun, 'weight') or hasattr(body_fun, 'bias')):
     # print("body_fun.weight: ", body_fun.weight)
     # print("body_fun.bias: ", body_fun.bias)
-    def cond_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
+    def cond_fn(upper, lower, one_value, x, input_value, output_value):
       return lower[0] < upper[0]
-    def body_fn(upper, lower, one_value, x, input_value, weight_0, output_value, bias_0):
+    def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
       output_value = body_fun(input_value)
       weight = body_fun.weight  ### not be used actually, initialized as placeholder xlacomputation requirement
