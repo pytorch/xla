@@ -96,8 +96,9 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
 
-  # !!! body xlacomputation change !!! add output_value argument
+  # !!! body xlacomputation change !!! add non-changed output_value argument
   additional_inputs_list_body = [fake_carried_inputs[-3]]
+
   ### TODO(@manfei): treat hard-code parameters: additional_inputs_list_body
   body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
   body_hlo = body_ctx.hlo()
@@ -120,10 +121,16 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
 
+  # ### TODO(@manfei): treat hard-code input arguments
+  # # !!! init change !!! 
+  # tmp_bias = params[-2]
+  # del params[-2]
+  # params.append(tmp_bias)
+
   ### TODO(@manfei): treat hard-code input arguments
-  # !!! init change !!! 
-  tmp_bias = params[-2]
-  del params[-2]
+  # !!! init change !!! switch bias and output_value
+  tmp_bias = params[-3]
+  del params[-3]
   params.append(tmp_bias)
 
   ### generate while xlacomputation
