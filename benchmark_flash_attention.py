@@ -10,10 +10,10 @@ import torch_xla.debug.metrics as met
 import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 
-xr.use_spmd()
-
-device = xm.xla_device()
 server = xp.start_server(9012)
+
+xr.use_spmd()
+device = xm.xla_device()
 torch.set_default_dtype(torch.bfloat16)
 
 @xp.trace_me("Eager Attention")
