@@ -95,8 +95,8 @@ class WhileLoopTest(unittest.TestCase):
 
     # def forward(self, upper, lower, one_value, x, input_value, output_value):
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-    weight_0 = linear_0.weight
-    bias_0 = linear_0.bias
+    # weight_0 = linear_0.weight
+    # bias_0 = linear_0.bias
 
     def cond_fn(upper, lower, one_value, x, input_value, output_value):
       return lower[0] < upper[0]
@@ -115,8 +115,10 @@ class WhileLoopTest(unittest.TestCase):
     # l_in_0 = torch.ones(10, device=xm.xla_device()) # input_value
     l_in_0 = torch.rand(10, device=xm.xla_device()) # input_value
     output_value = torch.zeros([20], dtype=torch.float32, device=device)
+    # weight_0 = linear_0.weight
+    # bias_0 = linear_0.bias
 
-    upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = while_loop( cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
+    upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, l_in_0, output_value))
 
     expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
 
