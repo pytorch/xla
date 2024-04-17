@@ -86,7 +86,7 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
-# debugging
+# passed
   def test_while_loop_tpu_simple_linear(self):
 
     xm.mark_step()
