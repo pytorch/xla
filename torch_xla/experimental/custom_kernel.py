@@ -194,9 +194,14 @@ class FlashAttention(torch.autograd.Function):
     ctx.causal = causal
     ctx.sharding_spec = sharding_spec
     ctx.mesh = mesh
+    ctx.full_shape = None
     save_residuals = q.requires_grad or k.requires_grad or v.requires_grad
 
-    # SPMD integration
+    # SPMD integration.
+    # mark_sharding is in-placed, and therefore save the full q, k, v for the backward.
+    full_q = q
+    full_k = k
+    full_v = v
     if sharding_spec is not None:
       ctx.full_shape = q.shape
       q = xs.enable_manual_sharding(q, sharding_spec, mesh=mesh).global_tensor
@@ -244,10 +249,10 @@ class FlashAttention(torch.autograd.Function):
     # SPMD integration
     if sharding_spec is not None:
       o = xs.disable_manual_sharding(o, sharding_spec, ctx.full_shape, mesh=mesh).global_tensor
-      l = xs.disable_manual_sharding(l, sharding_spec, ctx.full_shape[..., 0], mesh=mesh).global_tensor
-      m = xs.disable_manual_sharding(m, sharding_spec, ctx.full_shape[..., 0], mesh=mesh).global_tensor
+      l = xs.disable_manual_sharding(l, sharding_spec[0:3], ctx.full_shape[0:3], mesh=mesh).global_tensor
+      m = xs.disable_manual_sharding(m, sharding_spec[0:3], ctx.full_shape[0:3], mesh=mesh).global_tensor
 
-    ctx.save_for_backward(q, k, v, o, l, m)
+    ctx.save_for_backward(full_q, full_k, full_v, o, l, m)
     return o
 
   @staticmethod
@@ -256,6 +261,9 @@ class FlashAttention(torch.autograd.Function):
 
     q, k, v, o, l, m = ctx.saved_tensors
     causal = ctx.causal
+    sharding_spec = ctx.sharding_spec
+    mesh = ctx.mesh
+    full_shape = ctx.full_shape
     grad_q = grad_k = grad_v = None
 
     grad_i = torch.sum(
@@ -268,6 +276,16 @@ class FlashAttention(torch.autograd.Function):
                                         [FlashAttention.MIN_BLOCK_SIZE])
     expanded_grad_i = grad_i.unsqueeze(-1).expand(
         [-1 for _ in grad_i.shape] + [FlashAttention.MIN_BLOCK_SIZE])
+
+    # SPMD integration
+    if sharding_spec is not None:
+      q = xs.enable_manual_sharding(q, sharding_spec, mesh=mesh).global_tensor
+      k = xs.enable_manual_sharding(k, sharding_spec, mesh=mesh).global_tensor
+      v = xs.enable_manual_sharding(v, sharding_spec, mesh=mesh).global_tensor
+      expanded_l = xs.enable_manual_sharding(expanded_l, sharding_spec, mesh=mesh).global_tensor
+      expanded_m = xs.enable_manual_sharding(expanded_m, sharding_spec, mesh=mesh).global_tensor
+      grad_output = xs.enable_manual_sharding(grad_output, sharding_spec, mesh=mesh).global_tensor
+      expanded_grad_i = xs.enable_manual_sharding(expanded_grad_i, sharding_spec, mesh=mesh).global_tensor
 
     if ctx.needs_input_grad[0]:
       payload, _ = trace_pallas(
@@ -338,7 +356,13 @@ class FlashAttention(torch.autograd.Function):
     if ctx.needs_input_grad[2]:
       grad_v = grads[1]
 
-    return grad_q, grad_k, grad_v, None
+    # SPMD integration
+    if sharding_spec is not None:
+      grad_q = xs.disable_manual_sharding(grad_q, sharding_spec, full_shape, mesh=mesh).global_tensor
+      grad_k = xs.disable_manual_sharding(grad_k, sharding_spec, full_shape, mesh=mesh).global_tensor
+      grad_v = xs.disable_manual_sharding(grad_v, sharding_spec, full_shape, mesh=mesh).global_tensor
+
+    return grad_q, grad_k, grad_v, None, None, None
 
 
 def flash_attention(

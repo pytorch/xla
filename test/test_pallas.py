@@ -499,6 +499,51 @@ class PallasTest(unittest.TestCase):
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_backward_spmd_data_parallel(self):
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    xr.use_spmd()
+    n_devices = xr.global_runtime_device_count()
+    xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = flash_attention(q, k, v, sharding_spec=range(n_devices))
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(q_grad), f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(k_grad), f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(v_grad), f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = self._attention(q, k, v)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    mse = torch.nn.MSELoss()
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(mse(i[0].grad.cpu(), i[1].cpu()) < 1e-4)
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
