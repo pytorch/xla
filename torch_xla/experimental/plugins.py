@@ -76,7 +76,9 @@ def use_dynamic_plugins():
 
 
 def using_dynamic_plugins():
-  return xu.getenv_as(xenv.PJRT_DYNAMIC_PLUGINS, bool, False)
+  # TODO: dummy plugin for CPU
+  return xu.getenv_as(xenv.PJRT_DYNAMIC_PLUGINS, bool,
+                      False) and xr.device_type() != "CPU"
 
 
 def default() -> DevicePlugin:
