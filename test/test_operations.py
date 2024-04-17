@@ -88,6 +88,11 @@ def onlyOnCUDA(fn):
   return unittest.skipIf(accelerator != "cuda", "PJRT_DEVICE=CUDA required")(fn)
 
 
+def onlyIfXLAExperimentalContains(feat):
+  experimental = os.environ.get("XLA_EXPERIMENTAL", "").split(":")
+  return unittest.skipIf(feat not in experimental, f"XLA_EXPERIMENTAL={feat} required")
+
+
 def _gen_tensor(*args, **kwargs):
   return torch.randn(*args, **kwargs)
 
@@ -2454,6 +2459,7 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
 
 # These tests were extracted and adapted from torchvision.
 # Source: vision/test/test_ops.py
+@onlyIfXLAExperimentalContains("nms")
 class TestNMS(test_utils.XlaTestCase):
 
   def _reference_nms(self, boxes, scores, iou_threshold):
