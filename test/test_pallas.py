@@ -47,7 +47,7 @@ class PallasTest(unittest.TestCase):
     v_pages = torch.randn(
         num_kv_heads, total_pages, page_size, head_dim, dtype=dtype)
     page_indices = torch.randperm(
-        batch_size * pages_per_sequence, dtype=torch.int64)
+        batch_size * pages_per_sequence, dtype=torch.int32)
     page_indices = page_indices.reshape(batch_size, pages_per_sequence)
     q = torch.randn(batch_size, num_heads, head_dim, dtype=dtype)
     return q, k_pages, v_pages, page_indices
@@ -57,7 +57,8 @@ class PallasTest(unittest.TestCase):
     num_heads, _, _, head_dim = pages.shape
 
     def per_sequence_page_gather(pages, page_indices):
-      return torch.index_select(pages, dim=1, index=page_indices)
+      page_indices_int64 = page_indices.to(torch.int64)
+      return torch.index_select(pages, dim=1, index=page_indices_int64)
 
     gathered = torch.vmap(
         per_sequence_page_gather, in_dims=(None, 0))(pages, page_indices)
@@ -529,7 +530,8 @@ class PallasTest(unittest.TestCase):
     head_dim = 128
     dtype = torch.float32
     seq_lens = torch.tensor(
-        [max_kv_len // batch_size * (i + 1) for i in range(batch_size)])
+        [max_kv_len // batch_size * (i + 1) for i in range(batch_size)],
+        dtype=torch.int32)
 
     q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
         seq_lens,
@@ -546,13 +548,15 @@ class PallasTest(unittest.TestCase):
     v_pages_xla = v_pages.to("xla")
     seq_lens_xla = seq_lens.to("xla")
     page_indices_xla = page_indices.to("xla")
+    pages_per_compute_block = (block_size // page_size)
+
     o = paged_attention_kernel(
         q_xla,
         k_pages_xla,
         v_pages_xla,
         seq_lens_xla,
         page_indices_xla,
-        pages_per_compute_block=block_size // page_size,
+        pages_per_compute_block=pages_per_compute_block,
     )
     k = self._pagedattention_reconstruct_kv(page_indices, k_pages)
     v = self._pagedattention_reconstruct_kv(page_indices, v_pages)
