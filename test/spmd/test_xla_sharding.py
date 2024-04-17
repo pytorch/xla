@@ -1153,7 +1153,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_spmd_shard_to_full_shape(self):
     x = torch.zeros(8, 8).to(xm.xla_device())
-    x = torch.zeros(8, 8).to(xm.xla_device())
     x += 1
     # No sharding spec attached.
     with self.assertRaises(RuntimeError):
@@ -1178,7 +1177,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
     self.assertEqual(xx.shape, x.shape)
-    self.assertIn('%custom-call.9 = f32[8,8]{1,0}', hlo)
     self.assertIn('%custom-call.9 = f32[8,8]{1,0}', hlo)
     self.assertIn(
         'custom_call_target="SPMDShardToFullShape", sharding={replicated}', hlo)
