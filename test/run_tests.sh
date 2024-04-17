@@ -240,7 +240,7 @@ function run_xla_op_tests3 {
   if [ -x "$(command -v nvidia-smi)" ]; then
     # Please keep PJRT_DEVICE and GPU_NUM_DEVICES explicit in the following test commands.
     echo "single-host-single-process"
-    PJRT_DEVICE=CUDA GPU_NUM_DEVICES=1 python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_cores=1 --num_steps=25 --model=resnet18
+    PJRT_DEVICE=CUDA GPU_NUM_DEVICES=1 python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_steps=25 --model=resnet18
     PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
 
     echo "single-host-multi-process"
