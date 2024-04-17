@@ -131,7 +131,7 @@ class WhileLoopTest(unittest.TestCase):
     # print("expected: ", expected)
 
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
-    return aaa
+    return True
 
 # passed
   def test_while_loop_tpu_simple_linear_class(self):
