@@ -196,7 +196,13 @@ class WhileLoopTest(unittest.TestCase):
     def body_fun(a, b):
       return torch.add(a, b)
 
-    lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
+    # lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
+    upper_, new_lower_, one_value_, add_res_x_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
+    print("upper_: ", upper_)
+    print("new_lower_: ", new_lower_)
+    print("one_value_: ", one_value_)
+    print("add_res_x_: ", add_res_x_)
+    print("res_: ", res_)
     expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
     self.assertEqual(expected, res_)
 
