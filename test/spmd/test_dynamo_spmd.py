@@ -205,7 +205,8 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     dynamo_res = dynamo_linear(xla_x)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
 
-  @unittest.skip()
+  # https://github.com/pytorch/xla/pull/6921#issuecomment-2062106737
+  @unittest.skip("Failing in CI")
   def test_mark_sharding_inside_compile(self):
     met.clear_counters()
     device = xm.xla_device()
