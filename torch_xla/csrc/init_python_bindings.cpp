@@ -914,10 +914,12 @@ class PyLoweringContext {
   // needed in xlacomputation.
   void BuildForiLoop(std::vector<at::Tensor> tensors,
                      std::vector<at::Tensor> additional_inputs_list = {}) {
-    // hard-code modify cond xlacomputation input arguments with unusedarguments for xla::while requriement
+    // hard-code modify cond xlacomputation input arguments with unusedarguments
+    // for xla::while requriement
     if (GetNameString() == "condctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      int64_t parameter_idx = 2; // parameter_idx start from 2 after used upper and lower
+      int64_t parameter_idx =
+          2; // parameter_idx start from 2 after used upper and lower
       for (auto& additional_input_tensor : additional_inputs_list) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
         xla::Shape shape = xtensor->shape().get();
@@ -927,7 +929,8 @@ class PyLoweringContext {
       }
     }
 
-    // hard-code modify body xlacomputation input arguments with unusedarguments for xla::while requriement
+    // hard-code modify body xlacomputation input arguments with unusedarguments
+    // for xla::while requriement
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // TODO(@manfei): treat hard code parameter_idx value
