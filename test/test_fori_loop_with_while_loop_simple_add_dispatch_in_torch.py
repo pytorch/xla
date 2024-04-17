@@ -198,6 +198,7 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
     self.assertEqual(expected, res_)
 
+# passed
   def test_fori_loop_tpu_simple_linear(self):
 
     xm.mark_step()
