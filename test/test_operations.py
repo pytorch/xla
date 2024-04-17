@@ -90,7 +90,8 @@ def onlyOnCUDA(fn):
 
 def onlyIfXLAExperimentalContains(feat):
   experimental = os.environ.get("XLA_EXPERIMENTAL", "").split(":")
-  return unittest.skipIf(feat not in experimental, f"XLA_EXPERIMENTAL={feat} required")
+  return unittest.skipIf(feat not in experimental,
+                         f"XLA_EXPERIMENTAL={feat} required")
 
 
 def _gen_tensor(*args, **kwargs):
