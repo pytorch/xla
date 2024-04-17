@@ -12,3 +12,5 @@ package_version: 2.4.0
 nightly_release: false
 # Whether to preinstall libtpu in the PyTorch/XLA wheel. Ignored for GPU build.
 bundle_libtpu: 1
+# Suffix for bazel remote cache key
+cache_suffix: ""
