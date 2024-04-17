@@ -106,7 +106,10 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   body_ctx.set_name_string("bodyctx")
 
   # !!! body xlacomputation change !!! add non-changed output_value argument
-  additional_inputs_list_body = [fake_carried_inputs[-3]]
+  if additional_inputs:
+    additional_inputs_list_body = [fake_carried_inputs[-3]]
+  else:
+    additional_inputs_list_body = []
 
   ### TODO(@manfei): treat hard-code parameters: additional_inputs_list_body
   body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
