@@ -41,8 +41,8 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   ### cond_fn&body_fn: callable
   ### carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
   print("arrive here @while_loop_op.py_impl(DispatchKey.XLA) !!!")
-  print("carried_inputs: ", carried_inputs)
-  print("additional_inputs: ", additional_inputs)
+  # print("carried_inputs: ", carried_inputs)
+  # print("additional_inputs: ", additional_inputs)
   if additional_inputs is None:
     additional_inputs = tuple()
   return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
@@ -64,7 +64,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     fake_carried_inputs.append(
         torch.randint(10, additional_input.size(),
                       dtype=additional_input.dtype).to(device))
-  print("fake_carried_inputs: ", fake_carried_inputs)
+  # print("fake_carried_inputs: ", fake_carried_inputs)
 
   ### TODO(@manfei): specify which element is for which argument like a,b,c
   cond_result = cond_fn(*fake_carried_inputs)
@@ -104,9 +104,9 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
-  body_hlo_print = xb.get_computation_hlo(body_computation)
-  print("body computation: !!!!!!!!!")
-  print(body_hlo_print)
+  # body_hlo_print = xb.get_computation_hlo(body_computation)
+  # print("body computation: !!!!!!!!!")
+  # print(body_hlo_print)
 
   ### trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
   total_inputs = carried_inputs + additional_inputs
