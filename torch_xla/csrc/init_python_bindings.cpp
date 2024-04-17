@@ -919,7 +919,7 @@ class PyLoweringContext {
     if (GetNameString() == "condctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       int64_t parameter_idx =
-          2; // parameter_idx start from 2 after used upper and lower
+          2;  // parameter_idx start from 2 after used upper and lower
       for (auto& additional_input_tensor : additional_inputs_list) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
         xla::Shape shape = xtensor->shape().get();
