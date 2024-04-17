@@ -85,7 +85,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # del additional_inputs_list_cond[-2] ### not used, change order doesn't affect logic
   # additional_inputs_list_cond.append(tmp_bias) ### not used, change order doesn't affect logic
 
-  # !!! cond xlacomputation change !!! switch output_value and weight position
+  # !!! cond xlacomputation change !!! switch output_value and weight position if additional_inputs(weight/bias) exists
   additional_inputs_list_cond = list(fake_carried_inputs[2:]) ### all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
   if additional_inputs:
     tmp_bias = additional_inputs_list_cond[-3] ### not used, change order doesn't affect logic
@@ -105,7 +105,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
 
-  # !!! body xlacomputation change !!! add non-changed output_value argument
+  # !!! body xlacomputation change !!! add non-changed output_value argument if additional_inputs(weight/bias) exists
   if additional_inputs:
     additional_inputs_list_body = [fake_carried_inputs[-3]]
   else:
@@ -140,7 +140,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # params.append(tmp_bias)
 
   ### TODO(@manfei): treat hard-code input arguments
-  # !!! init change !!! switch bias and output_value
+  # !!! init change !!! switch bias and output_value if additional_inputs(weight/bias) exists
   if additional_inputs:
     tmp_bias = params[-3]
     del params[-3]
