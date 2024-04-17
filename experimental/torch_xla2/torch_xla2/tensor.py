@@ -199,7 +199,6 @@ class XLATensor2(torch.Tensor):
       if isinstance(func, torch._ops.OpOverloadPacket):
         return func(*args, **kwargs)
 
-      print(func.name())
       if func.name() == 'aten::copy_':
         x, y = args
         x._elem = y._elem
