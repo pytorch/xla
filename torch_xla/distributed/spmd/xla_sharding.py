@@ -491,7 +491,7 @@ def enable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                            *,
                            mesh: Mesh = None) -> XLAShardedTensor:
   """
-  This API enables manual sharding for the given tensor. Manual sharding disables auto sharding proporgation and auto
+  This API enables manual sharding for the given tensor. Manual sharding disables SPMD sharding proporgation and auto
   partition for the given tensor and all subsequential tensors that produced by an op that uses the given tensor as
   input, and therefore allows the user to manually call collectives for the tensor and subsequential tensors. It
   requires the user to provide the partition spec to shard the tensor before enabling the manual sharding. To be noted,
