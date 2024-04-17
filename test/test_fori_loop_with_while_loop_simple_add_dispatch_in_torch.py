@@ -49,6 +49,8 @@ class WhileLoopTest(unittest.TestCase):
     limit_value = torch.tensor([0], dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
+    print("expected: ", expected)
+    print("res: ", res)
     self.assertEqual(expected, res)
 
 # passed
@@ -69,6 +71,8 @@ class WhileLoopTest(unittest.TestCase):
     res = while_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
+    print("expected: ", expected)
+    print("res: ", res)
 
 # passed
   def test_while_loop_tpu_subtraction_nested(self):
