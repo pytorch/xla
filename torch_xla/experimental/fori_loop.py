@@ -17,28 +17,11 @@ from torch._higher_order_ops.while_loop import while_loop as torch_while_loop
 def fori_loop(upper, lower, body_fun, init_val, input_value):
 
   device = xm.xla_device()
-  # body_fun = torch.nn.Linear(10, 20).to(xm.xla_device())
 
   output_value = torch.zeros([20], dtype=torch.float32, device=device)
   one_value = torch.tensor([1], dtype=torch.int32, device=device)
 
-  # def cond_fn(upper, lower, one_value, x, input_value, output_value):
-  #   return lower[0] < upper[0]
-  # def body_fn(upper, lower, one_value, x, input_value, output_value):
-  #   new_lower = torch.add(one_value, lower)
-  #   output_value = body_fun(input_value)
-  #   weight = body_fun.weight  ### not be used actually, initialized as placeholder xlacomputation requirement
-  #   bias = body_fun.bias  ### not be used actually, initialized as placeholder xlacomputation requirement
-  #   # return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value
-  #   return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), bias.clone(), weight.clone(), output_value.clone() 
-  # # weight_0 = body_fun.weight
-  # # bias_0 = body_fun.bias
-  # res = torch_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, input_value, output_value))
-  # return res
-
   if (hasattr(body_fun, 'weight') or hasattr(body_fun, 'bias')):
-    # print("body_fun.weight: ", body_fun.weight)
-    # print("body_fun.bias: ", body_fun.bias)
     def cond_fn(upper, lower, one_value, x, input_value, output_value):
       return lower[0] < upper[0]
     def body_fn(upper, lower, one_value, x, input_value, output_value):
@@ -46,10 +29,7 @@ def fori_loop(upper, lower, body_fun, init_val, input_value):
       output_value = body_fun(input_value)
       weight = body_fun.weight  ### not be used actually, initialized as placeholder xlacomputation requirement
       bias = body_fun.bias  ### not be used actually, initialized as placeholder xlacomputation requirement
-      # return upper, new_lower, one_value, torch.add(one_value, x), input_value, weight, bias, output_value
       return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), bias.clone(), weight.clone(), output_value.clone() 
-    # weight_0 = body_fun.weight
-    # bias_0 = body_fun.bias
     res = torch_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, input_value, output_value))
   else:
     def cond_fn(upper, lower, one_value, x, input_value, output_value):
@@ -60,14 +40,6 @@ def fori_loop(upper, lower, body_fun, init_val, input_value):
       return upper, new_lower, one_value, torch.add(one_value, x), input_value, output_value
     res = torch_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, input_value, output_value))
 
-  # output_value = torch.zeros([20], dtype=torch.float32, device=device)
-  # one_value = torch.tensor([1], dtype=torch.int32, device=device)
-  # if (hasattr(body_fun, 'weight') or hasattr(body_fun, 'bias')):
-  #   weight_0 = body_fun.weight
-  #   bias_0 = body_fun.bias
-  #   res = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, *input_value, weight_0, bias_0, output_value))
-  # else:
-  #   res = while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, *input_value, output_value))
   return res
 
 
