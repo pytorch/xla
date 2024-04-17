@@ -914,18 +914,10 @@ class PyLoweringContext {
   // needed in xlacomputation.
   void BuildForiLoop(std::vector<at::Tensor> tensors,
                      std::vector<at::Tensor> additional_inputs_list = {}) {
+    // hard-code modify cond xlacomputation input arguments with unusedarguments for xla::while requriement
     if (GetNameString() == "condctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      // hard-code parameter_idx to 2 to skip existing upper/lower arguments
-      // TODO(@manfei): get body xlacomputation arguments' number first then decide items in `additional_inputs_list`, maybe implement in python level
-      // !!! since cond_fn only compare upper and lower, so it would only use two arguments, due to PyTorch/XLA
-      // !!! trace xlacomputation from result tensor, so all the other arguments would not be included or generated;
-      // !!! but to meet xla::while requirement, we would skip first two arguments,
-      // !!! then add all other arguments like body_fn/init
-      // !!! --- additional_inputs_list: this list include all other arguments like body_fn/init except upper and lower
-      // !!! --- next step: we add dump paras according to additional_inputs_list
-      // ??? --- could we get IRvalue of `additional_inputs_list` in this function to complete xlacomputation?
-      int64_t parameter_idx = 2; // parameter_idx start from 2 after upper and lower
+      int64_t parameter_idx = 2; // parameter_idx start from 2 after used upper and lower
       for (auto& additional_input_tensor : additional_inputs_list) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
         xla::Shape shape = xtensor->shape().get();
@@ -935,11 +927,11 @@ class PyLoweringContext {
       }
     }
 
-    // hard-code modify body xlacomputation input arguments
-    // TODO(@manfei): get body xlacomputation arguments' number first then decide items in `additional_inputs_list`, maybe implement in python level
+    // hard-code modify body xlacomputation input arguments with unusedarguments for xla::while requriement
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      int64_t parameter_idx = 7; // tensors.size();
+      // TODO(@manfei): treat hard code parameter_idx value
+      int64_t parameter_idx = 7;
       for (auto& additional_input_tensor : additional_inputs_list) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
         xla::Shape shape = xtensor->shape().get();
