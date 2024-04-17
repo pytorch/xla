@@ -32,6 +32,7 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
 
 class WhileLoopTest(unittest.TestCase):
 
+# passed
   def test_while_loop_tpu_subtraction(self):
 
     device = xm.xla_device()
@@ -50,6 +51,7 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+# passed
   def test_while_loop_tpu_addition(self):
 
     device = xm.xla_device()
@@ -68,6 +70,7 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+# passed
   def test_while_loop_tpu_subtraction_nested(self):
 
     device = xm.xla_device()
@@ -193,8 +196,7 @@ class WhileLoopTest(unittest.TestCase):
     def body_fun(a, b):
       return torch.add(a, b)
 
-    lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value,
-                                     init_val)
+    lower_, upper_, res_ = fori_loop(upper, lower, body_fun, one_value, init_val)
     expected = _fake_fori_loop(lower, upper, body_fun, init_val, one_value)
     self.assertEqual(expected, res_)
 
