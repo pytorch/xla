@@ -16,6 +16,7 @@ from torch._higher_order_ops.while_loop import while_loop_op
 def fori_loop(upper, lower, body_fun, init_val, input_value):
 
   device = xm.xla_device()
+  body_fun = torch.nn.Linear(10, 20).to(xm.xla_device())
 
   output_value = torch.zeros([20], dtype=torch.float32, device=device)
   one_value = torch.tensor([1], dtype=torch.int32, device=device)
