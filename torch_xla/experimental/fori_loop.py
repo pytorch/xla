@@ -132,8 +132,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   if additional_inputs:
     additional_inputs_list_body = [fake_carried_inputs[-3]]
   else:
-    # add fake output_value to do map and not reuse output in the next turn
-    additional_inputs_list_body = [fake_carried_inputs[-1]]
+    additional_inputs_list_body = []
 
   ### TODO(@manfei): treat hard-code parameters: additional_inputs_list_body
   body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
