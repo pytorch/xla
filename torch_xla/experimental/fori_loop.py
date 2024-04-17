@@ -36,7 +36,7 @@ def fori_loop(upper, lower, body_fun, init_val, input_value):
       return lower[0] < upper[0]
     def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
-      output_value = body_fun(input_value, one_value)
+      output_value = body_fun(one_value, input_value)
       return upper, new_lower, one_value, torch.add(one_value, x), input_value, output_value
     res = torch_while_loop(cond_fn, body_fn, (upper, lower, one_value, init_val, input_value, output_value))
 
