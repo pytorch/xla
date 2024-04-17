@@ -491,9 +491,11 @@ def enable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                            *,
                            mesh: Mesh = None) -> XLAShardedTensor:
   """
-  This API enables manual sharding for the given tensor. Manual sharding disables auto sharding proporgation and auto partition for
-  the given tensor and all subsequential tensors that produced by an op that uses the given tensor as input, and therefore allows the user to manually call collectives for the tensor and subsequential tensors. It requires the user to provide the
-  partition spec to shard the tensor before enabling the manual sharding. To be noted, the leaf tensors need to pass to disable_manual_sharding before ending the graph.
+  This API enables manual sharding for the given tensor. Manual sharding disables auto sharding proporgation and auto
+  partition for the given tensor and all subsequential tensors that produced by an op that uses the given tensor as
+  input, and therefore allows the user to manually call collectives for the tensor and subsequential tensors. It
+  requires the user to provide the partition spec to shard the tensor before enabling the manual sharding. To be noted,
+  the leaf tensors need to pass to disable_manual_sharding before ending the graph.
   """
   mesh = get_global_mesh() if mesh is None else mesh
   t = mark_sharding(unwrap_sharded_tensor(t), mesh, partition_spec)
@@ -507,7 +509,8 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                             *,
                             mesh: Mesh = None) -> XLAShardedTensor:
   """
-  This API disables manual sharding for the given tensor. The partition_spec and full_shape are used to construct the output tensor as if the input tensor has not been manual sharded.
+  This API disables manual sharding for the given tensor. The partition_spec and full_shape are used to construct the
+  output tensor as if the input tensor has not been manual sharded.
   """
   mesh = get_global_mesh() if mesh is None else mesh
   t = _mark_manual_sharding(unwrap_sharded_tensor(t))
