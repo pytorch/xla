@@ -417,6 +417,7 @@ class PallasTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_backward(self):
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
@@ -449,9 +450,9 @@ class PallasTest(unittest.TestCase):
     loss.backward()
     xm.mark_step()
 
-    mse = torch.nn.MSELoss()
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
-      self.assertTrue(mse(i[0].grad.cpu(), i[1].cpu()) < 1e-4)
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
 
 if __name__ == '__main__':
