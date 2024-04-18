@@ -3,6 +3,7 @@
 # slightly modify the upstream version of the checkpoint util function.
 import torch
 import warnings
+import torch_xla
 import torch_xla.core.xla_model as xm
 from torch.utils.checkpoint import detach_variable, check_backward_validity, _get_device_module, _infer_device_type
 from typing import Iterable, List, Tuple, Union
@@ -87,6 +88,12 @@ class CheckpointFunction(torch.autograd.Function):
         "dtype": torch.get_autocast_cpu_dtype(),
         "cache_enabled": torch.is_autocast_cache_enabled()
     }
+    ctx.xla_autocast_kwargs = {
+      "enabled": torch.is_autocast_xla_enabled(),
+      "dtype": torch.get_autocast_xla_dtype(),
+      "cache_enabled": torch.is_autocast_cache_enabled(),
+      "device": xm.xla_device()
+    }
     if preserve_rng_state:
       ctx.fwd_xla_state = xm.get_rng_state()
       ctx.fwd_cpu_state = torch.get_rng_state()
@@ -157,7 +164,8 @@ class CheckpointFunction(torch.autograd.Function):
         detached_inputs = detach_variable(tuple(inputs))
         with torch.enable_grad(), \
             torch.cuda.amp.autocast(**ctx.gpu_autocast_kwargs), \
-            torch.cpu.amp.autocast(**ctx.cpu_autocast_kwargs):
+            torch.cpu.amp.autocast(**ctx.cpu_autocast_kwargs), \
+            torch_xla.amp.autocast(**ctx.xla_autocast_kwargs):
           outputs = ctx.run_function(*detached_inputs)
 
     if isinstance(outputs, torch.Tensor):
