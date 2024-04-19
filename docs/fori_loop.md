@@ -8,6 +8,7 @@ User could use `fori_loop` like this:
 from torch_xla.experimental.fori_loop import fori_loop
 res = fori_loop(upper, lower, /*user defined*/body_fun, init)
 ```
+
 current fori_loop only support simple test like [link](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/test/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py), and user could try [simple user guide](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/docs/fori_loop.md#simple-example-with-fori_loop) with `fori_loop` on TPU too.
 
 For detailed implementation:
