@@ -2416,6 +2416,31 @@ class TestGeneric(test_utils.XlaTestCase):
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
 
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_cuda_to_xla_zero_copy(self):
+    met.clear_counters()
+    cuda_tensor = torch.arange(5, device=torch.device('cuda'))
+    xla_tensor = cuda_tensor.to(xm.xla_device())
+    print(f'met.metric_data("TransferToDeviceTime")[0]={met.metric_data("TransferToDeviceTime")[0]}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
+    xla_tensor[0] = -1
+    self.assertEqual(cuda_tensor[0], -1, f'got {cuda_tensor[0]}')
+    self.assertEqual(met.metric_data('TransferToDeviceTime')[0], 0, f'got {met.metric_data("TransferToDeviceTime")[0]}')
+    self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
+    #self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu())) # TODO: uncomment this
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_scalar_cuda_to_xla_zero_copy(self):
+    met.clear_counters()
+    cuda_tensor = torch.tensor(5, device=torch.device('cuda'))
+    xla_tensor = cuda_tensor.to(xm.xla_device())
+    print(f'met.metric_data("TransferToDeviceTime")[0]={met.metric_data("TransferToDeviceTime")[0]}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
+    xla_tensor[0] = -1
+    self.assertEqual(cuda_tensor[0], -1, f'got {cuda_tensor[0]}')
+    self.assertEqual(met.metric_data('TransferToDeviceTime')[0], 0, f'got {met.metric_data("TransferToDeviceTime")[0]}')
+    self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
+    #self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu())) # TODO: uncomment this
 
 class SimpleModelWithDropout(torch.nn.Module):
 
