@@ -18,7 +18,7 @@ def _extract_backend_config(
     module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> str | None:
   """
   This algorithm intends to extract the backend config from the compiler IR like the following,
-  and it is designed to traverse any generic MLIR module.
+  and it is not designed to traverse any generic MLIR module.
 
   module @jit_add_vectors attributes {mhlo.num_partitions = 1 : i32, mhlo.num_replicas = 1 : i32} {
     func.func public @main(%arg0: tensor<8xi32> {mhlo.layout_mode = "default", mhlo.sharding = "{replicated}"}, %arg1: tensor<8xi32> {mhlo.layout_mode = "default", mhlo.sharding = "{replicated}"}) -> (tensor<8xi32> {jax.result_info = "", mhlo.layout_mode = "default"}) {
@@ -55,6 +55,38 @@ def jax_import_guard():
   torch_xla._XLAC._init_computation_client()
 
 
+def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax.numpy as jnp
+
+  if dtype == torch.float32:
+    if _XLA_USE_BF16:
+      return jnp.bfloat16
+    return jnp.float32
+  elif dtype == torch.float64:
+    if _XLA_USE_BF16:
+      return jnp.bfloat16
+    return jnp.float64
+  elif dtype == torch.float16:
+    return jnp.float16
+  elif dtype == torch.bfloat16:
+    return jnp.bfloat16
+  elif dtype == torch.int32:
+    return jnp.int32
+  elif dtype == torch.int64:
+    return jnp.int64
+  elif dtype == torch.int16:
+    return jnp.int16
+  elif dtype == torch.int8:
+    return jnp.int8
+  elif dtype == torch.uint8:
+    return jnp.uint8
+  else:
+    raise ValueError(f"Unsupported dtype: {dtype}")
+
+
 def trace_pallas(kernel: Callable,
                  *args,
                  static_argnums=None,
@@ -64,34 +96,7 @@ def trace_pallas(kernel: Callable,
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
   import jax
-  import jax.numpy as jnp
   import jax._src.pallas.mosaic.pallas_call_registration
-
-  def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
-    if dtype == torch.float32:
-      if _XLA_USE_BF16:
-        return jnp.bfloat16
-      return jnp.float32
-    elif dtype == torch.float64:
-      if _XLA_USE_BF16:
-        return jnp.bfloat16
-      return jnp.float64
-    elif dtype == torch.float16:
-      return jnp.float16
-    elif dtype == torch.bfloat16:
-      return jnp.bfloat16
-    elif dtype == torch.int32:
-      return jnp.int32
-    elif dtype == torch.int64:
-      return jnp.int64
-    elif dtype == torch.int16:
-      return jnp.int16
-    elif dtype == torch.int8:
-      return jnp.int8
-    elif dtype == torch.uint8:
-      return jnp.uint8
-    else:
-      raise ValueError(f"Unsupported dtype: {dtype}")
 
   jax_args = []  # for tracing
   tensor_args = []  # for execution
@@ -167,13 +172,16 @@ class FlashAttention(torch.autograd.Function):
       "block_k_dq": 256,
       "block_k_major_dq": 512,
   }
+  NUM_LANES = 128
+  NUM_SUBLANES = 8
 
   @staticmethod
-  def forward(ctx, q, k, v, causal=False, partition_spec=None, mesh=None):
+  def forward(ctx, q, k, v, causal=False, q_segment_ids=None, kv_segment_ids=None, partition_spec=None, mesh=None):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
-    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
+    import jax
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl, SegmentIds
 
     ctx.causal = causal
     ctx.partition_spec = partition_spec
@@ -192,27 +200,30 @@ class FlashAttention(torch.autograd.Function):
       k = xs.enable_manual_sharding(k, partition_spec, mesh=mesh).global_tensor
       v = xs.enable_manual_sharding(v, partition_spec, mesh=mesh).global_tensor
 
-    # It returns the shape and type of o, l, m.
-    def shape_dtype(q, *arg):
-      if not save_residuals:
-        return [(q.shape, q.dtype)]
+    # It computes the shape and type of o, l, m.
+    shapes = [q.shape]
+    dtypes = [q.dtype]
+    if save_residuals:
       res_shape = list(q.shape)
       res_shape[-1] = FlashAttention.MIN_BLOCK_SIZE
-      return [(q.shape, q.dtype), (res_shape, torch.float32),
-              (res_shape, torch.float32)]
+      for _ in range(2):
+        shapes.append(res_shape)
+        dtypes.append(torch.float32)
 
-    # We can't directly use flash_attention as we need to override the save_residuals flag which returns
-    # l and m that is needed for the backward. Then we lose all the shape checks.
-    # TODO: replicate the shape checks on flash_attention.
-    _flash_attention_impl = make_kernel_from_pallas(_flash_attention_impl,
-                                                    shape_dtype)
     with torch.no_grad():
-      o = _flash_attention_impl(
+      # We can't directly use flash_attention as we need to override the save_residuals flag which returns
+      # l and m that is needed for the backward. Then we lose all the shape checks.
+      # TODO: replicate the shape checks on flash_attention.
+      # Here we seperate the tracing and execution part just to support SegmentIds.
+      payload, _ = trace_pallas(
+          _flash_attention_impl,
           q,
           k,
           v,
           None,
-          None,
+          SegmentIds(jax.ShapeDtypeStruct(
+          q_segment_ids.shape, convert_torch_dtype_to_jax(q_segment_ids.dtype)), jax.ShapeDtypeStruct(
+          kv_segment_ids.shape, convert_torch_dtype_to_jax(kv_segment_ids.dtype))),  # This is pretty ugly, can we do better?
           save_residuals,
           causal,
           1.0,
@@ -222,6 +233,14 @@ class FlashAttention(torch.autograd.Function):
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2]),
           False,
           static_argnums=range(5, 13))
+
+      q_segment_ids = q_segment_ids.unsqueeze(-1).expand([-1 for _ in q_segment_ids.shape] +
+                                        [FlashAttention.NUM_LANES])
+      kv_segment_ids = kv_segment_ids.unsqueeze(1).expand([kv_segment_ids.shape[0], FlashAttention.NUM_SUBLANES, kv_segment_ids.shape[1]])
+      o = torch_xla._XLAC._xla_tpu_custom_call(
+          [q, k, v, q_segment_ids, kv_segment_ids],
+          payload, shapes, dtypes)
+
       if not save_residuals:
         # SPMD integration
         if partition_spec is not None:
@@ -365,10 +384,12 @@ def flash_attention(
     k,  # [batch_size, num_heads, kv_seq_len, d_model]
     v,  # [batch_size, num_heads, kv_seq_len, d_model]
     causal=False,
+    q_segment_ids=None,
+    kv_segment_ids=None,
     *,
     partition_spec=None,
     mesh=None):
-  return FlashAttention.apply(q, k, v, causal, partition_spec, mesh)
+  return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids, partition_spec, mesh)
 
 
 def paged_attention(q, k_pages, v_pages, lengths, page_indices,

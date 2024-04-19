@@ -482,6 +482,22 @@ class PallasTest(unittest.TestCase):
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper_segment_ids(self):
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    q_segment_ids = torch.zeros(3, 128).to("xla")
+    kv_segment_ids = torch.zeros(3, 128).to("xla")
+
+    o = flash_attention(q, k, v, False, q_segment_ids, kv_segment_ids)
+    print(o)
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_paged_attention_wrapper(self):
