@@ -5,6 +5,7 @@ torch_xla/lib/
 torch_xla/pb/cpp/*
 torch_xla/version.py
 torch_xla/csrc/version.cpp
+torch_xla/test/bin
 */**/__pycache__
 *.swp
 *.pyc

@@ -26,7 +26,7 @@ jobs:
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
-      # BUILD_CPP_TESTS: 1
+      BUILD_CPP_TESTS: 1
     steps:
       - name: Setup gcloud
         shell: bash

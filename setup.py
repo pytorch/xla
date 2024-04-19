@@ -206,6 +206,23 @@ class BazelExtension(Extension):
     Extension.__init__(self, ext_name, sources=[])
 
 
+def copy_cpp_tests(bazel_bin, location):
+  bazel_argv = [
+      'bazel', 'query', 'kind(".*_test", tests(//:cpp_tests))', '--config=tpu'
+  ]
+
+  output = subprocess.check_output(bazel_argv).decode('utf-8')
+  targets = [
+      t.replace('//', 'bazel-bin/').replace(':', '/')
+      for t in output.split('\n')
+      if t
+  ]
+  print(targets)
+
+  for t in targets:
+    shutil.copyfile(t, os.path.join(location, os.path.basename(t)))
+
+
 class BuildBazelExtension(build_ext.build_ext):
   """A command that runs Bazel to build a C/C++ extension."""
 
@@ -222,6 +239,10 @@ class BuildBazelExtension(build_ext.build_ext):
         'bazel', 'build', ext.bazel_target,
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
+
+    build_cpp_tests = build_util.check_env_flag('BUILD_CPP_TESTS', default='0')
+    if build_cpp_tests:
+      bazel_argv.append('//:cpp_tests')
 
     import torch
     cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C,
@@ -240,6 +261,11 @@ class BuildBazelExtension(build_ext.build_ext):
     if not os.path.exists(ext_dest_dir):
       os.makedirs(ext_dest_dir)
     shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
+
+    if build_cpp_tests:
+      test_bin = os.path.join(base_dir, 'torch_xla/test/bin')
+      os.makedirs(test_bin, exist_ok=True)
+      copy_cpp_tests(os.path.join(self.build_temp, 'bazel-bin'), test_bin)
 
 
 class Develop(develop.develop):
