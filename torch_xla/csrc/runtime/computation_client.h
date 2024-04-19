@@ -278,6 +278,7 @@ class ComputationClient {
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
+  virtual DataPtr DLPackManagedTensorToData(DLManagedTensor* dl_tensor) = 0;
 
   // Reshard and return data sharded by `sharding` spec. This is a no-op if the
   // input sharding spec is identical to the target `sharding` sharding spec.

@@ -43,6 +43,7 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
+  DataPtr DLPackManagedTensorToData(DLManagedTensor* dl_tensor) override;
 
   // Reshard and return data sharded by `sharding` spec. This is a no-op if
   // the input sharding spec is identical to the target `sharding` sharding

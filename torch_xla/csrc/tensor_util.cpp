@@ -2,6 +2,7 @@
 
 #include <ATen/Formatting.h>
 #include <ATen/Functions.h>
+#include <ATen/DLConvertor.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/util.h>
 
@@ -477,6 +478,11 @@ torch::lazy::BackendDataPtr TensorToXlaData(
                                            nullptr);
   }
 
+  if (runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false)) {
+      XLA_CHECK(tensor.is_cuda()) << "tensor is not on cuda";
+      DLManagedTensor* dl_t = at::toDLPack(tensor);
+
+  }
   std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   source_tensors.push_back(
       std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));

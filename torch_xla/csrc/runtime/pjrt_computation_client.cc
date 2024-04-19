@@ -276,6 +276,10 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
   return datas;
 }
 
+DataPtr PjRtComputationClient::DLPackManagedTensorToData(DLManagedTensor* dl_tensor) {
+  return nullptr;
+}
+
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
     std::string device, xla::Shape shape, xla::OpSharding sharding) {
