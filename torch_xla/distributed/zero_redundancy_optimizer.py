@@ -1,4 +1,5 @@
 import copy
+import logging
 from typing import (Any, Iterator, Optional, Type, Union, List, Dict)
 
 import torch
@@ -49,7 +50,7 @@ class ZeroRedundancyOptimizer(Optimizer):
             ``dtype`` of grad accumulation will be the same as ``optimizer_dtype``. Users can set this
             to True to use higher precision for gradients accumulation. Default: False
         save_master_weights (bool, Optional):
-            if ``True``, also save sharded master weights. Default: False
+            if ``True``, also save sharded master weights. Default: True
         higher_cc_precision (bool, Optional): if ``True``, use higher precision for collective communication
             operators (the same as ``optimizer_dtype``). Default: False
         **defaults: any trailing arguments, which are forwarded to the local
@@ -74,10 +75,15 @@ class ZeroRedundancyOptimizer(Optimizer):
       lazy_init: bool = False,
       coalesce_cc: bool = False,
       use_grad_acc_hook: bool = False,
-      save_master_weights: bool = False,
+      save_master_weights: bool = True,
       higher_cc_precision: bool = False,
       **defaults: Any,
   ):
+    if not save_master_weights:
+      logging.warning(
+          'Not saving master weights may have accuracy issues when resuming training!'
+      )
+
     super().__init__(params, defaults)
 
     self.global_world_size = xm.xrt_world_size()
