@@ -26,6 +26,7 @@ jobs:
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
+      # BUILD_CPP_TESTS: 1
     steps:
       - name: Setup gcloud
         shell: bash
@@ -36,6 +37,7 @@ jobs:
         with:
           repository: pytorch/pytorch
           path: pytorch
+          submodules: recursive
           # TODO: correct pin
       - name: Checkout PyTorch/XLA Repo
         uses: actions/checkout@v4
@@ -45,7 +47,7 @@ jobs:
         shell: bash
         run: |
           cd pytorch/xla/infra/ansible
-          ansible-playbook playbook.yaml -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0" --skip-tags=fetch_srcs,install_deps
+          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
