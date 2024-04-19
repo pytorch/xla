@@ -8,14 +8,14 @@ User could use `fori_loop` like this:
 from torch_xla.experimental.fori_loop import fori_loop
 res = fori_loop(upper, lower, /*user defined*/body_fun, init)
 ```
-current fori_loop only support simple test in [link](), and simple user guide for `fori_loop` is [link]().
+current fori_loop only support simple test like [link](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/test/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py), and user could try [simple user guide](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/docs/fori_loop.md#simple-user-guide) with `fori_loop` on TPU too.
 
 For detailed implementation:
-- for situation that loop range is dynamic, `fori_loop` is implemented with `while_loop`,
+- for situation that loop range is dynamic, [`fori_loop`](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/docs/fori_loop.md#fori_loop) is implemented with [`while_loop`](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/docs/fori_loop.md#while_loop),
 like [`jax.lax.while_loop`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.while_loop.html), PyTorch/XLA would support `while_loop` with the
 native PyTorch and the XLA backend: XLA::While. Due to `while_loop` didn't support autograd, so it would be used for inference only.
 
-- for situation that loop range is not dynamic, `fori_loop` is implemented with `scan`,
+- for situation that loop range is not dynamic, [`fori_loop`](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/docs/fori_loop.md#fori_loop) is implemented with [`scan`](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/docs/fori_loop.md#wipscan),
 like [`jax.lax.scan`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html), PyTorch/XLA would enable `scan` using XLA::While operator.
 This implementation would be very similar like `while_loop`. `scan` support autograd, and it could be used in both training and inference.
 
@@ -30,7 +30,7 @@ import torch_xla.experimental.fori_loop
 from torch._higher_order_ops.while_loop import while_loop
 res = while_loop(/*user-defined*/cond_fn, /*user-defined*/body_fn, /*tuple or list*/init)
 ```
-current while_loop only support simple test in [link](), and simple user guide for `while_loop` is [link]().
+current while_loop only support simple test like [link](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/test/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py), and user could try [simple user guide](https://github.com/pytorch/xla/blob/ManfeiBai-patch-81/docs/fori_loop.md#simple-user-guide) with `while_loop` on TPU too.
 
 
 # [WIP]scan
@@ -39,8 +39,9 @@ like [`jax.lax.scan`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.
 
 
 # Simple user guide
+User could try these three simple test case to better compare difference between `pure python for loop` and `fori_loop` and `while_loop`, these three test case have similar logic: cumulative plus 1 for ten times:
 
-This is one simple example with python for loop:
+### simple example with pure python for loop
 ```bash
 # python
 >>> import torch
@@ -54,7 +55,7 @@ This is one simple example with python for loop:
 tensor([10], dtype=torch.int32)
 ```
 
-This is one simple example with `while_loop`:
+### simple example with `while_loop`:
 ```bash
 # PJRT_DEVICE=TPU python
 >>> import torch
@@ -82,7 +83,7 @@ FunctionalTensor(lvl=0, value=\
 tensor([11], device='xla:0', dtype=torch.int32))
 ```
 
-This is one simple example with `fori_loop`:
+### simple example with `fori_loop`:
 ```bash
 # PJRT_DEVICE=TPU python
 >>> import torch
