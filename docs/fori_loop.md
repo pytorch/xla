@@ -3,7 +3,7 @@
 - if loop range is dynamic, its deeper implementation would be [`jax.lax.while_loop`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.while_loop.html),
 - if loop range is not dynamic, its deeper implementation would be [`jax.lax.scan`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html),
 
-In 2.3, PyTorch/XLA enable `while_loop` with some simple case, and
+In 2.3, PyTorch/XLA enable `while_loop` with some simple case.
 
 # while_loop
 `while_loop` is a replacement of pure python while loop, PyTorch has supported `while_loop` in
