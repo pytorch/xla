@@ -27,6 +27,8 @@
 
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
   <!-- Google Tag Manager -->
@@ -225,7 +227,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git2ec7706 )
+                  master (2.4.0+gitb06c9c7 )
                 </div>
               
             
@@ -345,9 +347,9 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <div class="section" id="source-of-recompilations-in-torch-xla">
-<h1>Source of recompilations in torch_xla<a class="headerlink" href="#source-of-recompilations-in-torch-xla" title="Permalink to this headline">¶</a></h1>
+<h1>Source of recompilations in torch_xla<a class="headerlink" href="#source-of-recompilations-in-torch-xla" title="Permalink to this heading">¶</a></h1>
 <div class="section" id="lets-first-start-with-some-facts-constraints">
-<h2>Let’s first start with some facts/constraints:<a class="headerlink" href="#lets-first-start-with-some-facts-constraints" title="Permalink to this headline">¶</a></h2>
+<h2>Let’s first start with some facts/constraints:<a class="headerlink" href="#lets-first-start-with-some-facts-constraints" title="Permalink to this heading">¶</a></h2>
 <ol class="arabic simple">
 <li><p>Graph compilations in XLA are pretty expensive.</p></li>
 <li><p>XLA handles static shape only. In other words, even for the same IR graph, XLA recompiles when input shape changes.</p></li>
@@ -357,16 +359,16 @@
 <p><a href="#id1"><span class="problematic" id="id2">**</span></a><em>This doc aims to provide a detailed explanation of a few common sources of recompilations, and what do we need to get rid of them.  It will mainly focus on explaining the problem to beginners without any context. To make it easy to understand, the “solutions” proposed here may rely on impractical assumptions.</em> **</p>
 </div>
 <div class="section" id="from-input-dataset">
-<h2>#1. From input dataset.<a class="headerlink" href="#from-input-dataset" title="Permalink to this headline">¶</a></h2>
+<h2>#1. From input dataset.<a class="headerlink" href="#from-input-dataset" title="Permalink to this heading">¶</a></h2>
 <p>Yes it’s pretty common that input dataset contains examples with different shapes, e.g. sentences with varying length or images with different sizes. Without normalization, it’ll cause recompilation for every new input shape.</p>
 <p>Tensorflow graph mode users are more used to do padding/bucketization (<code class="docutils literal notranslate"><span class="pre">tf.pad</span></code>) to normalize input shapes to one or a few buckets. But this is kinda anti-pattern for PyTorch eager frontend users (which is the same user lazy tensor frontend is trying to target) since different input shapes just doesn’t matter for eager CPU/CUDA backend.</p>
 <p><strong>Proposed workaround:</strong> okay now let’s say we can work around this problem by teaching our users to do padding/bucketization (it’s hard in practice :P). What’s next?</p>
 </div>
 <div class="section" id="from-operator-output">
-<h2>#2. From operator output<a class="headerlink" href="#from-operator-output" title="Permalink to this headline">¶</a></h2>
+<h2>#2. From operator output<a class="headerlink" href="#from-operator-output" title="Permalink to this heading">¶</a></h2>
 <p>There are certain operators semantically are data-dependent and produce dynamic shape outputs: e.g. <code class="docutils literal notranslate"><span class="pre">torch.nonzero</span></code> returns indices of nonzero elements in its input tensor. So even your input tensors to this operator always have the same shape, it might produce different shape outputs and cause recompilations.</p>
 <div class="section" id="bounded-dynamic-shape-can-fix-the-case-when-you-use-the-tensor-with-dynamic-shape-as-a-tensor-without-querying-its-real-dimension">
-<h3>2.1 Bounded dynamic shape can fix the case when you use the tensor with dynamic shape as a Tensor, without querying its real dimension.<a class="headerlink" href="#bounded-dynamic-shape-can-fix-the-case-when-you-use-the-tensor-with-dynamic-shape-as-a-tensor-without-querying-its-real-dimension" title="Permalink to this headline">¶</a></h3>
+<h3>2.1 Bounded dynamic shape can fix the case when you use the tensor with dynamic shape as a Tensor, without querying its real dimension.<a class="headerlink" href="#bounded-dynamic-shape-can-fix-the-case-when-you-use-the-tensor-with-dynamic-shape-as-a-tensor-without-querying-its-real-dimension" title="Permalink to this heading">¶</a></h3>
 <p><strong>Proposed workaround:</strong> let’s say now XLA supports bounded dynamic shape for all operators, is it good enough?</p>
 <ul class="simple">
 <li><p>by bounded dynamic shape it means we can pad the tensor to a theoretical max, trading more memory usage for less recompilation/faster speed.</p></li>
@@ -392,7 +394,7 @@
 <p>You can see that in this case as long as the input tensor <code class="docutils literal notranslate"><span class="pre">a</span></code> has shape <code class="docutils literal notranslate"><span class="pre">[5]</span></code> we only compile the graph once. Bounded dynamic shape support helped!</p>
 </div>
 <div class="section" id="what-if-real-dimension-is-queried-on-a-tensor-with-dynamic-shape">
-<h3>2.2 what if real dimension is queried on a tensor with dynamic shape?<a class="headerlink" href="#what-if-real-dimension-is-queried-on-a-tensor-with-dynamic-shape" title="Permalink to this headline">¶</a></h3>
+<h3>2.2 what if real dimension is queried on a tensor with dynamic shape?<a class="headerlink" href="#what-if-real-dimension-is-queried-on-a-tensor-with-dynamic-shape" title="Permalink to this heading">¶</a></h3>
 <p>This is actually pretty commonly used since not all PyTorch computation are done in the form of Tensors.</p>
 <p>For example, <code class="docutils literal notranslate"><span class="pre">tensor.size()</span></code> in PyTorch returns a tuple of ints instead of a Tensor of dtype=int. When <code class="docutils literal notranslate"><span class="pre">tensor</span></code> is a dynamic shape tensor, this op basically forces XLA to cut the graph and evaluate so that we can return the correct scalar (otherwise it’ll just return the padded shape which is wrong).</p>
 <p>What’s made it worse is that many PyTorch takes scalar inputs as well. After you do <code class="docutils literal notranslate"><span class="pre">s</span> <span class="pre">=</span> <span class="pre">tensor.size(0)</span></code> and use <code class="docutils literal notranslate"><span class="pre">s</span></code> in other operators it also becomes a dynamic source. In this case we probably know how to pad it and its upper bound, but we cannot do it since it’s not even a Tensor!</p>
@@ -421,7 +423,7 @@
 </div>
 </div>
 <div class="section" id="from-control-flow">
-<h2>#3. From control flow<a class="headerlink" href="#from-control-flow" title="Permalink to this headline">¶</a></h2>
+<h2>#3. From control flow<a class="headerlink" href="#from-control-flow" title="Permalink to this heading">¶</a></h2>
 <p>No! We actually only solved the problem without data dependent control flow…</p>
 <p>See the example below:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
@@ -441,11 +443,11 @@
 <p>YES! Now you have your whole computation represented in a graph of Tensor operations, including control flow so that compilers can now consume and do their smart tricks! But tbh at this point your program is no longer very PyTorch-y.</p>
 </div>
 <div class="section" id="conclusion">
-<h2>Conclusion:<a class="headerlink" href="#conclusion" title="Permalink to this headline">¶</a></h2>
+<h2>Conclusion:<a class="headerlink" href="#conclusion" title="Permalink to this heading">¶</a></h2>
 <p>There’re actually multiple sources of recompilation and bounded dynamic shape support cannot solve all of them. The proposed workarounds in this doc are definitely sometimes impractical, and there might be better ways to fix each source properly that I’m totally unaware of. But I hope as we keep smashing our way to an ideal lazy tensor stack in this doc, it’s now easier for you understand what’re the remaining blockers ahead of us.</p>
 </div>
 <div class="section" id="appendix">
-<h2>Appendix:<a class="headerlink" href="#appendix" title="Permalink to this headline">¶</a></h2>
+<h2>Appendix:<a class="headerlink" href="#appendix" title="Permalink to this heading">¶</a></h2>
 <ol class="arabic simple">
 <li><p>NNC uses symbolic shapes, does that help?</p></li>
 </ol>
@@ -553,10 +555,11 @@
 
      
        <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
          <script src="../_static/jquery.js"></script>
          <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="../_static/doctools.js"></script>
-         <script src="../_static/language_data.js"></script>
      
 
   

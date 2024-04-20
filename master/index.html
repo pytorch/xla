@@ -27,6 +27,8 @@
 
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
   <!-- Google Tag Manager -->
@@ -225,7 +227,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git2ec7706 )
+                  master (2.4.0+gitb06c9c7 )
                 </div>
               
             
@@ -510,12 +512,12 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <div class="section" id="pytorch-on-xla-devices">
-<h1>PyTorch on XLA Devices<a class="headerlink" href="#pytorch-on-xla-devices" title="Permalink to this headline">¶</a></h1>
+<h1>PyTorch on XLA Devices<a class="headerlink" href="#pytorch-on-xla-devices" title="Permalink to this heading">¶</a></h1>
 <p>PyTorch runs on XLA devices, like TPUs, with the
 <a class="reference external" href="https://github.com/pytorch/xla/">torch_xla package</a>. This document describes
 how to run your models on these devices.</p>
 <div class="section" id="creating-an-xla-tensor">
-<h2>Creating an XLA Tensor<a class="headerlink" href="#creating-an-xla-tensor" title="Permalink to this headline">¶</a></h2>
+<h2>Creating an XLA Tensor<a class="headerlink" href="#creating-an-xla-tensor" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch/XLA adds a new <code class="docutils literal notranslate"><span class="pre">xla</span></code> device type to PyTorch. This device type works just
 like other PyTorch device types. For example, here’s how to create and
 print an XLA tensor:</p>
@@ -534,7 +536,7 @@ PyTorch with a few additions. Importing <code class="docutils literal notranslat
 depending on your environment.</p>
 </div>
 <div class="section" id="xla-tensors-are-pytorch-tensors">
-<h2>XLA Tensors are PyTorch Tensors<a class="headerlink" href="#xla-tensors-are-pytorch-tensors" title="Permalink to this headline">¶</a></h2>
+<h2>XLA Tensors are PyTorch Tensors<a class="headerlink" href="#xla-tensors-are-pytorch-tensors" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch operations can be performed on XLA tensors just like CPU or CUDA tensors.</p>
 <p>For example, XLA tensors can be added together:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">t0</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
@@ -565,13 +567,13 @@ same device. So code like</p>
 <p>will throw an error since the <code class="docutils literal notranslate"><span class="pre">torch.nn.Linear</span></code> module is on the CPU.</p>
 </div>
 <div class="section" id="running-models-on-xla-devices">
-<h2>Running Models on XLA Devices<a class="headerlink" href="#running-models-on-xla-devices" title="Permalink to this headline">¶</a></h2>
+<h2>Running Models on XLA Devices<a class="headerlink" href="#running-models-on-xla-devices" title="Permalink to this heading">¶</a></h2>
 <p>Building a new PyTorch network or converting an existing one to run on XLA
 devices requires only a few lines of XLA-specific code. The following snippets
 highlight these lines when running on a single device and multiple devices with XLA
 multi-processing.</p>
 <div class="section" id="running-on-a-single-xla-device">
-<h3>Running on a Single XLA Device<a class="headerlink" href="#running-on-a-single-xla-device" title="Permalink to this headline">¶</a></h3>
+<h3>Running on a Single XLA Device<a class="headerlink" href="#running-on-a-single-xla-device" title="Permalink to this heading">¶</a></h3>
 <p>The following snippet shows a network training on a single XLA device:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 
@@ -602,7 +604,7 @@ parameters. See <a class="reference external" href="#xla-tensor-deep-dive">XLA T
 how XLA creates graphs and runs operations.</p>
 </div>
 <div class="section" id="running-on-multiple-xla-devices-with-multi-processing">
-<h3>Running on Multiple XLA Devices with Multi-processing<a class="headerlink" href="#running-on-multiple-xla-devices-with-multi-processing" title="Permalink to this headline">¶</a></h3>
+<h3>Running on Multiple XLA Devices with Multi-processing<a class="headerlink" href="#running-on-multiple-xla-devices-with-multi-processing" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch/XLA makes it easy to accelerate training by running on multiple XLA
 devices. The following snippet shows how:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
@@ -664,7 +666,7 @@ stack).</p>
 for more on training a network on multiple XLA devices with multi-processing.</p>
 </div>
 <div class="section" id="running-on-tpu-pods">
-<h3>Running on TPU Pods<a class="headerlink" href="#running-on-tpu-pods" title="Permalink to this headline">¶</a></h3>
+<h3>Running on TPU Pods<a class="headerlink" href="#running-on-tpu-pods" title="Permalink to this heading">¶</a></h3>
 <p>Multi-host setup for different accelerators can be very different. This doc will talk about the device independent bits of multi-host training and will use the TPU + PJRT runtime(currently available on 1.13 and 2.x releases) as an example.</p>
 <p>Before you being, please take a look at our user guide at <a class="reference external" href="https://cloud.google.com/tpu/docs/run-calculation-pytorch">here</a> which will explain some Google Cloud basis like how to use <code class="docutils literal notranslate"><span class="pre">gcloud</span></code> command and how to setup your project. You can also check <a class="reference external" href="https://cloud.google.com/tpu/docs/how-to">here</a> for all Cloud TPU Howto. This doc will focus on the PyTorch/XLA perspective of the Setup.</p>
 <p>Let’s assume you have the above mnist example from above section in a <code class="docutils literal notranslate"><span class="pre">train_mnist_xla.py</span></code>. If it is a single host multi device training, you would ssh to the TPUVM and run command like</p>
@@ -688,12 +690,12 @@ for more on training a network on multiple XLA devices with multi-processing.</p
 </div>
 </div>
 <div class="section" id="id3">
-<h2>XLA Tensor Deep Dive<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<h2>XLA Tensor Deep Dive<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h2>
 <p>Using XLA tensors and devices requires changing only a few lines of code. But
 even though XLA tensors act a lot like CPU and CUDA tensors, their internals are
 different. This section describes what makes XLA tensors unique.</p>
 <div class="section" id="xla-tensors-are-lazy">
-<h3>XLA Tensors are Lazy<a class="headerlink" href="#xla-tensors-are-lazy" title="Permalink to this headline">¶</a></h3>
+<h3>XLA Tensors are Lazy<a class="headerlink" href="#xla-tensors-are-lazy" title="Permalink to this heading">¶</a></h3>
 <p>CPU and CUDA tensors launch operations immediately or <span class="raw-html-m2r"><b>eagerly</b></span>. XLA tensors,
 on the other hand, are <span class="raw-html-m2r"><b>lazy</b></span>. They record operations in a graph until the
 results are needed. Deferring execution like this lets XLA optimize it. A graph
@@ -706,7 +708,7 @@ taking an optimizer step explicitly synchronizes the CPU and the XLA device. For
 more information about our lazy tensor design, you can read <a class="reference external" href="https://arxiv.org/pdf/2102.13267.pdf">this paper</a>.</p>
 </div>
 <div class="section" id="xla-tensors-and-bfloat16">
-<h3>XLA Tensors and bFloat16<a class="headerlink" href="#xla-tensors-and-bfloat16" title="Permalink to this headline">¶</a></h3>
+<h3>XLA Tensors and bFloat16<a class="headerlink" href="#xla-tensors-and-bfloat16" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch/XLA can use the
 <a class="reference external" href="https://en.wikipedia.org/wiki/Bfloat16_floating-point_format">bfloat16</a>
 datatype when running on TPUs. In fact, PyTorch/XLA handles float types
@@ -728,14 +730,14 @@ from its actual datatype to its PyTorch datatype. Depending on how your code ope
 the type of processing unit can be important.</p>
 </div>
 <div class="section" id="memory-layout">
-<h3>Memory Layout<a class="headerlink" href="#memory-layout" title="Permalink to this headline">¶</a></h3>
+<h3>Memory Layout<a class="headerlink" href="#memory-layout" title="Permalink to this heading">¶</a></h3>
 <p>The internal data representation of XLA tensors is opaque to the user. They
 do not expose their storage and they always appear to be contiguous, unlike
 CPU and CUDA tensors. This allows XLA to adjust a tensor’s memory layout for
 better performance.</p>
 </div>
 <div class="section" id="moving-xla-tensors-to-and-from-the-cpu">
-<h3>Moving XLA Tensors to and from the CPU<a class="headerlink" href="#moving-xla-tensors-to-and-from-the-cpu" title="Permalink to this headline">¶</a></h3>
+<h3>Moving XLA Tensors to and from the CPU<a class="headerlink" href="#moving-xla-tensors-to-and-from-the-cpu" title="Permalink to this heading">¶</a></h3>
 <p>XLA tensors can be moved from the CPU to an XLA device and from an XLA device
 to the CPU. If a view is moved then the data its viewing is also copied to the
 other device and the view relationship is not preserved. Put another way,
@@ -744,7 +746,7 @@ previous device or any tensors on it. Again, depending on how your code operates
 appreciating and accommodating this transition can be important.</p>
 </div>
 <div class="section" id="saving-and-loading-xla-tensors">
-<h3>Saving and Loading XLA Tensors<a class="headerlink" href="#saving-and-loading-xla-tensors" title="Permalink to this headline">¶</a></h3>
+<h3>Saving and Loading XLA Tensors<a class="headerlink" href="#saving-and-loading-xla-tensors" title="Permalink to this heading">¶</a></h3>
 <p>XLA tensors should be moved to the CPU before saving, as in the following
 snippet:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
@@ -803,7 +805,7 @@ is under active development and this behavior may change in the future.</p>
 </div>
 </div>
 <div class="section" id="compilation-caching">
-<h2>Compilation Caching<a class="headerlink" href="#compilation-caching" title="Permalink to this headline">¶</a></h2>
+<h2>Compilation Caching<a class="headerlink" href="#compilation-caching" title="Permalink to this heading">¶</a></h2>
 <p>The XLA compiler converts the traced HLO into an executable which runs on
 the devices. Compilation can be time consuming, and in cases where the HLO
 doesn’t change across executions, the compilation result can be persisted to
@@ -823,7 +825,7 @@ write to the cache, which can be useful when a shared cache mount is used for
 an SPMD workload.</p>
 </div>
 <div class="section" id="further-reading">
-<h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this headline">¶</a></h2>
+<h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this heading">¶</a></h2>
 <p>Additional documentation is available at the
 <a class="reference external" href="https://github.com/pytorch/xla/">PyTorch/XLA repo</a>. More examples of running
 networks on TPUs are available
@@ -831,12 +833,12 @@ networks on TPUs are available
 </div>
 </div>
 <div class="section" id="pytorch-xla-api">
-<h1>PyTorch/XLA API<a class="headerlink" href="#pytorch-xla-api" title="Permalink to this headline">¶</a></h1>
+<h1>PyTorch/XLA API<a class="headerlink" href="#pytorch-xla-api" title="Permalink to this heading">¶</a></h1>
 <div class="section" id="module-torch_xla.core.xla_model">
-<span id="xla-model"></span><h2>xla_model<a class="headerlink" href="#module-torch_xla.core.xla_model" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="torch_xla.core.xla_model.xla_device">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">xla_device</code><span class="sig-paren">(</span><em class="sig-param">n=None</em>, <em class="sig-param">devkind=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#xla_device"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.xla_device" title="Permalink to this definition">¶</a></dt>
+<span id="xla-model"></span><h2>xla_model<a class="headerlink" href="#module-torch_xla.core.xla_model" title="Permalink to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.xla_device">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">xla_device</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">devkind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#xla_device"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.xla_device" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a given instance of an XLA device.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -844,7 +846,7 @@ networks on TPUs are available
 <li><p><strong>n</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The specific instance (ordinal) to be returned. If
 specified, the specific XLA device instance will be returned. Otherwise
 the first device of <cite>devkind</cite> will be returned.</p></li>
-<li><p><strong>devkind</strong> (<em>string...</em><em>, </em><em>optional</em>) – If specified, device type such as <cite>TPU</cite>,
+<li><p><strong>devkind</strong> (<em>string</em><em>...</em><em>, </em><em>optional</em>) – If specified, device type such as <cite>TPU</cite>,
 <cite>CUDA</cite>, <cite>CPU</cite>, or custom PJRT device. Deprecated.</p></li>
 </ul>
 </dd>
@@ -854,14 +856,14 @@ the first device of <cite>devkind</cite> will be returned.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.get_xla_supported_devices">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_xla_supported_devices</code><span class="sig-paren">(</span><em class="sig-param">devkind=None</em>, <em class="sig-param">max_devices=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_xla_supported_devices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_xla_supported_devices" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.get_xla_supported_devices">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_xla_supported_devices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">devkind</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_devices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_xla_supported_devices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_xla_supported_devices" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a list of supported devices of a given kind.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>devkind</strong> (<em>string...</em><em>, </em><em>optional</em>) – If specified, a device type such as <cite>TPU</cite>,
+<li><p><strong>devkind</strong> (<em>string</em><em>...</em><em>, </em><em>optional</em>) – If specified, a device type such as <cite>TPU</cite>,
 <cite>CUDA</cite>, <cite>CPU</cite>, or name of custom PJRT device.</p></li>
 <li><p><strong>max_devices</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The maximum number of devices to be returned of
 that kind.</p></li>
@@ -876,9 +878,9 @@ that kind.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.xla_device_hw">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">xla_device_hw</code><span class="sig-paren">(</span><em class="sig-param">device</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#xla_device_hw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.xla_device_hw" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.xla_device_hw">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">xla_device_hw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#xla_device_hw"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.xla_device_hw" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the hardware type of the given device.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -891,9 +893,9 @@ real device.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.get_ordinal">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_ordinal</code><span class="sig-paren">(</span><em class="sig-param">defval=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_ordinal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_ordinal" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.get_ordinal">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_ordinal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">defval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_ordinal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_ordinal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves the replication ordinal of the current thread.</p>
 <p>The ordinals range from 0 to <cite>xrt_world_size()</cite> minus 1.</p>
 <dl class="field-list simple">
@@ -908,9 +910,9 @@ Default: 0</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.get_local_ordinal">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_local_ordinal</code><span class="sig-paren">(</span><em class="sig-param">defval=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_local_ordinal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_local_ordinal" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.get_local_ordinal">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_local_ordinal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">defval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_local_ordinal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_local_ordinal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves the replication local ordinal of the current thread.</p>
 <p>The local ordinals range from 0 to the number of local devices minus 1.</p>
 <dl class="field-list simple">
@@ -925,9 +927,9 @@ Default: 0</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.is_master_ordinal">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">is_master_ordinal</code><span class="sig-paren">(</span><em class="sig-param">local=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#is_master_ordinal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.is_master_ordinal" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.is_master_ordinal">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">is_master_ordinal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#is_master_ordinal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.is_master_ordinal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Checks whether the current process is the master ordinal (0).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -942,9 +944,9 @@ Default: True</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.xrt_world_size">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">xrt_world_size</code><span class="sig-paren">(</span><em class="sig-param">defval=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#xrt_world_size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.xrt_world_size" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.xrt_world_size">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">xrt_world_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">defval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#xrt_world_size"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.xrt_world_size" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves the number of devices which is taking part of the replication.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -958,9 +960,9 @@ Default: 1</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.all_reduce">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.all_reduce">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">all_reduce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reduce_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_layout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an inplace reduce operation on the input tensor(s).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -996,9 +998,9 @@ returns the list/tuple itself.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.all_gather">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">output=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.all_gather">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">all_gather</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_layout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_gather"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_gather" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an all-gather operation along a given dimension.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1029,9 +1031,9 @@ participating replicas.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.all_to_all">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_to_all</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">split_dimension</em>, <em class="sig-param">concat_dimension</em>, <em class="sig-param">split_count</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_to_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_to_all" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.all_to_all">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">all_to_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_dimension</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concat_dimension</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split_count</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_layout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_to_all"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_to_all" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an XLA <cite>AllToAll()</cite> operation on the input tensor.</p>
 <p>See: <a class="reference external" href="https://www.tensorflow.org/xla/operation_semantics#alltoall">https://www.tensorflow.org/xla/operation_semantics#alltoall</a></p>
 <dl class="field-list simple">
@@ -1062,9 +1064,9 @@ like “HloModule has a mix of layout constrained”.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.add_step_closure">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">add_step_closure</code><span class="sig-paren">(</span><em class="sig-param">closure</em>, <em class="sig-param">args=()</em>, <em class="sig-param">run_async=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#add_step_closure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.add_step_closure" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.add_step_closure">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">add_step_closure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">closure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_async</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#add_step_closure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.add_step_closure" title="Permalink to this definition">¶</a></dt>
 <dd><p>Adds a closure to the list of the ones to be run at the end of the step.</p>
 <p>Many times during model training there is the need to print/report (print to
 console, post to tensorboard, etc…) information which require the content of
@@ -1091,21 +1093,21 @@ advised to throttle the printing/reporting events once every N steps.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.wait_device_ops">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">wait_device_ops</code><span class="sig-paren">(</span><em class="sig-param">devices=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#wait_device_ops"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.wait_device_ops" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.wait_device_ops">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">wait_device_ops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">devices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#wait_device_ops"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.wait_device_ops" title="Permalink to this definition">¶</a></dt>
 <dd><p>Waits for all the async operations on the given devices to complete.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>devices</strong> (<em>string...</em><em>, </em><em>optional</em>) – The devices whose async ops need to be waited
+<dd class="field-odd"><p><strong>devices</strong> (<em>string</em><em>...</em><em>, </em><em>optional</em>) – The devices whose async ops need to be waited
 for. If empty, all the local devices will be waited for.</p>
 </dd>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.optimizer_step">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">optimizer_step</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">barrier=False</em>, <em class="sig-param">optimizer_args={}</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#optimizer_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.optimizer_step" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.optimizer_step">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">optimizer_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">barrier</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pin_layout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#optimizer_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.optimizer_step" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run the provided optimizer step and issue the XLA device step computation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1138,9 +1140,9 @@ See <cite>xm.all_reduce</cite> for details.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.save">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">file_or_path</em>, <em class="sig-param">master_only=True</em>, <em class="sig-param">global_master=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.save" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.save">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_or_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">master_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_master</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.save" title="Permalink to this definition">¶</a></dt>
 <dd><p>Saves the input data into a file.</p>
 <p>The saved data is transferred to PyTorch CPU device before being saved, so a
 following <cite>torch.load()</cite> will load CPU data.
@@ -1173,9 +1175,9 @@ will hang.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.rendezvous">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">rendezvous</code><span class="sig-paren">(</span><em class="sig-param">tag</em>, <em class="sig-param">payload=b''</em>, <em class="sig-param">replicas=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#rendezvous"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.rendezvous" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.rendezvous">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">rendezvous</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">payload</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">b''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replicas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#rendezvous"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.rendezvous" title="Permalink to this definition">¶</a></dt>
 <dd><p>Waits for all the mesh clients to reach the named rendezvous.</p>
 <p>Note: PJRT does not support the XRT mesh server, so this is effectively an
 alias to <cite>xla_rendezvous</cite>.</p>
@@ -1196,9 +1198,9 @@ ordinal <cite>i</cite> at position <cite>i</cite> in the returned tuple.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.do_on_ordinals">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">do_on_ordinals</code><span class="sig-paren">(</span><em class="sig-param">target</em>, <em class="sig-param">data=()</em>, <em class="sig-param">ordinals=(0</em>, <em class="sig-param">)</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#do_on_ordinals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.do_on_ordinals" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.do_on_ordinals">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">do_on_ordinals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ordinals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0,)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#do_on_ordinals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.do_on_ordinals" title="Permalink to this definition">¶</a></dt>
 <dd><p>Runs a function only on a given set of ordinals.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1221,9 +1223,9 @@ otherwise <cite>None</cite>.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.mesh_reduce">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">mesh_reduce</code><span class="sig-paren">(</span><em class="sig-param">tag</em>, <em class="sig-param">data</em>, <em class="sig-param">reduce_fn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#mesh_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.mesh_reduce" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.mesh_reduce">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">mesh_reduce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduce_fn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#mesh_reduce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.mesh_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an out-of-graph client mesh reduction.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1242,9 +1244,9 @@ objects and returns the reduced result.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.set_rng_state">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">set_rng_state</code><span class="sig-paren">(</span><em class="sig-param">seed</em>, <em class="sig-param">device=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#set_rng_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.set_rng_state" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.set_rng_state">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">set_rng_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#set_rng_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.set_rng_state" title="Permalink to this definition">¶</a></dt>
 <dd><p>Sets the random number generator state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1257,9 +1259,9 @@ If missing the default device seed will be set.</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.get_rng_state">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_rng_state</code><span class="sig-paren">(</span><em class="sig-param">device=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_rng_state"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_rng_state" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.get_rng_state">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_rng_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_rng_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_rng_state" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets the current running random number generator state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1272,9 +1274,9 @@ If missing the default device seed will be set.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.get_memory_info">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_memory_info</code><span class="sig-paren">(</span><em class="sig-param">device</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_memory_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_memory_info" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.get_memory_info">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_memory_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_memory_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_memory_info" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves the device memory information.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1287,9 +1289,9 @@ memory in KB) keys.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.get_stablehlo">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_stablehlo</code><span class="sig-paren">(</span><em class="sig-param">tensors=None</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_stablehlo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_stablehlo" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.get_stablehlo">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_stablehlo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_stablehlo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_stablehlo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get StableHLO for the computation graph in string format.</p>
 <p>If <cite>tensors</cite> is not empty, the graph with <cite>tensors</cite> as outputs will be dump.
 If <cite>tensors</cite> is empty, the whole computation graph will be dump.
@@ -1308,9 +1310,9 @@ For training graph, it is not straightforward to identify the “outputs”. Usi
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.xla_model.get_stablehlo_bytecode">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_stablehlo_bytecode</code><span class="sig-paren">(</span><em class="sig-param">tensors=None</em><span class="sig-paren">)</span> &#x2192; bytes<a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_stablehlo_bytecode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_stablehlo_bytecode" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.get_stablehlo_bytecode">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_stablehlo_bytecode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bytes</span></span></span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_stablehlo_bytecode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_stablehlo_bytecode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get StableHLO for the computation graph in bytecode format.</p>
 <p>If <cite>tensors</cite> is not empty, the graph with <cite>tensors</cite> as outputs will be dump.
 If <cite>tensors</cite> is empty, the whole computation graph will be dump.
@@ -1328,9 +1330,9 @@ For training graph, it is not straightforward to identify the “outputs”. Usi
 </dl>
 </dd></dl>
 
-<span class="target" id="module-torch_xla.core.functions"></span><dl class="function">
-<dt id="torch_xla.core.functions.all_reduce">
-<code class="sig-prename descclassname">torch_xla.core.functions.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">value</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/functions.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.functions.all_reduce" title="Permalink to this definition">¶</a></dt>
+<span class="target" id="module-torch_xla.core.functions"></span><dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.functions.all_reduce">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.functions.</span></span><span class="sig-name descname"><span class="pre">all_reduce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reduce_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/functions.html#all_reduce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.functions.all_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an inplace reduce operation on the input tensor.</p>
 <p>This is the same as <cite>xm.all_reduce()</cite> but supports autograd differentiation.</p>
 <dl class="field-list simple">
@@ -1357,9 +1359,9 @@ all the replicas in it.</p>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.core.functions.all_gather">
-<code class="sig-prename descclassname">torch_xla.core.functions.</code><code class="sig-name descname">all_gather</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">dim=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/functions.html#all_gather"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.functions.all_gather" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.functions.all_gather">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.functions.</span></span><span class="sig-name descname"><span class="pre">all_gather</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/functions.html#all_gather"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.functions.all_gather" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an all-gather operation along a given dimension.</p>
 <p>This is the same as <cite>xm.all_gather()</cite> but supports autograd differentiation.</p>
 <dl class="field-list simple">
@@ -1379,10 +1381,10 @@ participating replicas.</p>
 
 </div>
 <div class="section" id="module-torch_xla.distributed.parallel_loader">
-<span id="distributed"></span><h2>distributed<a class="headerlink" href="#module-torch_xla.distributed.parallel_loader" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="torch_xla.distributed.parallel_loader.ParallelLoader">
-<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.parallel_loader.</code><code class="sig-name descname">ParallelLoader</code><span class="sig-paren">(</span><em class="sig-param">loader</em>, <em class="sig-param">devices</em>, <em class="sig-param">batchdim=0</em>, <em class="sig-param">batches_per_execution=1</em>, <em class="sig-param">loader_prefetch_size=8</em>, <em class="sig-param">device_prefetch_size=4</em>, <em class="sig-param">host_to_device_transfer_threads=1</em>, <em class="sig-param">input_sharding=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/parallel_loader.html#ParallelLoader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.parallel_loader.ParallelLoader" title="Permalink to this definition">¶</a></dt>
+<span id="distributed"></span><h2>distributed<a class="headerlink" href="#module-torch_xla.distributed.parallel_loader" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torch_xla.distributed.parallel_loader.ParallelLoader">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.parallel_loader.</span></span><span class="sig-name descname"><span class="pre">ParallelLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">devices</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batchdim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batches_per_execution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loader_prefetch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device_prefetch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host_to_device_transfer_threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_sharding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/parallel_loader.html#ParallelLoader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.parallel_loader.ParallelLoader" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wraps an existing PyTorch DataLoader with background data upload.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1411,9 +1413,9 @@ Default: None</p></li>
 </ul>
 </dd>
 </dl>
-<dl class="method">
-<dt id="torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader">
-<code class="sig-name descname">per_device_loader</code><span class="sig-paren">(</span><em class="sig-param">device</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/parallel_loader.html#ParallelLoader.per_device_loader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader">
+<span class="sig-name descname"><span class="pre">per_device_loader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/parallel_loader.html#ParallelLoader.per_device_loader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves the loader iterator object for the given device.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1430,9 +1432,9 @@ returns the same tensor data structure as returned by the wrapped
 
 </dd></dl>
 
-<span class="target" id="module-torch_xla.distributed.xla_multiprocessing"></span><dl class="function">
-<dt id="torch_xla.distributed.xla_multiprocessing.spawn">
-<code class="sig-prename descclassname">torch_xla.distributed.xla_multiprocessing.</code><code class="sig-name descname">spawn</code><span class="sig-paren">(</span><em class="sig-param">fn</em>, <em class="sig-param">args=()</em>, <em class="sig-param">nprocs=None</em>, <em class="sig-param">join=True</em>, <em class="sig-param">daemon=False</em>, <em class="sig-param">start_method='spawn'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#spawn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.spawn" title="Permalink to this definition">¶</a></dt>
+<span class="target" id="module-torch_xla.distributed.xla_multiprocessing"></span><dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.distributed.xla_multiprocessing.spawn">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.xla_multiprocessing.</span></span><span class="sig-name descname"><span class="pre">spawn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nprocs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">join</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">daemon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'spawn'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#spawn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.spawn" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enables multi processing based replication.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1463,9 +1465,9 @@ return None.</p>
 </dl>
 </dd></dl>
 
-<dl class="class">
-<dt id="torch_xla.distributed.xla_multiprocessing.MpModelWrapper">
-<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.xla_multiprocessing.</code><code class="sig-name descname">MpModelWrapper</code><span class="sig-paren">(</span><em class="sig-param">model</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpModelWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper" title="Permalink to this definition">¶</a></dt>
+<dl class="py class">
+<dt class="sig sig-object py" id="torch_xla.distributed.xla_multiprocessing.MpModelWrapper">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.xla_multiprocessing.</span></span><span class="sig-name descname"><span class="pre">MpModelWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpModelWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wraps a model to minimize host memory usage when <cite>fork</cite> method is used.</p>
 <p>This class should be used together with the <cite>spawn(…, start_method=’fork’)</cite>
 API to minimize the use of host memory.
@@ -1487,9 +1489,9 @@ Example:</p>
 pages to host the original model weights, and second it serializes the move
 of the wrapped model into each device, by lowering the load onto the system
 memory during the process.</p>
-<dl class="method">
-<dt id="torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to">
-<code class="sig-name descname">to</code><span class="sig-paren">(</span><em class="sig-param">device</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpModelWrapper.to"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to">
+<span class="sig-name descname"><span class="pre">to</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpModelWrapper.to"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves the model moved onto the specified device.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1503,9 +1505,9 @@ memory during the process.</p>
 
 </dd></dl>
 
-<dl class="class">
-<dt id="torch_xla.distributed.xla_multiprocessing.MpSerialExecutor">
-<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.xla_multiprocessing.</code><code class="sig-name descname">MpSerialExecutor</code><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpSerialExecutor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor" title="Permalink to this definition">¶</a></dt>
+<dl class="py class">
+<dt class="sig sig-object py" id="torch_xla.distributed.xla_multiprocessing.MpSerialExecutor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.xla_multiprocessing.</span></span><span class="sig-name descname"><span class="pre">MpSerialExecutor</span></span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpSerialExecutor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor" title="Permalink to this definition">¶</a></dt>
 <dd><p>Utility to run a function in a serialized fashion among multi-core processes.</p>
 <p>Example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># At global scope.</span>
@@ -1522,9 +1524,9 @@ memory during the process.</p>
 <span class="n">xmp</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
 </pre></div>
 </div>
-<dl class="method">
-<dt id="torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run">
-<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param">fn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpSerialExecutor.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run" title="Permalink to this definition">¶</a></dt>
+<dl class="py method">
+<dt class="sig sig-object py" id="torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/xla_multiprocessing.html#MpSerialExecutor.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Runs the provided function serialized WRT each per-core process.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1540,10 +1542,10 @@ memory during the process.</p>
 
 </div>
 <div class="section" id="module-torch_xla.utils.utils">
-<span id="utils"></span><h2>utils<a class="headerlink" href="#module-torch_xla.utils.utils" title="Permalink to this headline">¶</a></h2>
-<dl class="class">
-<dt id="torch_xla.utils.utils.SampleGenerator">
-<em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.utils.</code><code class="sig-name descname">SampleGenerator</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">sample_count</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/utils.html#SampleGenerator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.utils.SampleGenerator" title="Permalink to this definition">¶</a></dt>
+<span id="utils"></span><h2>utils<a class="headerlink" href="#module-torch_xla.utils.utils" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="torch_xla.utils.utils.SampleGenerator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torch_xla.utils.utils.</span></span><span class="sig-name descname"><span class="pre">SampleGenerator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_count</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/utils.html#SampleGenerator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.utils.utils.SampleGenerator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterator which returns multiple samples of a given input data.</p>
 <p>Can be used in place of a PyTorch <cite>DataLoader</cite> to generate synthetic data.</p>
 <dl class="field-list simple">
@@ -1556,15 +1558,15 @@ memory during the process.</p>
 </dl>
 </dd></dl>
 
-<dl class="class">
-<dt id="torch_xla.utils.utils.DataWrapper">
-<em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.utils.</code><code class="sig-name descname">DataWrapper</code><a class="reference internal" href="_modules/torch_xla/utils/utils.html#DataWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.utils.DataWrapper" title="Permalink to this definition">¶</a></dt>
+<dl class="py class">
+<dt class="sig sig-object py" id="torch_xla.utils.utils.DataWrapper">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torch_xla.utils.utils.</span></span><span class="sig-name descname"><span class="pre">DataWrapper</span></span><a class="reference internal" href="_modules/torch_xla/utils/utils.html#DataWrapper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.utils.utils.DataWrapper" title="Permalink to this definition">¶</a></dt>
 <dd><p>Utility class to wrap data structures to be sent to device.</p>
 </dd></dl>
 
-<span class="target" id="module-torch_xla.utils.serialization"></span><dl class="function">
-<dt id="torch_xla.utils.serialization.save">
-<code class="sig-prename descclassname">torch_xla.utils.serialization.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">path</em>, <em class="sig-param">master_only=True</em>, <em class="sig-param">global_master=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/serialization.html#save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.serialization.save" title="Permalink to this definition">¶</a></dt>
+<span class="target" id="module-torch_xla.utils.serialization"></span><dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.utils.serialization.save">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.utils.serialization.</span></span><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">master_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">global_master</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/serialization.html#save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.utils.serialization.save" title="Permalink to this definition">¶</a></dt>
 <dd><p>Saves the input data into a file.</p>
 <p>The saved data is transferred to PyTorch CPU device before being saved, so a
 following <cite>torch.load()</cite> will load CPU data.
@@ -1593,9 +1595,9 @@ Default: False</p></li>
 </dl>
 </dd></dl>
 
-<dl class="function">
-<dt id="torch_xla.utils.serialization.load">
-<code class="sig-prename descclassname">torch_xla.utils.serialization.</code><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/serialization.html#load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.serialization.load" title="Permalink to this definition">¶</a></dt>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.utils.serialization.load">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.utils.serialization.</span></span><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/serialization.html#load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.utils.serialization.load" title="Permalink to this definition">¶</a></dt>
 <dd><p>Loads data previously saved with the <cite>save()</cite> API.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1609,18 +1611,18 @@ Default: False</p></li>
 
 </div>
 <div class="section" id="test">
-<h2>test<a class="headerlink" href="#test" title="Permalink to this headline">¶</a></h2>
+<h2>test<a class="headerlink" href="#test" title="Permalink to this heading">¶</a></h2>
 </div>
 </div>
 <div class="section" id="beginner-s-guide-to-pytorch-xla">
-<h1>Beginner’s Guide to PyTorch/XLA<a class="headerlink" href="#beginner-s-guide-to-pytorch-xla" title="Permalink to this headline">¶</a></h1>
+<h1>Beginner’s Guide to PyTorch/XLA<a class="headerlink" href="#beginner-s-guide-to-pytorch-xla" title="Permalink to this heading">¶</a></h1>
 <p>This document provides a high-level overview of PyTorch XLA and illustrates a
 few examples how PyTorch code is converted to run on XLA devices (e.g. TPUs).
 This is not a complete solution, and additional changes may be required
 depending on the specific code. However, this document should serve as a
 starting point for the conversion process.</p>
 <div class="section" id="basic-high-level-understanding-of-some-xla-details">
-<h2>Basic high-level understanding of some XLA details<a class="headerlink" href="#basic-high-level-understanding-of-some-xla-details" title="Permalink to this headline">¶</a></h2>
+<h2>Basic high-level understanding of some XLA details<a class="headerlink" href="#basic-high-level-understanding-of-some-xla-details" title="Permalink to this heading">¶</a></h2>
 <dl class="simple">
 <dt>This section provides a brief overview of the basic details of PyTorch XLA,</dt><dd><p>which should help readers better understand the required modifications and
 optimizations of code. It is supplement to the API guide described <a class="reference external" href="https://github.com/pytorch/xla/blob/master/API_GUIDE.md">here</a>.</p>
@@ -1654,7 +1656,7 @@ optimizations of code. It is supplement to the API guide described <a class="ref
 <p>Another important point to consider is <a class="reference external" href="https://github.com/pytorch/xla/blob/a1f822e2627a5639464273241821852677401026/torch_xla/distributed/parallel_loader.py#L186">MPDeviceLoader</a>. Once your code is running on an XLA device, consider wrapping the torch dataloader with XLA <code class="docutils literal notranslate"><span class="pre">MPDeviceLoader</span></code> which preloads data to the device to improve performance and includes <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> in it. The latter automatically breaks the iterations over batches of data and sends them for execution. Note, if you are not using MPDeviceLoader, you might need to set <code class="docutils literal notranslate"><span class="pre">barrier=True</span></code> in the <code class="docutils literal notranslate"><span class="pre">optimizer_step()</span></code> to enable <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> if running a training job or explicitly adding <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code>.</p>
 </div>
 <div class="section" id="tpu-setup">
-<h2>TPU Setup<a class="headerlink" href="#tpu-setup" title="Permalink to this headline">¶</a></h2>
+<h2>TPU Setup<a class="headerlink" href="#tpu-setup" title="Permalink to this heading">¶</a></h2>
 <p>Create TPU with base image to use nightly wheels or from the stable release by specifying the <code class="docutils literal notranslate"><span class="pre">RUNTIME_VERSION</span></code>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export ZONE=us-central2-b
 export PROJECT_ID=your-project-id
@@ -1686,7 +1688,7 @@ sudo apt-get update &amp;&amp; sudo apt-get install libgl1 -y # diffusion specif
 </div>
 </div>
 <div class="section" id="converting-code-to-pytorch-xla">
-<h2>Converting code to PyTorch XLA<a class="headerlink" href="#converting-code-to-pytorch-xla" title="Permalink to this headline">¶</a></h2>
+<h2>Converting code to PyTorch XLA<a class="headerlink" href="#converting-code-to-pytorch-xla" title="Permalink to this heading">¶</a></h2>
 <p>General guidelines to modify your code:</p>
 <ul class="simple">
 <li><p>Replace <code class="docutils literal notranslate"><span class="pre">cuda</span></code> with <code class="docutils literal notranslate"><span class="pre">xm.xla_device()</span></code></p></li>
@@ -1698,7 +1700,7 @@ sudo apt-get update &amp;&amp; sudo apt-get install libgl1 -y # diffusion specif
 <p>Remember: each case is unique so you might need to do something different for each case.</p>
 </div>
 <div class="section" id="example-1-stable-diffusion-inference-in-pytorch-lightning-on-a-single-tpu-device">
-<h2>Example 1. Stable Diffusion inference in PyTorch Lightning on a Single TPU Device<a class="headerlink" href="#example-1-stable-diffusion-inference-in-pytorch-lightning-on-a-single-tpu-device" title="Permalink to this headline">¶</a></h2>
+<h2>Example 1. Stable Diffusion inference in PyTorch Lightning on a Single TPU Device<a class="headerlink" href="#example-1-stable-diffusion-inference-in-pytorch-lightning-on-a-single-tpu-device" title="Permalink to this heading">¶</a></h2>
 <p>As a first example consider the <a class="reference external" href="https://github.com/pytorch-tpu/stable-diffusion/blob/main/scripts/txt2img.py">inference code</a> of the stable diffusion model in PyTorch Lightning which can be run from command line as</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">scripts</span><span class="o">/</span><span class="n">txt2img</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">prompt</span> <span class="s2">&quot;a photograph of an astronaut riding a horse&quot;</span>
 </pre></div>
@@ -1726,7 +1728,7 @@ As in the general guideline above, start with changes related to <code class="do
 <p>Note: if you are running on v4-8 TPU, then you have 4 available XLA (TPU) devices. Running the code as above will only use one XLA device. In order to run on all 4 devices you need to use <code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code> function to spawn the code on all the devices. We will discuss an <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code> in the next example.</p>
 </div>
 <div class="section" id="example-2-hf-stable-diffusion-inference">
-<h2>Example 2. HF Stable Diffusion Inference<a class="headerlink" href="#example-2-hf-stable-diffusion-inference" title="Permalink to this headline">¶</a></h2>
+<h2>Example 2. HF Stable Diffusion Inference<a class="headerlink" href="#example-2-hf-stable-diffusion-inference" title="Permalink to this heading">¶</a></h2>
 <p>Now, consider using <a class="reference external" href="https://github.com/huggingface/diffusers/tree/main/examples/text_to_image">Stable Diffusion Inference</a> in the HuggingFace diffusers library for both the SD-XL and 2.1 versions of the model. For your reference, the changes described below can be found in this <a class="reference external" href="https://github.com/pytorch-tpu/diffusers">repo</a>. You can clone the repo and run the inference using the following command on your TPU VM:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>(vm)$ git clone https://github.com/pytorch-tpu/diffusers.git
 (vm)$ cd diffusers/examples/text_to_image/
@@ -1745,7 +1747,7 @@ As in the general guideline above, start with changes related to <code class="do
 <p>Warning: watch out for caveats highlighted <a class="reference external" href="https://github.com/huggingface/diffusers/pull/4254#issuecomment-1712289803">here</a>.</p>
 </div>
 <div class="section" id="running-on-a-single-tpu-device">
-<h2>Running on a Single TPU device<a class="headerlink" href="#running-on-a-single-tpu-device" title="Permalink to this headline">¶</a></h2>
+<h2>Running on a Single TPU device<a class="headerlink" href="#running-on-a-single-tpu-device" title="Permalink to this heading">¶</a></h2>
 <p>This section describes the changes that need to be made to the <a class="reference external" href="https://github.com/huggingface/diffusers/tree/main/examples/text_to_image#inference">text_to_image inference example</a> code to run it on TPUs.</p>
 <p>The original code uses Lora for inference, but this tutorial will not use it. Instead, we will set the <code class="docutils literal notranslate"><span class="pre">model_id</span></code> argument to <code class="docutils literal notranslate"><span class="pre">stabilityai/stable-diffusion-xl-base-0.9</span></code> when initializing the pipeline. We will also use the default scheduler (DPMSolverMultistepScheduler). However, similar changes can be made to the other schedulers as well.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">huggingface</span><span class="o">/</span><span class="n">diffusers</span>
@@ -1774,7 +1776,7 @@ As in the general guideline above, start with changes related to <code class="do
 <a class="reference external" href="https://pytorch.org/xla/release/2.0/index.html#known-performance-caveats">PyTorch XLA caveats</a>. The <code class="docutils literal notranslate"><span class="pre">.nonzero()</span></code> and <code class="docutils literal notranslate"><span class="pre">.item()</span></code> calls in this function send requests to the CPU for tensor evaluation, which trigger device-host communication. This is not desirable, as it can slow down the code. In this particular case, we can avoid these calls by passing the index to the function directly. This will prevent the function from sending requests to the CPU, and will improve the performance of the code. Changes are available in <a class="reference external" href="https://github.com/pytorch-tpu/diffusers/commit/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d">this</a> commit. The code now is ready to be run on TPUs.</p>
 </div>
 <div class="section" id="profiling-and-performance-analysis">
-<h2>Profiling and performance analysis<a class="headerlink" href="#profiling-and-performance-analysis" title="Permalink to this headline">¶</a></h2>
+<h2>Profiling and performance analysis<a class="headerlink" href="#profiling-and-performance-analysis" title="Permalink to this heading">¶</a></h2>
 <p>To further investigate the performance of the model, we can profile it using the profiling <a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm">guide</a>. As a rule of thumb, the profiling script should be run with the maximum batch size that fits into the memory for <a class="reference external" href="https://cloud.google.com/tpu/docs/performance-guide">optimal memory usage</a>. It also helps to overlap tracing of the code with device execution which leads to more optimal device usage. The duration of profiling should be long enough to capture at least one step. Good performance of the model on TPUs means that device-host communication is minimized and the device is constantly running processes with no idle time.</p>
 <p>Starting a server in the <code class="docutils literal notranslate"><span class="pre">inference_tpu_*.py</span></code> file and running <code class="docutils literal notranslate"><span class="pre">capture_profile.py</span></code> script as described in the guide will give us information on processes that run on the devices. Currently, only one XLA device is profiled. To better understand the TPU idle time (gaps in the profile), profiling traces (<code class="docutils literal notranslate"><span class="pre">xp.Trace()</span></code>) should be added to the code. The <code class="docutils literal notranslate"><span class="pre">xp.Trace()</span></code> measures the time it takes to trace the python code on the host machine wrapped with the trace. For this example, <code class="docutils literal notranslate"><span class="pre">xp.Trace()</span></code> traces were added inside the <a class="reference external" href="https://github.com/ssusie/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py">pipeline</a> and the <a class="reference external" href="https://github.com/ssusie/diffusers/blob/main/src/diffusers/models/unet_2d_condition.py">U-net model</a> to measure the time to run specific sections of the code on the host (CPU).</p>
 <p>If the gaps in the profile are due to Python code tracing that happens on the host, then this might be a bottleneck and there is no further straightforward optimization that can be done. Otherwise, the code should be analyzed further to understand the caveats and improve the performance further. Note that you cannot <code class="docutils literal notranslate"><span class="pre">xp.Trace()</span></code> wrap portions of the code where <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> is called.</p>
@@ -1796,7 +1798,7 @@ As in the general guideline above, start with changes related to <code class="do
 <p>If we investigate the U-Net function and the scheduler, we can see that the U-Net code does not contain any optimization targets for PyTorch/XLA. However, there are <code class="docutils literal notranslate"><span class="pre">.item()</span></code> and <code class="docutils literal notranslate"><span class="pre">.nonzero()</span></code> calls inside the <a class="reference external" href="https://github.com/huggingface/diffusers/blob/15782fd506e8c4a7c2b288fc2e558bd77fdfa51a/src/diffusers/schedulers/scheduling_euler_discrete.py#L371">scheduler.step</a>. We can <a class="reference external" href="https://github.com/pytorch-tpu/diffusers/blob/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d/src/diffusers/schedulers/scheduling_euler_discrete.py#L310">rewrite</a> the function to avoid those calls. If we fix this issue and rerun a profile, we will not see much difference. However, since we have reduced the device-host communication that was introducing smaller graphs, we allowed the compiler to optimize the code better. The function <a class="reference external" href="https://github.com/huggingface/diffusers/blob/15782fd506e8c4a7c2b288fc2e558bd77fdfa51a/src/diffusers/schedulers/scheduling_euler_discrete.py#L205">scale_model_input</a> has similar issues, and  we can fix these by making the changes we made above to the  <code class="docutils literal notranslate"><span class="pre">step</span></code> function. Overall, since many of the gaps are caused from python level code tracing and graph building, these gaps are not possible to optimize with the current version of PyTorch XLA, but we may see improvements in the future when dynamo is enabled in PyTorch XLA.</p>
 </div>
 <div class="section" id="running-on-multiple-tpu-devices">
-<h2>Running on Multiple TPU Devices<a class="headerlink" href="#running-on-multiple-tpu-devices" title="Permalink to this headline">¶</a></h2>
+<h2>Running on Multiple TPU Devices<a class="headerlink" href="#running-on-multiple-tpu-devices" title="Permalink to this heading">¶</a></h2>
 <p>To use multiple TPU devices, you can use the <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code> function to spawn the function you ran on a single device to multiple devices. The <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code> function will start processes on multiple TPU devices and sync them when needed. This can be done by passing the <code class="docutils literal notranslate"><span class="pre">index</span></code> argument to the function that runs on a single device. For example,</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_multiprocessing</span> <span class="k">as</span> <span class="nn">xmp</span>
 
@@ -1810,7 +1812,7 @@ As in the general guideline above, start with changes related to <code class="do
 <p><a class="reference external" href="https://github.com/ssusie/diffusers/blob/main/examples/text_to_image/inference_tpu_multidevice.py">This file</a> illustrates how xmp.spawn can be used to run stable diffusion 2.1 version on multiple TPU devices. For this version similar to the above changes were made to the <a class="reference external" href="https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py">pipeline</a> file.</p>
 </div>
 <div class="section" id="running-on-pods">
-<h2>Running on Pods<a class="headerlink" href="#running-on-pods" title="Permalink to this headline">¶</a></h2>
+<h2>Running on Pods<a class="headerlink" href="#running-on-pods" title="Permalink to this heading">¶</a></h2>
 <p>Once you have the code for running on a single host device, there is no further change needed. You can create the TPU pod, for example, by following these <a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-pods#create-tpu-vm">instructions</a>. Then run your script with</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gcloud compute tpus tpu-vm ssh ${TPU_NAME} \
   --zone=${ZONE} \
@@ -1826,14 +1828,14 @@ As in the general guideline above, start with changes related to <code class="do
 </div>
 </div>
 <div class="section" id="troubleshooting">
-<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline">¶</a></h1>
+<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this heading">¶</a></h1>
 <p>Note that the information in this section is subject to be removed in future releases of the <em>PyTorch/XLA</em> software,
 since many of them are peculiar to a given internal implementation which might change.</p>
 <div class="section" id="sanity-check">
-<h2>Sanity Check<a class="headerlink" href="#sanity-check" title="Permalink to this headline">¶</a></h2>
+<h2>Sanity Check<a class="headerlink" href="#sanity-check" title="Permalink to this heading">¶</a></h2>
 <p>Before performing any in depth debugging, we want to do a sanity check on the installed PyTorch/XLA.</p>
 <div class="section" id="check-pytorch-xla-version">
-<h3>Check PyTorch/XLA Version<a class="headerlink" href="#check-pytorch-xla-version" title="Permalink to this headline">¶</a></h3>
+<h3>Check PyTorch/XLA Version<a class="headerlink" href="#check-pytorch-xla-version" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch and PyTorch/XLA version should match. Check out our <a class="reference external" href="https://github.com/pytorch/xla#getting-started">README</a> for more detials on versions available.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>vm:~$ python
 &gt;&gt;&gt; import torch
@@ -1846,7 +1848,7 @@ since many of them are peculiar to a given internal implementation which might c
 </div>
 </div>
 <div class="section" id="perform-a-simple-calculation">
-<h3>Perform A Simple Calculation<a class="headerlink" href="#perform-a-simple-calculation" title="Permalink to this headline">¶</a></h3>
+<h3>Perform A Simple Calculation<a class="headerlink" href="#perform-a-simple-calculation" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>vm:~$ export PJRT_DEVICE=TPU
 vm:~$ python3
 &gt;&gt;&gt; import torch
@@ -1859,7 +1861,7 @@ tensor(300, device=&#39;xla:0&#39;)
 </div>
 </div>
 <div class="section" id="run-resnet-with-fake-data">
-<h3>Run Resnet With Fake Data<a class="headerlink" href="#run-resnet-with-fake-data" title="Permalink to this headline">¶</a></h3>
+<h3>Run Resnet With Fake Data<a class="headerlink" href="#run-resnet-with-fake-data" title="Permalink to this heading">¶</a></h3>
 <p>For nightly</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>vm:~$ git clone https://github.com/pytorch/xla.git
 vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
@@ -1874,21 +1876,21 @@ vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
 </div>
 </div>
 <div class="section" id="performance-debugging">
-<h2>Performance Debugging<a class="headerlink" href="#performance-debugging" title="Permalink to this headline">¶</a></h2>
+<h2>Performance Debugging<a class="headerlink" href="#performance-debugging" title="Permalink to this heading">¶</a></h2>
 <p>To diagnose performance issues, we can use the execution metrics and counters provided by <em>PyTorch/XLA</em>
 The <strong>first thing</strong> to check when model is slow is to generate a metrics report.</p>
 <p>Metrics report is extremely helpful in diagnosing issues. Please try to include it in your bug
 report sent to us if you have it.</p>
 </div>
 <div class="section" id="pytorch-xla-debugging-tool">
-<h2>PyTorch/XLA Debugging Tool<a class="headerlink" href="#pytorch-xla-debugging-tool" title="Permalink to this headline">¶</a></h2>
+<h2>PyTorch/XLA Debugging Tool<a class="headerlink" href="#pytorch-xla-debugging-tool" title="Permalink to this heading">¶</a></h2>
 <p>You can enable the PyTorch/XLA debugging tool by setting <code class="docutils literal notranslate"><span class="pre">PT_XLA_DEBUG=1</span></code>, which provides a couple useful debugging features.</p>
 </div>
 <div class="section" id="pytorch-xla-dynamo-debugging-tool">
-<h2>PyTorch/XLA + Dynamo Debugging Tool<a class="headerlink" href="#pytorch-xla-dynamo-debugging-tool" title="Permalink to this headline">¶</a></h2>
+<h2>PyTorch/XLA + Dynamo Debugging Tool<a class="headerlink" href="#pytorch-xla-dynamo-debugging-tool" title="Permalink to this heading">¶</a></h2>
 <p>You can enable the PyTorch/XLA + Dynamo debugging tool by setting <code class="docutils literal notranslate"><span class="pre">XLA_DYNAMO_DEBUG=1</span></code>.</p>
 <div class="section" id="perform-a-auto-metrics-analysis">
-<h3>Perform A Auto-Metrics Analysis<a class="headerlink" href="#perform-a-auto-metrics-analysis" title="Permalink to this headline">¶</a></h3>
+<h3>Perform A Auto-Metrics Analysis<a class="headerlink" href="#perform-a-auto-metrics-analysis" title="Permalink to this heading">¶</a></h3>
 <p>The debugging tool will analyze the metrics report and provide a summary. Some example output would be</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pt</span><span class="o">-</span><span class="n">xla</span><span class="o">-</span><span class="n">profiler</span><span class="p">:</span> <span class="n">CompileTime</span> <span class="n">too</span> <span class="n">frequent</span><span class="p">:</span> <span class="mi">21</span> <span class="n">counts</span> <span class="n">during</span> <span class="mi">11</span> <span class="n">steps</span>
 <span class="n">pt</span><span class="o">-</span><span class="n">xla</span><span class="o">-</span><span class="n">profiler</span><span class="p">:</span> <span class="n">TransferFromDeviceTime</span> <span class="n">too</span> <span class="n">frequent</span><span class="p">:</span> <span class="mi">11</span> <span class="n">counts</span> <span class="n">during</span> <span class="mi">11</span> <span class="n">steps</span>
@@ -1899,7 +1901,7 @@ report sent to us if you have it.</p>
 </div>
 </div>
 <div class="section" id="compilation-execution-analysis">
-<h3>Compilation &amp; Execution Analysis<a class="headerlink" href="#compilation-execution-analysis" title="Permalink to this headline">¶</a></h3>
+<h3>Compilation &amp; Execution Analysis<a class="headerlink" href="#compilation-execution-analysis" title="Permalink to this heading">¶</a></h3>
 <p>The debugging tool will analyze every compilation and execution for your model. Some example output would be</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Compilation</span> <span class="n">Analysis</span><span class="p">:</span> <span class="o">================================================================================</span>
 <span class="n">Compilation</span> <span class="n">Analysis</span><span class="p">:</span> <span class="n">Compilation</span> <span class="n">Cause</span>
@@ -1956,7 +1958,7 @@ report sent to us if you have it.</p>
 </div>
 </div>
 <div class="section" id="get-a-metrics-report">
-<h2>Get A Metrics Report<a class="headerlink" href="#get-a-metrics-report" title="Permalink to this headline">¶</a></h2>
+<h2>Get A Metrics Report<a class="headerlink" href="#get-a-metrics-report" title="Permalink to this heading">¶</a></h2>
 <p>Put the following line in your program to generate a report:</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
 
@@ -1968,7 +1970,7 @@ report sent to us if you have it.</p>
 </div>
 </div>
 <div class="section" id="understand-the-metrics-report">
-<h2>Understand The Metrics Report<a class="headerlink" href="#understand-the-metrics-report" title="Permalink to this headline">¶</a></h2>
+<h2>Understand The Metrics Report<a class="headerlink" href="#understand-the-metrics-report" title="Permalink to this heading">¶</a></h2>
 <p>The report includes things like:</p>
 <ul class="simple">
 <li><p>how many time we issue <em>XLA</em> compilations and time spent on issuing.</p></li>
@@ -2002,7 +2004,7 @@ They are fully qualified with their C++ namespace:</p>
 lowering in PyTorch/XLA. Feel free to open a feature request for it on <a class="reference external" href="https://github.com/pytorch/xla/issues">GitHub issues</a>.</p>
 </div>
 <div class="section" id="clear-the-metrics-report">
-<h2>Clear The Metrics Report<a class="headerlink" href="#clear-the-metrics-report" title="Permalink to this headline">¶</a></h2>
+<h2>Clear The Metrics Report<a class="headerlink" href="#clear-the-metrics-report" title="Permalink to this heading">¶</a></h2>
 <p>If you want to clear the metrics between steps/epochs, you can use</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
 
@@ -2011,7 +2013,7 @@ lowering in PyTorch/XLA. Feel free to open a feature request for it on <a class=
 </div>
 </div>
 <div class="section" id="performance-profiling">
-<h2>Performance Profiling<a class="headerlink" href="#performance-profiling" title="Permalink to this headline">¶</a></h2>
+<h2>Performance Profiling<a class="headerlink" href="#performance-profiling" title="Permalink to this heading">¶</a></h2>
 <p>To profile your workload in depth to understand bottlenecks please check the following resources:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm">Official tutorial</a></p></li>
@@ -2021,7 +2023,7 @@ lowering in PyTorch/XLA. Feel free to open a feature request for it on <a class=
 </ul>
 </div>
 <div class="section" id="known-performance-caveats">
-<h2>Known Performance Caveats<a class="headerlink" href="#known-performance-caveats" title="Permalink to this headline">¶</a></h2>
+<h2>Known Performance Caveats<a class="headerlink" href="#known-performance-caveats" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors share the full tensor interface with CPU &amp; GPU tensors.
 However, constraints in XLA/hardware and the lazy evaluation model suggest certain patterns might result in bad performance.</p>
 <p>If your model shows bad performance, keep in mind the following caveats:</p>
@@ -2088,7 +2090,7 @@ small batch sizes in those cases.</p></li>
 </ol>
 </div>
 <div class="section" id="xla-tensor-quirks">
-<h2>XLA Tensor Quirks<a class="headerlink" href="#xla-tensor-quirks" title="Permalink to this headline">¶</a></h2>
+<h2>XLA Tensor Quirks<a class="headerlink" href="#xla-tensor-quirks" title="Permalink to this heading">¶</a></h2>
 <ol class="arabic simple">
 <li><p><strong>XLA tensor internals are opaque.</strong> XLA tensors always appear to be
 contiguous and without storage. Networks should not try to check the strides
@@ -2111,7 +2113,7 @@ independent copies of the shared tensor will be made on the XLA device.</p></li>
 </ol>
 </div>
 <div class="section" id="more-debugging-tools">
-<h2>More Debugging Tools<a class="headerlink" href="#more-debugging-tools" title="Permalink to this headline">¶</a></h2>
+<h2>More Debugging Tools<a class="headerlink" href="#more-debugging-tools" title="Permalink to this heading">¶</a></h2>
 <p>We don’t expect users to use tools in this section to debug their models. But we might ask for
 them when you submit a bug report since they provide additional information that metrics report
 doesn’t have.</p>
@@ -2121,7 +2123,7 @@ doesn’t have.</p>
 </ul>
 <p>Note these functions must be called prior to <code class="docutils literal notranslate"><span class="pre">mark_step()</span></code>, otherwise the tensor will already be materialized.</p>
 <div class="section" id="environment-variables">
-<h3>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h3>
+<h3>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this heading">¶</a></h3>
 <p>There are also a number of environment variables which control the behavior of the <em>PyTorch/XLA</em>
 software stack.</p>
 <p>Setting such variables will cause different degrees of performance degradation, so they should
@@ -2177,7 +2179,7 @@ offending HLO graph will be dumped as part of the runtime error raised by <code 
 </ul>
 </div>
 <div class="section" id="common-debugging-environment-variables-combinations">
-<h3>Common Debugging Environment Variables Combinations<a class="headerlink" href="#common-debugging-environment-variables-combinations" title="Permalink to this headline">¶</a></h3>
+<h3>Common Debugging Environment Variables Combinations<a class="headerlink" href="#common-debugging-environment-variables-combinations" title="Permalink to this heading">¶</a></h3>
 <ul>
 <li><p>Record the graph execution in the IR format</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_IR_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_HLO_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_SAVE_TENSORS_FMT</span><span class="o">=</span><span class="s2">&quot;text&quot;</span> <span class="n">XLA_SAVE_TENSORS_FILE</span><span class="o">=</span><span class="s2">&quot;/tmp/save1.ir&quot;</span>
@@ -2197,7 +2199,7 @@ offending HLO graph will be dumped as part of the runtime error raised by <code 
 </ul>
 </div>
 <div class="section" id="reproducing-pytorch-xla-ci-cd-unit-test-failures">
-<h3>Reproducing PyTorch/XLA CI/CD unit test failures.<a class="headerlink" href="#reproducing-pytorch-xla-ci-cd-unit-test-failures" title="Permalink to this headline">¶</a></h3>
+<h3>Reproducing PyTorch/XLA CI/CD unit test failures.<a class="headerlink" href="#reproducing-pytorch-xla-ci-cd-unit-test-failures" title="Permalink to this heading">¶</a></h3>
 <p>You may see some test failures for a PR such as:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">To</span> <span class="n">execute</span> <span class="n">this</span> <span class="n">test</span><span class="p">,</span> <span class="n">run</span> <span class="n">the</span> <span class="n">following</span> <span class="kn">from</span> <span class="nn">the</span> <span class="n">base</span> <span class="n">repo</span> <span class="nb">dir</span><span class="p">:</span>
     <span class="n">PYTORCH_TEST_WITH_SLOW</span><span class="o">=</span><span class="mi">1</span> <span class="n">python</span> <span class="o">../</span><span class="n">test</span><span class="o">/</span><span class="n">test_torch</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">k</span> <span class="n">test_put_xla_uint8</span>
@@ -2209,7 +2211,7 @@ offending HLO graph will be dumped as part of the runtime error raised by <code 
 </div>
 </div>
 <div class="section" id="pjrt-runtime">
-<h1>PJRT Runtime<a class="headerlink" href="#pjrt-runtime" title="Permalink to this headline">¶</a></h1>
+<h1>PJRT Runtime<a class="headerlink" href="#pjrt-runtime" title="Permalink to this heading">¶</a></h1>
 <p>PyTorch/XLA has migrated from the TensorFlow-based XRT runtime to the <a class="reference external" href="https://github.com/openxla/xla/tree/main/xla/pjrt">PJRT
 runtime</a>
 used by <a class="reference external" href="https://github.com/google/jax">JAX</a>.</p>
@@ -2241,7 +2243,7 @@ this change has no impact</p></li>
 <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code></p></li>
 </ul>
 <div class="section" id="tl-dr">
-<h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this headline">¶</a></h2>
+<h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>To use the PJRT preview runtime, set the <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment variable to
 <code class="docutils literal notranslate"><span class="pre">CPU</span></code>, <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">CUDA</span></code></p></li>
@@ -2323,7 +2325,7 @@ use the <code class="docutils literal notranslate"><span class="pre">xla://</spa
 </div>
 </div>
 <div class="section" id="benefits">
-<h2>Benefits<a class="headerlink" href="#benefits" title="Permalink to this headline">¶</a></h2>
+<h2>Benefits<a class="headerlink" href="#benefits" title="Permalink to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>Simple runtime configuration: just set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> to <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, <code class="docutils literal notranslate"><span class="pre">CPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">CUDA</span></code>
 and start using XLA! Or, let PJRT select a device automatically based on your
@@ -2339,12 +2341,12 @@ chips.</p></li>
 </ul>
 </div>
 <div class="section" id="quickstart">
-<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this heading">¶</a></h2>
 <p>To start using PJRT with PyTorch/XLA, all you need to do is set the
 <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment variable. If you’re working on a TPU v2 or v3, keep
 reading to learn about the differences between TPU v2 and v3 and v4.</p>
 <div class="section" id="cpu">
-<h3>CPU<a class="headerlink" href="#cpu" title="Permalink to this headline">¶</a></h3>
+<h3>CPU<a class="headerlink" href="#cpu" title="Permalink to this heading">¶</a></h3>
 <p>On any machine with PyTorch/XLA installed, you can run our MNIST example on CPU
 like this:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_mnist</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span>
@@ -2352,7 +2354,7 @@ like this:</p>
 </div>
 </div>
 <div class="section" id="tpu">
-<h3>TPU<a class="headerlink" href="#tpu" title="Permalink to this headline">¶</a></h3>
+<h3>TPU<a class="headerlink" href="#tpu" title="Permalink to this heading">¶</a></h3>
 <p>To create a new TPU with PyTorch/XLA r2.0 installed:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm create $USER-pjrt --accelerator-type=v4-8 --version=tpu-vm-v4-pt-2.0 --zone=us-central2-b --project=$PROJECT
 </pre></div>
@@ -2368,7 +2370,7 @@ like this:</p>
 </pre></div>
 </div>
 <div class="section" id="pods">
-<h4>Pods<a class="headerlink" href="#pods" title="Permalink to this headline">¶</a></h4>
+<h4>Pods<a class="headerlink" href="#pods" title="Permalink to this heading">¶</a></h4>
 <p>On TPU Pods, use <code class="docutils literal notranslate"><span class="pre">gcloud</span></code> to run your command on each TPU in parallel:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command=&quot;git clone --depth=1 --branch r1.13 https://github.com/pytorch/xla.git&quot;
 gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command=&quot;PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1&quot;
@@ -2376,7 +2378,7 @@ gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$
 </div>
 </div>
 <div class="section" id="docker">
-<h4>Docker<a class="headerlink" href="#docker" title="Permalink to this headline">¶</a></h4>
+<h4>Docker<a class="headerlink" href="#docker" title="Permalink to this heading">¶</a></h4>
 <p>You can also use Docker to run your workload in a container with PyTorch/XLA
 preinstalled:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export DOCKER_IMAGE=gcr.io/...
@@ -2395,10 +2397,10 @@ for more information.</p>
 </div>
 </div>
 <div class="section" id="gpu">
-<h3>GPU<a class="headerlink" href="#gpu" title="Permalink to this headline">¶</a></h3>
+<h3>GPU<a class="headerlink" href="#gpu" title="Permalink to this heading">¶</a></h3>
 </div>
 <div class="section" id="single-node-gpu-training">
-<h3>Single-node GPU training<a class="headerlink" href="#single-node-gpu-training" title="Permalink to this headline">¶</a></h3>
+<h3>Single-node GPU training<a class="headerlink" href="#single-node-gpu-training" title="Permalink to this heading">¶</a></h3>
 <p>To use GPUs with PJRT, simply set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=CUDA</span></code> and configure
 <code class="docutils literal notranslate"><span class="pre">GPU_NUM_DEVICES</span></code> to the number of devices on the host. For example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CUDA</span> <span class="n">GPU_NUM_DEVICES</span><span class="o">=</span><span class="mi">4</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
@@ -2411,7 +2413,7 @@ for more information.</p>
 <p>In the above example, <code class="docutils literal notranslate"><span class="pre">--nnodes</span></code> means how many machines (physical machines or VMs) to be used (it is 1 since we do single-node training). <code class="docutils literal notranslate"><span class="pre">--nproc-per-node</span></code> means how many GPU devices to be used.</p>
 </div>
 <div class="section" id="multi-node-gpu-training">
-<h3>Multi-node GPU training<a class="headerlink" href="#multi-node-gpu-training" title="Permalink to this headline">¶</a></h3>
+<h3>Multi-node GPU training<a class="headerlink" href="#multi-node-gpu-training" title="Permalink to this heading">¶</a></h3>
 <p><strong>Note that this feature only works for cuda 12+</strong>. Similar to how PyTorch uses multi-node training, you can run the command as below:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun \
 --nnodes=${NUMBER_GPU_VM} \
@@ -2446,7 +2448,7 @@ for more information.</p>
 </div>
 </div>
 <div class="section" id="differences-from-xrt">
-<h2>Differences from XRT<a class="headerlink" href="#differences-from-xrt" title="Permalink to this headline">¶</a></h2>
+<h2>Differences from XRT<a class="headerlink" href="#differences-from-xrt" title="Permalink to this heading">¶</a></h2>
 <p>Although in most cases we expect PJRT and XRT to work mostly interchangeably
 from the end-user’s perspective (especially on TPU v4), there are some subtle
 differences that are important to keep in mind. Importantly, XRT was designed
@@ -2486,7 +2488,7 @@ communication to enhance stability on large TPU pods. See below for more
 details.</p></li>
 </ul>
 <div class="section" id="id18">
-<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#id18" title="Permalink to this headline">¶</a></h3>
+<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#id18" title="Permalink to this heading">¶</a></h3>
 <p>On TPU v2 and v3, <strong>distributed workloads always run multithreaded</strong>, since each
 TPU core exposes two TPU cores as devices and only one process may open a TPU
 chip at a time. In its default configuration, <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code> automatically spawns
@@ -2497,7 +2499,7 @@ distributed workloads will run across 4 processes, each with only one thread.
 This is identical to XRT’s behavior.</p>
 <p>In most cases, this will not require substantial changes to your existing code.
 The main change you will have to make in most cases is to model initialization.
-Because <code class="docutils literal notranslate"><span class="pre">torch</span></code>’s global RNG is shared between threads, results will vary
+Because <code class="docutils literal notranslate"><span class="pre">torch</span></code>‘s global RNG is shared between threads, results will vary
 between threads and runs even if you set <code class="docutils literal notranslate"><span class="pre">torch.manual_seed</span></code> to the same value
 in every replica. To get consistent parameters between replicas, either use
 <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt.broadcast_master_param</span></code> to broadcast one replica’s
@@ -2505,7 +2507,7 @@ parameters to all other replicas, or load each replica’s parameters from a
 common checkpoint.</p>
 </div>
 <div class="section" id="changes-to-xm-rendezvous">
-<h3>Changes to xm.rendezvous<a class="headerlink" href="#changes-to-xm-rendezvous" title="Permalink to this headline">¶</a></h3>
+<h3>Changes to xm.rendezvous<a class="headerlink" href="#changes-to-xm-rendezvous" title="Permalink to this heading">¶</a></h3>
 <p><em>New in PyTorch/XLA r2.0</em></p>
 <p>With XRT, worker 0 runs a mesh master service, and all processes on all workers
 connect to that service over gRPC. In practice, we found that running a single
@@ -2542,7 +2544,7 @@ PJRT at large scales.</p></li>
 </ul>
 </div>
 <div class="section" id="pjrt-and-torch-distributed">
-<h3>PJRT and torch.distributed<a class="headerlink" href="#pjrt-and-torch-distributed" title="Permalink to this headline">¶</a></h3>
+<h3>PJRT and torch.distributed<a class="headerlink" href="#pjrt-and-torch-distributed" title="Permalink to this heading">¶</a></h3>
 <p><em>New in PyTorch/XLA r2.0</em></p>
 <p>When using PJRT with <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> and
 <code class="docutils literal notranslate"><span class="pre">[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)</span></code>
@@ -2589,14 +2591,14 @@ run the following <a class="reference external" href="../test/test_train_mp_imag
 </div>
 </div>
 <div class="section" id="performance">
-<h2>Performance<a class="headerlink" href="#performance" title="Permalink to this headline">¶</a></h2>
+<h2>Performance<a class="headerlink" href="#performance" title="Permalink to this heading">¶</a></h2>
 <p>TorchBench shows improvements in average training time across tasks with PJRT
 compared to XRT, with an average improvement of over 35% on TPU v4-8. The
 benefits vary significantly by task and model type, ranging from 0% to 175%.
 The following chart shows the breakdown by task:</p>
 <a class="reference external image-reference" href="assets/torchbench_pjrt_vs_xrt.svg"><img alt="PJRT vs XRT" src="assets/torchbench_pjrt_vs_xrt.svg" /></a>
 <div class="section" id="new-tpu-runtime">
-<h3>New TPU runtime<a class="headerlink" href="#new-tpu-runtime" title="Permalink to this headline">¶</a></h3>
+<h3>New TPU runtime<a class="headerlink" href="#new-tpu-runtime" title="Permalink to this heading">¶</a></h3>
 <p><em>New in PyTorch/XLA r2.0</em></p>
 <p>The PyTorch/XLA r2.0 release introduces support for the <a class="reference external" href="https://github.com/openxla/community/blob/main/rfcs/20230123-pjrt-plugin.md#rfc-openxla-pjrt-plugin">PJRT Plugin
 API</a>,
@@ -2615,11 +2617,11 @@ comparison.</p>
 </div>
 </div>
 <div class="section" id="torchdynamo-torch-compile-integration-in-pytorch-xla">
-<h2>TorchDynamo(torch.compile) integration in PyTorch XLA<a class="headerlink" href="#torchdynamo-torch-compile-integration-in-pytorch-xla" title="Permalink to this headline">¶</a></h2>
+<h2>TorchDynamo(torch.compile) integration in PyTorch XLA<a class="headerlink" href="#torchdynamo-torch-compile-integration-in-pytorch-xla" title="Permalink to this heading">¶</a></h2>
 <p><a class="reference external" href="https://pytorch.org/docs/stable/torch.compiler.html">TorchDynamo</a> is a Python-level JIT compiler designed to make unmodified PyTorch programs faster. It provides a clean API for compiler backends to hook in and its biggest feature is to dynamically modify Python bytecode right before it is executed. In the pytorch/xla 2.0 release, PyTorch/XLA provided an experimental backend for the TorchDynamo for both inference and training.</p>
 <p>The way that XLA bridge works is that Dynamo will provide a TorchFX graph when it recognizes a model pattern and PyTorch/XLA will use existing Lazy Tensor technology to compile the FX graph and return the compiled function.</p>
 <div class="section" id="integration">
-<h3>Integration<a class="headerlink" href="#integration" title="Permalink to this headline">¶</a></h3>
+<h3>Integration<a class="headerlink" href="#integration" title="Permalink to this heading">¶</a></h3>
 <p>Support for PyTorch/XLA and Dynamo currently exists by adding the <code class="docutils literal notranslate"><span class="pre">backend='openxla'</span></code> argument to <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code>. For example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
@@ -2635,7 +2637,7 @@ comparison.</p>
 </div>
 </div>
 <div class="section" id="inference">
-<h3>Inference<a class="headerlink" href="#inference" title="Permalink to this headline">¶</a></h3>
+<h3>Inference<a class="headerlink" href="#inference" title="Permalink to this heading">¶</a></h3>
 <p>Here is a small code example of running resnet18 with <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torchvision</span>
@@ -2666,7 +2668,7 @@ timm_vision_transformer | 3.52
 geomean | 3.04</p>
 </div>
 <div class="section" id="training">
-<h3>Training<a class="headerlink" href="#training" title="Permalink to this headline">¶</a></h3>
+<h3>Training<a class="headerlink" href="#training" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch/XLA also supports Dynamo for training, but it is  experimental and we are working with the PyTorch Compiler team to iterate on the implementation. Here is an example of training a resnet18 with <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torchvision</span>
@@ -2708,7 +2710,7 @@ geomean | 1.41</p>
 </div></blockquote>
 </div>
 <div class="section" id="feature-gaps">
-<h3>Feature gaps<a class="headerlink" href="#feature-gaps" title="Permalink to this headline">¶</a></h3>
+<h3>Feature gaps<a class="headerlink" href="#feature-gaps" title="Permalink to this heading">¶</a></h3>
 <p>There is one gap we want to call out that are preventing us from using the TorchDynamo on larger scale models.</p>
 <ol class="arabic simple">
 <li><p>TorchDynamo will trace forward and backward into separate graphs. For PyTorch/XLA it is important to let the XLA compiler see the whole step as one graph to best optimize the speed. There is also a fixed overhead to launch every device execution which make executing multiple graphs per training step less ideal.</p></li>
@@ -2716,13 +2718,13 @@ geomean | 1.41</p>
 <p>This gap compared to Lazy Tensor makes it less efficient in real world training use cases, especially the tracing cost can be overlapped with the execution in training.</p>
 </div>
 <div class="section" id="take-away">
-<h3>Take away<a class="headerlink" href="#take-away" title="Permalink to this headline">¶</a></h3>
+<h3>Take away<a class="headerlink" href="#take-away" title="Permalink to this heading">¶</a></h3>
 <p>TorchDynamo provides a really promising way for the compiler backend to hide the complexity from the user and easily retrieve the modeling code in a graph format. Compared with PyTorch/XLA’s traditional Lazy Tensor way of extracting the graph, TorchDynamo can skip the graph tracing for every iteration, hence providing a much better inference response time.</p>
 <p>Most models supported by PyTorch/XLA, have seen significant speedup when running inference with the new dynamo-xla bridge. Our community is working hard to expand the set of supported models. Regarding the training feature gaps mentioned above, the PyTorch/XLA community is super excited to improve the training gap in our upcoming development work. The team continues to heavily invest in TorchDynamo and work with the upstream to mature the training story.</p>
 </div>
 </div>
 <div class="section" id="fully-sharded-data-parallel-fsdp-in-pytorch-xla">
-<h2>Fully Sharded Data Parallel (FSDP) in PyTorch XLA<a class="headerlink" href="#fully-sharded-data-parallel-fsdp-in-pytorch-xla" title="Permalink to this headline">¶</a></h2>
+<h2>Fully Sharded Data Parallel (FSDP) in PyTorch XLA<a class="headerlink" href="#fully-sharded-data-parallel-fsdp-in-pytorch-xla" title="Permalink to this heading">¶</a></h2>
 <p>Fully Sharded Data Parallel (FSDP) in PyTorch XLA is a utility for sharding Module parameters across data-parallel workers.</p>
 <p>Example usage:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
@@ -2788,17 +2790,17 @@ python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts –ckpt_prefix /
 <p>The implementation of this class is largely inspired by and mostly follows the structure of <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> in <a class="reference external" href="https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html">https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html</a>. One of the biggest differences from <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> is that in XLA we don’t have explicit parameter storage, so here we resort to a different approach to free full parameters for ZeRO-3.</p>
 <hr class="docutils" />
 <div class="section" id="example-training-scripts-on-mnist-and-imagenet">
-<h3>Example training scripts on MNIST and ImageNet<a class="headerlink" href="#example-training-scripts-on-mnist-and-imagenet" title="Permalink to this headline">¶</a></h3>
+<h3>Example training scripts on MNIST and ImageNet<a class="headerlink" href="#example-training-scripts-on-mnist-and-imagenet" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>MNIST: <cite>``test/test_train_mp_mnist_fsdp_with_ckpt.py`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py">https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py</a>&gt;`_ (it also tests checkpoint consolidation)</p></li>
 <li><p>ImageNet: <cite>``test/test_train_mp_imagenet_fsdp.py`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py">https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py</a>&gt;`_</p></li>
 </ul>
 <div class="section" id="installation">
-<h4>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h4>
+<h4>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">¶</a></h4>
 <p>FSDP is available on PyTorch/XLA 1.12 release and newer nightly. Please refer to <a class="reference external" href="https://github.com/pytorch/xla#-available-images-and-wheels">https://github.com/pytorch/xla#-available-images-and-wheels</a> for installation guide.</p>
 </div>
 <div class="section" id="clone-pytorch-xla-repo">
-<h4>Clone PyTorch/XLA repo<a class="headerlink" href="#clone-pytorch-xla-repo" title="Permalink to this headline">¶</a></h4>
+<h4>Clone PyTorch/XLA repo<a class="headerlink" href="#clone-pytorch-xla-repo" title="Permalink to this heading">¶</a></h4>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/pytorch/pytorch
 <span class="nb">cd</span><span class="w"> </span>pytorch/
 git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/pytorch/xla.git
@@ -2807,7 +2809,7 @@ git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="
 </div>
 </div>
 <div class="section" id="train-mnist-on-v3-8-tpu">
-<h4>Train MNIST on v3-8 TPU<a class="headerlink" href="#train-mnist-on-v3-8-tpu" title="Permalink to this headline">¶</a></h4>
+<h4>Train MNIST on v3-8 TPU<a class="headerlink" href="#train-mnist-on-v3-8-tpu" title="Permalink to this heading">¶</a></h4>
 <p>It gets around 98.9 accuracy for 2 epochs:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>~/pytorch/xla/test/test_train_mp_mnist_fsdp_with_ckpt.py<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--batch_size<span class="w"> </span><span class="m">16</span><span class="w"> </span>--drop_last<span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
@@ -2823,7 +2825,7 @@ python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.f
 </div>
 </div>
 <div class="section" id="train-imagenet-with-resnet-50-on-v3-8-tpu">
-<h4>Train ImageNet with ResNet-50 on v3-8 TPU<a class="headerlink" href="#train-imagenet-with-resnet-50-on-v3-8-tpu" title="Permalink to this headline">¶</a></h4>
+<h4>Train ImageNet with ResNet-50 on v3-8 TPU<a class="headerlink" href="#train-imagenet-with-resnet-50-on-v3-8-tpu" title="Permalink to this heading">¶</a></h4>
 <p>It gets around 75.9 accuracy for 100 epochs; download <a class="reference external" href="https://github.com/pytorch/examples/tree/master/imagenet#requirements">ImageNet-1k</a> to <code class="docutils literal notranslate"><span class="pre">/datasets/imagenet-1k</span></code>:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>~/pytorch/xla/test/test_train_mp_imagenet_fsdp.py<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--datadir<span class="w"> </span>/datasets/imagenet-1k<span class="w"> </span>--drop_last<span class="w"> </span><span class="se">\</span>
@@ -2837,25 +2839,25 @@ python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.f
 </div>
 <hr class="docutils" />
 <div class="section" id="example-training-scripts-on-tpu-pod-with-10-billion-parameters">
-<h3>Example training scripts on TPU pod (with 10 billion parameters)<a class="headerlink" href="#example-training-scripts-on-tpu-pod-with-10-billion-parameters" title="Permalink to this headline">¶</a></h3>
+<h3>Example training scripts on TPU pod (with 10 billion parameters)<a class="headerlink" href="#example-training-scripts-on-tpu-pod-with-10-billion-parameters" title="Permalink to this heading">¶</a></h3>
 <p>To train large models that cannot fit into a single TPU, one should apply auto-wrap or manually wrap the submodules with inner FSDP when building the entire model to implement the ZeRO-3 algorithm.</p>
 <p>Please see <a class="reference external" href="https://github.com/ronghanghu/vit_10b_fsdp_example">https://github.com/ronghanghu/vit_10b_fsdp_example</a> for an example of sharded training of a Vision Transformer (ViT) model using this XLA FSDP PR.</p>
 </div>
 </div>
 </div>
 <div class="section" id="how-to-do-distributeddataparallel">
-<h1>How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code><a class="headerlink" href="#how-to-do-distributeddataparallel" title="Permalink to this headline">¶</a></h1>
+<h1>How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code><a class="headerlink" href="#how-to-do-distributeddataparallel" title="Permalink to this heading">¶</a></h1>
 <p>This document shows how to use torch.nn.parallel.DistributedDataParallel in xla,
 and further describes its difference against the native xla data parallel
 approach.</p>
 <div class="section" id="background-motivation">
-<h2>Background / Motivation<a class="headerlink" href="#background-motivation" title="Permalink to this headline">¶</a></h2>
+<h2>Background / Motivation<a class="headerlink" href="#background-motivation" title="Permalink to this heading">¶</a></h2>
 <p>Customers have long requested the ability to use PyTorch’s
 DistributedDataParallel API with xla. And here we enable it as an experimental
 feature.</p>
 </div>
 <div class="section" id="how-to-use-distributeddataparallel">
-<h2>How to use DistributedDataParallel<a class="headerlink" href="#how-to-use-distributeddataparallel" title="Permalink to this headline">¶</a></h2>
+<h2>How to use DistributedDataParallel<a class="headerlink" href="#how-to-use-distributeddataparallel" title="Permalink to this heading">¶</a></h2>
 <p>For those who switched from the PyTorch eager mode to XLA, here are all the
 changes you need to do to convert your eager DDP model into XLA model. We assume
 that you already know how to use XLA <a class="reference external" href="../API_GUIDE.md#running-on-a-single-xla-device">on a single
@@ -2970,9 +2972,9 @@ specific touches on a single device plus the above five changes to your script.<
 </div>
 </div>
 <div class="section" id="benchmarking">
-<h2>Benchmarking<a class="headerlink" href="#benchmarking" title="Permalink to this headline">¶</a></h2>
+<h2>Benchmarking<a class="headerlink" href="#benchmarking" title="Permalink to this heading">¶</a></h2>
 <div class="section" id="resnet50-with-fake-data">
-<h3>Resnet50 with fake data<a class="headerlink" href="#resnet50-with-fake-data" title="Permalink to this headline">¶</a></h3>
+<h3>Resnet50 with fake data<a class="headerlink" href="#resnet50-with-fake-data" title="Permalink to this heading">¶</a></h3>
 <p>The following results are collected with the command: <code class="docutils literal notranslate"><span class="pre">python</span>
 <span class="pre">test/test_train_mp_imagenet.py</span> <span class="pre">--fake_data</span> <span class="pre">--model=resnet50</span> <span class="pre">--num_epochs=1</span></code> on a
 TPU VM V3-8 environment with ToT PyTorch and PyTorch/XLA. And the statistical
@@ -3028,7 +3030,7 @@ This result seems reasonable given the DDP wrapper introduces extra overheads on
 tracing the DDP runtime.</p>
 </div>
 <div class="section" id="mnist-with-fake-data">
-<h3>MNIST with fake data<a class="headerlink" href="#mnist-with-fake-data" title="Permalink to this headline">¶</a></h3>
+<h3>MNIST with fake data<a class="headerlink" href="#mnist-with-fake-data" title="Permalink to this heading">¶</a></h3>
 <p>The following results are collected with the command: <code class="docutils literal notranslate"><span class="pre">python</span>
 <span class="pre">test/test_train_mp_mnist.py</span> <span class="pre">--fake_data</span></code> on a TPU VM V3-8 environment with ToT
 PyTorch and PyTorch/XLA. And the statistical metrics are produced by using the
@@ -3085,7 +3087,7 @@ sense given the model is small. The additional DDP runtime tracing overhead is
 hard to amortize.</p>
 </div>
 <div class="section" id="mnist-with-real-data">
-<h3>MNIST with real data<a class="headerlink" href="#mnist-with-real-data" title="Permalink to this headline">¶</a></h3>
+<h3>MNIST with real data<a class="headerlink" href="#mnist-with-real-data" title="Permalink to this heading">¶</a></h3>
 <p>The following results are collected with the command: <code class="docutils literal notranslate"><span class="pre">python</span>
 <span class="pre">test/test_train_mp_mnist.py</span> <span class="pre">--logdir</span> <span class="pre">mnist/</span></code> on a TPU VM V3-8 environment with
 ToT PyTorch and PyTorch/XLA.</p>
@@ -3096,7 +3098,7 @@ end. (The native approach achieves 99%.)</p>
 </div>
 </div>
 <div class="section" id="disclaimer">
-<h2>Disclaimer<a class="headerlink" href="#disclaimer" title="Permalink to this headline">¶</a></h2>
+<h2>Disclaimer<a class="headerlink" href="#disclaimer" title="Permalink to this heading">¶</a></h2>
 <p>This feature is still experimental and under active development. Use it in
 cautions and feel free to file any bugs to the <a class="reference external" href="https://github.com/pytorch/xla/">xla github
 repo</a>. For those who are interested in the
@@ -3110,17 +3112,17 @@ native xla data parallel approach, here is the
 </div>
 </div>
 <div class="section" id="how-to-run-with-pytorch-xla-gpu">
-<h1>How to run with PyTorch/XLA:GPU<a class="headerlink" href="#how-to-run-with-pytorch-xla-gpu" title="Permalink to this headline">¶</a></h1>
+<h1>How to run with PyTorch/XLA:GPU<a class="headerlink" href="#how-to-run-with-pytorch-xla-gpu" title="Permalink to this heading">¶</a></h1>
 <p>PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, and CPU. This doc will go over the basic steps to run PyTorch/XLA on a nvidia GPU instances.</p>
 <div class="section" id="create-a-gpu-instance">
-<h2>Create a GPU instance<a class="headerlink" href="#create-a-gpu-instance" title="Permalink to this headline">¶</a></h2>
+<h2>Create a GPU instance<a class="headerlink" href="#create-a-gpu-instance" title="Permalink to this heading">¶</a></h2>
 <p>You can either use a local machine with GPU attached or a GPU VM on the cloud. For example in Google Cloud you can follow this <a class="reference external" href="https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus">doc</a> to create the GPU VM.</p>
 </div>
 <div class="section" id="environment-setup">
-<h2>Environment Setup<a class="headerlink" href="#environment-setup" title="Permalink to this headline">¶</a></h2>
+<h2>Environment Setup<a class="headerlink" href="#environment-setup" title="Permalink to this heading">¶</a></h2>
 <p>Make sure you have cuda driver installed on the host.</p>
 <div class="section" id="id21">
-<h3>Docker<a class="headerlink" href="#id21" title="Permalink to this headline">¶</a></h3>
+<h3>Docker<a class="headerlink" href="#id21" title="Permalink to this heading">¶</a></h3>
 <p>Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.8/12.1 and python 3.8. We recommend users to create a docker container with corresponding config. For a full list of docker images and wheels, please refer to <a class="reference external" href="https://github.com/pytorch/xla#available-docker-images-and-wheels">this doc</a>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1
 
@@ -3167,7 +3169,7 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 </div>
 </div>
 <div class="section" id="check-environment-variable">
-<h3>Check environment variable<a class="headerlink" href="#check-environment-variable" title="Permalink to this headline">¶</a></h3>
+<h3>Check environment variable<a class="headerlink" href="#check-environment-variable" title="Permalink to this heading">¶</a></h3>
 <p>Make sure <code class="docutils literal notranslate"><span class="pre">PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">LD_LIBRARY_PATH</span></code> environment variables account for cuda. Please do a <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$LD_LIBRARY_PATH</span></code> to verify. If not, please follow <a class="reference external" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#mandatory-actions">link</a> to do so. Example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">echo</span> <span class="s2">&quot;export PATH=\$PATH:/usr/local/cuda-12.1/bin&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
 <span class="n">echo</span> <span class="s2">&quot;export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
@@ -3176,7 +3178,7 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 </div>
 </div>
 <div class="section" id="wheel">
-<h3>Wheel<a class="headerlink" href="#wheel" title="Permalink to this headline">¶</a></h3>
+<h3>Wheel<a class="headerlink" href="#wheel" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="n">torch</span><span class="o">==</span><span class="mf">2.2.0</span>
 <span class="n">pip3</span> <span class="n">install</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">storage</span><span class="o">.</span><span class="n">googleapis</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">-</span><span class="n">xla</span><span class="o">-</span><span class="n">releases</span><span class="o">/</span><span class="n">wheels</span><span class="o">/</span><span class="n">cuda</span><span class="o">/</span><span class="mf">12.1</span><span class="o">/</span><span class="n">torch_xla</span><span class="o">-</span><span class="mf">2.2.0</span><span class="o">-</span><span class="n">cp38</span><span class="o">-</span><span class="n">cp38</span><span class="o">-</span><span class="n">manylinux_2_28_x86_64</span><span class="o">.</span><span class="n">whl</span>
 </pre></div>
@@ -3184,7 +3186,7 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 </div>
 </div>
 <div class="section" id="run-a-simple-model">
-<h2>Run a simple model<a class="headerlink" href="#run-a-simple-model" title="Permalink to this headline">¶</a></h2>
+<h2>Run a simple model<a class="headerlink" href="#run-a-simple-model" title="Permalink to this heading">¶</a></h2>
 <p>In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># export GPU_NUM_DEVICES=1 PJRT_DEVICE=CUDA</span>
 <span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># git clone --recursive https://github.com/pytorch/xla.git</span>
@@ -3202,11 +3204,11 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 </div>
 </div>
 <div class="section" id="amp-automatic-mixed-precision">
-<h2>AMP (AUTOMATIC MIXED PRECISION)<a class="headerlink" href="#amp-automatic-mixed-precision" title="Permalink to this headline">¶</a></h2>
+<h2>AMP (AUTOMATIC MIXED PRECISION)<a class="headerlink" href="#amp-automatic-mixed-precision" title="Permalink to this heading">¶</a></h2>
 <p>AMP is very useful on GPU training and PyTorch/XLA reuse Cuda’s AMP rule. You can checkout our <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py">mnist example</a> and <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_amp.py">imagenet example</a>. Note that we also used a modified version of <a class="reference external" href="https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree">optimizers</a> to avoid the additional sync between device and host.</p>
 </div>
 <div class="section" id="develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support">
-<h2>Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)<a class="headerlink" href="#develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support" title="Permalink to this headline">¶</a></h2>
+<h2>Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)<a class="headerlink" href="#develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support" title="Permalink to this heading">¶</a></h2>
 <ol class="arabic simple">
 <li><p>Inside a GPU VM, create a docker container from a development docker image. For example:</p></li>
 </ol>
@@ -3251,10 +3253,10 @@ PyTorch/XLA should have been installed successfully.</p>
 </div>
 </div>
 <div class="section" id="pytorch-xla-spmd-user-guide">
-<h1>PyTorch/XLA SPMD User Guide<a class="headerlink" href="#pytorch-xla-spmd-user-guide" title="Permalink to this headline">¶</a></h1>
+<h1>PyTorch/XLA SPMD User Guide<a class="headerlink" href="#pytorch-xla-spmd-user-guide" title="Permalink to this heading">¶</a></h1>
 <p>In this user guide, we discuss how <a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is integrated in PyTorch/XLA, and provide a design overview to illustrate how the SPMD sharding annotation API and its constructs work. And then, we provide a list of reference examples for users to try.</p>
 <div class="section" id="what-is-pytorch-xla-spmd">
-<h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this headline">¶</a></h2>
+<h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
 <p><a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is an automatic parallelization system for common ML workloads. The XLA compiler will transform the single device program into a partitioned one with proper collectives, based on the user provided sharding hints. This feature allows developers to write PyTorch programs as if they are on a single large device without any custom sharded computation ops and/or collective communications to scale.</p>
 <a class="reference external image-reference" href="assets/spmd_mode.png"><img alt="alt_text" src="assets/spmd_mode.png" /></a>
 <p><a href="#id24"><span class="problematic" id="id25">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
@@ -3271,9 +3273,9 @@ PyTorch/XLA should have been installed successfully.</p>
 <p>Also, this version of the SPMD is currently only tested.optimized on Google Cloud TPU. GPU support and optimization will come in the 2.2 release.</p>
 </div>
 <div class="section" id="pytorch-xla-spmd-design-overview">
-<h2>PyTorch/XLA SPMD Design Overview<a class="headerlink" href="#pytorch-xla-spmd-design-overview" title="Permalink to this headline">¶</a></h2>
+<h2>PyTorch/XLA SPMD Design Overview<a class="headerlink" href="#pytorch-xla-spmd-design-overview" title="Permalink to this heading">¶</a></h2>
 <div class="section" id="simple-example-sharding-aannotation-api">
-<h3>Simple Example &amp; Sharding Aannotation API<a class="headerlink" href="#simple-example-sharding-aannotation-api" title="Permalink to this headline">¶</a></h3>
+<h3>Simple Example &amp; Sharding Aannotation API<a class="headerlink" href="#simple-example-sharding-aannotation-api" title="Permalink to this heading">¶</a></h3>
 <p>Users can annotate native PyTorch tensors using the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> API (<a class="reference external" href="https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharding.py#L452">src</a>). This takes <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> as input and returns a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> as output.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span>
 </pre></div>
@@ -3327,7 +3329,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <p>More complete unit test cases and integration test examples are available in the PyTorch/XLA <a class="reference external" href="https://github.com/pytorch/xla/tree/r2.0/test/spmd">repo</a>.</p>
 </div>
 <div class="section" id="id27">
-<h3>Mesh<a class="headerlink" href="#id27" title="Permalink to this headline">¶</a></h3>
+<h3>Mesh<a class="headerlink" href="#id27" title="Permalink to this heading">¶</a></h3>
 <p>For a given cluster of devices, a physical mesh is a representation of the interconnect topology.</p>
 <p>We derive a logical mesh based on this topology to create sub-groups of devices which can be used for partitioning different axes of tensors in a model.</p>
 <a class="reference external image-reference" href="assets/mesh_spmd2.png"><img alt="alt_text" src="assets/mesh_spmd2.png" /></a>
@@ -3355,7 +3357,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <p>In general, SPMD programs should create a single mesh and reuse it for all sharding to ensure that the tiling assignment is consistent with the intended sharding strategy. The same mesh can be reused for tensors of different shapes and shardings by manipulating the partition spec, described further below.</p>
 </div>
 <div class="section" id="hybrid-mesh">
-<h3>Hybrid Mesh<a class="headerlink" href="#hybrid-mesh" title="Permalink to this headline">¶</a></h3>
+<h3>Hybrid Mesh<a class="headerlink" href="#hybrid-mesh" title="Permalink to this heading">¶</a></h3>
 <p>Mesh nicely abstracts how the physical device mesh is constructed. Users can arrange devices in any shape and order using the logical mesh. However, one can define a more performant mesh based on the physical topology, especially when it involves Data Center Network (DCN) cross slice connections. HybridMesh creates a mesh which gives good performance out of the box for such multislice environments. It accepts ici_mesh_shape and dcn_mesh_shape which denote logical mesh shapes of inner and outer network.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">HybridMesh</span>
 
@@ -3372,7 +3374,7 @@ PyTorch/XLA should have been installed successfully.</p>
 </div>
 </div>
 <div class="section" id="id28">
-<h3>Partition Spec<a class="headerlink" href="#id28" title="Permalink to this headline">¶</a></h3>
+<h3>Partition Spec<a class="headerlink" href="#id28" title="Permalink to this heading">¶</a></h3>
 <p>partition_spec has the same rank as the input tensor. Each dimension describes how the corresponding input tensor dimension is sharded across the device mesh (logically defined by mesh_shape). <code class="docutils literal notranslate"><span class="pre">partition_spec</span></code> is a tuple of <code class="docutils literal notranslate"><span class="pre">device_mesh</span></code> dimension <code class="docutils literal notranslate"><span class="pre">index</span></code> or None. The index can be an <code class="docutils literal notranslate"><span class="pre">int</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>, if the corresponding mesh dimension is named. This specifies how each input rank is sharded (<code class="docutils literal notranslate"><span class="pre">index</span></code> to <code class="docutils literal notranslate"><span class="pre">mesh_shape</span></code>) or replicated (<code class="docutils literal notranslate"><span class="pre">None</span></code>).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Provide optional mesh axis names and use them in the partition spec</span>
 <span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
@@ -3411,7 +3413,7 @@ PyTorch/XLA should have been installed successfully.</p>
 </div>
 </div>
 <div class="section" id="xlashardedtensor">
-<h3>XLAShardedTensor<a class="headerlink" href="#xlashardedtensor" title="Permalink to this headline">¶</a></h3>
+<h3>XLAShardedTensor<a class="headerlink" href="#xlashardedtensor" title="Permalink to this heading">¶</a></h3>
 <p>The main use case for <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> [<a class="reference external" href="https://github.com/pytorch/xla/issues/3871">RFC</a>] is to annotate a native <code class="docutils literal notranslate"><span class="pre">torch.tensor</span></code> (on a single device) with a sharding spec. The annotation takes place immediately, but the actual sharding of the tensor is delayed as the computation is carried out lazily, except for the input tensors which are sharded without delay. Once a tensor is annotated and wrapped inside a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>, it can be passed to existing PyTorch ops and <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> layers as <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code>. This is important to ensure that the same PyTorch layers and tensor ops can be stacked together with <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>. This means that the user does not need to rewrite the existing ops and model codes for sharded computation. Namely, <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> will satisfy the following requirements:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> is a <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> subclass and works directly with native torch ops and <code class="docutils literal notranslate"><span class="pre">module.layers</span></code>. We use <code class="docutils literal notranslate"><span class="pre">__torch_dispatch__</span></code> to send <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> to the XLA backend. PyTorch/XLA retrieves attached sharding annotations to trace the graph and invokes XLA SPMDPartitioner.</p></li>
@@ -3422,7 +3424,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <p>There is also an ongoing effort to integrate <span class="raw-html-m2r"><code>XLAShardedTensor</code></span> into <span class="raw-html-m2r"><code>DistributedTensor</code></span> API to support XLA backend [<a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>].</p>
 </div>
 <div class="section" id="dtensor-integration">
-<h3>DTensor Integration<a class="headerlink" href="#dtensor-integration" title="Permalink to this headline">¶</a></h3>
+<h3>DTensor Integration<a class="headerlink" href="#dtensor-integration" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch has prototype-released <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/_tensor/README.md">DTensor</a> in 2.1.
 We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>. We have a proof-of-concept integration for <code class="docutils literal notranslate"><span class="pre">distribute_tensor</span></code>, which calls <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> annotation API to shard a tensor and its computation using XLA:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
@@ -3437,7 +3439,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <p>This feature is experimental and stay tuned for more updates, examples and tutorials in the upcoming releases.</p>
 </div>
 <div class="section" id="sharding-aware-host-to-device-data-loading">
-<h3>Sharding-Aware Host-to-Device Data Loading<a class="headerlink" href="#sharding-aware-host-to-device-data-loading" title="Permalink to this headline">¶</a></h3>
+<h3>Sharding-Aware Host-to-Device Data Loading<a class="headerlink" href="#sharding-aware-host-to-device-data-loading" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch/XLA SPMD takes a single-device program, shards and executes it in parallel. The SPMD execution requires using the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step. To improve the native data loading performance, we made PyTorch/XLA ParallelLoader support input sharding directly (src), when passed the optional kwarg _input_sharding_:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># MpDeviceLoader returns ParallelLoader.per_device_loader as iterator</span>
 <span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
@@ -3449,7 +3451,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 </div>
 </div>
 <div class="section" id="distributed-checkpointing">
-<h3>Distributed Checkpointing<a class="headerlink" href="#distributed-checkpointing" title="Permalink to this headline">¶</a></h3>
+<h3>Distributed Checkpointing<a class="headerlink" href="#distributed-checkpointing" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch/XLA SPMD is compatible with the <a class="reference external" href="https://pytorch.org/docs/stable/distributed.checkpoint.html">torch.distributed.checkpoint</a> library through a dedicated <code class="docutils literal notranslate"><span class="pre">Planner</span></code> instance. Users are able to synchronously save and load checkpoints through this common interface.</p>
 <p>The SPMDSavePlanner and SPMDLoadPlanner (<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint.py">src</a>) classes enable the <code class="docutils literal notranslate"><span class="pre">save</span></code> and <code class="docutils literal notranslate"><span class="pre">load</span></code> functions to operate directly on the shards of an <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>, enabling all of the benefits of distributed checkpointing in SPMD training.</p>
 <p>Here is a demonstration of the synchronous distributed checkpointing API:</p>
@@ -3484,7 +3486,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 </pre></div>
 </div>
 <div class="section" id="checkpointmanager">
-<h4>CheckpointManager<a class="headerlink" href="#checkpointmanager" title="Permalink to this headline">¶</a></h4>
+<h4>CheckpointManager<a class="headerlink" href="#checkpointmanager" title="Permalink to this heading">¶</a></h4>
 <p>The experimental <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint/manager.py#L40">CheckpointManager</a>
 interface provides a higher-level API over the <code class="docutils literal notranslate"><span class="pre">torch.distributed.checkpoint</span></code>
 functions to enable a few key features:</p>
@@ -3534,7 +3536,7 @@ checkpointing directly to any fsspec-compatible filesystem, including GCS.</p></
 </div>
 </div>
 <div class="section" id="process-groups">
-<h3>Process Groups<a class="headerlink" href="#process-groups" title="Permalink to this headline">¶</a></h3>
+<h3>Process Groups<a class="headerlink" href="#process-groups" title="Permalink to this heading">¶</a></h3>
 <p>To use <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> APIs such as distributed checkpointing, a process
 group is required. In SPMD mode, the <code class="docutils literal notranslate"><span class="pre">xla</span></code> backend is not supported since the
 compiler is responsible for all collectives.</p>
@@ -3555,19 +3557,19 @@ and host rank. An example initialization is below:</p>
 </div>
 </div>
 <div class="section" id="virtual-device-optimization">
-<h3>Virtual Device Optimization<a class="headerlink" href="#virtual-device-optimization" title="Permalink to this headline">¶</a></h3>
+<h3>Virtual Device Optimization<a class="headerlink" href="#virtual-device-optimization" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because GSPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.</p>
 </div>
 <div class="section" id="number-of-processes">
-<h3>Number of processes<a class="headerlink" href="#number-of-processes" title="Permalink to this headline">¶</a></h3>
+<h3>Number of processes<a class="headerlink" href="#number-of-processes" title="Permalink to this heading">¶</a></h3>
 <p>Unlike existing DDP and FSDP, under the SPMD mode, there is always a single process running on each accelerator host. This provides the benefit that PyTorch/XLA only need to compile each graph once which can be reused for all accelerators attached to this host.</p>
 </div>
 <div class="section" id="running-spmd-on-tpu-pod">
-<h3>Running SPMD on TPU Pod<a class="headerlink" href="#running-spmd-on-tpu-pod" title="Permalink to this headline">¶</a></h3>
+<h3>Running SPMD on TPU Pod<a class="headerlink" href="#running-spmd-on-tpu-pod" title="Permalink to this heading">¶</a></h3>
 <p>There is no code change required to go from single TPU host to TPU Pod if you construct your mesh and partition spec based on the number of devices instead of some hardcode constant. To run the PyTorch/XLA workload on TPU Pod, please refer to the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md#pods">Pods section</a> of our PJRT guide.</p>
 </div>
 <div class="section" id="running-spmd-on-gpu">
-<h3>Running SPMD on GPU<a class="headerlink" href="#running-spmd-on-gpu" title="Permalink to this headline">¶</a></h3>
+<h3>Running SPMD on GPU<a class="headerlink" href="#running-spmd-on-gpu" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch/XLA supports SPMD on NVIDIA GPU (single-node or multi-nodes). The training/inference script remains the same as the one used for TPU, such as this <a class="reference external" href="https://github.com/pytorch/xla/blob/1dc78948c0c9d018d8d0d2b4cce912552ab27083/test/spmd/test_train_spmd_imagenet.py">ResNet script</a>. To execute the script using SPMD, we leverage <code class="docutils literal notranslate"><span class="pre">torchrun</span></code>:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA \
 torchrun \
@@ -3608,9 +3610,9 @@ training_or_inference_script_using_spmd.py
 </div>
 </div>
 <div class="section" id="reference-examples">
-<h2>Reference Examples<a class="headerlink" href="#reference-examples" title="Permalink to this headline">¶</a></h2>
+<h2>Reference Examples<a class="headerlink" href="#reference-examples" title="Permalink to this heading">¶</a></h2>
 <div class="section" id="use-spmd-to-express-data-parallel">
-<h3>Use SPMD to express Data Parallel<a class="headerlink" href="#use-spmd-to-express-data-parallel" title="Permalink to this headline">¶</a></h3>
+<h3>Use SPMD to express Data Parallel<a class="headerlink" href="#use-spmd-to-express-data-parallel" title="Permalink to this heading">¶</a></h3>
 <p>The SPMD API is general enough to express both data parallelism and model parallelism.  One can implement data parallelism simply by annotating the input batch dimension for sharding. Here, we have shard the batch dimension across all available devices (N-way):There are 2 ways of using SPMD to express data parallel or batch sharding:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
 
@@ -3641,7 +3643,7 @@ training_or_inference_script_using_spmd.py
 <p>We highly recommend the second approach as it should yield a better training performance.</p>
 </div>
 <div class="section" id="use-spmd-to-express-fsdp-fully-sharded-data-parallel">
-<h3>Use SPMD to express FSDP(Fully Sharded Data Parallel)<a class="headerlink" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel" title="Permalink to this headline">¶</a></h3>
+<h3>Use SPMD to express FSDP(Fully Sharded Data Parallel)<a class="headerlink" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch’s FSDP is data parallel + sharded model parameters at 0th dimension. Users first need to use SPMD to express Data Parallels as suggested in the previous section.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">():</span>
     <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
@@ -3651,7 +3653,7 @@ training_or_inference_script_using_spmd.py
 </div>
 </div>
 <div class="section" id="running-resnet50-example-with-spmd">
-<h3>Running Resnet50 example with SPMD<a class="headerlink" href="#running-resnet50-example-with-spmd" title="Permalink to this headline">¶</a></h3>
+<h3>Running Resnet50 example with SPMD<a class="headerlink" href="#running-resnet50-example-with-spmd" title="Permalink to this heading">¶</a></h3>
 <p>We provided a quick example of <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/spmd/test_train_spmd_imagenet.py">resnet50</a> with a couple different SPMD sharding strategies for you to play around with. You can first run it without SPMD using</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>test/spmd/test_train_spmd_imagenet.py<span class="w"> </span>--fake_data<span class="w"> </span>--batch_size<span class="w"> </span><span class="m">512</span>
 </pre></div>
@@ -3663,7 +3665,7 @@ training_or_inference_script_using_spmd.py
 <p>Note that I used a batch size 4 times as large since I am running it on a TPU v4 which has 4 TPU devices attached to it. You should see the throughput becomes roughly 4x the non-spmd run.</p>
 </div>
 <div class="section" id="spmd-debugging-tool">
-<h3>SPMD Debugging Tool<a class="headerlink" href="#spmd-debugging-tool" title="Permalink to this headline">¶</a></h3>
+<h3>SPMD Debugging Tool<a class="headerlink" href="#spmd-debugging-tool" title="Permalink to this heading">¶</a></h3>
 <p>We provide a <code class="docutils literal notranslate"><span class="pre">shard</span> <span class="pre">placement</span> <span class="pre">visualization</span> <span class="pre">debug</span> <span class="pre">tool</span></code> for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> to visualize sharded tensor, or you could use <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> or <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code>:</p>
 <ul class="simple">
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:
@@ -3674,12 +3676,12 @@ import rich</p></li>
 </div>
 </div>
 <div class="section" id="here-mesh-is-a-2x2-mesh-with-axes-x-and-y">
-<h1>Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’<a class="headerlink" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y" title="Permalink to this headline">¶</a></h1>
+<h1>Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’<a class="headerlink" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y" title="Permalink to this heading">¶</a></h1>
 <p>t = torch.randn(8, 4, device=’xla’)
 xs.mark_sharding(t, mesh, (‘x’, ‘y’))</p>
 </div>
 <div class="section" id="a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">
-<h1>A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method<a class="headerlink" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method" title="Permalink to this headline">¶</a></h1>
+<h1>A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method<a class="headerlink" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method" title="Permalink to this heading">¶</a></h1>
 <p>from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 generated_table = visualize_tensor_sharding(t, use_color=False)</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>![alt_text](assets/spmd_debug_1.png &quot;visualize_tensor_sharding example on TPU v4-8(single-host)&quot;)
@@ -3713,7 +3715,7 @@ from torch_xla.distributed.spmd import auto_policy</p></li>
 device_mesh = DeviceMesh(“xla”, list(range(device_count)))</p>
 </div>
 <div class="section" id="currently-model-should-be-loaded-to-xla-device-via-distribute-module">
-<h1>Currently, model should be loaded to xla device via distribute_module.<a class="headerlink" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module" title="Permalink to this headline">¶</a></h1>
+<h1>Currently, model should be loaded to xla device via distribute_module.<a class="headerlink" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module" title="Permalink to this heading">¶</a></h1>
 <p>model = MyModule()  # nn.module
 sharded_model = distribute_module(model, device_mesh, auto_policy)
 <a href="#id44"><span class="problematic" id="id45">``</span></a><a href="#id46"><span class="problematic" id="id47">`</span></a></p>
@@ -3727,7 +3729,7 @@ a default device mesh shape of <code class="docutils literal notranslate"><span 
 </ul>
 </div>
 <div class="section" id="fully-sharded-data-parallel-via-spmd">
-<h1>Fully Sharded Data Parallel via SPMD<a class="headerlink" href="#fully-sharded-data-parallel-via-spmd" title="Permalink to this headline">¶</a></h1>
+<h1>Fully Sharded Data Parallel via SPMD<a class="headerlink" href="#fully-sharded-data-parallel-via-spmd" title="Permalink to this heading">¶</a></h1>
 <p>Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that re-epxresses the famous FSDP algorithm in SPMD. <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/spmd_fully_sharded_data_parallel.py">This</a> is
 an experimental feature that aiming to offer a familiar interface for users to enjoy all the benefits that SPMD brings into
 the table. The design doc is <a class="reference external" href="https://github.com/pytorch/xla/issues/6379">here</a>.</p>
@@ -3760,7 +3762,7 @@ the table. The design doc is <a class="reference external" href="https://github.
 <p>It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters. The autowrapping
 feature will come in the future releases.</p>
 <div class="section" id="sharding-output">
-<h2>Sharding output<a class="headerlink" href="#sharding-output" title="Permalink to this headline">¶</a></h2>
+<h2>Sharding output<a class="headerlink" href="#sharding-output" title="Permalink to this heading">¶</a></h2>
 <p>To ensure the XLA compiler correctly implements the FSDP algorithm, we need to shard both weights and activations. This means sharding the output of the forward method. Since the forward function output can vary, we offer shard_output to shard activations in cases where your module output doesn’t fall into one of these categories:</p>
 <ol class="arabic simple">
 <li><p>A single tensor</p></li>
@@ -3775,7 +3777,7 @@ feature will come in the future releases.</p>
 </div>
 </div>
 <div class="section" id="id50">
-<h2>Gradient checkpointing<a class="headerlink" href="#id50" title="Permalink to this headline">¶</a></h2>
+<h2>Gradient checkpointing<a class="headerlink" href="#id50" title="Permalink to this heading">¶</a></h2>
 <p>Currently, gradient checkpointing needs to be applied to the module before the FSDP wrapper. Otherwise, recursively loop into children modules will end up with infinite loop. We will fix this issue in the future releases.</p>
 <p>Example usage:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">checkpoint_module</span>
@@ -3785,7 +3787,7 @@ feature will come in the future releases.</p>
 </div>
 </div>
 <div class="section" id="huggingface-llama-2-example">
-<h2>HuggingFace Llama 2 Example<a class="headerlink" href="#huggingface-llama-2-example" title="Permalink to this headline">¶</a></h2>
+<h2>HuggingFace Llama 2 Example<a class="headerlink" href="#huggingface-llama-2-example" title="Permalink to this heading">¶</a></h2>
 <p>We have a fork of HF Llama 2 to demonstrate a potential integration <a class="reference external" href="https://github.com/huggingface/transformers/compare/main...pytorch-tpu:transformers:llama2-spmd-fsdp">here</a>.</p>
 </div>
 </div>
@@ -4017,10 +4019,11 @@ feature will come in the future releases.</p>
 
      
        <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
          <script src="_static/jquery.js"></script>
          <script src="_static/underscore.js"></script>
+         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="_static/doctools.js"></script>
-         <script src="_static/language_data.js"></script>
      
 
   
