@@ -121,6 +121,7 @@ cc_library(
         "@com_google_absl//absl/types:span",
         "@tsl//tsl/platform:env",
         "@tsl//tsl/platform/cloud:gcs_file_system",
+        "@tsl//tsl/platform:errors",
         "@tsl//tsl/profiler/lib:traceme",
         "@xla//xla:literal",
         "@xla//xla:shape_util",

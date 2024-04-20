@@ -8,6 +8,7 @@
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
+#include "tsl/platform/errors.h"
 #include "pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -276,8 +277,205 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
   return datas;
 }
 
-DataPtr PjRtComputationClient::DLPackManagedTensorToData(DLManagedTensor* dl_tensor) {
-  return nullptr;
+absl::StatusOr<xla::PrimitiveType> DLDataTypeToPrimitiveType(DLDataType type) {
+  if (type.lanes != 1) {
+    return tsl::errors::Unimplemented("DLPack types with lanes != 1 not implemented, got %d",
+                         type.lanes);
+  }
+  switch (type.code) {
+    case kDLBool:
+      switch (type.bits) {
+        case 8:
+          return xla::PrimitiveType::PRED;
+        default:
+          return tsl::errors::Unimplemented(
+              "Only 8-bit DLPack booleans are supported, got %d bits",
+              type.bits);
+      }
+    case kDLInt:
+      switch (type.bits) {
+        case 8:
+          return xla::PrimitiveType::S8;
+        case 16:
+          return xla::PrimitiveType::S16;
+        case 32:
+          return xla::PrimitiveType::S32;
+        case 64:
+          return xla::PrimitiveType::S64;
+        default:
+          return tsl::errors::Unimplemented(
+              "Invalid or unsupported DLPack integer width: %d bits",
+              type.bits);
+      }
+    case kDLUInt:
+      switch (type.bits) {
+        case 8:
+          return xla::PrimitiveType::U8;
+        case 16:
+          return xla::PrimitiveType::U16;
+        case 32:
+          return xla::PrimitiveType::U32;
+        case 64:
+          return xla::PrimitiveType::U64;
+        default:
+          return tsl::errors::Unimplemented(
+              "Invalid or unsupported DLPack unsigned integer width: %d bits",
+              type.bits);
+      }
+    case kDLFloat:
+      switch (type.bits) {
+        case 16:
+          return xla::PrimitiveType::F16;
+        case 32:
+          return xla::PrimitiveType::F32;
+        case 64:
+          return xla::PrimitiveType::F64;
+        default:
+          return tsl::errors::Unimplemented(
+              "Invalid or unsupported DLPack float width: %d bits", type.bits);
+      }
+    case kDLBfloat:
+      switch (type.bits) {
+        case 16:
+          return xla::PrimitiveType::BF16;
+        default:
+          return tsl::errors::Unimplemented(
+              "Invalid or unsupported DLPack Bfloat width: %d bits", type.bits);
+      }
+    case kDLComplex:
+      switch (type.bits) {
+        case 64:
+          return xla::PrimitiveType::C64;
+        case 128:
+          return xla::PrimitiveType::C128;
+        default:
+          return tsl::errors::Unimplemented(
+              "Invalid or unsupported DLPack complex width: %d bits",
+              type.bits);
+      }
+    default:
+      return tsl::errors::Unimplemented("Unknown or invalid DLPack type code %d", type.code);
+  }
+}
+
+absl::StatusOr<std::vector<int64_t>> StridesToLayout(
+    absl::Span<int64_t const> dims, absl::Span<int64_t const> strides) {
+  XLA_CHECK_EQ(dims.size(), strides.size());
+  std::vector<int64_t> minor_to_major(dims.size());
+  std::iota(minor_to_major.begin(), minor_to_major.end(), 0);
+  absl::c_sort(minor_to_major, [&](int a, int b) {
+    if (strides[a] < strides[b]) {
+      return true;
+    }
+    if (strides[a] > strides[b]) {
+      return false;
+    }
+    // If two dimensions have the same stride, prefer the major-to-minor
+    // interpretation of the ordering, since that's what JAX wants.
+    return b < a;
+  });
+  int64_t stride = 1;
+  for (int64_t d : minor_to_major) {
+    if (dims[d] > 1 && strides[d] != stride) {
+      return tsl::errors::Unimplemented(
+          "Only DLPack tensors with trivial (compact) striding are supported; "
+          "i.e., tensors whose striding represents a transposition of the "
+          "underlying buffer but not broadcasting. Dimensions were: [%s], "
+          "strides were [%s].",
+          absl::StrJoin(dims, ","), absl::StrJoin(strides, ","));
+    }
+    stride *= dims[d];
+  }
+  return minor_to_major;
+}
+
+absl::StatusOr<xla::PjRtDevice*> DeviceForDLDevice(std::unique_ptr<xla::PjRtClient> & pjrt_client, const DLDevice& context) {
+  switch (context.device_type) {
+    case DLDeviceType::kDLCPU:
+      // if (cpu_client == nullptr) {
+      //   return InvalidArgument(
+      //       "DLPack tensor is on CPU, but no CPU backend was provided.");
+      // }
+      XLA_CHECK_EQ(pjrt_client->platform_id(), xla::CpuId());
+      return pjrt_client->LookupAddressableDevice(context.device_id);
+    case DLDeviceType::kDLCUDA:
+      // if (gpu_client == nullptr) { // xw32 TODO: check if client_ is GPU client
+      //   return InvalidArgument(
+      //       "DLPack tensor is on GPU, but no GPU backend was provided.");
+      // }
+      XLA_CHECK_EQ(pjrt_client->platform_id(), xla::CudaId());
+      return pjrt_client->LookupAddressableDevice(context.device_id).value();
+    // case DLDeviceType::kDLROCM:
+    //   // if (gpu_client == nullptr) {
+    //   //   return InvalidArgument(
+    //   //       "DLPack tensor is on GPU, but no GPU backend was provided.");
+    //   // }
+    //   XLA_CHECK_EQ(pjrt_client->platform_id(), xla::RocmId());
+    //   xla::PjRtDevice* device = pjrt_client->addressable_devices()[context.device_id];
+    //   return device;
+    default:
+      return tsl::errors::InvalidArgument("Unknown/unsupported DLPack device type %d",
+                             context.device_type);
+  }
+}
+
+ComputationClient::DataPtr PjRtComputationClient::DLPackManagedTensorToData(DLManagedTensor* dlmt) {
+  if (dlmt->dl_tensor.ndim < 0) {
+    XLA_ERROR() << "Number of dimensions in DLManagedTensor must be nonnegative, got " << dlmt->dl_tensor.ndim;
+  }
+  xla::PjRtDevice* device = DeviceForDLDevice(client_, dlmt->dl_tensor.device).value();
+  absl::Span<int64_t const> dimensions(
+      const_cast<int64_t*>(dlmt->dl_tensor.shape), dlmt->dl_tensor.ndim);
+  xla::PrimitiveType element_type = DLDataTypeToPrimitiveType(dlmt->dl_tensor.dtype).value();
+
+  std::vector<int64_t> minor_to_major;
+  if (dlmt->dl_tensor.strides &&
+      absl::c_find(dimensions, 0) == dimensions.end()) {
+    absl::Span<int64_t const> strides(
+        const_cast<int64_t*>(dlmt->dl_tensor.strides),
+        dlmt->dl_tensor.ndim);
+    minor_to_major = StridesToLayout(dimensions, strides).value();
+  } else {
+    minor_to_major.resize(dlmt->dl_tensor.ndim);
+    std::iota(minor_to_major.rbegin(), minor_to_major.rend(), 0);
+  }
+  xla::Shape shape = xla::ShapeUtil::MakeShapeWithDenseLayout(element_type, dimensions,
+                                                    minor_to_major);
+
+  // Raise an error if the resulting PjRtBuffer would have a non-default layout.
+  // TODO(skyewm): we do this because JAX doesn't currently have good support
+  // for non-default layouts, and will return wrong results if a non-default
+  // layout is passed to a computation expecting default layouts. Remove this
+  // special case when non-default layouts are better supported by JAX.
+  absl::StatusOr<xla::Layout> default_layout_from_client =
+      device->client()->GetDefaultLayout(element_type, dimensions);
+  xla::Layout default_layout;
+  if (default_layout_from_client.ok()) {
+    default_layout = *default_layout_from_client;
+  } else if (absl::IsUnimplemented(default_layout_from_client.status())) {
+    // TODO(skyewm): consider remove the fallback path when GetDefaultLayout is
+    // unimplemented.
+    xla::Shape host_shape = xla::ShapeUtil::MakeShape(element_type, dimensions);
+    default_layout = xla::LayoutUtil::GetWithDefaultLayout(host_shape).layout();
+  } else {
+    XLA_ERROR() << "default_layout_from_client.status() is not ok.";
+  }
+  if (shape.layout() != default_layout) {
+    XLA_ERROR() << "from_dlpack got array with non-default layout with minor-to-major dimensions (" << absl::StrJoin(shape.layout().minor_to_major(), ",") << "), expected (" << absl::StrJoin(default_layout.minor_to_major(), ",") << ")";
+  }
+
+  std::function<void()> on_delete_callback;
+  if (dlmt->deleter) {
+    on_delete_callback = [dlmt]() { dlmt->deleter(dlmt); };
+  }
+  xla::StatusOr<std::unique_ptr<xla::PjRtBuffer>> pjrt_buffer = device->client()->CreateViewOfDeviceBuffer(
+                          static_cast<char*>(dlmt->dl_tensor.data) +
+                              dlmt->dl_tensor.byte_offset,
+                          shape, device, on_delete_callback);
+
+  ComputationClient::DataPtr data =
+        std::make_shared<PjRtData>(PjRtDeviceToString(device), shape, std::move(pjrt_buffer.value()));
+  return data;
 }
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(

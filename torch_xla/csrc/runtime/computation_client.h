@@ -2,6 +2,7 @@
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
 #include <ATen/Tensor.h>
+#include <ATen/dlpack.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
@@ -28,6 +29,7 @@
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
 #include "xla/types.h"
+
 
 namespace torch_xla {
 namespace runtime {
