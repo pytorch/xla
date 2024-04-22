@@ -24,19 +24,21 @@ namespace {
 // Placeholder plugin for testing only. Does not implement multiprocessing or
 // configuration. Very likely will not work from Python code.
 class LibraryPlugin : public PjRtPlugin {
-public:
-    std::string library_path() const override {
-        return sys_util::GetEnvString("PJRT_LIBRARY_PATH", "");
-    }
+ public:
+  std::string library_path() const override {
+    return sys_util::GetEnvString("PJRT_LIBRARY_PATH", "");
+  }
 
-    const std::unordered_map<std::string, xla::PjRtValueType>
-    client_create_options() const override { return {}; }
+  const std::unordered_map<std::string, xla::PjRtValueType>
+  client_create_options() const override {
+    return {};
+  }
 
-    bool requires_xla_coordinator() const override { return false; }
+  bool requires_xla_coordinator() const override { return false; }
 };
 
 std::unordered_map<std::string, std::shared_ptr<const PjRtPlugin>>
-    pjrt_plugins_ = { {"LIBRARY", std::make_shared<LibraryPlugin>()} } ;
+    pjrt_plugins_ = {{"LIBRARY", std::make_shared<LibraryPlugin>()}};
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   auto allocator_config = xla::GpuAllocatorConfig{};
