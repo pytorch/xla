@@ -70,7 +70,6 @@ build:short_logs --output_filter=DONT_MATCH_ANYTHING
 
 #build:tpu --@xla//xla/python:enable_tpu=true
 build:tpu --define=with_tpu_support=true
-query:tpu --define=with_tpu_support=true
 
 # Run tests serially with TPU and GPU (only 1 device is available).
 test:tpu --local_test_jobs=1

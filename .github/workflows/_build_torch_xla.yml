@@ -53,3 +53,8 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /dist/*.whl
+      - name: Upload CPP test binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-test-bin
+          path: pytorch/xla/build/temp*/bazel-out/k8-opt/bin/cpp_tests_tar.tar

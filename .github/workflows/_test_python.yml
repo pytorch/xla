@@ -76,6 +76,11 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
+      - name: Fetch CPP test binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: cpp-test-bin
+          path: /tmp/test/bin
       - name: Fetch CUDA plugin
         uses: actions/download-artifact@v4
         with:
