@@ -40,7 +40,7 @@ class PallasTest(unittest.TestCase):
       head_dim,
       dtype=torch.float32,
   ):
-    # assert max_seq_len % page_size == 0
+    assert max_seq_len % page_size == 0
     pages_per_sequence = max_seq_len // page_size
     batch_size = len(seq_lens)
     total_pages = batch_size * pages_per_sequence

@@ -114,10 +114,7 @@ def trace_pallas(kernel: Callable,
   return payload, tensor_args
 
 
-def make_kernel_from_pallas(kernel: Callable,
-                            output_shape_dtype_fn: Callable,
-                            static_argnums: List[int] = None,
-                            static_argnames: List[str] = None):
+def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   # TODO: Maybe we can cache the payload for the same input.
   def wrapped_kernel(kernel: Callable,
                      output_shape_dtype_fn: Callable,
@@ -144,12 +141,7 @@ def make_kernel_from_pallas(kernel: Callable,
       return outputs[0]
     return tuple(outputs)
 
-  return functools.partial(
-      wrapped_kernel,
-      kernel,
-      output_shape_dtype_fn,
-      static_argnums=static_argnums,
-      static_argnames=static_argnames)
+  return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
 
 
 class FlashAttention(torch.autograd.Function):
