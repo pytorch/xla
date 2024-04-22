@@ -152,10 +152,7 @@ jobs:
         if: ${{ inputs.run_cpp_tests }}
       - name: Test
         shell: bash
-        run: |
-          source pytorch/xla/.circleci/common.sh
-
-          run_torch_xla_tests pytorch/ pytorch/xla/ $USE_COVERAGE
+        run: .github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
       - name: Upload coverage results
         if: ${{ inputs.collect-coverage }}
         shell: bash
