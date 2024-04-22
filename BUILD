@@ -3,11 +3,6 @@ load(
     "if_cuda_is_configured",
 )
 
-load(
-    "@rules_pkg//pkg:tar.bzl",
-    "pkg_tar",
-)
-
 cc_binary(
     name = "_XLAC.so",
     copts = [
@@ -55,11 +50,3 @@ test_suite(
         "//torch_xla/csrc/runtime:ifrt_computation_client_test",
     ],
 )
-
-# pkg_tar(
-#     name = "cpp_tests_tar",
-#     testonly = True,
-#     srcs = [
-#         ":cpp_tests"
-#     ]
-# )
