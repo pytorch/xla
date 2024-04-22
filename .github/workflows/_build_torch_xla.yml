@@ -58,6 +58,9 @@ jobs:
         run: |
           mkdir -p /tmp/test/bin
           cd pytorch/xla/build/temp*
+          pwd
+          ls
+          ls bazel-bin/
           bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --output=files | xargs cp -t $test_bin
       - name: Upload CPP test binaries
         uses: actions/upload-artifact@v4
