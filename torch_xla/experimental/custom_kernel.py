@@ -409,7 +409,7 @@ def paged_attention(q, k_pages, v_pages, lengths, page_indices,
   step = torch.zeros((1,), dtype=torch.int32).to("xla")
   output_shape = torch.Size(list(q.shape[:-1]) + [1])
 
-  output = torch_xla._XLAC._xla_tpu_custom_call(
+  output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
       [
           lengths,
           page_indices_reshaped,
@@ -421,7 +421,7 @@ def paged_attention(q, k_pages, v_pages, lengths, page_indices,
       ], payload, [q.shape, output_shape, output_shape],
       [q.dtype, torch.float32, torch.float32])
 
-  return output
+  return output.reshape(batch_size, num_heads, head_dim)
 
 
 XLA_LIB.define(
