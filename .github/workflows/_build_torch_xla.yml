@@ -61,7 +61,7 @@ jobs:
           pwd
           ls
           ls bazel-bin/
-          bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --output=files | xargs cp -t $test_bin
+          bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --output=files | xargs cp -t /tmp/test/bin
       - name: Upload CPP test binaries
         uses: actions/upload-artifact@v4
         with:
