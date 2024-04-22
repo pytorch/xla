@@ -1255,6 +1255,25 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                             padding_idx, scale_grad_by_freq);
 }
 
+XLATensorPtr embedding(const XLATensorPtr& weight,
+                       const XLATensorPtr& indices) {
+  return tensor_ops::Embedding(weight, indices);
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr, XLATensorPtr>
+embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
+              const XLATensorPtr& offsets, int64_t mode,
+              const XLATensorPtr& per_sample_weights,
+              bool include_last_offset) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<EmbeddingBag>(
+      weight->GetIrValue(), indices->GetIrValue(), offsets->GetIrValue(), mode,
+      per_sample_weights->GetIrValue(), include_last_offset);
+  return std::make_tuple(weight->CreateFrom(torch::lazy::Value(node, 0)),
+                         weight->CreateFrom(torch::lazy::Value(node, 1)),
+                         weight->CreateFrom(torch::lazy::Value(node, 2)),
+                         weight->CreateFrom(torch::lazy::Value(node, 3)));
+}
+
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr, XLATensorPtr>
 embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
               const XLATensorPtr& offsets, int64_t mode,
