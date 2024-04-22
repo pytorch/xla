@@ -53,8 +53,14 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /dist/*.whl
+      - name: Find and move CPP test binaries
+        shell: bash
+        run: |
+          mkdir -p /tmp/test/bin
+          cd pytorch/xla/build/temp*
+          bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --output=files | xargs cp -t $test_bin
       - name: Upload CPP test binaries
         uses: actions/upload-artifact@v4
         with:
           name: cpp-test-bin
-          path: pytorch/xla/build/temp*/bazel-bin/cpp_tests_tar.tar
+          path: /tmp/test/bin

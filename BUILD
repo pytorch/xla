@@ -56,10 +56,10 @@ test_suite(
     ],
 )
 
-pkg_tar(
-    name = "cpp_tests_tar",
-    testonly = True,
-    srcs = [
-        ":cpp_tests"
-    ]
-)
+# pkg_tar(
+#     name = "cpp_tests_tar",
+#     testonly = True,
+#     srcs = [
+#         ":cpp_tests"
+#     ]
+# )

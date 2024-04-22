@@ -1,0 +1,13 @@
+bazel-out/k8-opt/bin/test/cpp/test_aten_xla_tensor_1
+bazel-out/k8-opt/bin/test/cpp/test_aten_xla_tensor_2
+bazel-out/k8-opt/bin/test/cpp/test_aten_xla_tensor_3
+bazel-out/k8-opt/bin/test/cpp/test_aten_xla_tensor_4
+bazel-out/k8-opt/bin/test/cpp/test_aten_xla_tensor_5
+bazel-out/k8-opt/bin/test/cpp/test_aten_xla_tensor_6
+bazel-out/k8-opt/bin/test/cpp/test_ir
+bazel-out/k8-opt/bin/test/cpp/test_lazy
+bazel-out/k8-opt/bin/test/cpp/test_replication
+bazel-out/k8-opt/bin/test/cpp/test_tensor
+bazel-out/k8-opt/bin/test/cpp/test_xla_sharding
+bazel-out/k8-opt/bin/torch_xla/csrc/runtime/ifrt_computation_client_test
+bazel-out/k8-opt/bin/torch_xla/csrc/runtime/pjrt_computation_client_test
