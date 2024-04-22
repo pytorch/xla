@@ -77,6 +77,22 @@
     state: absent
     mode: '0755'
 
+- name: Create temp directory for C++ tests
+  ansible.builtin.file:
+    path: /tmp/test/bin
+    state: directory
+    mode: '0755'
+  when: build_cpp_tests
+
+- name: Collect C++ test files
+  ansible.builtin.shell: |
+    cd pytorch/xla/build/temp*
+    bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --output=files | xargs cp -t /tmp/test/bin
+  args:
+    executable: bash
+    chdir: "{{ src_root }}"
+  when: build_cpp_tests
+
 - name: Read Torchvision pin
   ansible.builtin.command: cat {{ (src_root, 'pytorch') | path_join }}/.github/ci_commit_pins/vision.txt
   register: torchvision_pin

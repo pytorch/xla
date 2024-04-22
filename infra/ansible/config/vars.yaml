@@ -14,3 +14,5 @@ nightly_release: false
 bundle_libtpu: 1
 # Suffix for bazel remote cache key
 cache_suffix: ""
+# Whether to build C++ tests with `torch_xla` wheel
+build_cpp_tests: 0

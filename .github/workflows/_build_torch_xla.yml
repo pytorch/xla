@@ -47,21 +47,12 @@ jobs:
         shell: bash
         run: |
           cd pytorch/xla/infra/ansible
-          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
+          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
           name: torch-xla-wheels
           path: /dist/*.whl
-      - name: Find and move CPP test binaries
-        shell: bash
-        run: |
-          mkdir -p /tmp/test/bin
-          cd pytorch/xla/build/temp*
-          pwd
-          ls
-          ls bazel-bin/
-          bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --output=files | xargs cp -t /tmp/test/bin
       - name: Upload CPP test binaries
         uses: actions/upload-artifact@v4
         with:
