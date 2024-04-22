@@ -46,13 +46,13 @@ test_suite(
         "//test/cpp:test_aten_xla_tensor_4",
         "//test/cpp:test_aten_xla_tensor_5",
         "//test/cpp:test_aten_xla_tensor_6",
-        "//torch_xla/csrc/runtime:pjrt_computation_client_test",
-        "//torch_xla/csrc/runtime:ifrt_computation_client_test",
         "//test/cpp:test_ir",
         "//test/cpp:test_lazy",
         "//test/cpp:test_replication",
         "//test/cpp:test_tensor",
         "//test/cpp:test_xla_sharding",
+        "//torch_xla/csrc/runtime:pjrt_computation_client_test",
+        "//torch_xla/csrc/runtime:ifrt_computation_client_test",
     ],
 )
 
