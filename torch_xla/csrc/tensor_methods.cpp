@@ -48,6 +48,7 @@
 #include "torch_xla/csrc/ops/dynamic_view.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/einsum_backward.h"
+#include "torch_xla/csrc/ops/embedding_bag.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/expand_symint.h"
 #include "torch_xla/csrc/ops/exponential.h"
@@ -1290,6 +1291,20 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
 XLATensorPtr embedding(const XLATensorPtr& weight,
                        const XLATensorPtr& indices) {
   return tensor_ops::Embedding(weight, indices);
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr, XLATensorPtr>
+embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
+              const XLATensorPtr& offsets, int64_t mode,
+              const XLATensorPtr& per_sample_weights,
+              bool include_last_offset) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<EmbeddingBag>(
+      weight->GetIrValue(), indices->GetIrValue(), offsets->GetIrValue(), mode,
+      per_sample_weights->GetIrValue(), include_last_offset);
+  return std::make_tuple(weight->CreateFrom(torch::lazy::Value(node, 0)),
+                         weight->CreateFrom(torch::lazy::Value(node, 1)),
+                         weight->CreateFrom(torch::lazy::Value(node, 2)),
+                         weight->CreateFrom(torch::lazy::Value(node, 3)));
 }
 
 XLATensorPtr exp(const XLATensorPtr& input) {
