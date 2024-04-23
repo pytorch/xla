@@ -88,6 +88,13 @@ jobs:
           name: cpp-test-bin
           path: /tmp/test/bin
         if: ${{ matrix.run_cpp_tests }}
+      # GitHub Actions doesn't preserve executable permissions
+      # https://github.com/actions/download-artifact?tab=readme-ov-file#permission-loss
+      - name: Set CPP test permissions
+        run: |
+          chmod +x /tmp/test/bin/*
+          ls -l /tmp/test/bin
+        if: ${{ matrix.run_cpp_tests }}
       - name: Fetch CUDA plugin
         uses: actions/download-artifact@v4
         with:
