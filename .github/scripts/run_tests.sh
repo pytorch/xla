@@ -1,3 +1,5 @@
+set -ex
+
 function run_torch_xla_python_tests() {
   PYTORCH_DIR=$1
   XLA_DIR=$2
@@ -34,6 +36,9 @@ function run_torch_xla_cpp_tests() {
     CUDA_PLUGIN_DIR=$(python -c "import pkgutil; import os; print(os.path.dirname(pkgutil.get_loader('torch_xla_cuda_plugin').get_filename()))")
     export PJRT_LIBRARY_PATH=$CUDA_PLUGIN_DIR/pjrt_c_api_gpu_plugin.so
     export PJRT_DEVICE=LIBRARY
+    export PJRT_DYNAMIC_PLUGINS=1
+  else
+    export PJRT_DEVICE=CPU
   fi
 
 
