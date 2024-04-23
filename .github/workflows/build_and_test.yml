@@ -30,29 +30,6 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cpp-cpu:
-    name: "CPU C++ tests"
-    uses: ./.github/workflows/_test_cpp.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      timeout-minutes: 120
-      collect-coverage: false  # TODO(yeounoh) separate from CPU coverage metrics
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
-
-  test-cpp-cuda:
-    name: "GPU C++ tests"
-    uses: ./.github/workflows/_test_cpp.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 300
-      collect-coverage: false  # TODO(yeounoh) separate from CPU coverage metrics
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
-
   push-docs:
     name: "Build & publish docs"
     if: github.event_name == 'push' && (github.event.ref == 'refs/heads/master' || startsWith(github.event.ref, 'refs/tags/r'))
@@ -82,7 +59,7 @@ jobs:
 
   test-python-cpu:
     name: "CPU Python tests"
-    uses: ./.github/workflows/_test_python.yml
+    uses: ./.github/workflows/_test.yml
     needs: build-torch-xla
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
@@ -91,9 +68,9 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-python-cuda:
+  test-cuda:
     name: "GPU Python tests"
-    uses: ./.github/workflows/_test_python.yml
+    uses: ./.github/workflows/_test.yml
     needs: [build-torch-xla, build-cuda-plugin]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
