@@ -2424,10 +2424,10 @@ class TestGeneric(test_utils.XlaTestCase):
     xla_tensor = cuda_tensor.to(xm.xla_device())
     print('xw32 metrics: ', met.metrics_report())
     print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
-    xla_tensor[0] = -1
-    self.assertEqual(cuda_tensor[0], -1, f'Not zero-copy, got {cuda_tensor[0]}')
+    cuda_tensor[0] = -1
     self.assertEqual(met.metric_data('TransferToDeviceTime'), None, f'got {met.metric_data("TransferToDeviceTime")}')
     self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
+    self.assertEqual(xla_tensor.cpu()[0], -1, f'Not zero-copy, got {cuda_tensor[0]}')
     #self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu())) # TODO: uncomment this
 
   @onlyIfTorchSupportsCUDA
