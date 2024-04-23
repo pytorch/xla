@@ -151,12 +151,6 @@ jobs:
           if [[ ! -z "$RUN_BENCHMARK_TESTS" ]]; then
             pip install -r pytorch/xla/benchmarks/requirements.txt
           fi
-      - name: list tests
-        shell: bash
-        run: |
-          cd /tmp/test/bin
-          ls
-        if: ${{ inputs.run_cpp_tests }}
       - name: Test
         shell: bash
         run: pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
