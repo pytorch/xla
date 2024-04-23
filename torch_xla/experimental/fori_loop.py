@@ -63,6 +63,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
   if additional_inputs is None:
     additional_inputs = tuple()
+  print("$$$ additional_inputs: ", additional_inputs)
   return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
 
 
