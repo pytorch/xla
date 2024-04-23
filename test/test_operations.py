@@ -2427,7 +2427,8 @@ class TestGeneric(test_utils.XlaTestCase):
     cuda_tensor[0] = -1
     self.assertEqual(met.metric_data('TransferToDeviceTime'), None, f'got {met.metric_data("TransferToDeviceTime")}')
     self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
-    self.assertEqual(xla_tensor.cpu()[0], -1, f'Not zero-copy, got {cuda_tensor[0]}')
+    got = xla_tensor.cpu()[0]
+    self.assertEqual(got, -1, f'Not zero-copy, got {got}')
     #self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu())) # TODO: uncomment this
 
   @onlyIfTorchSupportsCUDA
@@ -2436,11 +2437,13 @@ class TestGeneric(test_utils.XlaTestCase):
     met.clear_counters()
     cuda_tensor = torch.tensor(5, device=torch.device('cuda'))
     xla_tensor = cuda_tensor.to(xm.xla_device())
-    print(f'met.metric_data("TransferToDeviceTime")[0]={met.metric_data("TransferToDeviceTime")[0]}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
-    xla_tensor[0] = -1
-    self.assertEqual(cuda_tensor[0], -1, f'got {cuda_tensor[0]}')
-    self.assertEqual(met.metric_data('TransferToDeviceTime')[0], 0, f'got {met.metric_data("TransferToDeviceTime")[0]}')
+    print('xw32 metrics: ', met.metrics_report())
+    print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
+    cuda_tensor = -1
+    self.assertEqual(met.metric_data('TransferToDeviceTime'), None, f'got {met.metric_data("TransferToDeviceTime")}')
     self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
+    got = xla_tensor.cpu()
+    self.assertEqual(got, -1, f'Not zero-copy, got {got}')
     #self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu())) # TODO: uncomment this
 
 

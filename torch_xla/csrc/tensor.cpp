@@ -414,7 +414,12 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
       return ScalarOp(std::move(value),
                       MakeXlaPrimitiveType(tensor.scalar_type(), &device));
     }
-    data = XLAGraphExecutor::Get()->GetDeviceData(tensor.cpu(), device);
+    if (!runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false)) {
+      data = XLAGraphExecutor::Get()->GetDeviceData(tensor.cpu(), device);
+    } else {
+      data = XLAGraphExecutor::Get()->GetDeviceData(tensor, device);
+    }
+    
     read_only = true;
   } else {
     TORCH_LAZY_TIMED("IrValueTensorToXlaData");
