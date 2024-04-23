@@ -19,18 +19,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Old CI workflow
-  build:
-    name: "Build upstream CI image"
-    uses: ./.github/workflows/_build.yml
+  build-upstream-image:
+    name: "Build upstream Docker image"
+    uses: ./.github/workflows/_build_upstream_image.yml
     with:
       ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
-      gcr-docker-image: gcr.io/tpu-pytorch/xla_base:dev-3.8_cuda_12.1
-      cuda: 1
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+    # if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
 
-  # New CI workflow
   build-torch-xla:
     name: "Build PyTorch/XLA"
     uses: ./.github/workflows/_build_torch_xla.yml

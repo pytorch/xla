@@ -1,0 +1,44 @@
+name: xla-buld
+on:
+  workflow_call:
+    inputs:
+      ecr-docker-image-base:
+        required: true
+        type: string
+        description: Container registry to upload image to
+      runner:
+        required: false
+        type: string
+        description: Runner type for the test
+        default: linux.12xlarge
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 240
+    env:
+      ECR_DOCKER_IMAGE_BASE: ${{ inputs.ecr-docker-image-base }}
+      BAZEL_JOBS: 16
+    steps:
+      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+      - name: Clean up workspace
+        run: |
+          ls -la
+          sudo rm -rvf ${GITHUB_WORKSPACE}/*
+      - name: Setup Linux
+        uses: pytorch/test-infra/.github/actions/setup-linux@main
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Download docker image from GCR
+        shell: bash
+        run: |
+          docker build -t "${ECR_DOCKER_IMAGE_BASE}:v1.2-lite" .github/upstream
+      - name: Stage image to ECR
+        shell: bash
+        run: |
+            # This is to stage PyTorch/XLA base image for use in the upstream.
+            # To allow the upstream workflow to access PyTorch/XLA build images, we
+            # need to have them in the ECR. This is not expensive, and only pushes it
+            # if image layers are not present in the repo.
+            # Note: disable the following line while testing a new image, so we do not
+            # push to the upstream.
+            # docker push "${ECR_DOCKER_IMAGE_BASE}:v1.2-lite" >/dev/null
