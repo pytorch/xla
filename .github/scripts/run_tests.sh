@@ -40,7 +40,7 @@ function run_torch_xla_cpp_tests() {
   else
     export PJRT_DEVICE=CPU
   fi
-
+  export XLA_EXPERIMENTAL="nonzero:masked_select"
 
   test_names1=("test_aten_xla_tensor_1"
                "test_aten_xla_tensor_2"
