@@ -46,7 +46,8 @@ function run_torch_xla_cpp_tests() {
                "test_aten_xla_tensor_2"
                "test_aten_xla_tensor_3"
                "test_aten_xla_tensor_4"
-               "pjrt_computation_client_test")
+               "pjrt_computation_client_test",
+               "ifrt_computation_client_test")
   test_names2=("test_aten_xla_tensor_5"
                "test_aten_xla_tensor_6"
                "test_ir"
