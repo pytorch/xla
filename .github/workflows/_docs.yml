@@ -34,9 +34,9 @@ jobs:
       run: |
         pip install /tmp/wheels/*.whl
     - name: Checkout PyTorch/XLA Repo
-        uses: actions/checkout@v4
-        with:
-          path: pytorch/xla
+      uses: actions/checkout@v4
+      with:
+        path: pytorch/xla
     - name: Build docs
       shell: bash
       run: |
