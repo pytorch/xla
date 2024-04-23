@@ -87,7 +87,7 @@ jobs:
         with:
           name: cpp-test-bin
           path: /tmp/test/bin
-        if: ${{ inputs.run_cpp_tests }}
+        if: ${{ matrix.run_cpp_tests }}
       - name: Fetch CUDA plugin
         uses: actions/download-artifact@v4
         with:
