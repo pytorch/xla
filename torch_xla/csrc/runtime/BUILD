@@ -147,7 +147,7 @@ cc_test(
     deps = [
         ":cache",
         "@com_google_googletest//:gtest_main",
-        "@torch//:libtorch_cpu",  # For TORCH_LAZY_COUNTER
+        "@torch//:libtorch_cuda",  # For TORCH_LAZY_COUNTER
     ],
 )
 
@@ -184,7 +184,7 @@ cc_test(
     deps = [
         ":env_hash",
         "@com_google_googletest//:gtest_main",
-        "@torch//:libtorch_cpu",  # For torch::lazy::hash
+        "@torch//:libtorch_cuda",  # For torch::lazy::hash
     ],
 )
 
