@@ -2,10 +2,10 @@ name: xla-docs-build
 on:
   workflow_call:
     inputs:
-      docker-image:
+      dev-image:
         required: true
         type: string
-        description: Image to build docs in
+        description: Base image for builds
       runner:
         required: false
         type: string
@@ -18,32 +18,41 @@ jobs:
   push-docs:
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 45
+    container:
+      image: ${{ inputs.dev-image }}
     env:
-      DOCKER_IMAGE: ${{ inputs.docker-image }}
-      WORKDIR: /var/lib/jenkins/workspace
+      BRANCH_NAME: ${{ github.ref_name }}
+      DOCS_SUBDIR: ${{ env.BRANCH_NAME == 'master' && 'master' || format('{0}/{1}', 'release/', env.BRANCH_NAME) }}
     steps:
-      - name: Setup Linux
-        uses: pytorch/test-infra/.github/actions/setup-linux@main
-      - name: Setup SSH (Click me for login details)
-        uses: pytorch/test-infra/.github/actions/setup-ssh@main
+    - name: Fetch wheels
+      uses: actions/download-artifact@v4
+      with:
+        name: torch-xla-wheels
+        path: /tmp/wheels/
+    - name: Install wheels
+      shell: bash
+      run: |
+        pip install /tmp/wheels/*.whl
+    - name: Checkout PyTorch/XLA Repo
+        uses: actions/checkout@v4
         with:
-          github-secret: ${{ secrets.GITHUB_TOKEN }}
-          instructions: |
-            Doc builds are done inside container. Interactive session can be started by following:
-              docker exec -it $(docker container ps --format '{{.ID}}') bash
-      - name: Download and run docker image from GCR
-        shell: bash
-        env:
-          GITHUB_TORCH_XLA_BOT_TOKEN: ${{ secrets. torchxla-bot-token }}
-        run: |
-          echo "DOCKER_IMAGE: ${DOCKER_IMAGE}"
-          docker pull "${DOCKER_IMAGE}"
-          pid=$(docker run -e GITHUB_TORCH_XLA_BOT_TOKEN -t -d -w "$WORKDIR" "${DOCKER_IMAGE}")
-          echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
-          echo "pid=${pid}" >> "${GITHUB_ENV}"
-      - name: Build & publish docs
-        shell: bash
-        run: docker exec -u jenkins "${pid}" bash -c '.circleci/doc_push.sh'
-      - name: Teardown Linux
-        uses: pytorch/test-infra/.github/actions/teardown-linux@main
-        if: always()
+          path: pytorch/xla
+    - name: Build docs
+      shell: bash
+      run: |
+        cd pytorch/xla/docs
+        pip install -r requirements.txt
+        sphinx-build -b html source build
+    - name: Checkout GitHub Pages
+      uses: actions/checkout@v4
+      with:
+        path: gh-pages
+        ref: gh-pages
+    - name: Merge changes
+      shell: bash
+      run: cp -fR pytorch/xla/docs/build/* gh-pages/${DOCS_SUBDIR}
+    - name: Show diff
+      shell: bash
+      run: |
+        cd gh-pages
+        git diff
