@@ -142,7 +142,7 @@ class WhileLoopTest(unittest.TestCase):
     linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
 
     def cond_fn(upper, lower, one_value, x, input_value, output_value):
-      return lower[0] >= upper[0]
+      return lower[0] < upper[0]
 
     def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)

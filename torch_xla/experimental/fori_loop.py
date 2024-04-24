@@ -121,7 +121,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       # trynewres = res[:-1] + [res[-1]]
       # print("trynewres: ", trynewres)
       newres = res[:-1] + list(additional_inputs) + [res[-1]]
-      print("newres: ", newres)
+      # print("newres: ", newres)
       # res.insert(-2, *additional_inputs)
       # print("new res: ", res)
       # res.extend(additional_inputs)
