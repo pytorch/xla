@@ -110,7 +110,7 @@ jobs:
           python -c "
           import torch_xla.version
           with open('$GITHUB_ENV', 'a') as f:
-            f.write(torch_xla.version.__torch_gitrev__ + '\n')
+            f.write(f'PYTORCH_COMMIT={torch_xla.version.__torch_gitrev__}\n')
           "
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
