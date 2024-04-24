@@ -122,12 +122,13 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       # print("trynewres: ", trynewres)
       newres = res[:-1] + list(additional_inputs) + [res[-1]]
       print("newres: ", newres)
-      res.insert(-2, *additional_inputs)
-      print("new res: ", res)
+      # res.insert(-2, *additional_inputs)
+      # print("new res: ", res)
       # res.extend(additional_inputs)
       # res.append(body_fn.bias)
       # res.append(body_fn.weight)
-      return res
+      # return res
+      return newres
     return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
     # return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
   print("$$$ additional_inputs: ", additional_inputs)
