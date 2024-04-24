@@ -99,6 +99,10 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       tropical = ["mango", "pineapple", "papaya"]
       thislist.extend(tropical)
       print(thislist)
+      thislist = ["apple", "banana", "cherry"]
+      thistuple = ("kiwi", "orange")
+      thislist.extend(thistuple)
+      print(thislist)
       mid = list(body_fn(*carried_inputs))
       res = mid.extend(list(additional_inputs))
       print("res: ", res)
