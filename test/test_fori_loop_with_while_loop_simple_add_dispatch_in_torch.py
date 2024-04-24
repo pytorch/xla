@@ -34,6 +34,7 @@ class WhileLoopTest(unittest.TestCase):
 
   def test_while_loop_tpu_subtraction(self):
 
+    print("$$$ test_while_loop_tpu_subtraction !!!")
     device = xm.xla_device()
 
     def cond_fn(init, limit_value):
@@ -52,6 +53,7 @@ class WhileLoopTest(unittest.TestCase):
 
   def test_while_loop_tpu_addition(self):
 
+    print("$$$ test_while_loop_tpu_addition !!!")
     device = xm.xla_device()
 
     def cond_fn(init, limit_value):
@@ -70,6 +72,7 @@ class WhileLoopTest(unittest.TestCase):
 
   def test_while_loop_tpu_subtraction_nested(self):
 
+    print("$$$ test_while_loop_tpu_subtraction_nested !!!")
     device = xm.xla_device()
 
     def cond_fn(init, limit_value):
@@ -88,6 +91,7 @@ class WhileLoopTest(unittest.TestCase):
 
   def test_while_loop_tpu_simple_linear(self):
 
+    print("$$$ test_while_loop_tpu_simple_linear !!!")
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
@@ -123,6 +127,7 @@ class WhileLoopTest(unittest.TestCase):
 
   def test_while_loop_tpu_simple_linear_class(self):
 
+    print("$$$ test_while_loop_tpu_simple_linear_class !!!")
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
@@ -182,6 +187,7 @@ class WhileLoopTest(unittest.TestCase):
 
   def test_fori_loop_tpu_addition(self):
 
+    print("$$$ test_fori_loop_tpu_addition !!!")
     xm.mark_step()
     device = xm.xla_device()
 
@@ -200,6 +206,7 @@ class WhileLoopTest(unittest.TestCase):
 
   def test_fori_loop_tpu_simple_linear(self):
 
+    print("$$$ test_fori_loop_tpu_simple_linear !!!")
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
