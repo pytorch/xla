@@ -1,6 +1,6 @@
 # Custom Kernels via Pallas
 
-With the rise of OpenAI [triton](), custom kernels become more and more popular in the GPU community, for instance, the introduction of [FlashAttention]() and [PagedAttention](). In order to provide the feature parity in the TPU world, Google has introduced [Pallas]() and [Mosaic](). For PyTorch/XLA to continue pushing the performance in TPU, we have to support custom kernels, and the best way is through Pallas and Mosaic. The design doc is [TBD]().
+With the rise of OpenAI [triton](https://openai.com/research/triton), custom kernels become more and more popular in the GPU community, for instance, the introduction of [FlashAttention](https://github.com/Dao-AILab/flash-attention) and [PagedAttention](https://blog.vllm.ai/2023/06/20/vllm.html). In order to provide the feature parity in the TPU world, Google has introduced [Pallas](http://go/jax-pallas) and [Mosaic](http://go/mosaic-tpu). For PyTorch/XLA to continue pushing the performance in TPU, we have to support custom kernels, and the best way is through Pallas and Mosaic. The design doc is [TBA]().
 
 Let's assume you have a Pallas kernel defined as follow:
 ```python3
@@ -48,7 +48,7 @@ output = flash_attention(q, k, v)
 You can just use it like any other torch.ops.
 
 ## HuggingFace Llama 3 Example
-We have a fork of HF Llama 3 to demonstrate a potential integration [here]().
+We have a fork of HF Llama 3 to demonstrate a potential integration [here](https://github.com/pytorch-tpu/transformers/tree/alanwaketan/flash_attention).
 
 ## Dependencies
 The Pallas integration depends on JAX to function. However, not every JAX version is compatible with your installed PyTorch/XLA. To install the proper JAX:
