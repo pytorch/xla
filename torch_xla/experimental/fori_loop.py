@@ -66,7 +66,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
   else:
     # modify body_fn return with additional_inputs
-    def new_body_fn(carried_inputs):
+    def new_body_fn(*carried_inputs):
       # new_lower = torch.add(one_value, lower)
       # output_value = linear_0(input_value)
       weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
