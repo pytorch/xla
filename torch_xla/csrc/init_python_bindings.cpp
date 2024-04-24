@@ -929,20 +929,20 @@ class PyLoweringContext {
       }
     }
 
-    // hard-code modify body xlacomputation input arguments with unusedarguments
-    // for xla::while requriement
-    if (GetNameString() == "bodyctx") {
-      xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      // TODO(@manfei): treat hard code parameter_idx value
-      int64_t parameter_idx = 7;
-      for (auto& additional_input_tensor : additional_inputs_list) {
-        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
-        xla::Shape shape = xtensor->shape().get();
-        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-                                      "UnusedArgumentsPlaceholder");
-        parameter_idx += 1;
-      }
-    }
+    // // hard-code modify body xlacomputation input arguments with unusedarguments
+    // // for xla::while requriement
+    // if (GetNameString() == "bodyctx") {
+    //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
+    //   // TODO(@manfei): treat hard code parameter_idx value
+    //   int64_t parameter_idx = 7;
+    //   for (auto& additional_input_tensor : additional_inputs_list) {
+    //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
+    //     xla::Shape shape = xtensor->shape().get();
+    //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+    //                                   "UnusedArgumentsPlaceholder");
+    //     parameter_idx += 1;
+    //   }
+    // }
 
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
