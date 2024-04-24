@@ -171,6 +171,7 @@ def train_mnist(flags, **kwargs):
     correct = 0
     model.eval()
     print("loader: ", loader)
+    print("type loader: ", type(loader))
     for data, target in loader:
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
@@ -181,7 +182,7 @@ def train_mnist(flags, **kwargs):
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device)
+  # train_device_loader = pl.MpDeviceLoader(train_loader, device)
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):
