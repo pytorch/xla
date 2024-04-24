@@ -10,7 +10,6 @@ import sys
 import time
 import torch
 import torch._dynamo.utils as dynamo_utils
-import torch._functorch.config
 import tiers
 from typing import Optional
 import torch_xla.debug.metrics as met

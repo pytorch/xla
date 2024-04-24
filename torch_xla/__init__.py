@@ -189,6 +189,7 @@ torch._dynamo.config.automatic_dynamic_shapes = False
 # Activate view-replay on AOTAutograd.
 # See: https://github.com/pytorch/pytorch/pull/124488
 import torch._functorch.config
+
 torch._functorch.config.view_replay_for_aliased_outputs = True
 
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
