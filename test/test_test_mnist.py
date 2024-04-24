@@ -127,5 +127,5 @@ def test_mnist():
     test()
 
 
-torch.set_default_dtype(torch.float32)
+# torch.set_default_dtype(torch.float32)
 accuracy = test_mnist()
