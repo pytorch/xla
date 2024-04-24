@@ -99,7 +99,8 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       tropical = ["mango", "pineapple", "papaya"]
       thislist.extend(tropical)
       print(thislist)
-      res = list(body_fn(*carried_inputs)).extend(list(additional_inputs))
+      mid = list(body_fn(*carried_inputs))
+      res = mid.extend(list(additional_inputs))
       print("res: ", res)
       return list(body_fn(*carried_inputs)).extend(additional_inputs)
     return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
