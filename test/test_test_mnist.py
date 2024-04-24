@@ -13,6 +13,7 @@ torch.backends.cudnn.enabled = False
 torch.manual_seed(random_seed)
 
 ### load data
+import torch_xla.utils.utils as xu
 test_loader = xu.SampleGenerator(
     data=(torch.zeros(flags.batch_size, 1, 28,
                       28), torch.zeros(flags.batch_size,
