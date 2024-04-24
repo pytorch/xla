@@ -69,8 +69,8 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     def new_body_fn(*carried_inputs):
       # new_lower = torch.add(one_value, lower)
       # output_value = linear_0(input_value)
-      weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-      bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+      # weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+      # bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
       # return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
       #     one_value, x), input_value.clone(), bias.clone(), weight.clone(
       #     ), output_value.clone()
