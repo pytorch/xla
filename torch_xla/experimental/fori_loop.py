@@ -75,15 +75,15 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       #     one_value, x), input_value.clone(), bias.clone(), weight.clone(
       #     ), output_value.clone()
       # return body_fn(carried_inputs), weight.clone(), bias.clone()
-      print("carried_inputs: ", carried_inputs)
-      print("additional_inputs: ", additional_inputs)
+      # print("carried_inputs: ", carried_inputs)
+      # print("additional_inputs: ", additional_inputs)
       res1 = body_fn(*carried_inputs)
-      print("res1: ", res1)
-      print("type res1: ", type(res1))
-      print("type additional_inputs: ", type(additional_inputs))
+      # print("res1: ", res1)
+      # print("type res1: ", type(res1))
+      # print("type additional_inputs: ", type(additional_inputs))
       res2 = (res1, ) + additional_inputs
-      print("res2: ", res2)
-      print("type res2: ", type(res2))
+      # print("res2: ", res2)
+      # print("type res2: ", type(res2))
       return (body_fn(*carried_inputs), ) + additional_inputs
     return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
   print("$$$ additional_inputs: ", additional_inputs)
