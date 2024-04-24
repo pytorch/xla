@@ -119,9 +119,6 @@ def test():
 
 # run test model
 def test_mnist():
-  if flags.ddp or flags.pjrt_distributed:
-    dist.init_process_group('xla', init_method='xla://')
-
   torch.manual_seed(1)
 
   test()
