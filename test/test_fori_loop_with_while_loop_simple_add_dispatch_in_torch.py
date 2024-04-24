@@ -147,8 +147,8 @@ class WhileLoopTest(unittest.TestCase):
     def body_fn(upper, lower, one_value, x, input_value, output_value):
       new_lower = torch.add(one_value, lower)
       output_value = linear_0(input_value)
-      weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-      bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+      # weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+      # bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
       return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
           one_value, x), input_value.clone(), output_value.clone()
 
