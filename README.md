@@ -245,6 +245,7 @@ This is only required on Cloud TPU VMs.
 | Version | Cloud TPU VMs Docker |
 | --- | ----------- |
 | 2.3 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.3.0_3.10_tpuvm` |
+| 2.2 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm` |
 | 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm` |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_tpuvm` |
 | 1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` |
@@ -255,6 +256,7 @@ This is only required on Cloud TPU VMs.
 | Version | GPU CUDA 12.1 Docker |
 | --- | ----------- |
 | 2.3 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.3.0_3.10_cuda_12.1` |
+| 2.2 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_cuda_12.1` |
 | 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_cuda_12.1` |
 | nightly | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1` |
 | nightly at date | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1_YYYYMMDD` |
