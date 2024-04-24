@@ -721,6 +721,61 @@ std::vector<int64_t> StridesForShape(xla::PrimitiveType element_type,
   return strides;
 }
 
+DLDeviceType DLDeviceTypeForDevice(const xla::PjRtDevice& device) {
+  if (device.client()->platform_id() == xla::CpuId()) {
+    return DLDeviceType::kDLCPU;
+  } else if (device.client()->platform_id() == xla::CudaId()) {
+    return DLDeviceType::kDLCUDA;
+  } else if (device.client()->platform_id() == xla::RocmId()) {
+    return DLDeviceType::kDLROCM;
+  }
+  XLA_ERROR() << "Device " << device.DebugString() << " cannot be used as a DLPack device.";
+}
+
+DLDevice DLDeviceForDevice(const xla::PjRtDevice& device) {
+  DLDevice dlDevice;
+  dlDevice.device_type = DLDeviceTypeForDevice(device);
+  dlDevice.device_id = device.local_hardware_id();
+  return dlDevice;
+}
+
+DLDataType PrimitiveTypeToDLDataType(xla::PrimitiveType type) {
+  switch (type) {
+    case xla::PrimitiveType::S8:
+      return DLDataType{kDLInt, 8, 1};
+    case xla::PrimitiveType::S16:
+      return DLDataType{kDLInt, 16, 1};
+    case xla::PrimitiveType::S32:
+      return DLDataType{kDLInt, 32, 1};
+    case xla::PrimitiveType::S64:
+      return DLDataType{kDLInt, 64, 1};
+    case xla::PrimitiveType::U8:
+      return DLDataType{kDLUInt, 8, 1};
+    case xla::PrimitiveType::U16:
+      return DLDataType{kDLUInt, 16, 1};
+    case xla::PrimitiveType::U32:
+      return DLDataType{kDLUInt, 32, 1};
+    case xla::PrimitiveType::U64:
+      return DLDataType{kDLUInt, 64, 1};
+    case xla::PrimitiveType::F16:
+      return DLDataType{kDLFloat, 16, 1};
+    case xla::PrimitiveType::F32:
+      return DLDataType{kDLFloat, 32, 1};
+    case xla::PrimitiveType::F64:
+      return DLDataType{kDLFloat, 64, 1};
+    case xla::PrimitiveType::BF16:
+      return DLDataType{kDLBfloat, 16, 1};
+    case xla::PrimitiveType::PRED:
+      return DLDataType{kDLBool, 8, 1};
+    case xla::PrimitiveType::C64:
+      return DLDataType{kDLComplex, 64, 1};
+    case xla::PrimitiveType::C128:
+      return DLDataType{kDLComplex, 128, 1};
+    default:
+      XLA_ERROR() << "XLA type " << xla::PrimitiveType_Name(type) << " has no DLPack equivalent";
+  }
+}
+
 DLManagedTensor* PjRtComputationClient::DataToDLPackManagedTensor(ComputationClient::DataPtr data) {
   std::shared_ptr<PjRtData> pjrt_data = std::dynamic_pointer_cast<PjRtData>(data);
   xla::PjRtBuffer* pjrt_buffer = pjrt_data->buffer.get();
@@ -748,7 +803,7 @@ DLManagedTensor* PjRtComputationClient::DataToDLPackManagedTensor(ComputationCli
   dt.device = DLDeviceForDevice(*pjrt_buffer->device());
   dt.device.device_id = pjrt_buffer->device()->local_hardware_id();
   dt.ndim = pjrt_buffer->dimensions().size();
-  // dt.dtype = PrimitiveTypeToDLDataType(pjrt_buffer->element_type()); // xw32 TODO
+  dt.dtype = PrimitiveTypeToDLDataType(pjrt_buffer->element_type());
 
   torchXlaDLMTensor->shape = std::vector<int64_t>(pjrt_buffer->dimensions().begin(), pjrt_buffer->dimensions().end());
   xla::Layout xla_layout = xla::GetXlaLayoutUnsafe(pjrt_buffer->layout());

@@ -2450,6 +2450,7 @@ class TestGeneric(test_utils.XlaTestCase):
   def test_aten_move_xla_to_cuda_zero_copy(self): # WIP
     met.clear_counters()
     xla_tensor = torch.arange(5, device=xm.xla_device())
+    print('xw32 created a xla_tensor')
     cuda_tensor = xla_tensor.cuda()
     print('xw32 metrics: ', met.metrics_report())
     print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')

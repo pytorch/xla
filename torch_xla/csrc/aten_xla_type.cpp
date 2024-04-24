@@ -555,7 +555,7 @@ at::Tensor XLANativeFunctions::_to_copy(
     at::Tensor eager_tensor = self_tensor->ToTensor(/*detached=*/true);
 
     // Use the eager .to on the eager tensor.
-    return eager_tensor.to(options, non_blocking, /*copy=*/true);
+    return eager_tensor.to(options, non_blocking, /*copy=*/true); // xw32: non_blocking is false
   }
 
   // Case 2: Create a new XLA tensor with the supplied data and options.

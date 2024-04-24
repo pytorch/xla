@@ -398,7 +398,7 @@ torch::lazy::Value XLATensor::CurrentIrValue() const {
 }
 
 c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
-  if (data()->view != nullptr && !data()->view->IsUpToDate()) {
+  if (data()->view != nullptr && !data()->view->IsUpToDate()) { // xw32: false
     return c10::nullopt;
   }
   return data()->tensor_data;
@@ -499,7 +499,7 @@ XLATensorPtr XLATensor::CreateViewTensor(ViewInfo view_info) const {
 at::Tensor XLATensor::ToTensor(bool detached) {
   at::Tensor tensor;
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
-  if (!tensor_data) {
+  if (!tensor_data) { // xw32: true, data()->tensor_data is null.
     XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
