@@ -89,8 +89,8 @@ class MNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 device = xm.xla_device()
-# model = MNIST().to(device)
-network = Net().to(device)
+network = MNIST().to(device)
+# network = Net().to(device)
 optimizer = optim.SGD(network.parameters(), lr=learning_rate,
                       momentum=momentum)
 # loss_fn = nn.NLLLoss()
