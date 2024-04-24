@@ -10,6 +10,7 @@ import sys
 import time
 import torch
 import torch._dynamo.utils as dynamo_utils
+import torch._functorch.config
 import tiers
 from typing import Optional
 import torch_xla.debug.metrics as met
@@ -247,6 +248,12 @@ class ExperimentRunner:
     reset_rng_state(benchmark_experiment)
     benchmark_model = self.model_loader.load_model(model_config,
                                                    benchmark_experiment)
+
+    # PyTorch settings
+    # Activate view-replay on AOTAutograd.
+    # See: https://github.com/pytorch/pytorch/pull/124488
+    torch._functorch.config.view_replay_for_aliased_outputs = True
+
 
     # Repeat the experiment and accumulate metrics.
     last_output = None

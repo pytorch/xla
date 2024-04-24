@@ -31,6 +31,11 @@ def _is_on_tpu():
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
 
 
+def _set_view_replay_for_aliased_outputs():
+  import torch._functorch.config
+  torch._functorch.config.view_replay_for_aliased_outputs = True
+
+
 class DynamoInPlaceTest(unittest.TestCase):
 
   def inplace_update(self, a):
@@ -667,6 +672,22 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
     self.assertEqual(expected.shape, actual.shape)
     self.assertEqual(expected.dtype, actual.dtype)
     self.assertEqual(expected.device, actual.device)
+
+  def test_return_expand(self):
+    _set_view_replay_for_aliased_outputs()
+
+    def foo(x):
+      return x.expand(2, -1)
+
+    optfoo = torch.compile(backend="openxla")(foo)
+
+    t = torch.arange(10)
+    Xt = t.to(xm.xla_device())
+
+    expected = foo(t)
+    actual = optfoo(Xt)
+
+    self.assertEqual(expected, actual.cpu())
 
 
 if __name__ == '__main__':
