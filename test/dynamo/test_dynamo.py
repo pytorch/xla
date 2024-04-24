@@ -7,6 +7,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla.debug.metrics as met
 from torch_xla import runtime as xr
+import torch_xla.debug.profiler as xp
 import torch.optim as optim
 import torch.nn as nn
 import torch._dynamo as dynamo
@@ -91,6 +92,20 @@ class DynamoLTCInteractionTest(unittest.TestCase):
       self.assertEqual(current_execute_time, met.metric_data('ExecuteTime')[0])
 
 
+class DynamoProfilerTest(unittest.TestCase):
+
+  def dummy_fn(self, a):
+    return torch.sin(a) + a
+
+  def test_dynamo_with_trace(self):
+    dynamo_dummy = torch.compile(
+        self.dummy_fn, backend="openxla", fullgraph=True)
+    t = torch.randn(2, 3, 4, device=xm.xla_device())
+    for i in range(10):
+      with xp.Trace('build_graph'):
+        t = dynamo_dummy(t)
+
+
 class DynamoInferenceBasicTest(unittest.TestCase):
 
   @classmethod
@@ -137,7 +152,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
 
   # Tests that the dynamo bridge automatically moves tensors to XLA device,
   # then back to the original device.
-  @unittest.skipIf(xr.device_type() != "CUDA",
+  @unittest.skipIf(xr.device_type() != "CUDA" or not torch.cuda.is_available(),
                    f"GPU tests should only run on GPU devices.")
   def test_simple_model_automoves_tensors(self):
     x = torch.tensor(100.0).to(device="cuda")

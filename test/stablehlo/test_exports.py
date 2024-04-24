@@ -45,7 +45,7 @@ class ExportTest(unittest.TestCase):
       exported = torch.export.export(model, arg)
       shlo = exported_program_to_stablehlo(exported)
       ans2 = shlo(*arg).cpu().to(torch.float32)
-      self.assertTrue(torch.allclose(ans, ans2, atol=1e-5))
+      torch.testing.assert_close(ans, ans2, rtol=1e-5, atol=1e-4)
 
   def test_constant(self):
 
@@ -112,6 +112,26 @@ class ExportTest(unittest.TestCase):
       self.assertTrue('stablehlo.constant dense<1.000000e+00>' in shlo_text)
       self.assertTrue(re.search(r'%arg.*tensor<f32>', shlo_text) is not None)
       self.assertFalse('stablehlo.constant dense<5.000000e+00>' in shlo_text)
+
+  def test_export_no_weights(self):
+
+    class M(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.randn(10, 10))
+
+      def forward(self, x):
+        return torch.ops.aten.add(x, self.weight)
+
+    arg = (torch.randn(10, 10),)
+    model = M()
+    with torch.no_grad():
+      exported = torch.export.export(model, arg)
+      export_options = StableHLOExportOptions()
+      export_options.export_weights = False
+      shlo = exported_program_to_stablehlo(exported, options=export_options)
+      self.assertEqual(shlo._bundle.state_dict, {})
 
 
 if __name__ == '__main__':

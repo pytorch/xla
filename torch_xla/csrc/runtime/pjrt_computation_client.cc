@@ -463,7 +463,7 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
   metrics::TimedSection timed(TransferFromDeviceMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferFromDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
-  std::vector<xla::PjRtFuture<absl::Status>> futures;
+  std::vector<xla::PjRtFuture<>> futures;
   futures.reserve(handles.size());
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
@@ -679,7 +679,7 @@ PjRtComputationClient::ExecuteComputation(
   TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for " << device
              << " Done";
 
-  std::optional<xla::PjRtFuture<xla::Status>> returned_future;
+  std::optional<xla::PjRtFuture<>> returned_future;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
           ->ExecuteSharded(buffers, pjrt_device, execute_options,
@@ -779,8 +779,8 @@ PjRtComputationClient::ExecuteReplicated(
   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
              << spmd_device_str << " Done";
 
-  std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures =
-      std::vector<xla::PjRtFuture<xla::Status>>();
+  std::optional<std::vector<xla::PjRtFuture<>>> returned_futures =
+      std::vector<xla::PjRtFuture<>>();
   std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results;
   {
     tsl::profiler::TraceMe activity(

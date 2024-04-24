@@ -182,6 +182,12 @@ std::vector<XLATensorPtr> GetXlaTensors(const std::vector<at::Tensor>& tensors,
   return xtensors;
 }
 
+bool IsNonDeviceDataIR(const at::Tensor& tensor) {
+  XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+  return xtensor->CurrentIrValue() &&
+         !DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+}
+
 std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   std::vector<std::vector<int64_t>> replica_groups;
   for (auto& group : groups) {
@@ -458,12 +464,13 @@ void SyncLiveTensors(const std::string& device_str,
 }
 
 void StepMarker(const std::string& device_str,
-                const std::vector<std::string>& devices, bool wait) {
+                const std::vector<std::string>& devices, bool wait,
+                bool reset_scope) {
   tsl::profiler::TraceMe activity("StepMarker",
                                   tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
-  XLAGraphExecutor::Get()->MarkStep(device);
+  XLAGraphExecutor::Get()->MarkStep(device, reset_scope);
   bool debug_mode = runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
     std::string report = runtime::metrics::CreatePerformanceReport(
@@ -901,6 +908,43 @@ class PyLoweringContext {
       lowering_ctx.AddResult(root);
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
+  }
+
+  // Builds a HLO graph given a set of output tensors, and add unused parameters
+  // needed in xlacomputation.
+  void BuildForiLoop(std::vector<at::Tensor> tensors,
+                     std::vector<at::Tensor> input_arguments = {}) {
+    if (GetNameString() == "condctx") {
+      xla::XlaBuilder* local_builder = lowering_ctx.builder();
+      // hard-code parameter_idx to 2 to skip existing upper/lower arguments
+      int64_t parameter_idx = 2;
+      for (at::Tensor input_argument : input_arguments) {
+        xla::Shape shape =
+            xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameter_idx += 1;
+      }
+    }
+
+    // Get the backing XLA tensors from the output torch tensor handles
+    std::vector<XLATensorPtr> xtensors =
+        GetXlaTensors(tensors, /*want_all=*/true);
+
+    // Get the lazy IR value from the output XLA tensors
+    std::vector<torch::lazy::Value> ir_values;
+    for (auto& xtensor : xtensors) {
+      torch::lazy::Value value = xtensor->GetIrValue();
+      ir_values.push_back(value);
+    }
+
+    // Lower the graph using the output IR values
+    for (auto& ir_value : ir_values) {
+      xla::XlaOp root = lowering_ctx.GetOutputOp(
+          torch::lazy::Output(ir_value.node.get(), ir_value.index));
+      lowering_ctx.AddResult(root);
+    }
+    computation = ConsumeValue(lowering_ctx.BuildXla());
 
     // wrap inputs of cond/body_computation
     if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
@@ -1043,6 +1087,7 @@ void BuildLoweringContextSubmodule(py::module* m) {
 
   lowering_context_class.def(py::init<>())
       .def("build", &PyLoweringContext::Build)
+      .def("buildforiloop", &PyLoweringContext::BuildForiLoop)
       .def("hlo", &PyLoweringContext::GetHlo)
       .def("hlo_text", &PyLoweringContext::GetHloText)
       .def("hlo_json", &PyLoweringContext::GetHloJsonText)
@@ -1649,11 +1694,12 @@ void InitXlaModuleBindings(py::module m) {
   m.def(
       "_xla_step_marker",
       [](const std::string& device, const std::vector<std::string>& devices,
-         bool wait) {
+         bool wait, bool reset_scope) {
         NoGilSection nogil;
-        StepMarker(device, devices, wait);
+        StepMarker(device, devices, wait, reset_scope);
       },
-      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true,
+      py::arg("reset_scope") = true);
   m.def("_get_stablehlo",
         [](const std::vector<at::Tensor>& tensors, const std::string& device,
            const std::vector<std::string>& devices,
@@ -1899,6 +1945,49 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& input, xla::OpSharding sharding) {
           ShardingUtil::XlaMarkSharding(input, sharding);
         });
+  m.def("_mark_manual_sharding",
+        [](const at::Tensor& input, xla::OpSharding sharding) {
+          XLA_CHECK(IsNonDeviceDataIR(input))
+              << "Marking any data tensors as manual is not supported";
+          ShardingUtil::XlaMarkSharding(input, sharding);
+        });
+  m.def("_spmd_full_to_shard_shape", [](const at::Tensor& input) -> at::Tensor {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    auto sharding_spec = xtensor->sharding_spec();
+    XLA_CHECK(sharding_spec != nullptr) << "Input tensor is not sharded";
+
+    auto shard_shape = xla::ShapeUtil::MakeShape(
+        MakeXlaPrimitiveType(xtensor->dtype(), &(xtensor->GetDevice())),
+        ShardingUtil::GetShardShape(sharding_spec));
+    auto output = xtensor->CreateFrom(torch::lazy::MakeNode<CustomSharding>(
+        xtensor->GetIrValue(), shard_shape,
+        CustomSharding::Type::kSPMDFullToShardShape));
+    output->SetShardingSpec(XLATensor::ShardingSpec(
+        xla::HloSharding::Manual().ToProto(), shard_shape));
+    return bridge::AtenFromXlaTensor(output);
+  });
+  m.def(
+      "_spmd_shard_to_full_shape",
+      [](const at::Tensor& input, const xla::OpSharding& sharding,
+         const std::vector<int64_t>& output_shape,
+         const py::object& output_dtype) -> at::Tensor {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+        auto sharding_spec = xtensor->sharding_spec();
+        XLA_CHECK(sharding_spec != nullptr &&
+                  sharding_spec->sharding.type() == xla::OpSharding::MANUAL)
+            << "Input tensor is not manual sharded";
+
+        auto full_shape = xla::ShapeUtil::MakeShape(
+            MakeXlaPrimitiveType(
+                reinterpret_cast<THPDtype*>(output_dtype.ptr())->scalar_type,
+                &(xtensor->GetDevice())),
+            output_shape);
+        auto output = xtensor->CreateFrom(torch::lazy::MakeNode<CustomSharding>(
+            xtensor->GetIrValue(), full_shape,
+            CustomSharding::Type::kSPMDShardToFullShape));
+        output->SetShardingSpec(XLATensor::ShardingSpec(sharding, full_shape));
+        return bridge::AtenFromXlaTensor(output);
+      });
   m.def("_xla_mark_sharding_dynamo_custom_op",
         [](const at::Tensor& input, const py::list& tile_assignment,
            const py::list& group_assignment, const py::list& replication_groups,

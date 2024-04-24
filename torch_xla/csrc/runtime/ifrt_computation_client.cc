@@ -58,7 +58,24 @@ torch::lazy::hash_t hash_comp_env(
     xla::ifrt::Client* client,
     std::vector<xla::ifrt::Device*>& ordered_devices) {
   torch::lazy::hash_t hash = hash::HashXlaEnvVars();
-  auto topology_desc = client->GetTopologyForDevices(ordered_devices);
+  std::string platform_name(client->platform_name());
+  std::string platform_version(client->platform_version());
+  hash = torch::lazy::HashCombine(
+      hash, torch::lazy::StringHash(platform_name.c_str()));
+  // platform_version incorporates libtpu version and hardware type.
+  hash = torch::lazy::HashCombine(
+      hash, torch::lazy::StringHash(platform_version.c_str()));
+  // Include global devices in the hash, ensuring order is consistent.
+  xla::ifrt::DeviceList::Devices ifrt_devices;
+  for (auto& device : ordered_devices) {
+    std::string device_str(device->ToString());
+    hash = torch::lazy::HashCombine(
+        hash, torch::lazy::StringHash(device_str.c_str()));
+    ifrt_devices.push_back(device);
+  }
+
+  xla::ifrt::DeviceList device_list(std::move(ifrt_devices));
+  auto topology_desc = client->GetTopologyForDevices(device_list);
   if (topology_desc.ok()) {
     // Some backends support a topology description which provides a better
     // view of the specific compilation environment.
@@ -69,19 +86,6 @@ torch::lazy::hash_t hash_comp_env(
           torch::lazy::DataHash(serialized->data(), serialized->length()));
     }
     // If serialization fails, fallthrough to the manual approach.
-  }
-  std::string platform_name(client->platform_name());
-  std::string platform_version(client->platform_version());
-  hash = torch::lazy::HashCombine(
-      hash, torch::lazy::StringHash(platform_name.c_str()));
-  // platform_version incorporates libtpu version and hardware type.
-  hash = torch::lazy::HashCombine(
-      hash, torch::lazy::StringHash(platform_version.c_str()));
-  // Include global devices in the hash, ensuring order is consistent.
-  for (auto& device : ordered_devices) {
-    std::string device_str(device->ToString());
-    hash = torch::lazy::HashCombine(
-        hash, torch::lazy::StringHash(device_str.c_str()));
   }
   return hash;
 }

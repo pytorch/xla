@@ -40,7 +40,6 @@
 #include "torch_xla/csrc/ops/count_nonzero.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
-#include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/ops/dequant_tensor.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
@@ -49,6 +48,7 @@
 #include "torch_xla/csrc/ops/dynamic_view.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/einsum_backward.h"
+#include "torch_xla/csrc/ops/embedding_bag.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/expand_symint.h"
 #include "torch_xla/csrc/ops/exponential.h"
@@ -522,9 +522,10 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
 
 void custom_sharding_(
     const XLATensorPtr& input,
-    const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec) {
-  input->SetInPlaceIrValue(
-      torch::lazy::MakeNode<CustomSharding>(input->GetIrValue()));
+    const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec,
+    const CustomSharding::Type& type) {
+  input->SetInPlaceIrValue(torch::lazy::MakeNode<CustomSharding>(
+      input->GetIrValue(), input->shape().get(), type));
   input->SetShardingSpec(*sharding_spec);
 }
 
@@ -1010,6 +1011,12 @@ XLATensorPtr pdist_forward(const XLATensorPtr& input, double p) {
   return input->CreateFrom(Pdist_forward(input->GetIrValue(), p, dtype));
 }
 
+XLATensorPtr pixel_shuffle(const XLATensorPtr& input, int64_t upscale_factor) {
+  c10::optional<at::ScalarType> dtype = input->dtype_optional();
+  torch::lazy::NodePtr node = PixelShuffle(input->GetIrValue(), upscale_factor);
+  return input->CreateFrom(node, dtype);
+}
+
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha) {
   return input->CreateFrom(Celu(input->GetIrValue(), alpha));
 }
@@ -1284,6 +1291,20 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
 XLATensorPtr embedding(const XLATensorPtr& weight,
                        const XLATensorPtr& indices) {
   return tensor_ops::Embedding(weight, indices);
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr, XLATensorPtr>
+embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
+              const XLATensorPtr& offsets, int64_t mode,
+              const XLATensorPtr& per_sample_weights,
+              bool include_last_offset) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<EmbeddingBag>(
+      weight->GetIrValue(), indices->GetIrValue(), offsets->GetIrValue(), mode,
+      per_sample_weights->GetIrValue(), include_last_offset);
+  return std::make_tuple(weight->CreateFrom(torch::lazy::Value(node, 0)),
+                         weight->CreateFrom(torch::lazy::Value(node, 1)),
+                         weight->CreateFrom(torch::lazy::Value(node, 2)),
+                         weight->CreateFrom(torch::lazy::Value(node, 3)));
 }
 
 XLATensorPtr exp(const XLATensorPtr& input) {

@@ -60,20 +60,11 @@ def _aten_add(x, y, *, alpha=1):
   return x + y * alpha
 
 
-@op(torch.ops.aten.add_, is_jax_func=False)
-def _aten_add_inplace(self, other, *, alpha):
-  if isinstance(other, XLATensor2):
-    self._elem += alpha * other._elem
-  else:
-    self._elem += alpha * other
-  return self
-
-
 @op(torch.ops.aten.copy_, is_jax_func=False)
 def _aten_copy(x, y, memory_format=None):
-  if isinstance(x, XLATensor2):
+  if isinstance(x, tensor.XLATensor2):
     x._elem = y._elem
-  elif isinstance(x, SliceView):
+  elif isinstance(x, tensor.SliceView):
     x.mutate(y)
   return x
 
@@ -1693,3 +1684,62 @@ def _aten_scalar_tensor(s,
     dtype = tensor.t2j_dtype(dtype)
     return jnp.array(s, dtype=dtype)
   return jnp.array(s)
+
+
+@op(torch.ops.aten.to.device)
+def _aten_to_device(x,device, dtype):
+  return x
+
+
+@op(torch.ops.aten.max_pool2d_with_indices_backward)
+def max_pool2d_with_indices_backward_custom(grad_output, self, kernel_size, stride, padding, dilation, ceil_mode, indices):
+
+  """
+  Approximates the gradient calculation of PyTorch's max_pool2d_with_indices_backward.
+
+  Args:
+      grad_output: The gradient tensor from the preceding layer.
+      self: The input tensor on which the original max pooling was performed.
+      kernel_size: The size of the pooling window.
+      stride: The stride of the pooling window.
+      padding: The padding applied during max pooling.
+      dilation: The dilation factor for the pooling operation.
+      ceil_mode: Whether to use ceil or floor when calculating output shapes.
+      indices: The indices of the maximum values, as produced by max_pool2d_with_indices.
+
+  Returns:
+      The calculated gradient with respect to the input (grad_input).
+  """
+
+  kH, kW = kernel_size
+  dH, dW = stride
+  padH, padW = padding
+  dilH, dilW = dilation
+
+  # Calculate output shape (may need adjustment based on ceil_mode)
+  out_shape = jnp.array(self.shape)
+  grad_input = jnp.zeros_like(self)
+
+  # Iterate over the flattened input and output tensors
+  for i, idx in enumerate(indices.flatten()):
+    # Calculate input coordinates corresponding to the maximum value
+    out_y, out_x = i // grad_output.shape[3], i % grad_output.shape[3]
+    in_y = out_y * dH - padH + out_y * (dilH - 1)
+    in_x = out_x * dW - padW + out_x * (dilW - 1)
+
+    # Scatter the gradient to the appropriate input locations (handling potential overlaps)
+    for y in range(in_y, in_y + kH):
+      for x in range(in_x, in_x + kW):
+        if 0 <= y < grad_input.shape[2] and 0 <= x < grad_input.shape[3]:
+          grad_input = grad_input.at[y, x].add(grad_output.flatten()[i])  
+
+  return grad_input
+
+
+@op(torch.ops.aten._local_scalar_dense)
+def _aten_local_scalar_dense(x):
+  return x.item()
+
+@op(torch.ops.aten.tensor_split.sections)
+def _aten_tensor_split(ary, indices_or_sections, axis=0):
+  return jnp.array_split(ary, indices_or_sections, axis)

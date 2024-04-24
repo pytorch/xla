@@ -1290,6 +1290,38 @@ at::Tensor XLANativeFunctions::embedding_dense_backward(
       num_weights, padding_idx, scale_grad_by_freq));
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::_embedding_bag_forward_only(
+    const at::Tensor& weight, const at::Tensor& indices,
+    const at::Tensor& offsets, bool scale_grad_by_freq, int64_t mode,
+    bool sparse, const c10::optional<at::Tensor>& per_sample_weights,
+    bool include_last_offset, int64_t padding_idx) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  if (mode == 1 || scale_grad_by_freq || sparse || padding_idx != -1) {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback,
+        ATEN_OP(_embedding_bag_forward_only)>::call(weight, indices, offsets,
+                                                    scale_grad_by_freq, mode,
+                                                    sparse, per_sample_weights,
+                                                    include_last_offset,
+                                                    padding_idx);
+  }
+  auto indices_tensor = bridge::GetXlaTensor(indices);
+  auto sample_weights =
+      per_sample_weights.has_value() && per_sample_weights.value().defined()
+          ? bridge::GetXlaTensor(per_sample_weights.value())
+          : tensor_methods::full_like(indices_tensor, 1.0,
+                                      *torch_xla::bridge::GetXlaDevice(weight),
+                                      at::ScalarType::Float);
+  auto result = tensor_methods::embedding_bag(
+      bridge::GetXlaTensor(weight), indices_tensor,
+      bridge::GetXlaTensor(offsets), mode, sample_weights, include_last_offset);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result)),
+                         bridge::AtenFromXlaTensor(std::get<1>(result)),
+                         bridge::AtenFromXlaTensor(std::get<2>(result)),
+                         bridge::AtenFromXlaTensor(std::get<3>(result)));
+}
+
 at::Tensor XLANativeFunctions::empty_symint(
     at::SymIntArrayRef sym_size, c10::optional<at::ScalarType> dtype,
     c10::optional<at::Layout> layout, c10::optional<at::Device> device,
@@ -3709,6 +3741,7 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
                                         scale_grad_by_freq, sparse);
   }
 
+  // TODO: We need to make use of the TPU embedding core here eventually.
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::embedding(
       bridge::GetXlaTensor(weight), bridge::GetXlaTensor(indices)));
@@ -3748,10 +3781,8 @@ at::Tensor XLANativeFunctions::narrow_copy_symint(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::pixel_shuffle(const at::Tensor& self,
                                              int64_t upscale_factor) {
-  XLA_CHECK(
-      !runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
-  return at::functionalization::functionalize_aten_op<ATEN_OP(
-      pixel_shuffle)>::call(self, upscale_factor);
+  return bridge::AtenFromXlaTensor(tensor_methods::pixel_shuffle(
+      bridge::GetXlaTensor(self), upscale_factor));
 }
 
 at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,

@@ -2,6 +2,7 @@
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
 #include "torch_xla/csrc/cross_replica_reduces.h"
+#include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 
@@ -79,8 +80,10 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
-void custom_sharding_(const XLATensorPtr& input,
-                      const std::shared_ptr<XLATensor::ShardingSpec>& spec);
+void custom_sharding_(
+    const XLATensorPtr& input,
+    const std::shared_ptr<XLATensor::ShardingSpec>& spec,
+    const CustomSharding::Type& type = CustomSharding::Type::kSharding);
 
 std::vector<XLATensorPtr> tpu_custom_call(
     const std::vector<XLATensorPtr>& inputs, const std::string& payload,
@@ -287,6 +290,8 @@ XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
 
 XLATensorPtr pdist_forward(const XLATensorPtr& input, double p);
 
+XLATensorPtr pixel_shuffle(const XLATensorPtr& self, int64_t upscale_factor);
+
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
 void celu_(XLATensorPtr& input, const at::Scalar& alpha);
 
@@ -375,6 +380,11 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                       const XLATensorPtr& indices,
                                       int64_t num_weights, int64_t padding_idx,
                                       bool scale_grad_by_freq);
+
+std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr, XLATensorPtr>
+embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
+              const XLATensorPtr& offsets, int64_t mode,
+              const XLATensorPtr& per_sample_weights, bool include_last_offset);
 
 XLATensorPtr embedding(const XLATensorPtr& weight, const XLATensorPtr& indices);
 

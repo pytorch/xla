@@ -1,3 +1,4 @@
+name: Build and test
 on:
   pull_request:
     branches:
@@ -18,8 +19,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Old CI workflow
   build:
-    name: "Build XLA"
+    name: "Build PyTorch/XLA (GPU)"
     uses: ./.github/workflows/_build.yml
     with:
       ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
@@ -28,20 +30,20 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cpu:
-    name: "CPU tests"
-    uses: ./.github/workflows/_test.yml
+  test-cpp-cpu:
+    name: "CPU C++ tests"
+    uses: ./.github/workflows/_test_cpp.yml
     needs: build
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
       timeout-minutes: 120
-      collect-coverage: false
+      collect-coverage: false  # TODO(yeounoh) separate from CPU coverage metrics
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cuda:
-    name: "GPU tests"
-    uses: ./.github/workflows/_test.yml
+  test-cpp-cuda:
+    name: "GPU C++ tests"
+    uses: ./.github/workflows/_test_cpp.yml
     needs: build
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
@@ -60,3 +62,52 @@ jobs:
       docker-image: ${{ needs.build.outputs.docker-image }}
     secrets:
       torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}
+
+  # New CI workflow
+  build-torch-xla:
+    name: "Build PyTorch/XLA (TPU)"
+    uses: ./.github/workflows/_build_torch_xla.yml
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
+  build-cuda-plugin:
+    name: "Build XLA CUDA plugin"
+    uses: ./.github/workflows/_build_plugin.yml
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
+  test-python-cpu:
+    name: "CPU Python tests"
+    uses: ./.github/workflows/_test_python.yml
+    needs: build-torch-xla
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
+      timeout-minutes: 120
+      collect-coverage: false
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
+  test-python-cuda:
+    name: "GPU Python tests"
+    uses: ./.github/workflows/_test_python.yml
+    needs: [build-torch-xla, build-cuda-plugin]
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+      runner: linux.8xlarge.nvidia.gpu
+      timeout-minutes: 300
+      collect-coverage: false
+      install-cuda-plugin: true
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
+  test-tpu:
+    name: "TPU tests"
+    uses: ./.github/workflows/_tpu_ci.yml
+    needs: build-torch-xla
+    # Only run this for HEAD and releases
+    if: github.event_name == 'push'
+

@@ -2,10 +2,10 @@ name: xla-test
 on:
   workflow_call:
     inputs:
-      docker-image:
+      dev-image:
         required: true
         type: string
-        description: Image to test on
+        description: Base image for builds
       runner:
         required: false
         type: string
@@ -22,16 +22,12 @@ on:
         default: 270
         description: |
           Set the maximum (in minutes) how long the workflow should take to finish
-      disable-pjrt:
+            timeout-minutes:
+      install-cuda-plugin:
         required: false
-        type: string
-        default: 0
-        description: Whether to disable PJRT tests
-      test-script:
-        required: false
-        type: string
-        default: test.sh
-        description: Which test script to run
+        type: boolean
+        default: false
+        description: Whether to install CUDA plugin package
 
     secrets:
       gcloud-service-key:
@@ -40,14 +36,15 @@ on:
 jobs:
   test:
     runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.dev-image }}
+      options: "${{ inputs.install-cuda-plugin && '--gpus all' || '' }} --shm-size 16g"
     strategy:
       fail-fast: false
       matrix:
         include:
           # Use readable strings as they define the workflow titles.
           - run_benchmark_tests: 'benchmark_tests'
-          - run_cpp_tests1: 'cpp_tests1'
-          - run_cpp_tests2: 'cpp_tests2'
           - run_python_tests: 'python_tests'
             run_xla_op_tests1: 'xla_op1'
           - run_python_tests: 'python_tests'
@@ -58,61 +55,80 @@ jobs:
             run_torch_mp_op_tests: 'torch_mp_op'
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
-      DOCKER_IMAGE: ${{ inputs.docker-image }}
-      WORKDIR: /var/lib/jenkins/workspace
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
-      XLA_SKIP_TORCH_OP_TESTS: ${{ inputs.disable-pjrt }}
-      XLA_SKIP_MP_OP_TESTS: ${{ inputs.disable-pjrt }}
       RUN_BENCHMARK_TESTS: ${{ matrix.run_benchmark_tests }}
-      RUN_CPP_TESTS1: ${{ matrix.run_cpp_tests1 }}
-      RUN_CPP_TESTS2: ${{ matrix.run_cpp_tests2 }}
       RUN_PYTHON_TESTS: ${{ matrix.run_python_tests }}
       RUN_XLA_OP_TESTS1: ${{ matrix.run_xla_op_tests1 }}
       RUN_XLA_OP_TESTS2: ${{ matrix.run_xla_op_tests2 }}
       RUN_XLA_OP_TESTS3: ${{ matrix.run_xla_op_tests3 }}
       RUN_TORCH_MP_OP_TESTS: ${{ matrix.run_torch_mp_op_tests }}
+      BAZEL_JOBS: 16
+      BAZEL_REMOTE_CACHE: 1
     steps:
-      - name: Setup Linux
-        uses: pytorch/test-infra/.github/actions/setup-linux@main
-      - name: Setup SSH (Click me for login details)
-        uses: pytorch/test-infra/.github/actions/setup-ssh@main
+      - name: Setup gcloud
+        shell: bash
+        run: |
+          echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
+      - name: Fetch wheels
+        uses: actions/download-artifact@v4
         with:
-          github-secret: ${{ secrets.GITHUB_TOKEN }}
-          instructions: |
-            Tests are done inside the container, to start an interactive session run:
-              docker exec -it $(docker container ps --format '{{.ID}}') bash
-      - name: Install gcloud CLI
-        if: ${{ inputs.collect-coverage }}
+          name: torch-xla-wheels
+          path: /tmp/wheels/
+      - name: Fetch CUDA plugin
+        uses: actions/download-artifact@v4
+        with:
+          name: cuda-plugin
+          path: /tmp/wheels/
+        if: ${{ inputs.install-cuda-plugin }}
+      - name: Setup CUDA environment
         shell: bash
         run: |
-          sudo tee -a /etc/yum.repos.d/google-cloud-sdk.repo << EOM
-          [google-cloud-cli]
-          name=Google Cloud CLI
-          baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el8-x86_64
-          enabled=1
-          gpgcheck=1
-          repo_gpgcheck=0
-          gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-          EOM
-          sudo yum install -y google-cloud-cli
-      - name: Auth to GCR
-        if: ${{ inputs.collect-coverage }}
+          # TODO: Make PJRT_DEVICE=CPU work with XLA_REGISTER_INSTALLED_PLUGINS=1
+          echo "XLA_REGISTER_INSTALLED_PLUGINS=1" >> $GITHUB_ENV
+
+          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
+        if: ${{ inputs.install-cuda-plugin }}
+      - name: Check GPU
+        run: nvidia-smi
+        if: ${{ inputs.install-cuda-plugin }}
+      - name: Install wheels
         shell: bash
         run: |
-          echo "${GCLOUD_SERVICE_KEY}" | gcloud auth activate-service-account --key-file=-
-      - name: Download and run docker image from GCR
+          pip install /tmp/wheels/*.whl
+          # TODO: Add these in setup.py
+          pip install fsspec
+          pip install rich
+      - name: Record PyTorch commit
+        run: echo "PYTORCH_COMMIT=$(python -c 'import torch_xla.version; print(torch_xla.version.__torch_gitrev__)')" >> $GITHUB_ENV
+      - name: Checkout PyTorch Repo
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/pytorch
+          path: pytorch
+          ref: ${{ env.PYTORCH_COMMIT }}
+      - name: Checkout PyTorch/XLA Repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
+      - name: Extra CI deps
         shell: bash
         run: |
-          echo "DOCKER_IMAGE: ${DOCKER_IMAGE}"
-          docker pull "${DOCKER_IMAGE}"
-          pid=$(docker run --shm-size=16g ${GPU_FLAG:-} -e USE_COVERAGE -e XLA_SKIP_TORCH_OP_TESTS -e XLA_SKIP_MP_OP_TESTS -e RUN_BENCHMARK_TESTS -e RUN_CPP_TESTS1 -e RUN_CPP_TESTS2 -e RUN_PYTHON_TESTS -e RUN_XLA_OP_TESTS1 -e RUN_XLA_OP_TESTS2 -e RUN_XLA_OP_TESTS3 -e RUN_TORCH_MP_OP_TESTS -t -d -w "$WORKDIR" "${DOCKER_IMAGE}")
-          echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
-          echo "pid=${pid}" >> "${GITHUB_ENV}"
+          set -x
+
+          pip install expecttest unittest-xml-reporting
+
+          if [[ ! -z "$RUN_BENCHMARK_TESTS" ]]; then
+            pip install -r pytorch/xla/benchmarks/requirements.txt
+          fi
       - name: Test
         shell: bash
         run: |
-          docker exec --privileged -u jenkins "${pid}" bash -c '.circleci/${{ inputs.test-script }}'
+          source pytorch/xla/.circleci/common.sh
+
+          run_torch_xla_tests pytorch/ pytorch/xla/ $USE_COVERAGE
       - name: Upload coverage results
         if: ${{ inputs.collect-coverage }}
         shell: bash
@@ -158,8 +174,3 @@ jobs:
                 gsutil cp inc_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
               fi
             fi
-
-      - name: Teardown Linux
-        uses: pytorch/test-infra/.github/actions/teardown-linux@main
-        if: always()
-

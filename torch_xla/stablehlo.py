@@ -1,17 +1,13 @@
 import copy
 from dataclasses import dataclass
 import enum
-import itertools
 import json
-import shutil
 import os
-import re
 from typing import List, Tuple, Optional, Mapping, Any, Dict
 import dataclasses
 
 import numpy as np
 import torch
-from torch import nn
 from torch.fx import _pytree as fx_pytree
 import torch_xla
 from torch_xla.core import xla_model as xm
@@ -19,13 +15,10 @@ from torch_xla.core import dynamo_bridge
 from torch_xla.debug import metrics
 import torch_xla.experimental.quantized
 from torch_xla.experimental.unbounded_dynamism_export import exported_program_has_symbolic_input_shape, process_exported_program_with_symbolic_input
-import torch._dynamo as torchdynamo
 from torch.utils import _pytree as pytree
 from torch._decomp import get_decompositions
 
-from typing import Tuple, Type, Callable
-
-import sys
+from typing import Tuple
 
 
 def _get_numpy_dtype(dtype):
@@ -63,6 +56,9 @@ class StableHLOExportOptions:
   # Inline all constants in StableHLO if True. Otherwise only
   # special constants (0 and 1) are inlined.
   inline_all_constant: bool = True
+
+  # Whether to export the weights
+  export_weights: bool = True
 
 
 class StableHLOGraphModule:
@@ -432,11 +428,15 @@ def _exported_program_to_stablehlo_bundle(exported_model,
       output_pytree_spec=pytree.treespec_dumps(
           exported_model.call_spec.out_spec),
   )
+
+  exported_state_dict = {}
+  if options.export_weights:
+    exported_state_dict = pytree.tree_map_only(
+        torch.Tensor, lambda x: x.detach().cpu().numpy(), state_dict)
+
   bundle = StableHLOModelBundle(
       stablehlo_funcs=[StableHLOFunc(meta, stablehlo_content, stablehlo_text)],
-      state_dict=pytree.tree_map_only(torch.Tensor,
-                                      lambda x: x.detach().cpu().numpy(),
-                                      state_dict),
+      state_dict=exported_state_dict,
       additional_constants=additional_constants,
   )
 

@@ -148,9 +148,12 @@ xla::XlaOp BuildAddcmul(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
 xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
                              bool use_hamming, bool use_chebyshev);
 
+xla::XlaOp BuildPixelShuffle(xla::XlaOp input, int64_t upscale_factor);
+
 xla::XlaOp BuildUpperTriangle(xla::XlaOp input);
 
-xla::XlaOp BuildCustomSharding(const xla::XlaOp& input);
+xla::XlaOp BuildCustomSharding(const xla::XlaOp& input, const std::string& type,
+                               const xla::Shape& output_shape);
 
 std::vector<xla::XlaOp> BuildTpuCustomCall(
     const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,

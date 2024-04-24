@@ -80,11 +80,12 @@ class ShardingUtil {
   // based on the `sharding` spec. REPLICATED sharding should result in shards
   // identical to the input; OTHERS (tiled) sharding result in shards where
   // each data dimension is sharded across devices along the same dimension in
-  // the `tile_assignment`; the returned tensor shards vector is indexed by the
-  // device IDs. There is no data duplication. Shards are not padded in case the
-  // input tensor is not evenly partitionable, unless `padded` is set.
-  // The the returned tensors will be in 1:1 correspondence with the `devices`
-  // vector, so the `i`th result will belong on the `i`th device.
+  // the `tile_assignment`; the returned tensor shards vector is
+  // indexed by the device IDs. There is no data duplication. Shards are not
+  // padded in case the input tensor is not evenly partitionable, unless
+  // `padded` is set. The the returned tensors will be in 1:1 correspondence
+  // with the `devices` vector, so the `i`th result will belong on the `i`th
+  // device.
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
       const std::vector<std::string>& devices, bool padded = true);

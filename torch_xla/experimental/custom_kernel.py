@@ -5,28 +5,13 @@ import warnings
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.distributed.spmd as xs
 
 from typing import List, Callable
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
 _XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
-
-XLA_LIB.define(
-    "tpu_custom_call_(Tensor(a!) output, Tensor[] inputs, str payload) -> ()",)
-
-
-@impl(XLA_LIB, "tpu_custom_call_", "XLA")
-def tpu_custom_call_xla_(output: torch.Tensor, inputs: List[torch.Tensor],
-                         payload: str):
-  torch_xla._XLAC._xla_tpu_custom_call_(output, inputs, payload)
-
-
-@impl(XLA_LIB, "tpu_custom_call_", "CompositeExplicitAutograd")
-def tpu_custom_call_(output: torch.Tensor, inputs: List[torch.Tensor],
-                     payload: str):
-  # Do nothing for non-xla tensor.
-  return
 
 
 def _extract_backend_config(
@@ -184,14 +169,28 @@ class FlashAttention(torch.autograd.Function):
   }
 
   @staticmethod
-  def forward(ctx, q, k, v, causal=False):
+  def forward(ctx, q, k, v, causal=False, partition_spec=None, mesh=None):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
     from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
 
     ctx.causal = causal
+    ctx.partition_spec = partition_spec
+    ctx.mesh = mesh
+    ctx.full_shape = None
     save_residuals = q.requires_grad or k.requires_grad or v.requires_grad
+
+    # SPMD integration.
+    # mark_sharding is in-placed, and therefore save the full q, k, v for the backward.
+    full_q = q
+    full_k = k
+    full_v = v
+    if partition_spec is not None:
+      ctx.full_shape = q.shape
+      q = xs.enable_manual_sharding(q, partition_spec, mesh=mesh).global_tensor
+      k = xs.enable_manual_sharding(k, partition_spec, mesh=mesh).global_tensor
+      v = xs.enable_manual_sharding(v, partition_spec, mesh=mesh).global_tensor
 
     # It returns the shape and type of o, l, m.
     def shape_dtype(q, *arg):
@@ -224,11 +223,24 @@ class FlashAttention(torch.autograd.Function):
           False,
           static_argnums=range(5, 13))
       if not save_residuals:
+        # SPMD integration
+        if partition_spec is not None:
+          o = xs.disable_manual_sharding(
+              o, partition_spec, ctx.full_shape, mesh=mesh).global_tensor
         return o
       o, *aux = o
       l, m = (v[..., 0] for v in aux[-2:])
 
-    ctx.save_for_backward(q, k, v, o, l, m)
+    # SPMD integration
+    if partition_spec is not None:
+      o = xs.disable_manual_sharding(
+          o, partition_spec, ctx.full_shape, mesh=mesh).global_tensor
+      l = xs.disable_manual_sharding(
+          l, partition_spec[0:3], ctx.full_shape[0:3], mesh=mesh).global_tensor
+      m = xs.disable_manual_sharding(
+          m, partition_spec[0:3], ctx.full_shape[0:3], mesh=mesh).global_tensor
+
+    ctx.save_for_backward(full_q, full_k, full_v, o, l, m)
     return o
 
   @staticmethod
@@ -237,6 +249,9 @@ class FlashAttention(torch.autograd.Function):
 
     q, k, v, o, l, m = ctx.saved_tensors
     causal = ctx.causal
+    partition_spec = ctx.partition_spec
+    mesh = ctx.mesh
+    full_shape = ctx.full_shape
     grad_q = grad_k = grad_v = None
 
     grad_i = torch.sum(
@@ -249,6 +264,20 @@ class FlashAttention(torch.autograd.Function):
                                         [FlashAttention.MIN_BLOCK_SIZE])
     expanded_grad_i = grad_i.unsqueeze(-1).expand(
         [-1 for _ in grad_i.shape] + [FlashAttention.MIN_BLOCK_SIZE])
+
+    # SPMD integration
+    if partition_spec is not None:
+      q = xs.enable_manual_sharding(q, partition_spec, mesh=mesh).global_tensor
+      k = xs.enable_manual_sharding(k, partition_spec, mesh=mesh).global_tensor
+      v = xs.enable_manual_sharding(v, partition_spec, mesh=mesh).global_tensor
+      expanded_l = xs.enable_manual_sharding(
+          expanded_l, partition_spec, mesh=mesh).global_tensor
+      expanded_m = xs.enable_manual_sharding(
+          expanded_m, partition_spec, mesh=mesh).global_tensor
+      grad_output = xs.enable_manual_sharding(
+          grad_output, partition_spec, mesh=mesh).global_tensor
+      expanded_grad_i = xs.enable_manual_sharding(
+          expanded_grad_i, partition_spec, mesh=mesh).global_tensor
 
     if ctx.needs_input_grad[0]:
       payload, _ = trace_pallas(
@@ -319,7 +348,16 @@ class FlashAttention(torch.autograd.Function):
     if ctx.needs_input_grad[2]:
       grad_v = grads[1]
 
-    return grad_q, grad_k, grad_v, None
+    # SPMD integration
+    if partition_spec is not None:
+      grad_q = xs.disable_manual_sharding(
+          grad_q, partition_spec, full_shape, mesh=mesh).global_tensor
+      grad_k = xs.disable_manual_sharding(
+          grad_k, partition_spec, full_shape, mesh=mesh).global_tensor
+      grad_v = xs.disable_manual_sharding(
+          grad_v, partition_spec, full_shape, mesh=mesh).global_tensor
+
+    return grad_q, grad_k, grad_v, None, None, None
 
 
 def flash_attention(
@@ -327,8 +365,10 @@ def flash_attention(
     k,  # [batch_size, num_heads, kv_seq_len, d_model]
     v,  # [batch_size, num_heads, kv_seq_len, d_model]
     causal=False,
-):
-  return FlashAttention.apply(q, k, v, causal)
+    *,
+    partition_spec=None,
+    mesh=None):
+  return FlashAttention.apply(q, k, v, causal, partition_spec, mesh)
 
 
 XLA_LIB.define(
