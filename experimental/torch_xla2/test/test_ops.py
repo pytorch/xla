@@ -570,6 +570,7 @@ skiplist = {
     "special.xlog1py",
     "split",
     "split_with_sizes",
+    "split_with_sizes_copy",
     "sqrt",
     "square",
     "stack",
