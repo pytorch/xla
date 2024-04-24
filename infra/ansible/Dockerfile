@@ -22,6 +22,7 @@ RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" 
 WORKDIR /tmp/wheels
 COPY --from=build /src/pytorch/dist/*.whl ./
 COPY --from=build /src/pytorch/xla/dist/*.whl ./
+COPY --from=build /dist/torchvision*.whl ./
 
 RUN echo "Installing the following wheels" && ls *.whl
 RUN pip install *.whl
