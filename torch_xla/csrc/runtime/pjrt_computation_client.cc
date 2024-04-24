@@ -691,8 +691,73 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
   return literals;
 }
 
+// this is needed to be used to delete in
+// delete static_cast<TorchXLADLMTensor*>(arg->manager_ctx);
+struct TorchXLADLMTensor {
+  std::unique_ptr<xla::PjRtBuffer::ExternalReference> external_reference;
+
+  std::vector<int64_t> shape;
+  std::vector<int64_t> strides;
+  DLManagedTensor tensor;
+};
+
+void TorchXLADLMTensorDeleter(DLManagedTensor* t) {
+  if (t) {
+    delete static_cast<TorchXLADLMTensor*>(t->manager_ctx);
+  }
+}
+
+std::vector<int64_t> StridesForShape(xla::PrimitiveType element_type,
+                                     absl::Span<const int64_t> dimensions,
+                                     const xla::Layout& layout) {
+  XLA_CHECK_EQ(dimensions.size(), layout.minor_to_major().size());
+  std::vector<int64_t> strides;
+  strides.resize(dimensions.size());
+  int64_t stride = 1;
+  for (int i : layout.minor_to_major()) {
+    strides[i] = stride;
+    stride *= dimensions[i];
+  }
+  return strides;
+}
+
 DLManagedTensor* PjRtComputationClient::DataToDLPackManagedTensor(ComputationClient::DataPtr data) {
-  return nullptr;
+  std::shared_ptr<PjRtData> pjrt_data = std::dynamic_pointer_cast<PjRtData>(data);
+  xla::PjRtBuffer* pjrt_buffer = pjrt_data->buffer.get();
+
+  if (pjrt_buffer->IsTuple()) {
+    XLA_ERROR() << "Unimplemented. BufferToDLPackManagedTensor is not implemented for tuple buffers.";
+  }
+  if (pjrt_buffer->has_dynamic_dimensions()) {
+    XLA_ERROR() << "Unimplemented. DynamicShape is not implemented in DLPack.";
+  }
+
+  TorchXLADLMTensor* torchXlaDLMTensor(new TorchXLADLMTensor);
+  DLTensor& dt = torchXlaDLMTensor->tensor.dl_tensor;
+  {
+    torchXlaDLMTensor->external_reference = pjrt_buffer->AcquireExternalReference().value();
+    xla::PjRtFuture<absl::Status> future = pjrt_buffer->GetReadyFuture();
+    absl::Status status = future.Await();
+    XLA_CHECK_OK(status);
+  }
+  // pack->buffer_reference = nb::borrow<nb::object>(py_buffer); // xw32: should we do it?
+
+  dt.data = torchXlaDLMTensor->external_reference->OpaqueDeviceMemoryDataPointer();
+  torchXlaDLMTensor->tensor.manager_ctx = torchXlaDLMTensor;
+  torchXlaDLMTensor->tensor.deleter = TorchXLADLMTensorDeleter;
+  dt.device = DLDeviceForDevice(*pjrt_buffer->device());
+  dt.device.device_id = pjrt_buffer->device()->local_hardware_id();
+  dt.ndim = pjrt_buffer->dimensions().size();
+  // dt.dtype = PrimitiveTypeToDLDataType(pjrt_buffer->element_type()); // xw32 TODO
+
+  torchXlaDLMTensor->shape = std::vector<int64_t>(pjrt_buffer->dimensions().begin(), pjrt_buffer->dimensions().end());
+  xla::Layout xla_layout = xla::GetXlaLayoutUnsafe(pjrt_buffer->layout());
+  torchXlaDLMTensor->strides = StridesForShape(pjrt_buffer->element_type(), pjrt_buffer->dimensions(), xla_layout);
+  dt.shape = reinterpret_cast<std::int64_t*>(torchXlaDLMTensor->shape.data());
+  dt.strides = reinterpret_cast<std::int64_t*>(torchXlaDLMTensor->strides.data());
+  dt.byte_offset = 0;
+
+  return &(torchXlaDLMTensor->tensor);
 }
 
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
