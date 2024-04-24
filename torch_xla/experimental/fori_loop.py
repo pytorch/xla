@@ -94,6 +94,10 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       res1 = [1, 2, 3].extend([4, 5])
       print("res0: ", res0)
       print("res1: ", res1)
+      thislist = ["apple", "banana", "cherry"]
+      tropical = ["mango", "pineapple", "papaya"]
+      thislist.extend(tropical)
+      print(thislist)
       res = list(body_fn(*carried_inputs)).extend(additional_inputs)
       print("res: ", res)
       return list(body_fn(*carried_inputs)).extend(additional_inputs)
