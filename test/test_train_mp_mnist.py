@@ -170,6 +170,7 @@ def train_mnist(flags, **kwargs):
     total_samples = 0
     correct = 0
     model.eval()
+    print("loader: ", loader)
     for data, target in loader:
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
@@ -185,7 +186,7 @@ def train_mnist(flags, **kwargs):
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    train_loop_fn(train_device_loader, epoch)
+    # train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
     accuracy = test_loop_fn(test_device_loader)

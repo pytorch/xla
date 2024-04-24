@@ -117,7 +117,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       # print("res: ", res)
       # return list(body_fn(*carried_inputs)).extend(additional_inputs)
       # self.named_parameters
-      weight = self.linear.weight
+      # weight = self.linear.weight
       res = list(body_fn(*carried_inputs))
       # print("res: ", res)
       # trynewres = res[:-1] + [res[-1]]
