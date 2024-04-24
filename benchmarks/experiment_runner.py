@@ -249,12 +249,6 @@ class ExperimentRunner:
     benchmark_model = self.model_loader.load_model(model_config,
                                                    benchmark_experiment)
 
-    # PyTorch settings
-    # Activate view-replay on AOTAutograd.
-    # See: https://github.com/pytorch/pytorch/pull/124488
-    torch._functorch.config.view_replay_for_aliased_outputs = True
-
-
     # Repeat the experiment and accumulate metrics.
     last_output = None
     with benchmark_model.pick_grad():
