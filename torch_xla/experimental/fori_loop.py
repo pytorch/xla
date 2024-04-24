@@ -80,7 +80,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       res1 = body_fn(*carried_inputs)
       print("res1: ", res1)
       print("type res1: ", type(res1))
-      res2 = res1.append(*additional_inputs)
+      res2 = list(res1).append(*additional_inputs)
       print("res2: ", res2)
       print("type res2: ", type(res2))
       return list(body_fn(*carried_inputs)).append(*additional_inputs)
