@@ -41,8 +41,6 @@ spec:
     - bash
     - -cxe
     - |
-      # Torchvision installed from a commit requires torch, need to install after torch is compiled.
-      pip install --no-use-pep517 "git+https://github.com/pytorch/vision.git@$(cat /src/pytorch/.github/ci_commit_pins/vision.txt)"
       pip install expecttest==0.1.6
       pip install rich
       pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
