@@ -114,7 +114,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       # res = mid.extend(list(additional_inputs))
       res = list(body_fn(*carried_inputs))
       res.extend(additional_inputs)
-      print("res: ", res)
+      # print("res: ", res)
       # return list(body_fn(*carried_inputs)).extend(additional_inputs)
       return res
     return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
