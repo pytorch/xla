@@ -91,8 +91,8 @@ def test():
   test_loss /= 20
   test_losses.append(test_loss)
   print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-    test_loss, correct, len(test_loader.dataset),
-    100. * correct / len(test_loader.dataset)))
+    test_loss, correct, 20,
+    100. * correct / 20))
 
 # run test model
 test()
