@@ -118,7 +118,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       # return list(body_fn(*carried_inputs)).extend(additional_inputs)
       res = list(body_fn(*carried_inputs))
       print("res: ", res)
-      newres = res[:-1] + additional_inputs + res[-1]
+      newres = res[:-1] + list(additional_inputs) + res[-1]
       print("newres: ", newres)
       res.insert(-2, *additional_inputs)
       print("new res: ", res)
