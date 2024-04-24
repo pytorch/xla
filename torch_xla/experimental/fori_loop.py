@@ -90,6 +90,8 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       print("list(body_fn(*carried_inputs)): ", list(body_fn(*carried_inputs)))
       print("additional_inputs: ", additional_inputs)
       print("list(body_fn(*carried_inputs)).extend(additional_inputs): ", list(body_fn(*carried_inputs)).extend(additional_inputs))
+      res0 = list([1, 2, 3]).extend((4, 5))
+      print("res0: ", res0)
       res = list(body_fn(*carried_inputs)).extend(additional_inputs)
       print("res: ", res)
       return list(body_fn(*carried_inputs)).extend(additional_inputs)
