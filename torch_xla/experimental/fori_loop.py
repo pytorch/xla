@@ -63,8 +63,28 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
   if additional_inputs is None:
     additional_inputs = tuple()
+    return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
+  else:
+    # modify body_fn return with additional_inputs
+    def new_body_fn(carried_inputs):
+      # new_lower = torch.add(one_value, lower)
+      # output_value = linear_0(input_value)
+      weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+      bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+      # return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+      #     one_value, x), input_value.clone(), bias.clone(), weight.clone(
+      #     ), output_value.clone()
+      # return body_fn(carried_inputs), weight.clone(), bias.clone()
+      res1 = body_fn(carried_inputs)
+      print("res1: ", res1)
+      print("type res1: ", type(res1))
+      res2 = res1.append(additional_inputs)
+      print("res2: ", res2)
+      print("type res2: ", type(res2))
+      return (body_fn(carried_inputs)).append(additional_inputs)
+    return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
   print("$$$ additional_inputs: ", additional_inputs)
-  return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
+  # return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
 
 
 def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
