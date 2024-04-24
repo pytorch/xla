@@ -71,8 +71,8 @@ source ~/.bashrc
 
 ### Wheel
 ```
-pip3 install torch==2.2.0
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.2.0-cp38-cp38-manylinux_2_28_x86_64.whl
+pip3 install torch==2.3.0
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.3.0-cp310-cp310-manylinux_2_28_x86_64.whl
 ```
 
 ## Run a simple model
