@@ -91,6 +91,14 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       print("additional_inputs: ", additional_inputs)
       # print("type additional_inputs: ", type(additional_inputs))
       # print("list(body_fn(*carried_inputs)).extend(list(additional_inputs)): ", list(body_fn(*carried_inputs)).extend(list(additional_inputs)))
+      aaa = [1, 2, 3]
+      bbb = [4, 5]
+      ccc = (4, 5)
+      aaa.extend(bbb)
+      print(aaa)
+      aaa.extend(ccc)
+      print(aaa)
+
       res0 = [1, 2, 3].extend((4, 5))
       res1 = [1, 2, 3].extend([4, 5])
       print("res0: ", res0)
