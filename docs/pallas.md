@@ -49,3 +49,9 @@ You can just use it like any other torch.ops.
 
 ## HuggingFace Llama 3 Example
 We have a fork of HF Llama 3 to demonstrate a potential integration [here]().
+
+## Dependencies
+The Pallas integration depends on JAX to function. However, not every JAX version is compatible with your installed PyTorch/XLA. To install the proper JAX:
+```bash
+pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+```
