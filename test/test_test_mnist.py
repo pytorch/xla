@@ -77,7 +77,7 @@ optimizer = optim.SGD(network.parameters(), lr=learning_rate,
 train_losses = []
 train_counter = []
 test_losses = []
-test_counter = [i*len(train_loader.dataset) for i in range(n_epochs + 1)]
+test_counter = [i*20 for i in range(n_epochs + 1)]
 
 
 def test():
