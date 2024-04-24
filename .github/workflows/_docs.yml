@@ -47,7 +47,8 @@ jobs:
     - name: Merge changes
       shell: bash
       run: |
-        subdir=${{ env.BRANCH_NAME == 'master' && 'master' || format('{0}/{1}', 'release/', env.BRANCH_NAME) }}
+        subdir=${{ env.BRANCH_NAME == 'master' && 'master' || format('{0}/{1}', 'release', env.BRANCH_NAME) }}
+        mkdir -p gh-pages/$subdir
         cp -fR pytorch/xla/docs/build/* gh-pages/$subdir
     - name: Show diff
       shell: bash
