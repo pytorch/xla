@@ -11,9 +11,6 @@ on:
         type: string
         description: Runner type for the test
         default: linux.4xlarge
-    secrets:
-      torchxla-bot-token:
-        required: true
 jobs:
   push-docs:
     runs-on: ${{ inputs.runner }}
