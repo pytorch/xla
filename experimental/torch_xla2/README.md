@@ -80,9 +80,10 @@ Now let's execute a model under torch_xla2. We'll start with a simple 2-layer mo
 it can be in theory any instance of `torch.nn.Module`.
 
 ```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-import torch_xla2
-from torch import nn
 
 class MyModel(nn.Module):
     def __init__(self):
@@ -101,8 +102,8 @@ class MyModel(nn.Module):
 m = MyModel()
 
 # Execute this model using torch
-inputs = (torch.randn(3, 3, 28, 28), )
-print(m(*inputs))
+inputs = torch.randn(3, 3, 28, 28)
+print(m(inputs))
 ```
 
 This model `m` contains 2 parts: the weights that is stored inside of the model
@@ -114,6 +115,7 @@ to `XLA` devices. This can be accomplished with `torch_xla2.tensor.move_to_devic
 We need move both the weights and the input to xla devices:
 
 ```python
+import torch_xla2
 from torch.utils import _pytree as pytree
 from torch_xla2.tensor import move_to_device
 
@@ -121,7 +123,7 @@ inputs = move_to_device(inputs)
 new_state_dict = pytree.tree_map_only(torch.Tensor, move_to_device, m.state_dict())
 m.load_state_dict(new_state_dict, assign=True)
 
-res = m(*inputs)
+res = m(inputs)
 
 print(type(res))  # outputs XLATensor2
 ```
