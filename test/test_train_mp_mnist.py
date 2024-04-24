@@ -170,8 +170,8 @@ def train_mnist(flags, **kwargs):
     total_samples = 0
     correct = 0
     model.eval()
-    print("loader: ", loader)
-    print("type loader: ", type(loader))
+    # print("loader: ", loader)
+    # print("type loader: ", type(loader))
     for data, target in loader:
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
