@@ -431,6 +431,11 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
   return literals;
 }
 
+DLManagedTensor* IfrtComputationClient::DataToDLPackManagedTensor(ComputationClient::DataPtr data) {
+  XLA_ERROR() << "Not implemented yet.";
+  return nullptr;
+}
+
 std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
   metrics::TimedSection timed(CompileMetric());

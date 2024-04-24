@@ -304,6 +304,7 @@ class ComputationClient {
   // python while holding the GIL can cause deadlocks!
   virtual std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) = 0;
+  virtual DLManagedTensor* DataToDLPackManagedTensor(DataPtr data) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(

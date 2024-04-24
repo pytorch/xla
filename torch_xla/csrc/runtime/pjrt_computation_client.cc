@@ -691,6 +691,10 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
   return literals;
 }
 
+DLManagedTensor* PjRtComputationClient::DataToDLPackManagedTensor(ComputationClient::DataPtr data) {
+  return nullptr;
+}
+
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
   metrics::TimedSection timed(CompileMetric());

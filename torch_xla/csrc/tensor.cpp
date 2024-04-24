@@ -212,21 +212,21 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   }
   if (up_to_date) {
     torch::lazy::BackendDataPtr handle = CurrentDataHandle();
-    if (handle != nullptr) {
+    if (handle != nullptr) { // xw32: handle is null in my case.
       XLA_CHECK(handle->HasValue())
           << "Trying to access XLA data while an async operation is in flight: "
           << handle->shape();
       return handle;
     }
   }
-  if (ir_value) {
+  if (ir_value) { // xw32: null in my case
     // The view gave us an updated IR value. We usually do not have a valid IR
     // value field together with a view, but to allow code reuse in
     // ApplyPendingGraph() we temporarily set it here. The following call to
     // ApplyPendingGraph() will clear it.
     AssignIrValue(std::move(ir_value));
   }
-  if (data()->ir_value) {
+  if (data()->ir_value) { // xw32: true 
     torch::lazy::BackendDataPtr node_data =
         torch::lazy::getBackend()->GetComputationDataFromNode(
             data()->ir_value.node.get());
@@ -235,7 +235,7 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     if (node_data) {
       data()->ir_value = torch::lazy::Value();
       data()->handle = node_data;
-    } else {
+    } else { // xw32: true
       ApplyPendingGraph();
     }
   } else {
@@ -495,6 +495,7 @@ XLATensorPtr XLATensor::CreateViewTensor(ViewInfo view_info) const {
   return new_tensor;
 }
 
+// Convert the XLATensor to an eager tensor.
 at::Tensor XLATensor::ToTensor(bool detached) {
   at::Tensor tensor;
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();

@@ -2447,7 +2447,7 @@ class TestGeneric(test_utils.XlaTestCase):
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
-  def test_aten_move_xla_to_cuda_zero_copy(self):
+  def test_aten_move_xla_to_cuda_zero_copy(self): # WIP
     met.clear_counters()
     xla_tensor = torch.arange(5, device=xm.xla_device())
     cuda_tensor = xla_tensor.cuda()
