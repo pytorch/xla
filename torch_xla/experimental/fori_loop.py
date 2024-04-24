@@ -85,7 +85,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       # res2 = (res1, ) + additional_inputs
       # print("res2: ", res2)
       # print("type res2: ", type(res2))
-      return list(body_fn(*carried_inputs)).extend(*additional_inputs)
+      return list(body_fn(*carried_inputs)).extend(additional_inputs)
     return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
   print("$$$ additional_inputs: ", additional_inputs)
   # return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
