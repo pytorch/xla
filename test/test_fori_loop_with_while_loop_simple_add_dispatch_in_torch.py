@@ -130,6 +130,8 @@ class WhileLoopTest(unittest.TestCase):
 
     return self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
 
+###
+#
   def test_while_loop_tpu_simple_linear_wrapper(self):
 
     print("$$$ test_while_loop_tpu_simple_linear_wrapper !!!")
@@ -148,8 +150,7 @@ class WhileLoopTest(unittest.TestCase):
       weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
       bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
       return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-          one_value, x), input_value.clone(), bias.clone(), weight.clone(
-          ), output_value.clone()
+          one_value, x), input_value.clone(), output_value.clone()
 
     upper = torch.tensor([1], dtype=torch.int32, device=device)
     lower = torch.tensor([0], dtype=torch.int32, device=device)
