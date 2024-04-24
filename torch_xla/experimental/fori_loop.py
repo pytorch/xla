@@ -85,6 +85,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       # res2 = (res1, ) + additional_inputs
       # print("res2: ", res2)
       # print("type res2: ", type(res2))
+      print("before it")
       res = list(body_fn(*carried_inputs)).extend(additional_inputs)
       print("res: ", res)
       return list(body_fn(*carried_inputs)).extend(additional_inputs)
