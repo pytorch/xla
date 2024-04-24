@@ -91,29 +91,29 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       print("additional_inputs: ", additional_inputs)
       # print("type additional_inputs: ", type(additional_inputs))
       # print("list(body_fn(*carried_inputs)).extend(list(additional_inputs)): ", list(body_fn(*carried_inputs)).extend(list(additional_inputs)))
-      aaa = [1, 2, 3]
-      bbb = [4, 5]
-      ccc = (4, 5)
-      aaa.extend(bbb)
-      print(aaa)
-      aaa.extend(ccc)
-      print(aaa)
-
-      res0 = [1, 2, 3].extend((4, 5))
-      res1 = [1, 2, 3].extend([4, 5])
-      print("res0: ", res0)
-      print("res1: ", res1)
-      thislist = ["apple", "banana", "cherry"]
-      tropical = ["mango", "pineapple", "papaya"]
-      thislist.extend(tropical)
-      print(thislist)
-      thislist = ["apple", "banana", "cherry"]
-      thistuple = ("kiwi", "orange")
-      thislist.extend(thistuple)
-      print(thislist)
-      mid = list(body_fn(*carried_inputs))
+      # aaa = [1, 2, 3]
+      # bbb = [4, 5]
+      # ccc = (4, 5)
+      # aaa.extend(bbb)
+      # print(aaa)
+      # aaa.extend(ccc)
+      # print(aaa)
+      # res0 = [1, 2, 3].extend((4, 5))
+      # res1 = [1, 2, 3].extend([4, 5])
+      # print("res0: ", res0)
+      # print("res1: ", res1)
+      # thislist = ["apple", "banana", "cherry"]
+      # tropical = ["mango", "pineapple", "papaya"]
+      # thislist.extend(tropical)
+      # print(thislist)
+      # thislist = ["apple", "banana", "cherry"]
+      # thistuple = ("kiwi", "orange")
+      # thislist.extend(thistuple)
+      # print(thislist)
+      # mid = body_fn(*carried_inputs)
       # res = mid.extend(list(additional_inputs))
-      res = mid.extend(additional_inputs)
+      res = body_fn(*carried_inputs)
+      res.extend(additional_inputs)
       print("res: ", res)
       return list(body_fn(*carried_inputs)).extend(additional_inputs)
     return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
