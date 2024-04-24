@@ -1,0 +1,5 @@
+-r dev-requirements.txt
+pytest
+pytest-xdist
+sentencepiece
+expecttest
