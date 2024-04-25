@@ -392,17 +392,15 @@ def paged_attention(q, k_pages, v_pages, lengths, page_indices,
   batch_size, num_heads, head_dim = q.shape
   num_kv_heads, _, page_size, head_dim_k = k_pages.shape
   batch_size_paged_indices, pages_per_sequence = page_indices.shape
-
+  q_output_dtype = torch.float32
   if (num_heads // num_kv_heads) % 8 != 0:
     q = q.reshape(batch_size, num_heads, 1, head_dim)
+    q_output_dtype = q.dtype
 
   page_indices_reshaped = page_indices.reshape(-1)
   buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
   step = torch.zeros((1,), dtype=torch.int32).to("xla")
   output_shape = torch.Size(list(q.shape[:-1]) + [1])
-  q_output_dtype = torch.float32
-  if (num_heads // num_kv_heads) % 8 != 0:
-    q_output_dtype = q.dtype
 
   output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
       [
