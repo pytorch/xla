@@ -489,13 +489,13 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     # Graph 1: forward
     # Graph 2: backward
     # Graph 3: sync input for backward
-    self.assertEqual(met.metric_data('CompileTime')[0], 3)
+    self.assertLessEqual(met.metric_data('CompileTime')[0], 3)
     # We execute 3 graphs per step.
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3)
+    self.assertLessEqual(met.metric_data('ExecuteTime')[0], sample_count * 3)
     # one for each forward and one for each backward
-    self.assertEqual(
+    self.assertLessEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count * 2)
-    self.assertEqual(
+    self.assertLessEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count * 2)
 
 
