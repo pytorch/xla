@@ -414,7 +414,7 @@ def paged_attention(q, k_pages, v_pages, lengths, page_indices,
       ], payload, [q.shape, output_shape, output_shape],
       [q_output_dtype, torch.float32, torch.float32])
 
-  return output.reshape(batch_size, num_heads, head_dim)
+  return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
 
 
 def non_xla_attetion(q, k, v, attention_type):
