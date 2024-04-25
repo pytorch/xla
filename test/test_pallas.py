@@ -485,7 +485,6 @@ class PallasTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_paged_attention_wrapper(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     from torch_xla.experimental.custom_kernel import paged_attention
     from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
 
@@ -542,14 +541,12 @@ class PallasTest(unittest.TestCase):
         torch.allclose(
             output.cpu()[seq_lens > 0],
             expected_output.cpu()[seq_lens > 0],
-            atol=1e-1,
-            rtol=1e-1))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+            atol=1e-5,
+            rtol=1e-5))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_paged_attention_wrapper_with_dynamo(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     from torch_xla.experimental.custom_kernel import paged_attention
     from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
 
@@ -619,9 +616,8 @@ class PallasTest(unittest.TestCase):
         torch.allclose(
             output.cpu()[seq_lens > 0],
             expected_output.cpu()[seq_lens > 0],
-            atol=1e-1,
-            rtol=1e-1))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+            atol=1e-5,
+            rtol=1e-5))
 
 
 if __name__ == '__main__':
