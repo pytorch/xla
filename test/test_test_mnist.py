@@ -175,6 +175,9 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.distributed.xla_backend
 
+import torch_xla.experimental.fori_loop
+from torch_xla.experimental.fori_loop import fori_loop
+
 
 class MNIST(nn.Module):
 
