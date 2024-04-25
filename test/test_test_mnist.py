@@ -249,7 +249,7 @@ def train_mnist(flags, **kwargs):
     # xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     # train_loop_fn(train_device_loader, epoch)
     # xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
-    accuracy = test_loop_fn(test_device_loader)
+    accuracy = test_loop_fn() # test_device_loader)
     xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(epoch, test_utils.now(), accuracy))
     max_accuracy = max(accuracy, max_accuracy)
     # test_utils.write_to_summary(writer, epoch, dict_to_write={'Accuracy/test': accuracy}, write_xla_metrics=True)
