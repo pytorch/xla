@@ -151,7 +151,7 @@ FLAGS = args_parse.parse_common_options(
     lr=0.01,
     target_accuracy=98.0,
     num_epochs=18,
-    opts=MODEL_OPTS.items(),
+    # opts=MODEL_OPTS.items(),
 )
 
 import os
