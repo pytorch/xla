@@ -240,6 +240,7 @@ def train_mnist(flags, **kwargs):
   # train_device_loader = pl.MpDeviceLoader(train_loader, device)
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   accuracy, max_accuracy = 0.0, 0.0
+
   for epoch in range(1, flags.num_epochs + 1):
     # xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     # train_loop_fn(train_device_loader, epoch)
@@ -250,21 +251,26 @@ def train_mnist(flags, **kwargs):
     # test_utils.write_to_summary(writer, epoch, dict_to_write={'Accuracy/test': accuracy}, write_xla_metrics=True)
     # if flags.metrics_debug: xm.master_print(met.metrics_report())
 
-  # ### fori_loop
-  # # torch.set_grad_enabled(False)
+  ### fori_loop
+  # torch.set_grad_enabled(False)
   # new_test_device_loader = pl.MpDeviceLoader(test_loader, device)
-  # upper = torch.tensor([flags.num_epochs + 1], dtype=torch.int32, device=device) # flags.num_epochs + 1
-  # lower = torch.tensor([1], dtype=torch.int32, device=device) # 1
-  # init_val = torch.tensor([1], dtype=torch.int32, device=device)
-  # # l_in_0 = torch.randn(10, device=xm.xla_device()) # test_device_loader
-  # # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-  # def body_fun(test_device_loader):
-  #   accuracy = test_loop_fn(test_device_loader)
-  #   max_accuracy = max(accuracy, max_accuracy)
-  #   return max_accuracy
+  upper = torch.tensor([flags.num_epochs + 1], dtype=torch.int32, device=device) # flags.num_epochs + 1
+  lower = torch.tensor([1], dtype=torch.int32, device=device) # 1
+  init_val = torch.tensor([1], dtype=torch.int32, device=device)
+  # l_in_0 = torch.randn(10, device=xm.xla_device()) # test_device_loader
+  # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+  def body_fun(test_device_loader):
+    res1 = torch.tensor([2], dtype=torch.int32, device=device)
+    res2 = torch.tensor([2], dtype=torch.int32, device=device)
+    res3 = res1 + res2
+    return res3
+#   def body_fun(test_device_loader):
+#     accuracy = test_loop_fn(test_device_loader)
+#     max_accuracy = max(accuracy, max_accuracy)
+#     return max_accuracy
 
-  # upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = fori_loop(
-  #     upper, lower, body_fun, init_val, new_test_device_loader)
+  upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = fori_loop(
+      upper, lower, body_fun, init_val, test_device_loader)
 
   test_utils.close_summary_writer(writer)
   xm.master_print('Max Accuracy: {:.2f}%'.format(max_accuracy))
