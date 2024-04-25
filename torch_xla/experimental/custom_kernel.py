@@ -422,7 +422,8 @@ def non_xla_attetion(q, k, v, attention_type):
   # We need to make sure output tensor's shape is correct.
   if k.device != torch.device("meta"):
     warnings.warn(
-        f'XLA {attention_type} attention should only be applied to tensors on XLA device')
+        f'XLA {attention_type} attention should only be applied to tensors on XLA device'
+    )
 
   # perform a regular attention if input tensors are not on XLA device.
   attn_weight = q @ k.transpose(-2, -1)
