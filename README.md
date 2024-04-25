@@ -217,6 +217,11 @@ replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
 | 1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` |
 | nightly python | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm` |
 
+To use the above dockers, please pass `--privileged --net host --shm-size=16G` along. Here is an example:
+```bash
+docker run --privileged --net host --shm-size=16G -it us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm /bin/bash
+```
+
 <br/>
 
 | Version | GPU CUDA 12.1 Docker |
