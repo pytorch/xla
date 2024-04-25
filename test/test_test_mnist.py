@@ -224,13 +224,14 @@ def train_mnist(flags, **kwargs):
   optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
 
-  def test_loop_fn(loader):
+  def test_loop_fn(): # loader):
     total_samples = 0
     correct = 0
     model.eval()
     # print("loader: ", loader)
     # print("type loader: ", type(loader))
-    for data, target in loader:
+    # for data, target in loader:
+    for data, target in test_loader:
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum()
@@ -262,7 +263,7 @@ def train_mnist(flags, **kwargs):
   init_val = torch.tensor([1], dtype=torch.int32, device=device)
   # l_in_0 = torch.randn(10, device=xm.xla_device()) # test_device_loader
   # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-  def body_fun(test_device_loader):
+  def body_fun():
     res1 = torch.tensor([2], dtype=torch.int32, device=device)
     res2 = torch.tensor([2], dtype=torch.int32, device=device)
     res3 = res1 + res2
@@ -273,7 +274,7 @@ def train_mnist(flags, **kwargs):
 #     return max_accuracy
 
   upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = fori_loop(
-      upper, lower, body_fun, init_val, test_device_loader)
+      upper, lower, body_fun, ())
 
   test_utils.close_summary_writer(writer)
   xm.master_print('Max Accuracy: {:.2f}%'.format(max_accuracy))
