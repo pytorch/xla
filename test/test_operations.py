@@ -2436,7 +2436,7 @@ class TestGeneric(test_utils.XlaTestCase):
   def test_aten_move_scalar_cuda_to_xla_zero_copy(self):
     met.clear_counters()
     cuda_tensor = torch.tensor(5, device=torch.device('cuda'))
-    xla_tensor = cuda_tensor.to(xm.xla_device())
+    xla_tensor = cuda_tensor.to(xm.xla_device()) # xw32: fails here.
     print('xw32 metrics: ', met.metrics_report())
     print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
     self.assertEqual(met.metric_data('TransferToDeviceTime'), None, f'got {met.metric_data("TransferToDeviceTime")}')
@@ -2465,7 +2465,8 @@ class TestGeneric(test_utils.XlaTestCase):
   @onlyIfPJRTDeviceIsCUDA
   def test_aten_move_scalar_xla_to_cuda_zero_copy(self):
     met.clear_counters()
-    xla_tensor = torch.tensor(5, device=xm.xla_device())
+    xla_dev = xm.xla_device()
+    xla_tensor = torch.tensor(5, device=xla_dev)
     cuda_tensor = xla_tensor.cuda()
     print('xw32 metrics: ', met.metrics_report())
     print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')

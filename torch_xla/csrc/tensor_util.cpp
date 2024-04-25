@@ -478,8 +478,8 @@ torch::lazy::BackendDataPtr TensorToXlaData(
                                            nullptr);
   }
 
-  if (runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false)) {
-      XLA_CHECK(tensor.is_cuda()) << "tensor is not on cuda";
+  if (runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false) && tensor.is_cuda()) {
+      XLA_CHECK(tensor.is_cuda()) << "tensor is not on cuda. Instead, it is on the device " << tensor.device() << ", tensor.device().type()=" << tensor.device().type();
       DLManagedTensor* dl_t = at::toDLPack(tensor);
       runtime::ComputationClient::DataPtr handle = runtime::GetComputationClient()->DLPackManagedTensorToData(dl_t);
       return handle;
