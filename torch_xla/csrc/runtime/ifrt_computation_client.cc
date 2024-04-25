@@ -96,7 +96,7 @@ std::string IfrtComputationClient::IfrtDeviceToString(
     xla::ifrt::Device* const device) const {
   std::string platform =
       absl::AsciiStrToUpper(device->client()->platform_name());
-  int ordinal = global_ordinals_.at(device->id());
+  int ordinal = global_ordinals_.at(device->Id());
   std::string str = absl::StrFormat("%s:%d", platform, ordinal);
   return str;
 }
@@ -126,9 +126,9 @@ IfrtComputationClient::IfrtComputationClient() {
   std::vector<xla::ifrt::Device*> ordered_devices(client_->device_count());
   std::partial_sort_copy(client_->devices().begin(), client_->devices().end(),
                          ordered_devices.begin(), ordered_devices.end(),
-                         [](auto& a, auto& b) { return a->id() < b->id(); });
+                         [](auto& a, auto& b) { return a->Id() < b->Id(); });
   for (auto* device : ordered_devices) {
-    global_ordinals_[device->id()] = global_ordinals_.size();
+    global_ordinals_[device->Id()] = global_ordinals_.size();
     std::string device_str = IfrtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
   }
