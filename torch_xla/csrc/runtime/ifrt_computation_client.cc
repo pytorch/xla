@@ -615,7 +615,7 @@ std::vector<std::string> IfrtComputationClient::GetAllDevices() const {
 int IfrtComputationClient::GetNumProcesses() const {
   int max_process_index = client_->process_index();
   for (auto* device : client_->devices()) {
-    max_process_index = std::max(max_process_index, device->process_index());
+    max_process_index = std::max(max_process_index, device->ProcessIndex());
   }
 
   return max_process_index + 1;
