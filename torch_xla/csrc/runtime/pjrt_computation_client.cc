@@ -1,3 +1,4 @@
+// working
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 
 #include <algorithm>
@@ -787,10 +788,12 @@ DLManagedTensor* PjRtComputationClient::DataToDLPackManagedTensor(ComputationCli
     XLA_ERROR() << "Unimplemented. DynamicShape is not implemented in DLPack.";
   }
 
-  TorchXLADLMTensor* torchXlaDLMTensor(new TorchXLADLMTensor);
+  auto torchXlaDLMTensor = std::make_unique<TorchXLADLMTensor>();
   DLTensor& dt = torchXlaDLMTensor->tensor.dl_tensor;
   {
-    torchXlaDLMTensor->external_reference = pjrt_buffer->AcquireExternalReference().value();
+    auto external_ref = pjrt_buffer->AcquireExternalReference();
+    XLA_CHECK_OK(external_ref.status());
+    torchXlaDLMTensor->external_reference = std::move(external_ref.value());
     xla::PjRtFuture<absl::Status> future = pjrt_buffer->GetReadyFuture();
     absl::Status status = future.Await();
     XLA_CHECK_OK(status);
@@ -798,7 +801,7 @@ DLManagedTensor* PjRtComputationClient::DataToDLPackManagedTensor(ComputationCli
   // pack->buffer_reference = nb::borrow<nb::object>(py_buffer); // xw32: should we do it?
 
   dt.data = torchXlaDLMTensor->external_reference->OpaqueDeviceMemoryDataPointer();
-  torchXlaDLMTensor->tensor.manager_ctx = torchXlaDLMTensor;
+  torchXlaDLMTensor->tensor.manager_ctx = torchXlaDLMTensor.get();
   torchXlaDLMTensor->tensor.deleter = TorchXLADLMTensorDeleter;
   dt.device = DLDeviceForDevice(*pjrt_buffer->device());
   dt.device.device_id = pjrt_buffer->device()->local_hardware_id();
@@ -812,7 +815,7 @@ DLManagedTensor* PjRtComputationClient::DataToDLPackManagedTensor(ComputationCli
   dt.strides = reinterpret_cast<std::int64_t*>(torchXlaDLMTensor->strides.data());
   dt.byte_offset = 0;
 
-  return &(torchXlaDLMTensor->tensor);
+  return &(torchXlaDLMTensor.release()->tensor);
 }
 
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(

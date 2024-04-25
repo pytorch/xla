@@ -811,10 +811,13 @@ std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     absl::Span<const at::ScalarType> dest_element_type) {
   if (runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false)) {
-    std::vector<at::Tensor> tensors(xla_data.size());
+    std::vector<at::Tensor> tensors;
+    tensors.reserve(xla_data.size());
     for (const auto& xd : xla_data) {
       DLManagedTensor* dl_t = runtime::GetComputationClient()->DataToDLPackManagedTensor(UnwrapXlaData(xd));
-      tensors.push_back(at::fromDLPack(dl_t));
+      at::Tensor t = at::fromDLPack(dl_t);
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": t.device()=" << t.device() << std::endl;
+      tensors.push_back(t);
     }
     return tensors;
   }
