@@ -54,7 +54,6 @@ jobs:
       uses: actions/upload-pages-artifact@v3
       with:
         path: 'gh-pages'
-
   deploy:
     needs: build-docs
     runs-on: ubuntu-latest
@@ -67,6 +66,7 @@ jobs:
     #   name: github-pages
     #   url: ${{ steps.deployment.outputs.page_url }}
 
+    steps:
     # - name: Deploy to GitHub Pages
     #   id: deployment
     #   uses: actions/deploy-pages@v4
