@@ -227,7 +227,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git6ed2026 )
+                  master (2.4.0+gitabe090a )
                 </div>
               
             
@@ -400,9 +400,9 @@
 <li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
 <li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
 <li><a class="reference internal" href="#simple-example-sharding-aannotation-api">Simple Example &amp; Sharding Aannotation API</a></li>
-<li><a class="reference internal" href="#id27">Mesh</a></li>
+<li><a class="reference internal" href="#id28">Mesh</a></li>
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
-<li><a class="reference internal" href="#id28">Partition Spec</a></li>
+<li><a class="reference internal" href="#id29">Partition Spec</a></li>
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
 <li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
@@ -431,7 +431,7 @@
 <li><a class="reference internal" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module">Currently, model should be loaded to xla device via distribute_module.</a></li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-via-spmd">Fully Sharded Data Parallel via SPMD</a><ul>
 <li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
-<li><a class="reference internal" href="#id50">Gradient checkpointing</a></li>
+<li><a class="reference internal" href="#id51">Gradient checkpointing</a></li>
 <li><a class="reference internal" href="#huggingface-llama-2-example">HuggingFace Llama 2 Example</a></li>
 </ul>
 </li>
@@ -3179,10 +3179,12 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 </div>
 <div class="section" id="wheel">
 <h3>Wheel<a class="headerlink" href="#wheel" title="Permalink to this heading">¶</a></h3>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="n">torch</span><span class="o">==</span><span class="mf">2.2.0</span>
-<span class="n">pip3</span> <span class="n">install</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">storage</span><span class="o">.</span><span class="n">googleapis</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">-</span><span class="n">xla</span><span class="o">-</span><span class="n">releases</span><span class="o">/</span><span class="n">wheels</span><span class="o">/</span><span class="n">cuda</span><span class="o">/</span><span class="mf">12.1</span><span class="o">/</span><span class="n">torch_xla</span><span class="o">-</span><span class="mf">2.2.0</span><span class="o">-</span><span class="n">cp38</span><span class="o">-</span><span class="n">cp38</span><span class="o">-</span><span class="n">manylinux_2_28_x86_64</span><span class="o">.</span><span class="n">whl</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="n">torch</span><span class="o">==</span><span class="mf">2.3.0</span>
+<span class="c1"># GPU whl for python 3.10 + cuda 12.1</span>
+<span class="n">pip3</span> <span class="n">install</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">storage</span><span class="o">.</span><span class="n">googleapis</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">-</span><span class="n">xla</span><span class="o">-</span><span class="n">releases</span><span class="o">/</span><span class="n">wheels</span><span class="o">/</span><span class="n">cuda</span><span class="o">/</span><span class="mf">12.1</span><span class="o">/</span><span class="n">torch_xla</span><span class="o">-</span><span class="mf">2.3.0</span><span class="o">-</span><span class="n">cp310</span><span class="o">-</span><span class="n">cp310</span><span class="o">-</span><span class="n">manylinux_2_28_x86_64</span><span class="o">.</span><span class="n">whl</span>
 </pre></div>
 </div>
+<p>Wheels for other Python version and CUDA version can be found <a class="reference external" href="https://github.com/pytorch/xla?tab=readme-ov-file#available-docker-images-and-wheels">here</a>.</p>
 </div>
 </div>
 <div class="section" id="run-a-simple-model">
@@ -3259,7 +3261,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
 <p><a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is an automatic parallelization system for common ML workloads. The XLA compiler will transform the single device program into a partitioned one with proper collectives, based on the user provided sharding hints. This feature allows developers to write PyTorch programs as if they are on a single large device without any custom sharded computation ops and/or collective communications to scale.</p>
 <a class="reference external image-reference" href="assets/spmd_mode.png"><img alt="alt_text" src="assets/spmd_mode.png" /></a>
-<p><a href="#id24"><span class="problematic" id="id25">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
+<p><a href="#id25"><span class="problematic" id="id26">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
 <p>To support GSPMD in PyTorch/XLA, we are introducing a new execution mode. Before GSPMD, the execution mode in PyTorch/XLA assumed multiple model replicas, each with a single core (Figure 1.a). This mode of execution, as illustrated in the above  suits data parallelism frameworks, like the popular PyTorch <a class="reference external" href="https://pytorch.org/tutorials/intermediate/ddp_tutorial.html">Distributed Data Parallel (DDP)</a> or Fully Sharded Data Parallel (FSDP), but is also limited in that a replica can only reside on one device core for execution. PyTorch/XLA SPMD introduces a new execution mode that assumes a single replica with multiple cores (Figure 1.b), allowing a replica to run across multiple device cores. This shift unlocks more advanced parallelism strategies for better large model training performance.</p>
 <p>PyTorch/XLA SPMD is available on the new <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md">PJRT</a> runtime. To enable PyTorch/XLA SPMD execution mode, the user must call <span class="raw-html-m2r"><code>[use_spmd() API](https://github.com/pytorch/xla/blob/b8b484515a97f74e013dcf38125c44d53a41f011/torch_xla/runtime.py#L214)</code></span>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
@@ -3328,8 +3330,8 @@ PyTorch/XLA should have been installed successfully.</p>
 </div>
 <p>More complete unit test cases and integration test examples are available in the PyTorch/XLA <a class="reference external" href="https://github.com/pytorch/xla/tree/r2.0/test/spmd">repo</a>.</p>
 </div>
-<div class="section" id="id27">
-<h3>Mesh<a class="headerlink" href="#id27" title="Permalink to this heading">¶</a></h3>
+<div class="section" id="id28">
+<h3>Mesh<a class="headerlink" href="#id28" title="Permalink to this heading">¶</a></h3>
 <p>For a given cluster of devices, a physical mesh is a representation of the interconnect topology.</p>
 <p>We derive a logical mesh based on this topology to create sub-groups of devices which can be used for partitioning different axes of tensors in a model.</p>
 <a class="reference external image-reference" href="assets/mesh_spmd2.png"><img alt="alt_text" src="assets/mesh_spmd2.png" /></a>
@@ -3373,8 +3375,8 @@ PyTorch/XLA should have been installed successfully.</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id28">
-<h3>Partition Spec<a class="headerlink" href="#id28" title="Permalink to this heading">¶</a></h3>
+<div class="section" id="id29">
+<h3>Partition Spec<a class="headerlink" href="#id29" title="Permalink to this heading">¶</a></h3>
 <p>partition_spec has the same rank as the input tensor. Each dimension describes how the corresponding input tensor dimension is sharded across the device mesh (logically defined by mesh_shape). <code class="docutils literal notranslate"><span class="pre">partition_spec</span></code> is a tuple of <code class="docutils literal notranslate"><span class="pre">device_mesh</span></code> dimension <code class="docutils literal notranslate"><span class="pre">index</span></code> or None. The index can be an <code class="docutils literal notranslate"><span class="pre">int</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>, if the corresponding mesh dimension is named. This specifies how each input rank is sharded (<code class="docutils literal notranslate"><span class="pre">index</span></code> to <code class="docutils literal notranslate"><span class="pre">mesh_shape</span></code>) or replicated (<code class="docutils literal notranslate"><span class="pre">None</span></code>).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Provide optional mesh axis names and use them in the partition spec</span>
 <span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
@@ -3669,7 +3671,7 @@ training_or_inference_script_using_spmd.py
 <p>We provide a <code class="docutils literal notranslate"><span class="pre">shard</span> <span class="pre">placement</span> <span class="pre">visualization</span> <span class="pre">debug</span> <span class="pre">tool</span></code> for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> to visualize sharded tensor, or you could use <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> or <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code>:</p>
 <ul class="simple">
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:
-<a href="#id35"><span class="problematic" id="id36">``</span></a><a href="#id37"><span class="problematic" id="id38">`</span></a>python
+<a href="#id36"><span class="problematic" id="id37">``</span></a><a href="#id38"><span class="problematic" id="id39">`</span></a>python
 import rich</p></li>
 </ul>
 </div>
@@ -3706,7 +3708,7 @@ xr.use_spmd(auto=True)</p>
 </div></blockquote>
 </li>
 <li><p>Calling <code class="docutils literal notranslate"><span class="pre">pytorch.distributed._tensor.distribute_module</span></code> with <code class="docutils literal notranslate"><span class="pre">auto-policy</span></code> and <code class="docutils literal notranslate"><span class="pre">xla</span></code>:
-<a href="#id40"><span class="problematic" id="id41">``</span></a><a href="#id42"><span class="problematic" id="id43">`</span></a>python
+<a href="#id41"><span class="problematic" id="id42">``</span></a><a href="#id43"><span class="problematic" id="id44">`</span></a>python
 import torch_xla.runtime as xr
 from torch.distributed._tensor import DeviceMesh, distribute_module
 from torch_xla.distributed.spmd import auto_policy</p></li>
@@ -3718,7 +3720,7 @@ device_mesh = DeviceMesh(“xla”, list(range(device_count)))</p>
 <h1>Currently, model should be loaded to xla device via distribute_module.<a class="headerlink" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module" title="Permalink to this heading">¶</a></h1>
 <p>model = MyModule()  # nn.module
 sharded_model = distribute_module(model, device_mesh, auto_policy)
-<a href="#id44"><span class="problematic" id="id45">``</span></a><a href="#id46"><span class="problematic" id="id47">`</span></a></p>
+<a href="#id45"><span class="problematic" id="id46">``</span></a><a href="#id47"><span class="problematic" id="id48">`</span></a></p>
 <p>Optionally, one can set the following options/env-vars to control the behvaior of
 the XLA-based auto-sharding pass:</p>
 <ul class="simple">
@@ -3776,8 +3778,8 @@ feature will come in the future releases.</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id50">
-<h2>Gradient checkpointing<a class="headerlink" href="#id50" title="Permalink to this heading">¶</a></h2>
+<div class="section" id="id51">
+<h2>Gradient checkpointing<a class="headerlink" href="#id51" title="Permalink to this heading">¶</a></h2>
 <p>Currently, gradient checkpointing needs to be applied to the module before the FSDP wrapper. Otherwise, recursively loop into children modules will end up with infinite loop. We will fix this issue in the future releases.</p>
 <p>Example usage:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">checkpoint_module</span>
@@ -3969,9 +3971,9 @@ feature will come in the future releases.</p>
 <li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
 <li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
 <li><a class="reference internal" href="#simple-example-sharding-aannotation-api">Simple Example &amp; Sharding Aannotation API</a></li>
-<li><a class="reference internal" href="#id27">Mesh</a></li>
+<li><a class="reference internal" href="#id28">Mesh</a></li>
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
-<li><a class="reference internal" href="#id28">Partition Spec</a></li>
+<li><a class="reference internal" href="#id29">Partition Spec</a></li>
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
 <li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
@@ -4000,7 +4002,7 @@ feature will come in the future releases.</p>
 <li><a class="reference internal" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module">Currently, model should be loaded to xla device via distribute_module.</a></li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-via-spmd">Fully Sharded Data Parallel via SPMD</a><ul>
 <li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
-<li><a class="reference internal" href="#id50">Gradient checkpointing</a></li>
+<li><a class="reference internal" href="#id51">Gradient checkpointing</a></li>
 <li><a class="reference internal" href="#huggingface-llama-2-example">HuggingFace Llama 2 Example</a></li>
 </ul>
 </li>
