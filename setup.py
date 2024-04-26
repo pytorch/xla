@@ -223,6 +223,10 @@ class BuildBazelExtension(build_ext.build_ext):
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
 
+    build_cpp_tests = build_util.check_env_flag('BUILD_CPP_TESTS', default='0')
+    if build_cpp_tests:
+      bazel_argv.append('//:cpp_tests')
+
     import torch
     cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C,
                                               '_GLIBCXX_USE_CXX11_ABI', None)
