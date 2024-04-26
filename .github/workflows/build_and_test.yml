@@ -58,7 +58,7 @@ jobs:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   test-python-cpu:
-    name: "CPU Python tests"
+    name: "CPU tests"
     uses: ./.github/workflows/_test.yml
     needs: build-torch-xla
     with:
@@ -69,7 +69,7 @@ jobs:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   test-cuda:
-    name: "GPU Python tests"
+    name: "GPU tests"
     uses: ./.github/workflows/_test.yml
     needs: [build-torch-xla, build-cuda-plugin]
     with:
