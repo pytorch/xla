@@ -258,7 +258,7 @@ def newnewnew_test():
 
   upper__, lower__, one_value__, torch_add_res__, input_value__, bias__, weight__, output_value_real__, = _xla_while_loop(
       cond_fn, body_fn,
-      (upper, lower, one_value, init_val, l_in_0, output_value))
+      (upper, lower, one_value, init_val, l_in_0, output_value), ())
   print("finish newnewnew_test")
 
 # run test model
