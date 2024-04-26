@@ -2466,11 +2466,11 @@ class TestGeneric(test_utils.XlaTestCase):
   def test_aten_move_scalar_xla_to_cuda_zero_copy(self):
     met.clear_counters()
     xla_dev = xm.xla_device()
-    xla_tensor = torch.tensor(5, device=xla_dev)
+    xla_tensor = torch.tensor(5, device=xla_dev) # this will call .to and trigger a TransferToDeviceTime.
     cuda_tensor = xla_tensor.cuda()
     print('xw32 metrics: ', met.metrics_report())
     print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
-    self.assertEqual(met.metric_data('TransferToDeviceTime'), None, f'got {met.metric_data("TransferToDeviceTime")}')
+    self.assertEqual(met.metric_data('TransferToDeviceTime')[0], 1, f'got {met.metric_data("TransferToDeviceTime")}')
     self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
     xla_tensor.fill_(-1)
     got = cuda_tensor.cpu()
