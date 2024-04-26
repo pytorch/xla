@@ -20,6 +20,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.distributed.xla_backend
 import torch_xla.experimental.fori_loop
+from torch_xla.experimental.fori_loop import _xla_while_loop
 from torch._higher_order_ops.while_loop import while_loop
 
 n_epochs = 3
@@ -255,7 +256,7 @@ def newnewnew_test():
   l_in_0 = torch.rand(10, device=xm.xla_device())
   output_value = torch.zeros([20], dtype=torch.float32, device=device)
 
-  upper__, lower__, one_value__, torch_add_res__, input_value__, bias__, weight__, output_value_real__, = while_loop(
+  upper__, lower__, one_value__, torch_add_res__, input_value__, bias__, weight__, output_value_real__, = _xla_while_loop(
       cond_fn, body_fn,
       (upper, lower, one_value, init_val, l_in_0, output_value))
   print("finish newnewnew_test")
