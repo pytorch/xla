@@ -45,6 +45,9 @@ jobs:
       XLA_CUDA: ${{ inputs.cuda }}
       BAZEL_JOBS: 16
     steps:
+      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+      - name: Fix workspace permissions
+        run: chmod +w -R ${GITHUB_WORKSPACE}; rm -rf ${GITHUB_WORKSPACE}/*;
       - name: Setup Linux
         uses: pytorch/test-infra/.github/actions/setup-linux@main
       - name: Setup SSH (Click me for login details)
@@ -54,9 +57,6 @@ jobs:
           instructions: |
             Build is  done inside the container, to start an interactive session run:
               docker exec -it $(docker container ps --format '{{.ID}}') bash
-      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
-      - name: Fix workspace permissions
-        run: chmod +w -R ${GITHUB_WORKSPACE}
       - name: Checkout repo
         uses: actions/checkout@v3
       - name: Download docker image from GCR
