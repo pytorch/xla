@@ -189,8 +189,8 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     additional_inputs_list_body = []
 
   # TODO(@manfei): treat hard-code parameters: additional_inputs_list_body
-  # body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
-  body_ctx.buildforiloop(list(body_result), ())
+  body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
+  # body_ctx.buildforiloop(list(body_result), ())
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
