@@ -931,6 +931,9 @@ class PyLoweringContext {
 
     // hard-code modify body xlacomputation input arguments with unusedarguments
     // for xla::while requriement
+    // !!! actually weight/bias don't need to be added here as dummy arguments by additional_inputs_list,
+    // !!! they will be added automatically added here, we need to add dummy argument for output/return_value
+    // !!! 
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // TODO(@manfei): treat hard code parameter_idx value
