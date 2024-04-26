@@ -47,6 +47,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+# model.parameters()
+
+class SimpleWithLinearPure(torch.nn.Module):
+  def __init__(self):
+    super().__init__()
+    self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+    self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
+
+  def forward(self, upper, lower, one_value, x, input_value, output_value):
+    output_value_real = self.linear(input_value)
+    output_value_real_final = self.linear2(output_value_real)
+    return output_value_real_final
+
+
 class SimpleWithLinear(torch.nn.Module):
   def __init__(self):
     super().__init__()
@@ -88,7 +102,6 @@ class Net(nn.Module):
         x = F.dropout(x, training=self.training)
         x = self.fc2(x)
         return F.log_softmax(x)
-
 
 class MNIST(nn.Module):
 
@@ -152,26 +165,81 @@ def new_test():
   weight_0 = simple_with_linear.linear.weight
   bias_0 = simple_with_linear.linear.bias
 
-  # aaa = {
-  #     "simple_with_linear":
-  #         (simple_with_linear, (upper, lower, one_value, init_val, l_in_0,
-  #                               output_value))
-  # }
-
   upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = simple_with_linear(
       upper, lower, one_value, init_val, l_in_0, output_value)
   print("finish new_test")
 
+
+def newnew_test():
+  device = xm.xla_device()
+  torch.set_grad_enabled(False)
+
+  linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+  # simple_with_linear = SimpleWithLinear()
+
+  def cond_fn(upper, lower, one_value, x, input_value, output_value):
+    return lower[0] < upper[0]
+
+  def body_fn(upper, lower, one_value, x, input_value, output_value):
+    new_lower = torch.add(one_value, lower)
+    output_value = linear_0(input_value)
+    weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+    bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+    return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+        one_value, x), input_value.clone(), bias.clone(), weight.clone(
+        ), output_value.clone()
+
+  upper = torch.tensor([1], dtype=torch.int32, device=device)
+  lower = torch.tensor([0], dtype=torch.int32, device=device)
+  one_value = torch.tensor([1], dtype=torch.int32, device=device)
+  init_val = torch.tensor([1], dtype=torch.int32, device=device)
+  l_in_0 = torch.rand(10, device=xm.xla_device())
+  output_value = torch.zeros([20], dtype=torch.float32, device=device)
+
+  upper__, lower__, one_value__, torch_add_res__, input_value__, bias__, weight__, output_value_real__, = while_loop(
+      cond_fn, body_fn,
+      (upper, lower, one_value, init_val, l_in_0, output_value))
+  print("finish newnew_test")
+
+  # # simple_with_linear = SimpleWithLinear()
+  # simple_with_linear = SimpleWithLinear()
+  # upper = torch.tensor([52], dtype=torch.int32, device=device)
+  # lower = torch.tensor([0], dtype=torch.int32, device=device)
+  # one_value = torch.tensor([1], dtype=torch.int32, device=device)
+  # init_val = torch.tensor([1], dtype=torch.int32, device=device)
+  # l_in_0 = torch.rand(10, device=xm.xla_device())
+  # output_value = torch.zeros([20], dtype=torch.float32, device=device)
+  # weight_0 = simple_with_linear.linear.weight
+  # bias_0 = simple_with_linear.linear.bias
+
+  # upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = simple_with_linear(
+  #     upper, lower, one_value, init_val, l_in_0, output_value)
+  # print("finish new_test")
+
+  # def cond_fn(upper, lower, one_value, x, input_value, output_value):
+  #   return lower[0] < upper[0]
+
+  # def body_fn(upper, lower, one_value, x, input_value, output_value):
+  #   new_lower = torch.add(one_value, lower)
+  #   output_value_real = self.linear(input_value)
+  #   output_value_real_final = self.linear2(output_value_real)
+  #   return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+  #     one_value, x), input_value.clone(
+  #     ), output_value_real_final # , weight.clone(), bias.clone()
+
+  # return while_loop(
+  #       cond_fn, body_fn,
+  #       (upper, lower, one_value, x, input_value, output_value))
 
 # run test model
 def test_mnist():
   torch.manual_seed(1)
 
   print("before test_mnist")
-  new_test() # test()
+  newnew_test() # new_test() # test()
   # target fori_loop
   for epoch in range(1, n_epochs + 1):
-    new_test() # test()
+    newnew_test() # new_test() # test()
 
   print("after test_mnist")
 
