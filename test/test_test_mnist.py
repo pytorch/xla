@@ -164,11 +164,16 @@ def new_test():
 def test_mnist():
   torch.manual_seed(1)
 
+  print("before test_mnist")
   test()
   # target fori_loop
   for epoch in range(1, n_epochs + 1):
     test()
 
+  print("after test_mnist")
+
+if __name__ == '__main__':
+  test_mnist()
 
 # torch.set_default_dtype(torch.float32)
 # accuracy = test_mnist()
