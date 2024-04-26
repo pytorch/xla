@@ -109,5 +109,5 @@ jobs:
     uses: ./.github/workflows/_tpu_ci.yml
     needs: build-torch-xla
     # Only run this for HEAD and releases
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'tpuci')
 
