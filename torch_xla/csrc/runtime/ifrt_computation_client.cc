@@ -124,9 +124,10 @@ IfrtComputationClient::IfrtComputationClient() {
   // a device's global ordinal separately from its device ID. Order the
   // devices by increasing ID to assign global ordinals.
   std::vector<xla::ifrt::Device*> ordered_devices(client_->device_count());
-  std::partial_sort_copy(client_->devices().begin(), client_->devices().end(),
-                         ordered_devices.begin(), ordered_devices.end(),
-                         [](auto& a, auto& b) { return a->Id().value() < b->Id().value(); });
+  std::partial_sort_copy(
+      client_->devices().begin(), client_->devices().end(),
+      ordered_devices.begin(), ordered_devices.end(),
+      [](auto& a, auto& b) { return a->Id().value() < b->Id().value(); });
   for (auto* device : ordered_devices) {
     global_ordinals_[device->Id().value()] = global_ordinals_.size();
     std::string device_str = IfrtDeviceToString(device);
