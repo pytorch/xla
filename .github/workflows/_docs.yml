@@ -58,19 +58,15 @@ jobs:
     needs: build-docs
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    # permissions:
-    #   pages: write
-    #   id-token: write
+    permissions:
+      pages: write
+      id-token: write
 
     # Deploy to the github-pages environment
-    # environment:
-    #   name: github-pages
-    #   url: ${{ steps.deployment.outputs.page_url }}
-
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-    # - name: Deploy to GitHub Pages
-    #   id: deployment
-    #   uses: actions/deploy-pages@v4
-
-    - name: Skip
-      run: echo "testing..."
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

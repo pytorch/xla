@@ -79,7 +79,7 @@ jobs:
     if: github.event_name == 'push'
 
   push-docs:
-    name: "Build & publish docs"
+    name: "Build docs"
     # if: github.event_name == 'push' && (github.event.ref == 'refs/heads/master' || startsWith(github.event.ref, 'refs/tags/r'))
     uses: ./.github/workflows/_docs.yml
     needs: build-torch-xla
