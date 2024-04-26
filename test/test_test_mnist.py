@@ -48,27 +48,26 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class SimpleWithLinear(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+  def __init__(self):
+    super().__init__()
+    self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
 
-    def forward(self, upper, lower, one_value, x, input_value, output_value):
+  def forward(self, upper, lower, one_value, x, input_value, output_value):
+    def cond_fn(upper, lower, one_value, x, input_value, output_value):
+      return lower[0] < upper[0]
 
-      def cond_fn(upper, lower, one_value, x, input_value, output_value):
-        return lower[0] < upper[0]
+    def body_fn(upper, lower, one_value, x, input_value, output_value):
+      new_lower = torch.add(one_value, lower)
+      output_value_real = self.linear(input_value)
+      weight = self.linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+      bias = self.linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+          one_value, x), input_value.clone(
+          ), output_value_real, weight.clone(), bias.clone()
 
-      def body_fn(upper, lower, one_value, x, input_value, output_value):
-        new_lower = torch.add(one_value, lower)
-        output_value_real = self.linear(input_value)
-        weight = self.linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-        bias = self.linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
-        return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-            one_value, x), input_value.clone(
-            ), output_value_real
-
-      return while_loop(
-          cond_fn, body_fn,
-          (upper, lower, one_value, x, input_value, output_value))
+    return while_loop(
+        cond_fn, body_fn,
+        (upper, lower, one_value, x, input_value, output_value))
 
 class Net(nn.Module):
     def __init__(self):
