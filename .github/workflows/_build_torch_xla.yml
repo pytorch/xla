@@ -38,7 +38,6 @@ jobs:
           repository: pytorch/pytorch
           path: pytorch
           submodules: recursive
-          # TODO: correct pin
       - name: Checkout PyTorch/XLA Repo
         uses: actions/checkout@v4
         with:

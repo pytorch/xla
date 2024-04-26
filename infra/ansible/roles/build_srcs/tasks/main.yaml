@@ -1,3 +1,18 @@
+- name: Read PyTorch pin
+  ansible.builtin.command: cat {{ (src_root, 'pytorch/xla/.torch_pin') | path_join }}
+  register: torch_pin
+  # Pin may not exist
+  ignore_errors: true
+
+- name: Checkout PyTorch pin
+  # ansible.builtin.git wants to fetch the entire history, so check out the pin manually
+  ansible.builtin.shell:
+    cmd: |
+      git fetch origin {{ torch_pin.stdout }}
+      git checkout --recurse-submodules {{ torch_pin.stdout }}
+    chdir: "{{ (src_root, 'pytorch') | path_join }}"
+  when: torch_pin is succeeded
+
 - name: Build PyTorch
   ansible.builtin.command:
     cmd: python setup.py bdist_wheel

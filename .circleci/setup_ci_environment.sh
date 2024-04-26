@@ -58,7 +58,7 @@ sudo apt-get -y remove linux-image-generic linux-headers-generic linux-generic d
 # How to figure out what the correct versions of these packages are?
 # My preferred method is to start a Docker instance of the correct
 # Ubuntu version (e.g., docker run -it ubuntu:16.04) and then ask
-# apt what the packages you need are.  Note that the CircleCI image
+# apt what the packages you need are.  Note that the CI image
 # comes with Docker.
 #
 # Using 'retry' here as belt-and-suspenders even though we are
