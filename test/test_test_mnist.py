@@ -233,17 +233,17 @@ def newnewnew_test():
   device = xm.xla_device()
   torch.set_grad_enabled(False)
 
-  linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-  # simple_with_linear = SimpleWithLinear()
+  # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+  simple_with_linear = SimpleWithLinear()
 
   def cond_fn(upper, lower, one_value, x, input_value, output_value):
     return lower[0] < upper[0]
 
   def body_fn(upper, lower, one_value, x, input_value, output_value):
     new_lower = torch.add(one_value, lower)
-    output_value = linear_0(input_value)
-    weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-    bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+    output_value = SimpleWithLinear(input_value)
+    weight = SimpleWithLinear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+    bias = SimpleWithLinear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
     return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
         one_value, x), input_value.clone(), bias.clone(), weight.clone(
         ), output_value.clone()
