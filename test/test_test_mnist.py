@@ -165,10 +165,10 @@ def test_mnist():
   torch.manual_seed(1)
 
   print("before test_mnist")
-  test()
+  new_test() # test()
   # target fori_loop
   for epoch in range(1, n_epochs + 1):
-    test()
+    new_test() # test()
 
   print("after test_mnist")
 
