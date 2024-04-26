@@ -42,7 +42,7 @@ jobs:
 
   # New CI workflow
   build-torch-xla:
-    name: "Build PyTorch/XLA (TPU)"
+    name: "Build PyTorch/XLA"
     uses: ./.github/workflows/_build_torch_xla.yml
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
@@ -86,5 +86,5 @@ jobs:
     uses: ./.github/workflows/_tpu_ci.yml
     needs: build-torch-xla
     # Only run this for HEAD and releases
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'tpuci')
 
