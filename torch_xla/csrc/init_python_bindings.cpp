@@ -935,7 +935,7 @@ class PyLoweringContext {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // TODO(@manfei): treat hard code parameter_idx value
       // int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size(); // local_builder->parameter_numbers_; // GetProgramShape();
-      int64_t parameter_idx = 8;
+      int64_t parameter_idx = 9;
       for (auto& additional_input_tensor : additional_inputs_list) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
         xla::Shape shape = xtensor->shape().get();
