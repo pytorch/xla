@@ -57,6 +57,7 @@ jobs:
   deploy:
     needs: build-docs
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     # permissions:
     #   pages: write
     #   id-token: write
