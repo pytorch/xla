@@ -482,22 +482,6 @@ class PallasTest(unittest.TestCase):
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
-                   "This test only works on TPUv3+.")
-  def test_flash_attention_wrapper_segment_ids(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
-    from torch_xla.experimental.custom_kernel import flash_attention
-
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
-    q_segment_ids = torch.zeros(3, 128).to("xla")
-    kv_segment_ids = torch.zeros(3, 128).to("xla")
-
-    o = flash_attention(q, k, v, False, q_segment_ids, kv_segment_ids)
-    print(o)
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
-
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_paged_attention_wrapper(self):
@@ -634,6 +618,35 @@ class PallasTest(unittest.TestCase):
             expected_output.cpu()[seq_lens > 0],
             atol=1e-5,
             rtol=1e-5))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper_segment_ids(self):
+    from torch_xla.experimental.custom_kernel import flash_attention
+    from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention as jax_flash_attention, SegmentIds
+
+    q = torch.randn(3, 2, 128, 4)
+    k = torch.randn(3, 2, 128, 4)
+    v = torch.randn(3, 2, 128, 4)
+    q_segment_ids = torch.zeros(3, 128)
+    kv_segment_ids = torch.zeros(3, 128)
+    o = flash_attention(q.to("xla"), k.to("xla"), v.to("xla"), False, q_segment_ids.to("xla"), kv_segment_ids.to("xla"))
+
+    jax_q = jnp.array(q.numpy(), dtype=jnp.float32)
+    jax_k = jnp.array(k.numpy(), dtype=jnp.float32)
+    jax_v = jnp.array(v.numpy(), dtype=jnp.float32)
+    jax_q_segment_ids = jnp.array(q_segment_ids.numpy(), dtype=jnp.float32)
+    jax_kv_segment_ids = jnp.array(kv_segment_ids.numpy(), dtype=jnp.float32)
+    expected_o = torch.from_numpy(
+        np.array(
+            jax_flash_attention(
+                jax_q,
+                jax_k,
+                jax_v,
+                segment_ids=SegmentIds(jax_q_segment_ids, jax_kv_segment_ids),
+            )))
+
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
 
 
 if __name__ == '__main__':

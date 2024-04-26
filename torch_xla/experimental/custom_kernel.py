@@ -242,6 +242,7 @@ class FlashAttention(torch.autograd.Function):
           payload, shapes, dtypes)
 
       if not save_residuals:
+        o = o[0]
         # SPMD integration
         if partition_spec is not None:
           o = xs.disable_manual_sharding(
