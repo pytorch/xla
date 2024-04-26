@@ -243,11 +243,10 @@ def newnewnew_test():
   def body_fn(upper, lower, one_value, x, input_value, output_value):
     new_lower = torch.add(one_value, lower)
     output_value = simple_with_linear(input_value)
-    weight = simple_with_linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-    bias = simple_with_linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+    # weight = simple_with_linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+    # bias = simple_with_linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
     return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-        one_value, x), input_value.clone(), bias.clone(), weight.clone(
-        ), output_value.clone()
+        one_value, x), input_value.clone(), output_value.clone() # bias.clone(), weight.clone(), output_value.clone()
 
   upper = torch.tensor([1], dtype=torch.int32, device=device)
   lower = torch.tensor([0], dtype=torch.int32, device=device)
