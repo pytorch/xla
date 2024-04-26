@@ -61,11 +61,11 @@ class SimpleWithLinear(torch.nn.Module):
       new_lower = torch.add(one_value, lower)
       output_value_real = self.linear(input_value)
       output_value_real_final = self.linear2(output_value_real)
-      weight = self.linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-      bias = self.linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+      # weight = self.linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+      # bias = self.linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
       return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
           one_value, x), input_value.clone(
-          ), output_value_real_final, weight.clone(), bias.clone()
+          ), output_value_real_final # , weight.clone(), bias.clone()
 
     return while_loop(
         cond_fn, body_fn,
