@@ -131,8 +131,8 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       # res.append(body_fn.weight)
       # return res
       return newres
-    return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
-    # return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
+    # return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
+    return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
   print("$$$ additional_inputs: ", additional_inputs)
   # return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
 
