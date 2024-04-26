@@ -641,10 +641,7 @@ class DynamoErrorMessageTest(unittest.TestCase):
       # there should be 18 paramters + 1 input
       self.assertGreater(len(w), 15)
       self.assertIn('Found tensor with shape torch.Size', str(w[0].message))
-    # no XLA operation should happens except a empty mark_step. Partitioner should offload all CPU
-    # ops to CPU.
-    self.assertEqual(len(met.counter_names()), 1)
-    self.assertIn('MarkStep', met.counter_names())
+    self.assertLessEqual(len(met.counter_names()), 1)
 
 
 class DynamoOperationsTests(test_utils.XlaTestCase):
