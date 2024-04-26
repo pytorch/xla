@@ -14,6 +14,7 @@ python3 test/spmd/test_xla_auto_sharding.py
 XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shape_models.py -v
 XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shapes.py -v
 python3 test/test_autocast.py
+python3 test/test_grad_checkpoint.py
 python3 test/dynamo/test_dynamo.py
 python3 test/spmd/test_spmd_debugging.py
 python3 test/pjrt/test_dtypes.py
