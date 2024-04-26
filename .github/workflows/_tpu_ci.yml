@@ -3,6 +3,7 @@ on:
   workflow_call:
 jobs:
   tpu-test:
+    if: ${{ github.event.label.name == 'tpuci' }}
     runs-on: v4-runner-set
     steps:
       - name: Checkout repo
