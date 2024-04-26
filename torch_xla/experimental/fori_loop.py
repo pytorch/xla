@@ -151,6 +151,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
         torch.randint(
             10, additional_input.size(),
             dtype=additional_input.dtype).to(device))
+  print("fake_carried_inputs: ", fake_carried_inputs)
 
   # TODO(@manfei): specify which element is for which argument like a,b,c
   cond_result = cond_fn(*fake_carried_inputs)
