@@ -205,6 +205,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   def test_runtime_device_attributes(self):
     result = pjrt.run_multiprocess(self._runtime_device_attributes)
+    print("result: ", result)
     for device in result.values():
       print("device['coords']: ", device['coords'])
       print("device['core_on_chip']: ", device['core_on_chip'])
@@ -218,6 +219,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   def test_global_runtime_device_attributes(self):
     results = pjrt.run_multiprocess(self._global_runtime_device_attributes)
+    print("result: ", result)
     for result in results.values():
       for device in result:
         print("device['coords']: ", device['coords'])
