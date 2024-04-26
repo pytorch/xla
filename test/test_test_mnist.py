@@ -19,6 +19,8 @@ import torch_xla.test.test_utils as test_utils
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.distributed.xla_backend
+import torch_xla.experimental.fori_loop
+from torch._higher_order_ops.while_loop import while_loop
 
 n_epochs = 3
 batch_size_train = 8 # 64
@@ -149,11 +151,11 @@ def new_test():
   weight_0 = simple_with_linear.linear.weight
   bias_0 = simple_with_linear.linear.bias
 
-  aaa = {
-      "simple_with_linear":
-          (simple_with_linear, (upper, lower, one_value, init_val, l_in_0,
-                                output_value))
-  }
+  # aaa = {
+  #     "simple_with_linear":
+  #         (simple_with_linear, (upper, lower, one_value, init_val, l_in_0,
+  #                               output_value))
+  # }
 
   upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = simple_with_linear(
       upper, lower, one_value, init_val, l_in_0, output_value)
