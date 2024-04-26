@@ -51,6 +51,7 @@ class SimpleWithLinear(torch.nn.Module):
   def __init__(self):
     super().__init__()
     self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+    self.linear2 = torch.nn.Linear(50, 10).to(xm.xla_device())
 
   def forward(self, upper, lower, one_value, x, input_value, output_value):
     def cond_fn(upper, lower, one_value, x, input_value, output_value):
