@@ -58,7 +58,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: github-pages
-        path: gh-pages
+        path: pytorch/xla/docs/build/
     - name: Deploy
       shell: bash
       run: |
