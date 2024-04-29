@@ -242,7 +242,7 @@ def newnewnew_test():
   def cond_fn(upper, lower, one_value, x, input_value, output_value, *args):
     return lower[0] < upper[0]
 
-  def body_fn(upper, lower, one_value, x, input_value, output_value):
+  def body_fn(upper, lower, one_value, x, input_value, output_value, *args):
     new_lower = torch.add(one_value, lower)
     output_value = simple_with_linear(input_value)
     # weight = simple_with_linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
