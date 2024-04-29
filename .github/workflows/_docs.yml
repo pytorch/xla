@@ -47,6 +47,7 @@ jobs:
       with:
         path: gh-pages
         ref: gh-pages
+        token: ${{ secrets.torchxla-bot-token }}
     - name: Merge changes
       shell: bash
       run: |
@@ -66,6 +67,5 @@ jobs:
         git config user.name "torchxlabot2"
         git add . -v
         git commit -m "Update doc from commit ${{ github.sha }}"
-        git remote add pages https://torchxlabot2:${{ secrets.torchxla-bot-token }}@github.com/pytorch/xla
-        git push --dry-run pages gh-pages
+        git push --dry-run origin gh-pages
       # if: github.event_name == 'push'
