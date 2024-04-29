@@ -47,28 +47,25 @@ jobs:
       with:
         path: gh-pages
         ref: gh-pages
+        token: ${{ secrets.torchxla-bot-token }}
     - name: Merge changes
       shell: bash
       run: |
         subdir=${{ env.BRANCH_NAME == 'master' && 'master' || format('{0}/{1}', 'release', env.BRANCH_NAME) }}
         mkdir -p gh-pages/$subdir
         cp -fR pytorch/xla/docs/build/* gh-pages/$subdir
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
+    - name: Upload preview as artifact
+      uses: actions/upload-artifact@v4
       with:
-        path: 'gh-pages'
-  deploy:
-    needs: build-docs
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-
-    # Deploy to the github-pages environment
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
-      with:
-        token: ${{ secrets.torchxla-bot-token }}
+        name: github-pages
+        path: pytorch/xla/docs/build/
+    - name: Deploy
+      shell: bash
+      run: |
+        cd gh-pages
+        git config user.email "pytorchxla@gmail.com"
+        git config user.name "torchxlabot2"
+        git add . -v
+        git commit -m "Update doc from commit ${{ github.sha }}"
+        git push origin gh-pages
+      if: github.event_name == 'push'
