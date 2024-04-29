@@ -247,10 +247,13 @@ def newnewnew_test():
     output_value = simple_with_linear(input_value)
     # weight = simple_with_linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
     # bias = simple_with_linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
-    # for name, param in simple_with_linear.named_parameters():
-    #   asd
-    return (upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-        one_value, x), input_value.clone(), output_value.clone(), simple_with_linear.linear.weight) # bias.clone(), weight.clone(), output_value.clone()
+    res = [upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), output_value.clone()]
+    for name, param in simple_with_linear.named_parameters():
+      res.insert(-1, param)
+      # torch.randint(10, carried_input.size(), dtype=carried_input.dtype).to(device))
+    return tuple(res)
+    # return (upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+    #     one_value, x), input_value.clone(), output_value.clone(), simple_with_linear.linear.weight) # bias.clone(), weight.clone(), output_value.clone()
 
   # print("simple_with_linear weight: ", simple_with_linear.weight)
   # print("simple_with_linear bias: ", simple_with_linear.bias)
