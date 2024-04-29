@@ -49,7 +49,7 @@ jobs:
       - name: Fix workspace permissions
         run: |
           ls -la
-          rm -rvf ${GITHUB_WORKSPACE}/*
+          sudo rm -rvf ${GITHUB_WORKSPACE}/*
       - name: Setup Linux
         uses: pytorch/test-infra/.github/actions/setup-linux@main
       - name: Setup SSH (Click me for login details)
