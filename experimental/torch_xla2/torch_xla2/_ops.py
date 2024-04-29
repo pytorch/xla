@@ -415,6 +415,15 @@ def _aten_addmm(self, mat1, mat2, *, beta=1.0, alpha=1.0):
   self += alpha * jnp.matmul(mat1, mat2)
   return self
 
+@op(torch.ops.aten.addbmm.default)
+def _aten_addbmm(input, batch1, batch2, *, beta=1, alpha=1):
+  alpha = jnp.array(alpha).astype(batch1.dtype)
+  beta = jnp.array(beta).astype(batch1.dtype)
+  mm = jnp.einsum('bxy, byz -> xz', batch1, batch2)
+  return jax.lax.cond(beta == 0, 
+           lambda: alpha * mm,
+           lambda: beta*input + alpha*mm)
+
 
 @op(torch.ops.aten.gelu)
 def _aten_gelu(self, *, approximate="none"):
