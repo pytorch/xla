@@ -11,6 +11,9 @@ on:
         type: string
         description: Runner type for the test
         default: linux.4xlarge
+      secrets:
+        torchxla-bot-token:
+          required: true
 jobs:
   build-docs:
     runs-on: ubuntu-latest
@@ -58,9 +61,6 @@ jobs:
     needs: build-docs
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    permissions:
-      pages: write
-      id-token: write
 
     # Deploy to the github-pages environment
     environment:
@@ -70,3 +70,5 @@ jobs:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
+      with:
+        token: ${{ secrets.torchxla-bot-token }}
