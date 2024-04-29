@@ -179,12 +179,26 @@ class FlashAttention(torch.autograd.Function):
   NUM_SUBLANES = 8
 
   @staticmethod
+  def prepare_segment_ids(q_segment_ids, kv_segment_ids):
+    from jax.experimental.pallas.ops.tpu.flash_attention import SegmentIds
+    if q_segment_ids is None or kv_segment_ids is None:
+      return None, None, None
+
+    assert q_segment_ids is not None and kv_segment_ids is not None, "Both q_segment_ids and kv_segment_ids should be provided."
+    segment_ids = SegmentIds(to_jax_shape_dtype_struct(q_segment_ids), to_jax_shape_dtype_struct(
+          kv_segment_ids))
+    q_segment_ids = q_segment_ids.unsqueeze(-1).expand([-1 for _ in q_segment_ids.shape] +
+                                        [FlashAttention.NUM_LANES])
+    kv_segment_ids = kv_segment_ids.unsqueeze(1).expand([kv_segment_ids.shape[0], FlashAttention.NUM_SUBLANES, kv_segment_ids.shape[1]])
+    return segment_ids, q_segment_ids, kv_segment_ids
+
+  @staticmethod
   def forward(ctx, q, k, v, causal=False, q_segment_ids=None, kv_segment_ids=None, partition_spec=None, mesh=None):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
     import jax
-    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl, SegmentIds
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
 
     ctx.causal = causal
     ctx.partition_spec = partition_spec
@@ -214,6 +228,7 @@ class FlashAttention(torch.autograd.Function):
         dtypes.append(torch.float32)
 
     with torch.no_grad():
+      segment_ids, q_segment_ids, kv_segment_ids = FlashAttention.prepare_segment_ids(q_segment_ids, kv_segment_ids)
       # We can't directly use flash_attention as we need to override the save_residuals flag which returns
       # l and m that is needed for the backward. Then we lose all the shape checks.
       # TODO: replicate the shape checks on flash_attention.
@@ -224,8 +239,7 @@ class FlashAttention(torch.autograd.Function):
           k,
           v,
           None,
-          SegmentIds(to_jax_shape_dtype_struct(q_segment_ids), to_jax_shape_dtype_struct(
-          kv_segment_ids)),
+          segment_ids,
           save_residuals,
           causal,
           1.0,
@@ -236,10 +250,13 @@ class FlashAttention(torch.autograd.Function):
           False,
           static_argnums=range(5, 13))
 
-      q_segment_ids = q_segment_ids.unsqueeze(-1).expand([-1 for _ in q_segment_ids.shape] +
-                                        [FlashAttention.NUM_LANES])
-      kv_segment_ids = kv_segment_ids.unsqueeze(1).expand([kv_segment_ids.shape[0], FlashAttention.NUM_SUBLANES, kv_segment_ids.shape[1]])
-      o = torch_xla._XLAC._xla_tpu_custom_call(
+      if segment_ids is None:
+        o = torch_xla._XLAC._xla_tpu_custom_call(
+          [q, k, v],
+          payload, shapes, dtypes)
+
+      else:
+        o = torch_xla._XLAC._xla_tpu_custom_call(
           [q, k, v, q_segment_ids, kv_segment_ids],
           payload, shapes, dtypes)
 
@@ -379,7 +396,7 @@ class FlashAttention(torch.autograd.Function):
       grad_v = xs.disable_manual_sharding(
           grad_v, partition_spec, full_shape, mesh=mesh).global_tensor
 
-    return grad_q, grad_k, grad_v, None, None, None
+    return grad_q, grad_k, grad_v, None, None, None, None, None
 
 
 def flash_attention(
