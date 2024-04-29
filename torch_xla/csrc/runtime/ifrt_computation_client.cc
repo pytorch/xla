@@ -96,7 +96,7 @@ std::string IfrtComputationClient::IfrtDeviceToString(
     xla::ifrt::Device* const device) const {
   std::string platform =
       absl::AsciiStrToUpper(device->client()->platform_name());
-  int ordinal = global_ordinals_.at(device->id());
+  int ordinal = global_ordinals_.at(device->Id().value());
   std::string str = absl::StrFormat("%s:%d", platform, ordinal);
   return str;
 }
@@ -124,11 +124,12 @@ IfrtComputationClient::IfrtComputationClient() {
   // a device's global ordinal separately from its device ID. Order the
   // devices by increasing ID to assign global ordinals.
   std::vector<xla::ifrt::Device*> ordered_devices(client_->device_count());
-  std::partial_sort_copy(client_->devices().begin(), client_->devices().end(),
-                         ordered_devices.begin(), ordered_devices.end(),
-                         [](auto& a, auto& b) { return a->id() < b->id(); });
+  std::partial_sort_copy(
+      client_->devices().begin(), client_->devices().end(),
+      ordered_devices.begin(), ordered_devices.end(),
+      [](auto& a, auto& b) { return a->Id().value() < b->Id().value(); });
   for (auto* device : ordered_devices) {
-    global_ordinals_[device->id()] = global_ordinals_.size();
+    global_ordinals_[device->Id().value()] = global_ordinals_.size();
     std::string device_str = IfrtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
   }
@@ -615,7 +616,7 @@ std::vector<std::string> IfrtComputationClient::GetAllDevices() const {
 int IfrtComputationClient::GetNumProcesses() const {
   int max_process_index = client_->process_index();
   for (auto* device : client_->devices()) {
-    max_process_index = std::max(max_process_index, device->process_index());
+    max_process_index = std::max(max_process_index, device->ProcessIndex());
   }
 
   return max_process_index + 1;

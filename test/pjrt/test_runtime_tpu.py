@@ -206,7 +206,8 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def test_runtime_device_attributes(self):
     result = pjrt.run_multiprocess(self._runtime_device_attributes)
     for device in result.values():
-      self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
+      self.assertCountEqual(['coords', 'core_on_chip', 'num_cores'],
+                            list(device.keys()))
       self.assertIsInstance(device['coords'], list)
       self.assertIsInstance(device['core_on_chip'], int)
 
@@ -218,7 +219,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     results = pjrt.run_multiprocess(self._global_runtime_device_attributes)
     for result in results.values():
       for device in result:
-        self.assertCountEqual(['coords', 'core_on_chip', 'name'],
+        self.assertCountEqual(['coords', 'core_on_chip', 'name', 'num_cores'],
                               list(device.keys()))
         self.assertIsInstance(device['coords'], list)
         self.assertIsInstance(device['core_on_chip'], int)
