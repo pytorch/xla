@@ -55,7 +55,8 @@ class SimpleWithLinearPure(torch.nn.Module):
     self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
     self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
 
-  def forward(self, upper, lower, one_value, x, input_value, output_value):
+  # def forward(self, upper, lower, one_value, x, input_value, output_value):
+  def forward(self, input_value):
     output_value_real = self.linear(input_value)
     output_value_real_final = self.linear2(output_value_real)
     return output_value_real_final
