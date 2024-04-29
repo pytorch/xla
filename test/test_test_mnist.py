@@ -252,8 +252,10 @@ def newnewnew_test():
 
   # print("simple_with_linear weight: ", simple_with_linear.weight)
   # print("simple_with_linear bias: ", simple_with_linear.bias)
-  print("prine all things!!!")
+  print("print all things!!!")
+  print(type(simple_with_linear.parameters()))
   print("simple_with_linear.named_parameters(): ", simple_with_linear.named_parameters())
+  import pdb; pdb.set_trace()
   for name, param in simple_with_linear.named_parameters():
     if name in ['bias']:
       print(param.size())
