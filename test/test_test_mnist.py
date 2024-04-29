@@ -249,8 +249,8 @@ def newnewnew_test():
     # bias = simple_with_linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
     # for name, param in simple_with_linear.named_parameters():
     #   asd
-    return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-        one_value, x), input_value.clone(), output_value.clone(), simple_with_linear.linear.weight # bias.clone(), weight.clone(), output_value.clone()
+    return (upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+        one_value, x), input_value.clone(), output_value.clone(), simple_with_linear.linear.weight) # bias.clone(), weight.clone(), output_value.clone()
 
   # print("simple_with_linear weight: ", simple_with_linear.weight)
   # print("simple_with_linear bias: ", simple_with_linear.bias)
@@ -258,10 +258,12 @@ def newnewnew_test():
   # print(type(simple_with_linear.parameters()))
   # print("simple_with_linear.named_parameters(): ", simple_with_linear.named_parameters())
   # import pdb; pdb.set_trace()
-  for name, param in simple_with_linear.named_parameters():
-    print("arrive the loop")
-    print("name: ", name)
-    print("param: ", param)
+
+  # for name, param in simple_with_linear.named_parameters():
+  #   print("arrive the loop")
+  #   print("name: ", name)
+  #   print("param: ", param)
+
     # if name in ['bias']:
       # print(param.size())
 
