@@ -280,7 +280,7 @@ def newnewnew_test():
   additional_inputs = []
   for name, param in simple_with_linear.named_parameters():
       # additional_inputs.insert(-1, param)
-      additional_inputs.append(-1, param)
+      additional_inputs.append(param)
 
   print("in mnist additional_inputs: ", additional_inputs)
   upper__, lower__, one_value__, torch_add_res__, input_value__, bias__, weight__, output_value_real__, = _xla_while_loop(
