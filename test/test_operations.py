@@ -2476,6 +2476,29 @@ class TestGeneric(test_utils.XlaTestCase):
     got = cuda_tensor.cpu()
     self.assertEqual(got, -1, f'Not zero-copy, got {got}')
 
+  def test_move_cuda_module_to_cuda_zero_copy(self):
+    cuda_module = nn.Linear(2, 2).cuda()
+    breakpoint()
+    xla_dev = xm.xla_device()
+    cuda_module.to(xla_dev)
+
+  def test_move_tensor_with_non_default_layout(self):
+    cuda_t = torch.arange(4, device=torch.device('cuda')).reshape(2, 2)
+    cuda_tt = torch.t(cuda_t)
+    print('cuda_tt=', cuda_tt)
+    xla_dev = xm.xla_device()
+    got_cuda = cuda_tt.to(xla_dev).cuda()
+    print('got_cuda=', got_cuda)
+
+  # Workaround https://github.com/google/jax/issues/7657
+  # https://github.com/google/jax/issues/17784
+  def test_move_tensor_with_non_default_layout_with_workaround(self):
+    cuda_t = torch.arange(4, device=torch.device('cuda')).reshape(2, 2)
+    cuda_tt = torch.t(cuda_t)
+    xla_dev = xm.xla_device()
+    # cuda_tt.to(xla_dev).cuda() # this fails
+    cuda_tt.contiguous().to(xla_dev).cuda() # this works
+
 
 class SimpleModelWithDropout(torch.nn.Module):
 

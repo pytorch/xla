@@ -461,9 +461,9 @@ ComputationClient::DataPtr PjRtComputationClient::DLPackManagedTensorToData(DLMa
   } else {
     XLA_ERROR() << "default_layout_from_client.status() is not ok.";
   }
-  if (shape.layout() != default_layout) {
-    XLA_ERROR() << "from_dlpack got array with non-default layout with minor-to-major dimensions (" << absl::StrJoin(shape.layout().minor_to_major(), ",") << "), expected (" << absl::StrJoin(default_layout.minor_to_major(), ",") << ")";
-  }
+  // if (shape.layout() != default_layout) {
+  //   XLA_ERROR() << "from_dlpack got array with non-default layout with minor-to-major dimensions (" << absl::StrJoin(shape.layout().minor_to_major(), ",") << "), expected (" << absl::StrJoin(default_layout.minor_to_major(), ",") << ")";
+  // }
 
   std::function<void()> on_delete_callback;
   if (dlmt->deleter) {

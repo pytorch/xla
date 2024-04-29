@@ -479,6 +479,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
   }
 
   if (runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false) && tensor.is_cuda()) {
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Running with XLA_FALLBACK_CUDA for CUDA tensor to XLA tensor case in tensor_util::TensorToXlaData." << std::endl;
       XLA_CHECK(tensor.is_cuda()) << "tensor is not on cuda. Instead, it is on the device " << tensor.device() << ", tensor.device().type()=" << tensor.device().type();
       DLManagedTensor* dl_t = at::toDLPack(tensor);
       runtime::ComputationClient::DataPtr handle = runtime::GetComputationClient()->DLPackManagedTensorToData(dl_t);
@@ -811,6 +812,7 @@ std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     absl::Span<const at::ScalarType> dest_element_type) {
   if (runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false)) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Running with XLA_FALLBACK_CUDA for XLA tensor to CUDA tensor at tensor_util::XlaDataToTensors." << std::endl;
     std::vector<at::Tensor> tensors;
     tensors.reserve(xla_data.size());
     for (const auto& xd : xla_data) {
