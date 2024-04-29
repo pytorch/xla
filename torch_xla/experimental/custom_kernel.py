@@ -55,37 +55,41 @@ def jax_import_guard():
   torch_xla._XLAC._init_computation_client()
 
 
-def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
+def to_jax_shape_dtype_struct(tensor: torch.Tensor) -> "jax.ShapeDtypeStruct":
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
+  import jax
   import jax.numpy as jnp
 
-  if dtype == torch.float32:
-    if _XLA_USE_BF16:
+  def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
+    if dtype == torch.float32:
+      if _XLA_USE_BF16:
+        return jnp.bfloat16
+      return jnp.float32
+    elif dtype == torch.float64:
+      if _XLA_USE_BF16:
+        return jnp.bfloat16
+      return jnp.float64
+    elif dtype == torch.float16:
+      return jnp.float16
+    elif dtype == torch.bfloat16:
       return jnp.bfloat16
-    return jnp.float32
-  elif dtype == torch.float64:
-    if _XLA_USE_BF16:
-      return jnp.bfloat16
-    return jnp.float64
-  elif dtype == torch.float16:
-    return jnp.float16
-  elif dtype == torch.bfloat16:
-    return jnp.bfloat16
-  elif dtype == torch.int32:
-    return jnp.int32
-  elif dtype == torch.int64:
-    return jnp.int64
-  elif dtype == torch.int16:
-    return jnp.int16
-  elif dtype == torch.int8:
-    return jnp.int8
-  elif dtype == torch.uint8:
-    return jnp.uint8
-  else:
-    raise ValueError(f"Unsupported dtype: {dtype}")
+    elif dtype == torch.int32:
+      return jnp.int32
+    elif dtype == torch.int64:
+      return jnp.int64
+    elif dtype == torch.int16:
+      return jnp.int16
+    elif dtype == torch.int8:
+      return jnp.int8
+    elif dtype == torch.uint8:
+      return jnp.uint8
+    else:
+      raise ValueError(f"Unsupported dtype: {dtype}")
 
+  return jax.ShapeDtypeStruct(
+      tensor.shape, convert_torch_dtype_to_jax(tensor.dtype))
 
 def trace_pallas(kernel: Callable,
                  *args,
@@ -104,8 +108,7 @@ def trace_pallas(kernel: Callable,
     # TODO: Could the args be a tuple of tensors or a list of tensors? Flattern them?
     if torch.is_tensor(arg):
       # ShapeDtypeStruct doesn't have any storage and thus is very suitable for generating the payload.
-      jax_meta_tensor = jax.ShapeDtypeStruct(
-          arg.shape, convert_torch_dtype_to_jax(arg.dtype))
+      jax_meta_tensor = to_jax_shape_dtype_struct(arg)
       jax_args.append(jax_meta_tensor)
       tensor_args.append(arg)
     else:
@@ -221,9 +224,8 @@ class FlashAttention(torch.autograd.Function):
           k,
           v,
           None,
-          SegmentIds(jax.ShapeDtypeStruct(
-          q_segment_ids.shape, convert_torch_dtype_to_jax(q_segment_ids.dtype)), jax.ShapeDtypeStruct(
-          kv_segment_ids.shape, convert_torch_dtype_to_jax(kv_segment_ids.dtype))),  # This is pretty ugly, can we do better?
+          SegmentIds(to_jax_shape_dtype_struct(q_segment_ids), to_jax_shape_dtype_struct(
+          kv_segment_ids)),
           save_residuals,
           causal,
           1.0,
