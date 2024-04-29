@@ -109,6 +109,7 @@ cc_library(
         ":env_hash",
         ":env_vars",
         ":operation_manager",
+        ":pjrt_compile_only",
         ":pjrt_registry",
         ":profiler",
         ":stablehlo_helper",
@@ -188,6 +189,17 @@ cc_test(
 )
 
 cc_library(
+    name = "pjrt_compile_only",
+    srcs = ["pjrt_compile_only.cc"],
+    hdrs = ["pjrt_compile_only.h"],
+    deps = [
+        "@xla//xla/pjrt:pjrt_client",
+        "@xla//xla/pjrt:pjrt_future",
+        "@xla//xla/pjrt:pjrt_compiler",
+    ],
+)
+
+cc_library(
     name = "pjrt_registry",
     srcs = ["pjrt_registry.cc"],
     hdrs = ["pjrt_registry.h"],
@@ -198,6 +210,7 @@ cc_library(
         ":profiler",
         ":sys_util",
         ":tf_logging",
+        ":pjrt_compile_only",
         ":xla_coordinator",
         "@com_google_absl//absl/log:initialize",
         "@xla//xla/pjrt:pjrt_c_api_client",

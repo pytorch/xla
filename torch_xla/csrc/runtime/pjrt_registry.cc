@@ -3,6 +3,7 @@
 #include "absl/log/initialize.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/pjrt_compile_only.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
@@ -14,6 +15,7 @@
 #include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
+#include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 
 namespace torch_xla {
@@ -72,10 +74,21 @@ void RegisterPjRtPlugin(std::string name,
 }
 
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
-InitializePjRt(const std::string& device_type) {
+InitializePjRt(const std::string& env_device) {
   std::unique_ptr<xla::PjRtClient> client;
   std::unique_ptr<XlaCoordinator> coordinator;
 
+  std::string device_type = env_device;
+  std::string device_topology;
+  // if the env_device is AOT type, it will contain the topology information
+  // like `AOT-v4:2x2x1`
+  size_t pos = env_device.find('-');
+  if (pos != std::string::npos) {
+    device_type = env_device.substr(0, pos);
+    XLA_CHECK(device_type == "AOT")
+        << "Only AOT is supported with topology specification.";
+    device_topology = env_device.substr(pos + 1);
+  }
   if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false) &&
       device_type != "CPU") {
     std::shared_ptr<const PjRtPlugin> plugin = GetPjRtPlugin(device_type);
@@ -141,6 +154,23 @@ InitializePjRt(const std::string& device_type) {
     const PJRT_Api* c_api =
         static_cast<xla::PjRtCApiClient*>(client.get())->pjrt_c_api();
     profiler::RegisterProfilerForPlugin(c_api);
+  } else if (device_type == "AOT") {
+    TF_VLOG(1) << "Initializing AOT client with topology " << device_topology
+               << "...";
+    auto tpu_library_path = sys_util::GetEnvString(
+        env::kEnvTpuLibraryPath,
+        sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
+    tsl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
+    XLA_CHECK_OK(tpu_status);
+    absl::flat_hash_map<std::string, xla::PjRtValueType> create_options = {};
+    // TODO(piz): we need to specify correct replicas and partitions
+    absl::StatusOr<std::unique_ptr<xla::PjRtTopologyDescription>>
+        virtual_topology =
+            xla::GetCApiTopology("tpu", device_topology, create_options);
+    XLA_CHECK_OK(virtual_topology.status());
+    client = std::move(std::make_unique<xla::CompileOnlyPjRtClient>(
+        std::move(virtual_topology.value())));
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
   } else if (device_type == "CUDA") {

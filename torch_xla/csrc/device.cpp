@@ -30,6 +30,8 @@ std::string DeviceType::XlaDeviceTypeToString(XlaDeviceType hw_type) {
       return "NEURON";
     case XlaDeviceType::SPMD:
       return "SPMD";
+    case XlaDeviceType::AOT:
+      return "AOT";
     default:
       XLA_ERROR() << "Invalid device type";
   }
@@ -38,6 +40,8 @@ std::string DeviceType::XlaDeviceTypeToString(XlaDeviceType hw_type) {
 XlaDeviceType DeviceType::StringToXlaDeviceType(const std::string& type_name) {
   if (type_name == "SPMD") {
     return XlaDeviceType::SPMD;
+  } else if (type_name == "AOT") {
+    return XlaDeviceType::AOT;
   } else if (type_name == "TPU") {
     return XlaDeviceType::TPU;
   } else if (type_name == "CPU") {
@@ -98,6 +102,20 @@ bool IsVirtualDevice(const std::string& device) {
   return hw_type == XlaDeviceType::SPMD;
 }
 
+torch::lazy::BackendDevice GetCrossCompilationDevice() {
+  return ParseDeviceString("AOT:0");
+}
+
+bool UseCrossCompilationDevice() {
+  return runtime::sys_util::GetEnvString("PJRT_DEVICE", "") == "AOT";
+}
+
+bool IsCrossCompilationDevice(const std::string& device) {
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(ParseDeviceString(device).type());
+  return hw_type == XlaDeviceType::AOT;
+}
+
 bool GetLockSpmdConfig() { return spmd_config_is_locked; }
 
 bool CheckTpuDevice(XlaDeviceType hw_type) {
@@ -106,7 +124,7 @@ bool CheckTpuDevice(XlaDeviceType hw_type) {
   }
 
   std::string pjrt_device = runtime::sys_util::GetEnvString("PJRT_DEVICE", "");
-  if (hw_type == XlaDeviceType::SPMD) {
+  if (hw_type == XlaDeviceType::SPMD || hw_type == XlaDeviceType::AOT) {
     return pjrt_device == "TPU";
   }
   return false;

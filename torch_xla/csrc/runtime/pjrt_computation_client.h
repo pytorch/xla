@@ -298,6 +298,20 @@ class PjRtComputationClient : public ComputationClient {
     std::optional<std::vector<xla::OpSharding>> output_shardings_;
   };
 
+  // Used for AOT compilation.
+  struct PjRtUnloadedComputation : public Computation {
+    PjRtUnloadedComputation(xla::XlaComputation computation,
+                            std::vector<std::string> devices,
+                            std::unique_ptr<xla::PjRtExecutable> executable)
+        : Computation(std::move(computation), std::move(devices)),
+          executable(std::move(executable)) {
+      output_shardings_ = this->executable->GetOutputShardings();
+    }
+
+    std::unique_ptr<xla::PjRtExecutable> executable;
+    std::optional<std::vector<xla::OpSharding>> output_shardings_;
+  };
+
   // Use XLA replication to re-assemble the sharded data.
   std::shared_ptr<PjRtData> ReplicateShardedData(const DataPtr& handle);
 };
