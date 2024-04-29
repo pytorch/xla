@@ -236,7 +236,8 @@ def newnewnew_test():
   torch.set_grad_enabled(False)
 
   # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-  simple_with_linear = SimpleWithLinear()
+  # simple_with_linear = SimpleWithLinear()
+  simple_with_linear = SimpleWithLinearPure()
 
   def cond_fn(upper, lower, one_value, x, input_value, output_value):
     return lower[0] < upper[0]
