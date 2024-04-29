@@ -229,6 +229,8 @@ class FlashAttention(torch.autograd.Function):
 
     with torch.no_grad():
       segment_ids, q_segment_ids, kv_segment_ids = FlashAttention.prepare_segment_ids(q_segment_ids, kv_segment_ids)
+      ctx.segment_ids = segment_ids
+
       # We can't directly use flash_attention as we need to override the save_residuals flag which returns
       # l and m that is needed for the backward. Then we lose all the shape checks.
       # TODO: replicate the shape checks on flash_attention.
@@ -279,18 +281,19 @@ class FlashAttention(torch.autograd.Function):
       m = xs.disable_manual_sharding(
           m, partition_spec[0:3], ctx.full_shape[0:3], mesh=mesh).global_tensor
 
-    ctx.save_for_backward(full_q, full_k, full_v, o, l, m)
+    ctx.save_for_backward(full_q, full_k, full_v, o, l, m, q_segment_ids, kv_segment_ids)
     return o
 
   @staticmethod
   def backward(ctx, grad_output):
     from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq, _flash_attention_bwd_dkv
 
-    q, k, v, o, l, m = ctx.saved_tensors
+    q, k, v, o, l, m, q_segment_ids, kv_segment_ids = ctx.saved_tensors
     causal = ctx.causal
     partition_spec = ctx.partition_spec
     mesh = ctx.mesh
     full_shape = ctx.full_shape
+    segment_ids = ctx.segment_ids
     grad_q = grad_k = grad_v = None
 
     grad_i = torch.sum(
@@ -325,7 +328,7 @@ class FlashAttention(torch.autograd.Function):
           k,
           v,
           None,
-          None,
+          segment_ids,
           l,
           m,
           grad_output,
@@ -345,8 +348,14 @@ class FlashAttention(torch.autograd.Function):
               "block_q_major", "block_k_major", "block_k", "sm_scale", "causal",
               "mask_value", "debug"
           ])
-      grad_q = torch_xla._XLAC._xla_tpu_custom_call(
+      if segment_ids is None:
+        grad_q = torch_xla._XLAC._xla_tpu_custom_call(
           [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
+          payload, [q.shape], [q.dtype])[0]
+      else:
+        print("heyheyhey")
+        grad_q = torch_xla._XLAC._xla_tpu_custom_call(
+          [q, k, v, q_segment_ids, kv_segment_ids, expanded_l, expanded_m, grad_output, expanded_grad_i],
           payload, [q.shape], [q.dtype])[0]
 
     if ctx.needs_input_grad[1] or ctx.needs_input_grad[2]:
@@ -356,7 +365,7 @@ class FlashAttention(torch.autograd.Function):
           k,
           v,
           None,
-          None,
+          segment_ids,
           l,
           m,
           grad_output,
@@ -379,8 +388,13 @@ class FlashAttention(torch.autograd.Function):
               "block_q_major", "block_k_major", "block_k", "block_q",
               "sm_scale", "causal", "mask_value", "debug"
           ])
-      grads = torch_xla._XLAC._xla_tpu_custom_call(
+      if segment_ids is None:
+        grads = torch_xla._XLAC._xla_tpu_custom_call(
           [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
+          payload, [k.shape, v.shape], [k.dtype, v.dtype])
+      else:
+        grads = torch_xla._XLAC._xla_tpu_custom_call(
+          [q, k, v, q_segment_ids, kv_segment_ids, expanded_l, expanded_m, grad_output, expanded_grad_i],
           payload, [k.shape, v.shape], [k.dtype, v.dtype])
     if ctx.needs_input_grad[1]:
       grad_k = grads[0]
