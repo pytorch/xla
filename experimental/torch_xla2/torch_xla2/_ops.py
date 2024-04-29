@@ -410,7 +410,10 @@ def _aten_native_layer_norm(input,
 
 # - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
 @op(torch.ops.aten.addmm)
+@op(torch.ops.aten.addmv)
 def _aten_addmm(self, mat1, mat2, *, beta=1.0, alpha=1.0):
+  alpha = jnp.array(alpha).astype(mat1.dtype)
+  beta = jnp.array(beta).astype(mat1.dtype)
   self *= beta
   self += alpha * jnp.matmul(mat1, mat2)
   return self
@@ -641,13 +644,14 @@ def _aten_min(x, axis=None):
 
 
 @op(torch.ops.aten.amin)
-def _aten_amin(x, axis=None):
-  return jnp.min(x, axis=axis)
+def _aten_amin(x, dim=None, keepdim=False):
+  return _with_reduction_scalar(jnp.amin, x, dim, keepdim)
 
 
 @op(torch.ops.aten.argmin)
-def _aten_amin(x, axis=None):
-  return jnp.argmin(x, axis=axis)
+def _aten_argmin(self, dim=None, keepdim=False):
+  return _with_reduction_scalar(
+    jnp.argmin, self, dim, keepdim)
 
 
 @op(torch.ops.aten.sin)
@@ -1211,13 +1215,27 @@ def _aten_abs(self):
 # generate aten.amax only
 @op(torch.ops.aten.amax)
 def _aten_amax(self, dim=None, keepdim=False):
-  return jnp.amax(self, axis=dim, keepdims=keepdim)
+  return _with_reduction_scalar(jnp.amax, self, dim, keepdim)
 
+
+def _with_reduction_scalar(jax_func, self, dim, keepdim):
+  expanded = False
+  if self.ndim == 0:
+    # for self of rank 0:
+    # torch.any(x, 0), torch.any(x, -1) works;
+    # torch.any(x, 1) throws out of bounds, so it's
+    # behavior is the same as a jnp array of rank 1
+    expanded = True
+    self = jnp.expand_dims(self, 0)
+  res = jax_func(self, axis=dim, keepdims=keepdim)
+  if expanded:
+    res = res.squeeze()
+  return res
 
 # aten.any
 @op(torch.ops.aten.any)
 def _aten_any(self, dim=None, keepdim=False):
-  return jnp.any(self, axis=dim, keepdims=keepdim)
+  return _with_reduction_scalar(jnp.any, self, dim, keepdim)
 
 
 # aten.arange
@@ -1246,7 +1264,8 @@ def _aten_arange(start,
 # aten.argmax
 @op(torch.ops.aten.argmax)
 def _aten_argmax(self, dim=None, keepdim=False):
-  return jnp.argmax(self, axis=dim, keepdims=keepdim)
+  return _with_reduction_scalar(
+    jnp.argmax, self, dim, keepdim)
 
 
 # aten.as_strided
@@ -1752,3 +1771,11 @@ def _aten_local_scalar_dense(x):
 @op(torch.ops.aten.tensor_split.sections)
 def _aten_tensor_split(ary, indices_or_sections, axis=0):
   return jnp.array_split(ary, indices_or_sections, axis)
+
+@op(torch.ops.aten.outer)
+def _aten_outer(a, b):
+  return jnp.outer(a, b)
+
+@op(torch.ops.aten.allclose)
+def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
+  return jnp.allclose(input, other, rtol, atol, equal_nan)

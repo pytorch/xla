@@ -7,6 +7,8 @@ from torch.testing._internal.common_device_type import (
     instantiate_device_type_tests, ops)
 from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
+import torch_xla2
+
 
 skiplist = {
     "__getitem__",
@@ -15,18 +17,6 @@ skiplist = {
     "_native_batch_norm_legit",
     "_segment_reduce",
     "_upsample_bilinear2d_aa",
-    "addmm",
-    "addmv",
-    "addr",
-    "all",
-    "allclose",
-    "amax",
-    "amin",
-    "aminmax",
-    "angle",
-    "any",
-    "argmax",
-    "argmin",
     "argsort",
     "as_strided",
     "as_strided_scatter",
@@ -639,7 +629,8 @@ def run_export_and_compare(testcase,
       input2, args2, kwargs2 = pytree.tree_map_only(
           torch.Tensor, tensor.move_to_device,
           (sample_input.input, sample_input.args, sample_input.kwargs))
-      res2 = func(input2, *args2, **kwargs2)
+      with torch_xla2.mode():
+        res2 = func(input2, *args2, **kwargs2)
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
       with testcase.subTest("torch_xla2_diff:" + str(atol)):
         if ignore_indices and isinstance(res, tuple) and len(res) == 2:
