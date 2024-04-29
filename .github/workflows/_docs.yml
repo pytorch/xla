@@ -11,9 +11,9 @@ on:
         type: string
         description: Runner type for the test
         default: linux.4xlarge
-      secrets:
-        torchxla-bot-token:
-          required: true
+    secrets:
+      torchxla-bot-token:
+        required: true
 jobs:
   build-docs:
     runs-on: ubuntu-latest
