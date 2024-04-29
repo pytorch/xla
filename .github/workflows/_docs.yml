@@ -67,5 +67,5 @@ jobs:
         git config user.name "torchxlabot2"
         git add . -v
         git commit -m "Update doc from commit ${{ github.sha }}"
-        git push --dry-run origin gh-pages
-      # if: github.event_name == 'push'
+        git push origin gh-pages
+      if: github.event_name == 'push'
