@@ -250,6 +250,9 @@ def newnewnew_test():
     return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
         one_value, x), input_value.clone(), output_value.clone() # bias.clone(), weight.clone(), output_value.clone()
 
+  print("simple_with_linear weight: ", simple_with_linear.weight)
+  print("simple_with_linear bias: ", simple_with_linear.bias)
+
   upper = torch.tensor([1], dtype=torch.int32, device=device)
   lower = torch.tensor([0], dtype=torch.int32, device=device)
   one_value = torch.tensor([1], dtype=torch.int32, device=device)
