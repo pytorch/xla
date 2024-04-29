@@ -21,7 +21,7 @@ concurrency:
 jobs:
   # Old CI workflow
   build:
-    name: "Build PyTorch/XLA (GPU)"
+    name: "Build upstream CI image"
     uses: ./.github/workflows/_build.yml
     with:
       ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
