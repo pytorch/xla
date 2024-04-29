@@ -239,7 +239,7 @@ def newnewnew_test():
   # simple_with_linear = SimpleWithLinear()
   simple_with_linear = SimpleWithLinearPure()
 
-  def cond_fn(upper, lower, one_value, x, input_value, output_value):
+  def cond_fn(upper, lower, one_value, x, input_value, output_value, args*):
     return lower[0] < upper[0]
 
   def body_fn(upper, lower, one_value, x, input_value, output_value):
