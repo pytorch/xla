@@ -258,6 +258,8 @@ def newnewnew_test():
   # import pdb; pdb.set_trace()
   for name, param in simple_with_linear.named_parameters():
     print("arrive the loop")
+    print("name: ", name)
+    print("param: ", param)
     if name in ['bias']:
       print(param.size())
 
