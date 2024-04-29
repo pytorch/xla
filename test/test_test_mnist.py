@@ -275,11 +275,12 @@ def newnewnew_test():
   one_value = torch.tensor([1], dtype=torch.int32, device=device)
   init_val = torch.tensor([1], dtype=torch.int32, device=device)
   l_in_0 = torch.rand(10, device=xm.xla_device())
-  output_value = torch.zeros([20], dtype=torch.float32, device=device)
+  output_value = torch.zeros([30], dtype=torch.float32, device=device)
 
   additional_inputs = []
   for name, param in simple_with_linear.named_parameters():
-      additional_inputs.insert(-1, param)
+      # additional_inputs.insert(-1, param)
+      additional_inputs.append(-1, param)
 
   print("in mnist additional_inputs: ", additional_inputs)
   upper__, lower__, one_value__, torch_add_res__, input_value__, bias__, weight__, output_value_real__, = _xla_while_loop(
