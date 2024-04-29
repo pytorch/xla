@@ -162,13 +162,13 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   additional_inputs_list_cond = list(
       fake_carried_inputs[2:]
   )  # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
-  if additional_inputs:
-    tmp_bias = additional_inputs_list_cond[
-        -3]  # not used, change order doesn't affect logic
-    del additional_inputs_list_cond[
-        -3]  # not used, change order doesn't affect logic
-    additional_inputs_list_cond.append(
-        tmp_bias)  # not used, change order doesn't affect logic
+  # if additional_inputs:
+  #   tmp_bias = additional_inputs_list_cond[
+  #       -3]  # not used, change order doesn't affect logic
+  #   del additional_inputs_list_cond[
+  #       -3]  # not used, change order doesn't affect logic
+  #   additional_inputs_list_cond.append(
+  #       tmp_bias)  # not used, change order doesn't affect logic
 
   cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
   cond_hlo = cond_ctx.hlo()
