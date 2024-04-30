@@ -56,7 +56,7 @@ class SimpleWithLinearPure(torch.nn.Module):
     self.bn1 = torch.nn.BatchNorm2d(10).to(xm.xla_device())
     self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5).to(xm.xla_device())
     self.bn2 = torch.nn.BatchNorm2d(20).to(xm.xla_device())
-    # self.fc1 = torch.nn.Linear(320, 50).to(xm.xla_device())
+    self.fc1 = torch.nn.Linear(320, 50).to(xm.xla_device())
     # self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
     # self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
     # self.fc1 = nn.Linear(320, 50).to(xm.xla_device())
@@ -72,6 +72,7 @@ class SimpleWithLinearPure(torch.nn.Module):
     x = F.relu(F.max_pool2d(self.conv2(x), 2))
     x = self.bn2(x)
     x = torch.flatten(x, 1)
+    x = F.relu(self.fc1(x))
     return x
 
 class SimpleWithLinear(torch.nn.Module):
