@@ -327,6 +327,12 @@ def newnewnew_test():
       print("added bn_list: ", bn_list)
       bn_list = []
 
+  ### !!! add still exist bn_list if the last additional_inputs is bn- pre
+  if flag and (len(bn_list) !=0):
+    additional_inputs =additional_inputs + bn_list
+    print("added bn_list: ", bn_list)
+    bn_list = []
+
   # print("in mnist additional_inputs: ", additional_inputs)
   ### linear 10*20 + 20*30
   # upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, w2_, b2_, output_value_real__, = _xla_while_loop(
