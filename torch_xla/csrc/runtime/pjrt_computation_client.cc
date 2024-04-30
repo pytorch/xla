@@ -459,10 +459,12 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
 }
 
 std::uintptr_t PjRtComputationClient::UnsafeBufferPointer(const DataPtr handle) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   std::shared_ptr<PjRtData> pjrt_data = ReplicateShardedData(handle);
   XLA_CHECK(pjrt_data);
   xla::StatusOr<std::uintptr_t> ptr = client_->UnsafeBufferPointer(pjrt_data->buffer.get());
   XLA_CHECK(ptr.ok());
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": ptr.value()=" << ptr.value() << std::endl;
   return ptr.value();
 }
 

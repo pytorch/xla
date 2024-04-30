@@ -28,7 +28,6 @@
 #include "xla/python/ifrt/memory.h"
 #include "xla/python/ifrt/sharding.h"
 #include "xla/python/pjrt_ifrt/pjrt_array.h"
-#include "xla/python/py_array.h"
 #include "xla/python/pjrt_ifrt/pjrt_client.h"
 #include "xla/python/pjrt_ifrt/xla_sharding.h"
 #include "xla/shape.h"
@@ -399,12 +398,7 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
 }
 
 std::uintptr_t IfrtComputationClient::UnsafeBufferPointer(const DataPtr handle) {
-  std::shared_ptr<IfrtData> ifrt_data = std::dynamic_pointer_cast<IfrtData>(handle);
-  XLA_CHECK(ifrt_data);
-  xla::PjRtBuffer* pjrt_buffer = xla::GetPjrtBuffer((ifrt_data->buffer.get()));
-  xla::StatusOr<std::uintptr_t> ptr = client_->pjrt_client()->UnsafeBufferPointer(pjrt_buffer);
-  XLA_CHECK(ptr.ok());
-  return ptr.value();
+  XLA_ERROR() << __FUNCTION__ << " not implemented";
 }
 
 std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
