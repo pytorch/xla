@@ -18,6 +18,8 @@
         git checkout --recurse-submodules {{ torch_pin.stdout }}
       fi
     chdir: "{{ (src_root, 'pytorch') | path_join }}"
+  args:
+    executable: /bin/bash
   when: torch_pin is succeeded
 
 - name: Build PyTorch
