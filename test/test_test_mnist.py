@@ -315,7 +315,8 @@ def newnewnew_test():
   # out = c(x)
   # print(out.nelement())
   # output_value = torch.zeros([16,10,28,28], dtype=torch.float32, device=device) # conv2d
-  output_value = torch.zeros([16,10,14,14], dtype=torch.float32, device=device)# conv2d+mnist-treat
+  # output_value = torch.zeros([16,10,14,14], dtype=torch.float32, device=device) # conv2d+mnist-treat # conv1 + bn1
+  output_value = torch.zeros([16,20,5,5], dtype=torch.float32, device=device) # conv1 + bn1 + conv2
 
 
   additional_inputs = []
