@@ -254,10 +254,20 @@ def newnewnew_test():
     # weight = simple_with_linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
     # bias = simple_with_linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
     res = [upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), output_value.clone()]
+    bn_list = []
+    bn_flag = False
     for name, param in simple_with_linear.named_parameters():
       if name[:2]=='bn':
-        res.insert(-1, param) # dumpicate # continue # skip bn
+        bn_flag = True
+        bn_list.insert(-1, param) # dumpicate # continue # skip bn
+      else:
+        bn_flag = False
+
       res.insert(-1, param)
+
+      if not bn_flag and (len(bn_list) !=0): # False
+        res = res[:-1] + bn_list + res[-1]
+        bn_list = []
       # torch.randint(10, carried_input.size(), dtype=carried_input.dtype).to(device))
     return tuple(res)
     # return (upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
@@ -296,11 +306,23 @@ def newnewnew_test():
 
 
   additional_inputs = []
+  bn_list = []
+  bn_flag = False
   for name, param in simple_with_linear.named_parameters():
+    # if name[:2]=='bn':
+    #   additional_inputs.append(param) # dumplicate
     if name[:2]=='bn':
-      additional_inputs.append(param) # dumplicate
+      bn_flag = True
+      bn_list.insert(-1, param) # dumpicate # continue # skip bn
+    else:
+      bn_flag = False
+
     # additional_inputs.insert(-1, param)
     additional_inputs.append(param)
+
+    if not bn_flag and (len(bn_list) !=0): # False
+      additional_inputs =additional_inputs + bn_list
+      bn_list = []
 
   # print("in mnist additional_inputs: ", additional_inputs)
   ### linear 10*20 + 20*30
