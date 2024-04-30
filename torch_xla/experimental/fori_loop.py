@@ -162,13 +162,10 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   additional_inputs_list_cond = list(
       fake_carried_inputs[2:]
   )  # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
-  # if additional_inputs:
-  #   tmp_bias = additional_inputs_list_cond[
-  #       -3]  # not used, change order doesn't affect logic
-  #   del additional_inputs_list_cond[
-  #       -3]  # not used, change order doesn't affect logic
-  #   additional_inputs_list_cond.append(
-  #       tmp_bias)  # not used, change order doesn't affect logic
+  if additional_inputs:
+    tmp_bias = additional_inputs_list_cond[3] # additional_inputs_list_cond[-3]  # not used, change order doesn't affect logic
+    del additional_inputs_list_cond[3] # additional_inputs_list_cond[-3]  # not used, change order doesn't affect logic
+    additional_inputs_list_cond.append(tmp_bias)  # not used, change order doesn't affect logic
 
   cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
   cond_hlo = cond_ctx.hlo()
@@ -213,11 +210,11 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
 
-  # # TODO(@manfei): treat hard-code input arguments, currently switch bias and output_value if additional_inputs(weight/bias) exists
-  # if additional_inputs:
-  #   tmp_bias = params[-3]
-  #   del params[-3]
-  #   params.append(tmp_bias)
+  # TODO(@manfei): treat hard-code input arguments, currently switch bias and output_value if additional_inputs(weight/bias) exists
+  if additional_inputs:
+    tmp_bias = params[5] # params[-3]
+    del params[5] # params[-3]
+    params.append(tmp_bias)
 
   # generate while xlacomputation
   input_tuple = xb.Op.tuple(tuple(params))
