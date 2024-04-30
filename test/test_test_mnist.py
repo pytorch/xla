@@ -53,7 +53,7 @@ class SimpleWithLinearPure(torch.nn.Module):
   def __init__(self):
     super().__init__()
     self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2).to(xm.xla_device())
-    self.bn1 = nn.BatchNorm2d(10)
+    self.bn1 = torch.nn.BatchNorm2d(10).to(xm.xla_device())
     # self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
     # self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
     # self.fc1 = nn.Linear(320, 50).to(xm.xla_device())
@@ -114,12 +114,12 @@ class MNIST(nn.Module):
 
   def __init__(self):
     super(MNIST, self).__init__()
-    self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-    self.bn1 = nn.BatchNorm2d(10)
-    self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-    self.bn2 = nn.BatchNorm2d(20)
-    self.fc1 = nn.Linear(320, 50)
-    self.fc2 = nn.Linear(50, 10)
+    self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5)
+    self.bn1 = torch.nn.BatchNorm2d(10)
+    self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5)
+    self.bn2 = torch.nn.BatchNorm2d(20)
+    self.fc1 = torch.nn.Linear(320, 50)
+    self.fc2 = torch.nn.Linear(50, 10)
 
   def forward(self, x):
     x = F.relu(F.max_pool2d(self.conv1(x), 2))
