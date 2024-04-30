@@ -10,16 +10,16 @@ Before the feature is available on CircleCi side, we'll use a manual process to 
 But we'll need to manually commit the new versioned doc and point http://pytorch.org/xla to the documentation of new
 stable release.
 
-Take 1.5 release as example:
+Take 2.3 release as example:
 ```
-# Build pytorch/pytorch:release/1.5 and pytorch/xla:release/1.5 respectively.
+# Build pytorch/pytorch:release/2.3 and pytorch/xla:release/2.3 respectively.
 # In pytorch/xla/docs
 ./docs_build.sh
 git clone -b gh-pages https://github.com/pytorch/xla.git /tmp/xla
-cp -r build/* /tmp/xla/release/1.5
+cp -r build/* /tmp/xla/release/2.3
 cd /tmp/xla
 # Update `redirect_url` in index.md
 git add .
-git commit -m "Publish 1.5 documentation."
+git commit -m "Publish 2.3 documentation."
 git push origin gh-pages
 ```
