@@ -171,9 +171,9 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
-  # cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
   print("cond computation: !!!!!!!!!")
-  # print(cond_hlo_print)
+  print(cond_hlo_print)
 
   # generate body_fn xlacomputation
   body_result = body_fn(*fake_carried_inputs)
@@ -193,9 +193,9 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
-  # body_hlo_print = xb.get_computation_hlo(body_computation)
+  body_hlo_print = xb.get_computation_hlo(body_computation)
   print("body computation: !!!!!!!!!")
-  # print(body_hlo_print)
+  print(body_hlo_print)
 
   # trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
   total_inputs = carried_inputs + additional_inputs
