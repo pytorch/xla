@@ -132,14 +132,13 @@ Our comprehensive user guides are available at:
 
 PyTorch/XLA releases starting with version r2.1 will be available on PyPI. You
 can now install the main build with `pip install torch_xla`. To also install the
-Cloud TPU plugin, install the optional `tpu` dependencies:
+Cloud TPU plugin, install the optional `tpu` dependencies after installing the main build with
 
 ```
 pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
 
-GPU, XRT (legacy runtime), and nightly builds are available in our public GCS
-bucket.
+GPU and nightly builds are available in our public GCS bucket.
 
 | Version | Cloud TPU/GPU VMs Wheel |
 | --- | ----------- |
@@ -150,6 +149,8 @@ bucket.
 | nightly (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 | nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl` |
 | nightly (CUDA 12.1 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+
+You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. To get the companion pytorch nightly wheel, replace the `torch_xla` with `torch` on above wheel links.
 
 <details>
 
@@ -206,9 +207,6 @@ wheels for `torch` and `torch_xla` at
 | --- | ----------- |
 | 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-2.0-cp310-cp310-linux_x86_64.whl` |
 
-You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel
-of a specified date. To get the companion pytorch and torchvision nightly wheel,
-replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
 </details>
 
 ### Docker
