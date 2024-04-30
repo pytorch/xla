@@ -52,8 +52,11 @@ import torch.optim as optim
 class SimpleWithLinearPure(torch.nn.Module):
   def __init__(self):
     super().__init__()
-    self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
-    self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
+    self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5).to(xm.xla_device())
+    # self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+    # self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
+    # self.fc1 = nn.Linear(320, 50).to(xm.xla_device())
+    # self.fc2 = nn.Linear(50, 10).to(xm.xla_device())
 
   # def forward(self, upper, lower, one_value, x, input_value, output_value):
   def forward(self, input_value):
