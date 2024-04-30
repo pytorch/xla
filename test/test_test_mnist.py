@@ -64,7 +64,7 @@ class SimpleWithLinearPure(torch.nn.Module):
     # output_value_real = self.linear(input_value)
     # output_value_real_final = self.linear2(output_value_real)
     # output_value_real_final = self.conv1(input_value) # conv2d
-    output_value_real_final = F.relu(F.max_pool2d(self.conv1(input_value), 2))
+    output_value_real_final = F.relu(F.max_pool2d(self.conv1(input_value), 2)) # conv2d+mnist-treat
     return output_value_real_final
 
 class SimpleWithLinear(torch.nn.Module):
@@ -288,7 +288,8 @@ def newnewnew_test():
   # c = nn.Conv2d(3,10,kernel_size=5,stride=1,padding=2)
   # out = c(x)
   # print(out.nelement())
-  output_value = torch.zeros([16,10,28,28], dtype=torch.float32, device=device)
+  # output_value = torch.zeros([16,10,28,28], dtype=torch.float32, device=device) # conv2d
+  output_value = torch.zeros([16,10,14,14], dtype=torch.float32, device=device)# conv2d+mnist-treat
 
 
   additional_inputs = []
