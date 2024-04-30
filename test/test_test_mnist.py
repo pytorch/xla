@@ -295,7 +295,10 @@ def newnewnew_test():
       additional_inputs.append(param)
 
   # print("in mnist additional_inputs: ", additional_inputs)
-  upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, w2_, b2_, output_value_real__, = _xla_while_loop(
+  ### linear 10*20 + 20*30
+  # upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, w2_, b2_, output_value_real__, = _xla_while_loop(
+  ### conv2d
+  upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, output_value_real__, = _xla_while_loop(
       cond_fn, body_fn,
       (upper, lower, one_value, init_val, l_in_0, output_value), tuple(additional_inputs))
       # (upper, lower, one_value, init_val, l_in_0, output_value), ())
