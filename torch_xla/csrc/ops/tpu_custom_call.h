@@ -9,6 +9,7 @@ class TpuCustomCall : public XlaNode {
  public:
   // Make a TPU custom call with payload, e.g., Mosaic.
   TpuCustomCall(torch::lazy::OpList inputs, xla::Shape output_shape,
+                const std::string& name,
                 const std::string& payload);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
@@ -18,6 +19,7 @@ class TpuCustomCall : public XlaNode {
   std::string ToString() const override;
 
  private:
+  std::string name_;
   std::string payload_;
 };
 

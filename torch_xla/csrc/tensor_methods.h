@@ -85,8 +85,10 @@ void custom_sharding_(
     const std::shared_ptr<XLATensor::ShardingSpec>& spec,
     const CustomSharding::Type& type = CustomSharding::Type::kSharding);
 
-std::vector<XLATensorPtr> tpu_custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
+std::vector<XLATensorPtr> custom_call(
+    const std::vector<XLATensorPtr>& inputs, 
+    const std::string& name,
+    const std::string& payload,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes);
 

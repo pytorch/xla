@@ -262,6 +262,16 @@ class XLAExportInterpreter(torch.fx.Interpreter):
         ]
         self._mark_dynamic(res, dynamic_dims)
       return res
+    
+    if n.op == 'call_function' and n.target.namespace != 'aten':
+      def custom_call(*args, **kwargs):
+        return torch_xla._XLAC._xla_custom_call(
+          args, "hello world", 
+          [list(n.meta['val'].shape)],
+          [n.meta['val'].dtype],
+        )
+      n.target = custom_call
+
     return super().run_node(n)
 
 

@@ -529,8 +529,10 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
-std::vector<XLATensorPtr> tpu_custom_call(
-    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
+std::vector<XLATensorPtr> custom_call(
+    const std::vector<XLATensorPtr>& inputs, 
+    const std::string& name,
+    const std::string& payload,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes) {
   XLA_CHECK(inputs.size() > 0) << "inputs are empty";
@@ -551,7 +553,7 @@ std::vector<XLATensorPtr> tpu_custom_call(
   }
 
   auto node = torch::lazy::MakeNode<TpuCustomCall>(
-      values, xla::ShapeUtil::MakeTupleShape(output_xla_shapes), payload);
+      values, xla::ShapeUtil::MakeTupleShape(output_xla_shapes), name, payload);
 
   std::vector<XLATensorPtr> outputs;
   outputs.reserve(output_shapes.size());
