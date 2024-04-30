@@ -12,6 +12,7 @@ from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
 from torch._dynamo.utils import clone_inputs
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.utils.utils as xu
 import types
 import yaml
 from util import move_to_device, set_cwd, get_torchbench_test_name, find_near_file
@@ -253,9 +254,10 @@ class TorchBenchModel(BenchmarkModel):
     if self.benchmark_experiment.xla:
       # First, move the model and the inputs to CPU.
       # This avoids having dupplicated data on CUDA.
+      xla_fallback_cuda_enabled = xu.getenv_as('XLA_FALLBACK_CUDA', bool, defval=False)
       if self.benchmark_experiment.accelerator == "cuda":
-        self.module = self.module.to("cpu")
-        self.example_inputs = move_to_device(self.example_inputs, "cpu")
+        self.module = self.module.to("cuda") if xla_fallback_cuda_enabled else self.module.to("cpu") 
+        self.example_inputs = move_to_device(self.example_inputs, "cuda") if xla_fallback_cuda_enabled else move_to_device(self.example_inputs, "cpu")
         self._cleanup()
 
     # Torchbench has quite different setup for yolov3, so directly passing

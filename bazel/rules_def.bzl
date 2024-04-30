@@ -33,7 +33,7 @@ def ptxla_cc_test(
             "@torch//:headers",
             "@torch//:libc10",
             "@torch//:libtorch",
-            "@torch//:libtorch_cpu",
+            "@torch//:libtorch_cuda",
             "@torch//:libtorch_python",
         ],
         **kwargs

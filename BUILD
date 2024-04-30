@@ -24,7 +24,7 @@ cc_binary(
         "@torch//:headers",
         "@torch//:libc10",
         "@torch//:libtorch",
-        "@torch//:libtorch_cpu",
+        "@torch//:libtorch_cuda",
         "@torch//:libtorch_python",
     ] + if_cuda_is_configured([
         "@xla//xla/stream_executor:cuda_platform",

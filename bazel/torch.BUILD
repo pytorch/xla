@@ -43,8 +43,8 @@ cc_import(
 )
 
 cc_import(
-    name = "libtorch_cpu",
-    shared_library = "build/lib/libtorch_cpu.so",
+    name = "libtorch_cuda",
+    shared_library = "build/lib/libtorch_cuda.so",
 )
 
 cc_import(

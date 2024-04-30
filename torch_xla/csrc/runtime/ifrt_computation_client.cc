@@ -296,6 +296,11 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToDevice(
   return datas;
 }
 
+ComputationClient::DataPtr IfrtComputationClient::DLPackManagedTensorToData(DLManagedTensor* dlmt) {
+  XLA_ERROR() << "Not implemented yet.";
+  return nullptr;
+}
+
 ComputationClient::DataPtr IfrtComputationClient::TransferShardsToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
     std::string device, xla::Shape shape, xla::OpSharding sharding) {
@@ -429,6 +434,11 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
   InboundDataMetric()->AddSample(total_size);
 
   return literals;
+}
+
+DLManagedTensor* IfrtComputationClient::DataToDLPackManagedTensor(ComputationClient::DataPtr data) {
+  XLA_ERROR() << "Not implemented yet.";
+  return nullptr;
 }
 
 std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(

@@ -5,6 +5,7 @@ import re
 import torch
 import torch.nn as nn
 from torch._dynamo.testing import collect_results
+import torch_xla.utils.utils as xu
 from util import cast_to_dtype, move_to_device
 
 logger = logging.getLogger(__name__)
@@ -115,8 +116,10 @@ class BenchmarkModel:
       self.module = self.module.to(self.dtype)
       self.example_inputs = cast_to_dtype(self.example_inputs, self.dtype)
 
-    self.module = self.module.to(self.device)
-    self.example_inputs = move_to_device(self.example_inputs, self.device)
+    xla_fallback_cuda_enabled = xu.getenv_as('XLA_FALLBACK_CUDA', bool, defval=False)
+    if not (self.benchmark_experiment.xla and self.benchmark_experiment.accelerator == "cuda" and xla_fallback_cuda_enabled):
+      self.module = self.module.to(self.device)
+      self.example_inputs = move_to_device(self.example_inputs, self.device)
 
     if self.benchmark_experiment.test == "eval":
       self._prepare_for_eval()

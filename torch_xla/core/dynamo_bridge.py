@@ -160,9 +160,9 @@ def _maybe_move_tensors_to_device(tensors: tuple,
     if dynamo_debug:
       print("Moving Tensor {} to device {}".format(tensor, target_device))
 
-    # Have to move to CPU before moving it to target device.
-    moved_tensor = tensor.to(cpu_device)
-    moved_tensor = moved_tensor.to(target_device)
+    if target_device.type == "cuda":
+      tensor = tensor.contiguous()
+    moved_tensor = tensor.to(target_device)
 
     # Explicitly have to copy requires_grad attribute because it's dropped
     # with torch.to(..)

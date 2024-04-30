@@ -2,6 +2,7 @@
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
 #include <ATen/Tensor.h>
+#include <ATen/dlpack.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
@@ -28,6 +29,7 @@
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
 #include "xla/types.h"
+
 
 namespace torch_xla {
 namespace runtime {
@@ -278,6 +280,7 @@ class ComputationClient {
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
+  virtual DataPtr DLPackManagedTensorToData(DLManagedTensor* dl_tensor) = 0;
 
   // Reshard and return data sharded by `sharding` spec. This is a no-op if the
   // input sharding spec is identical to the target `sharding` sharding spec.
@@ -301,6 +304,7 @@ class ComputationClient {
   // python while holding the GIL can cause deadlocks!
   virtual std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) = 0;
+  virtual DLManagedTensor* DataToDLPackManagedTensor(DataPtr data) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(

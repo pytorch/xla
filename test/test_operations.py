@@ -2422,6 +2422,89 @@ class TestGeneric(test_utils.XlaTestCase):
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
 
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_cuda_to_xla_zero_copy(self):
+    met.clear_counters()
+    cuda_tensor = torch.arange(5, device=torch.device('cuda'))
+    xla_tensor = cuda_tensor.to(xm.xla_device())
+    print('xw32 metrics: ', met.metrics_report())
+    print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
+    self.assertEqual(met.metric_data('TransferToDeviceTime'), None, f'got {met.metric_data("TransferToDeviceTime")}')
+    self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
+    cuda_tensor[0] = -1
+    got = xla_tensor.cpu()
+    self.assertEqual(got[0], -1, f'Not zero-copy, got {got}')
+    self.assertTrue(torch.equal(got, cuda_tensor.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_scalar_cuda_to_xla_zero_copy(self):
+    met.clear_counters()
+    cuda_tensor = torch.tensor(5, device=torch.device('cuda'))
+    xla_tensor = cuda_tensor.to(xm.xla_device()) # xw32: fails here.
+    print('xw32 metrics: ', met.metrics_report())
+    print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
+    self.assertEqual(met.metric_data('TransferToDeviceTime'), None, f'got {met.metric_data("TransferToDeviceTime")}')
+    self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
+    cuda_tensor.fill_(-1)
+    got = xla_tensor.cpu()
+    self.assertEqual(got, -1, f'Not zero-copy, got {got}')
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_xla_to_cuda_zero_copy(self): # WIP
+    met.clear_counters()
+    xla_tensor = torch.arange(5, device=xm.xla_device())
+    print('xw32 created a xla_tensor')
+    cuda_tensor = xla_tensor.cuda()
+    print('xw32 metrics: ', met.metrics_report())
+    print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
+    self.assertEqual(met.metric_data('TransferToDeviceTime'), None, f'got {met.metric_data("TransferToDeviceTime")}')
+    self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
+    xla_tensor[0] = -1
+    got = cuda_tensor.cpu()
+    self.assertEqual(got[0], -1, f'Not zero-copy, got {got}')
+    self.assertTrue(torch.equal(got, xla_tensor.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_scalar_xla_to_cuda_zero_copy(self):
+    met.clear_counters()
+    xla_dev = xm.xla_device()
+    xla_tensor = torch.tensor(5, device=xla_dev) # this will call .to and trigger a TransferToDeviceTime.
+    cuda_tensor = xla_tensor.cuda()
+    print('xw32 metrics: ', met.metrics_report())
+    print(f'met.metric_data("TransferToDeviceTime")={met.metric_data("TransferToDeviceTime")}, met.metric_data("TransferFromDeviceTime")={met.metric_data("TransferFromDeviceTime")}')
+    self.assertEqual(met.metric_data('TransferToDeviceTime')[0], 1, f'got {met.metric_data("TransferToDeviceTime")}')
+    self.assertEqual(met.metric_data('TransferFromDeviceTime'), None, f'got {met.metric_data("TransferFromDeviceTime")}')
+    xla_tensor.fill_(-1)
+    got = cuda_tensor.cpu()
+    self.assertEqual(got, -1, f'Not zero-copy, got {got}')
+
+  def test_move_cuda_module_to_cuda_zero_copy(self):
+    cuda_module = nn.Linear(2, 2).cuda()
+    breakpoint()
+    xla_dev = xm.xla_device()
+    cuda_module.to(xla_dev)
+
+  def test_move_tensor_with_non_default_layout(self):
+    cuda_t = torch.arange(4, device=torch.device('cuda')).reshape(2, 2)
+    cuda_tt = torch.t(cuda_t)
+    print('cuda_tt=', cuda_tt)
+    xla_dev = xm.xla_device()
+    got_cuda = cuda_tt.to(xla_dev).cuda()
+    print('got_cuda=', got_cuda)
+
+  # Workaround https://github.com/google/jax/issues/7657
+  # https://github.com/google/jax/issues/17784
+  def test_move_tensor_with_non_default_layout_with_workaround(self):
+    cuda_t = torch.arange(4, device=torch.device('cuda')).reshape(2, 2)
+    cuda_tt = torch.t(cuda_t)
+    xla_dev = xm.xla_device()
+    # cuda_tt.to(xla_dev).cuda() # this fails
+    cuda_tt.contiguous().to(xla_dev).cuda() # this works
+
 
 class SimpleModelWithDropout(torch.nn.Module):
 

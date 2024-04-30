@@ -44,6 +44,7 @@ class IfrtComputationClient : public ComputationClient {
 
   std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
+  DataPtr DLPackManagedTensorToData(DLManagedTensor* dl_tensor) override;
 
   std::vector<DataPtr> ReshardData(
       absl::Span<const DataPtr> handles,
@@ -53,6 +54,7 @@ class IfrtComputationClient : public ComputationClient {
 
   std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
+  DLManagedTensor* DataToDLPackManagedTensor(DataPtr data) override;
 
   DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,

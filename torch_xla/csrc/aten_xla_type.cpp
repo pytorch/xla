@@ -523,41 +523,39 @@ std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::TensorList tensors) {
 // TODO(alanwaketan): Improve the error messages.
 // Let's rewrite it without reusing other native functions.
 at::Tensor XLANativeFunctions::_to_copy(
-    const at::Tensor& self, c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout, c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory, bool non_blocking,
-    c10::optional<at::MemoryFormat> memory_format) {
+    const at::Tensor& self, c10::optional<at::ScalarType> dest_dtype,
+    c10::optional<at::Layout> dest_layout, c10::optional<at::Device> dest_device,
+    c10::optional<bool> dest_pin_memory, bool non_blocking,
+    c10::optional<at::MemoryFormat> dest_memory_format) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
 
   auto options = self.options();
   // I put each of these setters in a conditional instead of doing
   // `self.options().dtype(dtype).layout(layout)... because calling
   // .dtype(nullopt) on an options() that already has dtype appears to wipe it
-  if (dtype) {
-    options = options.dtype(dtype);
+  if (dest_dtype) {
+    options = options.dtype(dest_dtype);
   }
-  if (layout) {
-    options = options.layout(layout);
+  if (dest_layout) {
+    options = options.layout(dest_layout);
   }
-  if (device) {
-    options = options.device(device);
+  if (dest_device) {
+    options = options.device(dest_device);
   }
-  if (pin_memory) {
-    options = options.pinned_memory(pin_memory);
+  if (dest_pin_memory) {
+    options = options.pinned_memory(dest_pin_memory);
   }
-  if (memory_format) {
-    options = options.memory_format(memory_format);
+  if (dest_memory_format) {
+    options = options.memory_format(dest_memory_format);
   }
 
   // Case 1: Materialize the tensor.
-  if (device && device->type() != c10::kXLA) {
-    XLA_CHECK(device->type() == c10::kCPU)
-        << "only cpu device is supported in _to_copy.";
-    auto self_tensor = bridge::GetXlaTensor(self);
-    auto eager_tensor = self_tensor->ToTensor(/*detached=*/true);
+  if (dest_device && dest_device->type() != c10::kXLA) {
+    XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+    at::Tensor eager_tensor = self_tensor->ToTensor(/*detached=*/true);
 
     // Use the eager .to on the eager tensor.
-    return eager_tensor.to(options, non_blocking, /*copy=*/true);
+    return eager_tensor.to(options, non_blocking, /*copy=*/true); // xw32: non_blocking is false
   }
 
   // Case 2: Create a new XLA tensor with the supplied data and options.
