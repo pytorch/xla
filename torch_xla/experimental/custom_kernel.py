@@ -269,8 +269,7 @@ class FlashAttention(torch.autograd.Function):
       args = [q, k, v]
       if segment_ids is not None:
         args += [q_segment_ids, kv_segment_ids]
-      o = torch_xla._XLAC._xla_tpu_custom_call(args, payload, shapes,
-                                                 dtypes)
+      o = torch_xla._XLAC._xla_tpu_custom_call(args, payload, shapes, dtypes)
 
       if not save_residuals:
         o = o[0]
@@ -364,9 +363,8 @@ class FlashAttention(torch.autograd.Function):
       if segment_ids is not None:
         args += [q_segment_ids, kv_segment_ids]
       args += [expanded_l, expanded_m, grad_output, expanded_grad_i]
-      grad_q = torch_xla._XLAC._xla_tpu_custom_call(
-            args,
-            payload, [q.shape], [q.dtype])[0]
+      grad_q = torch_xla._XLAC._xla_tpu_custom_call(args, payload, [q.shape],
+                                                    [q.dtype])[0]
 
     if ctx.needs_input_grad[1] or ctx.needs_input_grad[2]:
       payload, _ = trace_pallas(
@@ -403,7 +401,9 @@ class FlashAttention(torch.autograd.Function):
       if segment_ids is not None:
         args += [q_segment_ids, kv_segment_ids]
       args += [expanded_l, expanded_m, grad_output, expanded_grad_i]
-      grads = torch_xla._XLAC._xla_tpu_custom_call(args, payload, [k.shape, v.shape], [k.dtype, v.dtype])
+      grads = torch_xla._XLAC._xla_tpu_custom_call(args, payload,
+                                                   [k.shape, v.shape],
+                                                   [k.dtype, v.dtype])
     if ctx.needs_input_grad[1]:
       grad_k = grads[0]
     if ctx.needs_input_grad[2]:
