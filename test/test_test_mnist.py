@@ -65,7 +65,6 @@ class SimpleWithLinearPure(torch.nn.Module):
     output_value_real_final = self.conv1(input_value)
     return output_value_real_final
 
-
 class SimpleWithLinear(torch.nn.Module):
   def __init__(self):
     super().__init__()
@@ -278,8 +277,14 @@ def newnewnew_test():
   lower = torch.tensor([0], dtype=torch.int32, device=device)
   one_value = torch.tensor([1], dtype=torch.int32, device=device)
   init_val = torch.tensor([1], dtype=torch.int32, device=device)
-  l_in_0 = torch.rand(10, device=xm.xla_device())
+  # l_in_0 = torch.rand(10, device=xm.xla_device())
   output_value = torch.zeros([30], dtype=torch.float32, device=device)
+
+  bs=16
+  l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.int32, device=device)
+# c = nn.Conv2d(3,10,kernel_size=5,stride=1,padding=2)
+# out = c(x)
+# print(out.nelement())
 
   additional_inputs = []
   for name, param in simple_with_linear.named_parameters():
