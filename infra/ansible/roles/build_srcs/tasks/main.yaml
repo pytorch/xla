@@ -12,7 +12,7 @@
         PRNUM="${torch_pin.stdout//[!0-9]/}"
         git fetch origin "pull/$PRNUM/head:$PRNUM"
         git checkout --recurse-submodules "$PRNUM"
-      elif [[ "$CID" != "" ]]; then
+      else
         git fetch origin {{ torch_pin.stdout }}
         git checkout --recurse-submodules {{ torch_pin.stdout }}
       fi
