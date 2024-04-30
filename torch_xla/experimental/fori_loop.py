@@ -213,11 +213,11 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
 
-  # TODO(@manfei): treat hard-code input arguments, currently switch bias and output_value if additional_inputs(weight/bias) exists
-  if additional_inputs:
-    tmp_bias = params[-3]
-    del params[-3]
-    params.append(tmp_bias)
+  # # TODO(@manfei): treat hard-code input arguments, currently switch bias and output_value if additional_inputs(weight/bias) exists
+  # if additional_inputs:
+  #   tmp_bias = params[-3]
+  #   del params[-3]
+  #   params.append(tmp_bias)
 
   # generate while xlacomputation
   input_tuple = xb.Op.tuple(tuple(params))
