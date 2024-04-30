@@ -255,6 +255,8 @@ def newnewnew_test():
     # bias = simple_with_linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
     res = [upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), output_value.clone()]
     for name, param in simple_with_linear.named_parameters():
+      if name[:2]=='bn':
+        skip # skip bn
       res.insert(-1, param)
       # torch.randint(10, carried_input.size(), dtype=carried_input.dtype).to(device))
     return tuple(res)
