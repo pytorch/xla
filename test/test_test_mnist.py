@@ -266,15 +266,17 @@ def newnewnew_test():
       res.insert(-1, param)
 
       if (not bn_flag) and (len(bn_list) !=0): # False
+        output_value = res[-1]
         res = res[:-1] + bn_list #  + res[-1]
-        res.append(res[-1])
+        res.append(output_value)
         bn_list = []
       # torch.randint(10, carried_input.size(), dtype=carried_input.dtype).to(device))
 
     ### !!! add still exist bn_list if the last additional_inputs is bn- pre
     if bn_flag and (len(bn_list) !=0):
+      output_value = res[-1]
       res = res[:-1] + bn_list #  + res[-1]
-      res.append(res[-1])
+      res.append(output_value)
       bn_list = []
       bn_flag = False
 
