@@ -192,6 +192,20 @@ import torch._functorch.config
 
 torch._functorch.config.view_replay_for_aliased_outputs = True
 
+import importlib.metadata
+import warnings
+
+try:
+  # TensorFlow TPU distribution has the same package name as GPU, but not CPU
+  dist = importlib.metadata.distribution('tensorflow')
+  warnings.warn(
+      "`tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when"
+      " using PyTorch/XLA. To silence this warning, `pip uninstall tensorflow "
+      " && pip install tensorflow-cpu`. If you are in a notebook environment "
+      "such as Colab or Kaggle, restart your notebook runtime afterwards.")
+except importlib.metadata.PackageNotFoundError:
+  pass
+
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
 
 from .experimental import plugins
