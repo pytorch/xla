@@ -46,7 +46,7 @@ jobs:
       BAZEL_JOBS: 16
     steps:
       # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
-      - name: Fix workspace permissions
+      - name: Clean up workspace
         run: |
           ls -la
           sudo rm -rvf ${GITHUB_WORKSPACE}/*
