@@ -300,10 +300,10 @@ def newnewnew_test():
   # print("simple_with_linear.named_parameters(): ", simple_with_linear.named_parameters())
   # import pdb; pdb.set_trace()
 
-  for name, param in simple_with_linear.named_parameters():
-    # print("arrive the loop")
-    print("name: ", name)
-    print("param: ", param)
+  # for name, param in simple_with_linear.named_parameters():
+  #   # print("arrive the loop")
+  #   print("name: ", name)
+  #   print("param: ", param)
 
     # if name in ['bias']:
       # print(param.size())
@@ -360,7 +360,7 @@ def newnewnew_test():
     bn_list = []
     # bn_flag = False
 
-  print("final additional_inputs: ", additional_inputs)
+  # print("final additional_inputs: ", additional_inputs)
 
   # print("in mnist additional_inputs: ", additional_inputs)
   ### linear 10*20 + 20*30
