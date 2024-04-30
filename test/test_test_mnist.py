@@ -53,6 +53,7 @@ class SimpleWithLinearPure(torch.nn.Module):
   def __init__(self):
     super().__init__()
     self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2).to(xm.xla_device())
+    # self.bn1 = nn.BatchNorm2d(10)
     # self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
     # self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
     # self.fc1 = nn.Linear(320, 50).to(xm.xla_device())
@@ -62,7 +63,8 @@ class SimpleWithLinearPure(torch.nn.Module):
   def forward(self, input_value):
     # output_value_real = self.linear(input_value)
     # output_value_real_final = self.linear2(output_value_real)
-    output_value_real_final = self.conv1(input_value)
+    # output_value_real_final = self.conv1(input_value) # conv2d
+    output_value_real_final = F.relu(F.max_pool2d(self.conv1(input_value), 2))
     return output_value_real_final
 
 class SimpleWithLinear(torch.nn.Module):
