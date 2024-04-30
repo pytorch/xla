@@ -56,6 +56,7 @@ class SimpleWithLinearPure(torch.nn.Module):
     self.bn1 = torch.nn.BatchNorm2d(10).to(xm.xla_device())
     self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5).to(xm.xla_device())
     self.bn2 = torch.nn.BatchNorm2d(20).to(xm.xla_device())
+    # self.fc1 = torch.nn.Linear(320, 50).to(xm.xla_device())
     # self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
     # self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
     # self.fc1 = nn.Linear(320, 50).to(xm.xla_device())
@@ -324,7 +325,8 @@ def newnewnew_test():
   # print(out.nelement())
   # output_value = torch.zeros([16,10,28,28], dtype=torch.float32, device=device) # conv2d
   # output_value = torch.zeros([16,10,14,14], dtype=torch.float32, device=device) # conv2d+mnist-treat # conv1 + bn1
-  output_value = torch.zeros([16,20,5,5], dtype=torch.float32, device=device) # conv1 + bn1 + conv2
+  # output_value = torch.zeros([16,20,5,5], dtype=torch.float32, device=device) # conv1 + bn1 + conv2
+  output_value = torch.zeros([16,500], dtype=torch.float32, device=device) # conv1 + bn1 + conv2 + bn2 + flatten1
 
 
   additional_inputs = []
