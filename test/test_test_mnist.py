@@ -70,6 +70,7 @@ class SimpleWithLinearPure(torch.nn.Module):
     x = self.bn1(x)
     x = F.relu(F.max_pool2d(self.conv2(x), 2))
     x = self.bn2(x)
+    x = torch.flatten(x, 1)
     return x
 
 class SimpleWithLinear(torch.nn.Module):
