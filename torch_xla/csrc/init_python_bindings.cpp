@@ -2465,6 +2465,19 @@ void InitXlaModuleBindings(py::module m) {
     return false;
   });
 
+  m.def("_unsafe_buffer_pointer", [](const at::Tensor& input) -> int) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    XLA_CHECK(xtensor) << "The input is not an XLA tensor.";
+    if (xtensor->CurrentDataHandle() != nullptr) {
+      std::shared_ptr<runtime::ComputationClient::Data> data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+          xtensor->CurrentDataHandle());
+      // std::vector<xla::Literal> literals =
+      //   runtime::GetComputationClient()->TransferFromDevice(
+      //       UnwrapXlaData(device_data)); 
+      return runtime::GetComputationClient()->UnsafeBufferPointer(UnwrapXlaData(device_data));
+    }
+  }
+
   // -------------Dynamo Integration API Start-------------------------
   /*
    * Return tensor ids and at::tensors for all DeviceData nodes that is needed

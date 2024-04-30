@@ -92,6 +92,7 @@ cc_library(
         "@xla//xla/pjrt/distributed",
         "@xla//xla/python/ifrt",
         "@xla//xla/python/pjrt_ifrt",
+        "@local_config_python//:python_headers",
     ],
 )
 

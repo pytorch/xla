@@ -458,6 +458,14 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
   return resharded_results;
 }
 
+std::uintptr_t PjRtComputationClient::UnsafeBufferPointer(const DataPtr handle) {
+  std::shared_ptr<PjRtData> pjrt_data = ReplicateShardedData(handle);
+  XLA_CHECK(pjrt_data);
+  xla::StatusOr<std::uintptr_t> ptr = client_->UnsafeBufferPointer(pjrt_data->buffer.get());
+  XLA_CHECK(ptr.ok());
+  return ptr.value();
+}
+
 std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromDeviceMetric());

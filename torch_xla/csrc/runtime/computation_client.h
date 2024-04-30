@@ -302,6 +302,8 @@ class ComputationClient {
   virtual std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) = 0;
 
+  virtual std::uintptr_t UnsafeBufferPointer(const DataPtr handle) = 0;
+
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) = 0;

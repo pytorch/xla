@@ -2421,6 +2421,16 @@ class TestGeneric(test_utils.XlaTestCase):
     # 0-dimensional scalar-tensor
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
+  
+  def test_unsafe_buffer_pointer(self):
+    xla_tensor_0 = torch.tensor(42, device=xm.xla_device())
+    xla_tensor_1 = torch.ones((5, 5), device=xm.xla_device())
+    buf_ptr_0 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_0)
+    buf_ptr_1 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_1)
+    self.assertGreaterEqual(buf_ptr_0, 0)
+    self.assertGreaterEqual(buf_ptr_1, 0)
+
+
 
 
 class SimpleModelWithDropout(torch.nn.Module):
