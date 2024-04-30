@@ -939,7 +939,8 @@ class PyLoweringContext {
       // TODO(@manfei): treat hard code parameter_idx value
       // int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size(); // local_builder->parameter_numbers_; // GetProgramShape();
       // int64_t parameter_idx = 7; // conv2d
-      int64_t parameter_idx = 11; // conv2d+mnist-treat // conv1 + bn1
+      // int64_t parameter_idx = 11; // conv2d+mnist-treat // conv1 + bn1
+      int64_t parameter_idx = 13; // conv1 + bn1 + conv2
       // int64_t parameter_idx = 9; // linear
       // int64_t parameter_idx = tensors.size();
       for (auto& additional_input_tensor : additional_inputs_list) {
