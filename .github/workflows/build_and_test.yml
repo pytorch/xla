@@ -24,7 +24,7 @@ jobs:
     uses: ./.github/workflows/_build_upstream_image.yml
     with:
       ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
-    # if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
 
   build-torch-xla:
     name: "Build PyTorch/XLA"
