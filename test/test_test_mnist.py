@@ -328,7 +328,7 @@ def newnewnew_test():
       bn_list = []
 
   ### !!! add still exist bn_list if the last additional_inputs is bn- pre
-  if flag and (len(bn_list) !=0):
+  if bn_flag and (len(bn_list) !=0):
     additional_inputs =additional_inputs + bn_list
     print("added bn_list: ", bn_list)
     bn_list = []
