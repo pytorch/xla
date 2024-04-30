@@ -298,9 +298,9 @@ def test_mnist():
 
   print("before test_mnist")
   newnewnew_test() # newnew_test() # new_test() # test()
-  # target fori_loop
-  for epoch in range(1, n_epochs + 1):
-    newnewnew_test() # newnew_test() # new_test() # test()
+  # # target fori_loop
+  # for epoch in range(1, n_epochs + 1):
+  #   newnewnew_test() # newnew_test() # new_test() # test()
 
   print("after test_mnist")
 
