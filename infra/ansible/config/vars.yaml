@@ -16,3 +16,5 @@ bundle_libtpu: 1
 cache_suffix: ""
 # Whether to build C++ tests with `torch_xla` wheel
 build_cpp_tests: 0
+# Whether to tag wheels with git hash, e.g. X.Y.Z+git123abc
+git_versioned_xla_build: false
