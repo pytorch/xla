@@ -256,7 +256,7 @@ def newnewnew_test():
     res = [upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x), input_value.clone(), output_value.clone()]
     for name, param in simple_with_linear.named_parameters():
       if name[:2]=='bn':
-        continue # skip bn
+        res.insert(-1, param) # dumpicate # continue # skip bn
       res.insert(-1, param)
       # torch.randint(10, carried_input.size(), dtype=carried_input.dtype).to(device))
     return tuple(res)
@@ -297,8 +297,10 @@ def newnewnew_test():
 
   additional_inputs = []
   for name, param in simple_with_linear.named_parameters():
-      # additional_inputs.insert(-1, param)
-      additional_inputs.append(param)
+    if name[:2]=='bn':
+      additional_inputs.append(param) # dumplicate
+    # additional_inputs.insert(-1, param)
+    additional_inputs.append(param)
 
   # print("in mnist additional_inputs: ", additional_inputs)
   ### linear 10*20 + 20*30
