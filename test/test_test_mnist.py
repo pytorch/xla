@@ -277,14 +277,17 @@ def newnewnew_test():
   lower = torch.tensor([0], dtype=torch.int32, device=device)
   one_value = torch.tensor([1], dtype=torch.int32, device=device)
   init_val = torch.tensor([1], dtype=torch.int32, device=device)
+  ### linear 10*20 + 20*30 input&output
   # l_in_0 = torch.rand(10, device=xm.xla_device())
-  output_value = torch.zeros([30], dtype=torch.float32, device=device)
-
+  # output_value = torch.zeros([30], dtype=torch.float32, device=device)
+  ### conv2d input&output
   bs=16
   l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
   # c = nn.Conv2d(3,10,kernel_size=5,stride=1,padding=2)
   # out = c(x)
   # print(out.nelement())
+  output_value = torch.zeros([16,10,28,28], dtype=torch.float32, device=device)
+
 
   additional_inputs = []
   for name, param in simple_with_linear.named_parameters():
