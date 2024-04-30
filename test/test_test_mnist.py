@@ -354,7 +354,7 @@ def newnewnew_test():
   ### !!! add duplicated bn argus as the tile of the list
   if len(bn_list) !=0:
     # additional_inputs = additional_inputs + bn_list
-    bn_list.reverse()
+    bn_list.reverse() ### !!! reverse list for bn duplicate lists
     additional_inputs = additional_inputs + bn_list
     # print("added bn_list: ", bn_list)
     bn_list = []
@@ -370,7 +370,10 @@ def newnewnew_test():
   #### conv1+bn1
   # upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, bw1, bw11, bb1, bb11, output_value_real__, = _xla_while_loop(
   ##### conv1 + bn1 + conv2
-  upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, bw1, bw11, bb1, bb11, p1, p2, output_value_real__, = _xla_while_loop(
+  # upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, bw1, bw11, bb1, bb11, p1, p2, output_value_real__, = _xla_while_loop(
+  ##### conv1 + bn1 + conv2 + bn2
+  upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, bw1, bw11, bb1, bb11, p1, p2, p3, p4, output_value_real__, = _xla_while_loop(
+
       cond_fn, body_fn,
       (upper, lower, one_value, init_val, l_in_0, output_value), tuple(additional_inputs))
       # (upper, lower, one_value, init_val, l_in_0, output_value), ())
