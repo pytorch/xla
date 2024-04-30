@@ -23,7 +23,7 @@ import torch_xla.experimental.fori_loop
 from torch_xla.experimental.fori_loop import _xla_while_loop
 from torch._higher_order_ops.while_loop import while_loop
 
-n_epochs = 1 # 3
+n_epochs = 3
 batch_size_train = 8 # 64
 batch_size_test = 10 # 1000
 learning_rate = 0.01
