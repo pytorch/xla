@@ -52,7 +52,7 @@ import torch.optim as optim
 class SimpleWithLinearPure(torch.nn.Module):
   def __init__(self):
     super().__init__()
-    self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5).to(xm.xla_device())
+    self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2).to(xm.xla_device())
     # self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
     # self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
     # self.fc1 = nn.Linear(320, 50).to(xm.xla_device())
@@ -282,9 +282,9 @@ def newnewnew_test():
 
   bs=16
   l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.int32, device=device)
-# c = nn.Conv2d(3,10,kernel_size=5,stride=1,padding=2)
-# out = c(x)
-# print(out.nelement())
+  # c = nn.Conv2d(3,10,kernel_size=5,stride=1,padding=2)
+  # out = c(x)
+  # print(out.nelement())
 
   additional_inputs = []
   for name, param in simple_with_linear.named_parameters():
