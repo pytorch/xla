@@ -312,6 +312,7 @@ def newnewnew_test():
     # if name[:2]=='bn':
     #   additional_inputs.append(param) # dumplicate
     if name[:2]=='bn':
+      print("catch: ", name)
       bn_flag = True
       bn_list.insert(-1, param) # dumpicate # continue # skip bn
     else:
