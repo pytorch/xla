@@ -54,19 +54,21 @@ class SimpleWithLinearPure(torch.nn.Module):
     super().__init__()
     self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2).to(xm.xla_device())
     self.bn1 = torch.nn.BatchNorm2d(10).to(xm.xla_device())
+    self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5).to(xm.xla_device())
     # self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
     # self.linear2 = torch.nn.Linear(20, 30).to(xm.xla_device())
     # self.fc1 = nn.Linear(320, 50).to(xm.xla_device())
     # self.fc2 = nn.Linear(50, 10).to(xm.xla_device())
 
   # def forward(self, upper, lower, one_value, x, input_value, output_value):
-  def forward(self, input_value):
+  def forward(self, x):
     # output_value_real = self.linear(input_value)
     # output_value_real_final = self.linear2(output_value_real)
     # output_value_real_final = self.conv1(input_value) # conv2d
-    output_value_real_final = F.relu(F.max_pool2d(self.conv1(input_value), 2)) # conv2d+mnist-treat
-    output_value_real_final = self.bn1(output_value_real_final)
-    return output_value_real_final
+    x = F.relu(F.max_pool2d(self.conv1(x), 2)) # conv2d+mnist-treat
+    x = self.bn1(x)
+    x = F.relu(F.max_pool2d(self.conv2(x), 2))
+    return x
 
 class SimpleWithLinear(torch.nn.Module):
   def __init__(self):
