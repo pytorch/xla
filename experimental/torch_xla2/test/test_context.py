@@ -1,20 +1,22 @@
 import unittest
 
 import torch
-import torch_xla2
 from torch_xla2 import tensor
+
+xla_env = tensor.Environment(0)
 
 
 class TestContext(unittest.TestCase):
+
   def test_mode_context_manager(self):
-    with torch_xla2.mode():
+    with xla_env.mode():
       x = torch.full((3, 3), -1)
       self.assertIsInstance(x, tensor.XLATensor2)
       y = x.abs()
       self.assertIsInstance(y, tensor.XLATensor2)
 
   @staticmethod
-  @torch_xla2.mode()
+  @xla_env.mode()
   def _test_mode_decorator():
     x = torch.full((3, 3), -1)
     y = x.abs()

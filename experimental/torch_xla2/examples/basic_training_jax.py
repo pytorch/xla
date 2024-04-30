@@ -8,7 +8,7 @@ from torch.utils import _pytree as pytree
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla2
-import torch_xla2.extra
+import torch_xla2.interop
 import jax 
 import optax
 import numpy as np
@@ -91,7 +91,7 @@ opt_state = jax_optimizer.init(jax_weights)
 
 def jax_loss(weights, data, label):
     pred = jax_func(weights, data)
-    loss = torch_xla2.extra.call_torch(loss_fn, pred, label)
+    loss = torch_xla2.interop.call_torch(loss_fn, pred, label)
     return loss
 
 grad_fn = jax.jit(jax.value_and_grad(jax_loss))
@@ -155,12 +155,6 @@ for epoch in range(EPOCHS):
     # Make sure gradient tracking is on, and do a pass over the data
     model.train(True)
 
-    # NEW: Move model to XLA device
-    state_dict = model.state_dict()
-    state_dict = pytree.tree_map_only(torch.Tensor,
-        torch_xla2.tensor.move_to_device, state_dict)
-    model.load_state_dict(state_dict, strict=False, assign=True)
-
     avg_loss, opt_state = train_one_epoch(jax_weights, opt_state, epoch_number, writer)
 
     running_vloss = 0.0
@@ -174,7 +168,7 @@ for epoch in range(EPOCHS):
 
             vinputs, vlabels = pytree.tree_map_only(torch.Tensor, torch_xla2.tensor.t2j, vdata)
             voutputs = jax_func(jax_weights, (vinputs, )) # call model's forward
-            vloss = torch_xla2.extra.call_torch(loss_fn, voutputs, vlabels)
+            vloss = torch_xla2.interop.call_torch(loss_fn, voutputs, vlabels)
             running_vloss += vloss
 
     avg_vloss = running_vloss / (i + 1)
