@@ -321,10 +321,10 @@ def newnewnew_test():
     # if name[:2]=='bn':
     #   additional_inputs.append(param) # dumplicate
     if name[:2]=='bn':
-      print("catch: ", name)
+      # print("catch: ", name)
       bn_flag = True
       bn_list.insert(-1, param) # dumpicate # continue # skip bn
-      print("newest bn_list: ", bn_list)
+      # print("newest bn_list: ", bn_list)
     else:
       bn_flag = False
 
@@ -333,13 +333,13 @@ def newnewnew_test():
 
     if (not bn_flag) and (len(bn_list) !=0): # False
       additional_inputs =additional_inputs + bn_list
-      print("added bn_list: ", bn_list)
+      # print("added bn_list: ", bn_list)
       bn_list = []
 
   ### !!! add still exist bn_list if the last additional_inputs is bn- pre
   if bn_flag and (len(bn_list) !=0):
     additional_inputs =additional_inputs + bn_list
-    print("added bn_list: ", bn_list)
+    # print("added bn_list: ", bn_list)
     bn_list = []
     bn_flag = False
 
