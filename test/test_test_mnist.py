@@ -263,7 +263,8 @@ def newnewnew_test():
     for name, param in simple_with_linear.named_parameters():
       if name[:2]=='bn':
         # bn_flag = True
-        bn_list.insert(-1, param) # dumpicate # continue # skip bn
+        # bn_list.insert(-1, param) # dumpicate # continue # skip bn
+        bn_list.append(param)
       # else:
         # bn_flag = False
 
@@ -281,7 +282,8 @@ def newnewnew_test():
     ### !!! add at the tile
     if len(bn_list) !=0:
       output_value = res[-1]
-      res = res[:-1] + bn_list #  + res[-1]
+      # res = res[:-1] + bn_list #  + res[-1]
+      res = res[:-1] + bn_list.reverse()
       res.append(output_value)
       bn_list = []
       # bn_flag = False
@@ -332,7 +334,8 @@ def newnewnew_test():
     if name[:2]=='bn':
       # print("catch: ", name)
       # bn_flag = True
-      bn_list.insert(-1, param) # dumpicate # continue # skip bn
+      # bn_list.insert(-1, param) # dumpicate # continue # skip bn
+      bn_list.append(param)
       # print("newest bn_list: ", bn_list)
     # else:
       # bn_flag = False
@@ -349,7 +352,8 @@ def newnewnew_test():
   # if bn_flag and (len(bn_list) !=0):
   ### !!! add duplicated bn argus as the tile of the list
   if len(bn_list) !=0:
-    additional_inputs = additional_inputs + bn_list
+    # additional_inputs = additional_inputs + bn_list
+    additional_inputs = additional_inputs + bn_list.reverse()
     # print("added bn_list: ", bn_list)
     bn_list = []
     # bn_flag = False
