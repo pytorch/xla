@@ -22,8 +22,13 @@ if xr.device_type() == 'TPU':
 
 class PallasTest(unittest.TestCase):
 
-  def _attention(self, q, k, v):
+  def _make_attention_mask_from_segment_ids(self, q_segment_ids, kv_segment_ids):
+    return q_segment_ids.view(q_segment_ids.shape[0], 1, q_segment_ids.shape[1], 1) != kv_segment_ids.view(kv_segment_ids.shape[0], 1, 1, kv_segment_ids.shape[1])
+
+  def _attention(self, q, k, v, *, attn_mask=None):
     attn_weight = q @ k.transpose(-2, -1)
+    if attn_mask is not None:
+      attn_weight = attn_weight.masked_fill(attn_mask, torch.finfo(attn_weight.dtype).min)
     attn_weight = nn.functional.softmax(attn_weight, dim=-1)
     attn_output = attn_weight @ v
     return attn_output
@@ -621,7 +626,7 @@ class PallasTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
-  def test_flash_attention_wrapper_segment_ids(self):
+  def test_flash_attention_wrapper_segment_ids_1(self):
     from torch_xla.experimental.custom_kernel import flash_attention
     from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention as jax_flash_attention, SegmentIds
 
@@ -647,6 +652,23 @@ class PallasTest(unittest.TestCase):
             )))
 
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper_segment_ids_2(self):
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    q_segment_ids = torch.zeros(3, 128).to("xla")
+    kv_segment_ids = torch.zeros(3, 128).to("xla")
+    o = flash_attention(q, k, v, False, q_segment_ids, kv_segment_ids)
+
+    expected_o = self._attention(q, k, v, attn_mask=self._make_attention_mask_from_segment_ids(q_segment_ids, kv_segment_ids))
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
