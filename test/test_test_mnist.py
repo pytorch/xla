@@ -269,6 +269,13 @@ def newnewnew_test():
         res = res[:-1] + bn_list + res[-1]
         bn_list = []
       # torch.randint(10, carried_input.size(), dtype=carried_input.dtype).to(device))
+
+    ### !!! add still exist bn_list if the last additional_inputs is bn- pre
+    if bn_flag and (len(bn_list) !=0):
+      res = res[:-1] + bn_list + res[-1]
+      bn_list = []
+      bn_flag = False
+
     return tuple(res)
     # return (upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
     #     one_value, x), input_value.clone(), output_value.clone(), simple_with_linear.linear.weight) # bias.clone(), weight.clone(), output_value.clone()
