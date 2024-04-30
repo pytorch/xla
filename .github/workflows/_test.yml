@@ -73,6 +73,11 @@ jobs:
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
     steps:
+      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+      - name: Clean up workspace
+        run: |
+          ls -la
+          rm -rvf ${GITHUB_WORKSPACE}/*
       - name: Setup gcloud
         shell: bash
         run: |
