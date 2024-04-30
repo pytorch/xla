@@ -200,9 +200,10 @@ try:
   dist = importlib.metadata.distribution('tensorflow')
   warnings.warn(
       "`tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when"
-      " using PyTorch/XLA. To silence this warning, `pip uninstall tensorflow "
-      " && pip install tensorflow-cpu`. If you are in a notebook environment "
-      "such as Colab or Kaggle, restart your notebook runtime afterwards.")
+      " using PyTorch/XLA. To silence this warning, `pip uninstall -y "
+      "tensorflow && pip install tensorflow-cpu`. If you are in a notebook "
+      "environment such as Colab or Kaggle, restart your notebook runtime "
+      "afterwards.")
 except importlib.metadata.PackageNotFoundError:
   pass
 
