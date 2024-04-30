@@ -24,6 +24,7 @@ jobs:
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
+      GIT_VERSIONED_XLA_BUILD: 1
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
       BUILD_CPP_TESTS: 1
