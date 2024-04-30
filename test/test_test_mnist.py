@@ -283,7 +283,8 @@ def newnewnew_test():
     if len(bn_list) !=0:
       output_value = res[-1]
       # res = res[:-1] + bn_list #  + res[-1]
-      res = res[:-1] + bn_list.reverse()
+      bn_list.reverse()
+      res = res[:-1] + bn_list
       res.append(output_value)
       bn_list = []
       # bn_flag = False
@@ -353,7 +354,8 @@ def newnewnew_test():
   ### !!! add duplicated bn argus as the tile of the list
   if len(bn_list) !=0:
     # additional_inputs = additional_inputs + bn_list
-    additional_inputs = additional_inputs + bn_list.reverse()
+    bn_list.reverse()
+    additional_inputs = additional_inputs + bn_list
     # print("added bn_list: ", bn_list)
     bn_list = []
     # bn_flag = False
