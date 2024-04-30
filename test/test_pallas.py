@@ -22,13 +22,18 @@ if xr.device_type() == 'TPU':
 
 class PallasTest(unittest.TestCase):
 
-  def _make_attention_mask_from_segment_ids(self, q_segment_ids, kv_segment_ids):
-    return q_segment_ids.view(q_segment_ids.shape[0], 1, q_segment_ids.shape[1], 1) != kv_segment_ids.view(kv_segment_ids.shape[0], 1, 1, kv_segment_ids.shape[1])
+  def _make_attention_mask_from_segment_ids(self, q_segment_ids,
+                                            kv_segment_ids):
+    return q_segment_ids.view(q_segment_ids.shape[0], 1,
+                              q_segment_ids.shape[1], 1) != kv_segment_ids.view(
+                                  kv_segment_ids.shape[0], 1, 1,
+                                  kv_segment_ids.shape[1])
 
   def _attention(self, q, k, v, *, attn_mask=None):
     attn_weight = q @ k.transpose(-2, -1)
     if attn_mask is not None:
-      attn_weight = attn_weight.masked_fill(attn_mask, torch.finfo(attn_weight.dtype).min)
+      attn_weight = attn_weight.masked_fill(attn_mask,
+                                            torch.finfo(attn_weight.dtype).min)
     attn_weight = nn.functional.softmax(attn_weight, dim=-1)
     attn_output = attn_weight @ v
     return attn_output
@@ -635,7 +640,9 @@ class PallasTest(unittest.TestCase):
     v = torch.randn(3, 2, 128, 4)
     q_segment_ids = torch.zeros(3, 128)
     kv_segment_ids = torch.zeros(3, 128)
-    o = flash_attention(q.to("xla"), k.to("xla"), v.to("xla"), False, q_segment_ids.to("xla"), kv_segment_ids.to("xla"))
+    o = flash_attention(
+        q.to("xla"), k.to("xla"), v.to("xla"), False, q_segment_ids.to("xla"),
+        kv_segment_ids.to("xla"))
 
     jax_q = jnp.array(q.numpy(), dtype=jnp.float32)
     jax_k = jnp.array(k.numpy(), dtype=jnp.float32)
@@ -666,7 +673,12 @@ class PallasTest(unittest.TestCase):
     kv_segment_ids = torch.zeros(3, 128).to("xla")
     o = flash_attention(q, k, v, False, q_segment_ids, kv_segment_ids)
 
-    expected_o = self._attention(q, k, v, attn_mask=self._make_attention_mask_from_segment_ids(q_segment_ids, kv_segment_ids))
+    expected_o = self._attention(
+        q,
+        k,
+        v,
+        attn_mask=self._make_attention_mask_from_segment_ids(
+            q_segment_ids, kv_segment_ids))
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
@@ -705,7 +717,12 @@ class PallasTest(unittest.TestCase):
     k.retain_grad()
     v.retain_grad()
 
-    o = self._attention(q, k, v, attn_mask=self._make_attention_mask_from_segment_ids(q_segment_ids, kv_segment_ids))
+    o = self._attention(
+        q,
+        k,
+        v,
+        attn_mask=self._make_attention_mask_from_segment_ids(
+            q_segment_ids, kv_segment_ids))
     loss = o.sum()
     loss.backward()
     xm.mark_step()

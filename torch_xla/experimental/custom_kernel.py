@@ -88,8 +88,9 @@ def to_jax_shape_dtype_struct(tensor: torch.Tensor) -> "jax.ShapeDtypeStruct":
     else:
       raise ValueError(f"Unsupported dtype: {dtype}")
 
-  return jax.ShapeDtypeStruct(
-      tensor.shape, convert_torch_dtype_to_jax(tensor.dtype))
+  return jax.ShapeDtypeStruct(tensor.shape,
+                              convert_torch_dtype_to_jax(tensor.dtype))
+
 
 def trace_pallas(kernel: Callable,
                  *args,
@@ -185,15 +186,27 @@ class FlashAttention(torch.autograd.Function):
       return None, None, None
 
     assert q_segment_ids is not None and kv_segment_ids is not None, "Both q_segment_ids and kv_segment_ids should be provided."
-    segment_ids = SegmentIds(to_jax_shape_dtype_struct(q_segment_ids), to_jax_shape_dtype_struct(
-          kv_segment_ids))
-    q_segment_ids = q_segment_ids.unsqueeze(-1).expand([-1 for _ in q_segment_ids.shape] +
-                                        [FlashAttention.NUM_LANES])
-    kv_segment_ids = kv_segment_ids.unsqueeze(1).expand([kv_segment_ids.shape[0], FlashAttention.NUM_SUBLANES, kv_segment_ids.shape[1]])
+    segment_ids = SegmentIds(
+        to_jax_shape_dtype_struct(q_segment_ids),
+        to_jax_shape_dtype_struct(kv_segment_ids))
+    q_segment_ids = q_segment_ids.unsqueeze(-1).expand(
+        [-1 for _ in q_segment_ids.shape] + [FlashAttention.NUM_LANES])
+    kv_segment_ids = kv_segment_ids.unsqueeze(1).expand([
+        kv_segment_ids.shape[0], FlashAttention.NUM_SUBLANES,
+        kv_segment_ids.shape[1]
+    ])
     return segment_ids, q_segment_ids, kv_segment_ids
 
   @staticmethod
-  def forward(ctx, q, k, v, causal=False, q_segment_ids=None, kv_segment_ids=None, partition_spec=None, mesh=None):
+  def forward(ctx,
+              q,
+              k,
+              v,
+              causal=False,
+              q_segment_ids=None,
+              kv_segment_ids=None,
+              partition_spec=None,
+              mesh=None):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
@@ -228,7 +241,8 @@ class FlashAttention(torch.autograd.Function):
         dtypes.append(torch.float32)
 
     with torch.no_grad():
-      segment_ids, q_segment_ids, kv_segment_ids = FlashAttention.prepare_segment_ids(q_segment_ids, kv_segment_ids)
+      segment_ids, q_segment_ids, kv_segment_ids = FlashAttention.prepare_segment_ids(
+          q_segment_ids, kv_segment_ids)
       ctx.segment_ids = segment_ids
 
       # We can't directly use flash_attention as we need to override the save_residuals flag which returns
@@ -253,14 +267,12 @@ class FlashAttention(torch.autograd.Function):
           static_argnums=range(5, 13))
 
       if segment_ids is None:
-        o = torch_xla._XLAC._xla_tpu_custom_call(
-          [q, k, v],
-          payload, shapes, dtypes)
+        o = torch_xla._XLAC._xla_tpu_custom_call([q, k, v], payload, shapes,
+                                                 dtypes)
 
       else:
         o = torch_xla._XLAC._xla_tpu_custom_call(
-          [q, k, v, q_segment_ids, kv_segment_ids],
-          payload, shapes, dtypes)
+            [q, k, v, q_segment_ids, kv_segment_ids], payload, shapes, dtypes)
 
       if not save_residuals:
         o = o[0]
@@ -281,7 +293,8 @@ class FlashAttention(torch.autograd.Function):
       m = xs.disable_manual_sharding(
           m, partition_spec[0:3], ctx.full_shape[0:3], mesh=mesh).global_tensor
 
-    ctx.save_for_backward(full_q, full_k, full_v, o, l, m, q_segment_ids, kv_segment_ids)
+    ctx.save_for_backward(full_q, full_k, full_v, o, l, m, q_segment_ids,
+                          kv_segment_ids)
     return o
 
   @staticmethod
@@ -350,12 +363,13 @@ class FlashAttention(torch.autograd.Function):
           ])
       if segment_ids is None:
         grad_q = torch_xla._XLAC._xla_tpu_custom_call(
-          [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
-          payload, [q.shape], [q.dtype])[0]
+            [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
+            payload, [q.shape], [q.dtype])[0]
       else:
-        grad_q = torch_xla._XLAC._xla_tpu_custom_call(
-          [q, k, v, q_segment_ids, kv_segment_ids, expanded_l, expanded_m, grad_output, expanded_grad_i],
-          payload, [q.shape], [q.dtype])[0]
+        grad_q = torch_xla._XLAC._xla_tpu_custom_call([
+            q, k, v, q_segment_ids, kv_segment_ids, expanded_l, expanded_m,
+            grad_output, expanded_grad_i
+        ], payload, [q.shape], [q.dtype])[0]
 
     if ctx.needs_input_grad[1] or ctx.needs_input_grad[2]:
       payload, _ = trace_pallas(
@@ -389,12 +403,13 @@ class FlashAttention(torch.autograd.Function):
           ])
       if segment_ids is None:
         grads = torch_xla._XLAC._xla_tpu_custom_call(
-          [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
-          payload, [k.shape, v.shape], [k.dtype, v.dtype])
+            [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
+            payload, [k.shape, v.shape], [k.dtype, v.dtype])
       else:
-        grads = torch_xla._XLAC._xla_tpu_custom_call(
-          [q, k, v, q_segment_ids, kv_segment_ids, expanded_l, expanded_m, grad_output, expanded_grad_i],
-          payload, [k.shape, v.shape], [k.dtype, v.dtype])
+        grads = torch_xla._XLAC._xla_tpu_custom_call([
+            q, k, v, q_segment_ids, kv_segment_ids, expanded_l, expanded_m,
+            grad_output, expanded_grad_i
+        ], payload, [k.shape, v.shape], [k.dtype, v.dtype])
     if ctx.needs_input_grad[1]:
       grad_k = grads[0]
     if ctx.needs_input_grad[2]:
@@ -422,7 +437,9 @@ def flash_attention(
     *,
     partition_spec=None,
     mesh=None):
-  return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids, partition_spec, mesh)
+  # TODO: support SPMD and Dynamo with segment_ids.
+  return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
+                              partition_spec, mesh)
 
 
 def paged_attention(q, k_pages, v_pages, lengths, page_indices,
