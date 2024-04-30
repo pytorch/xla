@@ -66,6 +66,6 @@ jobs:
         git config user.email "pytorchxla@gmail.com"
         git config user.name "torchxlabot2"
         git add . -v
-        git commit -m "Update doc from commit ${{ github.sha }}"
+        git diff --cached --exit-code || git commit -m "Update doc from commit ${{ github.sha }}"
         git push origin gh-pages
       if: github.event_name == 'push'
