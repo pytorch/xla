@@ -288,6 +288,9 @@ def newnewnew_test():
       (upper, lower, one_value, init_val, l_in_0, output_value), tuple(additional_inputs))
       # (upper, lower, one_value, init_val, l_in_0, output_value), ())
   print("finish newnewnew_test")
+  print("actual res: ", output_value_real__)
+  expected_ = simple_with_linear(l_in_0)
+  print("expected res: ", expected_)
 
 # run test model
 def test_mnist():
