@@ -60,8 +60,9 @@ class SimpleWithLinearPure(torch.nn.Module):
 
   # def forward(self, upper, lower, one_value, x, input_value, output_value):
   def forward(self, input_value):
-    output_value_real = self.linear(input_value)
-    output_value_real_final = self.linear2(output_value_real)
+    # output_value_real = self.linear(input_value)
+    # output_value_real_final = self.linear2(output_value_real)
+    output_value_real_final = self.conv1(input_value)
     return output_value_real_final
 
 
