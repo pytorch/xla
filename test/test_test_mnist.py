@@ -265,7 +265,7 @@ def newnewnew_test():
 
       res.insert(-1, param)
 
-      if not bn_flag and (len(bn_list) !=0): # False
+      if (not bn_flag) and (len(bn_list) !=0): # False
         res = res[:-1] + bn_list + res[-1]
         bn_list = []
       # torch.randint(10, carried_input.size(), dtype=carried_input.dtype).to(device))
@@ -315,14 +315,16 @@ def newnewnew_test():
       print("catch: ", name)
       bn_flag = True
       bn_list.insert(-1, param) # dumpicate # continue # skip bn
+      print("newest bn_list: ", bn_list)
     else:
       bn_flag = False
 
     # additional_inputs.insert(-1, param)
     additional_inputs.append(param)
 
-    if not bn_flag and (len(bn_list) !=0): # False
+    if (not bn_flag) and (len(bn_list) !=0): # False
       additional_inputs =additional_inputs + bn_list
+      print("added bn_list: ", bn_list)
       bn_list = []
 
   # print("in mnist additional_inputs: ", additional_inputs)
