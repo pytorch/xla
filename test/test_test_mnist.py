@@ -366,6 +366,7 @@ def newnewnew_test():
       (upper, lower, one_value, init_val, l_in_0, output_value), tuple(additional_inputs))
       # (upper, lower, one_value, init_val, l_in_0, output_value), ())
   print("finish newnewnew_test")
+  print("torch_add_res__: run times: ", torch_add_res__)
   print("actual res: ", output_value_real__[0][0][0])
   expected_ = simple_with_linear(l_in_0)
   print("expected res: ", expected_[0][0][0])
