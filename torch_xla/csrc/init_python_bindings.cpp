@@ -941,7 +941,7 @@ class PyLoweringContext {
       // int64_t parameter_idx = 7; // conv2d
       // int64_t parameter_idx = 11; // conv2d+mnist-treat // conv1 + bn1
       // int64_t parameter_idx = 13; // conv1 + bn1 + conv2
-      int64_t parameter_idx = 17; // conv1 + bn1 + conv2 + bn2
+      int64_t parameter_idx = 19; // conv1 + bn1 + conv2 + bn2
       // int64_t parameter_idx = 9; // linear
       // int64_t parameter_idx = tensors.size();
       for (auto& additional_input_tensor : additional_inputs_list) {
