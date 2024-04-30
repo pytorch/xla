@@ -353,7 +353,6 @@ class FlashAttention(torch.autograd.Function):
           [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
           payload, [q.shape], [q.dtype])[0]
       else:
-        print("heyheyhey")
         grad_q = torch_xla._XLAC._xla_tpu_custom_call(
           [q, k, v, q_segment_ids, kv_segment_ids, expanded_l, expanded_m, grad_output, expanded_grad_i],
           payload, [q.shape], [q.dtype])[0]

@@ -673,52 +673,46 @@ class PallasTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_backward_segment_ids(self):
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     from torch_xla.experimental.custom_kernel import flash_attention
-    from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention as jax_flash_attention, SegmentIds
 
-    q = torch.randn(4, 2, 128, 8)
-    k = torch.randn(4, 2, 128, 8)
-    v = torch.randn(4, 2, 128, 8)
-    q_segment_ids = torch.zeros(4, 128)
-    kv_segment_ids = torch.zeros(4, 128)
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q_segment_ids = torch.zeros(4, 128).to("xla")
+    kv_segment_ids = torch.zeros(4, 128).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
 
-    xla_q = q.to("xla")
-    xla_k = q.to("xla")
-    xla_v = q.to("xla")
-    xla_q.requires_grad = True
-    xla_k.requires_grad = True
-    xla_v.requires_grad = True
-    xla_q.retain_grad()
-    xla_k.retain_grad()
-    xla_v.retain_grad()
-    o = flash_attention(xla_q, xla_k, xla_v) #, False, q_segment_ids.to("xla"), kv_segment_ids.to("xla"))
+    o = flash_attention(q, k, v, False, q_segment_ids, kv_segment_ids)
     loss = o.sum()
     loss.backward()
     xm.mark_step()
 
-    jax_q = jnp.array(q.numpy(), dtype=jnp.float32)
-    jax_k = jnp.array(k.numpy(), dtype=jnp.float32)
-    jax_v = jnp.array(v.numpy(), dtype=jnp.float32)
-    jax_q_segment_ids = jnp.array(q_segment_ids.numpy(), dtype=jnp.float32)
-    jax_kv_segment_ids = jnp.array(kv_segment_ids.numpy(), dtype=jnp.float32)
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
 
-    def wrapper(q, k, v, *, segment_ids):
-      return jnp.sum(jax_flash_attention(q, k, v)) #, segment_ids=SegmentIds(jax_q_segment_ids, jax_kv_segment_ids)))
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q_segment_ids = torch.zeros(4, 128).to("xla")
+    kv_segment_ids = torch.zeros(4, 128).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
 
-    grads = [torch.from_numpy(
-        np.array(t)) for t in jax.grad(wrapper, argnums=(0, 1, 2))(
-                jax_q,
-                jax_k,
-                jax_v,
-                segment_ids=SegmentIds(jax_q_segment_ids, jax_kv_segment_ids),
-            )]
+    o = self._attention(q, k, v, attn_mask=self._make_attention_mask_from_segment_ids(q_segment_ids, kv_segment_ids))
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
 
-    print(xla_q.grad)
-    print(grads[2])
-
-    # self.assertTrue(torch.allclose(xla_q.grad.cpu(), grads[0].cpu(), atol=1e-04))
-    # self.assertTrue(torch.allclose(xla_k.grad.cpu(), grads[1].cpu(), atol=1e-05))
-    # self.assertTrue(torch.allclose(xla_v.grad.cpu(), grads[2].cpu(), atol=1e-05))
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
 
 if __name__ == '__main__':
