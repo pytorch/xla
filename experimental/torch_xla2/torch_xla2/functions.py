@@ -92,6 +92,32 @@ def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
   # TODO: handle torch.Size
   return jnp.full(size, fill_value, dtype=dtype)
 
+@register_function(torch.allclose)
+def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
+  return jnp.allclose(input, other, rtol, atol, equal_nan)
+
+@register_function(torch.angle)
+def _torch_angle(input):
+  return jnp.angle(input)
+
+
+@register_function(torch.argsort)
+def _torch_argsort(input, dim=-1, descending=False, stable=False):
+  expanded = False
+  if input == 0:
+    # for self of rank 0:
+    # torch.any(x, 0), torch.any(x, -1) works;
+    # torch.any(x, 1) throws out of bounds, so it's
+    # behavior is the same as a jnp array of rank 1
+    expanded = True
+    input = jnp.expand_dims(input, 0)
+  res = jnp.argsort(input, axis=dim, descending=descending, 
+                     stable=stable)
+  if expanded:
+    res = res.squeeze()
+  return res
+
+
 
 class XLAFunctionMode(torch.overrides.TorchFunctionMode):
   """Context manager that dispatches torch function calls to JAX."""
