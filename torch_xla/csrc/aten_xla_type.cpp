@@ -1470,9 +1470,18 @@ at::Tensor XLANativeFunctions::full(at::IntArrayRef size,
     return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(full)>::call(
         size, fill_value, dtype, layout, device, pin_memory);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::full(
-      absl::Span<const int64_t>(size), fill_value,
-      GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+  at::ScalarType intend_dtype;
+  if (dtype || fill_value.isFloatingPoint()) {
+    // Respect the dtype if it is being explictlly passed in.
+    // All python scalar will be passed in as float64 to the backend, but the
+    // default behavior for pytorch is to return a float32 tensor in this case.
+    intend_dtype = at::dtype_or_default(dtype);
+  } else {
+    intend_dtype = fill_value.type();
+  }
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::full(absl::Span<const int64_t>(size), fill_value,
+                           GetXlaDeviceOrCurrent(device), intend_dtype));
 }
 
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
