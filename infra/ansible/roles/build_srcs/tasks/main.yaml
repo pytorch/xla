@@ -8,6 +8,7 @@
   # ansible.builtin.git wants to fetch the entire history, so check out the pin manually
   ansible.builtin.shell:
     cmd: |
+      set -xe
       PIN="{{ torch_pin.stdout }}"
       if [[ $PIN = \#* ]]; then
         PRNUM="${PIN//[!0-9]/}"
