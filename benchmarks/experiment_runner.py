@@ -221,7 +221,7 @@ class ExperimentRunner:
       tracing_time = time.perf_counter() - t_trace_start
 
     # Mark step.
-    self._mark_step(benchmark_experiment)
+    self._mark_step(benchmark_experiment, output)
     total_time = time.perf_counter() - total_time_start
     return output, total_time, tracing_time
 
@@ -307,7 +307,7 @@ class ExperimentRunner:
           total_timing += timing
 
         # Mark step.
-        self._mark_step(benchmark_experiment)
+        self._mark_step(benchmark_experiment, inputs_list[i])
         if pytorch_profile is not None:
           pytorch_profile.step()
 
@@ -414,9 +414,14 @@ class ExperimentRunner:
       inputs_list.append(inputs)
     return inputs_list
 
-  def _mark_step(self, benchmark_experiment):
+  def _mark_step(self, benchmark_experiment, tensor_to_check=None):
     if benchmark_experiment.xla:
-      xm.mark_step()
+      if benchmark_experiment.use_torch_xla2:
+        assert tensor_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
+        for t in tensor_to_check:
+          t.block_until_ready()
+      else:
+        xm.mark_step()
 
   def _synchronize(self, benchmark_experiment):
     if benchmark_experiment.xla:
@@ -858,6 +863,12 @@ def parse_args(args=None):
       type=str,
       action="append",
       help="Flags to forward to XLA via `XLA_FLAGS` env var.",
+  )
+  parser.add_argument(
+      "--torch-xla2",
+      action="store_true",
+      default=False,
+      help="Choose to use torch_xla2 or not.",
   )
   parser.add_argument(
       "--disable-tf32",

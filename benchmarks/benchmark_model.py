@@ -115,8 +115,21 @@ class BenchmarkModel:
       self.module = self.module.to(self.dtype)
       self.example_inputs = cast_to_dtype(self.example_inputs, self.dtype)
 
-    self.module = self.module.to(self.device)
-    self.example_inputs = move_to_device(self.example_inputs, self.device)
+    if self.benchmark_experiment.use_torch_xla2:
+      # for torch_xla2, we export model to FX graph and move weights to JAX device
+      import torch_xla2.export
+      import torch_xla2
+      import jax
+      exported = torch.export.export(self.module)
+      weights, jax_func = torch_xla2.export.export_program_to_jax(exported, self.sample_inputs)
+      jax_func = jax.jit(jax_func)
+      weights = pytree.tree_map_only(jnp.ndarray, lambda x: jax.device_put(x, device), weights)
+      # map the module function to jax_func
+      self.module = lambda x: jax_func(weights, x)
+    else:  
+      self.module = self.module.to(self.device)
+    
+    self.example_inputs = move_to_device(self.example_inputs, self.device, self.benchmark_experiment.use_torch_xla2)
 
     if self.benchmark_experiment.test == "eval":
       self._prepare_for_eval()

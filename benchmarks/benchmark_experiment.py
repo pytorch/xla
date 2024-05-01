@@ -72,6 +72,9 @@ class ExperimentLoader:
         exclude_tags=()):
       return False
 
+    if cfg_dynamo is not None and self._args.torch_xla2:
+      return False
+
     # Check dynamo backend-specifics constraints.
     if cfg_dynamo == "inductor":
       if cfg_accelerator == "tpu" or cfg_xla is not None:
@@ -116,12 +119,13 @@ class ExperimentLoader:
         xla_flags=xla_flags,
         dynamo=dynamo,
         test=test,
-        batch_size=batch_size)
+        batch_size=batch_size,
+        use_torch_xla2=self._args.torch_xla2)
 
 
 class BenchmarkExperiment:
 
-  def __init__(self, accelerator, xla, xla_flags, dynamo, test, batch_size):
+  def __init__(self, accelerator, xla, xla_flags, dynamo, test, batch_size, use_torch_xla2: bool = False):
     self.accelerator = accelerator
     self.xla = xla
     self.xla_flags = xla_flags
@@ -129,6 +133,7 @@ class BenchmarkExperiment:
     self.test = test
     self.batch_size = batch_size
     self.accelerator_model = get_accelerator_model(self.accelerator)
+    self.use_torch_xla2 = use_torch_xla2
 
   def update_process_env(self, process_env):
 
