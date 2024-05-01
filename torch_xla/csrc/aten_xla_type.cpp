@@ -1472,7 +1472,7 @@ at::Tensor XLANativeFunctions::full(at::IntArrayRef size,
   }
   return bridge::AtenFromXlaTensor(tensor_methods::full(
       absl::Span<const int64_t>(size), fill_value,
-      GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+      GetXlaDeviceOrCurrent(device), dtype ? *dtype : fill_value.type()));
 }
 
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
