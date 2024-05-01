@@ -2475,8 +2475,6 @@ void InitXlaModuleBindings(py::module m) {
                     xtensor->CurrentDataHandle());
             return runtime::GetComputationClient()->UnsafeBufferPointer(data);
           } else if (xtensor->CurrentIrValue().node != nullptr) {
-            // DeviceData* device_data =
-            // torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get());
             DeviceData* device_data =
                 DeviceData::Cast(xtensor->CurrentIrValue().node.get());
             if (device_data != nullptr) {
