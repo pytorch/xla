@@ -2465,6 +2465,31 @@ void InitXlaModuleBindings(py::module m) {
     return false;
   });
 
+  m.def("_unsafe_buffer_pointer",
+        [](const at::Tensor& input) -> std::uintptr_t {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          XLA_CHECK(xtensor) << "The input is not an XLA tensor.";
+          if (xtensor->CurrentDataHandle() != nullptr) {
+            std::shared_ptr<runtime::ComputationClient::Data> data =
+                std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                    xtensor->CurrentDataHandle());
+            return runtime::GetComputationClient()->UnsafeBufferPointer(data);
+          } else if (xtensor->CurrentIrValue().node != nullptr) {
+            DeviceData* device_data =
+                DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+            if (device_data != nullptr) {
+              torch::lazy::BackendDataPtr data = device_data->data();
+              return runtime::GetComputationClient()->UnsafeBufferPointer(
+                  UnwrapXlaData(data));
+            } else {
+              XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
+                             "with IR that's not DeviceData";
+            }
+          }
+          XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
+                         "without a data handle or an IR.";
+        });
+
   // -------------Dynamo Integration API Start-------------------------
   /*
    * Return tensor ids and at::tensors for all DeviceData nodes that is needed

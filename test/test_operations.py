@@ -2422,6 +2422,24 @@ class TestGeneric(test_utils.XlaTestCase):
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
 
+  def test_unsafe_buffer_pointer(self):
+    xla_device = xm.xla_device()
+    xla_tensor_0 = torch.tensor(42).to(xla_device)
+    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
+    xm.mark_step()
+    buf_ptr_0 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_0)
+    self.assertGreaterEqual(buf_ptr_0, 0)
+
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    xla_tensor_1 = torch.tensor(42, device=xm.xla_device())
+    buf_ptr_1 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_1)
+    self.assertGreaterEqual(buf_ptr_1, 0)
+
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    xla_tensor_2 = torch.ones((5, 5)).to(xla_device)
+    buf_ptr_2 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_2)
+    self.assertGreaterEqual(buf_ptr_2, 0)
+
 
 class SimpleModelWithDropout(torch.nn.Module):
 

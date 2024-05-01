@@ -397,6 +397,11 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   return *replicated_output;
 }
 
+std::uintptr_t IfrtComputationClient::UnsafeBufferPointer(
+    const DataPtr handle) {
+  XLA_ERROR() << __FUNCTION__ << " not implemented";
+}
+
 std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromDeviceMetric());
