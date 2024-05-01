@@ -53,7 +53,7 @@ class IfrtComputationClient : public ComputationClient {
 
   std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
-  
+
   std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;
 
   DataPtr TransferShardsToDevice(

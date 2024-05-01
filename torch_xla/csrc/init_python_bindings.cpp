@@ -2448,10 +2448,8 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_get_buffer_donation", [](const at::Tensor& input) -> bool {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     if (!xtensor) {
-      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": _get_buffer_donation: xtensor is null" << std::endl;
       return false;
     } else if (xtensor->CurrentDataHandle() != nullptr) {
-      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": _get_buffer_donation: xtensor->CurrentDataHandle() != nullptr" << std::endl;
       auto data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
           xtensor->CurrentDataHandle());
       return data->should_donate_buffer();
@@ -2459,38 +2457,38 @@ void InitXlaModuleBindings(py::module m) {
       auto device_data =
           torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get());
       if (device_data != nullptr) {
-        std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": _get_buffer_donation: xtensor->CurrentIrValue().node != nullptr and device_data != nullptr" << std::endl;
         return device_data->get_buffer_donation();
       } else {
-        std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": _get_buffer_donation: xtensor->CurrentIrValue().node != nullptr and device_data == nullptr" << std::endl;
         return false;
       }
     }
     return false;
   });
 
-  m.def("_unsafe_buffer_pointer", [](const at::Tensor& input) -> std::uintptr_t {
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    XLA_CHECK(xtensor) << "The input is not an XLA tensor.";
-    if (xtensor->CurrentDataHandle() != nullptr) {
-      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-      std::shared_ptr<runtime::ComputationClient::Data> data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-          xtensor->CurrentDataHandle());
-      return runtime::GetComputationClient()->UnsafeBufferPointer(data);
-    } else if (xtensor->CurrentIrValue().node != nullptr) {
-      // DeviceData* device_data = torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-      DeviceData* device_data = DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-      if (device_data != nullptr) {
-        torch::lazy::BackendDataPtr data = device_data->data();
-        std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-        return runtime::GetComputationClient()->UnsafeBufferPointer(UnwrapXlaData(data));
-      } else {
-        XLA_ERROR() << "Could not get the buffer pointer.";
-        std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-      }
-    }
-    XLA_ERROR() << "Could not get the buffer pointer.";
-  });
+  m.def("_unsafe_buffer_pointer",
+        [](const at::Tensor& input) -> std::uintptr_t {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          XLA_CHECK(xtensor) << "The input is not an XLA tensor.";
+          if (xtensor->CurrentDataHandle() != nullptr) {
+            std::shared_ptr<runtime::ComputationClient::Data> data =
+                std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                    xtensor->CurrentDataHandle());
+            return runtime::GetComputationClient()->UnsafeBufferPointer(data);
+          } else if (xtensor->CurrentIrValue().node != nullptr) {
+            // DeviceData* device_data =
+            // torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+            DeviceData* device_data =
+                DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+            if (device_data != nullptr) {
+              torch::lazy::BackendDataPtr data = device_data->data();
+              return runtime::GetComputationClient()->UnsafeBufferPointer(
+                  UnwrapXlaData(data));
+            } else {
+              XLA_ERROR() << "Could not get the buffer pointer.";
+            }
+          }
+          XLA_ERROR() << "Could not get the buffer pointer.";
+        });
 
   // -------------Dynamo Integration API Start-------------------------
   /*

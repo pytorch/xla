@@ -2421,28 +2421,24 @@ class TestGeneric(test_utils.XlaTestCase):
     # 0-dimensional scalar-tensor
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
-  
+
   def test_unsafe_buffer_pointer(self):
-    xla_device = xm.xla_device() 
-    xla_tensor_0 = torch.tensor(42).to(xla_device) # didn't change anything
-    # `mark_step` ensures xla_tensor_0's CurrentDataHandle() != nullptr
+    xla_device = xm.xla_device()
+    xla_tensor_0 = torch.tensor(42).to(xla_device)
+    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
     xm.mark_step()
     buf_ptr_0 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_0)
     self.assertGreaterEqual(buf_ptr_0, 0)
-    print('test_0 passed, buf_ptr_0=', buf_ptr_0)
 
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
     xla_tensor_1 = torch.tensor(42, device=xm.xla_device())
     buf_ptr_1 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_1)
     self.assertGreaterEqual(buf_ptr_1, 0)
-    print('test_1 passed, buf_ptr_1=', buf_ptr_1)
 
-    # xla_tensor_1 = torch.ones((5, 5), device=xm.xla_device()) # this goes to branch: xtensor->CurrentIrValue().node != nullptr and device_data == nullptr, that is it's not a device_data.
-    xla_tensor_2 = torch.ones((5, 5)).to(xla_device) # this works and goes to branch" xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    xla_tensor_2 = torch.ones((5, 5)).to(xla_device)
     buf_ptr_2 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_2)
     self.assertGreaterEqual(buf_ptr_2, 0)
-    print('test_1 passed, buf_ptr_2=', buf_ptr_2)
-
-
 
 
 class SimpleModelWithDropout(torch.nn.Module):
