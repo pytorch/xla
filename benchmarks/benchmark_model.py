@@ -120,7 +120,7 @@ class BenchmarkModel:
       import torch_xla2.export
       import torch_xla2
       import jax
-      exported = torch.export.export(self.module)
+      exported = torch.export.export(self.module, self.sample_inputs)
       weights, jax_func = torch_xla2.export.export_program_to_jax(exported, self.sample_inputs)
       jax_func = jax.jit(jax_func)
       weights = pytree.tree_map_only(jnp.ndarray, lambda x: jax.device_put(x, device), weights)
