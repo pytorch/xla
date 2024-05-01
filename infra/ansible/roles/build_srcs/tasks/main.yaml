@@ -8,9 +8,18 @@
   # ansible.builtin.git wants to fetch the entire history, so check out the pin manually
   ansible.builtin.shell:
     cmd: |
-      git fetch origin {{ torch_pin.stdout }}
-      git checkout --recurse-submodules {{ torch_pin.stdout }}
+      set -xe
+      PIN="{{ torch_pin.stdout }}"
+      if [[ $PIN = \#* ]]; then
+        PRNUM="${PIN//[!0-9]/}"
+        git fetch origin "pull/$PRNUM/head"
+      else
+        git fetch origin {{ torch_pin.stdout }}
+      fi
+      git checkout --recurse-submodules FETCH_HEAD
     chdir: "{{ (src_root, 'pytorch') | path_join }}"
+  args:
+    executable: /bin/bash
   when: torch_pin is succeeded
 
 - name: Build PyTorch
