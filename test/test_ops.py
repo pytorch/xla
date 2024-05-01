@@ -225,6 +225,7 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('norm', 'fro'),
             AllowedOpInfoEntry('special.erfcx'),
             AllowedOpInfoEntry('_native_batch_norm_legit'),
+            AllowedOpInfoEntry('full'),
 
             # Duplicate Redundant entries for this test.
             # AllowedOpInfoEntry('polygamma', 'polygamma_n_1'),
