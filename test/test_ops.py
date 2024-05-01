@@ -394,7 +394,7 @@ class TestOpInfo(TestCase):
           return tuple(map(to_cpu, x))
         elif isinstance(x, dict):
           return {k: to_cpu(v) for k, v in x.items()}
-        elif isinstance(x, (numbers.Number, bool, str)):
+        elif isinstance(x, (numbers.Number, bool, str, torch.dtype)):
           return x
 
         # Passthrough None because some functions wrapped with type promotion
