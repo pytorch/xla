@@ -65,76 +65,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     additional_inputs = tuple()
     return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
   else:
-    # modify body_fn return with additional_inputs
-    def new_body_fn(*carried_inputs):
-      # new_lower = torch.add(one_value, lower)
-      # output_value = linear_0(input_value)
-      # weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-      # bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
-      # return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-      #     one_value, x), input_value.clone(), bias.clone(), weight.clone(
-      #     ), output_value.clone()
-      # return body_fn(carried_inputs), weight.clone(), bias.clone()
-      # print("carried_inputs: ", carried_inputs)
-      # print("additional_inputs: ", additional_inputs)
-      # res1 = body_fn(*carried_inputs)
-      # print("res1: ", res1)
-      # print("type res1: ", type(res1))
-      # print("type additional_inputs: ", type(additional_inputs))
-      # print("*additional_inputs: ", *additional_inputs)
-      # res2 = (res1, ) + additional_inputs
-      # print("res2: ", res2)
-      # print("type res2: ", type(res2))
-      # print("before it")
-      # print("body_fn(*carried_inputs): ", body_fn(*carried_inputs))
-      # print("list(body_fn(*carried_inputs)): ", list(body_fn(*carried_inputs)))
-      # print("additional_inputs: ", additional_inputs)
-      # print("type additional_inputs: ", type(additional_inputs))
-      # print("list(body_fn(*carried_inputs)).extend(list(additional_inputs)): ", list(body_fn(*carried_inputs)).extend(list(additional_inputs)))
-      # aaa = [1, 2, 3]
-      # bbb = [4, 5]
-      # ccc = (4, 5)
-      # aaa.extend(bbb)
-      # print(aaa)
-      # aaa.extend(ccc)
-      # print(aaa)
-      # res0 = [1, 2, 3].extend((4, 5))
-      # res1 = [1, 2, 3].extend([4, 5])
-      # print("res0: ", res0)
-      # print("res1: ", res1)
-      # thislist = ["apple", "banana", "cherry"]
-      # tropical = ["mango", "pineapple", "papaya"]
-      # thislist.extend(tropical)
-      # print(thislist)
-      # thislist = ["apple", "banana", "cherry"]
-      # thistuple = ("kiwi", "orange")
-      # thislist.extend(thistuple)
-      # print(thislist)
-      # mid = body_fn(*carried_inputs)
-      # res = mid.extend(list(additional_inputs))
-      # res = list(body_fn(*carried_inputs))
-      # res.extend(additional_inputs)
-      # print("res: ", res)
-      # return list(body_fn(*carried_inputs)).extend(additional_inputs)
-      # self.named_parameters
-      # weight = self.linear.weight
-      res = list(body_fn(*carried_inputs))
-      # print("res: ", res)
-      # trynewres = res[:-1] + [res[-1]]
-      # print("trynewres: ", trynewres)
-      newres = res[:-1] + list(additional_inputs) + [res[-1]]
-      # print("newres: ", newres)
-      # res.insert(-2, *additional_inputs)
-      # print("new res: ", res)
-      # res.extend(additional_inputs)
-      # res.append(body_fn.bias)
-      # res.append(body_fn.weight)
-      # return res
-      return newres
-    # return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
     return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
-  print("$$$ additional_inputs: ", additional_inputs)
-  # return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
 
 
 def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
@@ -151,7 +82,6 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
         torch.randint(
             10, additional_input.size(),
             dtype=additional_input.dtype).to(device))
-  # print("fake_carried_inputs: ", fake_carried_inputs)
 
   # TODO(@manfei): specify which element is for which argument like a,b,c
   cond_result = cond_fn(*fake_carried_inputs)
@@ -171,9 +101,6 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
-  # cond_hlo_print = xb.get_computation_hlo(cond_computation)
-  # print("cond computation: !!!!!!!!!")
-  # print(cond_hlo_print)
 
   # generate body_fn xlacomputation
   body_result = body_fn(*fake_carried_inputs)
@@ -187,15 +114,11 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     additional_inputs_list_body = []
 
   # TODO(@manfei): treat hard-code parameters: additional_inputs_list_body
-  # body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
   # TODO(@manfei): get index of output_value, then trasfer them into buildforiloop for 
   body_ctx.buildforiloop(list(body_result), [body_result[-1],])
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
-  # body_hlo_print = xb.get_computation_hlo(body_computation)
-  # print("body computation: !!!!!!!!!")
-  # print(body_hlo_print)
 
   # trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
   total_inputs = carried_inputs + additional_inputs
@@ -212,8 +135,8 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
   # TODO(@manfei): treat hard-code input arguments, currently switch bias and output_value if additional_inputs(weight/bias) exists
   if additional_inputs:
-    tmp_bias = params[5] # params[-3]
-    del params[5] # params[-3]
+    tmp_bias = params[5]
+    del params[5]
     params.append(tmp_bias)
 
   # generate while xlacomputation
@@ -224,9 +147,6 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       body_computation=body_computation)
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
-  # hlo_print = xb.get_computation_hlo(computation)
-  # print("while computation: !!!!!!!!!")
-  # print(hlo_print)
 
   # gain final result with generated while xlacomputation
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',

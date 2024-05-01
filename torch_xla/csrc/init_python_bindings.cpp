@@ -933,18 +933,11 @@ class PyLoweringContext {
     // for xla::while requriement
     // !!! actually weight/bias don't need to be added here as dummy arguments by additional_inputs_list,
     // !!! they will be added automatically added here, we need to add dummy argument for output/return_value
-    // !!! 
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // TODO(@manfei): treat hard code parameter_idx value
       // int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size(); // local_builder->parameter_numbers_; // GetProgramShape();
-      // int64_t parameter_idx = 7; // conv2d
-      // int64_t parameter_idx = 11; // conv2d+mnist-treat // conv1 + bn1
-      // int64_t parameter_idx = 13; // conv1 + bn1 + conv2
-      // int64_t parameter_idx = 19; // conv1 + bn1 + conv2 + bn2
-      int64_t parameter_idx = 21; // conv1 + bn1 + conv2 + bn2
-      // int64_t parameter_idx = 9; // linear
-      // int64_t parameter_idx = tensors.size();
+      int64_t parameter_idx = 21;
       for (auto& additional_input_tensor : additional_inputs_list) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
         xla::Shape shape = xtensor->shape().get();
