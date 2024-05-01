@@ -142,6 +142,9 @@ class BenchmarkExperiment:
       process_env.pop("PJRT_DEVICE", None)
       process_env.pop("XRT_TPU_CONFIG", None)
       process_env.pop("XLA_FLAGS", None)
+    
+    if self.use_torch_xla2:
+      process_env.pop("JAX_PLATFORMS", self.accelerator.upper())
 
     if self.xla == "PJRT":
       process_env["PJRT_DEVICE"] = self.accelerator.upper()
