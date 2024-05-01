@@ -1471,10 +1471,8 @@ at::Tensor XLANativeFunctions::full(at::IntArrayRef size,
         size, fill_value, dtype, layout, device, pin_memory);
   }
   at::ScalarType intend_dtype;
-  if (dtype) {
+  if (dtype || fill_value.isFloatingPoint()) {
     // Respect the dtype if it is being explictlly passed in.
-    intend_dtype = *dtype;
-  } else if (fill_value.isFloatingPoint()) {
     // All python scalar will be passed in as float64 to the backend, but the
     // default behavior for pytorch is to return a float32 tensor in this case.
     intend_dtype = at::dtype_or_default(dtype);

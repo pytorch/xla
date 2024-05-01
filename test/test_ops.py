@@ -427,5 +427,4 @@ class TestOpInfo(TestCase):
 instantiate_device_type_tests(TestOpInfo, globals())
 
 if __name__ == '__main__':
-  #run_tests()
   unittest.main()
