@@ -2482,10 +2482,12 @@ void InitXlaModuleBindings(py::module m) {
               return runtime::GetComputationClient()->UnsafeBufferPointer(
                   UnwrapXlaData(data));
             } else {
-              XLA_ERROR() << "Could not get the buffer pointer.";
+              XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
+                             "with IR that's not DeviceData";
             }
           }
-          XLA_ERROR() << "Could not get the buffer pointer.";
+          XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
+                         "without a data handle or an IR.";
         });
 
   // -------------Dynamo Integration API Start-------------------------
