@@ -5,6 +5,7 @@ import re
 import torch
 import torch.nn as nn
 from torch._dynamo.testing import collect_results
+from torch.utils import _pytree as pytree
 from util import cast_to_dtype, move_to_device
 
 logger = logging.getLogger(__name__)
@@ -110,19 +111,27 @@ class BenchmarkModel:
   def prepare_for_experiment(self, dynamo_compilation_opts):
     self.device = self.benchmark_experiment.get_device()
     self.dtype = self.conversion_dtype()
-
     if self.dtype is not None:
       self.module = self.module.to(self.dtype)
       self.example_inputs = cast_to_dtype(self.example_inputs, self.dtype)
+
+    if self.benchmark_experiment.test == "eval":
+      self._prepare_for_eval()
+    elif self.benchmark_experiment.test == "train":
+      self._prepare_for_train()
+    else:
+      raise NotImplementedError
 
     if self.benchmark_experiment.use_torch_xla2:
       # for torch_xla2, we export model to FX graph and move weights to JAX device
       import torch_xla2.export
       import torch_xla2
       import jax
+      import jax.numpy as jnp
       exported = torch.export.export(self.module, self.example_inputs)
       weights, jax_func = torch_xla2.export.exported_program_to_jax(exported)
       jax_func = jax.jit(jax_func)
+      device = jax.devices()[0]
       weights = pytree.tree_map_only(jnp.ndarray,
                                      lambda x: jax.device_put(x, device),
                                      weights)
@@ -135,12 +144,7 @@ class BenchmarkModel:
         self.example_inputs, self.device,
         self.benchmark_experiment.use_torch_xla2)
 
-    if self.benchmark_experiment.test == "eval":
-      self._prepare_for_eval()
-    elif self.benchmark_experiment.test == "train":
-      self._prepare_for_train()
-    else:
-      raise NotImplementedError
+
 
     if self.benchmark_experiment.dynamo:
       compilation_opts = dynamo_compilation_opts.copy()

@@ -284,7 +284,7 @@ class ExperimentRunner:
 
     # Reset state and sync.
     reset_rng_state(benchmark_experiment)
-    self._mark_step(benchmark_experiment)
+    self._mark_step(benchmark_experiment, inputs_list[0])
     self._synchronize(benchmark_experiment)
     met.clear_all()
     dynamo_utils.counters.clear()
