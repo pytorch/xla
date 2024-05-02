@@ -482,7 +482,7 @@ def paged_attention(q, k_pages, v_pages, lengths, page_indices,
   return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
 
 
-def non_xla_attetion(q, k, v):
+def non_xla_attetion(q, k, v, attention_type):
   # This will be called when dynamo use fake tensor to construct the fake output.
   # We need to make sure output tensor's shape is correct.
   if k.device != torch.device("meta"):
@@ -490,6 +490,7 @@ def non_xla_attetion(q, k, v):
         f'XLA {attention_type} attention should only be applied to tensors on XLA device'
     )
 
+  # Return orignal shape of q.
   return torch.empty_like(q)
 
 
@@ -533,4 +534,4 @@ def paged_attention_non_xla(q: torch.Tensor, k_pages: torch.Tensor,
                             v_pages: torch.Tensor, lengths: torch.Tensor,
                             page_indices: torch.Tensor,
                             pages_per_compute_block: int):
-  return non_xla_attetion(q, k_pages, v_pages)
+  return non_xla_attetion(q, k_pages, v_pages, "paged")
