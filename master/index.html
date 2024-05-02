@@ -227,7 +227,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git0a54b2b )
+                  master (2.4.0+git93ce054 )
                 </div>
               
             
@@ -279,9 +279,56 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#pytorch-xla-api">PyTorch/XLA API</a><ul>
-<li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a></li>
-<li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a></li>
-<li><a class="reference internal" href="#module-torch_xla.utils.utils">utils</a></li>
+<li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a><ul>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.xla_device"><code class="docutils literal notranslate"><span class="pre">xla_device()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_xla_supported_devices"><code class="docutils literal notranslate"><span class="pre">get_xla_supported_devices()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.xla_device_hw"><code class="docutils literal notranslate"><span class="pre">xla_device_hw()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_ordinal"><code class="docutils literal notranslate"><span class="pre">get_ordinal()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_local_ordinal"><code class="docutils literal notranslate"><span class="pre">get_local_ordinal()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.is_master_ordinal"><code class="docutils literal notranslate"><span class="pre">is_master_ordinal()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.xrt_world_size"><code class="docutils literal notranslate"><span class="pre">xrt_world_size()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.all_reduce"><code class="docutils literal notranslate"><span class="pre">all_reduce()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.all_gather"><code class="docutils literal notranslate"><span class="pre">all_gather()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.all_to_all"><code class="docutils literal notranslate"><span class="pre">all_to_all()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.add_step_closure"><code class="docutils literal notranslate"><span class="pre">add_step_closure()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.wait_device_ops"><code class="docutils literal notranslate"><span class="pre">wait_device_ops()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.optimizer_step"><code class="docutils literal notranslate"><span class="pre">optimizer_step()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.save"><code class="docutils literal notranslate"><span class="pre">save()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.rendezvous"><code class="docutils literal notranslate"><span class="pre">rendezvous()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.do_on_ordinals"><code class="docutils literal notranslate"><span class="pre">do_on_ordinals()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.mesh_reduce"><code class="docutils literal notranslate"><span class="pre">mesh_reduce()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.set_rng_state"><code class="docutils literal notranslate"><span class="pre">set_rng_state()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_rng_state"><code class="docutils literal notranslate"><span class="pre">get_rng_state()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_memory_info"><code class="docutils literal notranslate"><span class="pre">get_memory_info()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_stablehlo"><code class="docutils literal notranslate"><span class="pre">get_stablehlo()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_stablehlo_bytecode"><code class="docutils literal notranslate"><span class="pre">get_stablehlo_bytecode()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.functions.all_reduce"><code class="docutils literal notranslate"><span class="pre">all_reduce()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.functions.all_gather"><code class="docutils literal notranslate"><span class="pre">all_gather()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a><ul>
+<li><a class="reference internal" href="#torch_xla.distributed.parallel_loader.ParallelLoader"><code class="docutils literal notranslate"><span class="pre">ParallelLoader</span></code></a><ul>
+<li><a class="reference internal" href="#torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader"><code class="docutils literal notranslate"><span class="pre">ParallelLoader.per_device_loader()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.spawn"><code class="docutils literal notranslate"><span class="pre">spawn()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper"><code class="docutils literal notranslate"><span class="pre">MpModelWrapper</span></code></a><ul>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to"><code class="docutils literal notranslate"><span class="pre">MpModelWrapper.to()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor"><code class="docutils literal notranslate"><span class="pre">MpSerialExecutor</span></code></a><ul>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run"><code class="docutils literal notranslate"><span class="pre">MpSerialExecutor.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-torch_xla.utils.utils">utils</a><ul>
+<li><a class="reference internal" href="#torch_xla.utils.utils.SampleGenerator"><code class="docutils literal notranslate"><span class="pre">SampleGenerator</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.utils.utils.DataWrapper"><code class="docutils literal notranslate"><span class="pre">DataWrapper</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.utils.serialization.save"><code class="docutils literal notranslate"><span class="pre">save()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.utils.serialization.load"><code class="docutils literal notranslate"><span class="pre">load()</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#test">test</a></li>
 </ul>
 </li>
@@ -3850,9 +3897,56 @@ feature will come in the future releases.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#pytorch-xla-api">PyTorch/XLA API</a><ul>
-<li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a></li>
-<li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a></li>
-<li><a class="reference internal" href="#module-torch_xla.utils.utils">utils</a></li>
+<li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a><ul>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.xla_device"><code class="docutils literal notranslate"><span class="pre">xla_device()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_xla_supported_devices"><code class="docutils literal notranslate"><span class="pre">get_xla_supported_devices()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.xla_device_hw"><code class="docutils literal notranslate"><span class="pre">xla_device_hw()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_ordinal"><code class="docutils literal notranslate"><span class="pre">get_ordinal()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_local_ordinal"><code class="docutils literal notranslate"><span class="pre">get_local_ordinal()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.is_master_ordinal"><code class="docutils literal notranslate"><span class="pre">is_master_ordinal()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.xrt_world_size"><code class="docutils literal notranslate"><span class="pre">xrt_world_size()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.all_reduce"><code class="docutils literal notranslate"><span class="pre">all_reduce()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.all_gather"><code class="docutils literal notranslate"><span class="pre">all_gather()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.all_to_all"><code class="docutils literal notranslate"><span class="pre">all_to_all()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.add_step_closure"><code class="docutils literal notranslate"><span class="pre">add_step_closure()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.wait_device_ops"><code class="docutils literal notranslate"><span class="pre">wait_device_ops()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.optimizer_step"><code class="docutils literal notranslate"><span class="pre">optimizer_step()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.save"><code class="docutils literal notranslate"><span class="pre">save()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.rendezvous"><code class="docutils literal notranslate"><span class="pre">rendezvous()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.do_on_ordinals"><code class="docutils literal notranslate"><span class="pre">do_on_ordinals()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.mesh_reduce"><code class="docutils literal notranslate"><span class="pre">mesh_reduce()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.set_rng_state"><code class="docutils literal notranslate"><span class="pre">set_rng_state()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_rng_state"><code class="docutils literal notranslate"><span class="pre">get_rng_state()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_memory_info"><code class="docutils literal notranslate"><span class="pre">get_memory_info()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_stablehlo"><code class="docutils literal notranslate"><span class="pre">get_stablehlo()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.get_stablehlo_bytecode"><code class="docutils literal notranslate"><span class="pre">get_stablehlo_bytecode()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.functions.all_reduce"><code class="docutils literal notranslate"><span class="pre">all_reduce()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.functions.all_gather"><code class="docutils literal notranslate"><span class="pre">all_gather()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a><ul>
+<li><a class="reference internal" href="#torch_xla.distributed.parallel_loader.ParallelLoader"><code class="docutils literal notranslate"><span class="pre">ParallelLoader</span></code></a><ul>
+<li><a class="reference internal" href="#torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader"><code class="docutils literal notranslate"><span class="pre">ParallelLoader.per_device_loader()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.spawn"><code class="docutils literal notranslate"><span class="pre">spawn()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper"><code class="docutils literal notranslate"><span class="pre">MpModelWrapper</span></code></a><ul>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to"><code class="docutils literal notranslate"><span class="pre">MpModelWrapper.to()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor"><code class="docutils literal notranslate"><span class="pre">MpSerialExecutor</span></code></a><ul>
+<li><a class="reference internal" href="#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run"><code class="docutils literal notranslate"><span class="pre">MpSerialExecutor.run()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-torch_xla.utils.utils">utils</a><ul>
+<li><a class="reference internal" href="#torch_xla.utils.utils.SampleGenerator"><code class="docutils literal notranslate"><span class="pre">SampleGenerator</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.utils.utils.DataWrapper"><code class="docutils literal notranslate"><span class="pre">DataWrapper</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.utils.serialization.save"><code class="docutils literal notranslate"><span class="pre">save()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.utils.serialization.load"><code class="docutils literal notranslate"><span class="pre">load()</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#test">test</a></li>
 </ul>
 </li>
@@ -4026,6 +4120,7 @@ feature will come in the future releases.</p>
          <script src="_static/underscore.js"></script>
          <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
          <script src="_static/doctools.js"></script>
+         <script src="_static/sphinx_highlight.js"></script>
      
 
   
