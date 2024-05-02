@@ -144,8 +144,6 @@ class BenchmarkModel:
         self.example_inputs, self.device,
         self.benchmark_experiment.use_torch_xla2)
 
-
-
     if self.benchmark_experiment.dynamo:
       compilation_opts = dynamo_compilation_opts.copy()
       compilation_opts['backend'] = self.benchmark_experiment.dynamo
