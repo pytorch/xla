@@ -209,7 +209,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/stablehlo/test_exports.py"
   run_test "$CDIR/stablehlo/test_export_fx_passes.py"
   run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
-  run_test "$CDIR/stablehlo/test_mark_pattern.py"
+  run_test "$CDIR/stablehlo/test_composite.py"
   run_test "$CDIR/stablehlo/test_pt2e_qdq.py"
   run_test "$CDIR/stablehlo/test_stablehlo_custom_call.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
