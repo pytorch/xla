@@ -17,6 +17,10 @@ When PyTorch PR introduces a breaking change, its PyTorch/XLA CI tests will fail
 4. Remove the `.torch_pin` in PyTorch/XLA PR and merge. To be noted, `git commit --amend` should be avoided in this step as PyTorch CI will keep using the commit hash created in step 1 until other PRs update that manually or the nightly buildbot updates that automatically.
 5. Finally, don't delete your branch until 2 days later. See step 4 for explanations.
 
+### Running TPU tests on PRs
+
+By default, we only run TPU tests on a postsubmit basis to save capacity. If you are making a sensitive change, add the `tpuci` label to your PR. Note that the label must be present before `build_and_test.yml` triggers. If it has already run, make a new commit or rebase to trigger the CI again.
+
 ## CI Environment
 
 Before the CI in this repository runs, we build a the base dev image. These are the same images we recommend in our VSCode `.devcontainer` setup and nightly build to ensure consistency between environments. We produce variants with and without CUDA, configured in `infra/ansible` (build config) and `infra/tpu-pytorch-releases/dev_images.tf` (build triggers).
@@ -41,7 +45,9 @@ The CPU and GPU test configs are defined in the same file, `_test.yml`. Since so
 
 CPU tests run immediately after then `torch_xla` build completes. This will likely be the first test feedback on your commit. GPU tests will launch when both the `torch_xla` and `torch_xla_cuda_plugin` complete. GPU compilation is much slower due to the number of possible optimizations, and the GPU chips themselves are quite outdated, so these tests will take longer to run than the CPU tests, even if they start at the same time.
 
-TODO figure showing dependency
+![CPU tests launch when `torch_xla` is complete](../docs/assets/ci_test_dependency.png)
+
+![GPU tests also depend on CUDA plugin](../docs/assets/ci_test_dependency_gpu.png)
 
 For the C++ test groups in either case, the test binaries are pre-built during the build phase and packaged in `cpp-test-bin`. This will only be downloaded if necessary.
 
