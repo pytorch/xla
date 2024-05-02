@@ -284,7 +284,11 @@ class ExperimentRunner:
 
     # Reset state and sync.
     reset_rng_state(benchmark_experiment)
-    self._mark_step(benchmark_experiment, inputs_list[0])
+    if self._args.use_torch_xla2:
+      for inputs in inputs_list:
+        self._mark_step(benchmark_experiment, inputs)
+    else:
+      self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
     met.clear_all()
     dynamo_utils.counters.clear()
@@ -307,7 +311,7 @@ class ExperimentRunner:
           total_timing += timing
 
         # Mark step.
-        self._mark_step(benchmark_experiment, inputs_list[i])
+        self._mark_step(benchmark_experiment, output)
         if pytorch_profile is not None:
           pytorch_profile.step()
 
@@ -414,11 +418,11 @@ class ExperimentRunner:
       inputs_list.append(inputs)
     return inputs_list
 
-  def _mark_step(self, benchmark_experiment, tensor_to_check=None):
+  def _mark_step(self, benchmark_experiment, tensors_to_check=None):
     if benchmark_experiment.xla:
       if benchmark_experiment.use_torch_xla2:
-        assert tensor_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
-        for t in tensor_to_check:
+        assert tensors_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
+        for t in tensors_to_check:
           t.block_until_ready()
       else:
         xm.mark_step()
@@ -867,7 +871,6 @@ def parse_args(args=None):
   parser.add_argument(
       "--torch-xla2",
       action="store_true",
-      default=False,
       help="Choose to use torch_xla2 or not.",
   )
   parser.add_argument(

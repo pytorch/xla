@@ -80,7 +80,8 @@ def move_to_device(item, device, use_torch_xla2: bool = False):
   if use_torch_xla2:
     import torch_xla2
     import jax
-    move_to_device_func = lambda t: jax.device_put(torch_xla2.tensor.t2j(t))
+    move_to_device_func = lambda t: jax.device_put(
+        torch_xla2.tensor.t2j(t), device)
   else:
     move_to_device_func = lambda t: t.to(device)
   return pytree.tree_map_only(torch.Tensor, move_to_device_func, item)

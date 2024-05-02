@@ -72,6 +72,7 @@ class ExperimentLoader:
         exclude_tags=()):
       return False
 
+    # torch_xla2 doesn't run with dynamo.
     if cfg_dynamo is not None and self._args.torch_xla2:
       return False
 
@@ -151,7 +152,7 @@ class BenchmarkExperiment:
       process_env.pop("XLA_FLAGS", None)
 
     if self.use_torch_xla2:
-      process_env.pop("JAX_PLATFORMS", self.accelerator.upper())
+      process_env["JAX_PLATFORMS"] = self.accelerator.lower()
 
     if self.xla == "PJRT":
       process_env["PJRT_DEVICE"] = self.accelerator.upper()
