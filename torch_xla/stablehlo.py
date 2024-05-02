@@ -1,24 +1,26 @@
 import copy
-from dataclasses import dataclass
+import dataclasses
 import enum
 import json
 import os
-from typing import List, Tuple, Optional, Mapping, Any, Dict
-import dataclasses
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple
 
 import numpy as np
 import torch
-from torch.fx import _pytree as fx_pytree
 import torch_xla
-from torch_xla.core import xla_model as xm
-from torch_xla.core import dynamo_bridge
-from torch_xla.debug import metrics
 import torch_xla.experimental.quantized
-from torch_xla.experimental.unbounded_dynamism_export import exported_program_has_symbolic_input_shape, process_exported_program_with_symbolic_input
-from torch.utils import _pytree as pytree
 from torch._decomp import get_decompositions
-
-from typing import Tuple
+from torch.fx import _pytree as fx_pytree
+from torch.utils import _pytree as pytree
+from torch_xla.core import dynamo_bridge
+from torch_xla.core import xla_model as xm
+from torch_xla.debug import metrics
+from torch_xla.experimental.stablehlo_custom_call import (
+    extract_custom_call_outputs_shape_dtype, stablehlo_custom_call)
+from torch_xla.experimental.unbounded_dynamism_export import (
+    exported_program_has_symbolic_input_shape,
+    process_exported_program_with_symbolic_input)
 
 
 def _get_numpy_dtype(dtype):
@@ -212,6 +214,22 @@ class StableHLOModelBundle:
   stablehlo_funcs: List[StableHLOFunc]
 
 
+# Ops that will be mapped to stablehlo.custom_call in the exported StableHLO graph.
+custom_ops_allowed_in_graph: Set[Callable] = set()
+
+
+def allow_custom_op_in_graph(op):
+  if hasattr(op, 'default'):
+    custom_ops_allowed_in_graph.add(op.default)
+  custom_ops_allowed_in_graph.add(op)
+
+
+def disallow_custom_op_in_graph(op):
+  if hasattr(op, 'default'):
+    custom_ops_allowed_in_graph.discard(op.default)
+  custom_ops_allowed_in_graph.discard(op)
+
+
 class XLAExportInterpreter(torch.fx.Interpreter):
 
   def __init__(self, module, device):
@@ -262,6 +280,11 @@ class XLAExportInterpreter(torch.fx.Interpreter):
         ]
         self._mark_dynamic(res, dynamic_dims)
       return res
+    if n.op == 'call_function' and n.target in custom_ops_allowed_in_graph:
+      output_shapes, output_dtypes = extract_custom_call_outputs_shape_dtype(n)
+      call_name = str(n.target)
+      n.target = stablehlo_custom_call
+      n.args = (n.args, call_name, output_shapes, output_dtypes)
     return super().run_node(n)
 
 
