@@ -125,7 +125,14 @@ class ExperimentLoader:
 
 class BenchmarkExperiment:
 
-  def __init__(self, accelerator, xla, xla_flags, dynamo, test, batch_size, use_torch_xla2: bool = False):
+  def __init__(self,
+               accelerator,
+               xla,
+               xla_flags,
+               dynamo,
+               test,
+               batch_size,
+               use_torch_xla2: bool = False):
     self.accelerator = accelerator
     self.xla = xla
     self.xla_flags = xla_flags
@@ -142,7 +149,7 @@ class BenchmarkExperiment:
       process_env.pop("PJRT_DEVICE", None)
       process_env.pop("XRT_TPU_CONFIG", None)
       process_env.pop("XLA_FLAGS", None)
-    
+
     if self.use_torch_xla2:
       process_env.pop("JAX_PLATFORMS", self.accelerator.upper())
 

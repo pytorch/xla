@@ -123,13 +123,17 @@ class BenchmarkModel:
       exported = torch.export.export(self.module, self.example_inputs)
       weights, jax_func = torch_xla2.export.exported_program_to_jax(exported)
       jax_func = jax.jit(jax_func)
-      weights = pytree.tree_map_only(jnp.ndarray, lambda x: jax.device_put(x, device), weights)
+      weights = pytree.tree_map_only(jnp.ndarray,
+                                     lambda x: jax.device_put(x, device),
+                                     weights)
       # map the module function to jax_func
       self.module = lambda x: jax_func(weights, x)
-    else:  
+    else:
       self.module = self.module.to(self.device)
-    
-    self.example_inputs = move_to_device(self.example_inputs, self.device, self.benchmark_experiment.use_torch_xla2)
+
+    self.example_inputs = move_to_device(
+        self.example_inputs, self.device,
+        self.benchmark_experiment.use_torch_xla2)
 
     if self.benchmark_experiment.test == "eval":
       self._prepare_for_eval()
