@@ -469,6 +469,13 @@ std::uintptr_t PjRtComputationClient::UnsafeBufferPointer(
   return ptr.value();
 }
 
+std::shared_ptr<xla::PjRtBuffer> PjRtComputationClient::GetPjRtBuffer(const DataPtr handle) {
+  std::shared_ptr<PjRtData> pjrt_data =
+      std::dynamic_pointer_cast<PjRtData>(handle);
+  XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString(); 
+  return pjrt_data->buffer;
+}
+
 std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromDeviceMetric());

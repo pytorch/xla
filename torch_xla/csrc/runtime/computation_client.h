@@ -25,6 +25,7 @@
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "xla/client/xla_computation.h"
+#include "xla/pjrt/pjrt_client.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
 #include "xla/types.h"
@@ -303,6 +304,8 @@ class ComputationClient {
       absl::Span<const DataPtr> handles) = 0;
 
   virtual std::uintptr_t UnsafeBufferPointer(const DataPtr handle) = 0;
+
+  virtual std::shared_ptr<xla::PjRtBuffer> GetPjRtBuffer(const DataPtr handle) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(

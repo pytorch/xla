@@ -56,6 +56,8 @@ class IfrtComputationClient : public ComputationClient {
 
   std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;
 
+  std::shared_ptr<xla::PjRtBuffer> GetPjRtBuffer(const DataPtr handle) override;
+
   DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
       std::string device, xla::Shape shape, xla::OpSharding sharding) override;

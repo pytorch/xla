@@ -402,6 +402,10 @@ std::uintptr_t IfrtComputationClient::UnsafeBufferPointer(
   XLA_ERROR() << __FUNCTION__ << " not implemented";
 }
 
+std::shared_ptr<xla::PjRtBuffer> IfrtComputationClient::GetPjRtBuffer(const DataPtr handle) {
+  XLA_ERROR() << __FUNCTION__ << " not implemented";
+}
+
 std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromDeviceMetric());

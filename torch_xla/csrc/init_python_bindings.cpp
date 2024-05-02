@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <c10/core/Device.h>
 #include <c10/util/Optional.h>
+#include <ATen/dlpack.h>
 #include <google/protobuf/text_format.h>
 #include <torch/csrc/autograd/utils/wrap_outputs.h>
 #include <torch/csrc/autograd/variable.h>
@@ -35,6 +36,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/dtype.h"
+#include "torch_xla/csrc/dl_convertor.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -1096,6 +1098,15 @@ void BuildLoweringContextSubmodule(py::module* m) {
       .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId)
       .def("set_name_string", &PyLoweringContext::SetNameString)
       .def("get_name_string", &PyLoweringContext::GetNameString);
+}
+
+void dlPack_Capsule_Destructor(PyObject* data) {
+  if (!PyCapsule_IsValid(data, "dltensor")) {
+    return;
+  }
+  DLManagedTensor* dlMTensor =
+      (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
+  dlMTensor->deleter(dlMTensor);
 }
 
 void InitXlaModuleBindings(py::module m) {
@@ -2510,7 +2521,8 @@ void InitXlaModuleBindings(py::module m) {
 
   // from an XLA tensor to a dlpack tensor.
   m.def("_to_dlpack", [](const at::Tensor& input) -> PyObject* {
-    return nullptr;
+    DLManagedTensor* dlMTensor = torch_xla::toDLPack(input);
+    return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
   });
   // from a dlpack tensor to an XLA tensor
   m.def("_from_dlpack", [](PyObject* ext_data) -> at::Tensor {
