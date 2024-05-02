@@ -6,6 +6,7 @@ import tempfile
 import torch
 import _XLAC
 from ._internal import tpu
+from .version import __version__
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -76,6 +77,8 @@ def _setup_default_env():
 
     os.environ.setdefault('ALLOW_MULTIPLE_LIBTPU_LOAD', '1')
     os.environ.setdefault('TPU_ML_PLATFORM', 'PyTorch/XLA')
+    # This is used for ML Framework Telemetry.
+    os.environ.setdefault('TPU_ML_PLATFORM_VERSION', __version__)
 
     if tpu.version() == 4:
       os.environ.setdefault('TPU_MEGACORE', 'megacore_dense')
@@ -149,7 +152,6 @@ if os.environ.get('TF_CPP_MIN_LOG_LEVEL') == '0':
 
 import atexit
 from ._patched_functions import _apply_patches
-from .version import __version__
 
 _found_libtpu = _setup_tpu_vm_library_path()
 
