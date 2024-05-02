@@ -338,31 +338,23 @@ def gmm(
   group_metadata2 = torch.from_numpy(np.array(group_metadata[2])).to("xla")
   num_active_tiles = torch.tensor(np.array(num_active_tiles)).to("xla")
   group_offset_torch = torch.from_numpy(np.array(group_offset)).to("xla")
+  output_shape = torch.Size([m, n])
+  # print("output_shapes", output_shape)
+  # print("output_dtypes", preferred_element_type)
+  # print("group_metadata0.dtype", group_metadata0.dtype)
+  # print("group_metadata1.dtype", group_metadata1.dtype)
+  # print("group_metadata2.dtype", group_metadata2.dtype)
+  # print("lhs.dtype", lhs.dtype)
+  # print("rhs.dtype", rhs.dtype)
+  # print("group_offset_torch.dtype", group_offset_torch.dtype)
+  # print("num_active_tiles.dtype", num_active_tiles.dtype)
 
-  # It returns the shape and type of tensors
-  def shape_dtype(q, *arg):
-    return [(q.shape, q.dtype)]
-
-  output_shape_dtype = shape_dtype(lhs)
-  output_shapes = [shape for shape, _ in output_shape_dtype]
-  output_dtypes = [dtype for _, dtype in output_shape_dtype]
-  print("output_shapes", output_shapes)
-  print("output_dtypes", output_dtypes)
-  print("group_metadata0.dtype", group_metadata0.dtype)
-  print("group_metadata1.dtype", group_metadata1.dtype)
-  print("group_metadata2.dtype", group_metadata2.dtype)
-  print("lhs.dtype", lhs.dtype)
-  print("rhs.dtype", rhs.dtype)
-  print("group_offset_torch.dtype", group_offset_torch.dtype)
-  print("num_active_tiles.dtype", num_active_tiles.dtype)
-
-  print("group_metadata0.shape", group_metadata0.shape)
-  print("group_metadata1.shape", group_metadata1.shape)
-  print("group_metadata2.shape", group_metadata2.shape)
-  print("group_offset_torch.shape", group_offset_torch.shape)
-  print("num_active_tiles.shape", num_active_tiles.shape)
-
-  out = torch_xla._XLAC._xla_tpu_custom_call([num_active_tiles, group_metadata0, group_metadata1, group_metadata2, group_offset_torch, lhs, rhs], payload, output_shapes, output_dtypes)
+  # print("group_metadata0.shape", group_metadata0.shape)
+  # print("group_metadata1.shape", group_metadata1.shape)
+  # print("group_metadata2.shape", group_metadata2.shape)
+  # print("group_offset_torch.shape", group_offset_torch.shape)
+  # print("num_active_tiles.shape", num_active_tiles.shape)
+  out = torch_xla._XLAC._xla_tpu_custom_call([num_active_tiles, group_metadata0, group_metadata1, group_metadata2, group_offset_torch, lhs, rhs], payload, [output_shape], [preferred_element_type])
 
   if existing_out is None and num_current_groups < num_total_groups:
     print("Milad: in if block!!! does it work right?")
@@ -416,6 +408,17 @@ def group_sizes_strategy(
   starts = np.concatenate([np.zeros(1, dtype=np.int32), ends_no_final])
   return torch.from_numpy(ends - starts).to(torch.int32)
 
+def trace_kernel_payload(lhs: torch.Tensor, rhs: torch.Tensor, group_sizes: torch.Tensor):
+  from jax.experimental.pallas.ops.tpu.megablox import gmm
+  from torch_xla.experimental.custom_kernel import trace_pallas
+  payload, _ = trace_pallas(
+      gmm,
+      lhs,
+      rhs,
+      group_sizes)
+
+  return payload
+
 def tolerances(
     lhs_dtype: torch.dtype, rhs_dtype: torch.dtype, out_dtype: torch.dtype
 ) -> tuple[float, float]:
@@ -427,34 +430,24 @@ def tolerances(
     return 1e-3, 1e-1  # atol, rtol
   return 1e-3, 1e-2  # atol, rtol
 
-def get_payload(lhs: torch.Tensor, rhs: torch.Tensor, group_sizes: torch.Tensor):
-  from jax.experimental.pallas.ops.tpu.megablox import gmm
-  from torch_xla.experimental.custom_kernel import trace_pallas
-  payload, _ = trace_pallas(
-      gmm,
-      lhs,
-      rhs,
-      group_sizes)
-
-  return payload
-
 if __name__ == '__main__':
   seed = 421
-  num_groups = 2
-  k = m = n = 256
-  lhs_dtype = rhs_dtype = out_dtype = torch.float32
+  num_groups = 1
+  k = m = n = 128
+  lhs_dtype = rhs_dtype = torch.bfloat16
+  out_dtype = torch.float32
 
   lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
   rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
   group_sizes = group_sizes_strategy(m=m, num_groups=num_groups)
 
-  payload = get_payload(lhs, rhs, group_sizes)
+  payload = trace_kernel_payload(lhs, rhs, group_sizes)
 
   out = gmm(lhs, rhs, group_sizes, payload)
-  print("PyTocrh/XLA Result:\n", out[0], out[0].shape)
+  # print("PyTocrh/XLA Result:\n", out[0], out[0].shape)
   
   ref_out = reference_gmm(lhs.to('cpu').float().numpy(), rhs.to('cpu').float().numpy(), group_sizes.numpy())
-  print("Reference Result:\n", ref_out, ref_out.shape)
+  # print("Reference Result:\n", ref_out, ref_out.shape)
   
   atol, rtol = tolerances(lhs_dtype, rhs_dtype, out_dtype)
   print(np.allclose(np.array(ref_out, dtype=float), np.array(out[0].to('cpu').float(), dtype=float), rtol=rtol, atol=atol))
