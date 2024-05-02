@@ -39,11 +39,11 @@ We have two build paths for each CI run:
   - C++ tests are piggybacked onto the same build and uploaded in the `cpp-test-bin` artifact.
 - `torch_xla_cuda_plugin`: the XLA CUDA runtime can be built independently of either `torch` or `torch_xla` -- it depends only on our pinned OpenXLA. Thus, this build should be almost entirely cached, unless your PR changes the XLA pin or adds a patch.
 
-Both the main package build and plugin build are configured with ansible at `infra/ansible`, although they run in separate stages (`stage=build_srcs` vs `stage=build_plugin`), respectively. This is the same configuration we use for our nightly and release builds.
+Both the main package build and plugin build are configured with ansible at `infra/ansible`, although they run in separate stages (`stage=build_srcs` vs `stage=build_plugin`). This is the same configuration we use for our nightly and release builds.
 
 The CPU and GPU test configs are defined in the same file, `_test.yml`. Since some of the tests come from the upstream PyTorch repository, we check out PyTorch at the same git rev as the `build` step (taken from `torch_xla.version.__torch_gitrev__`). The tests are split up into multiple groups that run in parallel; the `matrix` section of `_test.yml` corresponds to in `.github/scripts/run_tests.sh`.
 
-CPU tests run immediately after then `torch_xla` build completes. This will likely be the first test feedback on your commit. GPU tests will launch when both the `torch_xla` and `torch_xla_cuda_plugin` complete. GPU compilation is much slower due to the number of possible optimizations, and the GPU chips themselves are quite outdated, so these tests will take longer to run than the CPU tests, even if they start at the same time.
+CPU tests run immediately after then `torch_xla` build completes. This will likely be the first test feedback on your commit. GPU tests will launch when both the `torch_xla` and `torch_xla_cuda_plugin` complete. GPU compilation is much slower due to the number of possible optimizations, and the GPU chips themselves are quite outdated, so these tests will take longer to run than the CPU tests.
 
 ![CPU tests launch when `torch_xla` is complete](../docs/assets/ci_test_dependency.png)
 
@@ -63,7 +63,7 @@ The actual ARC cluster is defined in Terraform at `infra/tpu-pytorch/tpu_ci.yml`
 
 The best way to reproduce failures in the CI is to use the recommended container configuration in `.devcontainer`. These use identical images/environments as the CI.
 
-If you cannot reproduce the failure or need to inspect the package built in a CI run, you can download the `torch-xla-wheels` artifact for that run, [either locally in your web browser or remotely with the `gh` CLI tool](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts). C++ tests in particular can be quite slow to build. If you need to re-run these yourself, download the `cpp-test-bin` artifact.
+If you cannot reproduce the failure or need to inspect the package built in a CI run, you can download the `torch-xla-wheels` artifact for that run, [either locally in your web browser or remotely with the `gh` CLI tool](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts). C++ tests in particular can be quite slow to build. If you need to re-run these yourself, download the `cpp-test-bin` artifact. You'll have to set some additional environment variables for these to load the correct `torch` and plugin binaries, so you should copy the variables we set in `_test.yml` before runnign them.
 
 ### Generating docs
 
