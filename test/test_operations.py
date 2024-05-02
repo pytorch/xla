@@ -2448,6 +2448,68 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertGreaterEqual(buf_ptr_3, 0)
 
 
+class TestDLPack(test_utils.XlaTestCase):
+
+  # TODO(xw32): need to test different data type such as pytorch/test/test_dlpack.py
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_capsule_conversion(self):
+    # TODO(xw32): make sure to test the storage is tested.
+    t1 = torch.arange(5, device=xm.xla_device())
+    xm.mark_step()
+    got1 = from_dlpack(to_dlpack(t1))
+    self.assertEqual(t1.cpu(), got1.cpu())
+
+    t2 = torch.arange(5, device=xm.xla_device())
+    got2 = from_dlpack(to_dlpack(t2))
+    self.assertEqual(t2.cpu(), got2.cpu())
+
+    t3 = torch.tensor(5, device=xm.xla_device())
+    got3 = from_dlpack(to_dlpack(t3))
+    self.assertEqual(t3.cpu(), got3.cpu())
+
+  # TODO(xw32): figure it out what it is testing.
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_protocol_conversion(self):
+    t1 = torch.arange(5, device=xm.xla_device())
+    xm.mark_step()
+    got1 = from_dlpack(t1)
+    self.assertEqual(t1.cpu(), got1.cpu())
+
+    t2 = torch.arange(5, device=xm.xla_device())
+    got2 = from_dlpack(t2)
+    self.assertEqual(t2.cpu(), got2.cpu())
+
+    t3 = torch.tensor(5, device=xm.xla_device())
+    got3 = from_dlpack(t3)
+    self.assertEqual(t3.cpu(), got3.cpu())
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_cuda_to_xla_shared_storage(self):
+    t1 = torch.arange(5).cuda()
+    dlt1 = torch.utils.dlpack.to_dlpack(t1)
+    xla_t1 = from_dlpack(dlt1)
+    t1[0] = t1[0] + 20
+    self.assertEqual(t1, xla_t1.cpu())
+
+    t2 = torch.tensor(5).cuda()
+    dlt2 = torch.utils.dlpack.to_dlpack(t2)
+    xla_t2 = from_dlpack(dlt2)
+    t2.fill_(6)
+    self.assertEqual(t2, xla_t2.cpu())
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_xla_to_cuda_shared_storage(self):
+    xla_t1 = torch.arange(5, device=xm.xla_device())
+    dlt1 = to_dlpack(xla_t1)
+    cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
+    cuda_t1[0] = cuda_t1[0] + 20
+    self.assertEqual(xla_t1.cpu(), cuda_t1.cpu())
+
+
 class SimpleModelWithDropout(torch.nn.Module):
 
   def __init__(self):

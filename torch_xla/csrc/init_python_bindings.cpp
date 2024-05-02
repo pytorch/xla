@@ -2508,6 +2508,16 @@ void InitXlaModuleBindings(py::module m) {
                          "without a data handle or an IR.";
         });
 
+  // from an XLA tensor to a dlpack tensor.
+  m.def("_to_dlpack", [](const at::Tensor& input) -> PyObject* {
+    return nullptr;
+  });
+  // from a dlpack tensor to an XLA tensor
+  m.def("_from_dlpack", [](PyObject* ext_data) -> at::Tensor {
+    
+  });
+
+
   // -------------Dynamo Integration API Start-------------------------
   /*
    * Return tensor ids and at::tensors for all DeviceData nodes that is needed
