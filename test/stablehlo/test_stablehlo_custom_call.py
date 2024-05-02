@@ -6,9 +6,9 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.stablehlo_custom_call
 from torch.library import Library, impl, impl_abstract
-from torch_xla.stablehlo import (allow_custom_op_in_graph,
-                                 exported_program_to_stablehlo)
 from torch_xla.experimental.stablehlo_custom_call import stablehlo_custom_call
+from torch_xla.stablehlo import (StableHLOExportOptions,
+                                 exported_program_to_stablehlo)
 
 m = Library("my_custom_library", "DEF")
 
@@ -33,9 +33,10 @@ class StableHLOCustomCallExportTest(unittest.TestCase):
         x = torch.sin(x)
         return x
 
-    allow_custom_op_in_graph(torch.ops.my_custom_library.custom_op)
+    options = StableHLOExportOptions()
+    options.custom_ops_allowed_in_graph.add("my_custom_library")
     ep = torch.export.export(M(), (torch.randn(3, 3),))
-    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_module = exported_program_to_stablehlo(ep, options)
     shlo_text = shlo_module.get_stablehlo_text()
     self.assertTrue(
         re.search(
@@ -64,9 +65,10 @@ class StableHLOCustomCallExportTest(unittest.TestCase):
         y = torch.sin(y)
         return x, y
 
-    allow_custom_op_in_graph(torch.ops.my_custom_library.custom_op2)
+    options = StableHLOExportOptions()
+    options.custom_ops_allowed_in_graph.add("my_custom_library")
     ep = torch.export.export(M(), (torch.randn(3, 3), torch.randn(5, 5)))
-    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_module = exported_program_to_stablehlo(ep, options)
     shlo_text = shlo_module.get_stablehlo_text()
     self.assertTrue(
         re.search(
