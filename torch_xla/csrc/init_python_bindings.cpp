@@ -1109,6 +1109,15 @@ void dlPack_Capsule_Destructor(PyObject* data) {
   dlMTensor->deleter(dlMTensor);
 }
 
+at::Tensor tensor_fromDLPack(PyObject* data) {
+  DLManagedTensor* dlMTensor = (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
+  XLA_CHECK(dlMTensor != nullptr) << "from_dlpack received an invalid capsule. Note that a DLTensor capsule can be consumed only once. You may have already constructed a tensor from it once.";
+
+  at::Tensor tensor = torch_xla::fromDLPack(dlMTensor);
+  PyCapsule_SetName(data, "used_dltensor");
+  return tensor;
+}
+
 void InitXlaModuleBindings(py::module m) {
   m.def("_prepare_to_exit", []() { PrepareToExit(); });
   m.def("_xla_runtime_is_initialized", []() {
@@ -2526,7 +2535,7 @@ void InitXlaModuleBindings(py::module m) {
   });
   // from a dlpack tensor to an XLA tensor
   m.def("_from_dlpack", [](PyObject* ext_data) -> at::Tensor {
-    
+    return tensor_fromDLPack(ext_data);
   });
 
 

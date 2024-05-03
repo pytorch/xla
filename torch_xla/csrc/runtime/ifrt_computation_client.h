@@ -33,6 +33,12 @@ class IfrtComputationClient : public ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
+  DataPtr CreateData(
+      std::string device, xla::Shape shape,
+      std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) override {
+        XLA_ERROR() << __FUNCTION__ << " not implemented";
+      };
+
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
   DataPtr GetDataShard(DataPtr data, size_t index) override;
@@ -86,6 +92,14 @@ class IfrtComputationClient : public ComputationClient {
         absl::AsciiStrToUpper(client_->platform_name()));
   };
 
+  xla::PjRtPlatformId GetPlatformID() const override {
+    return client_->platform_id();
+  }
+
+  absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(int local_device_id) const override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
@@ -122,6 +136,10 @@ class IfrtComputationClient : public ComputationClient {
   MemoryInfo GetMemoryInfo(const std::string& device) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
+
+  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
 
   std::string SerializeComputation(const ComputationPtr computation) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";

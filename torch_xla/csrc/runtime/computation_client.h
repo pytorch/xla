@@ -29,6 +29,7 @@
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
 #include "xla/types.h"
+#include "xla/pjrt/pjrt_common.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -259,6 +260,10 @@ class ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) = 0;
 
+  virtual DataPtr CreateData(
+      std::string device, xla::Shape shape,
+      std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) = 0;
+
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input
   // wrapped inside a vector.
@@ -275,6 +280,8 @@ class ComputationClient {
   // Returns OpSharding attached to PjRtShardedData. The returned optional
   // structure will be empty if there is no sharding, like with PjRtData.
   virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
+
+  virtual std::string PjRtDeviceToString(xla::PjRtDevice* const device) const = 0;
 
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToDevice(
@@ -346,6 +353,10 @@ class ComputationClient {
   virtual std::string GetDefaultDevice() const = 0;
 
   virtual torch_xla::DeviceType GetDeviceType() const = 0;
+
+  virtual xla::PjRtPlatformId GetPlatformID() const = 0;
+
+  virtual absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(int local_device_id) const = 0;
 
   virtual size_t GetNumDevices() const = 0;
 

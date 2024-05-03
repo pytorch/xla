@@ -7,6 +7,7 @@
 namespace torch_xla {
 
 DLManagedTensor* toDLPack(const at::Tensor& src);
+at::Tensor fromDLPack(DLManagedTensor* src);
 
 }  // namespace torch_xla
 

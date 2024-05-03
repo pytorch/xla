@@ -185,6 +185,12 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
   return std::make_shared<PjRtData>(std::move(device), std::move(shape));
 }
 
+ComputationClient::DataPtr PjRtComputationClient::CreateData(
+    std::string device, xla::Shape shape,
+    std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) {
+  return std::make_shared<PjRtData>(std::move(device), std::move(shape));
+}
+
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
     ComputationClient::DataPtr data) {
   tsl::profiler::TraceMe activity("PjRtComputationClient::GetDataShards",
