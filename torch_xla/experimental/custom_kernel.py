@@ -490,11 +490,8 @@ def non_xla_attetion(q, k, v, attention_type):
         f'XLA {attention_type} attention should only be applied to tensors on XLA device'
     )
 
-  # perform a regular attention if input tensors are not on XLA device.
-  attn_weight = q @ k.transpose(-2, -1)
-  attn_weight = torch.nn.functional.softmax(attn_weight, dim=-1)
-  attn_output = attn_weight @ v
-  return attn_output
+  # Return orignal shape of q.
+  return torch.empty_like(q)
 
 
 XLA_LIB.define(
@@ -537,4 +534,4 @@ def paged_attention_non_xla(q: torch.Tensor, k_pages: torch.Tensor,
                             v_pages: torch.Tensor, lengths: torch.Tensor,
                             page_indices: torch.Tensor,
                             pages_per_compute_block: int):
-  return non_xla_attetion(q, k, v, "paged")
+  return non_xla_attetion(q, k_pages, v_pages, "paged")

@@ -590,18 +590,19 @@ class PallasTest(unittest.TestCase):
 
     def paged_attention_wrapper(q, k, v, seq_lens, page_indices,
                                 pages_per_compute_block):
-      return paged_attention(
-          q_xla,
-          k_pages_xla,
-          v_pages_xla,
-          seq_lens_xla,
-          page_indices_xla,
-          pages_per_compute_block=block_size // page_size,
+      return torch.ops.xla.paged_attention(
+          q,
+          k,
+          v,
+          seq_lens,
+          page_indices,
+          pages_per_compute_block=pages_per_compute_block,
       )
 
     compiled_paged_attention = torch.compile(
         paged_attention_wrapper, backend="openxla")
-    output = paged_attention_wrapper(
+
+    output = compiled_paged_attention(
         q_xla,
         k_pages_xla,
         v_pages_xla,
