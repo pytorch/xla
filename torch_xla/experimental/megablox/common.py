@@ -2,7 +2,7 @@
 
 from typing import Union
 import torch
-import tpu_features
+from torch_xla.experimental.megablox import tpu_features
 
 
 def assert_is_supported_dtype(dtype: torch.dtype) -> None:

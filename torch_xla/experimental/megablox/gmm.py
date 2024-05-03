@@ -1,7 +1,7 @@
 """Grouped matrix multiplication kernels for TPU written in Pallas."""
 
 from typing import Any, Callable, Optional, Union
-import common
+from torch_xla.experimental.megablox import common
 import torch
 import torch_xla
 import numpy as np
