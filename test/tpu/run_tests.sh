@@ -22,6 +22,7 @@ python3 test/pjrt/test_dynamic_plugin_tpu.py
 python3 test/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py
 python3 test/test_pallas.py
 python3 test/test_input_output_aliases.py
+python3 test/test_megablox.py
 python3 test/torch_distributed/test_torch_distributed_all_gather_xla_backend.py
 python3 test/torch_distributed/test_torch_distributed_all_reduce_xla_backend.py
 python3 test/torch_distributed/test_torch_distributed_multi_all_reduce_xla_backend.py
