@@ -2553,8 +2553,7 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
     x += 1
     xm.mark_step()
     // x.tensor_id =3, x.alias_id should be 2 since input tensor id will be 2
-    for
-    // this graph
+    // for this graph
     x *= 1 of 1
     */
     output_tensor->data()->alias_id = input_tensor->GetUniqueId();
