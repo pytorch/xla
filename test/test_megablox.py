@@ -22,7 +22,7 @@ if xr.device_type() == 'TPU':
   from jax.experimental import pallas as pl
 
 
-class PallasTest(unittest.TestCase):
+class MegabloxTest(unittest.TestCase):
 
   def _reference_gmm(
       self,
