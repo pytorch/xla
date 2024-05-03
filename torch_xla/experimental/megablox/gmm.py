@@ -1,14 +1,21 @@
 """Grouped matrix multiplication kernels for TPU written in Pallas."""
 
-from typing import Any, Callable, Optional, Union, Tuple
-import common_pt as common
+from typing import Any, Callable, Optional, Union
+import common
 import torch
 import torch_xla
 import numpy as np
-torch_xla._XLAC._init_computation_client()
 
+
+def jax_import_guard():
+  # Somehow, we need to grab the TPU before JAX locks it. Otherwise, any PT/XLA TPU operations will hang.
+  torch_xla._XLAC._init_computation_client()
+
+
+jax_import_guard()
 import jax
 import jax.numpy as jnp
+
 
 def _validate_args(
     *,
@@ -25,17 +32,14 @@ def _validate_args(
 
   # Validate 'rhs'.
   if rhs.dim() != expected_rhs_dims:
-    raise ValueError(
-        f"Expected {expected_rhs_dims}-tensor for 'rhs' but got"
-        f" {rhs.dim()}-tensor."
-    )
+    raise ValueError(f"Expected {expected_rhs_dims}-tensor for 'rhs' but got"
+                     f" {rhs.dim()}-tensor.")
   common.assert_is_supported_dtype(rhs.dtype)
 
   # Validate 'group_sizes'.
   if group_sizes.dtype != torch.int32:
     raise ValueError(
-        f"Expected 32-bit integer 'group_sizes' but got {group_sizes.dtype}."
-    )
+        f"Expected 32-bit integer 'group_sizes' but got {group_sizes.dtype}.")
 
   return lhs, group_sizes, common.select_input_dtype(lhs, rhs)
 
@@ -57,7 +61,7 @@ def _calculate_irregular_num_tiles(x: int, tx: int) -> tuple[int, int]:
 GroupMetadata = Any  # TODO(enriqueps): Clean this up and use a namedtuple
 
 
-def make_group_metadata(
+def _make_group_metadata(
     *,
     group_sizes: jnp.ndarray,
     m: int,
@@ -122,8 +126,7 @@ def make_group_metadata(
 
   # (2) Round the group_starts down to the nearest multiple of 'tm'.
   group_starts = jnp.concatenate(
-      [jnp.zeros(1, dtype=jnp.int32), group_ends[:-1]]
-  )
+      [jnp.zeros(1, dtype=jnp.int32), group_ends[:-1]])
   rounded_group_starts = group_starts // tm * tm
 
   # (3) Calculate the number of rows in each group.
@@ -190,23 +193,20 @@ def make_group_metadata(
   # group which is empty.
   #
   # TODO(tgale): Invert the 'partial_tile_mask' predicates to be more clear.
-  partial_tile_mask = jnp.logical_or(
-      (group_offsets[:-1] % tm) == 0, group_sizes == 0
-  )
+  partial_tile_mask = jnp.logical_or((group_offsets[:-1] % tm) == 0,
+                                     group_sizes == 0)
 
   # Explicitly enable tiles for zero sized groups, if specified. This covers
   # zero sized groups that start on a tile-aligned row and those that do not.
   if visit_empty_groups:
     partial_tile_mask = jnp.where(group_sizes == 0, 0, partial_tile_mask)
 
-  partial_tile_ids = jnp.where(
-      partial_tile_mask, tiles_m, group_offsets[:-1] // tm
-  )
+  partial_tile_ids = jnp.where(partial_tile_mask, tiles_m,
+                               group_offsets[:-1] // tm)
 
   tile_visits = (
-      jnp.histogram(partial_tile_ids, bins=tiles_m, range=(0, tiles_m - 1))[0]
-      + 1
-  )
+      jnp.histogram(partial_tile_ids, bins=tiles_m, range=(0, tiles_m - 1))[0] +
+      1)
 
   # Create the m-dimension tile ids for each grid index based on the visit
   # counts for each tile.
@@ -235,6 +235,7 @@ def make_group_metadata(
   num_tiles = group_tiles.sum()
   return (group_offsets, group_ids, m_tile_ids), num_tiles
 
+
 def _zero_uninitialized_memory(
     out: jnp.ndarray,
     *,
@@ -248,9 +249,12 @@ def _zero_uninitialized_memory(
   group_end = group_offsets[start_group + num_nonzero_groups]
   valid_mask = jax.lax.broadcasted_iota(jnp.int32, (out.shape[0],), 0)
   valid_mask = (valid_mask >= group_start) & (valid_mask < group_end)
-  return torch.from_numpy(np.array(jnp.where(valid_mask[:, None], out, 0))).to('xla')
+  return torch.from_numpy(np.array(jnp.where(valid_mask[:, None], out,
+                                             0))).to('xla')
+
 
 LutFn = Callable[[int, int, int], Optional[tuple[int, int, int]]]
+
 
 def gmm(
     lhs: torch.Tensor,
@@ -289,21 +293,18 @@ def gmm(
     expected_dtype = existing_out.dtype
     if expected_dtype != preferred_element_type:
       raise ValueError(
-          "Existing output dtype must match preferred_element_type."
-      )
+          "Existing output dtype must match preferred_element_type.")
   if group_offset is None:
     group_offset = jnp.array([0], dtype=jnp.int32)
   else:
     if group_offset.shape:
       raise ValueError(
-          f"group_offset must be a ()-shaped array. Got: {group_offset.shape}."
-      )
+          f"group_offset must be a ()-shaped array. Got: {group_offset.shape}.")
     group_offset = group_offset[None]
   num_current_groups = rhs.shape[0]
   num_total_groups = group_sizes.shape[0]
   lhs, group_sizes, input_dtype = _validate_args(
-      lhs=lhs, rhs=rhs, group_sizes=group_sizes
-  )
+      lhs=lhs, rhs=rhs, group_sizes=group_sizes)
 
   # Gather shape information.
   m, k, n = (lhs.shape[0], lhs.shape[1], rhs.shape[2])
@@ -325,7 +326,7 @@ def gmm(
 
   # Create the metadata we need for computation.
   group_sizes = jnp.asarray(group_sizes.numpy())
-  group_metadata, num_active_tiles = make_group_metadata(  # pylint: disable=unbalanced-tuple-unpacking
+  group_metadata, num_active_tiles = _make_group_metadata(  # pylint: disable=unbalanced-tuple-unpacking
       group_sizes=group_sizes,
       m=m,
       tm=tm,
@@ -333,31 +334,20 @@ def gmm(
       num_nonzero_groups=rhs.shape[0],
       visit_empty_groups=False,
   )
-  group_metadata0 = torch.from_numpy(np.array(group_metadata[0])).to(torch.int32).to("xla")
+  group_metadata0 = torch.from_numpy(np.array(group_metadata[0])).to(
+      torch.int32).to("xla")
   group_metadata1 = torch.from_numpy(np.array(group_metadata[1])).to("xla")
   group_metadata2 = torch.from_numpy(np.array(group_metadata[2])).to("xla")
   num_active_tiles = torch.tensor(np.array(num_active_tiles)).to("xla")
   group_offset_torch = torch.from_numpy(np.array(group_offset)).to("xla")
   output_shape = torch.Size([m, n])
-  # print("output_shapes", output_shape)
-  # print("output_dtypes", preferred_element_type)
-  # print("group_metadata0.dtype", group_metadata0.dtype)
-  # print("group_metadata1.dtype", group_metadata1.dtype)
-  # print("group_metadata2.dtype", group_metadata2.dtype)
-  # print("lhs.dtype", lhs.dtype)
-  # print("rhs.dtype", rhs.dtype)
-  # print("group_offset_torch.dtype", group_offset_torch.dtype)
-  # print("num_active_tiles.dtype", num_active_tiles.dtype)
-
-  # print("group_metadata0.shape", group_metadata0.shape)
-  # print("group_metadata1.shape", group_metadata1.shape)
-  # print("group_metadata2.shape", group_metadata2.shape)
-  # print("group_offset_torch.shape", group_offset_torch.shape)
-  # print("num_active_tiles.shape", num_active_tiles.shape)
-  out = torch_xla._XLAC._xla_tpu_custom_call([num_active_tiles, group_metadata0, group_metadata1, group_metadata2, group_offset_torch, lhs, rhs], payload, [output_shape], [preferred_element_type])
+  out = torch_xla._XLAC._xla_tpu_custom_call([
+      num_active_tiles, group_metadata0, group_metadata1, group_metadata2,
+      group_offset_torch, lhs, rhs
+  ], payload, [output_shape], [preferred_element_type])
 
   if existing_out is None and num_current_groups < num_total_groups:
-    print("Milad: in if block!!! does it work right?")
+    out = jnp.asarray(out.to('cpu').float().numpy())
     out = _zero_uninitialized_memory(
         out,
         start_group=group_offset[0],
@@ -365,89 +355,3 @@ def gmm(
         group_metadata=group_metadata,
     )
   return out
-
-import numpy as np
-def reference_gmm(
-    lhs: np.array,
-    rhs: np.array,
-    group_sizes: np.array,
-    preferred_element_type: np.dtype = np.float32,
-) -> np.array:
-
-  start = 0
-  out = []
-  for i, size in enumerate(group_sizes):
-    result = np.dot(
-        lhs[start : start + size, :],
-        rhs[i, :, :]
-    )
-
-    out.append(result)
-    start += group_sizes[i]
-  return np.array(np.concatenate(out))
-
-def group_sizes_strategy(
-    m: int, num_groups: int
-) -> torch.Tensor:
-  # Randomly sample the ends of the groups in the m-dimension. Let the fuzzer
-  # sample with replacement so that it's possible to get zero-sized groups. Get
-  # 'num_groups - 1' run ends. The final group will end at 'm'.
-  ends_no_final = np.sort(
-      np.array(
-          [
-              np.random.randint(low=0, high=m)
-              for _ in range(num_groups - 1)
-          ],
-          dtype=np.int32,
-      ),
-  )
-  ends = np.concatenate([ends_no_final, np.array([m], dtype=np.int32)])
-
-  # Calculate the run starts by shifting ends 1 to the right. The first run
-  # starts at zero.
-  starts = np.concatenate([np.zeros(1, dtype=np.int32), ends_no_final])
-  return torch.from_numpy(ends - starts).to(torch.int32)
-
-def trace_kernel_payload(lhs: torch.Tensor, rhs: torch.Tensor, group_sizes: torch.Tensor):
-  from jax.experimental.pallas.ops.tpu.megablox import gmm
-  from torch_xla.experimental.custom_kernel import trace_pallas
-  payload, _ = trace_pallas(
-      gmm,
-      lhs,
-      rhs,
-      group_sizes)
-
-  return payload
-
-def tolerances(
-    lhs_dtype: torch.dtype, rhs_dtype: torch.dtype, out_dtype: torch.dtype
-) -> tuple[float, float]:
-  if (
-      lhs_dtype == torch.bfloat16
-      or rhs_dtype == torch.bfloat16
-      or out_dtype == torch.bfloat16
-  ):
-    return 1e-3, 1e-1  # atol, rtol
-  return 1e-3, 1e-2  # atol, rtol
-
-if __name__ == '__main__':
-  seed = 421
-  num_groups = 1
-  k = m = n = 128
-  lhs_dtype = rhs_dtype = torch.bfloat16
-  out_dtype = torch.float32
-
-  lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
-  rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
-  group_sizes = group_sizes_strategy(m=m, num_groups=num_groups)
-
-  payload = trace_kernel_payload(lhs, rhs, group_sizes)
-
-  out = gmm(lhs, rhs, group_sizes, payload)
-  # print("PyTocrh/XLA Result:\n", out[0], out[0].shape)
-  
-  ref_out = reference_gmm(lhs.to('cpu').float().numpy(), rhs.to('cpu').float().numpy(), group_sizes.numpy())
-  # print("Reference Result:\n", ref_out, ref_out.shape)
-  
-  atol, rtol = tolerances(lhs_dtype, rhs_dtype, out_dtype)
-  print(np.allclose(np.array(ref_out, dtype=float), np.array(out[0].to('cpu').float(), dtype=float), rtol=rtol, atol=atol))
