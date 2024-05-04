@@ -40,6 +40,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 import torch_xla.test.test_utils as xtu
+import torch_xla.utils.dlpack as xdlpack
 import torch_xla.utils.utils as xu
 import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
@@ -2457,15 +2458,15 @@ class TestDLPack(test_utils.XlaTestCase):
     # TODO(xw32): make sure to test the storage is tested.
     t1 = torch.arange(5, device=xm.xla_device())
     xm.mark_step()
-    got1 = from_dlpack(to_dlpack(t1))
+    got1 = xdlpack.from_dlpack(xdlpack.to_dlpack(t1))
     self.assertEqual(t1.cpu(), got1.cpu())
 
     t2 = torch.arange(5, device=xm.xla_device())
-    got2 = from_dlpack(to_dlpack(t2))
+    got2 = xdlpack.from_dlpack(xdlpack.to_dlpack(t2))
     self.assertEqual(t2.cpu(), got2.cpu())
 
     t3 = torch.tensor(5, device=xm.xla_device())
-    got3 = from_dlpack(to_dlpack(t3))
+    got3 = xdlpack.from_dlpack(xdlpack.to_dlpack(t3))
     self.assertEqual(t3.cpu(), got3.cpu())
 
   # TODO(xw32): figure it out what it is testing.
@@ -2474,15 +2475,15 @@ class TestDLPack(test_utils.XlaTestCase):
   def test_dlpack_protocol_conversion(self):
     t1 = torch.arange(5, device=xm.xla_device())
     xm.mark_step()
-    got1 = from_dlpack(t1)
+    got1 = xdlpack.from_dlpack(t1)
     self.assertEqual(t1.cpu(), got1.cpu())
 
     t2 = torch.arange(5, device=xm.xla_device())
-    got2 = from_dlpack(t2)
+    got2 = xdlpack.from_dlpack(t2)
     self.assertEqual(t2.cpu(), got2.cpu())
 
     t3 = torch.tensor(5, device=xm.xla_device())
-    got3 = from_dlpack(t3)
+    got3 = xdlpack.from_dlpack(t3)
     self.assertEqual(t3.cpu(), got3.cpu())
 
   @onlyIfTorchSupportsCUDA
@@ -2490,13 +2491,13 @@ class TestDLPack(test_utils.XlaTestCase):
   def test_dlpack_cuda_to_xla_shared_storage(self):
     t1 = torch.arange(5).cuda()
     dlt1 = torch.utils.dlpack.to_dlpack(t1)
-    xla_t1 = from_dlpack(dlt1)
+    xla_t1 = xdlpack.from_dlpack(dlt1)
     t1[0] = t1[0] + 20
     self.assertEqual(t1, xla_t1.cpu())
 
     t2 = torch.tensor(5).cuda()
     dlt2 = torch.utils.dlpack.to_dlpack(t2)
-    xla_t2 = from_dlpack(dlt2)
+    xla_t2 = xdlpack.from_dlpack(dlt2)
     t2.fill_(6)
     self.assertEqual(t2, xla_t2.cpu())
 
@@ -2504,7 +2505,7 @@ class TestDLPack(test_utils.XlaTestCase):
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_xla_to_cuda_shared_storage(self):
     xla_t1 = torch.arange(5, device=xm.xla_device())
-    dlt1 = to_dlpack(xla_t1)
+    dlt1 = xdlpack.to_dlpack(xla_t1)
     cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
     cuda_t1[0] = cuda_t1[0] + 20
     self.assertEqual(xla_t1.cpu(), cuda_t1.cpu())

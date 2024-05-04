@@ -18,7 +18,6 @@
 #include "xla/status.h"
 
 namespace torch_xla {
-namespace {
 
 std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(const at::Tensor& input) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(input);
@@ -369,5 +368,4 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
 
 }
 
-} // xw32: why do we need the extra namespace?
 }
