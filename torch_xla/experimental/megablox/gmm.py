@@ -271,11 +271,11 @@ def gmm(
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
   Args:
-    lhs: A 2d, jnp.ndarray with shape [m, k].
-    rhs: A 3d, jnp.ndarray with shape [num_groups, k, n].
-    group_sizes: A 1d, jnp.ndarray with shape [num_groups] and jnp.int32 dtype.
+    lhs: A 2d, torch.Tensor with shape [m, k].
+    rhs: A 3d, torch.Tensor with shape [num_groups, k, n].
+    group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
     payload: pallas payload extracted from the pallas code on JAX.
-    preferred_element_type: jnp.dtype, the element type for the output matrix.
+    preferred_element_type: torch.dtype, the element type for the output matrix.
     tiling: 3-tuple of ints. The m, k and n-dimension tile sizes.
     group_offset: The group in group sizes to start computing from. This is
       particularly useful for when rhs num_groups is sharded.
@@ -295,7 +295,7 @@ def gmm(
       raise ValueError(
           "Existing output dtype must match preferred_element_type.")
   if group_offset is None:
-    group_offset = jnp.array([0], dtype=jnp.int32)
+    group_offset = torch.Tensor([0], dtype=torch.int32)
   else:
     if group_offset.shape:
       raise ValueError(
