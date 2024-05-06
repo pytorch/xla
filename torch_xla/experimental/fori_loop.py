@@ -158,7 +158,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
   print("fake_carried_inputs: ", fake_carried_inputs)
   # generate body_fn xlacomputation
-  import pdb; pdb.set_trace()
+  # import pdb; pdb.set_trace()
   body_result = body_fn(*fake_carried_inputs)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext() # PyLoweringContext
   body_ctx.set_name_string("bodyctx")
