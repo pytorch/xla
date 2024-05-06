@@ -1657,13 +1657,13 @@ XLAGraphExecutor::CachedComputation XLAGraphExecutor::GetXLAComputation(std::vec
   // CompilationResult compile_result =
   //     Compile(*tensors, devices, coll, &po_data, ir_values);
 
-  runtime::ComputationClient::ComputationPtr compile_result =
-      XLAGraphExecutor::Compile(tensors, devices, coll, nullptr, ir_values).computation;
+///   runtime::ComputationClient::ComputationPtr compile_result =
+///       XLAGraphExecutor::Compile(tensors, devices, coll, nullptr, ir_values).computation;
 
-  runtime::ComputationClient::ComputationPtr a = nullptr;
-  return a; // return nullptr;
+///   runtime::ComputationClient::ComputationPtr a = nullptr;
+///   return a; // return nullptr;
 
-}
+/// }
 
 XLAGraphExecutor::ComputationCache::TypePtr
 XLAGraphExecutor::LookupCachedCompiletwo(const torch::lazy::hash_t& hash) {
