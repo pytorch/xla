@@ -501,11 +501,13 @@ We are introducing a new PyTorch/XLA SPMD feature, called ``auto-sharding``, [RF
 PyTorch/XLA auto-sharding can be enabled by one of the following:
 - Setting envvar `XLA_SPMD_AUTO=1`
 - Calling the SPMD API in the beginning of your code:
+
 ```python
 import torch_xla.runtime as xr
 xr.use_spmd(auto=True)
 ```
 - Calling `pytorch.distributed._tensor.distribute_module` with `auto-policy` and `xla`:
+
 ```python
 import torch_xla.runtime as xr
 from torch.distributed._tensor import DeviceMesh, distribute_module
