@@ -1284,6 +1284,9 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
             {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
       },
       tsl::profiler::TraceMeLevel::kInfo);
+
+  TF_VLOG(3) << "We are running XLAGraphExecutor::Compile now";
+
   static const bool enable_aliasing =
       runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
   static const size_t parameter_wrapping_threadshold =
