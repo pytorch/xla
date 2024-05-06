@@ -23,6 +23,7 @@ std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(const at::Tens
   XLATensorPtr xtensor = bridge::GetXlaTensor(input);
   XLA_CHECK(xtensor) << "The input has to be an XLA tensor.";
   if (xtensor->CurrentDataHandle() != nullptr) {
+    TF_VLOG(4) << "The xla tensor has a current data handle.";
     return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(xtensor->CurrentDataHandle());
   } else if (xtensor->CurrentIrValue().node != nullptr) {
     DeviceData* device_data =
@@ -32,11 +33,13 @@ std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(const at::Tens
     }
     TF_VLOG(4) << "The xla tensor has IR value but does not have device data.";
   }
+  TF_VLOG(4) << "The xla tensor either has no current data handle or has no IR value.";
   return nullptr;
 }
 
 struct TorchXLADLMTensor {
   std::unique_ptr<xla::PjRtBuffer::ExternalReference> external_reference;
+  std::shared_ptr<xla::PjRtBuffer> buffer_reference;
 
   std::vector<int64_t> shape;
   std::vector<int64_t> strides;
@@ -125,7 +128,8 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
 
   // std::shared_ptr<PjRtData> pjrt_data = std::dynamic_pointer_cast<PjRtData>(data);
   // xla::PjRtBuffer* pjrt_buffer = pjrt_data->buffer.get();
-  xla::PjRtBuffer* pjrt_buffer = runtime::GetComputationClient()->GetPjRtBuffer(handle).get();
+  std::shared_ptr<xla::PjRtBuffer> pjrt_buffer = runtime::GetComputationClient()->GetPjRtBuffer(handle);
+  XLA_CHECK(pjrt_buffer != nullptr) << "Could not get a valid pjrt_buffer";
 
   if (pjrt_buffer->IsTuple()) {
     XLA_ERROR() << "Unimplemented. BufferToDLPackManagedTensor is not implemented for tuple buffers.";
@@ -144,6 +148,7 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
     absl::Status status = future.Await();
     XLA_CHECK_OK(status);
   }
+  torchXlaDLMTensor->buffer_reference = pjrt_buffer;
   // pack->buffer_reference = nb::borrow<nb::object>(py_buffer); // xw32: should we do it?
 
   dt.data = torchXlaDLMTensor->external_reference->OpaqueDeviceMemoryDataPointer();
@@ -161,6 +166,7 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
   dt.strides = reinterpret_cast<std::int64_t*>(torchXlaDLMTensor->strides.data());
   dt.byte_offset = 0;
 
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   return &(torchXlaDLMTensor.release()->tensor);
 }
 

@@ -2456,12 +2456,14 @@ class TestDLPack(test_utils.XlaTestCase):
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_capsule_conversion(self):
     # TODO(xw32): make sure to test the storage is tested.
-    t1 = torch.arange(5, device=xm.xla_device())
-    xm.mark_step()
-    got1 = xdlpack.from_dlpack(xdlpack.to_dlpack(t1))
+    t1 = torch.arange(5).to(xm.xla_device())
+    dlpt1 = xdlpack.to_dlpack(t1)
+    print('xw32 finished the to_dlpack')
+    got1 = xdlpack.from_dlpack(dlpt1)
     self.assertEqual(t1.cpu(), got1.cpu())
+    print('xw32 finished test case 1')
 
-    t2 = torch.arange(5, device=xm.xla_device())
+    t2 = torch.arange(5).to(xm.xla_device())
     got2 = xdlpack.from_dlpack(xdlpack.to_dlpack(t2))
     self.assertEqual(t2.cpu(), got2.cpu())
 
@@ -2504,7 +2506,7 @@ class TestDLPack(test_utils.XlaTestCase):
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_xla_to_cuda_shared_storage(self):
-    xla_t1 = torch.arange(5, device=xm.xla_device())
+    xla_t1 = torch.arange(5).to(xm.xla_device())
     dlt1 = xdlpack.to_dlpack(xla_t1)
     cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
     cuda_t1[0] = cuda_t1[0] + 20

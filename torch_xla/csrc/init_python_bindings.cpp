@@ -1100,14 +1100,28 @@ void BuildLoweringContextSubmodule(py::module* m) {
       .def("get_name_string", &PyLoweringContext::GetNameString);
 }
 
+// Used in the to_dlpack.
 void dlPack_Capsule_Destructor(PyObject* data) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   if (!PyCapsule_IsValid(data, "dltensor")) {
     return;
   }
+  HANDLE_TH_ERRORS
   DLManagedTensor* dlMTensor =
       (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
-  dlMTensor->deleter(dlMTensor);
+  if (dlMTensor) {
+    dlMTensor->deleter(dlMTensor);
+  } else {
+    PyErr_Clear();
+  }
+  END_HANDLE_TH_ERRORS_RET()
 }
+
+// PyObject* tensor_toDLPack(const at::Tensor& input) {
+//     DLManagedTensor* dlMTensor = torch_xla::toDLPack(input);
+//     std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+//     return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
+// }
 
 at::Tensor tensor_fromDLPack(PyObject* data) {
   DLManagedTensor* dlMTensor = (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
@@ -2529,13 +2543,16 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   // from an XLA tensor to a dlpack tensor.
-  m.def("_to_dlpack", [](const at::Tensor& input) -> PyObject* {
+  m.def("_to_dlpack", [](const at::Tensor& input) -> py::handle {
     DLManagedTensor* dlMTensor = torch_xla::toDLPack(input);
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
   });
+  // m.def("_to_dlpack", &tensor_toDLPack, ""); // 
+
   // from a dlpack tensor to an XLA tensor
-  m.def("_from_dlpack", [](PyObject* ext_data) -> at::Tensor {
-    return tensor_fromDLPack(ext_data);
+  m.def("_from_dlpack", [](py::handle ext_data) -> at::Tensor {
+    return tensor_fromDLPack(ext_data.ptr());
   });
 
 
