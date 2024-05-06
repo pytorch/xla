@@ -12,6 +12,32 @@ import torch._higher_order_ops.while_loop
 from torch._higher_order_ops.while_loop import while_loop_op
 from torch._higher_order_ops.while_loop import while_loop as torch_while_loop
 
+# def insert_into_res_with_output_value():
+
+def get_module_parameters(res, module, contain_output_balue=False):
+  bn_list = []
+  for name, param in module.named_parameters():
+    if name[:2]=='bn':
+      bn_list.append(param.clone())
+
+    if contain_output_balue:
+      res.insert(-1, param.clone())
+    else:
+      res.append(param.clone())
+
+  # hard-code BatchNorm2d duplicated parameters
+  if len(bn_list) !=0:
+    bn_list.reverse()
+    if contain_output_balue:
+      output_value = res[-1]
+      res = res[:-1] + bn_list
+      res.append(output_value)
+    else:
+      res = res + bn_list
+  # print("bn_list: ", bn_list)
+  # if not contain_output_balue:
+  #   print("res: ", res)
+  return res
 
 # TODO(@manfei): treat *input_value
 def fori_loop(upper, lower, body_fun, init_val, input_value):
@@ -55,7 +81,6 @@ def fori_loop(upper, lower, body_fun, init_val, input_value):
 
   return res
 
-
 @while_loop_op.py_impl(DispatchKey.XLA)
 def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # TODO(@manfei): PyTorch require carried_inputs to be list/tuple, PyTorch/XLA _xla_while_loop only accept *operands, *operands would tuple items again: (a, '')
@@ -63,6 +88,21 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
   if additional_inputs is None:
     additional_inputs = tuple()
+  else:
+    print("while additional_inputs: ", additional_inputs)
+    ### !!! we could use additional_inputs from PyTorch Dynamo to build dummy params in cond and maybe inputs too?
+    # additional_inputs = tuple(reversed(additional_inputs))
+
+    # additional_inputs_list = list(additional_inputs)
+    # additional_inputs_list.reverse()
+    # additional_inputs = tuple(additional_inputs_list)
+
+
+  def wrapped_body_fn_with_paras(*carried_inputs):
+    res = body_fn(*carried_inputs)
+    return tuple(res)
+
+  # return _xla_while_loop(cond_fn, wrapped_body_fn_with_paras, carried_inputs, additional_inputs)
   return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
 
 
@@ -86,31 +126,50 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
 
+  # # TODO(@manfei): treat hard-code cond xlacomputation change: currently switch output_value and weight position if additional_inputs(weight/bias) exists
+  # additional_inputs_list_cond = list(
+  #     fake_carried_inputs[2:]
+  # )  # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
+  # if additional_inputs:
+  #   tmp_bias = additional_inputs_list_cond[
+  #       -3]  # not used, change order doesn't affect logic
+  #   del additional_inputs_list_cond[
+  #       -3]  # not used, change order doesn't affect logic
+  #   additional_inputs_list_cond.append(
+  #       tmp_bias)  # not used, change order doesn't affect logic
+
   # TODO(@manfei): treat hard-code cond xlacomputation change: currently switch output_value and weight position if additional_inputs(weight/bias) exists
   additional_inputs_list_cond = list(
       fake_carried_inputs[2:]
   )  # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
   if additional_inputs:
-    tmp_bias = additional_inputs_list_cond[
-        -3]  # not used, change order doesn't affect logic
-    del additional_inputs_list_cond[
-        -3]  # not used, change order doesn't affect logic
-    additional_inputs_list_cond.append(
-        tmp_bias)  # not used, change order doesn't affect logic
+    ### actually output_value
+    tmp_bias = additional_inputs_list_cond[3] # additional_inputs_list_cond[-3]  # not used, change order doesn't affect logic
+    del additional_inputs_list_cond[3] # additional_inputs_list_cond[-3]  # not used, change order doesn't affect logic
+    additional_inputs_list_cond.append(tmp_bias)  # not used, change order doesn't affect logic
 
   cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  print("cond computation: !!!!!!!!!")
+  print(cond_hlo_print)
 
+  print("fake_carried_inputs: ", fake_carried_inputs)
   # generate body_fn xlacomputation
+  import pdb; pdb.set_trace()
   body_result = body_fn(*fake_carried_inputs)
-  body_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  body_ctx = torch_xla._XLAC.lowering.LoweringContext() # PyLoweringContext
   body_ctx.set_name_string("bodyctx")
+
+  ### !!! new solution to create xla_computation
+  body_ctx = torch_xla._XLAC._get_xla_computation(outputs)
 
   # TODO(@manfei): treat hard-code body xlacomputation change: currently add non-changed output_value argument if additional_inputs(weight/bias) exists
   if additional_inputs:
-    additional_inputs_list_body = [fake_carried_inputs[-3]]
+    # add output if additional params
+    additional_inputs_list_body = [fake_carried_inputs[5]] # -3]]
   else:
     additional_inputs_list_body = []
 
@@ -119,6 +178,9 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
+  body_hlo_print = xb.get_computation_hlo(body_computation)
+  print("body computation: !!!!!!!!!")
+  print(body_hlo_print)
 
   # trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
   total_inputs = carried_inputs + additional_inputs

@@ -7,6 +7,7 @@ import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
 from torch_xla.experimental.fori_loop import fori_loop
+from torch_xla.experimental.fori_loop import _xla_while_loop, get_module_parameters
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
@@ -121,6 +122,40 @@ class WhileLoopTest(unittest.TestCase):
 
     return self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
 
+  def test_while_loop_tpu_simple_linear_clean(self):
+
+    xm.mark_step()
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+
+    def cond_fn(upper, lower, one_value, x, input_value, output_value):
+      return lower[0] < upper[0]
+
+    def body_fn(upper, lower, one_value, x, input_value, output_value):
+      new_lower = torch.add(one_value, lower)
+      output_value = linear_0(input_value)
+      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+        one_value, x), input_value.clone(), output_value.clone()
+      # return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+      #     one_value, x), input_value.clone(), output_value.clone()
+
+    upper = torch.tensor([1], dtype=torch.int32, device=device)
+    lower = torch.tensor([0], dtype=torch.int32, device=device)
+    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device)
+    l_in_0 = torch.rand(10, device=xm.xla_device())
+    output_value = torch.zeros([20], dtype=torch.float32, device=device)
+
+    upper__, lower__, one_value__, torch_add_res__, input_value__, bias__, weight__, output_value_real__, = while_loop(
+        cond_fn, body_fn,
+        (upper, lower, one_value, init_val, l_in_0, output_value))
+
+    expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
+
+    return self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
+
   def test_while_loop_tpu_simple_linear_class(self):
 
     xm.mark_step()
@@ -180,6 +215,135 @@ class WhileLoopTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
     return aaa
 
+  def test_while_loop_tpu_simple_linear_class_clean(self):
+
+    xm.mark_step()
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    # define simple linear model class
+    class SimpleWithLinear(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+
+      def forward(self, one_value, x, input_value):
+        output_value_real = self.linear(input_value)
+        torch_add_res = torch.add(one_value, x)
+        return torch_add_res, output_value_real
+
+    simple_with_linear = SimpleWithLinear()
+
+    # define cond and body
+    def cond_fn(upper, lower, one_value, x, input_value, output_value, *args):
+      return lower[0] < upper[0]
+
+    def body_fn(upper, lower, one_value, x, input_value, output_value, *args):
+      new_lower = torch.add(one_value, lower)
+      output_value_real = simple_with_linear(one_value, x, input_value)
+      res = [upper.clone(), new_lower.clone(), one_value.clone(), output_value_real[0], input_value.clone(), output_value_real[1]]
+      res = get_module_parameters(res, simple_with_linear, contain_output_balue=True)
+      return tuple(res)
+
+    # simple_with_linear = SimpleWithLinear()
+    upper = torch.tensor([52], dtype=torch.int32, device=device)
+    lower = torch.tensor([1], dtype=torch.int32, device=device)
+    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device)
+    l_in_0 = torch.rand(10, device=xm.xla_device())
+    output_value = torch.zeros([20], dtype=torch.float32, device=device)
+
+    aaa = {
+        "simple_with_linear":
+            (simple_with_linear, (upper, lower, one_value, init_val, l_in_0,
+                                  output_value))
+    }
+
+    additional_inputs = get_module_parameters([], simple_with_linear, contain_output_balue=False)
+
+    upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, output_value_real__, = _xla_while_loop(
+      cond_fn, body_fn,
+      (upper, lower, one_value, init_val, l_in_0, output_value), tuple(additional_inputs))
+
+    print("while_loop run times: ", torch_add_res__)
+    print("output_value_real__: ", output_value_real__)
+
+    expected = simple_with_linear(one_value, init_val, l_in_0)
+    expected = expected[-1]
+    print("expected: ", expected)
+
+    self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
+    return aaa
+
+  def test_while_loop_tpu_simple_linear_class_clean_only_linear(self):
+
+    xm.mark_step()
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    # define simple linear model class
+    class SimpleWithLinear(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
+
+      def forward(self, x):
+        x = self.linear(x)
+        return x
+
+    simple_with_linear = SimpleWithLinear()
+
+    # define cond and body
+    def cond_fn(upper, lower, one_value, x, input_value, output_value, *args):
+      return lower[0] < upper[0]
+
+    def body_fn(upper, lower, one_value, x, input_value, output_value, *args):
+      new_lower = torch.add(one_value, lower)
+      output_value_real = simple_with_linear(input_value)
+      res = [upper.clone(), new_lower.clone(), one_value.clone(), torch.add(one_value, x).clone(), input_value.clone(), output_value_real.clone()]
+      res = get_module_parameters(res, simple_with_linear, contain_output_balue=False)
+      return tuple(res)
+
+    # simple_with_linear = SimpleWithLinear()
+    upper = torch.tensor([52], dtype=torch.int32, device=device)
+    lower = torch.tensor([1], dtype=torch.int32, device=device)
+    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device)
+    l_in_0 = torch.rand(10, dtype=torch.float32, device=device) # xm.xla_device()) # float
+    output_value = torch.zeros([20], dtype=torch.float32, device=device)
+    print("output_value: ", output_value)
+
+    aaa = {
+        "simple_with_linear":
+            (simple_with_linear, (upper, lower, one_value, init_val, l_in_0,
+                                  output_value))
+    }
+
+    additional_inputs = get_module_parameters([], simple_with_linear, contain_output_balue=False)
+    # print("additional_inputs: ", additional_inputs)
+
+    # while_loop
+    upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, output_value_real__, = while_loop(
+      cond_fn, body_fn,
+      (upper, lower, one_value, init_val, l_in_0, output_value))
+
+    # _xla_while_loop
+    # upper__, lower__, one_value__, torch_add_res__, input_value__, weight1__, bias1__, output_value_real__, = _xla_while_loop(
+    #   cond_fn, body_fn,
+    #   (upper, lower, one_value, init_val, l_in_0, output_value), tuple(additional_inputs))
+
+    print("while_loop run times: ", torch_add_res__)
+    print("output_value_real__: ", output_value_real__)
+
+    expected = simple_with_linear(l_in_0)
+    print("expected: ", expected)
+
+    self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
+    return aaa
+
+
   def test_fori_loop_tpu_addition(self):
 
     xm.mark_step()
@@ -218,6 +382,12 @@ class WhileLoopTest(unittest.TestCase):
 
     self.assertTrue(torch.all(torch.eq(expected, l_out_)))
 
+  def test_get_xlacomputation(self):
+    xla_device = xm.xla_device()
+    t1 = torch.randn(20, 5).to(xla_device)
+    t2 = torch.randn(20, 5).to(xla_device)
+    # expected_data_handles = torch_xla._XLAC._get_xla_computation([t1], [], False)
+    print("finish test here")
 
 if __name__ == '__main__':
   test = unittest.main()
