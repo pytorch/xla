@@ -253,10 +253,20 @@ def _zero_uninitialized_memory(
                                              0))).to('xla')
 
 
+def _trace_kernel_payload(lhs: torch.Tensor, rhs: torch.Tensor,
+                          group_sizes: torch.Tensor):
+  import jax
+  from jax.experimental.pallas.ops.tpu.megablox import gmm
+  from torch_xla.experimental.custom_kernel import trace_pallas
+  payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes)
+
+  return payload
+
+
 LutFn = Callable[[int, int, int], Optional[tuple[int, int, int]]]
 
 
-def gmm(
+def _gmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
@@ -295,8 +305,9 @@ def gmm(
       raise ValueError(
           "Existing output dtype must match preferred_element_type.")
   if group_offset is None:
-    group_offset = torch.Tensor([0], dtype=torch.int32)
+    group_offset = jnp.array([0], dtype=jnp.int32)
   else:
+    group_offset = jnp.ndarray(group_offset.numpy())
     if group_offset.shape:
       raise ValueError(
           f"group_offset must be a ()-shaped array. Got: {group_offset.shape}.")
@@ -354,4 +365,21 @@ def gmm(
         num_nonzero_groups=rhs.shape[0],
         group_metadata=group_metadata,
     )
+  return out
+
+
+def gmm(
+    lhs: torch.Tensor,
+    rhs: torch.Tensor,
+    group_sizes: torch.Tensor,
+    preferred_element_type: torch.dtype = torch.float32,
+    tiling: Optional[Union[tuple[int, int, int], LutFn]] = (128, 128, 128),
+    group_offset: Optional[torch.Tensor] = None,
+    existing_out: Optional[torch.Tensor] = None,
+    transpose_rhs: bool = False,
+    interpret: bool = False,
+):
+  payload = _trace_kernel_payload(lhs, rhs, group_sizes)
+  out = _gmm(lhs, rhs, group_sizes, payload, preferred_element_type, tiling,
+              group_offset, existing_out, transpose_rhs, interpret)
   return out

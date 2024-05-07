@@ -58,15 +58,6 @@ class MegabloxTest(unittest.TestCase):
     starts = np.concatenate([np.zeros(1, dtype=np.int32), ends_no_final])
     return torch.from_numpy(ends - starts).to(torch.int32)
 
-  def _trace_kernel_payload(self, lhs: torch.Tensor, rhs: torch.Tensor,
-                            group_sizes: torch.Tensor):
-    import jax
-    from jax.experimental.pallas.ops.tpu.megablox import gmm
-    from torch_xla.experimental.custom_kernel import trace_pallas
-    payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes)
-
-    return payload
-
   def _tolerances(self, lhs_dtype: torch.dtype, rhs_dtype: torch.dtype,
                   out_dtype: torch.dtype) -> tuple[float, float]:
     if (lhs_dtype == torch.bfloat16 or rhs_dtype == torch.bfloat16 or
@@ -75,23 +66,6 @@ class MegabloxTest(unittest.TestCase):
     return 1e-4, 1e-2  # atol, rtol
 
   LutFn = Callable[[int, int, int], Optional[tuple[int, int, int]]]
-
-  def gmm(
-      self,
-      lhs: torch.Tensor,
-      rhs: torch.Tensor,
-      group_sizes: torch.Tensor,
-      preferred_element_type: torch.dtype = torch.float32,
-      tiling: Optional[Union[tuple[int, int, int], LutFn]] = (128, 128, 128),
-      group_offset: Optional[torch.Tensor] = None,
-      existing_out: Optional[torch.Tensor] = None,
-      transpose_rhs: bool = False,
-      interpret: bool = False,
-  ):
-    payload = self._trace_kernel_payload(lhs, rhs, group_sizes)
-    out = g.gmm(lhs, rhs, group_sizes, payload, preferred_element_type, tiling,
-                group_offset, existing_out, transpose_rhs, interpret)
-    return out
 
   def _init_test_cases(self):
     self.tests_cases = []
@@ -167,7 +141,7 @@ class MegabloxTest(unittest.TestCase):
       lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
       group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      out = self.gmm(lhs, rhs, group_sizes)
+      out = g.gmm(lhs, rhs, group_sizes)
 
       ref_out = self._reference_gmm(
           lhs.to('cpu').float().numpy(),
