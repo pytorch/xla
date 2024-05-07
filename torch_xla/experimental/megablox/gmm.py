@@ -381,5 +381,5 @@ def gmm(
 ):
   payload = _trace_kernel_payload(lhs, rhs, group_sizes)
   out = _gmm(lhs, rhs, group_sizes, payload, preferred_element_type, tiling,
-              group_offset, existing_out, transpose_rhs, interpret)
+             group_offset, existing_out, transpose_rhs, interpret)
   return out
