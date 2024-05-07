@@ -2518,13 +2518,15 @@ void InitXlaModuleBindings(py::module m) {
 
   m.def("_get_xla_computation", [](const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices, const bool warm_up_cache_only) {
+    // convert list of at::Tensor to list of XLATensorPtr
     std::vector<XLATensorPtr> xtensors;
     xtensors.reserve(tensors.size());
     for (auto& tensor : tensors) {
       xtensors.push_back(bridge::GetXlaTensor(tensor));
     }
 
-    runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(xtensors, {}, true);
+    // create xlacomputation based on treated tensors
+    runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true);
     return xla_computation;
   });
   m.def("_get_tensors_handle",
