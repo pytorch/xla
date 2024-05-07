@@ -82,26 +82,26 @@ class TpuNavitAttention(nn.Module):
         assert q.shape[1] == self.dim
 
 
-        q = rearrange(q, "n d -> 1 1 n d")
+        q = rearrange(q, "n d -> 1 1 n d") * self.scale_factor
         k = rearrange(k, "n d -> 1 1 n d")
         v = rearrange(v, "n d -> 1 1 n d")
         q_indexes = rearrange(q_indexes, "n -> 1 n")
         kv_indexes = rearrange(kv_indexes, "n -> 1 n")
-        # q = q.to(self.device)
-        # k = k.to(self.device)
-        # v = v.to(self.device)
-        # q_indexes = q_indexes.to(self.device)
-        # kv_indexes = kv_indexes.to(self.device)
+        q = q.to(self.device)
+        k = k.to(self.device)
+        v = v.to(self.device)
+        q_indexes = q_indexes.to(self.device)
+        kv_indexes = kv_indexes.to(self.device)
 
         # using tpu flash attention function, which hopefully will be optimised
 
-        # out = flash_attention(q, k, v, q_segment_ids=q_indexes, kv_segment_ids=kv_indexes)
-        out = _attention(
-        q,
-        k,
-        v,
-        attn_mask=_make_attention_mask_from_segment_ids(
-            q_indexes, kv_indexes))
+        out = flash_attention(q, k, v, q_segment_ids=q_indexes, kv_segment_ids=kv_indexes)
+        # out = _attention(
+        # q,
+        # k,
+        # v,
+        # attn_mask=_make_attention_mask_from_segment_ids(
+        #     q_indexes, kv_indexes))
 
         # out *= self.scale_factor
         # xm.mark_step()
@@ -264,8 +264,8 @@ def navit_attention_accuracy_test():
 
         # ---------------     calculate the attention Navit way -----------------------------
 
-        at = NavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
-        # at = TpuNavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
+        # at = NavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
+        at = TpuNavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
 
         # print(f"indexes {pic_embed_indexes} , len {len(pic_embed_indexes)}")
         original_seq_length = pic_embed_sequence.shape[0]
@@ -277,14 +277,14 @@ def navit_attention_accuracy_test():
         q = Q(pic_embed_sequence) # torch.matmul(Q, pic_embed_sequence.transpose(0, 1)).transpose(0, 1)
         k = K(cont_embed_sequence) # torch.matmul(K, cont_embed_sequence.transpose(0, 1)).transpose(0, 1)
         v = V(cont_embed_sequence) # torch.matmul(V, cont_embed_sequence.transpose(0, 1)).transpose(0, 1)
-        test_output = at.for_ward_manual(q=q,
+        test_output = at.forward(q=q,
                                  q_indexes=NavitAttention.build_pic_id_sequence(pic_embed_indexes, navit_pack_length),
                                  k=k,
                                  v=v,
                                  kv_indexes=NavitAttention.build_ctx_id_sequence(cont_embed_indexes, navit_pack_length)
                                  )
-        # test_output = test_output[0, 0, :original_seq_length, :]
-        test_output = test_output[:original_seq_length, :]
+        test_output = test_output[0, 0, :original_seq_length, :]
+        # test_output = test_output[:original_seq_length, :]
         xm.mark_step()
         # test_output = test_output[ :original_seq_length, :]
         # ---------------   calc Navit   ------------------------------------------------------
