@@ -411,4 +411,4 @@ if __name__ == "__main__":
     torch_xla._XLAC._xla_set_use_full_mat_mul_precision(use_full_mat_mul_precision=True)
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     navit_attention_accuracy_test()
-    # navit_backward_accuracy()
+    navit_backward_accuracy()
