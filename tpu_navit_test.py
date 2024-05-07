@@ -175,42 +175,19 @@ class NavitAttention(nn.Module):
                            pad=(0, 0, 0, navit_pack_length - embed_sequence.shape[0]),
                            value=0)
 
-    def for_ward_manual(self, x, x_indexes, c, c_indexes):
-        assert x.shape[1] == self.dim
+    def for_ward_manual(self, q, q_indexes, k, v, kv_indexes):
+        assert q.shape[1] == self.dim
 
-        # if context is not given - doing self-attention
-        if c is None:
-            c = x
-            c_indexes = x_indexes
-
-        attn_mask = self.make_attention_mask(x_indexes, c_indexes)
-
-        qkv = (self._q(x), *self._kv(c).chunk(2, dim=-1))
-        # print(f"qkv \n{qkv}")
-        q, k, v = map(lambda t: rearrange(t, "n (h d) -> h n d", h=self.heads), qkv)
-        # print(f"Qx \n{q}")
-        # print(f"Kc \n{k}")
-        # print(f"Vc \n{v}")
+        attn_mask = self.make_attention_mask(q_indexes, kv_indexes)
 
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale_factor
-        # torch.set_printoptions(precision=1)
-        # print(f"Correlation before mask \n{dots}")
-
         if exists(attn_mask):
             dots = dots.masked_fill(~attn_mask, -torch.finfo(dots.dtype).max)
 
         attn = self.softmax(dots)
 
-        # if exists(attn_mask):
-        #    attn = attn.masked_fill(~attn_mask, 0)
-
-        # print(f"Correlation after mask \n{attn}")
-        # attn = self.dropout(attn)
-
         out = torch.matmul(attn, v)
-        # print(f"Out  \n{out}")
-        out = rearrange(out, "h n d -> n (h d)")
-        # print(f"Out  rearranged\n{out}")
+        # out = rearrange(out, "h n d -> n (h d)")
         return out # [:original_seq_length, :]  # self.to_out(out)
 
     def forward(self, q, q_indexes, k, v, kv_indexes):
@@ -287,8 +264,8 @@ def navit_attention_accuracy_test():
 
         # ---------------     calculate the attention Navit way -----------------------------
 
-        # at = NavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
-        at = TpuNavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
+        at = NavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
+        # at = TpuNavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
 
         # print(f"indexes {pic_embed_indexes} , len {len(pic_embed_indexes)}")
         original_seq_length = pic_embed_sequence.shape[0]
@@ -300,13 +277,14 @@ def navit_attention_accuracy_test():
         q = Q(pic_embed_sequence) # torch.matmul(Q, pic_embed_sequence.transpose(0, 1)).transpose(0, 1)
         k = K(cont_embed_sequence) # torch.matmul(K, cont_embed_sequence.transpose(0, 1)).transpose(0, 1)
         v = V(cont_embed_sequence) # torch.matmul(V, cont_embed_sequence.transpose(0, 1)).transpose(0, 1)
-        test_output = at.forward(q=q,
+        test_output = at.for_ward_manual(q=q,
                                  q_indexes=NavitAttention.build_pic_id_sequence(pic_embed_indexes, navit_pack_length),
                                  k=k,
                                  v=v,
                                  kv_indexes=NavitAttention.build_ctx_id_sequence(cont_embed_indexes, navit_pack_length)
                                  )
-        test_output = test_output[0, 0, :original_seq_length, :]
+        # test_output = test_output[0, 0, :original_seq_length, :]
+        test_output = test_output[:original_seq_length, :]
         xm.mark_step()
         # test_output = test_output[ :original_seq_length, :]
         # ---------------   calc Navit   ------------------------------------------------------
