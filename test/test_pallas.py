@@ -674,9 +674,9 @@ class PallasTest(unittest.TestCase):
     q = torch.randn(3, 2, 128, 4).to("xla")
     k = torch.randn(3, 2, 128, 4).to("xla")
     v = torch.randn(3, 2, 128, 4).to("xla")
-    q_segment_ids = torch.zeros(3, 128).to("xla")
-    kv_segment_ids = torch.zeros(3, 128).to("xla")
-    o = flash_attention(q, k, v, False, q_segment_ids, kv_segment_ids)
+    zeros = torch.zeros(3, 32).to("xla")
+    segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
+    o = flash_attention(q, k, v, False, segment_ids, segment_ids)
 
     expected_o = self._attention(
         q,
