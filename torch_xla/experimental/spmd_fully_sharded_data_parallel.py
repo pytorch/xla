@@ -106,6 +106,8 @@ class SpmdFullyShardedDataParallel(nn.Module):
     for param in module.parameters():
       if torch_xla._XLAC._get_xla_sharding_spec(param) != "":
         continue
+      if len(param.shape) <= 1:
+        continue
       spmd.mark_sharding(param, mesh, _prepare_spmd_partition_spec(param))
 
     # Register a backward hook to place optimization barrier to prevent
