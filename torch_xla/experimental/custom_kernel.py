@@ -421,8 +421,8 @@ def flash_attention(
     k,  # [batch_size, num_heads, kv_seq_len, d_model]
     v,  # [batch_size, num_heads, kv_seq_len, d_model]
     causal=False,
-    q_segment_ids=None,
-    kv_segment_ids=None,
+    q_segment_ids=None,  # [batch_size, q_seq_len]
+    kv_segment_ids=None,  # [batch_size, kv_seq_len]
     sm_scale=1.0,
     *,
     partition_spec=None,
