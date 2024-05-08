@@ -737,26 +737,23 @@ class PallasTest(unittest.TestCase):
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
-                    "This test only works on TPUv3+.")
+                   "This test only works on TPUv3+.")
   def test_flash_attention_wrapper_sm_scale(self):
-      jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
-      from torch_xla.experimental.custom_kernel import flash_attention
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    from torch_xla.experimental.custom_kernel import flash_attention
 
-      q = torch.randn(3, 2, 128, 4).to("xla")
-      k = torch.randn(3, 2, 128, 4).to("xla")
-      v = torch.randn(3, 2, 128, 4).to("xla")
-      sm_scale = 0.7
-      o = flash_attention(q, k, v, False, None, None, sm_scale)
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    sm_scale = 0.7
+    o = flash_attention(q, k, v, False, None, None, sm_scale)
 
-      expected_o = self._attention(
-          q * sm_scale,
-          k,
-          v)
-      self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
-      jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    expected_o = self._attention(q * sm_scale, k, v)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
-                    "This test only works on TPUv3+.")
+                   "This test only works on TPUv3+.")
   def test_flash_attention_sm_scale_backward(self):
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     from torch_xla.experimental.custom_kernel import flash_attention
@@ -787,10 +784,7 @@ class PallasTest(unittest.TestCase):
     k.retain_grad()
     v.retain_grad()
 
-    o = self._attention(
-        q * sm_scale,
-        k,
-        v)
+    o = self._attention(q * sm_scale, k, v)
     loss = o.sum()
     loss.backward()
     xm.mark_step()

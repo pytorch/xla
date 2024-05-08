@@ -198,16 +198,8 @@ class FlashAttention(torch.autograd.Function):
     return segment_ids, q_segment_ids, kv_segment_ids
 
   @staticmethod
-  def forward(ctx,
-              q,
-              k,
-              v,
-              causal,
-              q_segment_ids,
-              kv_segment_ids,
-              sm_scale,
-              partition_spec,
-              mesh):
+  def forward(ctx, q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale,
+              partition_spec, mesh):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
@@ -436,8 +428,8 @@ def flash_attention(
     partition_spec=None,
     mesh=None):
   # TODO: support SPMD and Dynamo with segment_ids.
-  return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale,
-                              partition_spec, mesh)
+  return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
+                              sm_scale, partition_spec, mesh)
 
 
 def paged_attention(q, k_pages, v_pages, lengths, page_indices,
