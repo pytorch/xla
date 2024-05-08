@@ -91,3 +91,20 @@ def _reflection_or_replication_pad(
 
 _try_register(aten.replication_pad1d, _replication_pad)
 _try_register(aten.replication_pad3d, _replication_pad)
+
+EXTRA_DECOMP = decomp.get_decompositions([
+    torch.ops.aten.upsample_nearest2d,
+    torch.ops.aten._native_batch_norm_legit.no_stats,
+    torch.ops.aten._adaptive_avg_pool2d,
+    torch.ops.aten._adaptive_avg_pool3d,
+    torch.ops.aten.grid_sampler_2d,
+    torch.ops.aten.native_dropout,
+    torch.ops.aten.reflection_pad1d,
+    torch.ops.aten.reflection_pad2d,
+    torch.ops.aten.reflection_pad3d,
+    torch.ops.aten.replication_pad1d,
+    torch.ops.aten.replication_pad2d,
+    torch.ops.aten.replication_pad3d,
+])
+
+EXTRA_DECOMP[torch.ops.aten.uniform] = torch.ops.aten.rand

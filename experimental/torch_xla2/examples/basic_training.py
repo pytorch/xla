@@ -10,7 +10,11 @@ import torch
 from torch.utils import _pytree as pytree
 import torchvision
 import torchvision.transforms as transforms
-import torch_xla2
+import torch_xla2.tensor
+
+
+xla_env = torch_xla2.tensor.Environment(0)
+mode = xla_env.mode()
 
 # PyTorch TensorBoard support
 from torch.utils.tensorboard import SummaryWriter
@@ -80,6 +84,7 @@ class GarmentClassifier(nn.Module):
 
 
 model = GarmentClassifier()
+model = xla_env.to_xla(model)
 
 loss_fn = torch.nn.CrossEntropyLoss()
 
@@ -96,13 +101,6 @@ loss = loss_fn(dummy_outputs, dummy_labels)
 print('Total loss for this batch: {}'.format(loss.item()))
 
 # Optimizers specified in the torch.optim package
-
-# NEW: Move model to XLA device
-state_dict = model.state_dict()
-state_dict = pytree.tree_map_only(torch.Tensor,
-    torch_xla2.tensor.move_to_device, state_dict)
-model.load_state_dict(state_dict, strict=False, assign=True)
-
 optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 def train_one_epoch(epoch_index, tb_writer):
@@ -115,14 +113,14 @@ def train_one_epoch(epoch_index, tb_writer):
     for i, data in enumerate(training_loader):
         # Every data instance is an input + label pair
         # NEW: Move model to XLA device
-        data = pytree.tree_map_only(torch.Tensor, 
-                                    torch_xla2.tensor.move_to_device, data)
+        data = xla_env.to_xla(data)
         inputs, labels = data
 
         # Zero your gradients for every batch!
         optimizer.zero_grad()
 
         # Make predictions for this batch
+
         outputs = model(inputs)
 
         # Compute the loss and its gradients
@@ -169,14 +167,11 @@ for epoch in range(EPOCHS):
     # Disable gradient computation and reduce memory consumption.
     with torch.no_grad():
         for i, vdata in enumerate(validation_loader):
-            # NOTE: move to XLA device
-            vinputs, vlabels = pytree.tree_map_only(
-                torch.Tensor, 
-                torch_xla2.tensor.move_to_device,
-                vdata)
-            voutputs = model(vinputs) # call model's forward
-            vloss = loss_fn(voutputs, vlabels)
-            running_vloss += vloss
+          # NOTE: move to XLA device
+          vinputs, vlabels = xla_env.to_xla(vdata)
+          voutputs = model(vinputs)  # call model's forward
+          vloss = loss_fn(voutputs, vlabels)
+          running_vloss += vloss
 
     avg_vloss = running_vloss / (i + 1)
     print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))

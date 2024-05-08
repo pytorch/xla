@@ -7,7 +7,6 @@ from torch.testing._internal.common_device_type import (
     instantiate_device_type_tests, ops)
 from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
-import torch_xla2
 
 
 skiplist = {
@@ -626,10 +625,9 @@ def run_export_and_compare(testcase,
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):
-      input2, args2, kwargs2 = pytree.tree_map_only(
-          torch.Tensor, tensor.move_to_device,
-          (sample_input.input, sample_input.args, sample_input.kwargs))
-      with torch_xla2.mode():
+      input2, args2, kwargs2 = testcase.env.to_xla((
+        sample_input.input, sample_input.args, sample_input.kwargs))
+      with testcase.env:
         res2 = func(input2, *args2, **kwargs2)
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
       with testcase.subTest("torch_xla2_diff:" + str(atol)):
@@ -654,6 +652,9 @@ class TestOpInfo(TestCase):
   @classmethod
   def setUpClass(cls):
     print('op_db size: ', len(op_db), 'testing: ', len(ops_to_test))
+
+  def setUp(self):
+    self.env = tensor.Environment(0)
 
   @ops(ops_to_test, allowed_dtypes=(torch.float32, torch.long))
   def test_reference_eager(self, device, dtype, op):
