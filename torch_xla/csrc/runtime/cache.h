@@ -162,6 +162,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   // if the key is tracked in memory, and if not it will check for a persisted
   // version on disk.
   TypePtr Get(const K& key) override {
+    TORCH_LAZY_TIMED("PersistentCacheGet");
     std::lock_guard<std::mutex> slock(lock_);
     TypePtr mem = memory_cache_.Get(key);
     if (mem) {
