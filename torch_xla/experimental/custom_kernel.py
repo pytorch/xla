@@ -198,15 +198,8 @@ class FlashAttention(torch.autograd.Function):
     return segment_ids, q_segment_ids, kv_segment_ids
 
   @staticmethod
-  def forward(ctx,
-              q,
-              k,
-              v,
-              causal=False,
-              q_segment_ids=None,
-              kv_segment_ids=None,
-              partition_spec=None,
-              mesh=None):
+  def forward(ctx, q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale,
+              partition_spec, mesh):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
@@ -214,6 +207,7 @@ class FlashAttention(torch.autograd.Function):
     from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
 
     ctx.causal = causal
+    ctx.sm_scale = sm_scale
     ctx.partition_spec = partition_spec
     ctx.mesh = mesh
     ctx.full_shape = None
@@ -258,7 +252,7 @@ class FlashAttention(torch.autograd.Function):
           segment_ids,
           save_residuals,
           causal,
-          1.0,
+          sm_scale,
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_b"], q.shape[0]),
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q"], q.shape[2]),
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], k.shape[2]),
@@ -300,6 +294,7 @@ class FlashAttention(torch.autograd.Function):
 
     q, k, v, o, l, m, q_segment_ids, kv_segment_ids = ctx.saved_tensors
     causal = ctx.causal
+    sm_scale = ctx.sm_scale
     partition_spec = ctx.partition_spec
     mesh = ctx.mesh
     full_shape = ctx.full_shape
@@ -350,7 +345,7 @@ class FlashAttention(torch.autograd.Function):
               k.shape[2]),
           block_k=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_dq"],
                       k.shape[2]),
-          sm_scale=1.0,
+          sm_scale=sm_scale,
           causal=causal,
           mask_value=FlashAttention.DEFAULT_MASK_VALUE,
           debug=False,
@@ -388,7 +383,7 @@ class FlashAttention(torch.autograd.Function):
                       k.shape[2]),
           block_q=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_dkv"],
                       q.shape[2]),
-          sm_scale=1.0,
+          sm_scale=sm_scale,
           causal=causal,
           mask_value=FlashAttention.DEFAULT_MASK_VALUE,
           debug=False,
@@ -418,7 +413,7 @@ class FlashAttention(torch.autograd.Function):
       grad_v = xs.disable_manual_sharding(
           grad_v, partition_spec, full_shape, mesh=mesh).global_tensor
 
-    return grad_q, grad_k, grad_v, None, None, None, None, None
+    return grad_q, grad_k, grad_v, None, None, None, None, None, None
 
 
 def flash_attention(
@@ -428,12 +423,13 @@ def flash_attention(
     causal=False,
     q_segment_ids=None,
     kv_segment_ids=None,
+    sm_scale=1.0,
     *,
     partition_spec=None,
     mesh=None):
   # TODO: support SPMD and Dynamo with segment_ids.
   return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
-                              partition_spec, mesh)
+                              sm_scale, partition_spec, mesh)
 
 
 def paged_attention(q, k_pages, v_pages, lengths, page_indices,
