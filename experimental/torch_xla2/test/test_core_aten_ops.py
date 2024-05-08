@@ -38,7 +38,7 @@ def run_export_and_compare(testcase,
     res = func(*args, **kwargs)
     with testcase.subTest("torch_xla2_eval"):
       args2, kwargs2 = testcase.env.to_xla((args, kwargs))
-      with testcase.env.mode():
+      with testcase.env:
         res2 = func(*args2, **kwargs2)
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
       # import pdb; pdb.set_trace()
@@ -3640,7 +3640,7 @@ class TestCoreAtenOps(unittest.TestCase):
     res = torch.ops.aten.sort(*args)
     with self.subTest("torch_xla2_eval"):
       args2 = self.env.to_xla(args)
-      with self.env.mode():
+      with self.env:
         res2 = torch.ops.aten.sort(*args2)
 
     # The second argument is the sorted index. These might not be

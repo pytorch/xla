@@ -1,17 +1,7 @@
-import torch
-import jax
-import jax.numpy as jnp
-
 import dataclasses
-from typing import TypeAlias, Callable, ParamSpec, Any, Union, Dict
+from torch_xla2.types import JaxCallable, TorchCallable
 
-P = ParamSpec('P')
-
-TorchValue: TypeAlias = Union[torch.Tensor, torch.dtype, 'TorchCallable', Any]
-TorchCallable: TypeAlias = Callable[P, TorchValue]
-
-JaxValue: TypeAlias = Union[jax.Array, jnp.dtype, 'TorchCallable', Any]
-JaxCallable: TypeAlias = Callable[P, JaxValue]
+from typing import Union, Dict
 
 
 @dataclasses.dataclass

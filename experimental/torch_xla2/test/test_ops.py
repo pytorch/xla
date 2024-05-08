@@ -627,7 +627,7 @@ def run_export_and_compare(testcase,
     with testcase.subTest("torch_xla2_eval"):
       input2, args2, kwargs2 = testcase.env.to_xla((
         sample_input.input, sample_input.args, sample_input.kwargs))
-      with testcase.env.mode():
+      with testcase.env:
         res2 = func(input2, *args2, **kwargs2)
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
       with testcase.subTest("torch_xla2_diff:" + str(atol)):

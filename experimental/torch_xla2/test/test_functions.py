@@ -34,7 +34,7 @@ class TestTorchFunctions(parameterized.TestCase):
   def test_tensor_constructor(self, func: Callable[[], torch.Tensor]):
     expected = func()
 
-    with self.env.mode():
+    with self.env:
       actual = func()
       self.assertIsInstance(actual, torch_xla2.tensor.XLATensor2)
 

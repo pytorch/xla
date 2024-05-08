@@ -27,7 +27,7 @@ def extract_jax(mod: torch.nn.Module, env=None):
   #@jax.jit
   def jax_func(states, inputs):
     (states, inputs) = env.j2t_iso((states, inputs))
-    with env.mode():
+    with env:
       res = torch.func.functional_call(mod, states, inputs)
     return env.t2j_iso(res)
 

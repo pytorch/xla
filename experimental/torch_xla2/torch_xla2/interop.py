@@ -1,5 +1,4 @@
 import functools
-from typing import TypeAlias, Callable, ParamSpec, Any, Union
 import torch
 import jax
 import jax.numpy as jnp
@@ -7,13 +6,8 @@ from jax import tree_util as pytree
 from torch_xla2 import tensor
 import torch_xla2
 
-P = ParamSpec('P')
+from torch_xla2.types import JaxValue, TorchValue, JaxCallable, TorchCallable
 
-TorchValue: TypeAlias = Union[torch.Tensor, torch.dtype, 'TorchCallable', Any]
-TorchCallable: TypeAlias = Callable[P, TorchValue]
-
-JaxValue: TypeAlias = Union[jax.Array, jnp.dtype, 'TorchCallable', Any]
-JaxCallable: TypeAlias = Callable[P, JaxValue]
 
 
 
@@ -57,7 +51,7 @@ def call_jax(jax_func: JaxCallable,
 
 def call_torch(torch_func: TorchCallable, *args: JaxValue, **kwargs: JaxValue) -> JaxValue:
     args, kwargs = pytree.tree_map(torch_view, (args, kwargs))
-    with torch_xla2.default_env().mode():
+    with torch_xla2.default_env():
         res: TorchValue = torch_func(*args, **kwargs)
     return jax_view(res)
 

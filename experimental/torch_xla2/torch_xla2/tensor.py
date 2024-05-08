@@ -158,7 +158,7 @@ class XLATensor2(torch.Tensor):
         env = arg._env
         break
 
-    with env.mode():
+    with env:
       return func(*args, **(kwargs or {}))
 
   def detach(self):
@@ -277,7 +277,7 @@ def _name_of_func(func):
   return func.__name__
 
 
-class Environment:
+class Environment(contextlib.ContextDecorator):
     """This class holds a set of configurations and "globals" needed
 
     for executing torch program using jax.
@@ -345,7 +345,7 @@ class Environment:
         if op.needs_env:
           kwargs['env'] = self
 
-        with self.mode():
+        with self:
           res = op.func(*args, **kwargs)
 
         if op.is_jax_function:
@@ -355,10 +355,14 @@ class Environment:
         #  debug_accuracy(func, args, kwargs, res)
         return res
 
-    @contextlib.contextmanager
-    def mode(self):
-      with self._dispatch_mode, self._function_mode:
-        yield
+    def __enter__(self):
+      self._dispatch_mode.__enter__()
+      self._function_mode.__enter__()
+      return self
+
+    def __exit__(self, *exc):
+      self._function_mode.__exit__(*exc)
+      self._dispatch_mode.__exit__(*exc)
 
     def _move_one_value(self, val):
       if isinstance(val, torch.nn.Module):
