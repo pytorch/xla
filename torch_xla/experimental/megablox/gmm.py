@@ -2,19 +2,10 @@
 
 from typing import Any, Callable, Optional, Union
 from torch_xla.experimental.megablox import common
+from torch_xla.experimental.custom_kernel import jax_import_guard
 import torch
 import torch_xla
 import numpy as np
-
-
-def jax_import_guard():
-  # Somehow, we need to grab the TPU before JAX locks it. Otherwise, any PT/XLA TPU operations will hang.
-  torch_xla._XLAC._init_computation_client()
-
-
-jax_import_guard()
-import jax
-import jax.numpy as jnp
 
 
 def _validate_args(
@@ -24,6 +15,11 @@ def _validate_args(
     group_sizes: torch.Tensor,
     expected_rhs_dims: int = 3,
 ) -> tuple[jnp.ndarray, jnp.ndarray, jnp.dtype]:
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
   """Validates the arguments for the gmm function."""
   # Validate 'lhs'.
   if lhs.dim() != 2:
@@ -97,6 +93,12 @@ def _make_group_metadata(
         will work on.
     num_tiles: The number of m-dimension tiles to execute.
   """
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
+
   num_groups = group_sizes.shape[0]
   end_group = start_group + num_nonzero_groups - 1
 
@@ -244,6 +246,12 @@ def _zero_uninitialized_memory(
     group_metadata: GroupMetadata,
 ) -> torch.Tensor:
   """Zero out uninitialized memory from output."""
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
+
   group_offsets = group_metadata[0]
   group_start = group_offsets[start_group]
   group_end = group_offsets[start_group + num_nonzero_groups]
@@ -251,16 +259,6 @@ def _zero_uninitialized_memory(
   valid_mask = (valid_mask >= group_start) & (valid_mask < group_end)
   return torch.from_numpy(np.array(jnp.where(valid_mask[:, None], out,
                                              0))).to('xla')
-
-
-def _trace_kernel_payload(lhs: torch.Tensor, rhs: torch.Tensor,
-                          group_sizes: torch.Tensor):
-  import jax
-  from jax.experimental.pallas.ops.tpu.megablox import gmm
-  from torch_xla.experimental.custom_kernel import trace_pallas
-  payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes)
-
-  return payload
 
 
 LutFn = Callable[[int, int, int], Optional[tuple[int, int, int]]]
@@ -297,6 +295,11 @@ def _gmm(
   Returns:
     A 2d, torch.Tensor with shape [m, n].
   """
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
 
   if existing_out is not None:
     assert isinstance(existing_out, jax.Array)
@@ -358,7 +361,7 @@ def _gmm(
   ], payload, [output_shape], [preferred_element_type])
 
   if existing_out is None and num_current_groups < num_total_groups:
-    out = jnp.asarray(out.to('cpu').float().numpy())
+    out = jnp.asarray(out.cpu().float().numpy())
     out = _zero_uninitialized_memory(
         out,
         start_group=group_offset[0],
@@ -379,7 +382,14 @@ def gmm(
     transpose_rhs: bool = False,
     interpret: bool = False,
 ):
-  payload = _trace_kernel_payload(lhs, rhs, group_sizes)
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  from jax.experimental.pallas.ops.tpu.megablox import gmm
+  from torch_xla.experimental.custom_kernel import trace_pallas
+
+  payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes)
   out = _gmm(lhs, rhs, group_sizes, payload, preferred_element_type, tiling,
              group_offset, existing_out, transpose_rhs, interpret)
   return out

@@ -2,7 +2,7 @@
 
 from typing import Union
 import torch
-from torch_xla.experimental.megablox import tpu_features
+from torch_xla._internal import tpu
 
 
 def assert_is_supported_dtype(dtype: torch.dtype) -> None:
@@ -15,8 +15,8 @@ def select_input_dtype(lhs: torch.Tensor, rhs: torch.Tensor) -> torch.dtype:
   # bf16xbf16 matmul is only supported since TPU v4 generation. In
   # case of mixed input precision, we need to convert bf16 argument to fp32
   # beforehand.
-  if (tpu_features.supports_bfloat16_matmul() and
-      lhs.dtype == torch.bfloat16 and rhs.dtype == torch.bfloat16):
+  if (tpu.version() >= 4 and lhs.dtype == torch.bfloat16 and
+      rhs.dtype == torch.bfloat16):
     return torch.bfloat16
   else:
     return torch.float32

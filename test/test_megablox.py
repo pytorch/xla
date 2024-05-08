@@ -143,13 +143,13 @@ class MegabloxTest(unittest.TestCase):
       group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
       out = g.gmm(lhs, rhs, group_sizes)
 
-      ref_out = self._reference_gmm(
-          lhs.to('cpu').float().numpy(),
-          rhs.to('cpu').float().numpy(), group_sizes.numpy())
+      ref_out = self._reference_gmm(lhs.cpu().float().numpy(),
+                                    rhs.cpu().float().numpy(),
+                                    group_sizes.numpy())
 
       atol, rtol = self._tolerances(lhs_dtype, rhs_dtype, out_dtype)
       np.testing.assert_allclose(
-          ref_out, np.array(out[0].to('cpu')), rtol=rtol, atol=atol)
+          ref_out, np.array(out[0].cpu()), rtol=rtol, atol=atol)
 
 
 if __name__ == '__main__':
