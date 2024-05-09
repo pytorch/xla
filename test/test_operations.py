@@ -2457,9 +2457,11 @@ class TestDLPack(test_utils.XlaTestCase):
   def test_dlpack_capsule_conversion(self):
     # TODO(xw32): make sure to test the storage is tested.
     t1 = torch.arange(5).to(xm.xla_device())
-    dlpt1 = xdlpack.to_dlpack(t1)
+    dlpt1 = xdlpack.to_dlpack(t1) # dlpt1 has type PyCapsule
     print('xw32 finished the to_dlpack')
     got1 = xdlpack.from_dlpack(dlpt1)
+    print('xw32 finished the from_dlpack')
+    self.assertEqual(torch_xla._XLAC._unsafe_buffer_pointer(t1),torch_xla._XLAC._unsafe_buffer_pointer(got1))
     self.assertEqual(t1.cpu(), got1.cpu())
     print('xw32 finished test case 1')
 

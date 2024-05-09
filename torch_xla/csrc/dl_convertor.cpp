@@ -365,13 +365,16 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
                           static_cast<char*>(dlmt->dl_tensor.data) +
                               dlmt->dl_tensor.byte_offset,
                           shape, device, on_delete_callback);
+  XLA_CHECK_OK(pjrt_buffer.status()) << "Failed to create a pjrt buffer in " << __FUNCTION__;
+  XLA_CHECK(pjrt_buffer.value() != nullptr) << "pjrt buffer is null in " << __FUNCTION__;
 
   runtime::ComputationClient::DataPtr data = runtime::GetComputationClient()->CreateData(runtime::GetComputationClient()->PjRtDeviceToString(device), shape, std::move(pjrt_buffer.value()));
   
   // xw32 note: XlaDataToTensors does a fromDeviceToHost transfer.XlaDataToTensors
   at::ScalarType tensor_type = at::toScalarType(dlmt->dl_tensor.dtype);
-  return XlaDataToTensors({data}, {tensor_type})[0];
-
+  // return XlaDataToTensors({data}, {tensor_type})[0];
+  XLATensorPtr xla_tensor = XLATensor::Create(data, tensor_type);
+  return bridge::AtenFromXlaTensor(xla_tensor);
 }
 
 }

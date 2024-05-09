@@ -469,6 +469,7 @@ std::uintptr_t PjRtComputationClient::UnsafeBufferPointer(
   std::shared_ptr<PjRtData> pjrt_data =
       std::dynamic_pointer_cast<PjRtData>(handle);
   XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
+  XLA_CHECK(pjrt_data->buffer != nullptr) << "PjRt buffer is null in " << __FUNCTION__;
   xla::StatusOr<std::uintptr_t> ptr =
       client_->UnsafeBufferPointer(pjrt_data->buffer.get());
   XLA_CHECK(ptr.ok());
@@ -497,7 +498,7 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
     // is not sharded, then it is a no-op.
     std::shared_ptr<PjRtData> pjrt_data = ReplicateShardedData(handle);
     XLA_CHECK(pjrt_data) << "PjRt_data is null in " << __FUNCTION__;
-    XLA_CHECK(pjrt_data->buffer) << "PjRt buffer is null in " << __FUNCTION__;
+    XLA_CHECK(pjrt_data->buffer != nullptr) << "PjRt buffer is null in " << __FUNCTION__;
 
     xla::Literal& literal =
         literals.emplace_back(host_output_shape(pjrt_data->buffer.get()));
