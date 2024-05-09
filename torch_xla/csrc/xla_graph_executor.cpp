@@ -1274,7 +1274,7 @@ std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
   return buffer_donor_indexs;
 }
 
-// XLAGraphExecutor::CompilationResult
+// TODO(@manfei): replacement of GetXLAComputation
 xla::XlaComputation XLAGraphExecutor::CompileForiLoop(
     std::vector<XLATensorPtr>& tensors, absl::Span<const std::string> devices,
     const SyncTensorCollection& coll, PostOrderData* po_data,
@@ -1286,42 +1286,27 @@ xla::XlaComputation XLAGraphExecutor::CompileForiLoop(
             {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
       },
       tsl::profiler::TraceMeLevel::kInfo);
-  TF_VLOG(3) << "We are running XLAGraphExecutor::Compile now";
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now"; // arrived
-  // 1
+
   static const bool enable_aliasing =
       runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
-  // 3200
   static const size_t parameter_wrapping_threadshold =
       runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
-  // 0
   static const bool use_autosharding = ShardingUtil::GetAutoSharding();
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: " << "enable_aliasing: " << enable_aliasing
-  //             << ", parameter_wrapping_threadshold: " << parameter_wrapping_threadshold
-  //             << ", use_autosharding: " << use_autosharding;
+
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now, after initialized lowering_ctx"; // arrived
   for (auto ir_value : ir_values) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now, after initialized lowering_ctx and add roots"; // arrived
-  // Always execute sharded when running in SPMD mode
-  // is_sharded = 0
+
   bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: is_sharded: " << is_sharded; // arrived
-  // Annotate HLO sharding selectively in the compuation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: after SetHloSharding"; // arrived
 
   std::vector<size_t> buffer_donor_indices;
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: initialized buffer_donor_indices"; // arrived
 
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: enable_aliasing: " << enable_aliasing << ", use_autosharding: " << use_autosharding; // arrived
-  // enable_aliasing: 1, use_autosharding: 0
   if (enable_aliasing && !use_autosharding) {
     if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
       buffer_donor_indices =
@@ -1333,7 +1318,6 @@ xla::XlaComputation XLAGraphExecutor::CompileForiLoop(
     }
   }
   // buffer_donor_indices: kong de
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: buffer_donor_indices: " << buffer_donor_indices; // arrived
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
 
@@ -1352,92 +1336,42 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       },
       tsl::profiler::TraceMeLevel::kInfo);
   TF_VLOG(3) << "We are running XLAGraphExecutor::Compile now";
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now"; // arrived
-  // 1
+
   static const bool enable_aliasing =
       runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
-  // 3200
   static const size_t parameter_wrapping_threadshold =
       runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
-  // 0
   static const bool use_autosharding = ShardingUtil::GetAutoSharding();
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: " << "enable_aliasing: " << enable_aliasing
-  //             << ", parameter_wrapping_threadshold: " << parameter_wrapping_threadshold
-  //             << ", use_autosharding: " << use_autosharding;
+
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now, after initialized lowering_ctx"; // arrived
   for (auto ir_value : ir_values) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now, after initialized lowering_ctx and add roots"; // arrived
-  // Always execute sharded when running in SPMD mode
-  // is_sharded = 0
   bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: is_sharded: " << is_sharded; // arrived
-  // Annotate HLO sharding selectively in the compuation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: after SetHloSharding"; // arrived
 
   std::vector<size_t> buffer_donor_indices;
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: initialized buffer_donor_indices"; // arrived
-  // TODO(yeounoh) enable aliasing is disabled for partitioned computation,
-  // since the current aliasing compares the unpartitioned input and output
-  // shapes which can lead to an incorrect aliasing pairs if sharded.
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: enable_aliasing: " << enable_aliasing << ", use_autosharding: " << use_autosharding; // arrived
-  // enable_aliasing: 1, use_autosharding: 0
   if (enable_aliasing && !use_autosharding) {
     if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
-      // We can only alias at the step barrier, when force_ltc_data is true.
-      // Consider the case:
-      //   1. Tensor A(DEVICE_DATA)
-      //   2. Tensor B = A + 0.9
-      //   3. A += 0.4
-      // If we activate aliasing for A's graph, and we do:
-      //   print(A)
-      //   print(A)
-      // The first print will update DEVICE_DATA' with DEVICE_DATA+0.4, and the
-      // second print will again update DEVICE_DATA" with DEVICE_DATA'+0.4,
-      // which will lead to incorrect results. We cannot normally turn A's state
-      // into DEVICE_DATA, as if any of the sources is a view, this will not
-      // lead to correct results (as A's value taken at different times need to
-      // reflect view source changes):
-      //   1. Tensor A = some_graph_with_view_source(V)
-      //   2. print(A)
-      //   3. V += 1
-      //   4. print(A)
-      // The second print should reflect the new value due to V's changes.
-      // Also in the first example, unless we are doing a step barrier and hence
-      // include all live tensors, if the B value is not part of the graph, it
-      // will later fetch the new value of A, which is incorrect.
-      // But, when we issue a step barrier (force_ltc_data == true) we have to
-      // turn everything into DEVICE_DATA, so we can activate aliasing.
       buffer_donor_indices =
           SetBufferDonors(tensors, coll.indices, &lowering_ctx);
     } else if (GetAliasWithBufferDonorConfig()) {
-      // only alias based on buffer donor if LTC can't auto infer the input
-      // output aliasing.
       buffer_donor_indices = SetBufferDonorsFromUserConfig(&lowering_ctx);
     }
   }
-  // buffer_donor_indices: kong de
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: buffer_donor_indices: " << buffer_donor_indices; // arrived
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: get computation"; // arrived
-
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: get program_shape"; // arrived
 
   // TODO(yeounoh) enable wrapping with auto-sharding.
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
       !use_autosharding;
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: should_wrap_parameter: " << should_wrap_parameter; // arrived
-  // should_wrap_parameter: 0
+
   if (should_wrap_parameter) {
     TF_VLOG(3) << "Wrapping graph with " << program_shape.parameters_size()
                << " parameters. Threadshold = "
@@ -1446,22 +1380,15 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
         computation, program_shape.parameters(), buffer_donor_indices));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
-  // parameter_wrapping_threadshold: 3200
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: after wrap parameters in computation based on parameter_wrapping_threadshold: " << parameter_wrapping_threadshold; // arrived
 
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: get shape";
 
   std::vector<runtime::ComputationClient::CompileInstance> instances;
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: initialize instances"; // arrived
   instances.push_back({std::move(computation), coll.device.toString(),
                        runtime::GetComputationClient()->GetCompilationDevices(
                            coll.device.toString(), devices),
                        &shape, should_wrap_parameter, is_sharded});
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: after many push_back to instances"; // arrived
-
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: before use_autosharding: " << use_autosharding;
   if (use_autosharding) {
     XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: enter the loop of use_autosharding";
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
@@ -1483,12 +1410,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                << "auto_spmd_mesh_ids={"
                << absl::StrJoin(auto_spmd_mesh_ids, ",") << "}";
   }
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: after use_autosharding"; 
 
   DebugUtil::analyze_graph_execution_python_frame(
       DebugUtil::GraphAnalysisSource::Compilation,
       /*graph_hash=*/coll.hash, /*program_shape=*/&program_shape);
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: analyze_graph_execution_python_frame"; // arrived
 
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
@@ -1502,14 +1427,12 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
              << coll.device << " done!";
   TF_VLOG(5) << "Compiled program shape "
              << computations.front()->program_shape().ToString() << std::endl;
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: some log for Compiling IR graph hash";
 
   TF_VLOG(5)
       << "Graph hash " << torch::lazy::HashToString(coll.hash)
       << " is computation hash "
       << torch::lazy::HashToString(torch::lazy::Hash(
              computations.front()->computation().proto().SerializeAsString()));
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: some Compiling IR graph hash again";
 
   if (use_autosharding) {
     const xla::HloModuleProto& computation_proto =
@@ -1520,9 +1443,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     TF_VLOG(5) << "Parameter sequence hash after resharding: "
                << torch::lazy::Hash(po_data->parameter_sequence);
   }
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: auto sharding and computation_proto";
 
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: before check should_wrap_parameter again: " << should_wrap_parameter; // arrived
   // should_wrap_parameter: 0
   if (should_wrap_parameter) {
     XLA_CHECK_EQ(program_shape.parameters_size(), 1);
@@ -1532,7 +1453,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     XLA_CHECK_EQ(program_shape.parameters_size(),
                  po_data->parameters_data.size());
   }
-  // XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: after some program_shape check"; // arrived
 
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
@@ -1626,9 +1546,7 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
         std::vector<XLATensorPtr>* tensors,
         absl::Span<const std::string> devices, bool warm_up_cache_only) {
   // coll
-  SyncTensorsConfig config; // bool force_ltc_data = true; bool sync_ltc_data = true;
-  // /*force_ltc_data=*/ Whether we want to force data on the target tensors (hence trimming
-  // the IR graph above them).
+  SyncTensorsConfig config;
   config.force_ltc_data = false;
 
   // struct SyncTensorCollection {SyncTensorsConfig config; std::vector<size_t> indices; hash_t hash; std::vector<ExceptionCleanup> unlocker; BackendDevice device;
@@ -1638,8 +1556,6 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
     TensorCollectionBarrier(&coll);
     return nullptr;
   }
-  // DebugUtil::SaveTensorsGraphInfo("ScheduleSyncTensorsGraph", tensors,
-  //                                 &coll.indices);
 
   // trace for list of ir_values based on given tensors
   std::vector<torch::lazy::Value> ir_values;
@@ -1649,7 +1565,6 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
   // trace ir_values by post-order
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
 
-  // ? combine hash
   coll.hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
 
@@ -1677,33 +1592,9 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
   TF_VLOG(4) << "Parameter sequence graph hash "
              << torch::lazy::HashToString(coll.hash);
 
-  // std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>> cache_res =
-  //     TryRunCachedSync(tensors, &coll, &po_data, tensor_data_vec,
-  //                      warm_up_cache_only);
-  // if (cache_res.first) {
-  //   // we have a cache hit, execution has been scheduled by TryRunCachedSync.
-  //   return cache_res.second;
-  // }
-
   CompilationResult compile_result0 =
       Compile(*tensors, devices, coll, &po_data, ir_values);
-  // XLA_ERROR() << "We have recevied compile_result0";
   return compile_result0.computation;
-
-  xla::XlaComputation compile_result1 =
-      CompileForiLoop(*tensors, devices, coll, &po_data, ir_values);
-  return std::make_shared<runtime::ComputationClient::Computation>(
-      "fori_loop_xlacomputation", std::move(compile_result1));
-  // return compile_result1;
-
-  runtime::ComputationClient::ComputationPtr compile_result =
-      Compile(*tensors, devices, coll, nullptr, ir_values).computation;
-      // XLAGraphExecutor::Compile(*tensors, devices, coll, nullptr, ir_values).computation;
-
-  return compile_result;
-
-  // runtime::ComputationClient::ComputationPtr a = nullptr;
-  // return a; // return nullptr;
 }
 
 }  // namespace torch_xla
