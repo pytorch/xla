@@ -45,7 +45,7 @@ class TpuNavitAttention(nn.Module):
         # pack_length must be the same for context and image, if different it will be not possible to do self-attention
         self.pack_length = pack_length
 
-        self.scale_factor = 1 / math.sqrt(dim) if scale is None else scale
+        self.scale_factor = 1 / math.sqrt(dim/heads) if scale is None else scale
         self.heads = heads
 
         self.softmax = nn.Softmax(dim=-1).to(self.device)
@@ -289,7 +289,7 @@ def navit_attention_accuracy_test(multihead_test=False):
         # ---------------     calculate the attention Navit way -----------------------------
 
         # at = NavitAttention(dim=dim, heads=1, pack_length=navit_pack_length, multi_head=multihead_test)
-        at = TpuNavitAttention(dim=dim, heads=1, pack_length=navit_pack_length, multi_head=multihead_test)
+        at = TpuNavitAttention(dim=dim, heads=8, pack_length=navit_pack_length, multi_head=multihead_test)
 
         # print(f"indexes {pic_embed_indexes} , len {len(pic_embed_indexes)}")
         original_seq_length = pic_embed_sequence.shape[0]
@@ -316,8 +316,8 @@ def navit_attention_accuracy_test(multihead_test=False):
         diff = torch.max(torch.abs(test_output.cpu() - straight_attention.cpu()))
         print(f"max diff: {diff},  ")
 
-        # assert diff < 0.001, \
-        #     "########################   ATTENTION CALCULATION ERROR   #########################"
+        assert diff < 0.001, \
+            "########################   ATTENTION CALCULATION ERROR   #########################"
     print(f"Navit Forward Attention Accuracy Test - OK  =============\n\n\n")
 
 def navit_backward_accuracy(multihead_test=False):
