@@ -2461,10 +2461,20 @@ class TestDLPack(test_utils.XlaTestCase):
     print('xw32 finished the to_dlpack')
     got1 = xdlpack.from_dlpack(dlpt1)
     print('xw32 finished the from_dlpack')
-    self.assertEqual(torch_xla._XLAC._unsafe_buffer_pointer(t1),torch_xla._XLAC._unsafe_buffer_pointer(got1))
-    self.assertEqual(t1.cpu(), got1.cpu())
-    print('xw32 finished test case 1')
 
+    print('t1.device=', t1.device, ', got1.device=', got1.device)
+    self.assertEqual(t1.device, got1.device)
+    print('t1.cpu()=', t1.cpu())
+    print('got1.cpu()=', got1.cpu())
+    self.assertEqual(t1.cpu(), got1.cpu())
+    self.assertRaisesRegex(RuntimeError, "DLTensor capsule can be consumed only once", lambda: xdlpack.from_dlpack(dlpt1))
+
+    print('xw32 torch_xla._XLAC._unsafe_buffer_pointer(t1)=', torch_xla._XLAC._unsafe_buffer_pointer(t1))
+    print('xw32 torch_xla._XLAC._unsafe_buffer_pointer(got1)=', torch_xla._XLAC._unsafe_buffer_pointer(got1))
+    self.assertEqual(torch_xla._XLAC._unsafe_buffer_pointer(t1),torch_xla._XLAC._unsafe_buffer_pointer(got1))
+    print('xw32 first test passed.')
+
+    # TODO(xw32): for the below test cases, test the same thing as above. May create a helper function if needed. 
     t2 = torch.arange(5).to(xm.xla_device())
     got2 = xdlpack.from_dlpack(xdlpack.to_dlpack(t2))
     self.assertEqual(t2.cpu(), got2.cpu())
