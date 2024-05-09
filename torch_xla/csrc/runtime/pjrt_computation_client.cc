@@ -188,7 +188,7 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
 ComputationClient::DataPtr PjRtComputationClient::CreateData(
     std::string device, xla::Shape shape,
     std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) {
-  return std::make_shared<PjRtData>(std::move(device), std::move(shape));
+  return std::make_shared<PjRtData>(std::move(device), std::move(shape), pjrt_buffer);
 }
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
