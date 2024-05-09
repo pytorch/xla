@@ -8,7 +8,7 @@ from typing import Optional, Union, Callable
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.experimental.megablox.gmm as g
+import torch_xla.experimental.megablox as megablox
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -130,7 +130,6 @@ class MegabloxTest(unittest.TestCase):
   def test_gmm(self):
     self._init_test_cases()
     for test_case in self.tests_cases:
-      print("Test Case: ", test_case)
       num_groups = test_case['num_groups']
       k = test_case['k']
       m = test_case['m']
@@ -141,7 +140,7 @@ class MegabloxTest(unittest.TestCase):
       lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
       group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      out = g.gmm(lhs, rhs, group_sizes)
+      out = megablox.gmm(lhs, rhs, group_sizes)
 
       ref_out = self._reference_gmm(lhs.cpu().float().numpy(),
                                     rhs.cpu().float().numpy(),

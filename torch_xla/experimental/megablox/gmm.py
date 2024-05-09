@@ -14,7 +14,7 @@ def _validate_args(
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
     expected_rhs_dims: int = 3,
-) -> tuple[jnp.ndarray, jnp.ndarray, jnp.dtype]:
+) -> 'tuple[jnp.ndarray, jnp.ndarray, jnp.dtype]':
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
@@ -59,10 +59,10 @@ GroupMetadata = Any  # TODO(enriqueps): Clean this up and use a namedtuple
 
 def _make_group_metadata(
     *,
-    group_sizes: jnp.ndarray,
+    group_sizes: 'jnp.ndarray',
     m: int,
     tm: int,
-    start_group: jnp.ndarray,
+    start_group: 'jnp.ndarray',
     num_nonzero_groups: int,
     visit_empty_groups: bool = True,
 ) -> GroupMetadata:
@@ -239,9 +239,9 @@ def _make_group_metadata(
 
 
 def _zero_uninitialized_memory(
-    out: jnp.ndarray,
+    out: 'jnp.ndarray',
     *,
-    start_group: jnp.ndarray,
+    start_group: 'jnp.ndarray',
     num_nonzero_groups: int,
     group_metadata: GroupMetadata,
 ) -> torch.Tensor:
