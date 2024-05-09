@@ -39,7 +39,8 @@ std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(const at::Tens
 
 struct TorchXLADLMTensor {
   std::unique_ptr<xla::PjRtBuffer::ExternalReference> external_reference;
-  std::shared_ptr<xla::PjRtBuffer> buffer_reference;
+  // std::shared_ptr<xla::PjRtBuffer> buffer_reference;
+  at::Tensor source_tensor;
 
   std::vector<int64_t> shape;
   std::vector<int64_t> strides;
@@ -124,10 +125,8 @@ std::vector<int64_t> StridesForShape(xla::PrimitiveType element_type,
 // Convert an XLA tensor to dlPack tensor.
 DLManagedTensor* toDLPack(const at::Tensor& input) {
   std::shared_ptr<runtime::ComputationClient::Data> handle = get_data_handle(input);
-  XLA_CHECK(handle) << "Could not extract a valid data handle from the input tensor";
+  XLA_CHECK(handle != nullptr) << "Could not extract a valid data handle from the input tensor";
 
-  // std::shared_ptr<PjRtData> pjrt_data = std::dynamic_pointer_cast<PjRtData>(data);
-  // xla::PjRtBuffer* pjrt_buffer = pjrt_data->buffer.get();
   std::shared_ptr<xla::PjRtBuffer> pjrt_buffer = runtime::GetComputationClient()->GetPjRtBuffer(handle);
   XLA_CHECK(pjrt_buffer != nullptr) << "Could not get a valid pjrt_buffer";
 
@@ -141,6 +140,7 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
   auto torchXlaDLMTensor = std::make_unique<TorchXLADLMTensor>();
   DLTensor& dt = torchXlaDLMTensor->tensor.dl_tensor;
   {
+    // AcquireExternalReference may block
     auto external_ref = pjrt_buffer->AcquireExternalReference();
     XLA_CHECK_OK(external_ref.status());
     torchXlaDLMTensor->external_reference = std::move(external_ref.value());
@@ -148,7 +148,8 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
     absl::Status status = future.Await();
     XLA_CHECK_OK(status);
   }
-  torchXlaDLMTensor->buffer_reference = pjrt_buffer;
+  // torchXlaDLMTensor->buffer_reference = pjrt_buffer;
+  torchXlaDLMTensor->source_tensor = input;
   // pack->buffer_reference = nb::borrow<nb::object>(py_buffer); // xw32: should we do it?
 
   dt.data = torchXlaDLMTensor->external_reference->OpaqueDeviceMemoryDataPointer();
@@ -166,7 +167,6 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
   dt.strides = reinterpret_cast<std::int64_t*>(torchXlaDLMTensor->strides.data());
   dt.byte_offset = 0;
 
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   return &(torchXlaDLMTensor.release()->tensor);
 }
 
@@ -342,17 +342,8 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
   // special case when non-default layouts are better supported by JAX.
   absl::StatusOr<xla::Layout> default_layout_from_client =
       device->client()->GetDefaultLayout(element_type, dimensions);
-  xla::Layout default_layout;
-  if (default_layout_from_client.ok()) {
-    default_layout = *default_layout_from_client;
-  } else if (absl::IsUnimplemented(default_layout_from_client.status())) {
-    // TODO(skyewm): consider remove the fallback path when GetDefaultLayout is
-    // unimplemented.
-    xla::Shape host_shape = xla::ShapeUtil::MakeShape(element_type, dimensions);
-    default_layout = xla::LayoutUtil::GetWithDefaultLayout(host_shape).layout();
-  } else {
-    XLA_ERROR() << "default_layout_from_client.status() is not ok.";
-  }
+  XLA_CHECK_OK(default_layout_from_client.status()) << "Failed to get a default layout in " << __FUNCTION__;
+  xla::Layout default_layout = default_layout_from_client.value(); // TODO(xw32): the check below is needed due to an limitation in ifrt. Since torch_xla uses pjrt, we may not need the check below and the var default_layout.
   // if (shape.layout() != default_layout) {
   //   XLA_ERROR() << "from_dlpack got array with non-default layout with minor-to-major dimensions (" << absl::StrJoin(shape.layout().minor_to_major(), ",") << "), expected (" << absl::StrJoin(default_layout.minor_to_major(), ",") << ")";
   // }
