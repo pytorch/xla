@@ -289,7 +289,10 @@ def navit_attention_accuracy_test(multihead_test=False):
         # ---------------     calculate the attention Navit way -----------------------------
 
         # at = NavitAttention(dim=dim, heads=1, pack_length=navit_pack_length, multi_head=multihead_test)
-        at = TpuNavitAttention(dim=dim, heads=8, pack_length=navit_pack_length, multi_head=multihead_test)
+        heads = 1
+        if multihead_test:
+            heads = 8
+        at = TpuNavitAttention(dim=dim, heads=heads, pack_length=navit_pack_length, multi_head=multihead_test)
 
         # print(f"indexes {pic_embed_indexes} , len {len(pic_embed_indexes)}")
         original_seq_length = pic_embed_sequence.shape[0]
@@ -380,7 +383,10 @@ def navit_backward_accuracy(multihead_test=False):
     # ---------------     calculate the attention Navit way -----------------------------
 
     # at = NavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
-    at = TpuNavitAttention(dim=dim, heads=1, pack_length=navit_pack_length)
+    heads = 1
+    if multihead_test:
+        heads = 8
+    at = TpuNavitAttention(dim=dim, heads=heads, pack_length=navit_pack_length, multi_head=multihead_test)
 
     Q.zero_grad()
     K.zero_grad()
@@ -392,18 +398,12 @@ def navit_backward_accuracy(multihead_test=False):
     q = Q(pic_embed_sequence)
     k = K(cont_embed_sequence)
     v = V(cont_embed_sequence)
-    if multihead_test:
-        q = rearrange(q, "n (h d) -> 1 h n d", h=8)
-        k = rearrange(k, "n (h d) -> 1 h n d", h=8)
-        v = rearrange(v, "n (h d) -> 1 h n d", h=8)
     test_output = at.forward(q=q,
                              q_indexes=NavitAttention.build_pic_id_sequence(pic_embed_indexes, navit_pack_length),
                              k=k,
                              v=v,
                              kv_indexes=NavitAttention.build_ctx_id_sequence(cont_embed_indexes, navit_pack_length)
                              )
-    if multihead_test:
-        st_att = rearrange(st_att, "1 h n d -> n (h d)")
     # test_output = test_output[:original_seq_length, :]
     test_output = test_output[:original_seq_length, :]
     # ---------------   calc Navit   ------------------------------------------------------
@@ -440,10 +440,9 @@ if __name__ == "__main__":
     # torch_xla._XLAC._xla_set_use_full_mat_mul_precision(use_full_mat_mul_precision=True)
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
     # navit_attention_accuracy_test(multihead_test=False)
-    #
     # for _ in range(10):
     #     navit_backward_accuracy(multihead_test=False)
-    #
+
     navit_attention_accuracy_test(multihead_test=True)
-    # for _ in range(1):
-    #     navit_backward_accuracy(multihead_test=True)
+    for _ in range(10):
+        navit_backward_accuracy(multihead_test=True)
