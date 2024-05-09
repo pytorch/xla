@@ -339,9 +339,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   ComputationCache::TypePtr LookupCachedCompile(
       const torch::lazy::hash_t& hash);
 
-  ComputationCache::TypePtr LookupCachedCompiletwo(
-      const torch::lazy::hash_t& hash);
-
   // We don't use the upstream TryRunCachedSync since
   // our CachedComputation is different from upstream.
   std::pair<bool, std::shared_ptr<Async>> TryRunCachedSync(
@@ -376,10 +373,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
       const SyncTensorsConfig& config, bool warm_up_cache_only = false);
-
-//   runtime::ComputationClient::ComputationPtr GetXLAComputation(std::vector<XLATensorPtr>& tensors,
-//                             absl::Span<const std::string> devices,
-//                             bool warm_up_cache_only = false);
 
   ComputationCache* computation_cache_;
 };
