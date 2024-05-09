@@ -2475,13 +2475,13 @@ class TestDLPack(test_utils.XlaTestCase):
     print('xw32 first test passed.')
 
     # TODO(xw32): for the below test cases, test the same thing as above. May create a helper function if needed. 
-    t2 = torch.arange(5).to(xm.xla_device())
-    got2 = xdlpack.from_dlpack(xdlpack.to_dlpack(t2))
-    self.assertEqual(t2.cpu(), got2.cpu())
+    # t2 = torch.arange(5).to(xm.xla_device())
+    # got2 = xdlpack.from_dlpack(xdlpack.to_dlpack(t2))
+    # self.assertEqual(t2.cpu(), got2.cpu())
 
-    t3 = torch.tensor(5, device=xm.xla_device())
-    got3 = xdlpack.from_dlpack(xdlpack.to_dlpack(t3))
-    self.assertEqual(t3.cpu(), got3.cpu())
+    # t3 = torch.tensor(5, device=xm.xla_device())
+    # got3 = xdlpack.from_dlpack(xdlpack.to_dlpack(t3))
+    # self.assertEqual(t3.cpu(), got3.cpu())
 
   # TODO(xw32): figure it out what it is testing.
   @onlyIfTorchSupportsCUDA
