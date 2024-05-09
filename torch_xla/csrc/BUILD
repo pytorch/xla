@@ -215,6 +215,7 @@ ptxla_cc_library(
     hdrs = ["aten_cpu_fallback.h"],
     deps = [
         ":function_call_tracker",
+        "@pybind11",
         "//torch_xla/csrc/runtime:debug_macros",
         "//torch_xla/csrc/runtime:metrics",
         "//torch_xla/csrc/runtime:tf_logging",
