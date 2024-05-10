@@ -13,6 +13,7 @@ parser.add_argument('--max_diff_count', type=int, default=25)
 parser.add_argument('--verbosity', type=int, default=0)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
+from absl.testing import absltest, parameterized
 
 # Normal imports section starts here.
 import collections
@@ -28,6 +29,8 @@ import torch.autograd as ad
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.testing._internal.common_device_type import dtypes
+from torch.testing._internal.common_dtype import (all_types_and_complex_and)
 import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
@@ -2449,80 +2452,111 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertGreaterEqual(buf_ptr_3, 0)
 
 
-class TestDLPack(test_utils.XlaTestCase):
+class TestDLPack(parameterized.TestCase):
+
+  def _test_dlpack_capsule_conversion_helper(self, xla_tensor):
+    dlpt = xdlpack.to_dlpack(xla_tensor) # dlpt1 has type PyCapsule
+    print('xw32 finished the to_dlpack')
+    got = xdlpack.from_dlpack(dlpt)
+    print('xw32 finished the from_dlpack')
+
+    print('xla_tensor.device=', xla_tensor.device, ', got.device=', got.device)
+    self.assertEqual(xla_tensor.device, got.device)
+    print('xla_tensor.cpu()=', xla_tensor.cpu())
+    print('got.cpu()=', got.cpu())
+    self.assertTrue(torch.allclose(xla_tensor.cpu(), got.cpu()))
+    self.assertRaisesRegex(RuntimeError, "DLTensor capsule can be consumed only once", lambda: xdlpack.from_dlpack(dlpt))
+
+    print('xw32 torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor)=', torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor))
+    print('xw32 torch_xla._XLAC._unsafe_buffer_pointer(got)=', torch_xla._XLAC._unsafe_buffer_pointer(got))
+    self.assertEqual(torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor),torch_xla._XLAC._unsafe_buffer_pointer(got))
 
   # TODO(xw32): need to test different data type such as pytorch/test/test_dlpack.py
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_capsule_conversion(self):
-    # TODO(xw32): make sure to test the storage is tested.
-    t1 = torch.arange(5).to(xm.xla_device())
-    dlpt1 = xdlpack.to_dlpack(t1) # dlpt1 has type PyCapsule
-    print('xw32 finished the to_dlpack')
-    got1 = xdlpack.from_dlpack(dlpt1)
-    print('xw32 finished the from_dlpack')
-
-    print('t1.device=', t1.device, ', got1.device=', got1.device)
-    self.assertEqual(t1.device, got1.device)
-    print('t1.cpu()=', t1.cpu())
-    print('got1.cpu()=', got1.cpu())
-    self.assertEqual(t1.cpu(), got1.cpu())
-    self.assertRaisesRegex(RuntimeError, "DLTensor capsule can be consumed only once", lambda: xdlpack.from_dlpack(dlpt1))
-
-    print('xw32 torch_xla._XLAC._unsafe_buffer_pointer(t1)=', torch_xla._XLAC._unsafe_buffer_pointer(t1))
-    print('xw32 torch_xla._XLAC._unsafe_buffer_pointer(got1)=', torch_xla._XLAC._unsafe_buffer_pointer(got1))
-    self.assertEqual(torch_xla._XLAC._unsafe_buffer_pointer(t1),torch_xla._XLAC._unsafe_buffer_pointer(got1))
-    print('xw32 first test passed.')
-
-    # TODO(xw32): for the below test cases, test the same thing as above. May create a helper function if needed. 
-    # t2 = torch.arange(5).to(xm.xla_device())
-    # got2 = xdlpack.from_dlpack(xdlpack.to_dlpack(t2))
-    # self.assertEqual(t2.cpu(), got2.cpu())
-
-    # t3 = torch.tensor(5, device=xm.xla_device())
-    # got3 = xdlpack.from_dlpack(xdlpack.to_dlpack(t3))
-    # self.assertEqual(t3.cpu(), got3.cpu())
-
-  # TODO(xw32): figure it out what it is testing.
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_protocol_conversion(self):
-    t1 = torch.arange(5, device=xm.xla_device())
+  @parameterized.parameters(*all_types_and_complex_and(torch.half, torch.bfloat16, torch.bool, torch.uint16, torch.uint32, torch.uint64))
+  def test_dlpack_roundtrip(self, dtype):
+    print('xw32 dtype=', dtype)
+    # "arange_cpu" not implemented for complex64 and complex128.
+    # xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device) failed with `RuntimeError: false INTERNAL ASSERT FAILED at "/ansible/pytorch/torch/csrc/lazy/core/hash.h":139, please report a bug to PyTorch. Unsupported scalar type:UInt64`, similar to other uint.
+    if dtype in { torch.complex128, torch.complex64, torch.uint64, torch.uint32, torch.uint16, torch.bool }:
+      return
+    xla_device = xm.xla_device()
+    xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
+    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
     xm.mark_step()
-    got1 = xdlpack.from_dlpack(t1)
-    self.assertEqual(t1.cpu(), got1.cpu())
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_0)
 
-    t2 = torch.arange(5, device=xm.xla_device())
-    got2 = xdlpack.from_dlpack(t2)
-    self.assertEqual(t2.cpu(), got2.cpu())
+    xla_tensor_1 = torch.tensor(42, dtype=dtype).to(xla_device)
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_1)
 
-    t3 = torch.tensor(5, device=xm.xla_device())
-    got3 = xdlpack.from_dlpack(t3)
-    self.assertEqual(t3.cpu(), got3.cpu())
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    xla_tensor_2 = torch.arange(5, dtype=dtype).to(xla_device)
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_2)
+
+    xla_tensor_3 = torch.arange(5, dtype=dtype, device=xm.xla_device())
+    xm.mark_step()
+    # Without the `wait_device_ops()`, the pjrt buffer (pjrt_data->buffer) at https://github.com/pytorch/xla/blob/e3fc03314dab5f44e3ed9ccbba6c15fbca3285cd/torch_xla/csrc/runtime/pjrt_computation_client.cc#L467 will be nullptr.
+    xm.wait_device_ops()
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_cuda_to_xla_shared_storage(self):
-    t1 = torch.arange(5).cuda()
-    dlt1 = torch.utils.dlpack.to_dlpack(t1)
+  def test_dlpack_roundtrip_bool(self):
+    xla_tensor = torch.ones(1, dtype=torch.bool).to(xm.xla_device())
+    self._test_dlpack_capsule_conversion_helper(xla_tensor) 
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_pytorch_cuda_to_xla(self):
+    t1_cuda = torch.arange(5).cuda()
+    dlt1 = torch.utils.dlpack.to_dlpack(t1_cuda)
     xla_t1 = xdlpack.from_dlpack(dlt1)
-    t1[0] = t1[0] + 20
-    self.assertEqual(t1, xla_t1.cpu())
+    t1_cuda[0] = t1_cuda[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
 
-    t2 = torch.tensor(5).cuda()
-    dlt2 = torch.utils.dlpack.to_dlpack(t2)
+    t2_cuda = torch.tensor(5).cuda()
+    dlt2 = torch.utils.dlpack.to_dlpack(t2_cuda)
     xla_t2 = xdlpack.from_dlpack(dlt2)
-    t2.fill_(6)
-    self.assertEqual(t2, xla_t2.cpu())
+    t2_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_xla_to_cuda_shared_storage(self):
+  def test_dlpack_xla_to_pytorch_cuda(self):
     xla_t1 = torch.arange(5).to(xm.xla_device())
     dlt1 = xdlpack.to_dlpack(xla_t1)
     cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
     cuda_t1[0] = cuda_t1[0] + 20
-    self.assertEqual(xla_t1.cpu(), cuda_t1.cpu())
+    self.assertTrue(torch.allclose(xla_t1.cpu(), cuda_t1.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_non_default_layout(self):
+    cuda_t = torch.arange(25, device=torch.device('cuda')).reshape(5, 5)
+
+    t1 = cuda_t.t()
+    xla_t1 = xdlpack.from_dlpack(t1.__dlpack__())
+    self.assertTrue(torch.allclose(t1.cpu(), xla_t1.cpu()))
+
+    t2 = cuda_t[0]
+    xla_t2 = xdlpack.from_dlpack(t2.__dlpack__())
+    self.assertTrue(torch.allclose(t2.cpu(), xla_t2.cpu()))
+
+    t3 = cuda_t[:, 0]
+    self.assertRaisesRegex(RuntimeError, r"Only DLPack tensors with trivial \(compact\) striding are supported", lambda: xdlpack.from_dlpack(t3.__dlpack__()))
+
+    t4 = cuda_t[1, :]
+    xla_t4 = xdlpack.from_dlpack(t4.__dlpack__())
+    self.assertTrue(torch.allclose(t4.cpu(), xla_t4.cpu()))
+
+    t5 = cuda_t[1]
+    xla_t5 = xdlpack.from_dlpack(t5.__dlpack__())
+    self.assertTrue(torch.allclose(t5.cpu(), xla_t5.cpu()))
+
+
+
 
 
 class SimpleModelWithDropout(torch.nn.Module):
