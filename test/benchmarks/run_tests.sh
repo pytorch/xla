@@ -39,10 +39,14 @@ function run_make_tests {
 }
 
 function run_python_tests {
-  python3 "$CDIR/test_experiment_runner.py"
-  python3 "$CDIR/test_benchmark_experiment.py"
-  python3 "$CDIR/test_benchmark_model.py"
-  python3 "$CDIR/test_result_analyzer.py"
+  # HACK: don't confuse local `torch_xla` folder with installed package
+  # Python 3.11 has the permanent fix: https://stackoverflow.com/a/73636559
+  pushd $CDIR
+  python3 "test_experiment_runner.py"
+  python3 "test_benchmark_experiment.py"
+  python3 "test_benchmark_model.py"
+  python3 "test_result_analyzer.py"
+  popd
 }
 
 function run_tests {

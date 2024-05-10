@@ -1266,9 +1266,10 @@ xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
   return output;
 }
 
-xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
-  return xla::CustomCall(input.builder(), /*call_target_name=*/"Sharding",
-                         {input}, ShapeHelper::ShapeOfXlaOp(input));
+xla::XlaOp BuildCustomSharding(const xla::XlaOp& input, const std::string& type,
+                               const xla::Shape& output_shape) {
+  return xla::CustomCall(input.builder(), /*call_target_name=*/type, {input},
+                         output_shape);
 }
 
 std::vector<xla::XlaOp> BuildGpuCustomCall(

@@ -4,13 +4,16 @@ from jax import dlpack as jaxdl
 import jax.numpy as jnp
 import numpy
 import torch
-import torch._decomp as decomp
+import torch.func
 import torch._decomp.decompositions
 from torch_xla2 import ops_registry
 import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
 import torch.utils.dlpack as torchdl
 from torch_xla2.ops import jaten
+from torch._subclasses.fake_tensor import FakeTensorMode
+
+fake_mode = FakeTensorMode()
 
 
 class XLADispatchMode(torch_dispatch.TorchDispatchMode):
@@ -36,8 +39,8 @@ def _aten_arange(start,
 
 
 def _aten_scalar_tensor(val, **kwargs):
-    p = torch.ops.aten.scalar_tensor(val)
-    return wrap(t2j(p))
+  p = torch.ops.aten.scalar_tensor(val)
+  return wrap(t2j(p))
 
 
 constructors = {
@@ -192,11 +195,17 @@ class XLATensor2(torch.Tensor):
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
     kwargs = kwargs or {}
     with jax.named_scope(func.name()):
+
       if isinstance(func, torch._ops.OpOverloadPacket):
         return func(*args, **kwargs)
 
-      if func in jaten.all_ops:
-        return jaten.all_ops[func](*args, **kwargs)
+      if func.name() == 'aten::copy_':
+        x, y = args
+        x._elem = y._elem
+        return
+
+      if func.overloadpacket in jaten.all_ops:
+        return jaten.all_ops[func.overloadpacket](*args, **kwargs)
 
       lowering = ops_registry.lowerings.lookup(func)
 

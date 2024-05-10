@@ -60,7 +60,8 @@ InitializePjRt(const std::string& device_type) {
   std::unique_ptr<xla::PjRtClient> client;
   std::unique_ptr<XlaCoordinator> coordinator;
 
-  if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false)) {
+  if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false) &&
+      device_type != "CPU") {
     std::shared_ptr<const PjRtPlugin> plugin = GetPjRtPlugin(device_type);
     if (plugin) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;

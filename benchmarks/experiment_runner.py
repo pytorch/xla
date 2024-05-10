@@ -319,8 +319,8 @@ class ExperimentRunner:
         self._args.profile_cuda_cpu or \
         self._args.profile_cuda_cpu_individual_ops
     enable_xla_profiling = self._args.profile_xla
-    assert not (enable_pytorch_profiling and enable_pytorch_profiling
-               ), "More than one profiling path enabled."
+    assert not (enable_pytorch_profiling and
+                enable_xla_profiling), "More than one profiling path enabled."
 
     if enable_xla_profiling:
       logdir = self._get_results_dir_path(experiment_config, model_config,
