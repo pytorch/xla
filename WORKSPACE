@@ -24,7 +24,6 @@ http_archive(
     url = "https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.tar.gz",
 )
 
-
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 
 # This is required for setting up the linkopts for -lpython.q

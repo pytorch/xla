@@ -20,6 +20,7 @@ fi
 apply_patches
 
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
+pip install --upgrade "jax[cuda12]"
 
 export PATH=$PATH:/usr/local/cuda-12.1/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64
