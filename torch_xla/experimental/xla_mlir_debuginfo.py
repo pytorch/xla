@@ -31,7 +31,7 @@ def write_mlir_debuginfo(x, data: str):
 
 @torch.library.impl(XLA_LIB, "write_mlir_debuginfo",
                     "CompositeExplicitAutograd")
-def write_mlir_debuginfo(x, data: str):
+def write_mlir_debuginfo_tensor(x, data: str):
   return x
 
 

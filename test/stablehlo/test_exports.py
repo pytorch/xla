@@ -153,7 +153,6 @@ class ExportTest(unittest.TestCase):
     export_options.export_node_metadata = True
     shlo = exported_program_to_stablehlo(ep, options=export_options)
     shlo_text = shlo.get_stablehlo_text()
-    print(shlo_text)
     self.assertTrue('stack_trace' in shlo_text)
     self.assertTrue('nn_module_stack' in shlo_text)
     self.assertTrue('source_fn_stack' in shlo_text)

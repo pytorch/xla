@@ -22,6 +22,7 @@ from torch_xla.experimental.stablehlo_custom_call import (
 from torch_xla.experimental.unbounded_dynamism_export import (
     exported_program_has_symbolic_input_shape,
     process_exported_program_with_symbolic_input)
+from torch_xla.experimental.xla_mlir_debuginfo import write_mlir_debuginfo
 
 
 def _get_numpy_dtype(dtype):
@@ -271,7 +272,7 @@ class XLAExportInterpreter(torch.fx.Interpreter):
         dynamic_dims = [
             i for i, x in enumerate(fake_t.shape) if not isinstance(x, int)
         ]
-      return res
+        self._mark_dynamic(res, dynamic_dims)
     elif n.op == 'call_function':
       if hasattr(n.target, 'namespace'
                 ) and n.target.namespace in self.custom_ops_allowed_in_graph:
@@ -285,10 +286,9 @@ class XLAExportInterpreter(torch.fx.Interpreter):
       res = super().run_node(n)
     if self.gm_serializer is not None:
       node_metadata = json.dumps(self.gm_serializer.serialize_metadata(n))
-      pytree.tree_map_only(
-          torch.Tensor,
-          lambda x: torch_xla._XLAC._set_xla_custom_op_name_prefix(
-              x, node_metadata, 1), res)
+      pytree.tree_map_only(torch.Tensor,
+                           lambda x: write_mlir_debuginfo(x, node_metadata),
+                           res)
     return res
 
 
@@ -347,13 +347,10 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   if options.inline_all_constant:
     # Inline all constants.
     torch_xla._XLAC._set_xla_all_numbers_special_scalars(True)
+  xla_hlo_debug_env = os.environ.get("XLA_HLO_DEBUG", "0")
   if options.export_node_metadata:
     gm_serializer = GraphModuleSerializer(exported_model.graph_signature,
                                           exported_model.module_call_graph)
-    if "XLA_HLO_DEBUG" in os.environ:
-      xla_hlo_debug_env = os.environ["XLA_HLO_DEBUG"]
-    else:
-      xla_hlo_debug_env = "0"
     os.environ["XLA_HLO_DEBUG"] = "1"
   else:
     gm_serializer = None
