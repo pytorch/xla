@@ -157,7 +157,8 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(x, mesh, (('data', 'fsdp'), None))
     output = model(x)
     # Make sure output are sharded.
-    annotation = '{devices=[4,1]0,2,1,3}'
+    annotation = '{devices=[4,1]0,1,2,3}'
+    self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(x))
     self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(output))
 
     # Make sure the model can execute without error.

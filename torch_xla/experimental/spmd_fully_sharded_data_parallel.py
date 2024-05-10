@@ -25,7 +25,7 @@ def _prepare_spmd_partition_spec(param, extra_data_axis=None):
   # another helper for the output.
   partition_spec[0] = "fsdp"
   if extra_data_axis:
-    partition_spec[0] = ("fsdp", extra_data_axis)
+    partition_spec[0] = (extra_data_axis, "fsdp")
   return tuple(partition_spec)
 
 
