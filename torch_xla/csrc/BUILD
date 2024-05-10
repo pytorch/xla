@@ -266,7 +266,6 @@ ptxla_cc_library(
         ":dtype",
         ":tensor",
         ":version",
-        "//torch_xla/csrc/triton:triton_kernels",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:metrics",
         "//torch_xla/csrc/runtime:metrics_analysis",
@@ -288,6 +287,7 @@ ptxla_cc_library(
         "@xla//xla/service:hlo_verifier",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
+        "@xla//xla/service:custom_call_target_registry",
     ],
 )
 

@@ -24,13 +24,6 @@ http_archive(
     url = "https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.tar.gz",
 )
 
-http_archive(
-    name = "nanobind",
-    strip_prefix = "nanobind-1.9.2",
-    sha256 = "149a3da40b0a988513d8cf5e71db3037373823505a3c92f87b988c92d7e0ab34",
-    url = "https://github.com/wjakob/nanobind/archive/refs/tags/v1.9.2.tar.gz",
-    build_file = "//bazel:nanobind.BUILD",
-)
 
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 

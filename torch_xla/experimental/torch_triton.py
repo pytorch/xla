@@ -1,4 +1,8 @@
-"""Module for calling Triton kernels from Pytorch/XLA."""
+"""Module for calling Triton kernels from Pytorch/XLA.
+
+Reference: https://github.com/jax-ml/jax-triton/blob/main/jax_triton/triton_lib.py
+
+"""
 
 from __future__ import annotations
 
@@ -10,8 +14,10 @@ import torch
 import numpy as np
 import triton
 import triton.language as tl
-import torch_xla.csrc.triton._triton as lib_triton
+from jax._src.lib import gpu_triton as lib_triton
+import torch_xla
 
+torch_xla._XLAC._xla_register_custom_call_target('triton_kernel_call', lib_triton._cuda_triton.get_custom_call(), 'CUDA')
 Grid = Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]]
 GridOrLambda = Union[Grid, Callable[[Dict[str, Any]], Grid]]
 
@@ -112,7 +118,6 @@ def get_or_create_triton_kernel(
       ptx,
       ttir,
       compute_capability,
-      *cluster_dims,
   )
 
   specialization_attr = fn._get_config(*args)  # pylint: disable=protected-access
@@ -140,7 +145,7 @@ def triton_kernel_call_lowering(
   if not isinstance(fn, triton.JITFunction):
     raise ValueError("`kernel` must be a Triton `JITFunction`.")
 
-  #TODO(bbahl): Add support for autotuner and heuristic functions.
+  #TODO: Add support for autotuner and heuristic functions.
   config = triton.Config(
       {},
       num_warps=NUM_WARPS,

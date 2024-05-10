@@ -282,7 +282,6 @@ setup(
     packages=find_packages(include=['torch_xla*']),
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
-        BazelExtension('//torch_xla/csrc/triton:_triton.so'),
     ],
     install_requires=[
         'absl-py>=1.0.0',

@@ -66,6 +66,7 @@
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
+#include "xla/service/custom_call_target_registry.h"
 #include "xla/service/hlo_parser.h"
 
 namespace torch_xla {
@@ -2300,12 +2301,26 @@ void InitXlaModuleBindings(py::module m) {
               bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes);
           return bridge::AtenFromXlaTensors(xtensors);
         });
-  m.def("_xla_gpu_custom_call_",
-        [](at::Tensor& output, const std::vector<at::Tensor>& inputs,
-           const std::string& payload) {
-          auto x_output = bridge::GetXlaTensor(output);
-          return tensor_methods::gpu_custom_call_(
-              x_output, bridge::GetXlaTensors(inputs), payload);
+  m.def("_xla_gpu_custom_call",
+        [](const std::vector<at::Tensor>& inputs, const std::string& payload,
+           const std::vector<std::vector<int64_t>>& output_shapes,
+           const std::vector<py::object>& output_dtypes)
+            -> std::vector<at::Tensor> {
+          std::vector<at::ScalarType> dtypes;
+          dtypes.reserve(output_dtypes.size());
+          for (auto& dtype : output_dtypes) {
+            dtypes.push_back(
+                reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
+          }
+
+          auto xtensors = tensor_methods::gpu_custom_call(
+              bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes);
+          return bridge::AtenFromXlaTensors(xtensors);
+        });
+  m.def("_xla_register_custom_call_target",
+        [](const std::string& fn_name, const py::capsule& function_ptr,
+           const std::string& platform) {
+          XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(fn_name, function_ptr.get_pointer(), platform);
         });
   m.def("_set_xla_custom_op_name_prefix",
         [](const at::Tensor& input, const std::string& op_name_prefix,

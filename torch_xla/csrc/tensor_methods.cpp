@@ -529,15 +529,37 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
-void gpu_custom_call_(XLATensorPtr& output,
-                      const std::vector<XLATensorPtr>& inputs,
-                      const std::string& payload) {
+std::vector<XLATensorPtr> gpu_custom_call(
+    const std::vector<XLATensorPtr>& inputs, const std::string& payload,
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<at::ScalarType>& output_dtypes) {
+  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+
   std::vector<torch::lazy::Value> values;
+  values.reserve(inputs.size());
   for (const auto& input : inputs) {
     values.push_back(input->GetIrValue());
   }
-  output->SetInPlaceIrValue(torch::lazy::MakeNode<GpuCustomCall>(
-      values, output->shape().get(), payload));
+
+  XLA_CHECK_EQ(output_shapes.size(), output_dtypes.size());
+  std::vector<xla::Shape> output_xla_shapes;
+  output_xla_shapes.reserve(output_shapes.size());
+  for (size_t i = 0; i < output_shapes.size(); ++i) {
+    output_xla_shapes.push_back(xla::ShapeUtil::MakeShape(
+        MakeXlaPrimitiveType(output_dtypes[i], &(inputs[0]->GetDevice())),
+        output_shapes[i]));
+  }
+
+  auto node = torch::lazy::MakeNode<GpuCustomCall>(
+      values, xla::ShapeUtil::MakeTupleShape(output_xla_shapes), payload);
+
+  std::vector<XLATensorPtr> outputs;
+  outputs.reserve(output_shapes.size());
+  for (size_t i = 0; i < output_shapes.size(); ++i) {
+    outputs.push_back(
+        inputs[0]->CreateFrom(torch::lazy::Value(node, i), output_dtypes[i]));
+  }
+  return outputs;
 }
 
 std::vector<XLATensorPtr> tpu_custom_call(

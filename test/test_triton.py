@@ -1,5 +1,6 @@
 import logging
 import torch
+from torch import nn as nn
 import unittest
 
 import torch_xla.experimental.torch_triton as torch_triton
@@ -19,6 +20,7 @@ def add_kernel(
     BLOCK_SIZE: tl.constexpr,  # Number of elements each program should process.
     # NOTE: `constexpr` so it can be used as a shape value.
 ):
+  # Triton add kernel from https://github.com/openai/triton/blob/main/python/tutorials/01-vector-add.py#L28
   # There are multiple 'programs' processing different data. We identify which program
   # we are here:
   pid = tl.program_id(axis=0)  # We use a 1D launch grid so axis is 0.
@@ -52,10 +54,11 @@ class TritonTest(unittest.TestCase):
     grid = (size // block_size,)
     payload = torch_triton.triton_call(
         x, y, output, size, kernel=add_kernel, grid=grid, BLOCK_SIZE=block_size)
-    torch_xla._XLAC._xla_gpu_custom_call_(output, [x, y], payload)
+    output = torch_xla._XLAC._xla_gpu_custom_call(
+      [x,y], payload, [output.shape],
+      [torch.int64])
     output_torch = x + y
-    self.assertTrue(torch.allclose(output.cpu(), output_torch.cpu()))
-
+    self.assertTrue(torch.allclose(output[0].cpu(), output_torch.cpu()))
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
