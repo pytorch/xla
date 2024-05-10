@@ -1,4 +1,4 @@
-name: xla-test
+name: triton-test
 on:
   workflow_call:
     inputs:
@@ -34,6 +34,12 @@ jobs:
     container:
       image: ${{ inputs.dev-image }}
       options: "${{ inputs.install-cuda-plugin && '--gpus all' || '' }} --shm-size 16g"
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    env:
+      GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
+      BAZEL_JOBS: 16
+      BAZEL_REMOTE_CACHE: 1
     steps:
       # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
       - name: Clean up workspace
@@ -102,7 +108,9 @@ jobs:
           pip install fsspec
           pip install rich
           # Jax nightly is needed for Triton tests.
-          pip install --upgrade "jax[cuda12]"
+          pip install -U --pre jaxlib -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+          pip install -U --pre jax-cuda12-pjrt jax-cuda12-plugin -f https://storage.googleapis.com/jax-releases/jax_cuda_plugin_nightly_releases.html
+          pip install -U --pre jax -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
       - name: Run Tests
         env:
           PJRT_DEVICE: CUDA
