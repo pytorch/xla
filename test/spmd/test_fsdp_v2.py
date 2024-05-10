@@ -142,23 +142,23 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_fsdp_v2_multi_slice(self):
     model = self.SimpleLinear().to(xm.xla_device())
-    mesh = self._get_mesh((2, self.n_devices // 2, 1), None, ('data', 'fsdp', 'tensor'))
+    mesh = self._get_mesh((2, self.n_devices // 2, 1), None,
+                          ('data', 'fsdp', 'tensor'))
     model = FSDPv2(model, mesh=mesh, extra_data_axis="data")
 
     # Make sure all weights are sharded.
     annotation = '{devices=[2,1,2]0,2,1,3 last_tile_dim_replicate}'
     self.assertEqual(annotation,
-                      torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+                     torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
     self.assertEqual(annotation,
-                      torch_xla._XLAC._get_xla_sharding_spec(model.fc2.weight))
+                     torch_xla._XLAC._get_xla_sharding_spec(model.fc2.weight))
 
     x = torch.randn(16, 128).to(xm.xla_device())
     xs.mark_sharding(x, mesh, (('data', 'fsdp'), None))
     output = model(x)
     # Make sure output are sharded.
     annotation = '{devices=[4,1]0,2,1,3}'
-    self.assertEqual(annotation,
-                      torch_xla._XLAC._get_xla_sharding_spec(output))
+    self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(output))
 
     # Make sure the model can execute without error.
     xm.mark_step()
@@ -169,7 +169,8 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     model_expected = self.SimpleLinear().to(xm.xla_device())
 
     model = copy.deepcopy(model_expected)
-    mesh = self._get_mesh((2, self.n_devices // 2, 1), None, ('data', 'fsdp', 'tensor'))
+    mesh = self._get_mesh((2, self.n_devices // 2, 1), None,
+                          ('data', 'fsdp', 'tensor'))
     model = FSDPv2(model, mesh=mesh, extra_data_axis="data")
 
     x_expected = torch.randn(16, 128).to(xm.xla_device())
@@ -183,9 +184,12 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
 
   def test_fsdp_v2_multi_slice_error(self):
     model = self.SimpleLinear().to(xm.xla_device())
-    xs.set_global_mesh(self._get_mesh((2, self.n_devices // 2, 1), None, ('data', 'fsdp', 'tensor')))
+    xs.set_global_mesh(
+        self._get_mesh((2, self.n_devices // 2, 1), None,
+                       ('data', 'fsdp', 'tensor')))
 
-    with self.assertRaisesRegex(ValueError, "The provided ddp axis is not in the mesh."):
+    with self.assertRaisesRegex(ValueError,
+                                "The provided ddp axis is not in the mesh."):
       model = FSDPv2(model, extra_data_axis='ddp')
 
 

@@ -79,7 +79,8 @@ class SpmdFullyShardedDataParallel(nn.Module):
     if "fsdp" not in mesh.axis_names:
       raise ValueError("The mesh must have an axis named 'fsdp'.")
     if extra_data_axis and extra_data_axis not in mesh.axis_names:
-      raise ValueError(f"The provided {extra_data_axis} axis is not in the mesh.")
+      raise ValueError(
+          f"The provided {extra_data_axis} axis is not in the mesh.")
 
     super().__init__()
 
@@ -136,8 +137,9 @@ class SpmdFullyShardedDataParallel(nn.Module):
               f"The output type is not supported: {type(output)}. Please provide your own shard_output callable."
           )
 
-        spmd.mark_sharding(real_output, mesh,
-                           _prepare_spmd_partition_spec(real_output, extra_data_axis))
+        spmd.mark_sharding(
+            real_output, mesh,
+            _prepare_spmd_partition_spec(real_output, extra_data_axis))
 
       shard_output = shard_output_impl
 
