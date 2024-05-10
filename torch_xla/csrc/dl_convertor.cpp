@@ -38,17 +38,26 @@ std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(const at::Tens
 }
 
 struct TorchXLADLMTensor {
+  ~TorchXLADLMTensor();
   std::unique_ptr<xla::PjRtBuffer::ExternalReference> external_reference;
-  // std::shared_ptr<xla::PjRtBuffer> buffer_reference;
-  at::Tensor source_tensor;
+  std::shared_ptr<xla::PjRtBuffer> buffer_reference;
+  // at::Tensor source_tensor;
 
   std::vector<int64_t> shape;
   std::vector<int64_t> strides;
   DLManagedTensor tensor;
 };
 
+TorchXLADLMTensor::~TorchXLADLMTensor() {
+  if (external_reference) {
+    external_reference.reset(nullptr);
+  }
+}
+
 void TorchXLADLMTensorDeleter(DLManagedTensor* t) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   if (t) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     delete static_cast<TorchXLADLMTensor*>(t->manager_ctx);
   }
 }
@@ -148,8 +157,8 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
     absl::Status status = future.Await();
     XLA_CHECK_OK(status);
   }
-  // torchXlaDLMTensor->buffer_reference = pjrt_buffer;
-  torchXlaDLMTensor->source_tensor = input;
+  torchXlaDLMTensor->buffer_reference = pjrt_buffer;
+  // torchXlaDLMTensor->source_tensor = input;
   // pack->buffer_reference = nb::borrow<nb::object>(py_buffer); // xw32: should we do it?
 
   dt.data = torchXlaDLMTensor->external_reference->OpaqueDeviceMemoryDataPointer();

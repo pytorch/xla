@@ -1128,6 +1128,7 @@ at::Tensor tensor_fromDLPack(PyObject* data) {
 
   at::Tensor tensor = torch_xla::fromDLPack(dlMTensor);
   PyCapsule_SetName(data, "used_dltensor");
+  PyCapsule_SetDestructor(data, nullptr);
   return tensor;
 }
 
@@ -2548,6 +2549,7 @@ void InitXlaModuleBindings(py::module m) {
       NoGilSection nogil;
       dlMTensor = torch_xla::toDLPack(input);
     }
+    // return py::reinterpret_steal<py::object>(PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor));
     return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
   });
   // m.def("_to_dlpack", &tensor_toDLPack, ""); // 
