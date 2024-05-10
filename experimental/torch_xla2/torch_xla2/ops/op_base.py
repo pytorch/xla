@@ -1,22 +1,11 @@
 import torch
-from torch_xla2 import extra 
-
-class JaxOperator:
-    """This is a aten op backed by jax function."""
-
-    def __init__(self, jax_callable):
-        self.jax = jax_callable
-
-    def __call__(self, *args, **kwargs):
-        # args are torch.Tensor
-        res = call_jax(self.jax, args, kwargs)
-        return res
+from torch_xla2 import interop
 
 
 class BinaryOpWithPromotion:
 
-    def __init__(self, jax_callable):
-        self.jax = jax_callable
+    def __init__(self, inner):
+        self.inner = inner 
 
     def _get_dtype(self, obj):
         if isinstance(obj, torch.Tensor):
@@ -31,7 +20,7 @@ class BinaryOpWithPromotion:
 
     def __call__(self, *args, **kwargs):
         # args are torch.Tensor
-        res = extra.torch_view(self.jax)(*args, **kwargs)
+        res = interop.torch_view(self.jax)(*args, **kwargs)
 
         dtype = torch.promote_types(
             self._get_dtype(args[0]), 
@@ -39,15 +28,6 @@ class BinaryOpWithPromotion:
         if dtype != res.dtype:
             res = res.to(dtype)
         return res
-
-
-class TorchLowering:
-
-    def __init__(self, lowering):
-        self.lowering = lowering
-
-    def __call__(self, *args, **kwargs):
-        return self.lowering(*args, **kwargs)
 
 
 class InplaceOp:
@@ -58,7 +38,7 @@ class InplaceOp:
 
     def __call__(self, *args, **kwargs):
         to_mutate = args[0]
-        to_mutate._elem = self.functional(*args, **kwargs)._elem
+        to_mutate.copy_(self.functional(*args, **kwargs))
         return to_mutate
 
 

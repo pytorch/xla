@@ -1,10 +1,9 @@
-
-from torch_xla2.tensor import move_to_device
 import torch_xla2
 from torch import nn
 from torch.nn import functional as F
 import torch
-from torch.utils import _pytree as pytree
+
+xla_env = torch_xla2.default_env()
 
 
 class MyModel(nn.Module):
@@ -22,21 +21,21 @@ class MyModel(nn.Module):
         return x
 
 m = MyModel()
+m = xla_env.to_xla(m)
 
 # Execute this model using torch
 inputs = (torch.randn(3, 3, 28, 28), )
+inputs = xla_env.to_xla(inputs)
 
-inputs, state_dict = pytree.tree_map_only(torch.Tensor, move_to_device, (inputs, m.state_dict()))
-m.load_state_dict(state_dict, strict=False, assign=True)
 print(m(*inputs))
 print('---=====')
 
-from torch_xla2.extra import jax_jit
+from torch_xla2.interop import jax_jit
 
 @jax_jit
 def model_func(param, inputs):
   return torch.func.functional_call(m, param, inputs)
 
-print(model_func(state_dict, inputs))
+print(model_func(m.state_dict(), inputs))
 
 

@@ -1,0 +1,40 @@
+name: Build upstream image
+on:
+  push:
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
+    paths-ignore:
+      - 'experimental/torch_xla2/**'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: linux.12xlarge
+    timeout-minutes: 30
+    env:
+      ECR_DOCKER_IMAGE_BASE: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
+      BAZEL_JOBS: 16
+    steps:
+      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+      - name: Clean up workspace
+        run: |
+          ls -la
+          sudo rm -rvf ${GITHUB_WORKSPACE}/*
+      - name: Setup Linux
+        uses: pytorch/test-infra/.github/actions/setup-linux@main
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Build Docker image
+        shell: bash
+        run: |
+          docker build -t "${ECR_DOCKER_IMAGE_BASE}:v1.2-lite" .github/upstream
+      - name: Stage image to ECR
+        shell: bash
+        run: |
+            # This is to stage PyTorch/XLA base image for use in the upstream.
+            # To allow the upstream workflow to access PyTorch/XLA build images, we
+            # need to have them in the ECR. This is not expensive, and only pushes it
+            # if image layers are not present in the repo.
+            # Note: disable the following line while testing a new image, so we do not
+            # push to the upstream.
+            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.2-lite"

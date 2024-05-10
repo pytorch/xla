@@ -267,6 +267,27 @@ TEST_F(AtenXlaTensorTest, TestEmbedding) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestEmbeddingBag) {
+  torch::Tensor weight =
+      torch::rand({32, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor indices =
+      torch::randint(0, 31, {10}, torch::TensorOptions(torch::kLong));
+  torch::Tensor offsets = torch::arange(0, 10, 3);
+  auto out = torch::embedding_bag(weight, indices, offsets);
+  torch::Tensor result = std::get<0>(out);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_weight = CopyToDevice(weight, device);
+    torch::Tensor xla_indices = CopyToDevice(indices, device);
+    torch::Tensor xla_offsets = CopyToDevice(offsets, device);
+    auto xla_out = torch::embedding_bag(xla_weight, xla_indices, xla_offsets);
+    torch::Tensor xla_result = std::get<0>(xla_out);
+    AllClose(result, xla_result);
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::_embedding_bag_forward_only",
+                         cpp_test::GetIgnoredCounters());
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestOneHot) {
   int num_classes = 5;
   torch::Tensor input =

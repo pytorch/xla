@@ -64,7 +64,7 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_date = '20240418'
+_date = '20240502'
 _libtpu_version = f'0.1.dev{_date}'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 _jax_version = f'0.4.27.dev{_date}'
@@ -222,6 +222,10 @@ class BuildBazelExtension(build_ext.build_ext):
         'bazel', 'build', ext.bazel_target,
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
+
+    build_cpp_tests = build_util.check_env_flag('BUILD_CPP_TESTS', default='0')
+    if build_cpp_tests:
+      bazel_argv.append('//:cpp_tests')
 
     import torch
     cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C,

@@ -2323,6 +2323,24 @@ void InitXlaModuleBindings(py::module m) {
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
         });
+  m.def("_xla_custom_call",
+        [](const std::vector<at::Tensor>& inputs, const std::string& target,
+           const std::vector<std::vector<int64_t>>& output_shapes,
+           const std::vector<py::object>& output_dtypes, bool has_side_effect,
+           const std::string& backend_config,
+           const int api_version) -> std::vector<at::Tensor> {
+          std::vector<at::ScalarType> dtypes;
+          dtypes.reserve(output_dtypes.size());
+          for (auto& dtype : output_dtypes) {
+            dtypes.push_back(
+                reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
+          }
+
+          auto xtensors = tensor_methods::custom_call(
+              bridge::GetXlaTensors(inputs), target, output_shapes, dtypes,
+              has_side_effect, backend_config, api_version);
+          return bridge::AtenFromXlaTensors(std::move(xtensors));
+        });
   m.def("_xla_tpu_custom_call",
         [](const std::vector<at::Tensor>& inputs, const std::string& payload,
            const std::vector<std::vector<int64_t>>& output_shapes,
@@ -2487,6 +2505,31 @@ void InitXlaModuleBindings(py::module m) {
     }
     return false;
   });
+
+  m.def("_unsafe_buffer_pointer",
+        [](const at::Tensor& input) -> std::uintptr_t {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          XLA_CHECK(xtensor) << "The input is not an XLA tensor.";
+          if (xtensor->CurrentDataHandle() != nullptr) {
+            std::shared_ptr<runtime::ComputationClient::Data> data =
+                std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                    xtensor->CurrentDataHandle());
+            return runtime::GetComputationClient()->UnsafeBufferPointer(data);
+          } else if (xtensor->CurrentIrValue().node != nullptr) {
+            DeviceData* device_data =
+                DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+            if (device_data != nullptr) {
+              torch::lazy::BackendDataPtr data = device_data->data();
+              return runtime::GetComputationClient()->UnsafeBufferPointer(
+                  UnwrapXlaData(data));
+            } else {
+              XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
+                             "with IR that's not DeviceData";
+            }
+          }
+          XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
+                         "without a data handle or an IR.";
+        });
 
   // -------------Dynamo Integration API Start-------------------------
   /*

@@ -19,53 +19,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Old CI workflow
-  build:
-    name: "Build PyTorch/XLA (GPU)"
-    uses: ./.github/workflows/_build.yml
-    with:
-      ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
-      gcr-docker-image: gcr.io/tpu-pytorch/xla_base:dev-3.8_cuda_12.1
-      cuda: 1
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cpp-cpu:
-    name: "CPU C++ tests"
-    uses: ./.github/workflows/_test_cpp.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      timeout-minutes: 120
-      collect-coverage: false  # TODO(yeounoh) separate from CPU coverage metrics
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
-
-  test-cpp-cuda:
-    name: "GPU C++ tests"
-    uses: ./.github/workflows/_test_cpp.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 300
-      collect-coverage: false  # TODO(yeounoh) separate from CPU coverage metrics
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
-
-  push-docs:
-    name: "Build & publish docs"
-    if: github.event_name == 'push' && (github.event.ref == 'refs/heads/master' || startsWith(github.event.ref, 'refs/tags/r'))
-    uses: ./.github/workflows/_docs.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-    secrets:
-      torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}
-
-  # New CI workflow
   build-torch-xla:
-    name: "Build PyTorch/XLA (TPU)"
+    name: "Build PyTorch/XLA"
     uses: ./.github/workflows/_build_torch_xla.yml
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
@@ -81,8 +37,8 @@ jobs:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   test-python-cpu:
-    name: "CPU Python tests"
-    uses: ./.github/workflows/_test_python.yml
+    name: "CPU tests"
+    uses: ./.github/workflows/_test.yml
     needs: build-torch-xla
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
@@ -91,9 +47,9 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-python-cuda:
-    name: "GPU Python tests"
-    uses: ./.github/workflows/_test_python.yml
+  test-cuda:
+    name: "GPU tests"
+    uses: ./.github/workflows/_test.yml
     needs: [build-torch-xla, build-cuda-plugin]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
@@ -109,5 +65,13 @@ jobs:
     uses: ./.github/workflows/_tpu_ci.yml
     needs: build-torch-xla
     # Only run this for HEAD and releases
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'tpuci')
 
+  push-docs:
+    name: "Build docs"
+    uses: ./.github/workflows/_docs.yml
+    needs: build-torch-xla
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
+    secrets:
+      torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}

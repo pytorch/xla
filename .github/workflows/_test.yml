@@ -53,6 +53,10 @@ jobs:
             run_xla_op_tests3: 'xla_op3'
           - run_python_tests: 'python_tests'
             run_torch_mp_op_tests: 'torch_mp_op'
+          - run_cpp_tests: 'cpp_tests'
+            run_cpp_tests1: 'cpp_tests1'
+          - run_cpp_tests: 'cpp_tests'
+            run_cpp_tests2: 'cpp_tests2'
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
@@ -64,9 +68,16 @@ jobs:
       RUN_XLA_OP_TESTS2: ${{ matrix.run_xla_op_tests2 }}
       RUN_XLA_OP_TESTS3: ${{ matrix.run_xla_op_tests3 }}
       RUN_TORCH_MP_OP_TESTS: ${{ matrix.run_torch_mp_op_tests }}
+      RUN_CPP_TESTS1: ${{ matrix.run_cpp_tests1 }}
+      RUN_CPP_TESTS2: ${{ matrix.run_cpp_tests2 }}
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
     steps:
+      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+      - name: Clean up workspace
+        run: |
+          ls -la
+          rm -rvf ${GITHUB_WORKSPACE}/*
       - name: Setup gcloud
         shell: bash
         run: |
@@ -76,6 +87,19 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
+      - name: Fetch CPP test binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: cpp-test-bin
+          path: /tmp/test/bin
+        if: ${{ matrix.run_cpp_tests }}
+      # GitHub Actions doesn't preserve executable permissions
+      # https://github.com/actions/download-artifact?tab=readme-ov-file#permission-loss
+      - name: Set CPP test permissions
+        run: |
+          chmod +x /tmp/test/bin/*
+          ls -l /tmp/test/bin
+        if: ${{ matrix.run_cpp_tests }}
       - name: Fetch CUDA plugin
         uses: actions/download-artifact@v4
         with:
@@ -101,8 +125,17 @@ jobs:
           # TODO: Add these in setup.py
           pip install fsspec
           pip install rich
+
+          echo "Import check..."
+          python -c "import torch_xla"
       - name: Record PyTorch commit
-        run: echo "PYTORCH_COMMIT=$(python -c 'import torch_xla.version; print(torch_xla.version.__torch_gitrev__)')" >> $GITHUB_ENV
+        run: |
+          # Don't just pipe output in shell because imports may do extra logging
+          python -c "
+          import torch_xla.version
+          with open('$GITHUB_ENV', 'a') as f:
+            f.write(f'PYTORCH_COMMIT={torch_xla.version.__torch_gitrev__}\n')
+          "
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
@@ -125,10 +158,7 @@ jobs:
           fi
       - name: Test
         shell: bash
-        run: |
-          source pytorch/xla/.circleci/common.sh
-
-          run_torch_xla_tests pytorch/ pytorch/xla/ $USE_COVERAGE
+        run: pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
       - name: Upload coverage results
         if: ${{ inputs.collect-coverage }}
         shell: bash

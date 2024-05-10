@@ -18,7 +18,7 @@ def _extract_backend_config(
     module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> str | None:
   """
   This algorithm intends to extract the backend config from the compiler IR like the following,
-  and it is designed to traverse any generic MLIR module.
+  and it is not designed to traverse any generic MLIR module.
 
   module @jit_add_vectors attributes {mhlo.num_partitions = 1 : i32, mhlo.num_replicas = 1 : i32} {
     func.func public @main(%arg0: tensor<8xi32> {mhlo.layout_mode = "default", mhlo.sharding = "{replicated}"}, %arg1: tensor<8xi32> {mhlo.layout_mode = "default", mhlo.sharding = "{replicated}"}) -> (tensor<8xi32> {jax.result_info = "", mhlo.layout_mode = "default"}) {
@@ -55,17 +55,12 @@ def jax_import_guard():
   torch_xla._XLAC._init_computation_client()
 
 
-def trace_pallas(kernel: Callable,
-                 *args,
-                 static_argnums=None,
-                 static_argnames=None,
-                 **kwargs):
+def to_jax_shape_dtype_struct(tensor: torch.Tensor) -> "jax.ShapeDtypeStruct":
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
   import jax
   import jax.numpy as jnp
-  import jax._src.pallas.mosaic.pallas_call_registration
 
   def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
     if dtype == torch.float32:
@@ -93,14 +88,28 @@ def trace_pallas(kernel: Callable,
     else:
       raise ValueError(f"Unsupported dtype: {dtype}")
 
+  return jax.ShapeDtypeStruct(tensor.shape,
+                              convert_torch_dtype_to_jax(tensor.dtype))
+
+
+def trace_pallas(kernel: Callable,
+                 *args,
+                 static_argnums=None,
+                 static_argnames=None,
+                 **kwargs):
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  import jax._src.pallas.mosaic.pallas_call_registration
+
   jax_args = []  # for tracing
   tensor_args = []  # for execution
   for i, arg in enumerate(args):
     # TODO: Could the args be a tuple of tensors or a list of tensors? Flattern them?
     if torch.is_tensor(arg):
       # ShapeDtypeStruct doesn't have any storage and thus is very suitable for generating the payload.
-      jax_meta_tensor = jax.ShapeDtypeStruct(
-          arg.shape, convert_torch_dtype_to_jax(arg.dtype))
+      jax_meta_tensor = to_jax_shape_dtype_struct(arg)
       jax_args.append(jax_meta_tensor)
       tensor_args.append(arg)
     else:
@@ -167,15 +176,38 @@ class FlashAttention(torch.autograd.Function):
       "block_k_dq": 256,
       "block_k_major_dq": 512,
   }
+  NUM_LANES = 128
+  NUM_SUBLANES = 8
 
   @staticmethod
-  def forward(ctx, q, k, v, causal=False, partition_spec=None, mesh=None):
+  def prepare_segment_ids(q_segment_ids, kv_segment_ids):
+    from jax.experimental.pallas.ops.tpu.flash_attention import SegmentIds
+    if q_segment_ids is None or kv_segment_ids is None:
+      return None, None, None
+
+    assert q_segment_ids is not None and kv_segment_ids is not None, "Both q_segment_ids and kv_segment_ids should be provided."
+    segment_ids = SegmentIds(
+        to_jax_shape_dtype_struct(q_segment_ids),
+        to_jax_shape_dtype_struct(kv_segment_ids))
+    q_segment_ids = q_segment_ids.unsqueeze(-1).expand(
+        [-1 for _ in q_segment_ids.shape] + [FlashAttention.NUM_LANES])
+    kv_segment_ids = kv_segment_ids.unsqueeze(1).expand([
+        kv_segment_ids.shape[0], FlashAttention.NUM_SUBLANES,
+        kv_segment_ids.shape[1]
+    ])
+    return segment_ids, q_segment_ids, kv_segment_ids
+
+  @staticmethod
+  def forward(ctx, q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale,
+              partition_spec, mesh):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
+    import jax
     from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
 
     ctx.causal = causal
+    ctx.sm_scale = sm_scale
     ctx.partition_spec = partition_spec
     ctx.mesh = mesh
     ctx.full_shape = None
@@ -192,37 +224,49 @@ class FlashAttention(torch.autograd.Function):
       k = xs.enable_manual_sharding(k, partition_spec, mesh=mesh).global_tensor
       v = xs.enable_manual_sharding(v, partition_spec, mesh=mesh).global_tensor
 
-    # It returns the shape and type of o, l, m.
-    def shape_dtype(q, *arg):
-      if not save_residuals:
-        return [(q.shape, q.dtype)]
+    # It computes the shape and type of o, l, m.
+    shapes = [q.shape]
+    dtypes = [q.dtype]
+    if save_residuals:
       res_shape = list(q.shape)
       res_shape[-1] = FlashAttention.MIN_BLOCK_SIZE
-      return [(q.shape, q.dtype), (res_shape, torch.float32),
-              (res_shape, torch.float32)]
+      for _ in range(2):
+        shapes.append(res_shape)
+        dtypes.append(torch.float32)
 
-    # We can't directly use flash_attention as we need to override the save_residuals flag which returns
-    # l and m that is needed for the backward. Then we lose all the shape checks.
-    # TODO: replicate the shape checks on flash_attention.
-    _flash_attention_impl = make_kernel_from_pallas(_flash_attention_impl,
-                                                    shape_dtype)
     with torch.no_grad():
-      o = _flash_attention_impl(
+      segment_ids, q_segment_ids, kv_segment_ids = FlashAttention.prepare_segment_ids(
+          q_segment_ids, kv_segment_ids)
+      ctx.segment_ids = segment_ids
+
+      # We can't directly use flash_attention as we need to override the save_residuals flag which returns
+      # l and m that is needed for the backward. Then we lose all the shape checks.
+      # TODO: replicate the shape checks on flash_attention.
+      # Here we seperate the tracing and execution part just to support SegmentIds.
+      payload, _ = trace_pallas(
+          _flash_attention_impl,
           q,
           k,
           v,
           None,
-          None,
+          segment_ids,
           save_residuals,
           causal,
-          1.0,
+          sm_scale,
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_b"], q.shape[0]),
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q"], q.shape[2]),
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], k.shape[2]),
           min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2]),
           False,
           static_argnums=range(5, 13))
+
+      args = [q, k, v]
+      if segment_ids is not None:
+        args += [q_segment_ids, kv_segment_ids]
+      o = torch_xla._XLAC._xla_tpu_custom_call(args, payload, shapes, dtypes)
+
       if not save_residuals:
+        o = o[0]
         # SPMD integration
         if partition_spec is not None:
           o = xs.disable_manual_sharding(
@@ -240,18 +284,21 @@ class FlashAttention(torch.autograd.Function):
       m = xs.disable_manual_sharding(
           m, partition_spec[0:3], ctx.full_shape[0:3], mesh=mesh).global_tensor
 
-    ctx.save_for_backward(full_q, full_k, full_v, o, l, m)
+    ctx.save_for_backward(full_q, full_k, full_v, o, l, m, q_segment_ids,
+                          kv_segment_ids)
     return o
 
   @staticmethod
   def backward(ctx, grad_output):
     from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq, _flash_attention_bwd_dkv
 
-    q, k, v, o, l, m = ctx.saved_tensors
+    q, k, v, o, l, m, q_segment_ids, kv_segment_ids = ctx.saved_tensors
     causal = ctx.causal
+    sm_scale = ctx.sm_scale
     partition_spec = ctx.partition_spec
     mesh = ctx.mesh
     full_shape = ctx.full_shape
+    segment_ids = ctx.segment_ids
     grad_q = grad_k = grad_v = None
 
     grad_i = torch.sum(
@@ -286,7 +333,7 @@ class FlashAttention(torch.autograd.Function):
           k,
           v,
           None,
-          None,
+          segment_ids,
           l,
           m,
           grad_output,
@@ -298,7 +345,7 @@ class FlashAttention(torch.autograd.Function):
               k.shape[2]),
           block_k=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_dq"],
                       k.shape[2]),
-          sm_scale=1.0,
+          sm_scale=sm_scale,
           causal=causal,
           mask_value=FlashAttention.DEFAULT_MASK_VALUE,
           debug=False,
@@ -306,9 +353,13 @@ class FlashAttention(torch.autograd.Function):
               "block_q_major", "block_k_major", "block_k", "sm_scale", "causal",
               "mask_value", "debug"
           ])
-      grad_q = torch_xla._XLAC._xla_tpu_custom_call(
-          [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
-          payload, [q.shape], [q.dtype])[0]
+
+      args = [q, k, v]
+      if segment_ids is not None:
+        args += [q_segment_ids, kv_segment_ids]
+      args += [expanded_l, expanded_m, grad_output, expanded_grad_i]
+      grad_q = torch_xla._XLAC._xla_tpu_custom_call(args, payload, [q.shape],
+                                                    [q.dtype])[0]
 
     if ctx.needs_input_grad[1] or ctx.needs_input_grad[2]:
       payload, _ = trace_pallas(
@@ -317,7 +368,7 @@ class FlashAttention(torch.autograd.Function):
           k,
           v,
           None,
-          None,
+          segment_ids,
           l,
           m,
           grad_output,
@@ -332,7 +383,7 @@ class FlashAttention(torch.autograd.Function):
                       k.shape[2]),
           block_q=min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q_dkv"],
                       q.shape[2]),
-          sm_scale=1.0,
+          sm_scale=sm_scale,
           causal=causal,
           mask_value=FlashAttention.DEFAULT_MASK_VALUE,
           debug=False,
@@ -340,9 +391,14 @@ class FlashAttention(torch.autograd.Function):
               "block_q_major", "block_k_major", "block_k", "block_q",
               "sm_scale", "causal", "mask_value", "debug"
           ])
-      grads = torch_xla._XLAC._xla_tpu_custom_call(
-          [q, k, v, expanded_l, expanded_m, grad_output, expanded_grad_i],
-          payload, [k.shape, v.shape], [k.dtype, v.dtype])
+
+      args = [q, k, v]
+      if segment_ids is not None:
+        args += [q_segment_ids, kv_segment_ids]
+      args += [expanded_l, expanded_m, grad_output, expanded_grad_i]
+      grads = torch_xla._XLAC._xla_tpu_custom_call(args, payload,
+                                                   [k.shape, v.shape],
+                                                   [k.dtype, v.dtype])
     if ctx.needs_input_grad[1]:
       grad_k = grads[0]
     if ctx.needs_input_grad[2]:
@@ -357,7 +413,7 @@ class FlashAttention(torch.autograd.Function):
       grad_v = xs.disable_manual_sharding(
           grad_v, partition_spec, full_shape, mesh=mesh).global_tensor
 
-    return grad_q, grad_k, grad_v, None, None, None
+    return grad_q, grad_k, grad_v, None, None, None, None, None, None
 
 
 def flash_attention(
@@ -365,10 +421,73 @@ def flash_attention(
     k,  # [batch_size, num_heads, kv_seq_len, d_model]
     v,  # [batch_size, num_heads, kv_seq_len, d_model]
     causal=False,
+    q_segment_ids=None,  # [batch_size, q_seq_len]
+    kv_segment_ids=None,  # [batch_size, kv_seq_len]
+    sm_scale=1.0,
     *,
     partition_spec=None,
     mesh=None):
-  return FlashAttention.apply(q, k, v, causal, partition_spec, mesh)
+  # TODO: support SPMD and Dynamo with segment_ids.
+  return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
+                              sm_scale, partition_spec, mesh)
+
+
+def paged_attention(q, k_pages, v_pages, lengths, page_indices,
+                    pages_per_compute_block):
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
+
+  payload, tensor_args = trace_pallas(
+      paged_attention,
+      q,
+      k_pages,
+      v_pages,
+      lengths,
+      page_indices,
+      pages_per_compute_block=pages_per_compute_block,
+      static_argnames=["pages_per_compute_block"],
+  )
+
+  batch_size, num_heads, head_dim = q.shape
+  num_kv_heads, _, page_size, head_dim_k = k_pages.shape
+  batch_size_paged_indices, pages_per_sequence = page_indices.shape
+  q_dtype_for_kernel_launch = q.dtype
+  if (num_heads // num_kv_heads) % 8 != 0:
+    q = q.reshape(batch_size, num_heads, 1, head_dim)
+    q_dtype_for_kernel_launch = torch.float32
+
+  page_indices_reshaped = page_indices.reshape(-1)
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
+  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  output_shape = torch.Size(list(q.shape[:-1]) + [1])
+
+  output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
+      [
+          lengths,
+          page_indices_reshaped,
+          buffer_index,
+          step,
+          q.to(q_dtype_for_kernel_launch),
+          k_pages,
+          v_pages,
+      ], payload, [q.shape, output_shape, output_shape],
+      [q_dtype_for_kernel_launch, torch.float32, torch.float32])
+
+  return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
+
+
+def non_xla_attetion(q, k, v, attention_type):
+  # This will be called when dynamo use fake tensor to construct the fake output.
+  # We need to make sure output tensor's shape is correct.
+  if k.device != torch.device("meta"):
+    warnings.warn(
+        f'XLA {attention_type} attention should only be applied to tensors on XLA device'
+    )
+
+  # Return orignal shape of q.
+  return torch.empty_like(q)
 
 
 XLA_LIB.define(
@@ -389,14 +508,26 @@ def flash_attention_non_xla(q: torch.Tensor,
                             k: torch.Tensor,
                             v: torch.Tensor,
                             causal: bool = False):
-  # This will be called when dynamo use fake tensor to construct the fake output.
-  # We need to make sure output tensor's shape is correct.
-  if k.device != torch.device("meta"):
-    warnings.warn(
-        'XLA flash attention should only be applied to tensors on XLA device')
+  return non_xla_attetion(q, k, v, "flash")
 
-  # perform a regular attention if input tensors are not on XLA device.
-  attn_weight = q @ k.transpose(-2, -1)
-  attn_weight = torch.nn.functional.softmax(attn_weight, dim=-1)
-  attn_output = attn_weight @ v
-  return attn_output
+
+XLA_LIB.define(
+    "paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block) -> Tensor",
+)
+
+
+@impl(XLA_LIB, "paged_attention", "XLA")
+def paged_attention_xla(q: torch.Tensor, k_pages: torch.Tensor,
+                        v_pages: torch.Tensor, lengths: torch.Tensor,
+                        page_indices: torch.Tensor,
+                        pages_per_compute_block: int):
+  return paged_attention(q, k_pages, v_pages, lengths, page_indices,
+                         pages_per_compute_block)
+
+
+@impl(XLA_LIB, "paged_attention", "CompositeExplicitAutograd")
+def paged_attention_non_xla(q: torch.Tensor, k_pages: torch.Tensor,
+                            v_pages: torch.Tensor, lengths: torch.Tensor,
+                            page_indices: torch.Tensor,
+                            pages_per_compute_block: int):
+  return non_xla_attetion(q, k_pages, v_pages, "paged")

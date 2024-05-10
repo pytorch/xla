@@ -54,6 +54,8 @@ class IfrtComputationClient : public ComputationClient {
   std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
 
+  std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;
+
   DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
       std::string device, xla::Shape shape, xla::OpSharding sharding) override;
@@ -134,7 +136,7 @@ class IfrtComputationClient : public ComputationClient {
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
   // dense global ordinal.
   std::unordered_map<int, int> global_ordinals_;
-  std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
+  std::unordered_map<std::string, xla::ifrt::Device* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
   OperationManager operation_manager_;
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
