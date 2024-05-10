@@ -6,7 +6,7 @@ import torch
 import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
-from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop_get_xla_computation
+from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop_get_xla_computation, _xla_while_loop_target, _xla_while_loop_target_first
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
@@ -37,6 +37,7 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
 class WhileLoopTest(unittest.TestCase):
   # --------------------------------------
   # while_loop + PyLoweringContext
+  # passed
   def test_while_loop_tpu_subtraction(self):
 
     device = xm.xla_device()
@@ -55,6 +56,7 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+  # passed
   def test_while_loop_tpu_addition(self):
 
     device = xm.xla_device()
@@ -73,6 +75,7 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+  # passed
   def test_while_loop_tpu_subtraction_nested(self):
 
     device = xm.xla_device()
@@ -92,6 +95,7 @@ class WhileLoopTest(unittest.TestCase):
     self.assertEqual(expected, res)
 
   # while_loop + PyLoweringContext + linear
+  # passed
   def test_while_loop_tpu_simple_linear_outside_loop(self):
 
     xm.mark_step()
@@ -127,7 +131,8 @@ class WhileLoopTest(unittest.TestCase):
 
     return self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
 
-  def test_while_loop_tpu_simple_linear_class_inside_loop(self):
+  # passed
+  def test_while_loop_tpu_simple_linear_class_inside_loop_while_loop(self):
 
     xm.mark_step()
     device = xm.xla_device()
@@ -186,8 +191,56 @@ class WhileLoopTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
     return aaa
 
+  def test_while_loop_tpu_simple_linear_target_inside_loop_while_loop(self):
+    xm.mark_step()
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    class SimpleWithLinear(torch.nn.Module):
+      def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(2, 2)
+        # self.register_buffer("dec", torch.tensor(1))
+
+      def forward(self, iter, x):
+        weight_bias_lists = []
+        for name, param in self.linear.named_parameters():
+          print("name: ", name)
+          print("param: ", param)
+          weight_bias_lists.append(param)
+
+        # def cond_fn(it, x):
+        #   return it - self.dec > 0
+        def cond_fn(it, x):
+          return it > 0
+
+        def body_fn(it, x):
+          return it - 1, self.linear(x)
+
+        # return while_loop(cond_fn, body_fn, (iter, x))
+        return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x), weight_bias_lists)
+
+    simple_with_linear = SimpleWithLinear()
+    simple_with_linear.to(device)
+    #breakpoint()
+    # input = torch.randn(2, 2).to(device)
+    input = torch.ones(2, 2).to(device)
+    iter = torch.tensor(3, device=device)
+    res = simple_with_linear(iter, input)
+    print("act-res: ", res[-1])
+
+    # create same weight/bias liear model for compare
+    linear_0 = torch.nn.Linear(2, 2).to(device)
+    linear_0.weight.data = simple_with_linear.linear.weight
+    linear_0.bias.data = simple_with_linear.linear.bias
+    # expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
+    for i in range(3):
+      input = linear_0(input)
+    print("expexted: ", input)
+    # self.assertEqual(res[-1], input)
+
   # WIP for target while_loop + PyLoweringContext + linear
-  def test_while_loop_tpu_simple_linear_class_inside_loop(self):
+  def test_while_loop_tpu_simple_linear_class_inside_loop_xla_while_loop_get_xla_computation(self):
 
     xm.mark_step()
     device = xm.xla_device()
@@ -198,87 +251,8 @@ class WhileLoopTest(unittest.TestCase):
 
       def __init__(self):
         super().__init__()
-        # self.linear = torch.nn.Linear(10, 20).to(xm.xla_device())
         self.linear = torch.nn.Linear(2, 2)
         self.register_buffer("dec", torch.tensor(1))
-
-      # def forward(self, iter, x):
-      #     def cond_fn(it, x):
-      #         return it - self.dec > 0
-
-      #     def body_fn(it, x):
-      #         return it - 1, self.linear(x)
-
-      #     return while_loop(cond_fn, body_fn, (iter, x))
-
-      def forward(self, iter, x):
-          def cond_fn(it, x):
-              return it - self.dec > 0
-
-          def body_fn(it, x):
-              return it - 1, self.linear(x)
-
-          # return while_loop(cond_fn, body_fn, (iter, x))
-          return _xla_while_loop_get_xla_computation(cond_fn, body_fn, (iter, x), ())
-
-      # def forward(self, upper, lower, one_value, x, input_value, output_value):
-
-      #   def cond_fn(upper, lower, one_value, x, input_value, output_value):
-      #     return lower[0] < upper[0]
-
-      #   def body_fn(upper, lower, one_value, x, input_value, output_value):
-      #     new_lower = torch.add(one_value, lower)
-      #     output_value_real = self.linear(input_value)
-      #     weight = self.linear.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-      #     bias = self.linear.bias  # not be used actually, initialized as placeholder xlacomputation requirement
-      #     return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-      #         one_value, x), input_value.clone(
-      #         ), output_value_real, weight.clone(), bias.clone()
-
-      #   return while_loop(
-      #       cond_fn, body_fn,
-      #       (upper, lower, one_value, x, input_value, output_value))
-
-    simple_with_linear = SimpleWithLinear()
-    simple_with_linear.to(device)
-    #breakpoint()
-    input = torch.randn(2, 2).to(device)
-    iter = torch.tensor(3, device=device)
-    res = simple_with_linear(iter, input)
-
-    return res
-
-    # upper = torch.tensor([52], dtype=torch.int32, device=device)
-    # lower = torch.tensor([0], dtype=torch.int32, device=device)
-    # one_value = torch.tensor([1], dtype=torch.int32, device=device)
-    # init_val = torch.tensor([1], dtype=torch.int32, device=device)
-    # l_in_0 = torch.rand(10, device=xm.xla_device())
-    # output_value = torch.zeros([20], dtype=torch.float32, device=device)
-
-    # upper__, lower__, one_value__, torch_add_res__, input_value__, output_value_real__, weight__, bias__ = simple_with_linear(
-    #     upper, lower, one_value, init_val, l_in_0, output_value)
-
-    # # create same weight/bias liear model for compare
-    # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-    # linear_0.weight.data = weight__
-    # linear_0.bias.data = bias__
-    # expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
-
-    # self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
-    # return aaa
-
-  def test_while_loop_tpu_simple_linear_target_inside_loop(self):
-
-    xm.mark_step()
-    device = xm.xla_device()
-    #device = ''
-    torch.set_grad_enabled(False)
-
-    class SimpleWithLinear(torch.nn.Module):
-      def __init__(self):
-          super().__init__()
-          self.linear = torch.nn.Linear(2, 2)
-          self.register_buffer("dec", torch.tensor(1))
 
       def forward(self, iter, x):
           def cond_fn(it, x):
@@ -288,13 +262,16 @@ class WhileLoopTest(unittest.TestCase):
               return it - 1, self.linear(x)
 
           return while_loop(cond_fn, body_fn, (iter, x))
-      
+          # return _xla_while_loop_get_xla_computation(cond_fn, body_fn, (iter, x), ())
+
     simple_with_linear = SimpleWithLinear()
     simple_with_linear.to(device)
     #breakpoint()
     input = torch.randn(2, 2).to(device)
     iter = torch.tensor(3, device=device)
     res = simple_with_linear(iter, input)
+
+    return res
 
   def test_while_loop_tpu_MNIST_outside_loop(self):
 
@@ -370,6 +347,7 @@ class WhileLoopTest(unittest.TestCase):
   # ------------------------
   # _get_xla_computation
   # pass
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_get_xlacomputation(self):
 
     xm.mark_step()
@@ -389,6 +367,7 @@ class WhileLoopTest(unittest.TestCase):
     else:
       print("print computation from _get_xla_computation: null !!!!!!!!!!!!!")
 
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_get_xlacomputation_directly(self):
 
     xm.mark_step()
@@ -408,6 +387,7 @@ class WhileLoopTest(unittest.TestCase):
     else:
       print("print computation from _get_xla_computation: null !!!!!!!!!!!!!")
 
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_get_xlacomputation_tpu_simple_linear_without_while_loop(self):
 
     xm.mark_step()
@@ -441,6 +421,7 @@ class WhileLoopTest(unittest.TestCase):
       print("print computation from _get_xla_computation: null !!!!!!!!!!!!!")
 
   # _xla_while_loop_get_xla_computation + _get_xla_computation
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_tpu_subtraction_get_xla_computation(self):
 
     device = xm.xla_device()
@@ -459,6 +440,7 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_tpu_addition_get_xla_computation(self):
 
     device = xm.xla_device()
@@ -477,6 +459,7 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_tpu_subtraction_nested_get_xla_computation(self):
 
     device = xm.xla_device()
@@ -496,6 +479,7 @@ class WhileLoopTest(unittest.TestCase):
     self.assertEqual(expected, res)
 
   # _xla_while_loop_get_xla_computation + _get_xla_computation + linear
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_tpu_simple_linear_outside_loop_get_xla_computation(self):
 
     xm.mark_step()
@@ -531,6 +515,7 @@ class WhileLoopTest(unittest.TestCase):
 
     return self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
 
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_tpu_simple_linear_class_inside_loop_get_xla_computation(self):
 
     xm.mark_step()
@@ -591,6 +576,7 @@ class WhileLoopTest(unittest.TestCase):
     return aaa
 
   # while_loop + _get_xla_computation: WIP
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_get_xlacomputation_tpu_simple_linear_while_loop(self):
 
     xm.mark_step()

@@ -64,12 +64,144 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
   if additional_inputs is None:
     additional_inputs = tuple()
-  print("arrive @while_loop_op.py_impl(DispatchKey.XLA)")
-  return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
+  # print("arrive @while_loop_op.py_impl(DispatchKey.XLA)")
+  # return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
+  return _xla_while_loop_target(cond_fn, body_fn, carried_inputs, additional_inputs)
+
+
+def _xla_while_loop_target_first(cond_fn, body_fn, carried_inputs, additional_inputs=None):
+  def new_body_fn(*carried_inputs):
+    res = list(body_fn(*carried_inputs))
+    iter = res[0]
+    inputs_and_outputs = res[1:]
+    # if len(inputs_and_outputs)==1:
+    #   inputs_and_outputs = [inputs_and_outputs,]
+    # res = res + list(additional_inputs)
+    res = [iter,] + list(additional_inputs) + list(inputs_and_outputs,)
+    return res
+  return _xla_while_loop_target(cond_fn, new_body_fn, carried_inputs, additional_inputs)
+
+def _xla_while_loop_target(cond_fn, body_fn, carried_inputs, additional_inputs=None):
+  # print("arrive _xla_while_loop")
+  print("carried_inputs: ", carried_inputs)
+  print("type carried_inputs: ", type(carried_inputs))
+  print("additional_inputs: ", additional_inputs)
+  ### use output as input now case, so we could get output in the return value from original inpjut position
+
+  # fake carried_inputs to split formal code
+  fake_carried_inputs = []
+  for carried_input in carried_inputs:
+    device = carried_input.device
+    fake_carried_inputs.append(
+        torch.randint(10, carried_input.size(),
+                      dtype=carried_input.dtype).to(device))
+  for additional_input in additional_inputs:
+    device = additional_input.device
+    fake_carried_inputs.append(
+        torch.randint(
+            10, additional_input.size(),
+            dtype=additional_input.dtype).to(device))
+
+  print("fake_carried_inputs: ", fake_carried_inputs)
+
+  # TODO(@manfei): specify which element is for which argument like a,b,c
+  # cond_result = cond_fn(*fake_carried_inputs)
+  cond_result = cond_fn(*carried_inputs)
+  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  cond_ctx.set_name_string("condctx")
+
+  # skip exist iter, add other additional inputs
+  additional_inputs_list_cond = list(
+      fake_carried_inputs[1:]
+  )
+  # seems due to post-order, input was in the final position of xlacomputation, so move inputs' order like that too
+  if additional_inputs:
+    print("arrive here for cond !!!")
+    tmp_output = additional_inputs_list_cond[0]  # not used, change order doesn't affect logic
+    del additional_inputs_list_cond[0]  # not used, change order doesn't affect logic
+    additional_inputs_list_cond.append(tmp_output)  # not used, change order doesn't affect logic
+
+  print("additional_inputs_list_cond: ", additional_inputs_list_cond)
+  cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
+  # cond_ctx.buildforiloop([cond_result], ())
+  cond_hlo = cond_ctx.hlo()
+  cond_computation = xb.computation_from_module_proto("condcomputation",
+                                                      cond_hlo)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  print("cond computation: !!!!!!!!!")
+  print(cond_hlo_print)
+
+  # generate body_fn xlacomputation
+  # body_result = body_fn(*fake_carried_inputs)
+  body_result = body_fn(*carried_inputs)
+  body_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  body_ctx.set_name_string("bodyctx")
+
+  # # add output arg in body's input for result save to meet requirement
+  # # TODO(@manfei): treat hard-code body xlacomputation change: currently add non-changed output_value argument if additional_inputs(weight/bias) exists
+  # if additional_inputs:
+  #   # print("arrive here !!!")
+  #   additional_inputs_list_body = [fake_carried_inputs[5]]
+  # else:
+  #   # print("arrive here too !!!")
+  #   additional_inputs_list_body = []
+
+  # for no-weight-bias-return body, we need to add params in build
+  additional_inputs_list_body = additional_inputs
+
+  # TODO(@manfei): treat hard-code parameters: additional_inputs_list_body
+  # body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
+  body_ctx.buildforiloop(list(body_result), ())
+  body_hlo = body_ctx.hlo()
+  body_computation = xb.computation_from_module_proto("bodycomputation",
+                                                      body_hlo)
+  body_hlo_print = xb.get_computation_hlo(body_computation)
+  print("body computation: !!!!!!!!!")
+  print(body_hlo_print)
+
+  # trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
+  total_inputs = carried_inputs + tuple(additional_inputs)
+  kwargs = {}
+  if type(total_inputs) is tuple:
+    shapes = xb.tensor_shape(total_inputs)
+  else:
+    shapes = xb.tensor_shape((total_inputs))
+  builder = xb.create_builder('test_while')
+  params = []
+  for shape in shapes:
+    p = xb.mkparam(builder, len(params), shape)
+    params.append(p)
+
+  # change order of output of real inputs to match the real body's xlacomputation due to post order
+  # TODO(@manfei): treat hard-code input arguments, currently switch bias and output_value if additional_inputs(weight/bias) exists
+  if additional_inputs:
+    tmp_output = params[1]
+    del params[1]
+    params.append(tmp_output)
+    # tmp_bias = params[-3]
+    # del params[-3]
+    # params.append(tmp_bias)
+
+  # generate while xlacomputation
+  input_tuple = xb.Op.tuple(tuple(params))
+  w = xb.mkop(
+      'While', (input_tuple.op,),
+      condition_computation=cond_computation,
+      body_computation=body_computation)
+  name = 'fori_loop_ed_torch_func'
+  computation = w.build(name)
+
+  # gain final result with generated while xlacomputation
+  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
+                                                 (total_inputs), computation)
+
+  return result
 
 
 def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
-  print("arrive _xla_while_loop")
+  # print("arrive _xla_while_loop")
+  print("carried_inputs: ", carried_inputs)
+  print("additional_inputs: ", additional_inputs)
   # fake carried_inputs to split formal code
   fake_carried_inputs = []
   for carried_input in carried_inputs:
@@ -93,16 +225,15 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   additional_inputs_list_cond = list(
       fake_carried_inputs[2:]
   )  # all missed arguments except upper/lower due to PyTorch/XLA trace from output tensor
+  # reorder the additional_inputs due to the given additional_inputs are not generated with expected order, let's check how `additional_inputs` was generated for mnist
   if additional_inputs:
-    tmp_bias = additional_inputs_list_cond[
-        -3]  # not used, change order doesn't affect logic
-    del additional_inputs_list_cond[
-        -3]  # not used, change order doesn't affect logic
-    additional_inputs_list_cond.append(
-        tmp_bias)  # not used, change order doesn't affect logic
+    # print("arrive here for cond !!!")
+    tmp_output = additional_inputs_list_cond[3]  # not used, change order doesn't affect logic
+    del additional_inputs_list_cond[3]  # not used, change order doesn't affect logic
+    additional_inputs_list_cond.append(tmp_output)  # not used, change order doesn't affect logic
 
-  # cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
-  cond_ctx.buildforiloop([cond_result], ())
+  cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
+  # cond_ctx.buildforiloop([cond_result], ())
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
@@ -117,13 +248,15 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
   # TODO(@manfei): treat hard-code body xlacomputation change: currently add non-changed output_value argument if additional_inputs(weight/bias) exists
   if additional_inputs:
-    additional_inputs_list_body = [fake_carried_inputs[-3]]
+    # print("arrive here !!!")
+    additional_inputs_list_body = [fake_carried_inputs[5]]
   else:
+    # print("arrive here too !!!")
     additional_inputs_list_body = []
 
   # TODO(@manfei): treat hard-code parameters: additional_inputs_list_body
-  # body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
-  body_ctx.buildforiloop(list(body_result), ())
+  body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
+  # body_ctx.buildforiloop(list(body_result), ())
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
@@ -146,9 +279,12 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
   # TODO(@manfei): treat hard-code input arguments, currently switch bias and output_value if additional_inputs(weight/bias) exists
   if additional_inputs:
-    tmp_bias = params[-3]
-    del params[-3]
-    params.append(tmp_bias)
+    tmp_output = params[5]
+    del params[5]
+    params.append(tmp_output)
+    # tmp_bias = params[-3]
+    # del params[-3]
+    # params.append(tmp_bias)
 
   # generate while xlacomputation
   input_tuple = xb.Op.tuple(tuple(params))
