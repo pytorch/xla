@@ -181,10 +181,7 @@ class PjRtComputationClient : public ComputationClient {
     };
     void Assign(const torch::lazy::BackendData& data) override;
     bool HasValue() const override {
-      // bool has_value = buffer != nullptr && !buffer->IsDeleted();
-      // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": buffer != nullptr=" << (buffer != nullptr) << ", buffer->IsDeleted()=" << buffer->IsDeleted() << std::endl;
-      // return has_value;
-      return buffer != nullptr && !buffer->IsDeleted(); // TODO(xw32): uncomment this line and remove all above lines in the method.
+      return buffer != nullptr && !buffer->IsDeleted();
     };
 
     bool HasSharding() const override { return false; }
@@ -240,7 +237,6 @@ class PjRtComputationClient : public ComputationClient {
     }
 
     bool HasValue() const override {
-      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": PjRtShardedData::HasValue is called." << std::endl;
       if (shards.empty()) {
         return false;
       }

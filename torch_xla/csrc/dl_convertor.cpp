@@ -55,9 +55,7 @@ TorchXLADLMTensor::~TorchXLADLMTensor() {
 }
 
 void TorchXLADLMTensorDeleter(DLManagedTensor* t) {
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   if (t) {
-    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     delete static_cast<TorchXLADLMTensor*>(t->manager_ctx);
   }
 }
@@ -67,8 +65,6 @@ DLDeviceType DLDeviceTypeForDevice(const xla::PjRtDevice& device) {
     return DLDeviceType::kDLCPU;
   } else if (device.client()->platform_id() == xla::CudaId()) {
     return DLDeviceType::kDLCUDA;
-  } else if (device.client()->platform_id() == xla::RocmId()) {
-    return DLDeviceType::kDLROCM;
   }
   XLA_ERROR() << "Device " << device.DebugString() << " cannot be used as a DLPack device.";
 }
@@ -131,7 +127,7 @@ std::vector<int64_t> StridesForShape(xla::PrimitiveType element_type,
   return strides;
 }
 
-// Convert an XLA tensor to dlPack tensor.
+// Convert an XLA tensor to a dlPack tensor.
 DLManagedTensor* toDLPack(const at::Tensor& input) {
   std::shared_ptr<runtime::ComputationClient::Data> handle = get_data_handle(input);
   XLA_CHECK(handle != nullptr) << "Could not extract a valid data handle from the input tensor";
@@ -146,63 +142,46 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
     XLA_ERROR() << "Unimplemented. DynamicShape is not implemented in DLPack.";
   }
 
-  auto torchXlaDLMTensor = std::make_unique<TorchXLADLMTensor>();
-  DLTensor& dt = torchXlaDLMTensor->tensor.dl_tensor;
+  auto pack = std::make_unique<TorchXLADLMTensor>();
+  DLTensor& dt = pack->tensor.dl_tensor;
   {
     // AcquireExternalReference may block
     auto external_ref = pjrt_buffer->AcquireExternalReference();
     XLA_CHECK_OK(external_ref.status());
-    torchXlaDLMTensor->external_reference = std::move(external_ref.value());
+    pack->external_reference = std::move(external_ref.value());
     xla::PjRtFuture<> future = pjrt_buffer->GetReadyFuture();
     absl::Status status = future.Await();
     XLA_CHECK_OK(status);
   }
-  torchXlaDLMTensor->buffer_reference = pjrt_buffer;
-  // torchXlaDLMTensor->source_tensor = input;
-  // pack->buffer_reference = nb::borrow<nb::object>(py_buffer); // xw32: should we do it?
+  pack->buffer_reference = pjrt_buffer;
+  // pack->source_tensor = input;
 
-  dt.data = torchXlaDLMTensor->external_reference->OpaqueDeviceMemoryDataPointer();
-  torchXlaDLMTensor->tensor.manager_ctx = torchXlaDLMTensor.get();
-  torchXlaDLMTensor->tensor.deleter = TorchXLADLMTensorDeleter;
+  dt.data = pack->external_reference->OpaqueDeviceMemoryDataPointer();
+  pack->tensor.manager_ctx = pack.get();
+  pack->tensor.deleter = TorchXLADLMTensorDeleter;
   dt.device = DLDeviceForDevice(*pjrt_buffer->device());
   dt.device.device_id = pjrt_buffer->device()->local_hardware_id();
   dt.ndim = pjrt_buffer->dimensions().size();
   dt.dtype = PrimitiveTypeToDLDataType(pjrt_buffer->element_type());
 
-  torchXlaDLMTensor->shape = std::vector<int64_t>(pjrt_buffer->dimensions().begin(), pjrt_buffer->dimensions().end());
+  pack->shape = std::vector<int64_t>(pjrt_buffer->dimensions().begin(), pjrt_buffer->dimensions().end());
   xla::Layout xla_layout = xla::GetXlaLayoutUnsafe(pjrt_buffer->layout());
-  torchXlaDLMTensor->strides = StridesForShape(pjrt_buffer->element_type(), pjrt_buffer->dimensions(), xla_layout);
-  dt.shape = reinterpret_cast<std::int64_t*>(torchXlaDLMTensor->shape.data());
-  dt.strides = reinterpret_cast<std::int64_t*>(torchXlaDLMTensor->strides.data());
+  pack->strides = StridesForShape(pjrt_buffer->element_type(), pjrt_buffer->dimensions(), xla_layout);
+  dt.shape = reinterpret_cast<std::int64_t*>(pack->shape.data());
+  dt.strides = reinterpret_cast<std::int64_t*>(pack->strides.data());
   dt.byte_offset = 0;
 
-  return &(torchXlaDLMTensor.release()->tensor);
+  return &(pack.release()->tensor);
 }
 
 absl::StatusOr<xla::PjRtDevice*> DeviceForDLDevice(const DLDevice& context) {
   switch (context.device_type) {
     case DLDeviceType::kDLCPU:
-      // if (cpu_client == nullptr) {
-      //   return InvalidArgument(
-      //       "DLPack tensor is on CPU, but no CPU backend was provided.");
-      // }
       XLA_CHECK_EQ(runtime::GetComputationClient()->GetPlatformID(), xla::CpuId());
       return runtime::GetComputationClient()->LookupAddressableDevice(context.device_id);
     case DLDeviceType::kDLCUDA:
-      // if (gpu_client == nullptr) { // xw32 TODO: check if client_ is GPU client
-      //   return InvalidArgument(
-      //       "DLPack tensor is on GPU, but no GPU backend was provided.");
-      // }
       XLA_CHECK_EQ(runtime::GetComputationClient()->GetPlatformID(), xla::CudaId());
       return runtime::GetComputationClient()->LookupAddressableDevice(context.device_id);
-    // case DLDeviceType::kDLROCM:
-    //   // if (gpu_client == nullptr) {
-    //   //   return InvalidArgument(
-    //   //       "DLPack tensor is on GPU, but no GPU backend was provided.");
-    //   // }
-    //   XLA_CHECK_EQ(pjrt_client->platform_id(), xla::RocmId());
-    //   xla::PjRtDevice* device = pjrt_client->addressable_devices()[context.device_id];
-    //   return device;
     default:
       return tsl::errors::InvalidArgument("Unknown/unsupported DLPack device type %d",
                              context.device_type);
@@ -325,7 +304,7 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
   if (dlmt->dl_tensor.ndim < 0) {
     XLA_ERROR() << "Number of dimensions in DLManagedTensor must be nonnegative, got " << dlmt->dl_tensor.ndim;
   }
-  xla::PjRtDevice* device = DeviceForDLDevice(dlmt->dl_tensor.device).value(); // client_ is a xla::PjRtClient. So this fromDLPack should be inside pjrt_computation_client class.
+  xla::PjRtDevice* device = DeviceForDLDevice(dlmt->dl_tensor.device).value();
   absl::Span<int64_t const> dimensions(
       const_cast<int64_t*>(dlmt->dl_tensor.shape), dlmt->dl_tensor.ndim);
   xla::PrimitiveType element_type = DLDataTypeToPrimitiveType(dlmt->dl_tensor.dtype).value();
@@ -344,19 +323,6 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
   xla::Shape shape = xla::ShapeUtil::MakeShapeWithDenseLayout(element_type, dimensions,
                                                     minor_to_major);
 
-  // Raise an error if the resulting PjRtBuffer would have a non-default layout.
-  // TODO(skyewm): we do this because JAX doesn't currently have good support
-  // for non-default layouts, and will return wrong results if a non-default
-  // layout is passed to a computation expecting default layouts. Remove this
-  // special case when non-default layouts are better supported by JAX.
-  absl::StatusOr<xla::Layout> default_layout_from_client =
-      device->client()->GetDefaultLayout(element_type, dimensions);
-  XLA_CHECK_OK(default_layout_from_client.status()) << "Failed to get a default layout in " << __FUNCTION__;
-  xla::Layout default_layout = default_layout_from_client.value(); // TODO(xw32): the check below is needed due to an limitation in ifrt. Since torch_xla uses pjrt, we may not need the check below and the var default_layout.
-  // if (shape.layout() != default_layout) {
-  //   XLA_ERROR() << "from_dlpack got array with non-default layout with minor-to-major dimensions (" << absl::StrJoin(shape.layout().minor_to_major(), ",") << "), expected (" << absl::StrJoin(default_layout.minor_to_major(), ",") << ")";
-  // }
-
   std::function<void()> on_delete_callback;
   if (dlmt->deleter) {
     on_delete_callback = [dlmt]() { dlmt->deleter(dlmt); };
@@ -370,9 +336,7 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
 
   runtime::ComputationClient::DataPtr data = runtime::GetComputationClient()->CreateData(runtime::GetComputationClient()->PjRtDeviceToString(device), shape, std::move(pjrt_buffer.value()));
   
-  // xw32 note: XlaDataToTensors does a fromDeviceToHost transfer.XlaDataToTensors
   at::ScalarType tensor_type = at::toScalarType(dlmt->dl_tensor.dtype);
-  // return XlaDataToTensors({data}, {tensor_type})[0];
   XLATensorPtr xla_tensor = XLATensor::Create(data, tensor_type);
   return bridge::AtenFromXlaTensor(xla_tensor);
 }

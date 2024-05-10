@@ -1116,12 +1116,6 @@ void dlPack_Capsule_Destructor(PyObject* data) {
   }
 }
 
-// PyObject* tensor_toDLPack(const at::Tensor& input) {
-//     DLManagedTensor* dlMTensor = torch_xla::toDLPack(input);
-//     std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-//     return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
-// }
-
 at::Tensor tensor_fromDLPack(PyObject* data) {
   DLManagedTensor* dlMTensor = (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
   XLA_CHECK(dlMTensor != nullptr) << "from_dlpack received an invalid capsule. Note that a DLTensor capsule can be consumed only once. You may have already constructed a tensor from it once.";

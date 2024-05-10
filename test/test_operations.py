@@ -2456,27 +2456,18 @@ class TestDLPack(parameterized.TestCase):
 
   def _test_dlpack_capsule_conversion_helper(self, xla_tensor):
     dlpt = xdlpack.to_dlpack(xla_tensor) # dlpt1 has type PyCapsule
-    print('xw32 finished the to_dlpack')
     got = xdlpack.from_dlpack(dlpt)
-    print('xw32 finished the from_dlpack')
 
-    print('xla_tensor.device=', xla_tensor.device, ', got.device=', got.device)
     self.assertEqual(xla_tensor.device, got.device)
-    print('xla_tensor.cpu()=', xla_tensor.cpu())
-    print('got.cpu()=', got.cpu())
     self.assertTrue(torch.allclose(xla_tensor.cpu(), got.cpu()))
     self.assertRaisesRegex(RuntimeError, "DLTensor capsule can be consumed only once", lambda: xdlpack.from_dlpack(dlpt))
 
-    print('xw32 torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor)=', torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor))
-    print('xw32 torch_xla._XLAC._unsafe_buffer_pointer(got)=', torch_xla._XLAC._unsafe_buffer_pointer(got))
     self.assertEqual(torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor),torch_xla._XLAC._unsafe_buffer_pointer(got))
 
-  # TODO(xw32): need to test different data type such as pytorch/test/test_dlpack.py
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   @parameterized.parameters(*all_types_and_complex_and(torch.half, torch.bfloat16, torch.bool, torch.uint16, torch.uint32, torch.uint64))
   def test_dlpack_roundtrip(self, dtype):
-    print('xw32 dtype=', dtype)
     # "arange_cpu" not implemented for complex64 and complex128.
     # xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device) failed with `RuntimeError: false INTERNAL ASSERT FAILED at "/ansible/pytorch/torch/csrc/lazy/core/hash.h":139, please report a bug to PyTorch. Unsupported scalar type:UInt64`, similar to other uint.
     if dtype in { torch.complex128, torch.complex64, torch.uint64, torch.uint32, torch.uint16, torch.bool }:
