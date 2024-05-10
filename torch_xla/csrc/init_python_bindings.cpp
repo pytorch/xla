@@ -1,7 +1,7 @@
+#include <ATen/dlpack.h>
 #include <Python.h>
 #include <c10/core/Device.h>
 #include <c10/util/Optional.h>
-#include <ATen/dlpack.h>
 #include <google/protobuf/text_format.h>
 #include <torch/csrc/autograd/utils/wrap_outputs.h>
 #include <torch/csrc/autograd/variable.h>
@@ -35,8 +35,8 @@
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/dl_convertor.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -1117,8 +1117,12 @@ void dlPack_Capsule_Destructor(PyObject* data) {
 }
 
 at::Tensor tensor_fromDLPack(PyObject* data) {
-  DLManagedTensor* dlMTensor = (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
-  XLA_CHECK(dlMTensor != nullptr) << "from_dlpack received an invalid capsule. Note that a DLTensor capsule can be consumed only once. You may have already constructed a tensor from it once.";
+  DLManagedTensor* dlMTensor =
+      (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
+  XLA_CHECK(dlMTensor != nullptr)
+      << "from_dlpack received an invalid capsule. Note that a DLTensor "
+         "capsule can be consumed only once. You may have already constructed "
+         "a tensor from it once.";
 
   at::Tensor tensor = torch_xla::fromDLPack(dlMTensor);
   PyCapsule_SetName(data, "used_dltensor");
@@ -2543,16 +2547,16 @@ void InitXlaModuleBindings(py::module m) {
       NoGilSection nogil;
       dlMTensor = torch_xla::toDLPack(input);
     }
-    // return py::reinterpret_steal<py::object>(PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor));
+    // return py::reinterpret_steal<py::object>(PyCapsule_New(dlMTensor,
+    // "dltensor", dlPack_Capsule_Destructor));
     return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
   });
-  // m.def("_to_dlpack", &tensor_toDLPack, ""); // 
+  // m.def("_to_dlpack", &tensor_toDLPack, ""); //
 
   // from a dlpack tensor to an XLA tensor
   m.def("_from_dlpack", [](py::handle ext_data) -> at::Tensor {
     return tensor_fromDLPack(ext_data.ptr());
   });
-
 
   // -------------Dynamo Integration API Start-------------------------
   /*

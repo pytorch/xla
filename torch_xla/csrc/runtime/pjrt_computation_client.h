@@ -32,9 +32,8 @@ class PjRtComputationClient : public ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
-  DataPtr CreateData(
-      std::string device, xla::Shape shape,
-      std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) override;
+  DataPtr CreateData(std::string device, xla::Shape shape,
+                     std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) override;
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
@@ -99,8 +98,10 @@ class PjRtComputationClient : public ComputationClient {
     return client_->platform_id();
   }
 
-  absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(int local_device_id) const override {
-    return client_->LookupAddressableDevice(xla::PjRtLocalDeviceId(local_device_id));
+  absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
+      int local_device_id) const override {
+    return client_->LookupAddressableDevice(
+        xla::PjRtLocalDeviceId(local_device_id));
   }
 
   std::vector<std::string> GetLocalDevices() const override;

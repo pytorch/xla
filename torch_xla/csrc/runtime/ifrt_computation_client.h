@@ -33,11 +33,10 @@ class IfrtComputationClient : public ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
-  DataPtr CreateData(
-      std::string device, xla::Shape shape,
-      std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) override {
-        XLA_ERROR() << __FUNCTION__ << " not implemented";
-      };
+  DataPtr CreateData(std::string device, xla::Shape shape,
+                     std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  };
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
@@ -96,7 +95,8 @@ class IfrtComputationClient : public ComputationClient {
     return client_->platform_id();
   }
 
-  absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(int local_device_id) const override {
+  absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
+      int local_device_id) const override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 

@@ -402,7 +402,8 @@ std::uintptr_t IfrtComputationClient::UnsafeBufferPointer(
   XLA_ERROR() << __FUNCTION__ << " not implemented";
 }
 
-std::shared_ptr<xla::PjRtBuffer> IfrtComputationClient::GetPjRtBuffer(const DataPtr handle) {
+std::shared_ptr<xla::PjRtBuffer> IfrtComputationClient::GetPjRtBuffer(
+    const DataPtr handle) {
   XLA_ERROR() << __FUNCTION__ << " not implemented";
 }
 

@@ -2455,22 +2455,33 @@ class TestGeneric(test_utils.XlaTestCase):
 class TestDLPack(parameterized.TestCase):
 
   def _test_dlpack_capsule_conversion_helper(self, xla_tensor):
-    dlpt = xdlpack.to_dlpack(xla_tensor) # dlpt1 has type PyCapsule
+    dlpt = xdlpack.to_dlpack(xla_tensor)  # dlpt1 has type PyCapsule
     got = xdlpack.from_dlpack(dlpt)
 
     self.assertEqual(xla_tensor.device, got.device)
     self.assertTrue(torch.allclose(xla_tensor.cpu(), got.cpu()))
-    self.assertRaisesRegex(RuntimeError, "DLTensor capsule can be consumed only once", lambda: xdlpack.from_dlpack(dlpt))
+    self.assertRaisesRegex(RuntimeError,
+                           "DLTensor capsule can be consumed only once",
+                           lambda: xdlpack.from_dlpack(dlpt))
 
-    self.assertEqual(torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor),torch_xla._XLAC._unsafe_buffer_pointer(got))
+    self.assertEqual(
+        torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor),
+        torch_xla._XLAC._unsafe_buffer_pointer(got))
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
-  @parameterized.parameters(*all_types_and_complex_and(torch.half, torch.bfloat16, torch.bool, torch.uint16, torch.uint32, torch.uint64))
+  @parameterized.parameters(*all_types_and_complex_and(torch.half,
+                                                       torch.bfloat16,
+                                                       torch.bool, torch.uint16,
+                                                       torch.uint32,
+                                                       torch.uint64))
   def test_dlpack_roundtrip(self, dtype):
     # "arange_cpu" not implemented for complex64 and complex128.
     # xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device) failed with `RuntimeError: false INTERNAL ASSERT FAILED at "/ansible/pytorch/torch/csrc/lazy/core/hash.h":139, please report a bug to PyTorch. Unsupported scalar type:UInt64`, similar to other uint.
-    if dtype in { torch.complex128, torch.complex64, torch.uint64, torch.uint32, torch.uint16, torch.bool }:
+    if dtype in {
+        torch.complex128, torch.complex64, torch.uint64, torch.uint32,
+        torch.uint16, torch.bool
+    }:
       return
     xla_device = xm.xla_device()
     xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
@@ -2496,7 +2507,7 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_roundtrip_bool(self):
     xla_tensor = torch.ones(1, dtype=torch.bool).to(xm.xla_device())
-    self._test_dlpack_capsule_conversion_helper(xla_tensor) 
+    self._test_dlpack_capsule_conversion_helper(xla_tensor)
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
@@ -2536,7 +2547,10 @@ class TestDLPack(parameterized.TestCase):
     self.assertTrue(torch.allclose(t2.cpu(), xla_t2.cpu()))
 
     t3 = cuda_t[:, 0]
-    self.assertRaisesRegex(RuntimeError, r"Only DLPack tensors with trivial \(compact\) striding are supported", lambda: xdlpack.from_dlpack(t3.__dlpack__()))
+    self.assertRaisesRegex(
+        RuntimeError,
+        r"Only DLPack tensors with trivial \(compact\) striding are supported",
+        lambda: xdlpack.from_dlpack(t3.__dlpack__()))
 
     t4 = cuda_t[1, :]
     xla_t4 = xdlpack.from_dlpack(t4.__dlpack__())
@@ -2545,9 +2559,6 @@ class TestDLPack(parameterized.TestCase):
     t5 = cuda_t[1]
     xla_t5 = xdlpack.from_dlpack(t5.__dlpack__())
     self.assertTrue(torch.allclose(t5.cpu(), xla_t5.cpu()))
-
-
-
 
 
 class SimpleModelWithDropout(torch.nn.Module):

@@ -25,11 +25,11 @@
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "xla/client/xla_computation.h"
-#include "xla/pjrt/pjrt_client.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
-#include "xla/types.h"
+#include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_common.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -260,9 +260,8 @@ class ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) = 0;
 
-  virtual DataPtr CreateData(
-      std::string device, xla::Shape shape,
-      std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) = 0;
+  virtual DataPtr CreateData(std::string device, xla::Shape shape,
+                             std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) = 0;
 
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input
@@ -281,7 +280,8 @@ class ComputationClient {
   // structure will be empty if there is no sharding, like with PjRtData.
   virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
 
-  virtual std::string PjRtDeviceToString(xla::PjRtDevice* const device) const = 0;
+  virtual std::string PjRtDeviceToString(
+      xla::PjRtDevice* const device) const = 0;
 
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToDevice(
@@ -312,7 +312,8 @@ class ComputationClient {
 
   virtual std::uintptr_t UnsafeBufferPointer(const DataPtr handle) = 0;
 
-  virtual std::shared_ptr<xla::PjRtBuffer> GetPjRtBuffer(const DataPtr handle) = 0;
+  virtual std::shared_ptr<xla::PjRtBuffer> GetPjRtBuffer(
+      const DataPtr handle) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(
@@ -356,7 +357,8 @@ class ComputationClient {
 
   virtual xla::PjRtPlatformId GetPlatformID() const = 0;
 
-  virtual absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(int local_device_id) const = 0;
+  virtual absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
+      int local_device_id) const = 0;
 
   virtual size_t GetNumDevices() const = 0;
 
