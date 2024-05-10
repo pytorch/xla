@@ -386,10 +386,122 @@ def gmm(
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
   import jax
-  from jax.experimental.pallas.ops.tpu.megablox import gmm
+  from jax.experimental.pallas.ops.tpu.megablox import gmm as jax_gmm
   from torch_xla.experimental.custom_kernel import trace_pallas
 
-  payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes)
+  payload, _ = trace_pallas(jax_gmm, lhs, rhs, group_sizes)
   out = _gmm(lhs, rhs, group_sizes, payload, preferred_element_type, tiling,
              group_offset, existing_out, transpose_rhs, interpret)
+  return out
+
+
+def _tgmm(
+    lhs: torch.Tensor,
+    rhs: torch.Tensor,
+    group_sizes: torch.Tensor,
+    payload: str,
+    preferred_element_type: torch.dtype = torch.float32,
+    tiling: Optional[Union[tuple[int, int, int], LutFn]] = (128, 128, 128),
+    group_offset: Optional[torch.Tensor] = None,
+    num_actual_groups: Optional[int] = None,
+    existing_out: Optional[torch.Tensor] = None,
+    interpret: bool = False,
+) -> torch.Tensor:
+  """Compute lhs[:, sizes[i-1]:sizes[i]] @ rhs[sizes[i-1]:sizes[i], :].
+  Args:
+    lhs: A 2d, torch.Tensor with shape [k, m].
+    rhs: A 2d, torch.Tensor with shape [m, n].
+    group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
+    payload: pallas payload extracted from the pallas code on JAX.
+    preferred_element_type: torch.dtype, the element type for the output matrix.
+    tiling: 3-tuple of ints. The m, k and n-dimension tile sizes.
+    group_offset: The group in group sizes to start computing from. This is
+      particularly useful for when rhs num_groups is sharded.
+    num_actual_groups: For when num_groups is sharded and we should only compute
+      the groups that are local, starting from group_offset.
+    existing_out: Existing output to write to.
+    interpret: Whether or not to run the kernel in interpret mode, helpful for
+      testing and debugging.
+  Returns:
+    A  3d, torch.Tensor with shape [num_groups, k, n].
+  """
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
+
+  if group_offset is None:
+    group_offset = jnp.array([0], dtype=jnp.int32)
+  else:
+    group_offset = jnp.ndarray(group_offset.numpy())
+    group_offset = group_offset[None]
+  lhs, group_sizes, input_dtype = _validate_args(
+      lhs=lhs, rhs=rhs, group_sizes=group_sizes, expected_rhs_dims=2)
+
+  # Gather shape information.
+  k, m, n = (lhs.shape[0], lhs.shape[1], rhs.shape[1])
+  num_groups = group_sizes.shape[0]
+  num_actual_groups = (
+      num_actual_groups if num_actual_groups is not None else num_groups)
+
+  # If tiling is callable, look up the problem dimensions in the LUT. If no tuned
+  # tile dimensions are available throw an error.
+  if callable(tiling):
+    tiling = tiling(m, k, n)
+
+  if tiling is None:
+    raise ValueError(f"No tuned tiling found for (m, k, n) = ({m}, {k}, {n})")
+
+  tm, tk, tn = tiling
+  tiles_k, k_rem = _calculate_irregular_num_tiles(k, tk)
+  del k_rem
+  tiles_n, n_rem = _calculate_irregular_num_tiles(n, tn)
+  del n_rem
+
+  # Create the metadata we need for computation.
+  group_sizes = jnp.asarray(group_sizes.numpy())
+  group_metadata, num_active_tiles = _make_group_metadata(  # pylint: disable=unbalanced-tuple-unpacking
+      group_sizes=group_sizes,
+      m=m,
+      tm=tm,
+      start_group=group_offset[0],
+      num_nonzero_groups=rhs.shape[0],
+      visit_empty_groups=False,
+  )
+  group_metadata0 = torch.from_numpy(np.array(group_metadata[0])).to(
+      torch.int32).to("xla")
+  group_metadata1 = torch.from_numpy(np.array(group_metadata[1])).to("xla")
+  group_metadata2 = torch.from_numpy(np.array(group_metadata[2])).to("xla")
+  num_active_tiles = torch.tensor(np.array(num_active_tiles)).to("xla")
+  group_offset_torch = torch.from_numpy(np.array(group_offset)).to("xla")
+  output_shape = torch.Size([num_groups, k, n])
+  out = torch_xla._XLAC._xla_tpu_custom_call([
+      num_active_tiles, group_metadata0, group_metadata1, group_metadata2,
+      group_offset_torch, lhs, rhs
+  ], payload, [output_shape], [preferred_element_type])
+  return out
+
+
+def tgmm(
+    lhs: torch.Tensor,
+    rhs: torch.Tensor,
+    group_sizes: torch.Tensor,
+    preferred_element_type: torch.dtype = torch.float32,
+    tiling: Optional[Union[tuple[int, int, int], LutFn]] = (128, 128, 128),
+    group_offset: Optional[torch.Tensor] = None,
+    existing_out: Optional[torch.Tensor] = None,
+    transpose_rhs: bool = False,
+    interpret: bool = False,
+):
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax
+  from jax.experimental.pallas.ops.tpu.megablox.gmm import tgmm as jax_tgmm
+  from torch_xla.experimental.custom_kernel import trace_pallas
+
+  payload, _ = trace_pallas(jax_tgmm, lhs, rhs, group_sizes)
+  out = _tgmm(lhs, rhs, group_sizes, payload, preferred_element_type, tiling,
+              group_offset, existing_out, transpose_rhs, interpret)
   return out

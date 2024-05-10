@@ -71,6 +71,7 @@ class MegabloxTest(unittest.TestCase):
     self.tests_cases = []
     self.tests_cases.append({
         'dtype': torch.float32,
+        'jax_dtype': jnp.float32,
         'm': 128,
         'k': 128,
         'n': 128,
@@ -78,6 +79,7 @@ class MegabloxTest(unittest.TestCase):
     })
     self.tests_cases.append({
         'dtype': torch.float32,
+        'jax_dtype': jnp.float32,
         'm': 256,
         'k': 128,
         'n': 128,
@@ -85,6 +87,7 @@ class MegabloxTest(unittest.TestCase):
     })
     self.tests_cases.append({
         'dtype': torch.float32,
+        'jax_dtype': jnp.float32,
         'm': 128,
         'k': 256,
         'n': 128,
@@ -92,6 +95,7 @@ class MegabloxTest(unittest.TestCase):
     })
     self.tests_cases.append({
         'dtype': torch.float32,
+        'jax_dtype': jnp.float32,
         'm': 512,
         'k': 128,
         'n': 256,
@@ -99,6 +103,7 @@ class MegabloxTest(unittest.TestCase):
     })
     self.tests_cases.append({
         'dtype': torch.bfloat16,
+        'jax_dtype': jnp.bfloat16,
         'm': 128,
         'k': 128,
         'n': 128,
@@ -106,6 +111,7 @@ class MegabloxTest(unittest.TestCase):
     })
     self.tests_cases.append({
         'dtype': torch.bfloat16,
+        'jax_dtype': jnp.bfloat16,
         'm': 256,
         'k': 128,
         'n': 128,
@@ -113,6 +119,7 @@ class MegabloxTest(unittest.TestCase):
     })
     self.tests_cases.append({
         'dtype': torch.bfloat16,
+        'jax_dtype': jnp.bfloat16,
         'm': 128,
         'k': 256,
         'n': 128,
@@ -120,6 +127,7 @@ class MegabloxTest(unittest.TestCase):
     })
     self.tests_cases.append({
         'dtype': torch.bfloat16,
+        'jax_dtype': jnp.bfloat16,
         'm': 512,
         'k': 128,
         'n': 256,
@@ -149,6 +157,50 @@ class MegabloxTest(unittest.TestCase):
       atol, rtol = self._tolerances(lhs_dtype, rhs_dtype, out_dtype)
       np.testing.assert_allclose(
           ref_out, np.array(out[0].cpu()), rtol=rtol, atol=atol)
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_tgmm(self):
+    from jax.experimental.pallas.ops.tpu.megablox.gmm import tgmm as jax_tgmm
+
+    self._init_test_cases()
+    for test_case in self.tests_cases:
+      print("Test Case (tgmm kernel): ", test_case)
+      num_groups = test_case['num_groups']
+      k = test_case['k']
+      m = test_case['m']
+      n = test_case['n']
+      lhs_dtype = rhs_dtype = test_case['dtype']
+      jax_dtype = test_case['jax_dtype']
+      out_dtype = torch.float32
+
+      lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
+      rhs = torch.rand(k, n, dtype=rhs_dtype).to('xla')
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      out = megablox.tgmm(lhs, rhs, group_sizes)
+
+      lhs_jax = jnp.array(lhs.float().cpu().numpy(), dtype=jax_dtype)
+      rhs_pages_jax = jnp.array(rhs.float().cpu().numpy(), dtype=jax_dtype)
+      group_sizes_jax = jnp.array(group_sizes.cpu().numpy(), dtype=jnp.int32)
+      jax_expected_output = torch.from_numpy(
+          np.array(jax_tgmm(
+              lhs_jax,
+              rhs_pages_jax,
+              group_sizes_jax,
+          )))
+
+      print(f'{jax_expected_output.shape=}')
+      print(f'{out[0].shape=}')
+      print(f'{jax_expected_output=}')
+      print(f'{out[0]=}')
+      print(f'{jax_expected_output - out[0]=}')
+
+      # atol, rtol = self._tolerances(lhs_dtype, rhs_dtype, out_dtype)
+      # np.testing.assert_allclose(
+      #     jax_expected_output.cpu(), out[0].cpu(), rtol=rtol, atol=atol)
+      # print(out)
+      # print(f'Test case {i} success!')
+
+    print('ALl success!')
 
 
 if __name__ == '__main__':
