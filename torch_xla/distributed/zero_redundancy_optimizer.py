@@ -419,8 +419,7 @@ class ZeroRedundancyOptimizer(Optimizer):
         if param.grad is not None or (self.use_grad_acc_hook and
                                       hasattr(shard, 'main_grad')):
           shard_data = shard.data
-          if not self.higher_cc_precision:
-            shard_data = shard_data.to(dtype=param.dtype)
+          shard_data = shard_data.to(dtype=param.dtype)
           if self.coalesce_cc_all_gather:
             sharded_data.append(shard_data)
           else:
@@ -430,8 +429,6 @@ class ZeroRedundancyOptimizer(Optimizer):
                 pin_layout=self.pin_layout,
                 groups=self.sharding_groups,
             )
-            if padded_param.dtype != param.dtype:
-              padded_param = padded_param.to(dtype=param.dtype)
             param.data.copy_(padded_param.data[:param.size(0)])
 
     if self.coalesce_cc_all_gather:
@@ -450,8 +447,6 @@ class ZeroRedundancyOptimizer(Optimizer):
           if param.grad is not None or (self.use_grad_acc_hook and
                                         hasattr(shard, 'main_grad')):
             padded_param = padded_params[index]
-            if padded_param.dtype != param.dtype:
-              padded_param = padded_params[index].to(dtype=param.dtype)
             param.data.copy_(padded_param.data[:param.size(0)])
             index += 1
 
