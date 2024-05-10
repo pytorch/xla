@@ -54,11 +54,11 @@ class TritonTest(unittest.TestCase):
     grid = (size // block_size,)
     payload = torch_triton.triton_call(
         x, y, output, size, kernel=add_kernel, grid=grid, BLOCK_SIZE=block_size)
-    output = torch_xla._XLAC._xla_gpu_custom_call(
-      [x,y], payload, [output.shape],
-      [torch.int64])
+    output = torch_xla._XLAC._xla_gpu_custom_call([x, y], payload,
+                                                  [output.shape], [torch.int64])
     output_torch = x + y
     self.assertTrue(torch.allclose(output[0].cpu(), output_torch.cpu()))
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)

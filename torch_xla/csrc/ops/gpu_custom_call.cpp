@@ -10,7 +10,8 @@ GpuCustomCall::GpuCustomCall(torch::lazy::OpList inputs,
                              xla::Shape output_shape,
                              const std::string& payload)
     : XlaNode(xla_gpu_custom_call, inputs, std::move(output_shape),
-              /*num_outputs=*/output_shape.tuple_shapes_size(), torch::lazy::MHash(payload)),
+              /*num_outputs=*/output_shape.tuple_shapes_size(),
+              torch::lazy::MHash(payload)),
       payload_(payload) {}
 
 torch::lazy::NodePtr GpuCustomCall::Clone(torch::lazy::OpList operands) const {

@@ -2320,7 +2320,8 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_register_custom_call_target",
         [](const std::string& fn_name, const py::capsule& function_ptr,
            const std::string& platform) {
-          XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(fn_name, function_ptr.get_pointer(), platform);
+          XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(
+              fn_name, function_ptr.get_pointer(), platform);
         });
   m.def("_set_xla_custom_op_name_prefix",
         [](const at::Tensor& input, const std::string& op_name_prefix,

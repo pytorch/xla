@@ -17,7 +17,11 @@ import triton.language as tl
 from jax._src.lib import gpu_triton as lib_triton
 import torch_xla
 
-torch_xla._XLAC._xla_register_custom_call_target('triton_kernel_call', lib_triton._cuda_triton.get_custom_call(), 'CUDA')
+# Register target corresponding to gpu custom call using the
+# implementation provided by jaxlib.
+torch_xla._XLAC._xla_register_custom_call_target(
+    'triton_kernel_call', lib_triton._cuda_triton.get_custom_call(), 'CUDA')
+
 Grid = Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]]
 GridOrLambda = Union[Grid, Callable[[Dict[str, Any]], Grid]]
 
@@ -102,6 +106,8 @@ def get_or_create_triton_kernel(
     args,
     dump,
 ) -> Tuple[lib_triton.TritonKernel, Any]:
+  # Extract the compilation parameters and compiled ptx from the
+  # compiled triton kernel.
   ttir = compiled_kernel.asm['ttir']
   ptx = compiled_kernel.asm['ptx']
   if (dump):
