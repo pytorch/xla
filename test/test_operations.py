@@ -2456,17 +2456,17 @@ class TestDLPack(parameterized.TestCase):
 
   def _test_dlpack_capsule_conversion_helper(self, xla_tensor):
     dlpt = xdlpack.to_dlpack(xla_tensor)  # dlpt1 has type PyCapsule
-    got = xdlpack.from_dlpack(dlpt)
+    xla_tensor2 = xdlpack.from_dlpack(dlpt)
 
-    self.assertEqual(xla_tensor.device, got.device)
-    self.assertTrue(torch.allclose(xla_tensor.cpu(), got.cpu()))
+    self.assertEqual(xla_tensor.device, xla_tensor2.device)
+    self.assertTrue(torch.allclose(xla_tensor.cpu(), xla_tensor2.cpu()))
     self.assertRaisesRegex(RuntimeError,
                            "DLTensor capsule can be consumed only once",
                            lambda: xdlpack.from_dlpack(dlpt))
 
     self.assertEqual(
         torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor),
-        torch_xla._XLAC._unsafe_buffer_pointer(got))
+        torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor2))
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
@@ -2499,8 +2499,6 @@ class TestDLPack(parameterized.TestCase):
 
     xla_tensor_3 = torch.arange(5, dtype=dtype, device=xm.xla_device())
     xm.mark_step()
-    # Without the `wait_device_ops()`, the pjrt buffer (pjrt_data->buffer) at https://github.com/pytorch/xla/blob/e3fc03314dab5f44e3ed9ccbba6c15fbca3285cd/torch_xla/csrc/runtime/pjrt_computation_client.cc#L467 will be nullptr.
-    xm.wait_device_ops()
     self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
 
   @onlyIfTorchSupportsCUDA

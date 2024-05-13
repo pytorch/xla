@@ -482,8 +482,17 @@ std::shared_ptr<xla::PjRtBuffer> PjRtComputationClient::GetPjRtBuffer(
     const DataPtr handle) {
   std::shared_ptr<PjRtData> pjrt_data =
       std::dynamic_pointer_cast<PjRtData>(handle);
+
   XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
-  return pjrt_data->buffer;
+  std::shared_ptr<xla::PjRtBuffer> pjrt_buffer = pjrt_data->buffer;
+  if (pjrt_buffer != nullptr) {
+    return pjrt_buffer;
+  } else {
+    TF_VLOG(3) << "The pjrt buffer is null so we need to wait for device ops "
+                  "to finish.";
+    WaitDeviceOps({});
+    return std::dynamic_pointer_cast<PjRtData>(handle)->buffer;
+  }
 }
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(

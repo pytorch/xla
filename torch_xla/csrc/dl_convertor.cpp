@@ -19,47 +19,25 @@
 
 namespace torch_xla {
 
-std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(
-    const at::Tensor& input) {
-  XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-  XLA_CHECK(xtensor) << "The input has to be an XLA tensor.";
-  if (xtensor->CurrentDataHandle() != nullptr) {
-    TF_VLOG(4) << "The xla tensor has a current data handle.";
-    return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-        xtensor->CurrentDataHandle());
-  } else if (xtensor->CurrentIrValue().node != nullptr) {
-    DeviceData* device_data =
-        DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-    if (device_data != nullptr) {
-      return UnwrapXlaData(device_data->data());
-    }
-    TF_VLOG(4) << "The xla tensor has IR value but does not have device data.";
-  }
-  TF_VLOG(4)
-      << "The xla tensor either has no current data handle or has no IR value.";
-  return nullptr;
-}
-
-struct TorchXLADLMTensor {
-  ~TorchXLADLMTensor();
+struct DLPackTensor {
+  ~DLPackTensor();
   std::unique_ptr<xla::PjRtBuffer::ExternalReference> external_reference;
   std::shared_ptr<xla::PjRtBuffer> buffer_reference;
-  // at::Tensor source_tensor;
 
   std::vector<int64_t> shape;
   std::vector<int64_t> strides;
   DLManagedTensor tensor;
 };
 
-TorchXLADLMTensor::~TorchXLADLMTensor() {
+DLPackTensor::~DLPackTensor() {
   if (external_reference) {
     external_reference.reset(nullptr);
   }
 }
 
-void TorchXLADLMTensorDeleter(DLManagedTensor* t) {
+void DLPackTensorDeleter(DLManagedTensor* t) {
   if (t) {
-    delete static_cast<TorchXLADLMTensor*>(t->manager_ctx);
+    delete static_cast<DLPackTensor*>(t->manager_ctx);
   }
 }
 
@@ -151,7 +129,7 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
     XLA_ERROR() << "Unimplemented. DynamicShape is not implemented in DLPack.";
   }
 
-  auto pack = std::make_unique<TorchXLADLMTensor>();
+  auto pack = std::make_unique<DLPackTensor>();
   DLTensor& dt = pack->tensor.dl_tensor;
   {
     // AcquireExternalReference may block
@@ -163,11 +141,10 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
     XLA_CHECK_OK(status);
   }
   pack->buffer_reference = pjrt_buffer;
-  // pack->source_tensor = input;
 
   dt.data = pack->external_reference->OpaqueDeviceMemoryDataPointer();
   pack->tensor.manager_ctx = pack.get();
-  pack->tensor.deleter = TorchXLADLMTensorDeleter;
+  pack->tensor.deleter = DLPackTensorDeleter;
   dt.device = DLDeviceForDevice(*pjrt_buffer->device());
   dt.device.device_id = pjrt_buffer->device()->local_hardware_id();
   dt.ndim = pjrt_buffer->dimensions().size();
