@@ -3,6 +3,10 @@ import os
 from train_resnet_base import TrainResNetBase
 import torch_xla.debug.profiler as xp
 
+# check https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#environment-variables
+os.environ["XLA_IR_DEBUG"] = "1"
+os.environ["XLA_HLO_DEBUG"] = "1"
+
 if __name__ == '__main__':
   base = TrainResNetBase()
   profile_port = 9012
