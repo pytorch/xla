@@ -3,15 +3,14 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 
-import os
 import time
+import itertools
 
 import torch
+import torch_xla
 import torchvision
 import torch.optim as optim
 import torch.nn as nn
-
-time.ctime()
 
 
 def _train_update(step, loss, tracker, epoch):
@@ -26,13 +25,13 @@ class TrainResNetBase():
     self.num_steps = 300
     self.num_epochs = 1
     train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
+    # For the purpose of this example, we are going to use fake data.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(self.batch_size, 3, img_dim, img_dim),
               torch.zeros(self.batch_size, dtype=torch.int64)),
-        sample_count=train_dataset_len // self.batch_size //
-        xm.xrt_world_size())
+        sample_count=train_dataset_len // self.batch_size // xr.world_size())
 
-    self.device = xm.xla_device()
+    self.device = torch_xla.device()
     self.train_device_loader = pl.MpDeviceLoader(train_loader, self.device)
     self.model = torchvision.models.resnet50().to(self.device)
     self.optimizer = optim.SGD(self.model.parameters(), weight_decay=1e-4)
@@ -46,6 +45,7 @@ class TrainResNetBase():
     def train_loop_fn(loader, epoch):
       tracker = xm.RateTracker()
       self.model.train()
+      loader = itertools.islice(loader, self.num_steps)
       for step, (data, target) in enumerate(loader):
         self.optimizer.zero_grad()
         output = self.model(data)
@@ -55,8 +55,6 @@ class TrainResNetBase():
         tracker.add(self.batch_size)
         if step % 10 == 0:
           xm.add_step_closure(_train_update, args=(step, loss, tracker, epoch))
-        if self.num_steps == step:
-          break
 
     for epoch in range(1, self.num_epochs + 1):
       xm.master_print('Epoch {} train begin {}'.format(
