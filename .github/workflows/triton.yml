@@ -5,14 +5,12 @@ on:
       - r[0-9]+.[0-9]+
     paths:
       - 'torch_xla/experimental/torch_triton.py'
-      - 'torch_xla/csrc/triton/**'
   push:
     branches:
       - master
       - r[0-9]+.[0-9]+
     paths:
       - 'torch_xla/experimental/torch_triton.py'
-      - 'torch_xla/csrc/triton/**'
     workflow_dispatch:
 
 concurrency:
@@ -26,7 +24,7 @@ jobs:
     outputs:
       docker-image: ${{ steps.upload-docker-image.outputs.docker-image }}
     env:
-      DOCKER_IMAGE: gcr.io/tpu-pytorch/xla_base:dev-3.8_cuda_12.1
+      DOCKER_IMAGE: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
       ECR_DOCKER_IMAGE_BASE: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
       WORKDIR: /triton_dir
     steps:
@@ -48,13 +46,12 @@ jobs:
         shell: bash
         run: |
           pid=$(docker run --privileged -t -d -w "${WORKDIR}" "${DOCKER_IMAGE}")
-          docker exec -u jenkins "${pid}" sudo chown -R jenkins "${WORKDIR}"
           docker cp "${GITHUB_WORKSPACE}/." "$pid:$WORKDIR"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
       - name: Build and Test
         shell: bash
         run: |
-          docker exec --privileged -u jenkins "${pid}" bash -c ".circleci/triton.sh"
+          docker exec --privileged "${pid}" bash -c ".circleci/triton.sh"
       - name: Push built docker image to ECR
         id: upload-docker-image
         shell: bash
@@ -93,7 +90,7 @@ jobs:
       - name: Test
         shell: bash
         run: |
-          docker exec --privileged -u jenkins "${pid}" bash -c 'TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas python test/test_triton.py'
+          docker exec --privileged "${pid}" bash -c 'TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas python test/test_triton.py'
       - name: Teardown Linux
         uses: pytorch/test-infra/.github/actions/teardown-linux@main
         if: always()
