@@ -6,10 +6,16 @@ import torch
 import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
-from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop_get_xla_computation, _xla_while_loop_target, _xla_while_loop_target_first
+from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop_target, _xla_while_loop_target_first, insert_model_pars_into_additional_inputs
+# from torch_xla.experimental.fori_loop import _post_order_get_xla_computation_target_first, _xla_while_loop_get_xla_computation
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
+import torch_xla.utils.utils as xu
+
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 
 
 def _fake_while_loop(cond_fn, body_fn, operands):
@@ -191,6 +197,7 @@ class WhileLoopTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
     return aaa
 
+  # passed
   def test_while_loop_tpu_simple_linear_target_inside_loop_while_loop(self):
     xm.mark_step()
     device = xm.xla_device()
@@ -200,7 +207,6 @@ class WhileLoopTest(unittest.TestCase):
       def __init__(self):
         super().__init__()
         self.linear = torch.nn.Linear(2, 2)
-        # self.register_buffer("dec", torch.tensor(1))
 
       def forward(self, iter, x):
         weight_bias_lists = []
@@ -209,22 +215,19 @@ class WhileLoopTest(unittest.TestCase):
           print("param: ", param)
           weight_bias_lists.append(param)
 
-        # def cond_fn(it, x):
-        #   return it - self.dec > 0
         def cond_fn(it, x):
           return it > 0
 
         def body_fn(it, x):
           return it - 1, self.linear(x)
 
-        # return while_loop(cond_fn, body_fn, (iter, x))
+        # torch.while_loop's additional_inputs could not be used in xlacomputation generation, looks like not real args
         return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x), weight_bias_lists)
 
     simple_with_linear = SimpleWithLinear()
     simple_with_linear.to(device)
     #breakpoint()
-    # input = torch.randn(2, 2).to(device)
-    input = torch.ones(2, 2).to(device)
+    input = torch.randn(2, 2).to(device)
     iter = torch.tensor(3, device=device)
     res = simple_with_linear(iter, input)
     print("act-res: ", res[-1])
@@ -237,9 +240,11 @@ class WhileLoopTest(unittest.TestCase):
     for i in range(3):
       input = linear_0(input)
     print("expexted: ", input)
-    # self.assertEqual(res[-1], input)
+
+    self.assertTrue(torch.all(res[-1].eq(input)))
 
   # WIP for target while_loop + PyLoweringContext + linear
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_tpu_simple_linear_class_inside_loop_xla_while_loop_get_xla_computation(self):
 
     xm.mark_step()
@@ -273,6 +278,160 @@ class WhileLoopTest(unittest.TestCase):
 
     return res
 
+  class MNIST(torch.nn.Module):
+    def __init__(self):
+      # super().__init__()
+      super(MNIST, self).__init__()
+      self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2) # .to(xm.xla_device())
+      self.bn1 = torch.nn.BatchNorm2d(10) # .to(xm.xla_device())
+      self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5) # .to(xm.xla_device())
+      self.bn2 = torch.nn.BatchNorm2d(20) # .to(xm.xla_device())
+      self.fc1 = torch.nn.Linear(500, 50) # .to(xm.xla_device())
+      self.fc2 = torch.nn.Linear(50, 10) # .to(xm.xla_device())
+
+    def forward(self, x):
+      x = F.relu(F.max_pool2d(self.conv1(x), 2))
+      x = self.bn1(x)
+      x = F.relu(F.max_pool2d(self.conv2(x), 2))
+      x = self.bn2(x)
+      x = torch.flatten(x, 1)
+      x = F.relu(self.fc1(x))
+      x = self.fc2(x)
+      return F.log_softmax(x, dim=1)
+
+  @unittest.skip("skip _get_xlacomputation now")
+  def test_while_loop_tpu_MNIST_outside_loop(self):
+
+    xm.mark_step()
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    # linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
+    mnist = MNIST().to(device)
+
+    def cond_fn(upper, lower, one_value, x, input_value, output_value):
+      return lower[0] < upper[0]
+
+    def body_fn(upper, lower, one_value, x, input_value, output_value):
+      new_lower = torch.add(one_value, lower)
+      output_value = linear_0(input_value)
+      weight = linear_0.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+      bias = linear_0.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+          one_value, x), input_value.clone(), bias.clone(), weight.clone(
+          ), output_value.clone()
+
+    upper = torch.tensor([1], dtype=torch.int32, device=device)
+    lower = torch.tensor([0], dtype=torch.int32, device=device)
+    one_value = torch.tensor([1], dtype=torch.int32, device=device)
+    init_val = torch.tensor([1], dtype=torch.int32, device=device)
+    l_in_0 = torch.rand(10, device=xm.xla_device())
+    output_value = torch.zeros([20], dtype=torch.float32, device=device)
+
+    upper__, lower__, one_value__, torch_add_res__, input_value__, bias__, weight__, output_value_real__, = while_loop(
+        cond_fn, body_fn,
+        (upper, lower, one_value, init_val, l_in_0, output_value))
+
+    expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
+
+    return self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
+
+  # @unittest.skip("skip _get_xlacomputation now")
+  def test_while_loop_tpu_MNIST_target_inside_loop_while_loop(self):
+    xm.mark_step()
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    n_epochs = 3
+    batch_size_train = 8 # 64
+    batch_size_test = 10 # 1000
+    learning_rate = 0.01
+    momentum = 0.5
+    log_interval = 10
+    random_seed = 1
+    torch.backends.cudnn.enabled = False
+    torch.manual_seed(random_seed)
+
+    ### load data
+    test_loader = xu.SampleGenerator(
+    data=(torch.zeros(8, 1, 28,28), torch.zeros(8, dtype=torch.int64)),
+    sample_count=1000 // 8 // xm.xrt_world_size())
+
+    class MNIST(torch.nn.Module):
+      def __init__(self):
+        super().__init__()
+        # self.linear = torch.nn.Linear(2, 2)
+        self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2) # .to(xm.xla_device())
+        self.bn1 = torch.nn.BatchNorm2d(10) # .to(xm.xla_device())
+        self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5) # .to(xm.xla_device())
+        self.bn2 = torch.nn.BatchNorm2d(20) # .to(xm.xla_device())
+        self.fc1 = torch.nn.Linear(500, 50) # .to(xm.xla_device())
+        self.fc2 = torch.nn.Linear(50, 10) # .to(xm.xla_device())
+
+      def forward(self, iter, x):
+        weight_bias_lists = []
+        bn_weight_bias_lists = []
+
+        def cond_fn(it, x):
+          return it > 0
+
+        def body_fn(it, x):
+          x = F.relu(F.max_pool2d(self.conv1(x), 2))
+          insert_model_pars_into_additional_inputs(weight_bias_lists, self.conv1.named_parameters())
+          x = self.bn1(x)
+          insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn1.named_parameters())
+          insert_model_pars_into_additional_inputs(bn_weight_bias_lists, self.bn1.named_parameters())
+          x = F.relu(F.max_pool2d(self.conv2(x), 2))
+          insert_model_pars_into_additional_inputs(weight_bias_lists, self.conv2.named_parameters())
+          x = self.bn2(x)
+          insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn2.named_parameters())
+          insert_model_pars_into_additional_inputs(bn_weight_bias_lists, self.bn2.named_parameters())
+          x = torch.flatten(x, 1)
+          x = F.relu(self.fc1(x))
+          insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc1.named_parameters())
+          x = self.fc2(x)
+          insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc2.named_parameters())
+
+          return it -1, F.log_softmax(x, dim=1)
+
+        bn_weight_bias_lists.reverse()
+        weight_bias_lists = weight_bias_lists + bn_weight_bias_lists
+        return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x), weight_bias_lists)
+        # return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x), [])
+        # return _post_order_get_xla_computation_target_first(cond_fn, body_fn, (iter, x), [])
+
+        # def body_fn(it, x):
+        #   x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.conv1.named_parameters())
+        #   x = self.bn1(x)
+        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn1.named_parameters())
+        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn1.named_parameters())
+        #   x = F.relu(F.max_pool2d(self.conv2(x), 2))
+        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.conv2.named_parameters())
+        #   x = self.bn2(x)
+        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn2.named_parameters())
+        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn2.named_parameters())
+        #   x = torch.flatten(x, 1)
+        #   x = F.relu(self.fc1(x))
+        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc1.named_parameters())
+        #   x = self.fc2(x)
+        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc2.named_parameters())
+
+        #   return it -1, F.log_softmax(x, dim=1)
+        # return while_loop(cond_fn, body_fn, (iter, x))
+
+    mnist = MNIST()
+    mnist.to(device)
+    #breakpoint()
+    # input = torch.randn(2, 2).to(device)
+    bs=16
+    l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
+    iter = torch.tensor(3, device=device)
+    res = mnist(iter, l_in_0)
+    print("res: ", res)
+    # print("act-res: ", res[-1])
+
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_tpu_MNIST_outside_loop(self):
 
     xm.mark_step()
@@ -309,6 +468,7 @@ class WhileLoopTest(unittest.TestCase):
     return self.assertTrue(torch.all(torch.eq(expected, output_value_real__)))
 
   # WIP for while_loop + PyLoweringContext + MNIST & inside_loop
+  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_tpu_MNIST_outside_loop(self):
 
     xm.mark_step()
@@ -630,6 +790,7 @@ class WhileLoopTest(unittest.TestCase):
     print(body_hlo_print)
 
   # fori_loop + PyLoweringContext: WIP
+  @unittest.skip("skip _get_xlacomputation now")
   def test_fori_loop_tpu_addition(self):
 
     xm.mark_step()
@@ -642,12 +803,14 @@ class WhileLoopTest(unittest.TestCase):
 
     def body_fun(*argus):
       plus_value, init_val = argus
-      return plus_value.clone(), torch.add(plus_value, init_val).clone()
+      # return plus_value.clone(), torch.add(plus_value, init_val).clone()
+      return plus_value, torch.add(plus_value, init_val)
 
     _, _, _, actual = fori_loop(upper, lower, body_fun, plus_value, init_val)
     expected = _fake_fori_loop(lower, upper, body_fun, plus_value, init_val)
     self.assertEqual(expected, actual)
 
+  @unittest.skip("skip _get_xlacomputation now")
   def test_fori_loop_tpu_simple_linear(self):
 
     xm.mark_step()

@@ -2476,6 +2476,23 @@ void InitXlaModuleBindings(py::module m) {
 
     // create xlacomputation based on treated tensors
     runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true);
+
+    // // wrap inputs of cond/body_computation
+    // // if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
+    // if (true) { // only while_loop would call this function now, so warp args when true
+    //   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+    //   std::vector<size_t> buffer_donor_indices;
+    //   xla::ProgramShape program_shape =
+    //       ConsumeValue(xla_computation.GetProgramShape());
+    //   // TODO(@manfei): please confirm whether we check for more than two or use
+    //   // default value true
+    //   bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
+    //   if (should_wrap_parameter) {
+    //     xla_computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+    //         xla_computation, program_shape.parameters(), buffer_donor_indices));
+    //   }
+    // }
+
     return xla_computation;
   });
   m.def("_get_tensors_handle",
