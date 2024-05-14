@@ -84,6 +84,23 @@ class PT2EExportTest(unittest.TestCase):
     self.assertEqual(stablehlo_txt.count("stablehlo.uniform_quantize"), 1)
     self.assertEqual(stablehlo_txt.count("stablehlo.uniform_dequantize"), 1)
 
+  def test_per_channel_qdq_scalar_scale(self):
+    device = xm.xla_device()
+    x = torch.randn(2, 3, 4, 5).to(device)
+    scale = torch.tensor([3.2]).to(device)
+    zero_point = torch.tensor([-1], dtype=torch.int64).to(device)
+    x = torch.ops.quantized_decomposed.quantize_per_channel(
+        x, scale, zero_point, 2, -128, 127, torch.int8)
+    x = torch.ops.quantized_decomposed.dequantize_per_channel(
+        x, scale, zero_point, 2, -128, 127, torch.int8)
+    stablehlo_txt = xm.get_stablehlo([x])
+    self.assertEqual(
+        stablehlo_txt.count(
+            'tensor<2x3x4x5x!quant.uniform<i8:f32:2, {3.200000e+00:-1,3.200000e+00:-1,3.200000e+00:-1,3.200000e+00:-1}>>'
+        ), 2)
+    self.assertEqual(stablehlo_txt.count("stablehlo.uniform_quantize"), 1)
+    self.assertEqual(stablehlo_txt.count("stablehlo.uniform_dequantize"), 1)
+
   def test_resnet18(self):
     # Step 1: export resnet18
     args = (torch.randn(1, 3, 224, 224),)
@@ -116,7 +133,6 @@ class PT2EExportTest(unittest.TestCase):
       save_torch_module_as_tf_saved_model(m, args, tmp_path)
       self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
-  @unittest.skip
   def test_resnet18_per_channel(self):
     # Step 1: export resnet18
     args = (torch.randn(1, 3, 224, 224),)

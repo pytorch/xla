@@ -77,6 +77,16 @@ def _xla_quantize(input: torch.Tensor,
                   dtype: torch.dtype,
                   axis: int = -1):
   _check_scale_zp(input, scale, zero_point, axis, dtype)
+  if axis != -1:
+    # PT2E generate scalar for per-channel quant, which shouldn't be expected
+    # https://github.com/pytorch/pytorch/issues/126189
+    # StableHLO uniform_quantize requires the scalar/zero_point size to be the
+    # same as the size of the axis that is quantized along.
+    # We will broadcast the scalar to the size of the axis for now.
+    if input.shape[axis] != scale.numel() and scale.numel() == 1:
+      scale = scale.cpu().broadcast_to((input.shape[axis],))
+    if input.shape[axis] != zero_point.numel() and zero_point.numel() == 1:
+      zero_point = zero_point.cpu().broadcast_to((input.shape[axis],))
   # Scale and zero_point need to be unpacked(materialized before enter LTC),
   # because the quant param will be attached to tensor Shape in HLO/StableHLO.
   scale_np = _unpack_tensor_to_list(scale)
