@@ -6,7 +6,7 @@ import torch
 import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
-from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop_target, _xla_while_loop_target_first, insert_model_pars_into_additional_inputs
+from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop, _xla_while_loop_target, _xla_while_loop_target_first, insert_model_pars_into_additional_inputs
 # from torch_xla.experimental.fori_loop import _post_order_get_xla_computation_target_first, _xla_while_loop_get_xla_computation
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
@@ -371,13 +371,11 @@ class WhileLoopTest(unittest.TestCase):
         self.bn_weight_bias_lists = []
 
       def forward(self, iter, x, y):
-        # weight_bias_lists0 = []
-        # bn_weight_bias_lists0 = []
 
-        def cond_fn(it, x, y):
-          return it > 1
+        def cond_fn(iter, x, y):
+          return iter > 0
 
-        def body_fn(it, x, y):
+        def body_fn(iter, x, y):
           x = F.relu(F.max_pool2d(self.conv1(x), 2))
           # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.conv1.named_parameters())
           x = self.bn1(x)
@@ -394,7 +392,6 @@ class WhileLoopTest(unittest.TestCase):
           x = self.fc2(x)
           # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.fc2.named_parameters())
 
-          # *
           insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.conv1.named_parameters())
           insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.bn1.named_parameters())
           insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn1.named_parameters())
@@ -407,38 +404,13 @@ class WhileLoopTest(unittest.TestCase):
           # self.bn_weight_bias_lists.reverse()
           # self.weight_bias_lists = self.weight_bias_lists + self.bn_weight_bias_lists
           # print("weight_bias_lists: ", weight_bias_lists)
-          return it-1, x, F.log_softmax(x, dim=1)
-
-        # bn_weight_bias_lists.reverse()
-        # weight_bias_lists = weight_bias_lists + bn_weight_bias_lists
-        # print("weight_bias_lists: ", weight_bias_lists)
+          return iter-1, x, F.log_softmax(x, dim=1)
 
         self.bn_weight_bias_lists.reverse()
         self.weight_bias_lists = self.weight_bias_lists + self.bn_weight_bias_lists
         return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists)
-
-        # return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x, y), weight_bias_lists0)
-        # return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x), [])
-        # return _post_order_get_xla_computation_target_first(cond_fn, body_fn, (iter, x), [])
-
-        # def body_fn(it, x):
-        #   x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.conv1.named_parameters())
-        #   x = self.bn1(x)
-        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn1.named_parameters())
-        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn1.named_parameters())
-        #   x = F.relu(F.max_pool2d(self.conv2(x), 2))
-        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.conv2.named_parameters())
-        #   x = self.bn2(x)
-        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn2.named_parameters())
-        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn2.named_parameters())
-        #   x = torch.flatten(x, 1)
-        #   x = F.relu(self.fc1(x))
-        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc1.named_parameters())
-        #   x = self.fc2(x)
-        #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc2.named_parameters())
-        #   return it -1, F.log_softmax(x, dim=1)
-        # return while_loop(cond_fn, body_fn, (iter, x))
+        # return while_loop(cond_fn, body_fn, (iter, x, y))
+        # return _xla_while_loop(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists)
 
     mnist = MNIST()
     mnist.to(device)
