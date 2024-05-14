@@ -367,36 +367,57 @@ class WhileLoopTest(unittest.TestCase):
         self.bn2 = torch.nn.BatchNorm2d(20) # .to(xm.xla_device())
         self.fc1 = torch.nn.Linear(500, 50) # .to(xm.xla_device())
         self.fc2 = torch.nn.Linear(50, 10) # .to(xm.xla_device())
+        self.weight_bias_lists = []
+        self.bn_weight_bias_lists = []
 
-      def forward(self, iter, x):
-        weight_bias_lists = []
-        bn_weight_bias_lists = []
+      def forward(self, iter, x, y):
+        # weight_bias_lists0 = []
+        # bn_weight_bias_lists0 = []
 
-        def cond_fn(it, x):
-          return it > 0
+        def cond_fn(it, x, y):
+          return it > 1
 
-        def body_fn(it, x):
+        def body_fn(it, x, y):
           x = F.relu(F.max_pool2d(self.conv1(x), 2))
-          insert_model_pars_into_additional_inputs(weight_bias_lists, self.conv1.named_parameters())
+          # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.conv1.named_parameters())
           x = self.bn1(x)
-          insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn1.named_parameters())
-          insert_model_pars_into_additional_inputs(bn_weight_bias_lists, self.bn1.named_parameters())
+          # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.bn1.named_parameters())
+          # insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn1.named_parameters())
           x = F.relu(F.max_pool2d(self.conv2(x), 2))
-          insert_model_pars_into_additional_inputs(weight_bias_lists, self.conv2.named_parameters())
+          # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.conv2.named_parameters())
           x = self.bn2(x)
-          insert_model_pars_into_additional_inputs(weight_bias_lists, self.bn2.named_parameters())
-          insert_model_pars_into_additional_inputs(bn_weight_bias_lists, self.bn2.named_parameters())
+          # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.bn2.named_parameters())
+          # insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn2.named_parameters())
           x = torch.flatten(x, 1)
           x = F.relu(self.fc1(x))
-          insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc1.named_parameters())
+          # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.fc1.named_parameters())
           x = self.fc2(x)
-          insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc2.named_parameters())
+          # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.fc2.named_parameters())
 
-          return it -1, F.log_softmax(x, dim=1)
+          # *
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.conv1.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.bn1.named_parameters())
+          insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn1.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.conv2.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.bn2.named_parameters())
+          insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn2.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.fc1.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.fc2.named_parameters())
 
-        bn_weight_bias_lists.reverse()
-        weight_bias_lists = weight_bias_lists + bn_weight_bias_lists
-        return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x), weight_bias_lists)
+          # self.bn_weight_bias_lists.reverse()
+          # self.weight_bias_lists = self.weight_bias_lists + self.bn_weight_bias_lists
+          # print("weight_bias_lists: ", weight_bias_lists)
+          return it-1, x, F.log_softmax(x, dim=1)
+
+        # bn_weight_bias_lists.reverse()
+        # weight_bias_lists = weight_bias_lists + bn_weight_bias_lists
+        # print("weight_bias_lists: ", weight_bias_lists)
+
+        self.bn_weight_bias_lists.reverse()
+        self.weight_bias_lists = self.weight_bias_lists + self.bn_weight_bias_lists
+        return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists)
+
+        # return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x, y), weight_bias_lists0)
         # return _xla_while_loop_target_first(cond_fn, body_fn, (iter, x), [])
         # return _post_order_get_xla_computation_target_first(cond_fn, body_fn, (iter, x), [])
 
@@ -416,7 +437,6 @@ class WhileLoopTest(unittest.TestCase):
         #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc1.named_parameters())
         #   x = self.fc2(x)
         #   # insert_model_pars_into_additional_inputs(weight_bias_lists, self.fc2.named_parameters())
-
         #   return it -1, F.log_softmax(x, dim=1)
         # return while_loop(cond_fn, body_fn, (iter, x))
 
@@ -426,8 +446,9 @@ class WhileLoopTest(unittest.TestCase):
     # input = torch.randn(2, 2).to(device)
     bs=16
     l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
+    l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
     iter = torch.tensor(3, device=device)
-    res = mnist(iter, l_in_0)
+    res = mnist(iter, l_in_0, l_out)
     print("res: ", res)
     # print("act-res: ", res[-1])
 
