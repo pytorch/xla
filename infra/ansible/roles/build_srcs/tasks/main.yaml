@@ -28,7 +28,7 @@
     chdir: "{{ (src_root, 'pytorch') | path_join }}"
     creates: "{{ (src_root, 'pytorch/dist/*.whl') | path_join }}"
   # Set `USE_CUDA=0` as PyTorch cannot be used with GPU in eager and XLA mode.
-  environment: "{{ env_vars | combine({'USE_CUDA': 1, 'TORCH_CUDA_ARCH_LIST': '8.6'}) }}"
+  environment: "{{ env_vars | combine({'USE_CUDA': 0}) }}"
 
 - name: Find PyTorch *.whl files in pytorch/dist
   ansible.builtin.find:

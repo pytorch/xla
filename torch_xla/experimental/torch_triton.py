@@ -124,6 +124,7 @@ def get_or_create_triton_kernel(
       ptx,
       ttir,
       compute_capability,
+      *cluster_dims,
   )
 
   specialization_attr = fn._get_config(*args)  # pylint: disable=protected-access
