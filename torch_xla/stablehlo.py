@@ -22,7 +22,6 @@ from torch_xla.experimental.stablehlo_custom_call import (
 from torch_xla.experimental.unbounded_dynamism_export import (
     exported_program_has_symbolic_input_shape,
     process_exported_program_with_symbolic_input)
-from torch_xla.experimental.xla_mlir_debuginfo import write_mlir_debuginfo
 
 
 def _get_numpy_dtype(dtype):
@@ -285,6 +284,7 @@ class XLAExportInterpreter(torch.fx.Interpreter):
     else:
       res = super().run_node(n)
     if self.gm_serializer is not None:
+      from torch_xla.experimental.xla_mlir_debuginfo import write_mlir_debuginfo
       node_metadata = json.dumps(self.gm_serializer.serialize_metadata(n))
       pytree.tree_map_only(torch.Tensor,
                            lambda x: write_mlir_debuginfo(x, node_metadata),
