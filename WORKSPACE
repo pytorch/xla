@@ -38,6 +38,9 @@ python_configure(
 # b) get the sha256 hash of the commit by running:
 #    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
+
+xla_hash = 'dc2b3b3545b41aa3280291fe40face744d187ad7'
+
 http_archive(
     name = "xla",
     patch_args = [
@@ -50,9 +53,9 @@ http_archive(
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
     ],
-    strip_prefix = "xla-80462ef5b22360df177fe24fc13c81b235d3f3a2",
+    strip_prefix = "xla-" + xla_hash,
     urls = [
-        "https://github.com/openxla/xla/archive/80462ef5b22360df177fe24fc13c81b235d3f3a2.tar.gz",
+        "https://github.com/openxla/xla/archive/" + xla_hash + ".tar.gz",
     ],
 )
 
