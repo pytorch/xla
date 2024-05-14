@@ -84,23 +84,6 @@ class PT2EExportTest(unittest.TestCase):
     self.assertEqual(stablehlo_txt.count("stablehlo.uniform_quantize"), 1)
     self.assertEqual(stablehlo_txt.count("stablehlo.uniform_dequantize"), 1)
 
-  def test_per_channel_qdq_scalar_scale(self):
-    device = xm.xla_device()
-    x = torch.randn(2, 3, 4, 5).to(device)
-    scale = torch.tensor([3.2]).to(device)
-    zero_point = torch.tensor([-1], dtype=torch.int64).to(device)
-    x = torch.ops.quantized_decomposed.quantize_per_channel(
-        x, scale, zero_point, 2, -128, 127, torch.int8)
-    x = torch.ops.quantized_decomposed.dequantize_per_channel(
-        x, scale, zero_point, 2, -128, 127, torch.int8)
-    stablehlo_txt = xm.get_stablehlo([x])
-    self.assertEqual(
-        stablehlo_txt.count(
-            'tensor<2x3x4x5x!quant.uniform<i8:f32:2, {3.200000e+00:-1,3.200000e+00:-1,3.200000e+00:-1,3.200000e+00:-1}>>'
-        ), 2)
-    self.assertEqual(stablehlo_txt.count("stablehlo.uniform_quantize"), 1)
-    self.assertEqual(stablehlo_txt.count("stablehlo.uniform_dequantize"), 1)
-
   def test_resnet18(self):
     # Step 1: export resnet18
     args = (torch.randn(1, 3, 224, 224),)
@@ -143,8 +126,10 @@ class PT2EExportTest(unittest.TestCase):
     quantizer = XNNPACKQuantizer().set_global(
         get_symmetric_quantization_config(is_per_channel=True))
     m = prepare_pt2e(m, quantizer)
-
-    # Step 3: Quantize the model
+    # Step 3: Run through example inputs, otherwise per-channel
+    # quant may have scalar scale/zero_point
+    m(*args)
+    # Step 4: Quantize the model
     m = convert_pt2e(m, fold_quantize=False)
 
     # Trace with torch/xla and export stablehlo
