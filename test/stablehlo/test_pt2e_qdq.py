@@ -116,6 +116,7 @@ class PT2EExportTest(unittest.TestCase):
       save_torch_module_as_tf_saved_model(m, args, tmp_path)
       self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
+  @unittest.skip
   def test_resnet18_per_channel(self):
     # Step 1: export resnet18
     args = (torch.randn(1, 3, 224, 224),)

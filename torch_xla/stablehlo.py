@@ -11,6 +11,7 @@ import torch
 import torch_xla
 import torch_xla.experimental.quantized
 from torch._decomp import get_decompositions
+from torch._export.serde.serialize import GraphModuleSerializer
 from torch.fx import _pytree as fx_pytree
 from torch.utils import _pytree as pytree
 from torch_xla.core import dynamo_bridge
@@ -64,6 +65,8 @@ class StableHLOExportOptions:
   # Ops that will be mapped to stablehlo.custom_call in the
   # exported StableHLO graph.
   custom_ops_allowed_in_graph: Set[str] = field(default_factory=set)
+  # Export node metadata to NamedLoc in StableHLO.
+  export_node_metadata: bool = False
 
 
 class StableHLOGraphModule:
@@ -219,11 +222,13 @@ class StableHLOModelBundle:
 
 class XLAExportInterpreter(torch.fx.Interpreter):
 
-  def __init__(self, module, device, custom_ops_allowed_in_graph):
+  def __init__(self, module, device, custom_ops_allowed_in_graph,
+               gm_serializer):
     self._device = device
     super().__init__(module)
     self.tensor_id_to_dynamic_dims = {}
     self.custom_ops_allowed_in_graph = custom_ops_allowed_in_graph
+    self.gm_serializer = gm_serializer
 
   def _mark_dynamic(self, tensor, dynamic_dims):
     tid = torch_xla._XLAC._xla_get_tensor_id(tensor)
@@ -267,8 +272,7 @@ class XLAExportInterpreter(torch.fx.Interpreter):
             i for i, x in enumerate(fake_t.shape) if not isinstance(x, int)
         ]
         self._mark_dynamic(res, dynamic_dims)
-      return res
-    if n.op == 'call_function':
+    elif n.op == 'call_function':
       if hasattr(n.target, 'namespace'
                 ) and n.target.namespace in self.custom_ops_allowed_in_graph:
         output_shapes, output_dtypes = extract_custom_call_outputs_shape_dtype(
@@ -276,7 +280,16 @@ class XLAExportInterpreter(torch.fx.Interpreter):
         call_name = str(n.target)
         n.target = stablehlo_custom_call
         n.args = (n.args, call_name, output_shapes, output_dtypes)
-    return super().run_node(n)
+      res = super().run_node(n)
+    else:
+      res = super().run_node(n)
+    if self.gm_serializer is not None:
+      from torch_xla.experimental.xla_mlir_debuginfo import write_mlir_debuginfo
+      node_metadata = json.dumps(self.gm_serializer.serialize_metadata(n))
+      pytree.tree_map_only(torch.Tensor,
+                           lambda x: write_mlir_debuginfo(x, node_metadata),
+                           res)
+    return res
 
 
 def _extract_input_args(exported_model, options):
@@ -334,8 +347,17 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   if options.inline_all_constant:
     # Inline all constants.
     torch_xla._XLAC._set_xla_all_numbers_special_scalars(True)
+  xla_hlo_debug_env = os.environ.get("XLA_HLO_DEBUG", "0")
+  if options.export_node_metadata:
+    gm_serializer = GraphModuleSerializer(exported_model.graph_signature,
+                                          exported_model.module_call_graph)
+    os.environ["XLA_HLO_DEBUG"] = "1"
+  else:
+    gm_serializer = None
+
   xla_interpreter = XLAExportInterpreter(exported_model.graph_module, device,
-                                         options.custom_ops_allowed_in_graph)
+                                         options.custom_ops_allowed_in_graph,
+                                         gm_serializer)
   with torch.no_grad():
     res = xla_interpreter.run(*_flat_input_args, enable_io_processing=False)
     res = res[num_mutations:]
@@ -457,6 +479,8 @@ def _exported_program_to_stablehlo_bundle(exported_model,
 
   # Recover the global flag to not inline all scalars.
   torch_xla._XLAC._set_xla_all_numbers_special_scalars(False)
+  # Recover the global XLA_HLO_DEBUG flag
+  os.environ["XLA_HLO_DEBUG"] = xla_hlo_debug_env
 
   return bundle
 

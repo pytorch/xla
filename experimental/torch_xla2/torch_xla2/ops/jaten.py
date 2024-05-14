@@ -1827,6 +1827,7 @@ def _aten_tensor_split(ary, indices_or_sections, axis=0):
 
 
 @op(torch.ops.aten.randn, needs_env=True)
+@op_base.convert_dtype()
 def _randn(
   *size,
   generator=None,
@@ -1844,12 +1845,12 @@ def _randn(
   key = env.get_and_rotate_prng_key()
   res = jax.random.normal(key, shape)
   if dtype is not None:
-    dtype = tensor.t2j_dtype(dtype)
     res = res.astype(dtype)
   return res
 
 
 @op(torch.ops.aten.rand, needs_env=True)
+@op_base.convert_dtype()
 def _rand(
   *size,
   generator=None,
@@ -1867,7 +1868,6 @@ def _rand(
   key = env.get_and_rotate_prng_key()
   res = jax.random.uniform(key, shape)
   if dtype is not None:
-    dtype = tensor.t2j_dtype(dtype)
     res = res.astype(dtype)
   return res
 
