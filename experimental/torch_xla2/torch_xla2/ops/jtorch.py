@@ -1,49 +1,21 @@
 """Tensor constructor overrides"""
 import functools
-from typing import Callable, Optional, ParamSpec, Sequence
+from typing import Optional, Sequence
 
 import jax
 import torch
 import jax.numpy as jnp
 from torch_xla2 import tensor
 from torch_xla2.ops.ops_registry import register_torch_function_op
+from torch_xla2.ops import op_base
+
 
 def register_function(torch_func, **kwargs):
   return functools.partial(register_torch_function_op, torch_func, **kwargs)
 
 
-P = ParamSpec('P')
-
-
-def convert_dtype(use_default_dtype: bool = True):
-  """Converts `dtype` kwarg of function from torch to JAX.
-
-  Args:
-    use_default_dtype: Whether to use torch default dtype if none is provided.
-
-  Returns:
-    A decorator that wraps a JAX implementation of a torch function.
-  """
-
-  def decorator(func: Callable[P, torch.Tensor]):
-
-    @functools.wraps(func)
-    def wrapper(*args: P.args,
-                dtype: Optional[torch.dtype] = None,
-                **kwargs: P.kwargs):
-      if not dtype and use_default_dtype:
-        dtype = torch.get_default_dtype()
-      jax_dtype = tensor.t2j_dtype(dtype)
-
-      return func(*args, dtype=jax_dtype, **kwargs)
-
-    return wrapper
-
-  return decorator
-
-
 @register_function(torch.tensor)
-@convert_dtype(use_default_dtype=False)  # Attempt to infer type from elements
+@op_base.convert_dtype(use_default_dtype=False)  # Attempt to infer type from elements
 def _tensor(data, *, dtype=None, **kwargs):
   python_types_to_torch_types = {
       bool: jnp.bool,
@@ -61,25 +33,25 @@ def _tensor(data, *, dtype=None, **kwargs):
 
 
 @register_function(torch.ones)
-@convert_dtype()
+@op_base.convert_dtype()
 def _ones(*size: int, dtype=None, **kwargs):
   return jnp.ones(size, dtype)
 
 
 @register_function(torch.zeros)
-@convert_dtype()
+@op_base.convert_dtype()
 def _zeros(*size: int, dtype=None, **kwargs):
   return jnp.zeros(size, dtype)
 
 
 @register_function(torch.eye)
-@convert_dtype()
+@op_base.convert_dtype()
 def _eye(n: int, m: Optional[int] = None, *, dtype=None, **kwargs):
   return jnp.eye(n, m, dtype=dtype)
 
 
 @register_function(torch.full)
-@convert_dtype()
+@op_base.convert_dtype()
 def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
   # TODO: handle torch.Size
   return jnp.full(size, fill_value, dtype=dtype)

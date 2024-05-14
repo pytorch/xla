@@ -1,5 +1,9 @@
+import functools
 import torch
-from torch_xla2 import interop
+from torch_xla2 import interop, tensor
+from torch_xla2 import types
+
+from typing import Callable, Optional, ParamSpec, Sequence
 
 
 class BinaryOpWithPromotion:
@@ -52,4 +56,29 @@ class OutVariant:
 
 
 
+P = ParamSpec('P')
+def convert_dtype(use_default_dtype: bool = True):
+  """Converts `dtype` kwarg of function from torch to JAX.
 
+  Args:
+    use_default_dtype: Whether to use torch default dtype if none is provided.
+
+  Returns:
+    A decorator that wraps a JAX implementation of a torch function.
+  """
+
+  def decorator(func: types.TorchCallable):
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args,
+                dtype: Optional[torch.dtype] = None,
+                **kwargs: P.kwargs):
+      if not dtype and use_default_dtype:
+        dtype = torch.get_default_dtype()
+      jax_dtype = tensor.t2j_dtype(dtype)
+
+      return func(*args, dtype=jax_dtype, **kwargs)
+
+    return wrapper
+
+  return decorator
