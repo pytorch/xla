@@ -310,31 +310,39 @@ def _xla_while_loop_target(cond_fn, body_fn, carried_inputs, additional_inputs=N
     fake_carried_inputs.append(
         torch.randint(10, carried_input.size(),
                       dtype=carried_input.dtype).to(device))
+  fake_iter = fake_carried_inputs[0]
+  fake_input_output = fake_carried_inputs[1:]
+
+  fake_additiona_args = [] # fake_carried_inputs
   for additional_input in additional_inputs:
     device = additional_input.device
-    fake_carried_inputs.append(
+    fake_additiona_args.append(
         torch.randint(
             10, additional_input.size(),
             dtype=additional_input.dtype).to(device))
 
-  print("fake_carried_inputs: ", fake_carried_inputs)
+  # print("fake_carried_inputs: ", fake_carried_inputs)
+
 
   # TODO(@manfei): specify which element is for which argument like a,b,c
   # cond_result = cond_fn(*fake_carried_inputs)
-  cond_result = cond_fn(*carried_inputs)
+  # cond_result = cond_fn(*fake_carried_inputs_all_args)
+  cond_result = cond_fn(*carried_inputs) # fake one would result none input args
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
 
-  # skip exist iter, add other additional inputs
-  additional_inputs_list_cond = list(
-      fake_carried_inputs[1:]
-  )
-  # seems due to post-order, input was in the final position of xlacomputation, so move inputs' order like that too
-  if additional_inputs:
-    print("arrive here for cond !!!")
-    tmp_output = additional_inputs_list_cond[0]  # not used, change order doesn't affect logic
-    del additional_inputs_list_cond[0]  # not used, change order doesn't affect logic
-    additional_inputs_list_cond.append(tmp_output)  # not used, change order doesn't affect logic
+  # # skip exist iter, add other additional inputs
+  # additional_inputs_list_cond = list(
+  #     fake_carried_inputs_all_args[1:] # fake_carried_inputs[1:]
+  # )
+  additional_inputs_list_cond = fake_additiona_args + fake_input_output # due to post order
+
+  # # seems due to post-order, input was in the final position of xlacomputation, so move inputs' order like that too
+  # if additional_inputs:
+  #   print("arrive here for cond !!!")
+  #   tmp_output = additional_inputs_list_cond[0]  # not used, change order doesn't affect logic
+  #   del additional_inputs_list_cond[0]  # not used, change order doesn't affect logic
+  #   additional_inputs_list_cond.append(tmp_output)  # not used, change order doesn't affect logic
 
   print("additional_inputs_list_cond: ", additional_inputs_list_cond)
   cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
@@ -348,7 +356,7 @@ def _xla_while_loop_target(cond_fn, body_fn, carried_inputs, additional_inputs=N
 
   # generate body_fn xlacomputation
   # body_result = body_fn(*fake_carried_inputs)
-  body_result = body_fn(*carried_inputs)
+  body_result = body_fn(*carried_inputs) # fake would miss iter
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
 
@@ -361,12 +369,13 @@ def _xla_while_loop_target(cond_fn, body_fn, carried_inputs, additional_inputs=N
   #   # print("arrive here too !!!")
   #   additional_inputs_list_body = []
 
-  # for no-weight-bias-return body, we need to add params in build
-  additional_inputs_list_body = additional_inputs
+  # # for no-weight-bias-return body, we need to add params in build
+  # additional_inputs_list_body = additional_inputs
+  additional_inputs_list_body = [fake_input_output[-1],]
 
   # TODO(@manfei): treat hard-code parameters: additional_inputs_list_body
-  # body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
-  body_ctx.buildforiloop(list(body_result), ())
+  body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
+  # body_ctx.buildforiloop(list(body_result), ())
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
@@ -374,8 +383,12 @@ def _xla_while_loop_target(cond_fn, body_fn, carried_inputs, additional_inputs=N
   print("body computation: !!!!!!!!!")
   print(body_hlo_print)
 
-  # trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
-  total_inputs = carried_inputs + tuple(additional_inputs)
+  # # trans fake_carried_inputs from list(tensor) to list(xla::op), which part could change init of xla::while
+  # total_inputs = carried_inputs + tuple(additional_inputs)
+  iter_value = carried_inputs[0]
+  input_and_outputs_value = carried_inputs[1:]
+  total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(carried_inputs[1:])
+
   kwargs = {}
   if type(total_inputs) is tuple:
     shapes = xb.tensor_shape(total_inputs)
@@ -390,8 +403,8 @@ def _xla_while_loop_target(cond_fn, body_fn, carried_inputs, additional_inputs=N
   # change order of output of real inputs to match the real body's xlacomputation due to post order
   # TODO(@manfei): treat hard-code input arguments, currently switch bias and output_value if additional_inputs(weight/bias) exists
   if additional_inputs:
-    tmp_output = params[1]
-    del params[1]
+    tmp_output = params[2] # 1]
+    del params[2] # 1]
     params.append(tmp_output)
     # tmp_bias = params[-3]
     # del params[-3]
