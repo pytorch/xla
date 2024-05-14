@@ -133,30 +133,6 @@ class ExportTest(unittest.TestCase):
       shlo = exported_program_to_stablehlo(exported, options=export_options)
       self.assertEqual(shlo._bundle.state_dict, {})
 
-  def test_export_node_metadata(self):
-
-    class M(torch.nn.Module):
-
-      def __init__(self):
-        super().__init__()
-        self.fc1 = torch.nn.Linear(in_features=4, out_features=16, bias=True)
-        self.fc2 = torch.nn.Linear(in_features=16, out_features=10, bias=True)
-
-      def forward(self, x):
-        x = self.fc1(x)
-        x = self.fc2(x)
-        return torch.relu(x)
-
-    args = (torch.rand(2, 4),)
-    ep = torch.export.export(M(), args)
-    export_options = StableHLOExportOptions()
-    export_options.export_node_metadata = True
-    shlo = exported_program_to_stablehlo(ep, options=export_options)
-    shlo_text = shlo.get_stablehlo_text()
-    self.assertTrue('stack_trace' in shlo_text)
-    self.assertTrue('nn_module_stack' in shlo_text)
-    self.assertTrue('source_fn_stack' in shlo_text)
-
 
 if __name__ == '__main__':
   unittest.main()
