@@ -10,6 +10,7 @@ from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP, chec
 from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
                                              transformer_auto_wrap_policy)
 
+
 class TrainResNetXLAFSDP(TrainResNetBase):
 
   def __init__(self):
@@ -20,8 +21,7 @@ class TrainResNetXLAFSDP(TrainResNetBase):
     if auto_wrap_policy == "size_based":
       # auto-wrap all sub-modules with a certain number of parameters (default 1e6)
       auto_wrap_policy = partial(
-          size_based_auto_wrap_policy,
-          min_num_params=auto_wrap_min_num_params)
+          size_based_auto_wrap_policy, min_num_params=auto_wrap_min_num_params)
     elif auto_wrap_policy == "type_based":
       # auto-wrap all sub-modules in torchvision ResNet's BasicBlock or Bottleneck
       # or torchvision transformer's EncoderBlock as an example
@@ -32,14 +32,14 @@ class TrainResNetXLAFSDP(TrainResNetBase):
               torchvision.models.resnet.BasicBlock,
               torchvision.models.resnet.Bottleneck,
               torchvision.models.vision_transformer.EncoderBlock,
-          }) 
+          })
     else:
       raise Exception(f"Invalid auto-wrap policy: {auto_wrap_policy}")
     fsdp_wrap = lambda m: FSDP(
         m,
         compute_dtype=torch.float32,
         pin_layout_in_collective_ops=True,
-        auto_wrap_policy=auto_wrap_policy)    
+        auto_wrap_policy=auto_wrap_policy)
     self.model = fsdp_wrap(self.model)
     self.optimizer = optim.SGD(self.model.parameters(), weight_decay=1e-4)
 
