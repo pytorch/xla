@@ -432,12 +432,21 @@ def flash_attention(
                               sm_scale, partition_spec, mesh)
 
 
-def paged_attention(q, k_pages, v_pages, lengths, page_indices,
-                    pages_per_compute_block):
+def paged_attention(q,
+                    k_pages,
+                    v_pages,
+                    lengths,
+                    page_indices,
+                    pages_per_compute_block,
+                    megacore_mode: str = None):
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
   from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
+
+  assert megacore_mode in [
+      "kv_head", "batch", None
+  ], "megacore_mode must be one of ['kv_head', 'batch', None]."
 
   payload, tensor_args = trace_pallas(
       paged_attention,
@@ -447,7 +456,8 @@ def paged_attention(q, k_pages, v_pages, lengths, page_indices,
       lengths,
       page_indices,
       pages_per_compute_block=pages_per_compute_block,
-      static_argnames=["pages_per_compute_block"],
+      megacore_mode=megacore_mode,
+      static_argnames=["pages_per_compute_block", "megacore_mode"],
   )
 
   batch_size, num_heads, head_dim = q.shape
@@ -512,22 +522,28 @@ def flash_attention_non_xla(q: torch.Tensor,
 
 
 XLA_LIB.define(
-    "paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block) -> Tensor",
+    "paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block, str megacore_mode=None) -> Tensor",
 )
 
 
 @impl(XLA_LIB, "paged_attention", "XLA")
-def paged_attention_xla(q: torch.Tensor, k_pages: torch.Tensor,
-                        v_pages: torch.Tensor, lengths: torch.Tensor,
+def paged_attention_xla(q: torch.Tensor,
+                        k_pages: torch.Tensor,
+                        v_pages: torch.Tensor,
+                        lengths: torch.Tensor,
                         page_indices: torch.Tensor,
-                        pages_per_compute_block: int):
+                        pages_per_compute_block: int,
+                        megacore_mode: str = None):
   return paged_attention(q, k_pages, v_pages, lengths, page_indices,
-                         pages_per_compute_block)
+                         pages_per_compute_block, megacore_mode)
 
 
 @impl(XLA_LIB, "paged_attention", "CompositeExplicitAutograd")
-def paged_attention_non_xla(q: torch.Tensor, k_pages: torch.Tensor,
-                            v_pages: torch.Tensor, lengths: torch.Tensor,
+def paged_attention_non_xla(q: torch.Tensor,
+                            k_pages: torch.Tensor,
+                            v_pages: torch.Tensor,
+                            lengths: torch.Tensor,
                             page_indices: torch.Tensor,
-                            pages_per_compute_block: int):
+                            pages_per_compute_block: int,
+                            megacore_mode: str = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")

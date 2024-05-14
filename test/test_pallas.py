@@ -560,6 +560,75 @@ class PallasTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
+  def test_paged_attention_wrapper_with_megacore_modes(self):
+    from torch_xla.experimental.custom_kernel import paged_attention
+    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
+
+    max_kv_len = 2048
+    block_size = 512
+    page_size = 64
+    num_kv_heads = 8
+    q_kv_head_ratio = 8
+    head_dim = 256
+    dtype = torch.float32
+    seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
+
+    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+        seq_lens,
+        page_size,
+        max_kv_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+    )
+
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    seq_lens_xla = seq_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+
+    outputs = []
+    for megacore_mode in ['kv_head', 'batch', None]:
+      outputs.append(
+          paged_attention(
+              q_xla,
+              k_pages_xla,
+              v_pages_xla,
+              seq_lens_xla,
+              page_indices_xla,
+              pages_per_compute_block=block_size // page_size,
+              megacore_mode=megacore_mode))
+
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    seq_lens_jax = jnp.array(seq_lens.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    expected_outputs = []
+    for megacore_mode in ['kv_head', 'batch', None]:
+      expected_outputs.append(
+          torch.from_numpy(
+              np.array(
+                  jax_paged_attention(
+                      q_jax,
+                      k_pages_jax,
+                      v_pages_jax,
+                      seq_lens_jax,
+                      page_indices_jax,
+                      pages_per_compute_block=block_size // page_size,
+                      megacore_mode=megacore_mode))))
+
+    for output, expected_output in zip(outputs, expected_outputs):
+      self.assertTrue(
+          torch.allclose(
+              output.cpu()[seq_lens > 0],
+              expected_output.cpu()[seq_lens > 0],
+              atol=1e-5,
+              rtol=1e-5))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
   def test_paged_attention_wrapper_with_dynamo(self):
     from torch_xla.experimental.custom_kernel import paged_attention
     from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
