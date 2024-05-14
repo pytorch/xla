@@ -284,7 +284,7 @@ class ExperimentRunner:
 
     # Reset state and sync.
     reset_rng_state(benchmark_experiment)
-    if self._args.use_torch_xla2:
+    if self._args.torch_xla2:
       for inputs in inputs_list:
         self._mark_step(benchmark_experiment, inputs)
     else:
@@ -420,7 +420,7 @@ class ExperimentRunner:
 
   def _mark_step(self, benchmark_experiment, tensors_to_check=None):
     if benchmark_experiment.xla:
-      if benchmark_experiment.use_torch_xla2:
+      if benchmark_experiment.torch_xla2:
         assert tensors_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
         for t in tensors_to_check:
           t.block_until_ready()
@@ -870,8 +870,9 @@ def parse_args(args=None):
   )
   parser.add_argument(
       "--torch-xla2",
-      action="store_true",
-      help="Choose to use torch_xla2 or not.",
+      choices=["extract_jax", "torch_export"],
+      action="append",
+      help="Choose to use torch_xla2 and which mode to use.",
   )
   parser.add_argument(
       "--disable-tf32",

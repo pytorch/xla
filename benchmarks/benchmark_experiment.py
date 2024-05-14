@@ -22,6 +22,8 @@ class ExperimentLoader:
         "xla": [None, "PJRT", "XRT"],
         "xla_flags": [None],
         "dynamo": [None, "inductor", "openxla_eval", "openxla"],
+        "torch_xla2": ["extract_jax",
+                       "torch_export"],  # options only apply to torch_xla2
         "test": ["eval", "train"],
     }
 
@@ -30,6 +32,9 @@ class ExperimentLoader:
       config_choices["accelerator"] = list(set(self._args.accelerator))
     if self._args.xla:
       config_choices["xla"] = list(map(parse_none_str, set(self._args.xla)))
+    if self._args.torch_xla2:
+      config_choices["torch_xla2"] = list(
+          map(parse_none_str, set(self._args.torch_xla2)))
     if self._args.dynamo:
       config_choices["dynamo"] = list(
           map(parse_none_str, set(self._args.dynamo)))
@@ -72,7 +77,7 @@ class ExperimentLoader:
         exclude_tags=()):
       return False
 
-    # torch_xla2 doesn't run with dynamo.
+    # torch_xla2 doesn't support dynamo at this time.
     if cfg_dynamo is not None and self._args.torch_xla2:
       return False
 
@@ -114,34 +119,29 @@ class ExperimentLoader:
     dynamo = experiment_config["dynamo"]
     test = experiment_config["test"]
     batch_size = experiment_config.get("batch_size", self._args.batch_size)
+    torch_xla2 = experiment_config["torch_xla2"]
     return BenchmarkExperiment(
         accelerator=accelerator,
         xla=xla,
         xla_flags=xla_flags,
+        torch_xla2=self._args.torch_xla2,
         dynamo=dynamo,
         test=test,
-        batch_size=batch_size,
-        use_torch_xla2=self._args.torch_xla2)
+        batch_size=batch_size)
 
 
 class BenchmarkExperiment:
 
-  def __init__(self,
-               accelerator,
-               xla,
-               xla_flags,
-               dynamo,
-               test,
-               batch_size,
-               use_torch_xla2: bool = False):
+  def __init__(self, accelerator, xla, xla_flags, torch_xla2, dynamo, test,
+               batch_size):
     self.accelerator = accelerator
     self.xla = xla
     self.xla_flags = xla_flags
+    self.torch_xla2 = torch_xla2
     self.dynamo = dynamo
     self.test = test
     self.batch_size = batch_size
     self.accelerator_model = get_accelerator_model(self.accelerator)
-    self.use_torch_xla2 = use_torch_xla2
 
   def update_process_env(self, process_env):
 
@@ -151,7 +151,7 @@ class BenchmarkExperiment:
       process_env.pop("XRT_TPU_CONFIG", None)
       process_env.pop("XLA_FLAGS", None)
 
-    if self.use_torch_xla2:
+    if self.torch_xla2:
       process_env["JAX_PLATFORMS"] = self.accelerator.lower()
 
     if self.xla == "PJRT":

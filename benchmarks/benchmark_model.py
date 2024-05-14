@@ -122,14 +122,19 @@ class BenchmarkModel:
     else:
       raise NotImplementedError
 
-    if self.benchmark_experiment.use_torch_xla2:
+    if self.benchmark_experiment.torch_xla2:
       # for torch_xla2, we export model to FX graph and move weights to JAX device
       import torch_xla2.export
       import torch_xla2
       import jax
       import jax.numpy as jnp
-      exported = torch.export.export(self.module, self.example_inputs)
-      weights, jax_func = torch_xla2.export.exported_program_to_jax(exported)
+      if benchmark_experiment.torch_xla2 == 'torch_export':
+        exported = torch.export.export(self.module, self.example_inputs)
+        weights, jax_func = torch_xla2.export.exported_program_to_jax(exported)
+      elif benchmark_experiment.torch_xla2 == 'extract_jax':
+        weights, jax_func = torch_xla2.extract_jax(self.module)
+      else:
+        raise ValueError("torch_xla2 option unavailable")
       jax_func = jax.jit(jax_func)
       device = jax.devices()[0]
       weights = pytree.tree_map_only(jnp.ndarray,
@@ -137,13 +142,12 @@ class BenchmarkModel:
                                      weights)
       # map the module function to jax_func
       self.module = lambda x: jax_func(weights, x)
-      self.example_inputs = move_to_device(
-          self.example_inputs, device, self.benchmark_experiment.use_torch_xla2)
+      self.example_inputs = move_to_device(self.example_inputs, device,
+                                           self.benchmark_experiment.torch_xla2)
     else:
       self.module = self.module.to(self.device)
-      self.example_inputs = move_to_device(
-          self.example_inputs, self.device,
-          self.benchmark_experiment.use_torch_xla2)
+      self.example_inputs = move_to_device(self.example_inputs, self.device,
+                                           self.benchmark_experiment.torch_xla2)
 
     if self.benchmark_experiment.dynamo:
       compilation_opts = dynamo_compilation_opts.copy()
