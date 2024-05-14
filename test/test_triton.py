@@ -51,7 +51,7 @@ class TritonTest(unittest.TestCase):
     y = torch.arange(size, dtype=torch.int64).to("xla")
     output = torch.empty_like(x)
     block_size = 8
-    grid = (size // block_size,)
+    grid = (triton.cdiv(size, block_size), )
     payload = torch_triton.triton_call(
         x, y, output, size, kernel=add_kernel, grid=grid, BLOCK_SIZE=block_size)
     output = torch_xla._XLAC._xla_gpu_custom_call([x, y], payload,
