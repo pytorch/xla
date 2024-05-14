@@ -33,11 +33,6 @@ class IfrtComputationClient : public ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
-  DataPtr CreateData(std::string device, xla::Shape shape,
-                     std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
   DataPtr GetDataShard(DataPtr data, size_t index) override;

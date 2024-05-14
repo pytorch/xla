@@ -260,9 +260,6 @@ class ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) = 0;
 
-  virtual DataPtr CreateData(std::string device, xla::Shape shape,
-                             std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) = 0;
-
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input
   // wrapped inside a vector.

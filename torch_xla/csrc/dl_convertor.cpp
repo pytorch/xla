@@ -6,6 +6,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
@@ -121,13 +122,9 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
       runtime::GetComputationClient()->GetPjRtBuffer(handle);
   XLA_CHECK(pjrt_buffer != nullptr) << "Could not get a valid pjrt_buffer";
 
-  if (pjrt_buffer->IsTuple()) {
-    XLA_ERROR() << "Unimplemented. BufferToDLPackManagedTensor is not "
-                   "implemented for tuple buffers.";
-  }
-  if (pjrt_buffer->has_dynamic_dimensions()) {
-    XLA_ERROR() << "Unimplemented. DynamicShape is not implemented in DLPack.";
-  }
+  XLA_CHECK(!pjrt_buffer->IsTuple()) << "Unimplemented. BufferToDLPackManagedTensor is not "
+  "implemented for tuple buffers.";
+  XLA_CHECK(!pjrt_buffer->has_dynamic_dimensions()) << "Unimplemented. DynamicShape is not implemented in DLPack.";
 
   auto pack = std::make_unique<DLPackTensor>();
   DLTensor& dt = pack->tensor.dl_tensor;
@@ -180,6 +177,7 @@ absl::StatusOr<xla::PjRtDevice*> DeviceForDLDevice(const DLDevice& context) {
   }
 }
 
+// Reference: https://github.com/openxla/xla/blob/main/xla/python/dlpack.cc
 absl::StatusOr<xla::PrimitiveType> DLDataTypeToPrimitiveType(DLDataType type) {
   if (type.lanes != 1) {
     return tsl::errors::Unimplemented(
@@ -294,11 +292,8 @@ absl::StatusOr<std::vector<int64_t>> StridesToLayout(
 }
 
 at::Tensor fromDLPack(DLManagedTensor* dlmt) {
-  if (dlmt->dl_tensor.ndim < 0) {
-    XLA_ERROR()
-        << "Number of dimensions in DLManagedTensor must be nonnegative, got "
+  XLA_CHECK(dlmt->dl_tensor.ndim >= 0) << "Number of dimensions in DLManagedTensor must be nonnegative, got "
         << dlmt->dl_tensor.ndim;
-  }
   xla::PjRtDevice* device = DeviceForDLDevice(dlmt->dl_tensor.device).value();
   absl::Span<int64_t const> dimensions(
       const_cast<int64_t*>(dlmt->dl_tensor.shape), dlmt->dl_tensor.ndim);
@@ -328,12 +323,12 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
               dlmt->dl_tensor.byte_offset,
           shape, device, on_delete_callback);
   XLA_CHECK_OK(pjrt_buffer.status())
-      << "Failed to create a pjrt buffer in " << __FUNCTION__;
+      << "Failed to create a pjrt buffer.";
   XLA_CHECK(pjrt_buffer.value() != nullptr)
-      << "pjrt buffer is null in " << __FUNCTION__;
+      << "pjrt buffer is null.";
 
   runtime::ComputationClient::DataPtr data =
-      runtime::GetComputationClient()->CreateData(
+      runtime::PjRtComputationClient::CreateData(
           runtime::GetComputationClient()->PjRtDeviceToString(device), shape,
           std::move(pjrt_buffer.value()));
 

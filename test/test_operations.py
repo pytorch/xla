@@ -2513,12 +2513,16 @@ class TestDLPack(parameterized.TestCase):
     t1_cuda = torch.arange(5).cuda()
     dlt1 = torch.utils.dlpack.to_dlpack(t1_cuda)
     xla_t1 = xdlpack.from_dlpack(dlt1)
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
     t1_cuda[0] = t1_cuda[0] + 20
     self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
 
     t2_cuda = torch.tensor(5).cuda()
     dlt2 = torch.utils.dlpack.to_dlpack(t2_cuda)
     xla_t2 = xdlpack.from_dlpack(dlt2)
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
     t2_cuda.fill_(6)
     self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
 
@@ -2528,6 +2532,8 @@ class TestDLPack(parameterized.TestCase):
     xla_t1 = torch.arange(5).to(xm.xla_device())
     dlt1 = xdlpack.to_dlpack(xla_t1)
     cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
+    self.assertEqual(cuda_t1.device.type, 'cuda')
+    self.assertEqual(cuda_t1.device.index, xla_t1.device.index)
     cuda_t1[0] = cuda_t1[0] + 20
     self.assertTrue(torch.allclose(xla_t1.cpu(), cuda_t1.cpu()))
 
@@ -2538,10 +2544,14 @@ class TestDLPack(parameterized.TestCase):
 
     t1 = cuda_t.t()
     xla_t1 = xdlpack.from_dlpack(t1.__dlpack__())
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, 0)
     self.assertTrue(torch.allclose(t1.cpu(), xla_t1.cpu()))
 
     t2 = cuda_t[0]
     xla_t2 = xdlpack.from_dlpack(t2.__dlpack__())
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, 0)
     self.assertTrue(torch.allclose(t2.cpu(), xla_t2.cpu()))
 
     t3 = cuda_t[:, 0]
@@ -2552,10 +2562,14 @@ class TestDLPack(parameterized.TestCase):
 
     t4 = cuda_t[1, :]
     xla_t4 = xdlpack.from_dlpack(t4.__dlpack__())
+    self.assertEqual(xla_t4.device.type, 'xla')
+    self.assertEqual(xla_t4.device.index, 0)
     self.assertTrue(torch.allclose(t4.cpu(), xla_t4.cpu()))
 
     t5 = cuda_t[1]
     xla_t5 = xdlpack.from_dlpack(t5.__dlpack__())
+    self.assertEqual(xla_t5.device.type, 'xla')
+    self.assertEqual(xla_t5.device.index, 0)
     self.assertTrue(torch.allclose(t5.cpu(), xla_t5.cpu()))
 
 
