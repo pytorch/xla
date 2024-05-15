@@ -224,7 +224,7 @@ class TorchBenchModel(BenchmarkModel):
     gc.collect()
 
     # If we are using CUDA, clean-up its cache left-over.
-    if self.use_accelerator_cuda():
+    if self.is_accelerator_cuda():
       torch.cuda.empty_cache()
 
   def set_up(self):
@@ -253,7 +253,7 @@ class TorchBenchModel(BenchmarkModel):
     if self.benchmark_experiment.xla:
       # First, move the model and the inputs to CPU.
       # This avoids having dupplicated data on CUDA.
-      if self.use_accelerator_cuda():
+      if self.is_accelerator_cuda():
         self.module = self.module.to("cpu")
         self.example_inputs = move_to_device(self.example_inputs, "cpu")
         self._cleanup()
@@ -307,7 +307,7 @@ class TorchBenchModel(BenchmarkModel):
     # torchbench uses `xla` as device instead of `tpu`
     device = (
         str(self.benchmark_experiment.get_device()) if
-        self.use_accelerator_tpu() else self.benchmark_experiment.accelerator)
+        self.is_accelerator_tpu() else self.benchmark_experiment.accelerator)
 
     return self.benchmark_cls()(
         test=self.benchmark_experiment.test,
