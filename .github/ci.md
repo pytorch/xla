@@ -88,6 +88,48 @@ As mentioned above, [PyTorch CI pins PyTorch/XLA](https://github.com/pytorch/pyt
 
 [PyTorch/XLA CI pulls PyTorch from master](https://github.com/pytorch/xla/blob/f3415929683880192b63b285921c72439af55bf0/.circleci/common.sh#L15) unless a PyTorch pin is manually provided. PyTorch/XLA is a downstream package to PyTorch, and pulling from master ensures that PyTorch/XLA will stay up-to-date and works with the latest PyTorch changes.
 
+#### TPU CI is broken
+
+If the TPU CI won't run, try to debug using the following steps:
+
+On your cloudtop:
+
+```
+gcloud config set project tpu-pytorch
+gcloud container clusters get-credentials tpu-ci --location=us-central2
+```
+
+Check to see if the runner pod is working:
+
+```
+kubectl get pods -n arc-runners
+```
+
+If it is working, check the logs:
+
+```
+kubectl logs -n arc-runners <runner-pod-name>
+```
+
+If there is no runner pod available, you can check the controller logs. First find the controller pod name:
+
+```
+kubectl get pods -n arc-systems
+```
+
+The name should match actions-runner-controller-gha-rs-controller-*. You can then check the logs by running the following:
+
+```
+kubectl logs -n arc-systems <controller-pod-name>
+```
+
+If the ephemeralrunner spawning the runner pods is stuck in an error, you can attempt the following to restart the ephemeralrunner and check the logs:
+
+```
+kubectl delete ephemeralrunners --all -A
+kubectl logs -f -n arc-runners $(kubectl get pods -n arc-runners -l 'actions.github.com/scale-set-name=v4-runner-set' -o jsonpath='{.items[0].metadata.name}')
+```
+
 ## Upstream CI image (`build_upstream_image.yml`)
 
 We use different build tools than the upstream `torch` repository due to our dependency on XLA, namely `bazel`. To ensure the upstream CI has the correct tools to run XLA, we layer some additional tools and changes on top of our dev image and push the result to upstream's ECR instance. The upstream CI image is defined in `.github/upstream`.
