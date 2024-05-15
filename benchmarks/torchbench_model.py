@@ -358,15 +358,17 @@ class TorchBenchModel(BenchmarkModel):
   def _get_autocast_with_kwargs(self):
     kwargs = {}
     if self.use_amp():
-      # Set the default data-type based on the accelerator.
+      # TODO: Should call device specific autocast implementations.
+      # Specifically, we should be using:
+      #   - torch.cuda.amp.autocast for inductor
+      #   - torch_xla.amp.autocast for PyTorch/XLA experiments.
+      # PyTorch/XLA autocast does not run with dynamo, though:
+      # https://github.com/pytorch/xla/issues/6511
       if self.is_accelerator_cuda():
         # For inductor and XLA:CUDA, we use CUDA autocast.
         autocast = torch.cuda.amp.autocast
         kwargs["dtype"] = torch.float16
       elif self.is_accelerator_tpu():
-        # Should call device specific autocast implementations.
-        # PyTorch/XLA autocast does not run with dynamo, though:
-        # https://github.com/pytorch/xla/issues/6511
         autocast = torch.amp.autocast
         kwargs["device_type"] = "xla"
         kwargs["dtype"] = torch.bfloat16
