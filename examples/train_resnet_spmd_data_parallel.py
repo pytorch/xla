@@ -23,9 +23,8 @@ class TrainResNetXLASpmdDDP(TrainResNetBase):
     # Shard along batch dimension only
     num_devices = xr.global_runtime_device_count()
     device_ids = np.arange(num_devices)
-    mesh_shape = (num_devices, 1, 1, 1)
-    # We know data is 4d and 0th dimension is the batch dimension
-    input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+    mesh_shape = (num_devices,)
+    mesh = xs.Mesh(device_ids, mesh_shape, ('data',))
     # scale the batch size with num_devices since there will be only one
     # process that handles all runtime devices.
     self.batch_size *= num_devices
@@ -37,7 +36,8 @@ class TrainResNetXLASpmdDDP(TrainResNetBase):
     self.train_device_loader = pl.MpDeviceLoader(
         train_loader,
         self.device,
-        input_sharding=xs.ShardingSpec(input_mesh, (0, 1, 2, 3)))
+        # Shard the input's batch dimension along the `data` axis, no sharding along other dimensions
+        input_sharding=xs.ShardingSpec(mesh, ('data', None, None, None)))
 
 
 if __name__ == '__main__':
