@@ -40,6 +40,57 @@ class TestDevices(parameterized.TestCase):
 
     self.assertEqual(met.counter_value('MarkStep'), 1)
 
+  def test_step(self):
+    with torch.step():
+      torch.ones((3, 3), device=xla.device())
+
+    self.assertEqual(met.counter_value('MarkStep'), 1)
+
+  def test_step_exception(self):
+    try:
+      with torch.step():
+        torch.ones((3, 3), device=xla.device())
+        raise RuntimeError("Expected error")
+    except:
+      pass
+
+    self.assertEqual(met.counter_value('MarkStep'), 1)
+
+  # Should roughly match example given in README
+  def test_trivial_model(self):
+    class TrivialModel(nn.Module):
+      def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(10, 10)
+
+      def forward(self, x):
+        return self.linear(x)
+
+    model = TrivialModel().to(xla.device())
+
+    batch_size = 16
+    num_samples = 100
+
+    input_data = torch.randn(num_samples, 10)
+    target_data = torch.randn(num_samples, 10)
+
+    # Create a DataLoader
+    dataset = TensorDataset(input_data, target_data)
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    loss_fn = nn.MSELoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+    for inputs, targets in data_loader:
+      with xla.step():
+        inputs, labels = inputs.to(xla.device()), labels.to(xla.device())
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = loss_fn(outputs, labels)
+        loss.backward()
+        # optimizer.step()
+        xm.optimizer_step(optimizer)
+
 
 if __name__ == "__main__":
   absltest.main()

@@ -33,29 +33,27 @@ To update your existing training loop, make the following changes:
 
 ```diff
 -import torch.multiprocessing as mp
++import torch_xla as xla
 +import torch_xla.core.xla_model as xm
-+import torch_xla.distributed.parallel_loader as pl
 +import torch_xla.distributed.xla_multiprocessing as xmp
 
  def _mp_fn(index):
    ...
 
 +  # Move the model paramters to your XLA device
-+  model.to(xm.xla_device())
-+
-+  # MpDeviceLoader preloads data to the XLA device
-+  xla_train_loader = pl.MpDeviceLoader(train_loader, xm.xla_device())
++  model.to(xla.device())
 
--  for inputs, labels in train_loader:
-+  for inputs, labels in xla_train_loader:
-     optimizer.zero_grad()
-     outputs = model(inputs)
-     loss = loss_fn(outputs, labels)
-     loss.backward()
--    optimizer.step()
-+
-+    # `xm.optimizer_step` combines gradients across replicas
-+    xm.optimizer_step()
+   for inputs, labels in train_loader:
++    with xla.step():
++      # Transfer data to the XLA device. This happens asynchronously.
++      inputs, labels = inputs.to(xla.device()), labels.to(xla.device())
+       optimizer.zero_grad()
+       outputs = model(inputs)
+       loss = loss_fn(outputs, labels)
+       loss.backward()
+-      optimizer.step()
++      # `xm.optimizer_step` combines gradients across replicas
++      xm.optimizer_step(optimizer)
 
  if __name__ == '__main__':
 -  mp.spawn(_mp_fn, args=(), nprocs=world_size)
@@ -69,8 +67,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 ```diff
  import torch.distributed as dist
 -import torch.multiprocessing as mp
-+import torch_xla.core.xla_model as xm
-+import torch_xla.distributed.parallel_loader as pl
++import torch_xla as xla
 +import torch_xla.distributed.xla_multiprocessing as xmp
 +import torch_xla.distributed.xla_backend
 
@@ -89,15 +86,15 @@ If you're using `DistributedDataParallel`, make the following changes:
 
 -  model = model.to(rank)
 -  ddp_model = DDP(model, device_ids=[rank])
-+  xla_train_loader = pl.MpDeviceLoader(train_loader, xm.xla_device())
 
--  for inputs, labels in train_loader:
-+  for inputs, labels in xla_train_loader:
-     optimizer.zero_grad()
-     outputs = ddp_model(inputs)
-     loss = loss_fn(outputs, labels)
-     loss.backward()
-     optimizer.step()
+   for inputs, labels in train_loader:
++    with xla.step():
++      inputs, labels = inputs.to(xla.device()), labels.to(xla.device())
+       optimizer.zero_grad()
+       outputs = ddp_model(inputs)
+       loss = loss_fn(outputs, labels)
+       loss.backward()
+       optimizer.step()
 
  if __name__ == '__main__':
 -  mp.spawn(_mp_fn, args=(), nprocs=world_size)
