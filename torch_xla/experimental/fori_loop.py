@@ -582,6 +582,23 @@ def _xla_while_loop_target_first_second(cond_fn, body_fn, carried_inputs, additi
     res = [iter, ] + additional_inputs + [one, ] + bn_additional_inputs + inputs_items + [outputs_items, ]
     return res
 
+  def tenth_try_new_body_fn(*carried_inputs):
+    # add s64[] for 1
+    res = list(body_fn(*carried_inputs))
+    iter = res[0]
+    inputs_and_outputs = res[1:]
+    inputs_items = inputs_and_outputs[:-1]
+    outputs_items = inputs_and_outputs[-1]
+    # if len(inputs_and_outputs)==1:
+    #   inputs_and_outputs = [inputs_and_outputs,]
+    # res = res + list(additional_inputs)
+    # xla_device = carried_inputs[0].device
+    # one = torch.tensor(1, dtype=torch.int64, device=xla_device)
+    # res = [iter, ] + additional_inputs + [one, ] + bn_additional_inputs + inputs_items + [outputs_items, ]
+    # res = [iter, ] + additional_inputs + bn_additional_inputs[1:] + inputs_items + [outputs_items, ]
+    res = [iter, ] + additional_inputs + bn_additional_inputs + inputs_items + [outputs_items, ]
+    return res
+
   # new_additional_inputs = additional_inputs[0] + additional_inputs[1]
 
   # return _xla_while_loop_target(cond_fn, new_body_fn, carried_inputs, additional_inputs)
@@ -604,6 +621,8 @@ def _xla_while_loop_target_second(cond_fn, body_fn, carried_inputs, additional_i
   # for i in range(len(additional_inputs)): print("additional_inputs ", i, " size: ", additional_inputs[i].size())
   # print("additional_inputs: ", additional_inputs)
   ### use output as input now case, so we could get output in the return value from original inpjut position
+
+  # for i in range(len(bn_additional_inputs)): print("bn_additional_inputs ", i, " size: ", bn_additional_inputs[i].size())
 
   # fake carried_inputs to split formal code
   fake_carried_inputs = []
@@ -690,6 +709,10 @@ def _xla_while_loop_target_second(cond_fn, body_fn, carried_inputs, additional_i
   # === add bn_additional_inputs ===
   fake_additiona_args += bn_additional_inputs
 
+  # for i in range(len(bn_additional_inputs)): print("bn_additional_inputs ", i, " size: ", bn_additional_inputs[i].size())
+
+  # for i in range(len(additional_inputs)): print("additional_inputs ", i, " size: ", additional_inputs[i].size())
+
   # TODO(@manfei): specify which element is for which argument like a,b,c
   # cond_result = cond_fn(*fake_carried_inputs)
   # cond_result = cond_fn(*fake_carried_inputs_all_args)
@@ -756,7 +779,14 @@ def _xla_while_loop_target_second(cond_fn, body_fn, carried_inputs, additional_i
   # total_inputs = carried_inputs + tuple(additional_inputs)
   iter_value = carried_inputs[0]
   input_and_outputs_value = carried_inputs[1:]
-  total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple([one, ]) + tuple(bn_additional_inputs) + tuple(carried_inputs[1:])
+
+  # # === add one ===
+  # # xla_device = carried_inputs[0].device
+  # one = torch.tensor(1, dtype=torch.int64, device=device) # xla_device)
+  # fake_additiona_args.append(one)
+
+  # total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple([one, ]) + tuple(bn_additional_inputs) + tuple(carried_inputs[1:])
+  total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple([one,]) + tuple(bn_additional_inputs) + tuple(carried_inputs[1:])
 
   # for i in range(len(carried_inputs)): print("2 carried_inputs ", i, " size: ", carried_inputs[i].size())
   # for i in range(len(additional_inputs)): print("2 additional_inputs ", i, " size: ", additional_inputs[i].size())
