@@ -71,6 +71,7 @@ class ExperimentLoader:
     cfg_accelerator = experiment_config["accelerator"]
     cfg_xla = experiment_config["xla"]
     cfg_test = experiment_config["test"]
+    cfg_torch_xla2 = experiment_config["torch_xla2"]
 
     # Check that dynamo refers to an existing backend.
     if cfg_dynamo is not None and cfg_dynamo not in dynamo.list_backends(
@@ -78,7 +79,7 @@ class ExperimentLoader:
       return False
 
     # torch_xla2 doesn't support dynamo at this time.
-    if cfg_dynamo is not None and self._args.torch_xla2:
+    if cfg_dynamo is not None and cfg_torch_xla2:
       return False
 
     # Check dynamo backend-specifics constraints.
