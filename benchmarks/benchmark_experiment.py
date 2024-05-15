@@ -125,21 +125,21 @@ class ExperimentLoader:
         accelerator=accelerator,
         xla=xla,
         xla_flags=xla_flags,
-        torch_xla2=torch_xla2,
         dynamo=dynamo,
+        torch_xla2=torch_xla2,
         test=test,
         batch_size=batch_size)
 
 
 class BenchmarkExperiment:
 
-  def __init__(self, accelerator, xla, xla_flags, torch_xla2, dynamo, test,
+  def __init__(self, accelerator, xla, xla_flags, dynamo, torch_xla2, test,
                batch_size):
     self.accelerator = accelerator
     self.xla = xla
     self.xla_flags = xla_flags
-    self.torch_xla2 = torch_xla2
     self.dynamo = dynamo
+    self.torch_xla2 = torch_xla2
     self.test = test
     self.batch_size = batch_size
     self.accelerator_model = get_accelerator_model(self.accelerator)
@@ -201,8 +201,8 @@ class BenchmarkExperiment:
     d["accelerator_model"] = self.accelerator_model
     d["xla"] = self.xla
     d["xla_flags"] = self.xla_flags
-    d["torch_xla2"] = self.torch_xla2
     d["dynamo"] = self.dynamo
+    d["torch_xla2"] = self.torch_xla2
     d["test"] = self.test
     d["batch_size"] = self.batch_size
     return d
