@@ -22,8 +22,7 @@ class ExperimentLoader:
         "xla": [None, "PJRT", "XRT"],
         "xla_flags": [None],
         "dynamo": [None, "inductor", "openxla_eval", "openxla"],
-        "torch_xla2": [None, "extract_jax",
-                       "torch_export"],  # options only apply to torch_xla2
+        "torch_xla2": [None],  # options only apply to torch_xla2
         "test": ["eval", "train"],
     }
 
