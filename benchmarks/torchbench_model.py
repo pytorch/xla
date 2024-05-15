@@ -306,8 +306,8 @@ class TorchBenchModel(BenchmarkModel):
 
     # torchbench uses `xla` as device instead of `tpu`
     device = (
-        str(self.benchmark_experiment.get_device()) if
-        self.is_accelerator_tpu() else self.benchmark_experiment.accelerator)
+        str(self.benchmark_experiment.get_device())
+        if self.is_accelerator_tpu() else self.benchmark_experiment.accelerator)
 
     return self.benchmark_cls()(
         test=self.benchmark_experiment.test,
@@ -376,9 +376,8 @@ class TorchBenchModel(BenchmarkModel):
         # Error: AMP is only supported on XLA:CUDA and XLA:TPU.
         name = self.model_name
         accelerator = self.benchmark_experiment.accelerator
-        raise RuntimeError(
-            f"Tried to run {name} with AMP on {accelerator}. "
-            "However, AMP is only supported on cuda and tpu.")
+        raise RuntimeError(f"Tried to run {name} with AMP on {accelerator}. "
+                           "However, AMP is only supported on cuda and tpu.")
     else:
       autocast = contextlib.nullcontext
     return (autocast, kwargs)
