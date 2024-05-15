@@ -968,13 +968,15 @@ class PyLoweringContext {
       lowering_ctx.AddResult(root);
     }
 
-    xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
+    // xla::XlaBuilder* local_builder = lowering_ctx.builder();
+    // int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
     // XLA_ERROR() << "for fori_loop, we have args now: " <<  parameter_idx;
 
     // hard-code modify cond xlacomputation input arguments with unusedarguments
     // for xla::while requriement
     if (GetNameString() == "condctx") {
+      xla::XlaBuilder* local_builder = lowering_ctx.builder();
+      int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
       // xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // int64_t parameter_idx = 2;  // parameter_idx start from 2 after used upper and lower // param_count
       for (auto& additional_input_tensor : additional_inputs_list) {
@@ -990,6 +992,8 @@ class PyLoweringContext {
     // for xla::while requriement
     if (GetNameString() == "bodyctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
+      int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
+      // xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // TODO(@manfei): treat hard code parameter_idx value
       // int64_t parameter_idx = 21;
       for (auto& additional_input_tensor : additional_inputs_list) {
