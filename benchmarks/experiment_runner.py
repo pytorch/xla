@@ -284,7 +284,7 @@ class ExperimentRunner:
 
     # Reset state and sync.
     reset_rng_state(benchmark_experiment)
-    if self._args.torch_xla2:
+    if benchmark_experiment.torch_xla2:
       for inputs in inputs_list:
         self._mark_step(benchmark_experiment, inputs)
     else:
