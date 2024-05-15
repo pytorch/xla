@@ -369,11 +369,13 @@ class WhileLoopTest(unittest.TestCase):
         self.fc2 = torch.nn.Linear(50, 10) # .to(xm.xla_device())
         self.weight_bias_lists = []
         self.bn_weight_bias_lists = []
+        self.register_buffer("dec", torch.tensor(1))
 
       def forward(self, iter, x, y):
 
         def cond_fn(iter, x, y):
-          return iter > 0
+          # return iter > 0
+          return iter > self.dec
 
         def body_fn(iter, x, y): # def body_fn(iter, original_x, y):
           # x = original_x.clone()
@@ -418,6 +420,7 @@ class WhileLoopTest(unittest.TestCase):
           # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.bn1.named_parameters())
           # # insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.bn2.named_parameters())
 
+          # self.bn_weight_bias_lists.append(self.dec)
           insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn2.named_parameters())
           insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn1.named_parameters())
 
@@ -429,7 +432,7 @@ class WhileLoopTest(unittest.TestCase):
           # for i in range(len(self.weight_bias_lists)): print("self.weight_bias_lists ", i, " size: ", self.weight_bias_lists[i].size())
           # return iter-1, x, F.log_softmax(x, dim=1)
           # return iter-1, original_x, F.log_softmax(x, dim=1)
-          return iter-1, x, F.log_softmax(y, dim=1)
+          return iter - self.dec, x, F.log_softmax(y, dim=1)
 
         # self.bn_weight_bias_lists.reverse()
         # self.weight_bias_lists = self.weight_bias_lists + self.bn_weight_bias_lists
