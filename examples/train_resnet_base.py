@@ -16,16 +16,17 @@ import torch.nn as nn
 class TrainResNetBase():
 
   def __init__(self):
-    img_dim = 224
+    self.img_dim = 224
     self.batch_size = 128
     self.num_steps = 300
     self.num_epochs = 1
-    train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
+    self.train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     # For the purpose of this example, we are going to use fake data.
     train_loader = xu.SampleGenerator(
-        data=(torch.zeros(self.batch_size, 3, img_dim, img_dim),
+        data=(torch.zeros(self.batch_size, 3, self.img_dim, self.img_dim),
               torch.zeros(self.batch_size, dtype=torch.int64)),
-        sample_count=train_dataset_len // self.batch_size // xr.world_size())
+        sample_count=self.train_dataset_len // self.batch_size //
+        xr.world_size())
 
     self.device = torch_xla.device()
     self.train_device_loader = pl.MpDeviceLoader(train_loader, self.device)
