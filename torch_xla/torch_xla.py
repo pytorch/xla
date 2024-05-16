@@ -62,5 +62,7 @@ def step():
   works with `xla.step` but does not follow best practices will become errors in
   future releases. See https://github.com/pytorch/xla/issues/6751 for context.
   """
-  yield
-  xm.mark_step()
+  try:
+    yield
+  finally:
+    xm.mark_step()

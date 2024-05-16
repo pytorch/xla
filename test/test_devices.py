@@ -2,7 +2,10 @@ import os
 
 from absl.testing import absltest, parameterized
 import torch
+from torch import nn
+from torch.utils.data import TensorDataset, DataLoader
 import torch_xla as xla
+import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.debug.metrics as met
 
@@ -14,8 +17,8 @@ class TestDevices(parameterized.TestCase):
     xr.set_device_type('CPU')
     os.environ['CPU_NUM_DEVICES'] = '4'
 
-  def tearDown(self):
-    met.clear_metrics()
+  def setUp(self):
+    met.clear_all()
 
   @parameterized.parameters((None, torch.device('xla:0')),
                             (0, torch.device('xla:0')),
@@ -41,17 +44,17 @@ class TestDevices(parameterized.TestCase):
     self.assertEqual(met.counter_value('MarkStep'), 1)
 
   def test_step(self):
-    with torch.step():
+    with xla.step():
       torch.ones((3, 3), device=xla.device())
 
     self.assertEqual(met.counter_value('MarkStep'), 1)
 
   def test_step_exception(self):
     try:
-      with torch.step():
+      with xla.step():
         torch.ones((3, 3), device=xla.device())
         raise RuntimeError("Expected error")
-    except:
+    except RuntimeError:
       pass
 
     self.assertEqual(met.counter_value('MarkStep'), 1)
@@ -83,14 +86,13 @@ class TestDevices(parameterized.TestCase):
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
-    for inputs, targets in data_loader:
+    for inputs, labels in loader:
       with xla.step():
         inputs, labels = inputs.to(xla.device()), labels.to(xla.device())
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = loss_fn(outputs, labels)
         loss.backward()
-        # optimizer.step()
         xm.optimizer_step(optimizer)
 
 
