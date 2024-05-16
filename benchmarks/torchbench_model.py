@@ -246,7 +246,9 @@ class TorchBenchModel(BenchmarkModel):
     benchmark = self.load_benchmark()
 
     self.module, self.example_inputs = benchmark.get_module()
-
+    if isinstance(self.example_inputs,
+                  dict) and "input_ids" in self.example_inputs:
+      self.example_inputs = (self.example_inputs['input_ids'],)
     self.benchmark_experiment.batch_size = benchmark.batch_size
 
     # Move the initialized model to XLA device.
