@@ -1,4 +1,4 @@
-name: build-cuda-plugin
+name: build-torch-with-cuda-xla-with-cuda
 on:
   workflow_call:
     inputs:
@@ -21,6 +21,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
+      options: "--gpus all --shm-size 16g"
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
