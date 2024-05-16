@@ -41,6 +41,7 @@ jobs:
     uses: ./.github/workflows/_build_plugin.yml
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+      runner: linux.8xlarge.nvidia.gpu
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
