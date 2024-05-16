@@ -221,7 +221,7 @@ class ExperimentRunner:
       tracing_time = time.perf_counter() - t_trace_start
 
     # Mark step.
-    self._mark_step(benchmark_experiment)
+    self._mark_step(benchmark_experiment, output)
     total_time = time.perf_counter() - total_time_start
     return output, total_time, tracing_time
 
@@ -284,7 +284,11 @@ class ExperimentRunner:
 
     # Reset state and sync.
     reset_rng_state(benchmark_experiment)
-    self._mark_step(benchmark_experiment)
+    if benchmark_experiment.torch_xla2:
+      for inputs in inputs_list:
+        self._mark_step(benchmark_experiment, inputs)
+    else:
+      self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
     met.clear_all()
     dynamo_utils.counters.clear()
@@ -307,7 +311,7 @@ class ExperimentRunner:
           total_timing += timing
 
         # Mark step.
-        self._mark_step(benchmark_experiment)
+        self._mark_step(benchmark_experiment, output)
         if pytorch_profile is not None:
           pytorch_profile.step()
 
@@ -414,9 +418,14 @@ class ExperimentRunner:
       inputs_list.append(inputs)
     return inputs_list
 
-  def _mark_step(self, benchmark_experiment):
+  def _mark_step(self, benchmark_experiment, tensors_to_check=None):
     if benchmark_experiment.xla:
-      xm.mark_step()
+      if benchmark_experiment.torch_xla2:
+        assert tensors_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
+        for t in tensors_to_check:
+          t.block_until_ready()
+      else:
+        xm.mark_step()
 
   def _synchronize(self, benchmark_experiment):
     if benchmark_experiment.xla:
@@ -858,6 +867,12 @@ def parse_args(args=None):
       type=str,
       action="append",
       help="Flags to forward to XLA via `XLA_FLAGS` env var.",
+  )
+  parser.add_argument(
+      "--torch-xla2",
+      choices=["extract_jax", "torch_export"],
+      action="append",
+      help="Choose to use torch_xla2 and which mode to use.",
   )
   parser.add_argument(
       "--disable-tf32",
