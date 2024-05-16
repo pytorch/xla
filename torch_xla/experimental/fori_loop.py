@@ -441,7 +441,370 @@ def _xla_while_loop_target_first(cond_fn, body_fn, carried_inputs, additional_in
   # return _xla_while_loop_target(cond_fn, eigth_try_new_body_fn, carried_inputs, additional_inputs)
   return _xla_while_loop_target(cond_fn, ninth_try_new_body_fn, carried_inputs, additional_inputs)
 
+# used new s32
+def _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
+
+  xla_device = carried_inputs[0].device
+  one = torch.tensor(1, dtype=carried_inputs[0].dtype, device=xla_device)
+
+  # iter = carried_inputs[0]
+  # inputs_ouputs_val = carried_inputs[1:]
+  # new_carried_inputs = [iter, one] + list(inputs_ouputs_val)
+
+  iter = carried_inputs[0]
+  inputs_values = carried_inputs[1:-1]
+  iter_inputs_values = carried_inputs[:-1]
+  # TODO(@manfei): get length of ouputs_values
+  ouputs_values = carried_inputs[-1]
+  # new_carried_inputs = [iter, one] + [inputs_values, ] + list([ouputs_values, ])
+  new_carried_inputs = list(iter_inputs_values) + [one, ] + list([ouputs_values, ])
+
+  # # def new_cond_fn(iter, one, *inputs_ouputs_val): # *carried_inputs):
+  # def new_cond_fn(iter_inputs_values, _, *ouputs_values): # *carried_inputs):
+  #   return cond_fn(iter_inputs_values, *ouputs_values)
+
+  def new_body_fn(iter_inputs_values, one, *ouputs_values): # *carried_inputs):
+    res = list(body_fn(iter_inputs_values, *ouputs_values))
+
+    res_iter_inputs = res[:-1]
+    res_outputs = res[-1]
+
+    if additional_inputs and (bn_additional_inputs != []):
+      print("arrive here 1 !!!")
+      bn_additional_inputs.insert(0, one)
+      # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+      res = list(res_iter_inputs) + list(additional_inputs) + bn_additional_inputs + [one, ] + [res_outputs, ]
+      # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + inputs_and_outputs
+    elif additional_inputs and (bn_additional_inputs == []):
+      print("arrive here 2 !!!")
+      # res = [iter, ] + list(additional_inputs) + [one, ] + inputs_and_outputs
+      res = list(res_iter_inputs) + list(additional_inputs) + [one, ] + [res_outputs, ]
+      # res.insert(1, one)
+      # res.insert(1, additional_inputs)
+      # res = [iter, ] + list(additional_inputs) + inputs_and_outputs
+    else: # no additional_inputs and no bn_additional_inputs
+      # print("arrive here 3 !!!")
+      # print("res: ", res)
+      # print("arrive here 3-1 !!!")
+      # res = [iter, ] + [one, ] + inputs_and_outputs
+      res = list(res_iter_inputs) + [one, ] + [res_outputs, ]
+      # res = res.insert(1, one) # body_result would be None
+    # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + [one, ] + inputs_and_outputs
+    return res
+
+  def new_body_fn_may16_1426pm(*carried_inputs):
+    res = list(body_fn(*carried_inputs))
+
+    # res_iter_inputs = res[:-1]
+    # res_outputs = res[-1]
+
+    if additional_inputs and (bn_additional_inputs != []):
+      print("arrive here 1 !!!")
+      bn_additional_inputs.insert(0, one)
+      # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+      # res = list(res_iter_inputs) + list(additional_inputs) + bn_additional_inputs + [one, ] + [res_outputs, ]
+      res = list(res_iter_inputs) + list(additional_inputs) + bn_additional_inputs + [res_outputs, ]
+      # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + inputs_and_outputs
+    elif additional_inputs and (bn_additional_inputs == []):
+      print("arrive here 2 !!!")
+      # res = [iter, ] + list(additional_inputs) + [one, ] + inputs_and_outputs
+      # res = list(res_iter_inputs) + list(additional_inputs) + [one, ] + [res_outputs, ]
+      res = list(res_iter_inputs) + list(additional_inputs) + [res_outputs, ]
+      # res.insert(1, one)
+      # res.insert(1, additional_inputs)
+      # res = [iter, ] + list(additional_inputs) + inputs_and_outputs
+    else: # no additional_inputs and no bn_additional_inputs
+      # print("arrive here 3 !!!")
+      # print("res: ", res)
+      # print("arrive here 3-1 !!!")
+      # res = [iter, ] + [one, ] + inputs_and_outputs
+      # res = list(res_iter_inputs) + [one, ] + [res_outputs, ]
+      res = res # list(res_iter_inputs) + [res_outputs, ]
+      # res = res.insert(1, one) # body_result would be None
+    # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + [one, ] + inputs_and_outputs
+    return res
+
+  # def new_new_cond_fn(*carried_inputs):
+  #   return cond_fn(*carried_inputs)
+
+  # def new_new_body_fn(*carried_inputs):
+  #   return body_fn(*carried_inputs)
+
+  # return _xla_while_loop_target_second_clean_version_s32(cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(new_cond_fn, new_body_fn, new_carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32_may16_1617pm(cond_fn, new_body_fn, new_carried_inputs, additional_inputs, bn_additional_inputs)
+  return _xla_while_loop_target_second_clean_version_s32_may16_1617pm(cond_fn, new_body_fn_may16_1426pm, carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(new_cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(cond_fn, new_body_fn, new_carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(new_new_cond_fn, new_new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+
+
+def _xla_while_loop_target_first_second_clean_version_s32_may16_1530pm(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
+
+  # iter = carried_inputs[0]
+  # inputs_ouputs_val = carried_inputs[1:]
+
+  # if bn_additional_inputs != []: 
+  #   xla_device = carried_inputs[0].device
+  #   # one = torch.tensor(1, dtype=torch.int32, device=xla_device)
+  #   one = torch.tensor(1, dtype=carried_inputs[0].dtype, device=xla_device) # dtype == iter.dtype
+  #   new_carried_inputs = [iter, one] + list(inputs_ouputs_val)
+  #   bn_additional_inputs.insert(0, one)
+  # else:
+  #   new_carried_inputs = carried_inputs
+
+  xla_device = carried_inputs[0].device
+  one = torch.tensor(1, dtype=carried_inputs[0].dtype, device=xla_device) # dtype == iter.dtype
+  # new_carried_inputs = [iter, one] + list(inputs_ouputs_val)
+  # bn_additional_inputs.insert(0, one)
+  # else:
+  #   new_carried_inputs = carried_inputs
+
+  iter = carried_inputs[0]
+  inputs_ouputs_val = carried_inputs[1:]
+  new_carried_inputs = [iter, one] + list(inputs_ouputs_val)
+  # new_carried_inputs = [iter, ] + list(inputs_ouputs_val)
+  # if bn_additional_inputs != []:
+  #   bn_additional_inputs.insert(0, one)
+
+  # def new_cond_fn(iter, one, *inputs_ouputs_val): # *carried_inputs):
+  def new_cond_fn(iter, _, *inputs_ouputs_val): # *carried_inputs):
+    return cond_fn(iter, *inputs_ouputs_val)
+
+  # print("additional_inputs: ", additional_inputs)
+  # def new_body_fn(*carried_inputs):
+  def new_body_fn(iter, one, *inputs_ouputs_val): # *carried_inputs):
+    # res = list(body_fn(*carried_inputs))
+    # return body_fn(iter, *inputs_ouputs_val)
+
+    res = list(body_fn(iter, *inputs_ouputs_val))
+
+    iter = res[0]
+    inputs_and_outputs = res[1:]
+
+    # xla_device = carried_inputs[0].device
+    # one = torch.tensor(1, dtype=torch.int32, device=xla_device)
+    # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+
+    if additional_inputs and (bn_additional_inputs != []):
+      print("arrive here 1 !!!")
+      bn_additional_inputs.insert(0, one)
+      # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+      res = [iter, ] + list(additional_inputs) + bn_additional_inputs + [one, ] + inputs_and_outputs
+      # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + inputs_and_outputs
+    elif additional_inputs and (bn_additional_inputs == []):
+      print("arrive here 2 !!!")
+      # res = [iter, ] + list(additional_inputs) + [one, ] + inputs_and_outputs
+      res = [iter, ] + list(additional_inputs) + [one, ] + inputs_and_outputs
+      # res.insert(1, one)
+      # res.insert(1, additional_inputs)
+      # res = [iter, ] + list(additional_inputs) + inputs_and_outputs
+    else: # no additional_inputs and no bn_additional_inputs
+      # print("arrive here 3 !!!")
+      # print("res: ", res)
+      # print("arrive here 3-1 !!!")
+      # res = [iter, ] + [one, ] + inputs_and_outputs
+      res = [iter, one] + inputs_and_outputs
+      # res = res.insert(1, one) # body_result would be None
+    # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + [one, ] + inputs_and_outputs
+    return res
+
+
+  def new_new_cond_fn(*carried_inputs):
+    return cond_fn(*carried_inputs)
+
+  def new_new_body_fn(*carried_inputs):
+    return body_fn(*carried_inputs)
+
+
+  # return _xla_while_loop_target_second_clean_version_s32(cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  return _xla_while_loop_target_second_clean_version_s32(new_cond_fn, new_body_fn, new_carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(new_cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(cond_fn, new_body_fn, new_carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(new_new_cond_fn, new_new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+
+def _xla_while_loop_target_first_second_clean_version_s32_pure_cond_body_fn_may16_1541pm(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
+
+  # xla_device = carried_inputs[0].device
+  # one = torch.tensor(1, dtype=carried_inputs[0].dtype, device=xla_device)
+
+  # iter = carried_inputs[0]
+  # inputs_ouputs_val = carried_inputs[1:]
+  # new_carried_inputs = [iter, one] + list(inputs_ouputs_val)
+
+  # def new_cond_fn(iter, _, *inputs_ouputs_val): # *carried_inputs):
+  #   return cond_fn(iter, *inputs_ouputs_val)
+
+  # def new_body_fn(iter, one, *inputs_ouputs_val): # *carried_inputs):
+  #   # res = list(body_fn(*carried_inputs))
+  #   # return body_fn(iter, *inputs_ouputs_val)
+
+  #   res = list(body_fn(iter, *inputs_ouputs_val))
+
+  #   iter = res[0]
+  #   inputs_and_outputs = res[1:]
+
+  #   # xla_device = carried_inputs[0].device
+  #   # one = torch.tensor(1, dtype=torch.int32, device=xla_device)
+  #   # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+
+  #   if additional_inputs and (bn_additional_inputs != []):
+  #     print("arrive here 1 !!!")
+  #     bn_additional_inputs.insert(0, one)
+  #     # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+  #     res = [iter, ] + list(additional_inputs) + bn_additional_inputs + [one, ] + inputs_and_outputs
+  #     # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + inputs_and_outputs
+  #   elif additional_inputs and (bn_additional_inputs == []):
+  #     print("arrive here 2 !!!")
+  #     # res = [iter, ] + list(additional_inputs) + [one, ] + inputs_and_outputs
+  #     res = [iter, ] + list(additional_inputs) + [one, ] + inputs_and_outputs
+  #     # res.insert(1, one)
+  #     # res.insert(1, additional_inputs)
+  #     # res = [iter, ] + list(additional_inputs) + inputs_and_outputs
+  #   else: # no additional_inputs and no bn_additional_inputs
+  #     # print("arrive here 3 !!!")
+  #     # print("res: ", res)
+  #     # print("arrive here 3-1 !!!")
+  #     # res = [iter, ] + [one, ] + inputs_and_outputs
+  #     res = [iter, one] + inputs_and_outputs
+  #     # res = res.insert(1, one) # body_result would be None
+  #   # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + [one, ] + inputs_and_outputs
+  #   return res
+
+  def new_new_cond_fn(*carried_inputs):
+    return cond_fn(*carried_inputs)
+
+  def new_new_body_fn(*carried_inputs):
+    return body_fn(*carried_inputs)
+
+  return _xla_while_loop_target_second_clean_version_s32(new_new_cond_fn, new_new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+
+def _xla_while_loop_target_first_second_clean_version_s32_experimental(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
+
+  iter = carried_inputs[0]
+  inputs_ouputs_val = carried_inputs[1:]
+
+  if bn_additional_inputs != []: 
+    xla_device = carried_inputs[0].device
+    # one = torch.tensor(1, dtype=torch.int32, device=xla_device)
+    one = torch.tensor(1, dtype=carried_inputs[0].dtype, device=xla_device) # dtype == iter.dtype
+    new_carried_inputs = [iter, one] + list(inputs_ouputs_val)
+    bn_additional_inputs.insert(0, one)
+  else:
+    new_carried_inputs = carried_inputs
+
+  # iter = carried_inputs[0]
+  # inputs_ouputs_val = carried_inputs[1:]
+  # new_carried_inputs = [iter, one] + list(inputs_ouputs_val)
+  # new_carried_inputs = [iter, ] + list(inputs_ouputs_val)
+  # if bn_additional_inputs != []:
+  #   bn_additional_inputs.insert(0, one)
+
+  # def new_cond_fn(iter, one, *inputs_ouputs_val): # *carried_inputs):
+  def new_cond_fn(iter, _, *inputs_ouputs_val): # *carried_inputs):
+    return cond_fn(iter, *inputs_ouputs_val)
+
+  # print("additional_inputs: ", additional_inputs)
+  # def new_body_fn(*carried_inputs):
+  def new_body_fn(iter, one, *inputs_ouputs_val): # *carried_inputs):
+    # res = list(body_fn(*carried_inputs))
+    res = list(body_fn(iter, *inputs_ouputs_val))
+    iter = res[0]
+    inputs_and_outputs = res[1:]
+    # xla_device = carried_inputs[0].device
+    # one = torch.tensor(1, dtype=torch.int32, device=xla_device)
+    # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+
+    # if additional_inputs and (bn_additional_inputs != []):
+    #   print("arrive here 1 !!!")
+    #   bn_additional_inputs.insert(0, one)
+    #   # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+    #   res = [iter, ] + list(additional_inputs) + bn_additional_inputs + [one, ] + inputs_and_outputs
+    #   # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + inputs_and_outputs
+    # elif additional_inputs and (bn_additional_inputs == []):
+    #   print("arrive here 2 !!!")
+    #   res = [iter, ] + list(additional_inputs) + [one, ] + inputs_and_outputs
+    #   # res = [iter, ] + list(additional_inputs) + inputs_and_outputs
+    # else: # no additional_inputs and no bn_additional_inputs
+    #   # print("arrive here 3 !!!")
+    #   # print("res: ", res)
+    #   # print("arrive here 3-1 !!!")
+    #   # res = [iter, ] + [one, ] + inputs_and_outputs
+    #   res = [iter, one] + inputs_and_outputs
+    res = [iter, ] + list(additional_inputs) + bn_additional_inputs + [one, ] + inputs_and_outputs
+    return res
+
+  # return _xla_while_loop_target_second_clean_version_s32(cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(new_cond_fn, new_body_fn, new_carried_inputs, additional_inputs, bn_additional_inputs)
+  return _xla_while_loop_target_second_clean_version_s32(new_cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(cond_fn, new_body_fn, new_carried_inputs, additional_inputs, bn_additional_inputs)
+
+def _xla_while_loop_target_first_second_clean_version_s32_old(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
+
+  xla_device = carried_inputs[0].device
+  # one = torch.tensor(1, dtype=torch.int32, device=xla_device)
+  one = torch.tensor(1, dtype=carried_inputs[0].dtype, device=xla_device) # dtype == iter.dtype
+
+  iter = carried_inputs[0]
+  inputs_ouputs_val = carried_inputs[1:]
+  new_carried_inputs = [iter, one] + list(inputs_ouputs_val)
+  # new_carried_inputs = [iter, ] + list(inputs_ouputs_val)
+  # if bn_additional_inputs != []:
+  #   bn_additional_inputs.insert(0, one)
+
+  # def new_cond_fn(iter, one, *inputs_ouputs_val): # *carried_inputs):
+  def new_cond_fn(iter, _, *inputs_ouputs_val): # *carried_inputs):
+    return cond_fn(iter, *inputs_ouputs_val)
+
+  # print("additional_inputs: ", additional_inputs)
+  # def new_body_fn(*carried_inputs):
+  def new_body_fn(iter, one, *inputs_ouputs_val): # *carried_inputs):
+    # res = list(body_fn(*carried_inputs))
+    res = list(body_fn(iter, *inputs_ouputs_val))
+    iter = res[0]
+    inputs_and_outputs = res[1:]
+    # xla_device = carried_inputs[0].device
+    # one = torch.tensor(1, dtype=torch.int32, device=xla_device)
+    # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+
+    if additional_inputs and (bn_additional_inputs != []):
+      print("arrive here 1 !!!")
+      bn_additional_inputs.insert(0, one)
+      # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+      res = [iter, ] + list(additional_inputs) + bn_additional_inputs + [one, ] + inputs_and_outputs
+      # res = [iter, ] + list(additional_inputs) + bn_additional_inputs + inputs_and_outputs
+    elif additional_inputs and (bn_additional_inputs == []):
+      print("arrive here 2 !!!")
+      res = [iter, ] + list(additional_inputs) + [one, ] + inputs_and_outputs
+      # res = [iter, ] + list(additional_inputs) + inputs_and_outputs
+    else: # no additional_inputs and no bn_additional_inputs
+      # print("arrive here 3 !!!")
+      # print("res: ", res)
+      # print("arrive here 3-1 !!!")
+      # res = [iter, ] + [one, ] + inputs_and_outputs
+      res = [iter, one] + inputs_and_outputs
+    return res
+
+  # return _xla_while_loop_target_second_clean_version_s32(cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  return _xla_while_loop_target_second_clean_version_s32(new_cond_fn, new_body_fn, new_carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second_clean_version_s32(cond_fn, new_body_fn, new_carried_inputs, additional_inputs, bn_additional_inputs)
+
+
 # used
+def _xla_while_loop_target_first_second_clean_version(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
+
+  def new_body_fn(*carried_inputs):
+    res = list(body_fn(*carried_inputs))
+    iter = res[0]
+    inputs_and_outputs = res[1:]
+    xla_device = carried_inputs[0].device
+    one = torch.tensor(1, dtype=torch.int64, device=xla_device)
+    res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+    return res
+
+  return _xla_while_loop_target_second_clean_version(cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+
+# commented version
 def _xla_while_loop_target_first_second(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
   def new_body_fn(*carried_inputs):
     res = list(body_fn(*carried_inputs))
@@ -625,6 +988,42 @@ def _xla_while_loop_target_first_second(cond_fn, body_fn, carried_inputs, additi
     return res
   # new_additional_inputs = additional_inputs[0] + additional_inputs[1]
 
+  def twelveth_try_new_body_fn(*carried_inputs):
+    # add s64[] for 1
+    res = list(body_fn(*carried_inputs))
+    iter = res[0]
+    inputs_and_outputs = res[1:]
+    # inputs_items = inputs_and_outputs[:-1]
+    # outputs_items = inputs_and_outputs[-1]
+    # if len(inputs_and_outputs)==1:
+    #   inputs_and_outputs = [inputs_and_outputs,]
+    # res = res + list(additional_inputs)
+    # if not bn_additional_inputs:
+    #   bn_additional_inputs = []
+    xla_device = carried_inputs[0].device
+    one = torch.tensor(1, dtype=torch.int64, device=xla_device)
+    res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+    return res
+
+  def thirteenth_try_new_body_fn(*carried_inputs):
+    # add s64[] for 1
+    res = list(body_fn(*carried_inputs))
+    iter = res[0]
+    inputs_and_outputs = res[1:]
+    # inputs_items = inputs_and_outputs[:-1]
+    # outputs_items = inputs_and_outputs[-1]
+    # if len(inputs_and_outputs)==1:
+    #   inputs_and_outputs = [inputs_and_outputs,]
+    # res = res + list(additional_inputs)
+    # if not bn_additional_inputs:
+    #   bn_additional_inputs = []
+    xla_device = carried_inputs[0].device
+    one = torch.tensor(1, dtype=torch.int64, device=xla_device)
+    bn_additional_inputs.insert(0, one)
+    # res = [iter, ] + list(additional_inputs) + [one, ] + bn_additional_inputs + inputs_and_outputs
+    res = [iter, ] + list(additional_inputs) + bn_additional_inputs + inputs_and_outputs
+    return res
+
   # return _xla_while_loop_target(cond_fn, new_body_fn, carried_inputs, additional_inputs)
   # return _xla_while_loop_target(cond_fn, try_new_body_fn, carried_inputs, additional_inputs)
   # return _xla_while_loop_target(cond_fn, body_fn, carried_inputs, additional_inputs)
@@ -635,10 +1034,297 @@ def _xla_while_loop_target_first_second(cond_fn, body_fn, carried_inputs, additi
   # return _xla_while_loop_target(cond_fn, sixth_try_new_body_fn, carried_inputs, additional_inputs)
   # return _xla_while_loop_target(cond_fn, seventh_try_new_body_fn, carried_inputs, additional_inputs)
   # return _xla_while_loop_target(cond_fn, eigth_try_new_body_fn, carried_inputs, additional_inputs)
-  return _xla_while_loop_target_second(cond_fn, ninth_try_new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second(cond_fn, ninth_try_new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
   # return _xla_while_loop_target_second(cond_fn, eleventh_try_new_body_fn, carried_inputs, additional_inputs, new_bn_additional_inputs)
+  # return _xla_while_loop_target_second(cond_fn, twelveth_try_new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  # return _xla_while_loop_target_second(cond_fn, thirteenth_try_new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  return _xla_while_loop_target_second_clean_version(cond_fn, twelveth_try_new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
 
-# used
+# used new s32
+def _xla_while_loop_target_second_clean_version_s32_may16_1617pm(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=None):
+
+  # print("type carried_inputs: ", type(carried_inputs))
+  # print("type carried_inputs[0]: ", type(carried_inputs[0]))
+  # fake carried_inputs to split formal code
+  fake_carried_inputs = []
+  for carried_input in carried_inputs:
+    device = carried_input.device
+    fake_carried_inputs.append(
+        torch.randint(10, carried_input.size(),
+                      dtype=carried_input.dtype).to(device))
+  # fake_iter = fake_carried_inputs[0]
+  fake_input_output = fake_carried_inputs[1:]
+  fake_iter_input = fake_carried_inputs[:-1]
+  fake_output = fake_carried_inputs[-1]
+
+  #  ============================= body ==========================================
+  # additional_inputs_list_body = fake_input_output
+  # for i in range(len(carried_inputs)): print("carried_inputs: ", i, " size: ", carried_inputs[i].size())
+  body_result = body_fn(*carried_inputs) # fake would miss iter
+  body_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  body_ctx.set_name_string("bodyctx")
+  additional_inputs_list_body = [fake_output, ] # fake_input_output
+
+  # print("arrive here 4 !!!")
+  # print("body_result: ", body_result)
+  # print("arrive here 4-1 !!!")
+  # print("additional_inputs_list_body: ", additional_inputs_list_body)
+  # print("arrive here 4-2 !!!")
+
+  # print("body_result: ", body_result)
+  # print("additional_inputs_list_body: ", additional_inputs_list_body)
+  body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
+  # body_ctx.buildforiloop(list(body_result), ())
+  body_hlo = body_ctx.hlo()
+  body_computation = xb.computation_from_module_proto("bodycomputation",
+                                                      body_hlo)
+  body_hlo_print = xb.get_computation_hlo(body_computation)
+  print("body computation: !!!!!!!!!")
+  print(body_hlo_print)
+
+  # iter, input, weght, bias, s64[], bn_weight, bias, output
+  # iter, input, weight, bias, s64[]. ouput
+
+  #  ============================= cond ==========================================
+  #  === additional_inputs_list_cond ===
+  fake_additiona_args = []
+  for additional_input in additional_inputs: # additional_inputs would has value after body_fn been traced
+    device = additional_input.device
+    fake_additiona_args.append(
+        torch.randint(
+            10, additional_input.size(),
+            dtype=additional_input.dtype).to(device))
+  # #  === add one ===
+  # one = torch.tensor(1, dtype=torch.int32, device=device)
+  # bn_additional_inputs.insert(0, one)
+  #  === add bn_additional_inputs ===
+  fake_additiona_args += bn_additional_inputs
+  additional_inputs_list_cond = fake_additiona_args + fake_input_output
+
+  cond_result = cond_fn(*carried_inputs) # fake one would result none input args
+  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  cond_ctx.set_name_string("condctx")
+
+  cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
+  cond_hlo = cond_ctx.hlo()
+  cond_computation = xb.computation_from_module_proto("condcomputation",
+                                                      cond_hlo)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  print("cond computation: !!!!!!!!!")
+  print(cond_hlo_print)
+
+  #  ============================= xla::while ==========================================
+  iter_value = carried_inputs[0]
+  input_and_outputs_value = carried_inputs[1:]
+  total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
+
+  kwargs = {}
+  if type(total_inputs) is tuple:
+    shapes = xb.tensor_shape(total_inputs)
+  else:
+    shapes = xb.tensor_shape((total_inputs))
+  builder = xb.create_builder('test_while')
+  params = []
+  for shape in shapes:
+    p = xb.mkparam(builder, len(params), shape)
+    params.append(p)
+
+  input_tuple = xb.Op.tuple(tuple(params))
+  w = xb.mkop(
+      'While', (input_tuple.op,),
+      condition_computation=cond_computation,
+      body_computation=body_computation)
+  name = 'fori_loop_ed_torch_func'
+  computation = w.build(name)
+
+  # gain final result with generated while xlacomputation
+  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
+                                                 (total_inputs), computation)
+
+  return result
+
+def _xla_while_loop_target_second_clean_version_s32(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=None):
+
+  # print("type carried_inputs: ", type(carried_inputs))
+  # print("type carried_inputs[0]: ", type(carried_inputs[0]))
+  # fake carried_inputs to split formal code
+  fake_carried_inputs = []
+  for carried_input in carried_inputs:
+    device = carried_input.device
+    fake_carried_inputs.append(
+        torch.randint(10, carried_input.size(),
+                      dtype=carried_input.dtype).to(device))
+  fake_iter = fake_carried_inputs[0]
+  fake_input_output = fake_carried_inputs[1:]
+
+  #  ============================= body ==========================================
+  # additional_inputs_list_body = fake_input_output
+  # for i in range(len(carried_inputs)): print("carried_inputs: ", i, " size: ", carried_inputs[i].size())
+  body_result = body_fn(*carried_inputs) # fake would miss iter
+  body_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  body_ctx.set_name_string("bodyctx")
+  additional_inputs_list_body = fake_input_output
+
+  # print("arrive here 4 !!!")
+  # print("body_result: ", body_result)
+  # print("arrive here 4-1 !!!")
+  # print("additional_inputs_list_body: ", additional_inputs_list_body)
+  # print("arrive here 4-2 !!!")
+
+  # print("body_result: ", body_result)
+  # print("additional_inputs_list_body: ", additional_inputs_list_body)
+  body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
+  # body_ctx.buildforiloop(list(body_result), ())
+  body_hlo = body_ctx.hlo()
+  body_computation = xb.computation_from_module_proto("bodycomputation",
+                                                      body_hlo)
+  body_hlo_print = xb.get_computation_hlo(body_computation)
+  print("body computation: !!!!!!!!!")
+  print(body_hlo_print)
+
+  # iter, input, weght, bias, s64[], bn_weight, bias, output
+  # iter, input, weight, bias, s64[]. ouput
+
+  #  ============================= cond ==========================================
+  #  === additional_inputs_list_cond ===
+  fake_additiona_args = []
+  for additional_input in additional_inputs: # additional_inputs would has value after body_fn been traced
+    device = additional_input.device
+    fake_additiona_args.append(
+        torch.randint(
+            10, additional_input.size(),
+            dtype=additional_input.dtype).to(device))
+  # #  === add one ===
+  # one = torch.tensor(1, dtype=torch.int32, device=device)
+  # bn_additional_inputs.insert(0, one)
+  #  === add bn_additional_inputs ===
+  fake_additiona_args += bn_additional_inputs
+  additional_inputs_list_cond = fake_additiona_args + fake_input_output
+
+  cond_result = cond_fn(*carried_inputs) # fake one would result none input args
+  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  cond_ctx.set_name_string("condctx")
+
+  cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
+  cond_hlo = cond_ctx.hlo()
+  cond_computation = xb.computation_from_module_proto("condcomputation",
+                                                      cond_hlo)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  print("cond computation: !!!!!!!!!")
+  print(cond_hlo_print)
+
+  #  ============================= xla::while ==========================================
+  iter_value = carried_inputs[0]
+  input_and_outputs_value = carried_inputs[1:]
+  total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
+
+  kwargs = {}
+  if type(total_inputs) is tuple:
+    shapes = xb.tensor_shape(total_inputs)
+  else:
+    shapes = xb.tensor_shape((total_inputs))
+  builder = xb.create_builder('test_while')
+  params = []
+  for shape in shapes:
+    p = xb.mkparam(builder, len(params), shape)
+    params.append(p)
+
+  input_tuple = xb.Op.tuple(tuple(params))
+  w = xb.mkop(
+      'While', (input_tuple.op,),
+      condition_computation=cond_computation,
+      body_computation=body_computation)
+  name = 'fori_loop_ed_torch_func'
+  computation = w.build(name)
+
+  # gain final result with generated while xlacomputation
+  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
+                                                 (total_inputs), computation)
+
+  return result
+
+# used 
+def _xla_while_loop_target_second_clean_version(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=None):
+
+  # fake carried_inputs to split formal code
+  fake_carried_inputs = []
+  for carried_input in carried_inputs:
+    device = carried_input.device
+    fake_carried_inputs.append(
+        torch.randint(10, carried_input.size(),
+                      dtype=carried_input.dtype).to(device))
+  fake_iter = fake_carried_inputs[0]
+  fake_input_output = fake_carried_inputs[1:]
+
+  #  ============================= body ==========================================
+  additional_inputs_list_body = fake_input_output
+  body_result = body_fn(*carried_inputs) # fake would miss iter
+  body_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  body_ctx.set_name_string("bodyctx")
+  body_ctx.buildforiloop(list(body_result), additional_inputs_list_body)
+  body_hlo = body_ctx.hlo()
+  body_computation = xb.computation_from_module_proto("bodycomputation",
+                                                      body_hlo)
+
+  # iter, input, weght, bias, s64[], bn_weight, bias, output
+  # iter, input, weight, bias, s64[]. ouput
+
+  #  ============================= cond ==========================================
+  #  === additional_inputs_list_cond ===
+  fake_additiona_args = []
+  for additional_input in additional_inputs: # additional_inputs would has value after body_fn been traced
+    device = additional_input.device
+    fake_additiona_args.append(
+        torch.randint(
+            10, additional_input.size(),
+            dtype=additional_input.dtype).to(device))
+  #  === add one ===
+  one = torch.tensor(1, dtype=torch.int64, device=device)
+  bn_additional_inputs.insert(0, one)
+  #  === add bn_additional_inputs ===
+  fake_additiona_args += bn_additional_inputs
+  additional_inputs_list_cond = fake_additiona_args + fake_input_output
+
+  cond_result = cond_fn(*carried_inputs) # fake one would result none input args
+  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  cond_ctx.set_name_string("condctx")
+
+  cond_ctx.buildforiloop([cond_result], additional_inputs_list_cond)
+  cond_hlo = cond_ctx.hlo()
+  cond_computation = xb.computation_from_module_proto("condcomputation",
+                                                      cond_hlo)
+
+  #  ============================= xla::while ==========================================
+  iter_value = carried_inputs[0]
+  input_and_outputs_value = carried_inputs[1:]
+  total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
+
+  kwargs = {}
+  if type(total_inputs) is tuple:
+    shapes = xb.tensor_shape(total_inputs)
+  else:
+    shapes = xb.tensor_shape((total_inputs))
+  builder = xb.create_builder('test_while')
+  params = []
+  for shape in shapes:
+    p = xb.mkparam(builder, len(params), shape)
+    params.append(p)
+
+  input_tuple = xb.Op.tuple(tuple(params))
+  w = xb.mkop(
+      'While', (input_tuple.op,),
+      condition_computation=cond_computation,
+      body_computation=body_computation)
+  name = 'fori_loop_ed_torch_func'
+  computation = w.build(name)
+
+  # gain final result with generated while xlacomputation
+  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
+                                                 (total_inputs), computation)
+
+  return result
+
+# commented version
 def _xla_while_loop_target_second(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=None):
   # print("arrive _xla_while_loop")
   # print("carried_inputs: ", carried_inputs)
