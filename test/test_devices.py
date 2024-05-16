@@ -50,12 +50,10 @@ class TestDevices(parameterized.TestCase):
     self.assertEqual(met.counter_value('MarkStep'), 1)
 
   def test_step_exception(self):
-    try:
+    with self.assertRaisesRegex(RuntimeError, 'Expected error'):
       with xla.step():
         torch.ones((3, 3), device=xla.device())
-        raise RuntimeError("Expected error")
-    except RuntimeError:
-      pass
+        raise RuntimeError('Expected error')
 
     self.assertEqual(met.counter_value('MarkStep'), 1)
 
