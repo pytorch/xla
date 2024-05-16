@@ -79,7 +79,11 @@ TORCH_DTYPE_TO_JAX = {
       None: None,
 }
 
-JAX_DTYPE_TO_TORCH = {value: key for key, value in TORCH_DTYPE_TO_JAX.items()}
+JAX_DTYPE_TO_TORCH = {
+  value: key for key, value in TORCH_DTYPE_TO_JAX.items()
+}
+# No int4 dtype in torch, map jnp.int4 to torch.int8.
+JAX_DTYPE_TO_TORCH[jnp.dtype('int4')] = torch.int8
 
 def t2j_dtype(dtype):
   if dtype not in TORCH_DTYPE_TO_JAX:
