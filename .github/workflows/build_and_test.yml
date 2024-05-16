@@ -28,6 +28,15 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
+  build-torch-with-cuda-xla-with-cuda:
+    name: "Build PyTorch with CUDA and PyTorch/XLA"
+    uses: ./.github/workflows/_build_torch_with_cuda_and_xla.yml
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+      runner: linux.8xlarge.nvidia.gpu
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
   build-cuda-plugin:
     name: "Build XLA CUDA plugin"
     uses: ./.github/workflows/_build_plugin.yml
@@ -57,6 +66,18 @@ jobs:
       timeout-minutes: 300
       collect-coverage: false
       install-cuda-plugin: true
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
+  test-cuda-with-pytorch-cuda-enabled:
+    name: "GPU tests with PyTorch CUDA enabled"
+    uses: ./.github/workflows/_test_requiring_torch_cuda.yml
+    needs: [build-torch-with-cuda-xla-with-cuda, build-cuda-plugin]
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+      runner: linux.8xlarge.nvidia.gpu
+      timeout-minutes: 300
+      collect-coverage: false
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 

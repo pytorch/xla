@@ -1,0 +1,63 @@
+name: build-torch-with-cuda-xla-with-cuda
+on:
+  workflow_call:
+    inputs:
+      dev-image:
+        required: true
+        type: string
+        description: Base image for builds
+      runner:
+        required: false
+        type: string
+        description: Runner type for the test
+        default: linux.12xlarge
+
+    secrets:
+      gcloud-service-key:
+        required: true
+        description: Secret to access Bazel build cache
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.dev-image }}
+      options: "--gpus all --shm-size 16g"
+    env:
+      GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
+      BAZEL_JOBS: 16
+      BAZEL_REMOTE_CACHE: 1
+      BUILD_CPP_TESTS: 1
+    steps:
+      - name: Setup gcloud
+        shell: bash
+        run: |
+          echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
+      - name: Setup CUDA environment
+        shell: bash
+        run: |
+          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
+      - name: Check GPU
+        run: nvidia-smi
+      - name: Checkout PyTorch Repo
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/pytorch
+          path: pytorch
+          submodules: recursive
+      - name: Checkout PyTorch/XLA Repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
+      - name: Build
+        shell: bash
+        run: |
+          cd pytorch/xla/infra/ansible
+          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=cuda cuda_compute_capabilities=5.2,7.5 src_root=${GITHUB_WORKSPACE} build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci build_pytorch_with_cuda=1" --skip-tags=fetch_srcs,install_deps
+          python -c "import torch; assert torch.cuda.is_available()"
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: torch-with-cuda-xla-with-cuda-wheels
+          path: /dist/*.whl
