@@ -64,4 +64,3 @@ def step():
   """
   yield
   xm.mark_step()
-

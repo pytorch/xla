@@ -58,7 +58,9 @@ class TestDevices(parameterized.TestCase):
 
   # Should roughly match example given in README
   def test_trivial_model(self):
+
     class TrivialModel(nn.Module):
+
       def __init__(self):
         super().__init__()
         self.linear = nn.Linear(10, 10)
