@@ -32,6 +32,13 @@ jobs:
         shell: bash
         run: |
           echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
+      - name: Setup CUDA environment
+        shell: bash
+        run: |
+          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
+      - name: Check GPU
+        run: nvidia-smi
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
