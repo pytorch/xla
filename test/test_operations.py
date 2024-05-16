@@ -31,9 +31,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.testing._internal.common_device_type import dtypes
 from torch.testing._internal.common_dtype import (
-  all_types_and_complex_and,
-  all_types_and,
-  )
+    all_types_and_complex_and,
+    all_types_and,
+)
 import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
@@ -2534,10 +2534,12 @@ class TestDLPack(parameterized.TestCase):
     dlt3 = torch.utils.dlpack.to_dlpack(t3_cuda)
     xla_t3 = xdlpack.from_dlpack(dlt3)
     self.assertEqual(xla_t3.device.type, 'xla')
-    self.assertEqual(xla_t3.device.index, t3_cuda.device.index, msg='both value should 1. xla_t3.device should be xla:1.')
+    self.assertEqual(
+        xla_t3.device.index,
+        t3_cuda.device.index,
+        msg='both value should 1. xla_t3.device should be xla:1.')
     t3_cuda.fill_(6)
     self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
-
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA

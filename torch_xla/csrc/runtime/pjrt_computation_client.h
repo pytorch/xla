@@ -33,7 +33,7 @@ class PjRtComputationClient : public ComputationClient {
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
   static DataPtr CreateData(std::string device, xla::Shape shape,
-                     std::shared_ptr<xla::PjRtBuffer> pjrt_buffer);
+                            std::shared_ptr<xla::PjRtBuffer> pjrt_buffer);
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
