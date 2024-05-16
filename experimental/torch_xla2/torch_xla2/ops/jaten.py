@@ -318,7 +318,6 @@ def _aten_index_put(self, indexes, values, accumulate=False):
 @op(torch.ops.aten._unsafe_index)
 @op(torch.ops.aten.index.Tensor)
 def _aten_index(self, indexes):
-  print(indexes)
   indexes = [slice(None, None, None) if i is None else i for i in indexes]
   indexes = tuple(indexes)
   return self[indexes]
@@ -1671,8 +1670,11 @@ def _aten_topk(input, k, dim=None, largest=True, sorted=True, *, out=None):
           - indices: The indices of the top k values in the original array.
   """
   if dim is None:
-    input = input.flatten()
-    dim = 0
+    # last dim is chosen
+    dim = input.ndim - 1
+
+  if dim < 0:
+    dim = dim + input.ndim
 
   if not largest:
     input = -input  # Find top-k of negated input if we want the smallest
