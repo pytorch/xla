@@ -30,7 +30,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.testing._internal.common_device_type import dtypes
-from torch.testing._internal.common_dtype import (all_types_and_complex_and)
+from torch.testing._internal.common_dtype import (
+  all_types_and_complex_and,
+  all_types_and,
+  )
 import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
@@ -2470,19 +2473,27 @@ class TestDLPack(parameterized.TestCase):
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
+  @parameterized.parameters(*all_types_and(torch.half, torch.bfloat16))
+  def test_dlpack_roundtrip_tensor(self, dtype):
+    xla_device = xm.xla_device()
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    # xla_tensor_2 uses XLANativeFunctions::_to_copy
+    xla_tensor_2 = torch.arange(5, dtype=dtype).to(xla_device)
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_2)
+
+    # xla_tensor_3 uses arange_out IR node.
+    xla_tensor_3 = torch.arange(5, dtype=dtype, device=xm.xla_device())
+    xm.mark_step()
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
   @parameterized.parameters(*all_types_and_complex_and(torch.half,
                                                        torch.bfloat16,
                                                        torch.bool, torch.uint16,
                                                        torch.uint32,
                                                        torch.uint64))
-  def test_dlpack_roundtrip(self, dtype):
-    # "arange_cpu" not implemented for complex64 and complex128.
-    # xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device) failed with `RuntimeError: false INTERNAL ASSERT FAILED at "/ansible/pytorch/torch/csrc/lazy/core/hash.h":139, please report a bug to PyTorch. Unsupported scalar type:UInt64`, similar to other uint.
-    if dtype in {
-        torch.complex128, torch.complex64, torch.uint64, torch.uint32,
-        torch.uint16, torch.bool
-    }:
-      return
+  def test_dlpack_roundtrip_scalar(self, dtype):
     xla_device = xm.xla_device()
     xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
     # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
@@ -2492,14 +2503,6 @@ class TestDLPack(parameterized.TestCase):
     xla_tensor_1 = torch.tensor(42, dtype=dtype).to(xla_device)
     # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
     self._test_dlpack_capsule_conversion_helper(xla_tensor_1)
-
-    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
-    xla_tensor_2 = torch.arange(5, dtype=dtype).to(xla_device)
-    self._test_dlpack_capsule_conversion_helper(xla_tensor_2)
-
-    xla_tensor_3 = torch.arange(5, dtype=dtype, device=xm.xla_device())
-    xm.mark_step()
-    self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
@@ -2525,6 +2528,16 @@ class TestDLPack(parameterized.TestCase):
     self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
     t2_cuda.fill_(6)
     self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
+
+    cuda1 = torch.device('cuda:1')
+    t3_cuda = torch.tensor(5, device=cuda1)
+    dlt3 = torch.utils.dlpack.to_dlpack(t3_cuda)
+    xla_t3 = xdlpack.from_dlpack(dlt3)
+    self.assertEqual(xla_t3.device.type, 'xla')
+    self.assertEqual(xla_t3.device.index, t3_cuda.device.index, msg='both value should 1. xla_t3.device should be xla:1.')
+    t3_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
+
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
