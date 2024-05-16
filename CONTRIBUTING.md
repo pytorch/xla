@@ -17,6 +17,7 @@ We recommend you to use our prebuilt Docker image to start your development work
   ```bash
   git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
   git clone https://github.com/pytorch/xla.git pytorch/xla
+  # Optional: use git@github.com:pytorch/xla.git instead if you prefer to use SSH with key forwarding
   ```
 
 * Link (or copy) VSCode configuration to your workspace directory:
