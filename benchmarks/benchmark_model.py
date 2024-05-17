@@ -137,8 +137,8 @@ class BenchmarkModel:
       else:
         raise ValueError("torch_xla2 option unavailable")
       weights = pytree.tree_map_only(jnp.ndarray,
-                                      lambda x: jax.device_put(x, device),
-                                      weights)
+                                     lambda x: jax.device_put(x, device),
+                                     weights)
       jax_func = jax.jit(jax_func)
       self.module = lambda *x: jax_func(weights, x)
       self.example_inputs = move_to_device(self.example_inputs, device,
