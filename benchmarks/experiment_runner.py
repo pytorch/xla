@@ -45,6 +45,10 @@ class ExperimentRunner:
       self.model_loader = ModelLoader(self._args)
     else:
       raise NotImplementedError
+    
+    if benchmark_experiment.torch_xla2:
+      import jax
+      self.jax = jax
 
     self.output_dir = os.path.abspath(self._args.output_dirname)
     os.makedirs(self.output_dir, exist_ok=True)
@@ -420,11 +424,8 @@ class ExperimentRunner:
   def _mark_step(self, benchmark_experiment, tensors_to_check=None):
     if benchmark_experiment.xla:
       if benchmark_experiment.torch_xla2:
-        # jax module should be cached and we expect this to cause 0 overhead.
-        # We didn't import the module globally since torch_xla2 is still in experimental stage.
-        import jax
         assert tensors_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
-        jax.block_until_ready(tensors_to_check)
+        self.jax.block_until_ready(tensors_to_check)
       else:
         xm.mark_step()
 
