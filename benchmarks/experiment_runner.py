@@ -45,10 +45,6 @@ class ExperimentRunner:
       self.model_loader = ModelLoader(self._args)
     else:
       raise NotImplementedError
-    
-    if benchmark_experiment.torch_xla2:
-      import jax
-      self.jax = jax
 
     self.output_dir = os.path.abspath(self._args.output_dirname)
     os.makedirs(self.output_dir, exist_ok=True)
@@ -107,6 +103,11 @@ class ExperimentRunner:
         # TODO: See if we can pass experiment_cfg to `load_experiment`.
         benchmark_experiment = self.experiment_loader.load_experiment(
             experiment_cfg)
+
+        if benchmark_experiment.torch_xla2:
+          import jax
+          self.jax = jax
+
         benchmark_model = self.model_loader.load_model(
             model_cfg, benchmark_experiment, dummy=True)
 
