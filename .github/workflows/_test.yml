@@ -28,6 +28,11 @@ on:
         type: boolean
         default: false
         description: Whether to install CUDA plugin package
+      require-pytorch-cuda:
+        required: false
+        type: boolean
+        default: false
+        description: Whether the tests require pytorch built with CUDA enabled
 
     secrets:
       gcloud-service-key:
@@ -87,6 +92,13 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
+        if: $! {{ require-pytorch-cuda }}
+      - name: Fetch wheels (pytorch and pytorch/xla with CUDA enabled) if needed.
+        uses: actions/download-artifact@v4
+        with:
+          name: torch-with-cuda-xla-with-cuda-wheels
+          path: /tmp/wheels/
+        if: ${{ require-pytorch-cuda }}
       - name: Fetch CPP test binaries
         uses: actions/download-artifact@v4
         with:
