@@ -9,7 +9,7 @@ XLA_DIR=$PYTORCH_DIR/xla
 git clone --quiet https://github.com/pytorch/pytorch.git "$PYTORCH_DIR"
 pushd .
 cd $PYTORCH_DIR
-git submodule update --init --recursive
+git submodule --quiet update --init --recursive
 popd
 cp -r "${KOKORO_ARTIFACTS_DIR}/github/xla" "$XLA_DIR"
 source ${XLA_DIR}/.kokoro/common.sh
