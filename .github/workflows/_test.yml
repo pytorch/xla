@@ -92,7 +92,7 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
-        if: ! ${{ inputs.require-pytorch-cuda }}
+        if: false == ${{ inputs.require-pytorch-cuda }}
       - name: Fetch wheels (pytorch and pytorch/xla with CUDA enabled) if needed.
         uses: actions/download-artifact@v4
         with:
