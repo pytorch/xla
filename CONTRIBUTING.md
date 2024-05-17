@@ -6,9 +6,56 @@ You are very welcome to pick issues from [good first issue](https://github.com/p
 If you plan to contribute new features, utility functions or extensions to the core, please first open an issue and discuss the feature with us.
 Sending a PR without discussion might end up resulting in a rejected PR, because we might be taking the core in a different direction than you might be aware of.
 
-## Building Manually
+## Building from source
 
-We recommend you to use our prebuilt Docker image to start your development work. If you want to use VSCode with docker, please refer to this [config](https://github.com/pytorch/xla/tree/master/.devcontainer/tpu-contributor).
+We recommend you to use our prebuilt Docker image to start your development work using one of the two following methods.
+
+### Visual Studio Code Dev Container
+
+* Create an empty directory (optionally on a remote host via SSH) and open it in VSCode. Then, clone PyTorch and PyTorch/XLA:
+
+  ```bash
+  git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
+  git clone https://github.com/pytorch/xla.git pytorch/xla
+  # Optional: use git@github.com:pytorch/xla.git instead if you prefer to use SSH with key forwarding
+  ```
+
+* Link (or copy) VSCode configuration to your workspace directory:
+
+  ```bash
+  ln -s pytorch/xla/.devcontainer/ .devcontainer
+  ln -s pytorch/xla/contrib/vscode/ .vscode
+  ln -s pytorch/xla/.style.yapf .style.yapf
+  ln -s pytorch/xla/.clang-format .clang-format
+  ```
+
+* From VSCode's command menu, run `Reopen in Container` to open your workspace in one of our pre-built Docker containers. Select the correct container config based on your local accelerator (default to `tpu-contributor` if you are not sure).
+
+* Since you are running as root in this container, change ownership of all files:
+
+  ```bash
+  chown -R root:root .
+  ```
+
+* Build PyTorch and PyTorch/XLA:
+
+  ```bash
+  cd pytorch/
+  python setup.py install
+  cd xla/
+  python setup.py develop
+  # Optional: if you're using TPU, install libtpu
+  pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+  ```
+
+* Test your build
+
+  ```bash
+  python -c 'import torch_xla as xla; print(xla.device())'
+  # Output: xla:0
+  ```
+
+### Manually build in Docker container
 
 * Setup Development Docker Image
 
@@ -42,7 +89,7 @@ We recommend you to use our prebuilt Docker image to start your development work
   python setup.py develop
   ```
 
-### Build PyTorch/XLA from source with GPU support
+### Additional steps for GPU
 
 Please refer to this [guide](https://github.com/pytorch/xla/blob/master/docs/gpu.md#develop-pytorchxla-on-a-gpu-instance-build-pytorchxla-from-source-with-gpu-support).
 
