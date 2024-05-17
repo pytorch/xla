@@ -54,14 +54,9 @@ jobs:
         shell: bash
         run: |
           cd pytorch/xla/infra/ansible
-          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=cuda cuda_compute_capabilities=5.2,7.5 src_root=${GITHUB_WORKSPACE} build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci build_pytorch_with_cuda=1" --skip-tags=fetch_srcs,install_deps
+          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=cuda cuda_compute_capabilities=5.2,7.5 src_root=${GITHUB_WORKSPACE} build_cpp_tests=0 git_versioned_xla_build=1 cache_suffix=-ci build_pytorch_with_cuda=1" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: torch-xla-wheels
+          name: torch-with-cuda-xla-with-cuda-wheels
           path: /dist/*.whl
-      - name: Upload CPP test binaries
-        uses: actions/upload-artifact@v4
-        with:
-          name: cpp-test-bin
-          path: /tmp/test/bin
