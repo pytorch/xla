@@ -25,6 +25,8 @@ We recommend you to use our prebuilt Docker image to start your development work
   ```bash
   ln -s pytorch/xla/.devcontainer/ .devcontainer
   ln -s pytorch/xla/contrib/vscode/ .vscode
+  ln -s pytorch/xla/.style.yapf .style.yapf
+  ln -s pytorch/xla/.clang-format .clang-format
   ```
 
 * From VSCode's command menu, run `Reopen in Container` to open your workspace in one of our pre-built Docker containers. Select the correct container config based on your local accelerator (default to `tpu-contributor` if you are not sure).
