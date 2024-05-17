@@ -79,6 +79,7 @@ jobs:
       timeout-minutes: 300
       collect-coverage: false
       install-cuda-plugin: true
+      require-pytorch-cuda: true
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
