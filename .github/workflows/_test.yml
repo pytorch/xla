@@ -28,6 +28,11 @@ on:
         type: boolean
         default: false
         description: Whether to install CUDA plugin package
+      require-pytorch-cuda:
+        required: false
+        type: boolean
+        default: false
+        description: Whether the tests require pytorch built with CUDA enabled
 
     secrets:
       gcloud-service-key:
