@@ -2,6 +2,7 @@ import argparse
 import bench
 from collections import OrderedDict
 import copy
+import jax
 import json
 import logging
 import os
