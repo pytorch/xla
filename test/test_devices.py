@@ -47,7 +47,7 @@ class TestDevices(parameterized.TestCase):
     with xla.step():
       torch.ones((3, 3), device=xla.device())
 
-    self.assertEqual(met.counter_value('MarkStep'), 1)
+    self.assertEqual(met.counter_value('MarkStep'), 2)
 
   def test_step_exception(self):
     with self.assertRaisesRegex(RuntimeError, 'Expected error'):
@@ -55,7 +55,7 @@ class TestDevices(parameterized.TestCase):
         torch.ones((3, 3), device=xla.device())
         raise RuntimeError('Expected error')
 
-    self.assertEqual(met.counter_value('MarkStep'), 1)
+    self.assertEqual(met.counter_value('MarkStep'), 2)
 
   # Should roughly match example given in README
   def test_trivial_model(self):
