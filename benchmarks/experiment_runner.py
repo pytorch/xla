@@ -285,7 +285,6 @@ class ExperimentRunner:
     # Reset state and sync.
     reset_rng_state(benchmark_experiment)
     if benchmark_experiment.torch_xla2:
-      import jax
       self._mark_step(benchmark_experiment, inputs)
     else:
       self._mark_step(benchmark_experiment)
@@ -421,6 +420,9 @@ class ExperimentRunner:
   def _mark_step(self, benchmark_experiment, tensors_to_check=None):
     if benchmark_experiment.xla:
       if benchmark_experiment.torch_xla2:
+        # jax module should be cached and we expect this to cause 0 overhead.
+        # We didn't import the module globally since torch_xla2 is still in experimental stage.
+        import jax
         assert tensors_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
         jax.block_until_ready(tensors_to_check)
       else:
