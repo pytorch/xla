@@ -92,6 +92,13 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
+        if: ! ${{ inputs.require-pytorch-cuda }}
+      - name: Fetch wheels (pytorch and pytorch/xla with CUDA enabled) if needed.
+        uses: actions/download-artifact@v4
+        with:
+          name: torch-with-cuda-xla-with-cuda-wheels
+          path: /tmp/wheels/
+        if: ${{ inputs.require-pytorch-cuda }}
       - name: Fetch CPP test binaries
         uses: actions/download-artifact@v4
         with:
