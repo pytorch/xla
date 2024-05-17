@@ -2,7 +2,6 @@ import argparse
 import bench
 from collections import OrderedDict
 import copy
-import jax
 import json
 import logging
 import os
@@ -286,6 +285,7 @@ class ExperimentRunner:
     # Reset state and sync.
     reset_rng_state(benchmark_experiment)
     if benchmark_experiment.torch_xla2:
+      import jax
       self._mark_step(benchmark_experiment, inputs)
     else:
       self._mark_step(benchmark_experiment)
