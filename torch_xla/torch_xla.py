@@ -1,4 +1,6 @@
+import contextlib
 from typing import List
+
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -50,3 +52,20 @@ def device_count() -> int:
 def sync():
   """Launches all pending graph operations."""
   xm.mark_step()
+
+
+@contextlib.contextmanager
+def step():
+  """Wraps code that should be dispatched to the runtime.
+
+  Experimental: `xla.step` is still a work in progress. Some code that currently
+  works with `xla.step` but does not follow best practices will become errors in
+  future releases. See https://github.com/pytorch/xla/issues/6751 for context.
+  """
+  # Clear pending operations
+  xm.mark_step()
+
+  try:
+    yield
+  finally:
+    xm.mark_step()
