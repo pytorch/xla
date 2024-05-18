@@ -504,6 +504,19 @@ TEST_F(AtenXlaTensorTest, TestDivScalar) {
   ExpectCounterChanged("xla::div", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestDivScalarHalfOverflow) {
+  torch::Tensor input = torch::rand({3, 4}, torch::TensorOptions(torch::kHalf));
+  torch::Scalar other = torch::Scalar(100000);
+  torch::Tensor out = torch::div(input, other);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_out = torch::div(xla_input, other);
+    AllClose(out, xla_out);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::div", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestDivScalarInPlace) {
   for (torch::ScalarType scalar_type : {torch::kFloat}) {
     torch::Tensor a =
