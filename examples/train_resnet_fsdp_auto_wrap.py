@@ -35,12 +35,11 @@ class TrainResNetXLAFSDP(TrainResNetBase):
           })
     else:
       raise Exception(f"Invalid auto-wrap policy: {auto_wrap_policy}")
-    fsdp_wrap = lambda m: FSDP(
-        m,
+    self.model = FSDP(
+        self.model,
         compute_dtype=torch.float32,
         pin_layout_in_collective_ops=True,
         auto_wrap_policy=auto_wrap_policy)
-    self.model = fsdp_wrap(self.model)
     self.optimizer = optim.SGD(self.model.parameters(), weight_decay=1e-4)
 
 
