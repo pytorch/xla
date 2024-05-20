@@ -198,7 +198,6 @@ skiplist = {
     "nansum",
     "narrow_copy",
     "narrow",
-    "native_batch_norm",
     "native_layer_norm",
     "new_empty",
     "new_empty_strided",
