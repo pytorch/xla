@@ -4,7 +4,6 @@
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
-// TODO: Merge GPU and TPU custom call.
 class GpuCustomCall : public XlaNode {
  public:
   // Make a GPU custom call with payload, e.g., Triton.

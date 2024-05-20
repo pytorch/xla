@@ -200,6 +200,24 @@ std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   return replica_groups;
 }
 
+std::vector<at::Tensor> XlaCustomCall(
+    const std::vector<at::Tensor>& inputs, const std::string& payload,
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<py::object>& output_dtypes, bool is_tpu) {
+  std::vector<at::ScalarType> dtypes;
+  dtypes.reserve(output_dtypes.size());
+  for (auto& dtype : output_dtypes) {
+    dtypes.push_back(reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
+  }
+
+  if (is_tpu) {
+    return bridge::AtenFromXlaTensors(tensor_methods::tpu_custom_call(
+        bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes));
+  }
+  return bridge::AtenFromXlaTensors(tensor_methods::gpu_custom_call(
+      bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes));
+}
+
 std::vector<std::pair<int64_t, int64_t>> CreateSourceTargetPairs(
     const py::list& pairs) {
   std::vector<std::pair<int64_t, int64_t>> source_target_pairs;
@@ -2346,32 +2364,16 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<std::vector<int64_t>>& output_shapes,
            const std::vector<py::object>& output_dtypes)
             -> std::vector<at::Tensor> {
-          std::vector<at::ScalarType> dtypes;
-          dtypes.reserve(output_dtypes.size());
-          for (auto& dtype : output_dtypes) {
-            dtypes.push_back(
-                reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
-          }
-
-          auto xtensors = tensor_methods::tpu_custom_call(
-              bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes);
-          return bridge::AtenFromXlaTensors(xtensors);
+          return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
+                               /*is_tpu=*/true);
         });
   m.def("_xla_gpu_custom_call",
         [](const std::vector<at::Tensor>& inputs, const std::string& payload,
            const std::vector<std::vector<int64_t>>& output_shapes,
            const std::vector<py::object>& output_dtypes)
             -> std::vector<at::Tensor> {
-          std::vector<at::ScalarType> dtypes;
-          dtypes.reserve(output_dtypes.size());
-          for (auto& dtype : output_dtypes) {
-            dtypes.push_back(
-                reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
-          }
-
-          auto xtensors = tensor_methods::gpu_custom_call(
-              bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes);
-          return bridge::AtenFromXlaTensors(xtensors);
+          return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
+                               /*is_tpu=*/false);
         });
   m.def("_xla_register_custom_call_target",
         [](const std::string& fn_name, const py::capsule& function_ptr,

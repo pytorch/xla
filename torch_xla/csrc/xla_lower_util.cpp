@@ -1281,12 +1281,6 @@ std::vector<xla::XlaOp> BuildGpuCustomCall(
     input_shapes.push_back(ShapeHelper::ShapeOfXlaOp(input));
   }
 
-  // std::vector<xla::Shape> output_shapes;
-  // output_shapes.reserve(output_shape.tuple_shapes_size());
-  // for (int i = 0; i < output_shape.tuple_shapes_size(); ++i) {
-  //   output_shapes.push_back(output_shape.tuple_shapes(i));
-  // }
-
   XLA_CHECK(inputs.size() > 0) << "inputs are empty";
   xla::XlaOp outputs = xla::CustomCallWithLayout(
       inputs[0].builder(),

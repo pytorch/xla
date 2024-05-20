@@ -136,13 +136,10 @@ def triton_kernel_call_lowering(
     fn,
     compiled_kernel,
     scalar_args,
-    name,
     grid,
     debug,
-    serialized_metadata,
     **metaparams,
 ):
-  kernel_call_name = name
   args = list(array_args)
   arg_dtypes = list(map(get_triton_type, array_args))
   for idx, dtype, v in scalar_args:
@@ -188,7 +185,7 @@ def triton_kernel_call_lowering(
       kernel_params,
   )
 
-  call_proto = kernel_call.to_proto(kernel_call_name, serialized_metadata)
+  call_proto = kernel_call.to_proto("triton_kernel", b"")
   return zlib.compress(call_proto)
 
 
@@ -196,9 +193,7 @@ def triton_call(
     *args: Union[torch.Tensor, bool, int, float, np.float32],
     kernel: triton.JITFunction,
     grid: GridOrLambda,
-    name: str = "",
     debug: bool = False,
-    serialized_metadata: bytes = b"",
     **metaparams: Any,
 ) -> Any:
   array_args = []
@@ -213,5 +208,4 @@ def triton_call(
 
   compiled_kernel = kernel.run(*args, grid=grid, warmup=True, **metaparams)
   return triton_kernel_call_lowering(array_args, kernel, compiled_kernel,
-                                     scalar_args, name, grid, debug,
-                                     serialized_metadata, **metaparams)
+                                     scalar_args, grid, debug, **metaparams)
