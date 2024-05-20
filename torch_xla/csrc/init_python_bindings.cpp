@@ -725,8 +725,8 @@ py::dict GetMemoryInfo(const std::string& device_str) {
         runtime::GetComputationClient()->GetMemoryInfo(device.toString());
   }
   auto py_dict = py::dict();
-  py_dict["kb_free"] = mem_info.kb_free;
-  py_dict["kb_total"] = mem_info.kb_total;
+  py_dict["bytes_used"] = mem_info.bytes_used;
+  py_dict["bytes_limit"] = mem_info.bytes_limit;
   return py_dict;
 }
 
@@ -1825,9 +1825,9 @@ void InitXlaModuleBindings(py::module m) {
         return GetLiveTensorsReport(nodes_threshold, device);
       },
       py::arg("nodes_threshold") = 100, py::arg("device") = "");
-  m.def("_xla_memory_info", [](const std::string& device) -> py::object {
-    return GetMemoryInfo(device);
-  });
+  py::class_<runtime::ComputationClient::MemoryInfo>(m, "MemoryInfo");
+  m.def("_xla_memory_info",
+        [](const std::string& device) { return GetMemoryInfo(device); });
   m.def(
       "_xla_set_use_full_mat_mul_precision",
       [](bool use_full_mat_mul_precision) {
