@@ -216,7 +216,3 @@ class DecoderOnlyModel(nn.Module):
     hidden_states = self.norm(hidden_states)
     # [B, S, H] -> [B, S, V]
     return self.output(hidden_states)
-
-
-config = DecoderOnlyConfig
-decoder_only = DecoderOnlyModel(config)
