@@ -483,7 +483,7 @@ def _xla_while_loop_target_second_clean_version_s32_may19_2205pm(cond_fn, body_f
       res = res # list(res_iter_inputs) + [res_outputs, ]
     return res
 
-  print("wrapper carried_inputs: ", carried_inputs)
+  # print("wrapper carried_inputs: ", carried_inputs)
   def new_body_fn_may19_2208pm(*carried_inputs):
     res = list(body_fn(*carried_inputs))
 
@@ -1307,9 +1307,9 @@ def _xla_while_loop_target_second_clean_version_s32_may19_2206pm(cond_fn, body_f
   # body_result = body_fn(*carried_inputs) # fake would miss iter
   body_result = body_fn(*carried_inputs, *additional_inputs) # fake would miss iter # right inputs
   # body_result = body_fn(carried_inputs[0], *additional_inputs, *carried_inputs[1:]) # fake would miss iter
-  print("body carried_inputs: ", carried_inputs)
-  print("body additional_inputs: ", additional_inputs)
-  print("body inputs: ", (*carried_inputs, *additional_inputs))
+  # print("body carried_inputs: ", carried_inputs)
+  # print("body additional_inputs: ", additional_inputs)
+  # print("body inputs: ", (*carried_inputs, *additional_inputs))
   # body_result = body_fn(*newest_fake_inputs) # fake would miss iter
   # body_result = body_fn(*modified_carried_inputs) # fake would miss iter
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
@@ -1365,7 +1365,7 @@ def _xla_while_loop_target_second_clean_version_s32_may19_2206pm(cond_fn, body_f
   iter_value = carried_inputs[0]
   input_and_outputs_value = carried_inputs[1:]
   total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
-  print("total_inputs: ", total_inputs)
+  # print("total_inputs: ", total_inputs)
 
   print("get total_inputs !!!")
 
