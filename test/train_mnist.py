@@ -122,6 +122,7 @@ def train_mnist(flags, **kwargs):
         drop_last=flags.drop_last,
         shuffle=False if train_sampler else True,
         num_workers=flags.num_workers)
+    print('xw32 flags.num_workers=', flags.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=flags.batch_size,
@@ -152,30 +153,14 @@ def train_mnist(flags, **kwargs):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      optimizer.zero_grad()
-      output = model(data)
-      loss = loss_fn(output, target)
-      loss.backward()
-      if flags.ddp:
-        optimizer.step()
-      else:
-        xm.optimizer_step(optimizer)
-      tracker.add(flags.batch_size)
-      if step % flags.log_steps == 0:
-        xm.add_step_closure(
-            _train_update,
-            args=(device, step, loss, tracker, epoch, writer),
-            run_async=flags.async_closures)
+      pass
 
   def test_loop_fn(loader):
     total_samples = 0
     correct = 0
     model.eval()
     for data, target in loader:
-      output = model(data)
-      pred = output.max(1, keepdim=True)[1]
-      correct += pred.eq(target.view_as(pred)).sum()
-      total_samples += data.size()[0]
+      pass
 
     accuracy = 100.0 * correct.item() / total_samples
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
