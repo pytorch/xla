@@ -1440,10 +1440,10 @@ class MemoryInfo(TypedDict):
 
 
 def get_memory_info(device: torch.device) -> MemoryInfo:
-  """Retrieves the device memory information.
+  """Retrieves the device memory usage.
 
   Args:
-    device (string): The device whose memory information are requested.
+    device: The device whose memory information are requested.
 
   Returns:
     MemoryInfo dict with memory usage for the given device.
