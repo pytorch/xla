@@ -979,8 +979,11 @@ class PyLoweringContext {
       int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
       // xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // int64_t parameter_idx = 2;  // parameter_idx start from 2 after used upper and lower // param_count
-      for (auto& additional_input_tensor : additional_inputs_list) {
-        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
+      int64_t additional_inputs_list_size = additional_inputs_list.size();
+      for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
+      // for (auto& additional_input_tensor : additional_inputs_list) {
+        // XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
+        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
         xla::Shape shape = xtensor->shape().get();
         xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
                                       "UnusedArgumentsPlaceholder");
@@ -996,8 +999,11 @@ class PyLoweringContext {
       // xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // TODO(@manfei): treat hard code parameter_idx value
       // int64_t parameter_idx = 21;
-      for (auto& additional_input_tensor : additional_inputs_list) {
-        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
+      int64_t additional_inputs_list_size = additional_inputs_list.size();
+      for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
+      // for (auto& additional_input_tensor : additional_inputs_list) {
+        // XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
+        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
         xla::Shape shape = xtensor->shape().get();
         xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
                                       "UnusedArgumentsPlaceholder");

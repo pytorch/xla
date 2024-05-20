@@ -8,7 +8,7 @@ import torch_xla
 import torch_xla.experimental.fori_loop
 from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop, _xla_while_loop_target, _xla_while_loop_target_first, insert_model_pars_into_additional_inputs, _xla_while_loop_target_first_second, _xla_while_loop_target_first_second_clean_version #,  _xla_while_loop_target_first_second_clean_version_s32
 # from torch_xla.experimental.fori_loop import _post_order_get_xla_computation_target_first, _xla_while_loop_get_xla_computation
-from torch_xla.experimental.fori_loop import _xla_while_loop_target_first_second_clean_version_s32_old, _xla_while_loop_target_first_second_clean_version_s32_may16_1530pm, _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm
+from torch_xla.experimental.fori_loop import _xla_while_loop_target_first_second_clean_version_s32_old, _xla_while_loop_target_first_second_clean_version_s32_may16_1530pm, _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm, _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
@@ -50,74 +50,555 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
 
 class WhileLoopTest(unittest.TestCase):
 
-  # passed new nnn unexpected
+  # passed: torch pure version: subtraction
+  def test_while_loop_tpu_subtraction_may16_2238pm_pure_torch(self):
+    xm.mark_step()
+    device = xm.xla_device()
+
+    def cond_fn(iteri, x, y):
+      return iteri > 0
+
+    def body_fn(iteri, x, y):
+      return iteri - 1, x, torch.sub(x, 1)
+
+    init_val = torch.tensor(10)
+    out_val = torch.tensor(15)
+    # init_val = torch.tensor(10, dtype=torch.int32, device=device)
+    # out_val = torch.tensor(15, dtype=torch.int32, device=device) # how to rand a torch.tensor?
+    iteri = torch.tensor(3)
+    # res =  _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
+    # res =  _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
+    res = while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
+    print("res: ", res)
+    expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
+    print("expected: ", expected)
+    # self.assertEqual(list(expected), res)
+
+  # passed: torch_xla version: subtraction
+  def test_while_loop_tpu_subtraction_may16_2238pm(self):
+    xm.mark_step()
+    device = xm.xla_device()
+
+    def cond_fn(iteri, x):
+      return iteri > 0
+
+    def body_fn(iteri, x):
+      return iteri - 1, torch.sub(x, 1)
+
+    # init_val = torch.tensor(10)
+    # out_val = torch.tensor(15)
+    init_val = torch.tensor(10, dtype=torch.int32, device=device)
+    # out_val = torch.tensor(15, dtype=torch.int32, device=device) # how to rand a torch.tensor?
+    # iteri = torch.tensor(3)
+    iteri = torch.tensor(3, device=device)
+    # res =  _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
+    # res =  _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
+    res = while_loop(cond_fn, body_fn, (iteri, init_val))
+    print("res: ", res)
+    expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
+    print("expected: ", expected)
+    # self.assertEqual(list(expected), res)
+
+  # passed: torch pure version: addition
+  def test_while_loop_tpu_addition_may17_1149am_pure_torch(self):
+    def cond_fn(iteri, x, y):
+      return iteri > 0
+
+    def body_fn(iteri, x, y):
+      return iteri - 1, x, torch.add(x, 1)
+
+    init_val = torch.tensor(3)
+    out_val = torch.tensor(15)
+    iteri = torch.tensor(10)
+    res =  while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
+    print("res: ", res)
+    expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
+    print("expected: ", expected)
+
+  # passed: torch_xla version: addition
+  def test_while_loop_tpu_addition_may17_1153am(self):
+    xm.mark_step()
+    device = xm.xla_device()
+    # one_val = torch.tensor(1, dtype=torch.int32, device=device) # add this variable avoid body miss input arg in xla_computation, not fori_loop related
+
+    def cond_fn(iteri, x): # make sure name of variable match
+      return iteri > 0
+
+    def body_fn(iteri, x):
+      # return iter - one_val, x, torch.add(x, 2)
+      # return iteri - 1, x, torch.add(x, 1) # 1 and 2 are different, so would not missed input
+      return iteri - 1, torch.add(x, 1) # 1 and 2 are different, so would not missed input # due to `torch.while_loop's body_fn might be aliasing the input!`
+
+    init_val = torch.tensor(3, dtype=torch.int32, device=device)
+    # out_val = torch.tensor(15, dtype=torch.int32, device=device) # how to rand a torch.tensor?
+    iteri = torch.tensor(10, device=device)
+    res =  while_loop(cond_fn, body_fn, (iteri, init_val))
+    print("res: ", res)
+    expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
+    print("expected: ", expected)
+    # self.assertEqual(list(expected), res)
+
+  # def test_while_loop_tpu_addition_may16_2238pm(self):
+  #   xm.mark_step()
+  #   device = xm.xla_device()
+  #   one_val = torch.tensor(1, dtype=torch.int32, device=device) # add this variable avoid body miss input arg in xla_computation, not fori_loop related
+
+  #   def cond_fn(iteri, x, y): # make sure name of variable match
+  #     return iteri > 0
+
+  #   def body_fn(iteri, x, y):
+  #     # return iter - one_val, x, torch.add(x, 2)
+  #     return iteri - 1, x, torch.add(x, 1) # 1 and 2 are different, so would not missed input
+
+  #   init_val = torch.tensor(3, dtype=torch.int32, device=device)
+  #   out_val = torch.tensor(15, dtype=torch.int32, device=device) # how to rand a torch.tensor?
+  #   # iteri = torch.tensor(10, dtype=torch.int32, device=device)
+  #   iteri = torch.tensor(10, device=device)
+  #   # res =  _xla_while_loop_target_first_second_clean_version(cond_fn, body_fn, (iter, init_val, out_val), [], [])
+  #   res =  _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
+  #   # iter_res, original_x, x_res
+  #   # print("iter_res: ", iter_res)
+  #   # print("original_x: ", original_x)
+  #   # print("x_res: ", x_res)
+  #   print("res: ", res)
+
+  #   # expected = _fake_while_loop(cond_fn, body_fn, (iter, init_val, out_val))
+  #   # print("expected: ", expected)
+  #   # self.assertEqual(list(expected), res)
+
+  # passed:  torch pure version: nestes addition
+  def test_while_loop_tpu_addition_nested_may17_1456pm_pure_torch(self):
+
+    def cond_fn(iteri, x, y):
+      return iteri > 0
+
+    def body_fn(iteri, x, y):
+      return iteri - 1, x, torch.add(torch.add(x, 1), 1)
+
+    init_val = torch.tensor(0)
+    out_val = torch.tensor(0)
+    iteri = torch.tensor(10)
+    res =  while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
+    print("res: ", res)
+    expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
+    print("expected: ", expected)
+    self.assertEqual(expected, res)
+
+  # limitsed passed: torch_xla version: nestes subtraction
+  def test_while_loop_tpu_addition_nested_may17_1456pm(self):
+    xm.mark_step()
+    device = xm.xla_device()
+
+    def cond_fn(iteri, x):
+      return iteri > 0
+
+    def body_fn(iteri, x):
+      return iteri - 1, torch.add(torch.add(x, 1), 1)
+
+    # init_val = torch.tensor(0, dtype=torch.int32, device=device) # result would be wrong when init_val = 0, 1, due to body's xlacomputation missed inputs
+    init_val = torch.tensor(2, dtype=torch.int32, device=device)
+    iteri = torch.tensor(10, device=device)
+    res =  while_loop(cond_fn, body_fn, (iteri, init_val))
+    print("res: ", res)
+    expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
+    print("expected: ", expected)
+    # self.assertEqual(expected, res)
+
+  # def test_while_loop_tpu_subtraction_nested_may16_2238pm(self):
+  #   xm.mark_step()
+  #   device = xm.xla_device()
+
+  #   def cond_fn(iter, x, y):
+  #     return iter > 0
+
+  #   def body_fn(iter, x, y):
+  #     return iter - 1, x, torch.add(torch.add(x, 1), 1)
+
+  #   init_val = torch.tensor(0, dtype=torch.int32, device=device)
+  #   out_val = torch.tensor(0, dtype=torch.int32, device=device)
+  #   iter = torch.tensor(10, device=device)
+  #   res =  _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iter, init_val, out_val), [], [])
+  #   print("res: ", res)
+  #   # expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
+  #   # self.assertEqual(expected, res)
+
+  # WIP: torch pure version: linear
+  @unittest.skip("skip it now before debug")
+  def test_while_loop_tpu_simple_linear_target_inside_loop_may17_1510pm_pure_torch(self):
+
+    torch.set_grad_enabled(False)
+
+    n_epochs = 3
+    batch_size_train = 8 # 64
+    batch_size_test = 10 # 1000
+    learning_rate = 0.01
+    momentum = 0.5
+    log_interval = 10
+    random_seed = 1
+    torch.backends.cudnn.enabled = False
+    torch.manual_seed(random_seed)
+
+    ### load data
+    test_loader = xu.SampleGenerator(
+    data=(torch.zeros(8, 1, 28,28), torch.zeros(8, dtype=torch.int64)),
+    sample_count=1000 // 8 // xm.xrt_world_size())
+
+    class SimpleLinear(torch.nn.Module):
+      def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(2, 2)
+        self.weight_bias_lists = []
+        self.bn_weight_bias_lists = []
+        # self.register_buffer("dec", torch.tensor(1))
+
+      def forward(self, iter, x, y):
+
+        def cond_fn(iter, x, y):
+          # return iter > self.dec
+          return iter > 0
+
+        def body_fn(iter, x, y):
+          y = self.linear(x)
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.linear.named_parameters())
+
+          # return iter - self.dec, x, y #  why return x, y
+          return iter - 1, x, y #  why return x, y
+
+        # return _xla_while_loop_target_first_second_clean_version_s32(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+        # return _xla_while_loop_target_first_second_clean_version_s32_old(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+        return _xla_while_loop_target_first_second_clean_version(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+
+    linear_model = SimpleLinear()
+    linear_model.to(device)
+    #breakpoint()
+    # input = torch.randn(2, 2).to(device)
+    bs=16
+    l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
+    l_out = torch.randn(2, 2, dtype=torch.float32, device=device)
+    iter = torch.tensor(3, device=device) # add dtype in iter would miss input
+    res = linear_model(iter, l_in_0, l_out)
+    print("res: ", res[-1])
+    
+    fake_linear = torch.nn.Linear(2, 2).to(xm.xla_device())
+    fake_linear.weight.data = res[1]
+    fake_linear.bias.data = res[2]
+    # expected = _fake_while_loop_second(lower, upper, fake_linear, l_in_0)
+    expected = fake_linear(l_in_0)
+    print("expected: ", expected)
+
+    print("l_in_0: ", l_in_0)
+
+  # torch_xla version: linear
+  def test_while_loop_tpu_simple_linear_target_inside_loop_may17_1515pm(self):
+    xm.mark_step()
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    n_epochs = 3
+    batch_size_train = 8 # 64
+    batch_size_test = 10 # 1000
+    learning_rate = 0.01
+    momentum = 0.5
+    log_interval = 10
+    random_seed = 1
+    torch.backends.cudnn.enabled = False
+    torch.manual_seed(random_seed)
+
+    ### load data
+    test_loader = xu.SampleGenerator(
+    data=(torch.zeros(8, 1, 28,28), torch.zeros(8, dtype=torch.int64)),
+    sample_count=1000 // 8 // xm.xrt_world_size())
+
+    class SimpleLinear(torch.nn.Module):
+      def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(2, 2)
+        # self.weight_bias_lists = []
+        # self.bn_weight_bias_lists = []
+        # self.register_buffer("dec", torch.tensor(1))
+
+      def forward(self, iteri, x):
+
+        def cond_fn(iteri, x):
+          # return iter > self.dec
+          return iteri > 0
+
+        def body_fn(iteri, x):
+          return iteri - 1, self.linear(x)
+
+        return while_loop(cond_fn, body_fn, (iteri, x))
+
+    linear_model = SimpleLinear()
+    linear_model.to(device)
+    bs=16
+    l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
+    # l_out = torch.randn(2, 2, dtype=torch.float32, device=device)
+    iteri = torch.tensor(3, dtype=torch.int32, device=device) # add dtype in iter would miss input
+    res = linear_model(iteri, l_in_0)
+    print("res: ", res[-1])
+    print("res are: ", res)
+
+    # fake_linear = torch.nn.Linear(2, 2).to(xm.xla_device())
+    # fake_linear.weight.data = res[1]
+    # fake_linear.bias.data = res[2]
+    # # expected = _fake_while_loop_second(lower, upper, fake_linear, l_in_0)
+    # expected = fake_linear(l_in_0)
+    # print("expected: ", expected)
+    # print("l_in_0: ", l_in_0)
+
+  def test_while_loop_tpu_MNIST_target_inside_loop_may16_2238pm(self):
+    xm.mark_step()
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    n_epochs = 3
+    batch_size_train = 8 # 64
+    batch_size_test = 10 # 1000
+    learning_rate = 0.01
+    momentum = 0.5
+    log_interval = 10
+    random_seed = 1
+    torch.backends.cudnn.enabled = False
+    torch.manual_seed(random_seed)
+
+    ### load data
+    test_loader = xu.SampleGenerator(
+    data=(torch.zeros(8, 1, 28,28), torch.zeros(8, dtype=torch.int64)),
+    sample_count=1000 // 8 // xm.xrt_world_size())
+
+    class MNIST(torch.nn.Module):
+      def __init__(self):
+        super().__init__()
+        self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2)
+        self.bn1 = torch.nn.BatchNorm2d(10)
+        self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5)
+        self.bn2 = torch.nn.BatchNorm2d(20)
+        self.fc1 = torch.nn.Linear(500, 50)
+        self.fc2 = torch.nn.Linear(50, 10)
+        self.weight_bias_lists = []
+        self.bn_weight_bias_lists = []
+        # self.register_buffer("dec", torch.tensor(1))
+
+      def forward(self, iteri, x, y):
+
+        def cond_fn(iteri, x, y):
+          return iteri > 0
+
+        def body_fn(iteri, x, y):
+
+          y = F.relu(F.max_pool2d(self.conv1(x), 2))
+          y = self.bn1(y)
+          y = F.relu(F.max_pool2d(self.conv2(y), 2))
+          y = self.bn2(y)
+          y = torch.flatten(y, 1)
+          y = F.relu(self.fc1(y))
+          y = self.fc2(y)
+
+          # add layers para manually
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.conv1.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.bn1.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.conv2.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.bn2.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.fc1.named_parameters())
+          insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.fc2.named_parameters())
+
+          insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn2.named_parameters())
+          insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn1.named_parameters())
+
+          return iteri - 1, x, F.log_softmax(y, dim=1)
+
+        return _xla_while_loop_target_first_second_clean_version(cond_fn, body_fn, (iteri, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+        # return _xla_while_loop_target_first_second_clean_version_s32(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+        # return _xla_while_loop_target_first_second_clean_version_s32_old(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+        # return _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+
+    mnist = MNIST()
+    mnist.to(device)
+    bs=16
+    l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
+    l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
+    iteri = torch.tensor(3, dtype=torch.int64, device=device)
+    # print("dtype iter: ", iter.dtype())
+    # print("type iter: ", iter.type())
+    # print("dtype ite 1: ", torch.dtype(iter))
+    # print("dtype iter 2: ", iter.type().dtype)
+    # print("dtype iter 3: ", iter.dtype)
+    res = mnist(iteri, l_in_0, l_out)
+    print("res: ", res[-1])
+
+  # def test_while_loop_tpu_simple_linear_target_inside_loop_may16_2238pm(self):
+  #   xm.mark_step()
+  #   device = xm.xla_device()
+  #   torch.set_grad_enabled(False)
+
+  #   n_epochs = 3
+  #   batch_size_train = 8 # 64
+  #   batch_size_test = 10 # 1000
+  #   learning_rate = 0.01
+  #   momentum = 0.5
+  #   log_interval = 10
+  #   random_seed = 1
+  #   torch.backends.cudnn.enabled = False
+  #   torch.manual_seed(random_seed)
+
+  #   ### load data
+  #   test_loader = xu.SampleGenerator(
+  #   data=(torch.zeros(8, 1, 28,28), torch.zeros(8, dtype=torch.int64)),
+  #   sample_count=1000 // 8 // xm.xrt_world_size())
+
+  #   class SimpleLinear(torch.nn.Module):
+  #     def __init__(self):
+  #       super().__init__()
+  #       self.linear = torch.nn.Linear(2, 2)
+  #       self.weight_bias_lists = []
+  #       self.bn_weight_bias_lists = []
+  #       # self.register_buffer("dec", torch.tensor(1))
+
+  #     def forward(self, iter, x, y):
+
+  #       def cond_fn(iter, x, y):
+  #         # return iter > self.dec
+  #         return iter > 0
+
+  #       def body_fn(iter, x, y):
+  #         y = self.linear(x)
+  #         insert_model_pars_into_additional_inputs(self.weight_bias_lists, self.linear.named_parameters())
+
+  #         # return iter - self.dec, x, y #  why return x, y
+  #         return iter - 1, x, y #  why return x, y
+
+  #       # return _xla_while_loop_target_first_second_clean_version_s32(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+  #       # return _xla_while_loop_target_first_second_clean_version_s32_old(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+  #       return _xla_while_loop_target_first_second_clean_version(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+
+  #   linear_model = SimpleLinear()
+  #   linear_model.to(device)
+  #   #breakpoint()
+  #   # input = torch.randn(2, 2).to(device)
+  #   bs=16
+  #   l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
+  #   l_out = torch.randn(2, 2, dtype=torch.float32, device=device)
+  #   iter = torch.tensor(3, device=device) # add dtype in iter would miss input
+  #   res = linear_model(iter, l_in_0, l_out)
+  #   print("res: ", res[-1])
+    
+  #   fake_linear = torch.nn.Linear(2, 2).to(xm.xla_device())
+  #   fake_linear.weight.data = res[1]
+  #   fake_linear.bias.data = res[2]
+  #   # expected = _fake_while_loop_second(lower, upper, fake_linear, l_in_0)
+  #   expected = fake_linear(l_in_0)
+  #   print("expected: ", expected)
+
+  #   print("l_in_0: ", l_in_0)
+
+  # passed new nnn
+  @unittest.skip("skip torch_xla func now")
   def test_while_loop_tpu_subtraction_s32(self):
     xm.mark_step()
     device = xm.xla_device()
     # one_value = torch.tensor(1, dtype=torch.int64, device=device)
 
-    def cond_fn(iter, x, y):
+    def cond_fn(iteri, x, y):
       # return iter > one_value
-      return iter > 0
+      return iteri > 0
 
-    def body_fn(iter, x, y):
+    def body_fn(iteri, x, y):
       # return iter - one_value, x, torch.sub(x, one_value)
-      return iter - 1, x, torch.sub(x, 1)
+      return iteri - 1, x, torch.sub(x, 1)
       # return iter - 1, y, torch.sub(y, 1)
 
     init_val = torch.tensor(10, dtype=torch.int32, device=device)
     # out_val = torch.randint(0, 10, 1, dtype=torch.int32, device=device)
-    out_val = torch.tensor(10, dtype=torch.int32, device=device)
+    out_val = torch.tensor(15, dtype=torch.int32, device=device) # how to rand a torch.tensor?
     # out_val = torch.rand(1, dtype=torch.int32, device=device)
     # iter = torch.tensor(10, dtype=torch.int32, device=device)
-    iter = torch.tensor(3, device=device)
-    res =  _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iter, init_val, out_val), [], [])
+    iteri = torch.tensor(3, device=device)
+    # res =  _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
+    res =  _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
     print("res: ", res)
-    expected = _fake_while_loop_second(cond_fn, body_fn, (iter, init_val, out_val))
+    expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
     print("expected: ", expected)
     # self.assertEqual(list(expected), res)
 
   # passed new nnn unexpected
+  @unittest.skip("skip torch_xla func now")
   def test_while_loop_tpu_addition_s32(self):
     xm.mark_step()
     device = xm.xla_device()
+    one_val = torch.tensor(1, dtype=torch.int32, device=device) # add this variable avoid body miss input arg in xla_computation, not fori_loop related
 
-    def cond_fn(init, x, y):
-      return iter > 0
+    def cond_fn(iteri, x, y): # make sure name of variable match
+      return iteri > 0
 
-    def body_fn(init, x, y):
-      return iter - 1, x, torch.add(1, x)
+    def body_fn(iteri, x, y):
+      # return iter - one_val, x, torch.add(x, 2)
+      return iteri - 1, x, torch.add(x, 1) # 1 and 2 are different, so would not missed input
 
-    init_val = torch.tensor(0, device=device) # torch.tensor(0, dtype=torch.int32, device=device)
-    out_val = torch.tensor(15, device=device) # torch.tensor(15, dtype=torch.int32, device=device)
-    iter = torch.tensor(10, dtype=torch.int32, device=device)
+    init_val = torch.tensor(3, dtype=torch.int32, device=device)
+    out_val = torch.tensor(15, dtype=torch.int32, device=device) # how to rand a torch.tensor?
+    # iteri = torch.tensor(10, dtype=torch.int32, device=device)
+    iteri = torch.tensor(10, device=device)
     # res =  _xla_while_loop_target_first_second_clean_version(cond_fn, body_fn, (iter, init_val, out_val), [], [])
-    res =  _xla_while_loop_target_first_second_clean_version_s32(cond_fn, body_fn, (iter, init_val, out_val), [], [])
+    res =  _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
+    # iter_res, original_x, x_res
+    # print("iter_res: ", iter_res)
+    # print("original_x: ", original_x)
+    # print("x_res: ", x_res)
     print("res: ", res)
+
     # expected = _fake_while_loop(cond_fn, body_fn, (iter, init_val, out_val))
     # print("expected: ", expected)
     # self.assertEqual(list(expected), res)
 
+  @unittest.skip("skip _get_xlacomputation now")
+  def test_while_loop_cal_get_xlacomputation(self):
+
+    xm.mark_step()
+    device = xm.xla_device()
+
+    def cond_fn(iter, x, y): # make sure name of variable match
+      return iter > 0
+
+    def body_fn(iter, x, y):
+      return iter - 1, x, torch.sub(x, 1) # torch.add(x, 1)
+
+    init_val = torch.tensor(0, dtype=torch.int32, device=device)
+    out_val = torch.tensor(15, dtype=torch.int32, device=device)
+    iter = torch.tensor(10, device=device) # add dtype would miss input
+
+    res = body_fn(iter, init_val, out_val)
+    print("before run _get_xla_computation: !!!!!!!!!")
+    res_xla_computation = torch_xla._XLAC._get_xla_computation(list(res), [], True)
+    print("after run _get_xla_computation: !!!!!!!!!")
+    if res_xla_computation:
+      hlo_print = xb.get_computation_hlo(res_xla_computation)
+      print("print computation from _get_xla_computation: !!!!!!!!!")
+      print(hlo_print)
+    else:
+      print("print computation from _get_xla_computation: null !!!!!!!!!!!!!")
+
   # passed new nnn unexpected
+  @unittest.skip("skip torch_xla func now")
   def test_while_loop_tpu_subtraction_nested_s32(self):
     xm.mark_step()
     device = xm.xla_device()
 
-    def cond_fn(init, x, y):
+    def cond_fn(iter, x, y):
       return iter > 0
 
-    def body_fn(init, x, y):
+    def body_fn(iter, x, y):
       return iter - 1, x, torch.add(torch.add(x, 1), 1)
 
     init_val = torch.tensor(0, dtype=torch.int32, device=device)
     out_val = torch.tensor(0, dtype=torch.int32, device=device)
-    iter = torch.tensor(10, dtype=torch.int32, device=device)
-    res =  _xla_while_loop_target_first_second_clean_version_s32(cond_fn, body_fn, (iter, init_val, out_val), [], [])
+    iter = torch.tensor(10, device=device)
+    res =  _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iter, init_val, out_val), [], [])
     print("res: ", res)
     # expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     # self.assertEqual(expected, res)
 
   # passed now new ?
+  @unittest.skip("skip torch_xla func now")
   def test_while_loop_tpu_MNIST_target_inside_loop_s32(self):
     xm.mark_step()
     device = xm.xla_device()
@@ -151,12 +632,12 @@ class WhileLoopTest(unittest.TestCase):
         self.bn_weight_bias_lists = []
         # self.register_buffer("dec", torch.tensor(1))
 
-      def forward(self, iter, x, y):
+      def forward(self, iteri, x, y):
 
-        def cond_fn(iter, x, y):
-          return iter > 0
+        def cond_fn(iteri, x, y):
+          return iteri > 0
 
-        def body_fn(iter, x, y):
+        def body_fn(iteri, x, y):
 
           y = F.relu(F.max_pool2d(self.conv1(x), 2))
           y = self.bn1(y)
@@ -177,27 +658,29 @@ class WhileLoopTest(unittest.TestCase):
           insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn2.named_parameters())
           insert_model_pars_into_additional_inputs(self.bn_weight_bias_lists, self.bn1.named_parameters())
 
-          return iter - 1, x, F.log_softmax(y, dim=1)
+          return iteri - 1, x, F.log_softmax(y, dim=1)
 
-        # return _xla_while_loop_target_first_second_clean_version(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
-        return _xla_while_loop_target_first_second_clean_version_s32(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+        return _xla_while_loop_target_first_second_clean_version(cond_fn, body_fn, (iteri, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+        # return _xla_while_loop_target_first_second_clean_version_s32(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
         # return _xla_while_loop_target_first_second_clean_version_s32_old(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
+        # return _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iter, x, y), self.weight_bias_lists, self.bn_weight_bias_lists)
 
     mnist = MNIST()
     mnist.to(device)
     bs=16
     l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
     l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
-    iter = torch.tensor(3, dtype=torch.int64, device=device)
+    iteri = torch.tensor(3, dtype=torch.int64, device=device)
     # print("dtype iter: ", iter.dtype())
     # print("type iter: ", iter.type())
     # print("dtype ite 1: ", torch.dtype(iter))
     # print("dtype iter 2: ", iter.type().dtype)
     # print("dtype iter 3: ", iter.dtype)
-    res = mnist(iter, l_in_0, l_out)
+    res = mnist(iteri, l_in_0, l_out)
     print("res: ", res[-1])
 
   # unexpected
+  @unittest.skip("skip torch_xla func now")
   def test_while_loop_tpu_simple_linear_target_inside_loop_s32(self):
     xm.mark_step()
     device = xm.xla_device()
@@ -250,7 +733,7 @@ class WhileLoopTest(unittest.TestCase):
     bs=16
     l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
     l_out = torch.randn(2, 2, dtype=torch.float32, device=device)
-    iter = torch.tensor(3, dtype=torch.int64, device=device)
+    iter = torch.tensor(3, device=device) # add dtype in iter would miss input
     res = linear_model(iter, l_in_0, l_out)
     print("res: ", res[-1])
     
@@ -262,6 +745,7 @@ class WhileLoopTest(unittest.TestCase):
     print("expected: ", expected)
 
     print("l_in_0: ", l_in_0)
+
 
 
   # ==================================== other test ==========================================
