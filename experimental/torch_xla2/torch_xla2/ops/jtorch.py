@@ -5,9 +5,16 @@ from typing import Optional, Sequence
 import jax
 import torch
 import jax.numpy as jnp
+import numpy as np
 from torch_xla2 import tensor
 from torch_xla2.ops.ops_registry import register_torch_function_op
 from torch_xla2.ops import op_base
+from torch_xla2 import interop
+
+from jax.experimental.pallas.ops.tpu import flash_attention
+from jax.experimental.shard_map import shard_map
+
+
 
 
 def register_function(torch_func, **kwargs):
@@ -86,3 +93,74 @@ def _torch_argsort(input, dim=-1, descending=False, stable=False):
 def _einsum(equation, *operands):
   assert isinstance(equation, str), 'Only accept str equation'
   return jnp.einsum(equation, *operands)
+
+
+def _sdpa_reference(
+   query, key, value, attn_mask=None, 
+   dropout_p=0.0, is_causal=False, scale=None) -> torch.Tensor:
+    L, S = query.size(-2), key.size(-2)
+    scale_factor = 1 / np.sqrt(query.size(-1)) if scale is None else scale
+    attn_bias = torch.zeros(L, S, dtype=query.dtype)
+
+    if is_causal:
+        assert attn_mask is None
+        temp_mask = torch.ones(L, S, dtype=torch.bool).tril(diagonal=0)
+        attn_bias.masked_fill_(temp_mask.logical_not(), float("-inf"))
+        attn_bias.to(query.dtype)
+
+    if attn_mask is not None:
+        if attn_mask.dtype == torch.bool:
+            attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
+        else:
+            attn_bias += attn_mask
+    attn_weight = query @ key.transpose(-2, -1) * scale_factor
+    attn_weight += attn_bias
+    attn_weight = torch.softmax(attn_weight, dim=-1)
+    attn_weight = torch.dropout(attn_weight, dropout_p, train=True)
+    return attn_weight @ value
+
+
+from jax.sharding import PartitionSpec
+
+def _tpu_flash_attention(query, key, value, env):
+  fsdp_partition = PartitionSpec('fsdp')
+  block_sizes = flash_attention.BlockSizes(
+    block_b=min(2, query.shape[0]),
+    block_q=min(512, query.shape[2]),
+    block_k_major=min(512, key.shape[2]),
+    block_k=min(512, key.shape[2]),
+    block_q_major_dkv=min(512, query.shape[2]),
+    block_k_major_dkv=min(512, key.shape[2]),
+    block_k_dkv=min(512, key.shape[2]),
+    block_q_dkv=min(512, query.shape[2]),
+    block_k_major_dq=min(512, key.shape[2]),
+    block_k_dq=min(256, key.shape[2]),
+    block_q_dq=min(1024, query.shape[2]),
+  )
+  def wrap_flash_attention(query, key, value):
+     return flash_attention.flash_attention(
+        query, key, value, causal=True, block_sizes=block_sizes)
+
+  if env.config.shmap_flash_attention:
+    wrap_flash_attention = shard_map(
+      wrap_flash_attention, 
+      mesh=env._mesh, 
+      in_specs=(fsdp_partition, fsdp_partition, fsdp_partition),
+      out_specs=fsdp_partition ,
+      check_rep=False,
+    )
+  #return flash_attn_mapped(query, key, value)
+  return wrap_flash_attention(query, key, value)
+  
+
+@register_function(torch.nn.functional.scaled_dot_product_attention, is_jax_function=False, needs_env=True)
+def scaled_dot_product_attention(
+   query, key, value, attn_mask=None, 
+   dropout_p=0.0, is_causal=False, scale=None, env=None) -> torch.Tensor:
+
+   if env.config.use_tpu_flash_attention:
+    jquery, jkey, jvalue = env.t2j_iso((query, key, value))
+    res = _tpu_flash_attention(jquery, jkey, jvalue, env)
+    return env.j2t_iso(res)
+
+   return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal, scale)
