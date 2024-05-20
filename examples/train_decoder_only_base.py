@@ -48,7 +48,8 @@ class TrainDecoderOnlyBase():
     for step, (data, target) in enumerate(loader):
       self.optimizer.zero_grad()
       logits = self.model(data)
-      loss = self.loss_fn(logits.view(-1, self.config.vocab_size), target.view(-1))
+      loss = self.loss_fn(
+          logits.view(-1, self.config.vocab_size), target.view(-1))
       loss.backward()
       self.run_optimizer()
       tracker.add(self.batch_size)
