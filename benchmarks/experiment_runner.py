@@ -103,6 +103,11 @@ class ExperimentRunner:
         # TODO: See if we can pass experiment_cfg to `load_experiment`.
         benchmark_experiment = self.experiment_loader.load_experiment(
             experiment_cfg)
+
+        if benchmark_experiment.torch_xla2:
+          import jax
+          self.jax = jax
+
         benchmark_model = self.model_loader.load_model(
             model_cfg, benchmark_experiment, dummy=True)
 
@@ -285,8 +290,7 @@ class ExperimentRunner:
     # Reset state and sync.
     reset_rng_state(benchmark_experiment)
     if benchmark_experiment.torch_xla2:
-      for inputs in inputs_list:
-        self._mark_step(benchmark_experiment, inputs)
+      self._mark_step(benchmark_experiment, inputs_list)
     else:
       self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
@@ -422,8 +426,7 @@ class ExperimentRunner:
     if benchmark_experiment.xla:
       if benchmark_experiment.torch_xla2:
         assert tensors_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
-        for t in tensors_to_check:
-          t.block_until_ready()
+        self.jax.block_until_ready(tensors_to_check)
       else:
         xm.mark_step()
 
