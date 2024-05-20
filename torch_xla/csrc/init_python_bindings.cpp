@@ -1825,7 +1825,6 @@ void InitXlaModuleBindings(py::module m) {
         return GetLiveTensorsReport(nodes_threshold, device);
       },
       py::arg("nodes_threshold") = 100, py::arg("device") = "");
-  py::class_<runtime::ComputationClient::MemoryInfo>(m, "MemoryInfo");
   m.def("_xla_memory_info",
         [](const std::string& device) { return GetMemoryInfo(device); });
   m.def(
