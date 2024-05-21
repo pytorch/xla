@@ -1504,8 +1504,10 @@ at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
                                              const at::Tensor& self,
                                              c10::string_view approximate) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  at::ScalarType result_type = at::result_type(grad, self);
   return bridge::AtenFromXlaTensor(tensor_methods::gelu_backward(
-      bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self), approximate));
+      bridge::GetXlaTensor(grad.to(result_type)),
+      bridge::GetXlaTensor(self.to(result_type)), approximate));
 }
 
 at::Tensor XLANativeFunctions::hardtanh(const at::Tensor& self,

@@ -1982,6 +1982,22 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for dtype in test_dtypes:
       test(dtype)
 
+  def test_gelu_backward_different_types(self):
+
+    def foo(grad, inp):
+      return torch.ops.aten.gelu_backward.default(grad, inp)
+
+    grad = torch.rand(10, 10, dtype=torch.bfloat16)
+    inp = torch.rand(10, 10)
+
+    Xgrad = grad.to(xm.xla_device())
+    Xinp = inp.to(xm.xla_device())
+
+    r = foo(grad, inp)
+    Xr = foo(Xgrad, Xinp)
+
+    self.assertEqual(r, Xr.cpu())
+
 
 class MNISTComparator(nn.Module):
 
