@@ -377,36 +377,56 @@ class WhileLoopTest(unittest.TestCase):
         self.fc2 = torch.nn.Linear(50, 10)
 
       def forward(self, iteri, x, y):
-
         def cond_fn(iteri, x, y):
+        # def cond_fn(iteri, x):
           return iteri > 0
 
         def body_fn(iteri, x, y):
+        # def body_fn(iteri, x):
 
-          z = F.relu(F.max_pool2d(self.conv1(x), 2))
-          z = self.bn1(z)
-          # y = F.relu(F.max_pool2d(self.conv2(y), 2))
+          # z = self.bn1(F.relu(F.max_pool2d(self.conv1(x), 2)))
+          # # z = self.bn1(z)
+
+          y = F.relu(F.max_pool2d(self.conv1(x), 2)) # [16, 10, 14, 14]
+          # z = self.bn1(z) # torch.while_loop's body_fn might be modifying the input!
+          y = F.relu(F.max_pool2d(self.conv2(y), 2)) # [16, 20, 5, 5]
           # y = self.bn2(y)
-          # y = torch.flatten(y, 1)
-          # y = F.relu(self.fc1(y))
-          # y = self.fc2(y)
+          y = torch.flatten(y, 1) # [16, 500]
+          y = F.relu(self.fc1(y)) # [16, 50]
+          y = self.fc2(y)
 
           # return iteri - 1, F.log_softmax(y, dim=1)
-          return iteri - 1, x.clone(), z
+          return iteri - 1, x.clone(), F.log_softmax(y, dim=1)
+          # return iteri - 1, x.clone(), y
+          # return iteri - 1, z
 
         return while_loop(cond_fn, body_fn, (iteri, x, y))
+        # return while_loop(cond_fn, body_fn, (iteri, x))
         # return _xla_while_loop_target_second_clean_version_s32_may21_1047am(cond_fn, body_fn, (iteri, x, y), [], [])
+
+      def forward_compare(self, iteri, x, y):
+        y = F.relu(F.max_pool2d(self.conv1(x), 2)) # [16, 10, 14, 14]
+        # z = self.bn1(z) # torch.while_loop's body_fn might be modifying the input!
+        y = F.relu(F.max_pool2d(self.conv2(y), 2)) # [16, 20, 5, 5]
+        # y = self.bn2(y)
+        y = torch.flatten(y, 1) # [16, 500]
+        y = F.relu(self.fc1(y)) # [16, 50]
+        y = self.fc2(y)
+        return iteri - 1, x.clone(), F.log_softmax(y, dim=1)
 
     mnist = MNIST()
     mnist.to(device)
     bs=16
     # l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
     l_in_0 = torch.randn(16, 1, 28, 28, dtype=torch.float32, device=device)
-    l_out = torch.randn(16, 10, 14, 14, dtype=torch.float32, device=device)
+    l_out = torch.randn(16, 10, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
     res = mnist(iteri, l_in_0, l_out)
-    print("res: ", res[-1])
-
+    # res = mnist(iteri, l_in_0)
+    print("res: ", res[-1][0])
+    expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
+    # res = mnist(iteri, l_in_0)
+    print("expected res: ", res[-1][0])
 
   # def test_while_loop_tpu_MNIST_target_inside_loop_may16_2238pm(self):
   #   xm.mark_step()
