@@ -1285,14 +1285,11 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
             {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
       },
       tsl::profiler::TraceMeLevel::kInfo);
-  TF_VLOG(3) << "We are running XLAGraphExecutor::Compile now";
-
   static const bool enable_aliasing =
       runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
   static const size_t parameter_wrapping_threadshold =
       runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
   static const bool use_autosharding = ShardingUtil::GetAutoSharding();
-
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
@@ -1301,15 +1298,46 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
+  // Always execute sharded when running in SPMD mode
   bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
+  // Annotate HLO sharding selectively in the compuation.
   ShardingUtil::SetHloSharding(&lowering_ctx);
 
   std::vector<size_t> buffer_donor_indices;
+  // TODO(yeounoh) enable aliasing is disabled for partitioned computation,
+  // since the current aliasing compares the unpartitioned input and output
+  // shapes which can lead to an incorrect aliasing pairs if sharded.
   if (enable_aliasing && !use_autosharding) {
     if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
+      // We can only alias at the step barrier, when force_ltc_data is true.
+      // Consider the case:
+      //   1. Tensor A(DEVICE_DATA)
+      //   2. Tensor B = A + 0.9
+      //   3. A += 0.4
+      // If we activate aliasing for A's graph, and we do:
+      //   print(A)
+      //   print(A)
+      // The first print will update DEVICE_DATA' with DEVICE_DATA+0.4, and the
+      // second print will again update DEVICE_DATA" with DEVICE_DATA'+0.4,
+      // which will lead to incorrect results. We cannot normally turn A's state
+      // into DEVICE_DATA, as if any of the sources is a view, this will not
+      // lead to correct results (as A's value taken at different times need to
+      // reflect view source changes):
+      //   1. Tensor A = some_graph_with_view_source(V)
+      //   2. print(A)
+      //   3. V += 1
+      //   4. print(A)
+      // The second print should reflect the new value due to V's changes.
+      // Also in the first example, unless we are doing a step barrier and hence
+      // include all live tensors, if the B value is not part of the graph, it
+      // will later fetch the new value of A, which is incorrect.
+      // But, when we issue a step barrier (force_ltc_data == true) we have to
+      // turn everything into DEVICE_DATA, so we can activate aliasing.
       buffer_donor_indices =
           SetBufferDonors(tensors, coll.indices, &lowering_ctx);
     } else if (GetAliasWithBufferDonorConfig()) {
+      // only alias based on buffer donor if LTC can't auto infer the input
+      // output aliasing.
       buffer_donor_indices = SetBufferDonorsFromUserConfig(&lowering_ctx);
     }
   }
@@ -1321,7 +1349,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
       !use_autosharding;
-
   if (should_wrap_parameter) {
     TF_VLOG(3) << "Wrapping graph with " << program_shape.parameters_size()
                << " parameters. Threadshold = "
@@ -1330,7 +1357,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
         computation, program_shape.parameters(), buffer_donor_indices));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
-
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
@@ -1339,8 +1365,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                        runtime::GetComputationClient()->GetCompilationDevices(
                            coll.device.toString(), devices),
                        &shape, should_wrap_parameter, is_sharded});
+
   if (use_autosharding) {
-    XLA_ERROR() << "We are running XLAGraphExecutor::Compile now: enter the loop of use_autosharding";
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
     TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
     instances.front().use_auto_spmd_partitioning = use_autosharding;
@@ -1377,7 +1403,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
              << coll.device << " done!";
   TF_VLOG(5) << "Compiled program shape "
              << computations.front()->program_shape().ToString() << std::endl;
-
   TF_VLOG(5)
       << "Graph hash " << torch::lazy::HashToString(coll.hash)
       << " is computation hash "
@@ -1394,7 +1419,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                << torch::lazy::Hash(po_data->parameter_sequence);
   }
 
-  // should_wrap_parameter: 0
   if (should_wrap_parameter) {
     XLA_CHECK_EQ(program_shape.parameters_size(), 1);
     XLA_CHECK_EQ(program_shape.parameters()[0].tuple_shapes_size(),
@@ -1548,7 +1572,6 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
   SyncTensorsConfig config;
   config.force_ltc_data = false;
 
-  // struct SyncTensorCollection {SyncTensorsConfig config; std::vector<size_t> indices; hash_t hash; std::vector<ExceptionCleanup> unlocker; BackendDevice device;
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   // check coll for device
   if (coll.indices.empty()) {
@@ -1597,7 +1620,6 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
   // TODO(@manfei): abstract xla_computation and wrap them for xla::while requirement
 
   return compile_result0.computation;
-  // return xla_computation;
 }
 
 }  // namespace torch_xla
