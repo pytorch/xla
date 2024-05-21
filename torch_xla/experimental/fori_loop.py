@@ -278,14 +278,14 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   # TODO(@manfei): PyTorch require carried_inputs to be list/tuple, PyTorch/XLA _xla_while_loop only accept *operands, *operands would tuple items again: (a, '')
   # cond_fn&body_fn: callable
   # carried_inputs: (Tuple of possibly nested dict/list/tuple of tensors)
-  print("dispatchkey here !!!")
+  # print("dispatchkey here !!!")
   if additional_inputs is None:
     additional_inputs = tuple()
   # print("arrive @while_loop_op.py_impl(DispatchKey.XLA)")
   # return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
   # return _xla_while_loop_target(cond_fn, body_fn, carried_inputs, additional_inputs)
   # return _xla_while_loop_target_first_second(cond_fn, body_fn, carried_inputs, additional_inputs)
-  print("dispatchkey here !!!")
+  # print("dispatchkey here !!!")
   # print("additional_inputs size: ", additional_inputs.size())
   # print("additional_inputs: ", additional_inputs)
   # for i in range(len(additional_inputs)): print("additional_inputs: ", i, " size: ", additional_inputs.size()) # ()
@@ -1311,7 +1311,7 @@ def _xla_while_loop_target_second_clean_version_s32_may21_1049am(cond_fn, body_f
   # body_result = body_fn(*carried_inputs) # fake would miss iter # right inputs
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
-  print("get body_result !!!")
+  # print("get body_result !!!")
 
   #  ============================= body xlacomputation ==========================================
   # additional_inputs_list_body = modified_fake_inputs
@@ -1322,15 +1322,15 @@ def _xla_while_loop_target_second_clean_version_s32_may21_1049am(cond_fn, body_f
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
-  body_hlo_print = xb.get_computation_hlo(body_computation)
-  print("body computation: !!!!!!!!!")
-  print(body_hlo_print)
+  # body_hlo_print = xb.get_computation_hlo(body_computation)
+  # print("body computation: !!!!!!!!!")
+  # print(body_hlo_print)
 
   #  ============================= cond_fn ==========================================
   cond_result = cond_fn(*carried_inputs, *additional_inputs) # fake one would result none input args
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
-  print("get cond_result !!!")
+  # print("get cond_result !!!")
 
   #  ============================= cond ==========================================
   # additional_inputs_list_cond = [fake_carried_inputs[0], ] + fake_additiona_args + fake_carried_inputs[1:]
@@ -1338,9 +1338,9 @@ def _xla_while_loop_target_second_clean_version_s32_may21_1049am(cond_fn, body_f
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
-  cond_hlo_print = xb.get_computation_hlo(cond_computation)
-  print("cond computation: !!!!!!!!!")
-  print(cond_hlo_print)
+  # cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  # print("cond computation: !!!!!!!!!")
+  # print(cond_hlo_print)
 
   #  ============================= xla::while ==========================================
   iter_value = carried_inputs[0]
@@ -1348,7 +1348,7 @@ def _xla_while_loop_target_second_clean_version_s32_may21_1049am(cond_fn, body_f
   total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
   # print("total_inputs: ", total_inputs)
 
-  print("get total_inputs !!!")
+  # print("get total_inputs !!!")
 
   kwargs = {}
   if type(total_inputs) is tuple:
