@@ -18,7 +18,7 @@ num_devices = xr.global_runtime_device_count()
 mesh_shape = (num_devices, 1)
 device_ids = np.array(range(num_devices))
 # To be noted, the mesh must have an axis named 'fsdp', which the weights and activations will be sharded on.
-mesh = Mesh(device_ids, mesh_shape, ('fsdp', 'model'))
+mesh = xs.Mesh(device_ids, mesh_shape, ('fsdp', 'model'))
 
 # Shard the input, and assume x is a 2D tensor.
 x = xs.mark_sharding(x, mesh, ('fsdp', None))

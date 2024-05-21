@@ -12,7 +12,7 @@ from torch_xla.experimental.spmd_fully_sharded_data_parallel import SpmdFullySha
 from torch_xla import runtime as xr
 from torch_xla.distributed.fsdp.wrap import transformer_auto_wrap_policy
 
-
+# checkout our doc at https://github.com/pytorch/xla/blob/master/docs/fsdpv2.md
 class TrainDecoderOnlyFSDPv2(TrainDecoderOnlyBase):
 
   def __init__(self):
@@ -24,8 +24,8 @@ class TrainDecoderOnlyFSDPv2(TrainDecoderOnlyBase):
     # To be noted, the mesh must have an axis named 'fsdp', which the weights and activations will be sharded on.
     mesh = xs.Mesh(device_ids, mesh_shape, ('fsdp', 'model'))
 
-    # Shard the input(data parallel)
-    # scale the batch size with num_devices since there will be only one
+    # Shard the input(data parallel).
+    # Scale the batch size with num_devices since there will be only one
     # process that handles all runtime devices.
     self.batch_size *= num_devices
     train_loader = xu.SampleGenerator(
@@ -38,7 +38,7 @@ class TrainDecoderOnlyFSDPv2(TrainDecoderOnlyBase):
         # Shard the input's batch dimension along the `fsdp` axis, no sharding along other dimensions
         input_sharding=xs.ShardingSpec(mesh, ('fsdp', None)))
 
-    # Apply FSDP sharding on attnetion and mlp layers.
+    # Apply FSDP sharding on each attnetion layer and each mlp layer.
     auto_wrap_policy = functools.partial(
         transformer_auto_wrap_policy,
         transformer_layer_cls={
