@@ -8,7 +8,7 @@ import torch_xla
 import torch_xla.experimental.fori_loop
 from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop, _xla_while_loop_target, _xla_while_loop_target_first, insert_model_pars_into_additional_inputs, _xla_while_loop_target_first_second, _xla_while_loop_target_first_second_clean_version #,  _xla_while_loop_target_first_second_clean_version_s32
 # from torch_xla.experimental.fori_loop import _post_order_get_xla_computation_target_first, _xla_while_loop_get_xla_computation
-from torch_xla.experimental.fori_loop import _xla_while_loop_target_first_second_clean_version_s32_old, _xla_while_loop_target_first_second_clean_version_s32_may16_1530pm, _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm, _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm
+from torch_xla.experimental.fori_loop import _xla_while_loop_target_first_second_clean_version_s32_old, _xla_while_loop_target_first_second_clean_version_s32_may16_1530pm, _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm, _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm, _xla_while_loop_target_second_clean_version_s32_may21_1047am
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
@@ -381,10 +381,10 @@ class WhileLoopTest(unittest.TestCase):
         def cond_fn(iteri, x, y):
           return iteri > 0
 
-        def body_fn(iteri, x):
+        def body_fn(iteri, x, y):
 
-          y = F.relu(F.max_pool2d(self.conv1(x), 2))
-          # y = self.bn1(y)
+          z = F.relu(F.max_pool2d(self.conv1(x), 2))
+          z = self.bn1(z)
           # y = F.relu(F.max_pool2d(self.conv2(y), 2))
           # y = self.bn2(y)
           # y = torch.flatten(y, 1)
@@ -392,17 +392,19 @@ class WhileLoopTest(unittest.TestCase):
           # y = self.fc2(y)
 
           # return iteri - 1, F.log_softmax(y, dim=1)
-          return iteri - 1, y
+          return iteri - 1, x.clone(), z
 
-        return while_loop(cond_fn, body_fn, (iteri, x))
+        return while_loop(cond_fn, body_fn, (iteri, x, y))
+        # return _xla_while_loop_target_second_clean_version_s32_may21_1047am(cond_fn, body_fn, (iteri, x, y), [], [])
 
     mnist = MNIST()
     mnist.to(device)
     bs=16
     # l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
     l_in_0 = torch.randn(16, 1, 28, 28, dtype=torch.float32, device=device)
+    l_out = torch.randn(16, 10, 14, 14, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
-    res = mnist(iteri, l_in_0)
+    res = mnist(iteri, l_in_0, l_out)
     print("res: ", res[-1])
 
 
