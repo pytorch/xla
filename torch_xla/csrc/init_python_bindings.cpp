@@ -914,41 +914,9 @@ class PyLoweringContext {
   }
 
   // Builds a HLO graph given a set of output tensors, and add unused parameters
-  // needed in xlacomputation.
+  // needed in xlacomputation for fori_loop/while_loop.
   void BuildForiLoop(std::vector<at::Tensor> tensors,
                      std::vector<at::Tensor> additional_inputs_list = {}) {
-    // // hard-code modify cond xlacomputation input arguments with unusedarguments
-    // // for xla::while requriement
-    // if (GetNameString() == "condctx") {
-    //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    //   // XLA_ERROR() << "for condctx, we want test here! ";
-    //   // int64_t parameter_idx0 = local_builder->GetProgramShape()->parameters_size();
-    //   // XLA_ERROR() << "for condctx, we have args now: " <<  parameter_idx0;
-    //   int64_t parameter_idx =
-    //       2;  // parameter_idx start from 2 after used upper and lower // param_count
-    //   for (auto& additional_input_tensor : additional_inputs_list) {
-    //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
-    //     xla::Shape shape = xtensor->shape().get();
-    //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-    //                                   "UnusedArgumentsPlaceholder");
-    //     parameter_idx += 1;
-    //   }
-    // }
-
-    // // hard-code modify body xlacomputation input arguments with unusedarguments
-    // // for xla::while requriement
-    // if (GetNameString() == "bodyctx") {
-    //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    //   // TODO(@manfei): treat hard code parameter_idx value
-    //   int64_t parameter_idx = 21;
-    //   for (auto& additional_input_tensor : additional_inputs_list) {
-    //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
-    //     xla::Shape shape = xtensor->shape().get();
-    //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-    //                                   "UnusedArgumentsPlaceholder");
-    //     parameter_idx += 1;
-    //   }
-    // }
 
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
@@ -968,21 +936,12 @@ class PyLoweringContext {
       lowering_ctx.AddResult(root);
     }
 
-    // xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    // int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
-    // XLA_ERROR() << "for fori_loop, we have args now: " <<  parameter_idx;
-
-    // hard-code modify cond xlacomputation input arguments with unusedarguments
-    // for xla::while requriement
+    // add dummy parameter to cond xlacomputation's input for xla::while requriement
     if (GetNameString() == "condctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
-      // xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      // int64_t parameter_idx = 2;  // parameter_idx start from 2 after used upper and lower // param_count
       int64_t additional_inputs_list_size = additional_inputs_list.size();
       for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
-      // for (auto& additional_input_tensor : additional_inputs_list) {
-        // XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
         xla::Shape shape = xtensor->shape().get();
         xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
@@ -991,23 +950,12 @@ class PyLoweringContext {
       }
     }
 
-    // hard-code modify body xlacomputation input arguments with unusedarguments
-    // for xla::while requriement
+    // add dummy parameter to body xlacomputation's input for xla::while requriement
     if (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0) {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
-      // XLA_ERROR() << " !!! current parameter_idx: " << parameter_idx ; // linear: 6
-      // for (int64_t i = 0; i < parameter_idx ; i++) {
-      //   XLA_ERROR() << " !!! current tensor: " << tensors[parameter_idx];
-      // }
-      // xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      // TODO(@manfei): treat hard code parameter_idx value
-      // int64_t parameter_idx = 21;
       int64_t additional_inputs_list_size = additional_inputs_list.size();
-      // XLA_ERROR() << " !!! current additional_inputs_list_size: " << additional_inputs_list_size ; // linear: 5
       for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
-      // for (auto& additional_input_tensor : additional_inputs_list) {
-        // XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
         xla::Shape shape = xtensor->shape().get();
         xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
