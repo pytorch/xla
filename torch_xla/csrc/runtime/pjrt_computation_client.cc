@@ -8,7 +8,6 @@
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
-#include "pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_hash.h"
@@ -924,6 +923,20 @@ void PjRtComputationClient::WaitDeviceOps(
 std::map<std::string, Metric> PjRtComputationClient::GetMetrics() const {
   // TODO(jonbolin): Add any PJRt-client-specific metrics here
   return {};
+}
+
+ComputationClient::MemoryInfo PjRtComputationClient::GetMemoryInfo(
+    const std::string& device) {
+  XLA_CHECK_NE(device, spmd_device_str)
+      << "MemoryInfo not supported for SPMD virtual device.";
+  xla::PjRtDevice* pjrt_device =
+      PjRtComputationClient::StringToPjRtDevice(device);
+  tsl::AllocatorStats stats = pjrt_device->GetAllocatorStats().value();
+
+  return {
+      stats.bytes_in_use,
+      *stats.bytes_limit,
+  };
 }
 
 }  // namespace runtime

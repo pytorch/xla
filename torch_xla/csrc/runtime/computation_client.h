@@ -246,8 +246,8 @@ class ComputationClient {
   struct ExecuteReplicatedOptions : public ClientExecuteOptions {};
 
   struct MemoryInfo {
-    int64_t kb_free = 0;
-    int64_t kb_total = 0;
+    int64_t bytes_used = 0;
+    int64_t bytes_limit = 0;
   };
 
   virtual ~ComputationClient() {}

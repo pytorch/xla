@@ -120,11 +120,7 @@ class PjRtComputationClient : public ComputationClient {
 
   bool CoordinatorInitialized() const override;
 
-  // NOT IMPLEMENTED
-
-  MemoryInfo GetMemoryInfo(const std::string& device) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
+  MemoryInfo GetMemoryInfo(const std::string& device) override;
 
  private:
   std::unique_ptr<xla::PjRtClient> client_;
