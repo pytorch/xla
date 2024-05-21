@@ -271,7 +271,6 @@ class WhileLoopTest(unittest.TestCase):
     print("expected_res[0]: ", res[0])
 
   # ==================================== test _get_xla_computation ==========================================
-  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_get_xlacomputation(self):
 
     xm.mark_step()
@@ -281,18 +280,15 @@ class WhileLoopTest(unittest.TestCase):
     t3 = torch.add(t1, t2)
 
     ### implement one new function for xlacomputation generation with post-order
-    print("before run _get_xla_computation: !!!!!!!!!")
     res_xla_computation = torch_xla._XLAC._get_xla_computation([t3], [], True)
-    print("after run _get_xla_computation: !!!!!!!!!")
     if res_xla_computation:
       hlo_print = xb.get_computation_hlo(res_xla_computation)
-      print("print computation from _get_xla_computation: !!!!!!!!!")
+      print("Gain and print computation from _get_xla_computation:")
       print(hlo_print)
     else:
-      print("print computation from _get_xla_computation: null !!!!!!!!!!!!!")
+      print("Failed to gain or print computation(null) from _get_xla_computation")
 
   # while_loop + _get_xla_computation: WIP
-  @unittest.skip("skip _get_xlacomputation now")
   def test_while_loop_get_xlacomputation_tpu_simple_linear_while_loop(self):
 
     xm.mark_step()
@@ -324,15 +320,13 @@ class WhileLoopTest(unittest.TestCase):
       return tuple(res)
 
     ### implement one new function for xlacomputation generation with post-order
-    print("before run _get_xla_computation: !!!!!!!!!")
     res_xla_computation = torch_xla._XLAC._get_xla_computation([t3], [], True)
-    print("after run _get_xla_computation: !!!!!!!!!")
     if res_xla_computation:
       hlo_print = xb.get_computation_hlo(res_xla_computation)
-      print("print computation from _get_xla_computation: !!!!!!!!!")
+      print("Gain and print computation from _get_xla_computation:")
       print(hlo_print)
     else:
-      print("print computation from _get_xla_computation: null !!!!!!!!!!!!!")
+      print("Failed to gain or print computation(null) from _get_xla_computation")
 
     ### get xlacomputation via PyLoweringContext
     body_ctx = torch_xla._XLAC.lowering.LoweringContext()
@@ -342,7 +336,7 @@ class WhileLoopTest(unittest.TestCase):
     body_computation = xb.computation_from_module_proto("bodycomputation",
                                                         body_hlo)
     body_hlo_print = xb.get_computation_hlo(body_computation)
-    print("print computation from PyLoweringContext: !!!!!!!!!")
+    print("Gain and print computation from PyLoweringContext:")
     print(body_hlo_print)
 
 if __name__ == '__main__':
