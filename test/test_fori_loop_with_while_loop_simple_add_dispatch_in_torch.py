@@ -151,7 +151,7 @@ class WhileLoopTest(unittest.TestCase):
     print("expected: ", expected)
     self.assertEqual(expected, res)
 
-  # limitsed passed: torch_xla version: nestes subtraction
+  # passed: torch_xla version: nestes subtraction
   def test_while_loop_tpu_addition_nested_may17_1456pm(self):
     xm.mark_step()
     device = xm.xla_device()
@@ -162,7 +162,6 @@ class WhileLoopTest(unittest.TestCase):
     def body_fn(iteri, x):
       return iteri - 1, torch.add(torch.add(x, 1), 1)
 
-    # init_val = torch.tensor(0, dtype=torch.int32, device=device) # result would be wrong when init_val = 0, 1, due to body's xlacomputation missed inputs
     init_val = torch.tensor(2, dtype=torch.int32, device=device)
     iteri = torch.tensor(10, device=device)
     res =  while_loop(cond_fn, body_fn, (iteri, init_val))
