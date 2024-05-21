@@ -992,13 +992,18 @@ class PyLoweringContext {
 
     // hard-code modify body xlacomputation input arguments with unusedarguments
     // for xla::while requriement
-    if (GetNameString() == "bodyctx") {
+    if (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0) {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
+      // XLA_ERROR() << " !!! current parameter_idx: " << parameter_idx ; // linear: 6
+      // for (int64_t i = 0; i < parameter_idx ; i++) {
+      //   XLA_ERROR() << " !!! current tensor: " << tensors[parameter_idx];
+      // }
       // xla::XlaBuilder* local_builder = lowering_ctx.builder();
       // TODO(@manfei): treat hard code parameter_idx value
       // int64_t parameter_idx = 21;
       int64_t additional_inputs_list_size = additional_inputs_list.size();
+      // XLA_ERROR() << " !!! current additional_inputs_list_size: " << additional_inputs_list_size ; // linear: 5
       for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
       // for (auto& additional_input_tensor : additional_inputs_list) {
         // XLATensorPtr xtensor = bridge::GetXlaTensor(additional_input_tensor);
