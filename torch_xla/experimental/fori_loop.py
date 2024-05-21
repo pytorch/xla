@@ -82,7 +82,7 @@ def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=
 
 def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]): # bn_additional_inputs=[]: 'NoneType' object is not iterable
 
-  #  ============================= fake_carried_inputs ==========================================  
+  #  ====== fake_carried_inputs ======
   fake_carried_inputs = []
   for carried_input in carried_inputs:
     device = carried_input.device
@@ -94,7 +94,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
   fake_iter_input = fake_carried_inputs[:-1]
   fake_output = fake_carried_inputs[-1]
 
-  #  ============================= additional_inputs_list_cond ======================
+  #  ====== additional_inputs_list_cond ======
   fake_additiona_args = []
   for additional_input in additional_inputs:
     device = additional_input.device
@@ -103,31 +103,31 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
             10, additional_input.size(),
             dtype=additional_input.dtype).to(device))
 
-  #  =============== additional_inputs_list_cond ====================================
+  #  ====== additional_inputs_list_cond ======
   dummy_inputs_list = [fake_carried_inputs[0], ] + fake_additiona_args + fake_carried_inputs[1:]
 
   body_result = body_fn(carried_inputs[0], *fake_carried_inputs[1:], *additional_inputs)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
 
-  #  ============================= body xlacomputation ==========================================
+  #  ====== body xlacomputation ======
   body_ctx.buildforiloop(list(body_result), dummy_inputs_list)
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
 
-  #  ============================= cond_fn ==========================================
+  #  ====== cond_fn ======
   cond_result = cond_fn(*carried_inputs, *additional_inputs)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
 
-  #  ============================= cond xlacomputation ===========================================
+  #  ====== cond xlacomputation ======
   cond_ctx.buildforiloop([cond_result], dummy_inputs_list)
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
 
-  #  ============================= xla::while ==========================================
+  #  ====== xla::while ======
   iter_value = carried_inputs[0]
   input_and_outputs_value = carried_inputs[1:]
   total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
