@@ -33,7 +33,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
-      options: "${{ inputs.install-cuda-plugin && '--gpus all' || '' }} --shm-size 16g"
+      options: "--gpus all --shm-size 16g"
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
@@ -67,7 +67,6 @@ jobs:
         with:
           name: cuda-plugin
           path: /tmp/wheels/
-        if: ${{ inputs.install-cuda-plugin }}
       - name: Setup CUDA environment
         shell: bash
         run: |
@@ -114,4 +113,7 @@ jobs:
           pip install expecttest unittest-xml-reporting
       - name: Test
         shell: bash
-        run: PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
+        run: |
+          set -xue
+          PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
+          PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
