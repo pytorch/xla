@@ -595,12 +595,6 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     if (memory_stats_status_or.ok()) {
       xla::CompiledMemoryStats memory_stats = memory_stats_status_or.value();
       TF_VLOG(3) << "memory usage detail = " << memory_stats.DebugString();
-      TF_VLOG(3)
-          << "total runtime device memory required to run this program = "
-          << ((memory_stats.output_size_in_bytes +
-               memory_stats.temp_size_in_bytes) >>
-              20)
-          << " MB";
     } else {
       TF_VLOG(3) << "memory usage is not availiable";
     }

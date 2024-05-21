@@ -191,6 +191,10 @@ class ComputationClient {
       return module->ToString();
     }
 
+    virtual const std::string get_memory_info() const {
+      XLA_ERROR() << "Unimplemented";
+    }
+
    private:
     xla::XlaComputation computation_;
     xla::ProgramShape program_shape_;

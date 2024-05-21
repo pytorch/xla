@@ -263,6 +263,15 @@ class PjRtComputationClient : public ComputationClient {
       output_shardings_ = this->executable->GetOutputShardings();
     }
 
+    const std::string get_memory_info() const override {
+      auto memory_stats_status_or = executable->GetCompiledMemoryStats();
+      if (memory_stats_status_or.ok()) {
+        return memory_stats_status_or.value().DebugString();
+      } else {
+        return "memory usage is not availiable";
+      }
+    }
+
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;
     std::optional<std::vector<xla::OpSharding>> output_shardings_;
   };
