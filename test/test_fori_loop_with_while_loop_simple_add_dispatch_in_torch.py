@@ -6,9 +6,7 @@ import torch
 import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
-from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop, _xla_while_loop_target, _xla_while_loop_target_first, insert_model_pars_into_additional_inputs, _xla_while_loop_target_first_second, _xla_while_loop_target_first_second_clean_version #,  _xla_while_loop_target_first_second_clean_version_s32
-# from torch_xla.experimental.fori_loop import _post_order_get_xla_computation_target_first, _xla_while_loop_get_xla_computation
-from torch_xla.experimental.fori_loop import _xla_while_loop_target_first_second_clean_version_s32_old, _xla_while_loop_target_first_second_clean_version_s32_may16_1530pm, _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm, _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm, _xla_while_loop_target_second_clean_version_s32_may21_1047am
+from torch_xla.experimental.fori_loop import fori_loop
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
@@ -385,27 +383,6 @@ class WhileLoopTest(unittest.TestCase):
     body_hlo_print = xb.get_computation_hlo(body_computation)
     print("print computation from PyLoweringContext: !!!!!!!!!")
     print(body_hlo_print)
-
-  @unittest.skip("skip _get_xlacomputation now")
-  def test_fori_loop_tpu_simple_linear(self):
-
-    xm.mark_step()
-    device = xm.xla_device()
-    torch.set_grad_enabled(False)
-
-    upper = torch.tensor([52], dtype=torch.int32, device=device)
-    lower = torch.tensor([0], dtype=torch.int32, device=device)
-    init_val = torch.tensor([1], dtype=torch.int32, device=device)
-    l_in_0 = torch.randn(10, device=xm.xla_device())
-
-    linear_0 = torch.nn.Linear(10, 20).to(xm.xla_device())
-
-    upper_, lower_, one_value_, add_res_x_, l_in_i_plus_1_, weight_, bias_, l_out_ = fori_loop(
-        upper, lower, linear_0, init_val, l_in_0)
-
-    expected = _fake_fori_loop(lower, upper, linear_0, l_in_0)
-
-    self.assertTrue(torch.all(torch.eq(expected, l_out_)))
 
 if __name__ == '__main__':
   test = unittest.main()
