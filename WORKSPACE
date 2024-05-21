@@ -39,7 +39,7 @@ python_configure(
 #    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
 
-xla_hash = 'dc2b3b3545b41aa3280291fe40face744d187ad7'
+xla_hash = '90a69e9c16ac949f3d93734cdaca5349ad14b652'
 
 http_archive(
     name = "xla",
@@ -58,6 +58,31 @@ http_archive(
         "https://github.com/openxla/xla/archive/" + xla_hash + ".tar.gz",
     ],
 )
+
+# Initialize hermetic Python
+load("@xla//third_party/py:python_init_rules.bzl", "python_init_rules")
+
+python_init_rules()
+
+load("@xla//third_party/py:python_init_repositories.bzl", "python_init_repositories")
+
+python_init_repositories(
+    requirements = {
+        "3.11": "//:requirements_lock_3_11.txt",
+    },
+)
+
+load("@xla//third_party/py:python_init_toolchains.bzl", "python_init_toolchains")
+
+python_init_toolchains()
+
+load("@xla//third_party/py:python_init_pip.bzl", "python_init_pip")
+
+python_init_pip()
+
+load("@pypi//:requirements.bzl", "install_deps")
+
+install_deps()
 
 # For development, one often wants to make changes to the OpenXLA repository as well
 # as the PyTorch/XLA repository. You can override the pinned repository above with a

@@ -480,7 +480,7 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
                                      &mlir_module);
     std::unique_ptr<xla::ifrt::LoadedExecutable> executable =
         ConsumeValue(client_->GetDefaultCompiler()->Compile(
-            std::make_unique<xla::ifrt::XlaProgram>(std::move(mlir_module)),
+            std::make_unique<xla::ifrt::HloProgram>(std::move(mlir_module)),
             std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options)));
     StableHloCompileCounter()->AddValue(1);
 

@@ -2,6 +2,20 @@ load(
     "@tsl//tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
 )
+load("@python//:defs.bzl", "compile_pip_requirements")
+load("@python_version_repo//:py_version.bzl", "REQUIREMENTS")
+
+compile_pip_requirements(
+    name = "requirements",
+    extra_args = [
+        "--allow-unsafe",
+        "--build-isolation",
+        "--rebuild",
+    ],
+    requirements_in = "requirements.in",
+    requirements_txt = REQUIREMENTS,
+    generate_hashes = True,
+)
 
 cc_binary(
     name = "_XLAC.so",
