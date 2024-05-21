@@ -38,11 +38,11 @@ class TrainDecoderOnlyFSDPv2(TrainDecoderOnlyBase):
         # Shard the input's batch dimension along the `fsdp` axis, no sharding along other dimensions
         input_sharding=xs.ShardingSpec(mesh, ('fsdp', None)))
 
-    # Apply FSDP sharding on each attnetion layer and each mlp layer.
+    # Apply FSDP sharding on each DecoderLayer layer.
     auto_wrap_policy = functools.partial(
         transformer_auto_wrap_policy,
         transformer_layer_cls={
-            decoder_only_model.GroupQueryAttention, decoder_only_model.MLP
+            decoder_only_model.DecoderLayer
         },
     )
     self.model = FSDPv2(
