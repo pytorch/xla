@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git961c22a )
+                  master (2.4.0+git5409cd5 )
                 </div>
               
             
@@ -377,7 +377,7 @@
 <span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">TypedDict</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.distributed._functional_collectives</span>
 <span class="kn">from</span> <span class="nn">torch.library</span> <span class="kn">import</span> <span class="n">Library</span>
@@ -1804,15 +1804,19 @@
     <span class="n">set_rng_state</span><span class="p">(</span><span class="n">xla_rng_state</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="get_memory_info"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_memory_info">[docs]</a><span class="k">def</span> <span class="nf">get_memory_info</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the device memory information.</span>
+<span class="k">class</span> <span class="nc">MemoryInfo</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
+  <span class="n">bytes_used</span><span class="p">:</span> <span class="nb">str</span>
+  <span class="n">bytes_limit</span><span class="p">:</span> <span class="nb">int</span>
+
+
+<div class="viewcode-block" id="get_memory_info"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_memory_info">[docs]</a><span class="k">def</span> <span class="nf">get_memory_info</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MemoryInfo</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the device memory usage.</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    device (string): The device whose memory information are requested.</span>
+<span class="sd">    device: The device whose memory information are requested.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    A dictionary with `kb_free` (free memory in KB) and `kb_total` (total</span>
-<span class="sd">    memory in KB) keys.</span>
+<span class="sd">    MemoryInfo dict with memory usage for the given device.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_memory_info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">))</span></div>
 
