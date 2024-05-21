@@ -56,7 +56,8 @@ jobs:
         with:
           name: torch-with-cuda-xla-with-cuda-wheels
           path: /tmp/wheels/
-      - name: Fetch torch_xla wheel without CUDA enabled.
+          pattern: torch-*.whl 
+      - name: Fetch torch_xla (without CUDA enabled) and torchvision wheel.
         uses: actions/download-artifact@v4
         with:
           name: torch-xla-wheels
@@ -87,6 +88,10 @@ jobs:
 
           echo "Import check..."
           python -c "import torch_xla"
+          echo "Import check done."
+          echo "Check if CUDA is available for PyTorch..."
+          python -c "import torch; print('torch.cuda.is_available()=', torch.cuda.is_available())"
+          echo "CUDA is available for PyTorch."
       - name: Record PyTorch commit
         run: |
           # Don't just pipe output in shell because imports may do extra logging
