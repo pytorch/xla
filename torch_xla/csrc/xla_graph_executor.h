@@ -187,10 +187,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
                        const torch::lazy::BackendDevice& device);
 
-//   struct saveComputation {
-//     runtime::ComputationClient::ComputationPtr computation;
-//   };
-//   std::vector<runtime::ComputationClient::ComputationPtr>
   runtime::ComputationClient::ComputationPtr GetXLAComputation(
         std::vector<XLATensorPtr>* tensors,
         absl::Span<const std::string> devices, bool warm_up_cache_only = false);

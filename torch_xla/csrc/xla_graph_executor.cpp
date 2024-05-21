@@ -1274,56 +1274,6 @@ std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
   return buffer_donor_indexs;
 }
 
-// TODO(@manfei): replacement of GetXLAComputation
-xla::XlaComputation XLAGraphExecutor::CompileForiLoop(
-    std::vector<XLATensorPtr>& tensors, absl::Span<const std::string> devices,
-    const SyncTensorCollection& coll, PostOrderData* po_data,
-    const std::vector<torch::lazy::Value>& ir_values) {
-  tsl::profiler::TraceMe activity(
-      [&] {
-        return tsl::profiler::TraceMeEncode(
-            "XLAGraphExecutor::Compile",
-            {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
-      },
-      tsl::profiler::TraceMeLevel::kInfo);
-
-  static const bool enable_aliasing =
-      runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
-  static const size_t parameter_wrapping_threadshold =
-      runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
-  static const bool use_autosharding = ShardingUtil::GetAutoSharding();
-
-  LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
-                               po_data->post_order,
-                               std::move(po_data->emission_map));
-  for (auto ir_value : ir_values) {
-    xla::XlaOp root = lowering_ctx.GetOutputOp(
-        torch::lazy::Output(ir_value.node.get(), ir_value.index));
-    lowering_ctx.AddResult(root);
-  }
-
-  bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
-  ShardingUtil::SetHloSharding(&lowering_ctx);
-
-  std::vector<size_t> buffer_donor_indices;
-
-  if (enable_aliasing && !use_autosharding) {
-    if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
-      buffer_donor_indices =
-          SetBufferDonors(tensors, coll.indices, &lowering_ctx);
-    } else if (GetAliasWithBufferDonorConfig()) {
-      // only alias based on buffer donor if LTC can't auto infer the input
-      // output aliasing.
-      buffer_donor_indices = SetBufferDonorsFromUserConfig(&lowering_ctx);
-    }
-  }
-  // buffer_donor_indices: kong de
-
-  xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
-
-  return computation;
-}
-
 XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     std::vector<XLATensorPtr>& tensors, absl::Span<const std::string> devices,
     const SyncTensorCollection& coll, PostOrderData* po_data,
@@ -1461,6 +1411,55 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
           /*is_sharded=*/is_sharded};
 }
 
+// TODO(@manfei): replacement of GetXLAComputation
+xla::XlaComputation XLAGraphExecutor::CompileForiLoop(
+    std::vector<XLATensorPtr>& tensors, absl::Span<const std::string> devices,
+    const SyncTensorCollection& coll, PostOrderData* po_data,
+    const std::vector<torch::lazy::Value>& ir_values) {
+  tsl::profiler::TraceMe activity(
+      [&] {
+        return tsl::profiler::TraceMeEncode(
+            "XLAGraphExecutor::Compile",
+            {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
+      },
+      tsl::profiler::TraceMeLevel::kInfo);
+  static const bool enable_aliasing =
+      runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
+  static const size_t parameter_wrapping_threadshold =
+      runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
+  static const bool use_autosharding = ShardingUtil::GetAutoSharding();
+  LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
+                               po_data->post_order,
+                               std::move(po_data->emission_map));
+  for (auto ir_value : ir_values) {
+    xla::XlaOp root = lowering_ctx.GetOutputOp(
+        torch::lazy::Output(ir_value.node.get(), ir_value.index));
+    lowering_ctx.AddResult(root);
+  }
+  // Always execute sharded when running in SPMD mode
+  bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
+  // Annotate HLO sharding selectively in the compuation.
+  ShardingUtil::SetHloSharding(&lowering_ctx);
+
+  std::vector<size_t> buffer_donor_indices;
+
+  if (enable_aliasing && !use_autosharding) {
+    if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
+      buffer_donor_indices =
+          SetBufferDonors(tensors, coll.indices, &lowering_ctx);
+    } else if (GetAliasWithBufferDonorConfig()) {
+      // only alias based on buffer donor if LTC can't auto infer the input
+      // output aliasing.
+      buffer_donor_indices = SetBufferDonorsFromUserConfig(&lowering_ctx);
+    }
+  }
+  // buffer_donor_indices: empty
+
+  xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
+
+  return computation;
+}
+
 std::shared_ptr<XLAGraphExecutor::Async>
 XLAGraphExecutor::SyncTensorsGraphInternal(
     std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
@@ -1595,23 +1594,7 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
   CompilationResult compile_result0 =
       Compile(*tensors, devices, coll, &po_data, ir_values);
 
-  // runtime::ComputationClient::ComputationPtr xla_computation = compile_result0.computation;
-
-  // // wrap inputs of cond/body_computation
-  // // if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
-  // if (true) { // only while_loop would call this function now, so warp args when true
-  //   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-  //   std::vector<size_t> buffer_donor_indices;
-  //   xla::ProgramShape program_shape =
-  //       ConsumeValue(xla_computation.GetProgramShape());
-  //   // TODO(@manfei): please confirm whether we check for more than two or use
-  //   // default value true
-  //   bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
-  //   if (should_wrap_parameter) {
-  //     xla_computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-  //         xla_computation, program_shape.parameters(), buffer_donor_indices));
-  //   }
-  // }
+  // TODO(@manfei): abstract xla_computation and wrap them for xla::while requirement
 
   return compile_result0.computation;
   // return xla_computation;
