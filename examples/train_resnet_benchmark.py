@@ -36,7 +36,7 @@ class TrainResNetBenchmark(TrainResNetBase):
       xm.wait_device_ops()
       device_execution_end_time = time.time()
       print(
-          f'Step: {step}, Tracing time: {tracing_end_time - tracing_start_time}, E2E time: {device_execution_end_time - tracing_start_time}'
+          f'Step: {step}, Tracing time: {tracing_end_time - tracing_start_time}s, E2E time: {device_execution_end_time - tracing_start_time}s'
       )
 
 
