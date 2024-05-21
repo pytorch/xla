@@ -2541,19 +2541,24 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   // from an XLA tensor to a dlpack tensor.
+  // If ext_data is the result of an CUDA computation, we should synchronize
+  // (waits for all kernels in all streams on a CUDA device to complete) if the
+  // current stream is different from the ext_data's stream. Otherwise, we may
+  // risk of getting incorrect results.
   m.def("_to_dlpack", [](const at::Tensor& input) -> py::handle {
     DLManagedTensor* dlMTensor;
     {
       NoGilSection nogil;
       dlMTensor = torch_xla::toDLPack(input);
     }
-    // return py::reinterpret_steal<py::object>(PyCapsule_New(dlMTensor,
-    // "dltensor", dlPack_Capsule_Destructor));
     return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
   });
-  // m.def("_to_dlpack", &tensor_toDLPack, ""); //
 
   // from a dlpack tensor to an XLA tensor
+  // If ext_data is the result of an CUDA computation, we should synchronize
+  // (waits for all kernels in all streams on a CUDA device to complete) if the
+  // current stream is different from the ext_data's stream. Otherwise, we may
+  // risk of getting incorrect results.
   m.def("_from_dlpack", [](py::handle ext_data) -> at::Tensor {
     return tensor_fromDLPack(ext_data.ptr());
   });

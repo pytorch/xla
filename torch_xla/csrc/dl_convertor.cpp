@@ -52,6 +52,7 @@ DLDeviceType DLDeviceTypeForDevice(const xla::PjRtDevice& device) {
               << " cannot be used as a DLPack device.";
 }
 
+// Reference: https://github.com/openxla/xla/blob/main/xla/python/dlpack.cc
 DLDevice DLDeviceForDevice(const xla::PjRtDevice& device) {
   DLDevice dlDevice;
   dlDevice.device_type = DLDeviceTypeForDevice(device);
@@ -59,6 +60,7 @@ DLDevice DLDeviceForDevice(const xla::PjRtDevice& device) {
   return dlDevice;
 }
 
+// Reference: https://github.com/openxla/xla/blob/main/xla/python/dlpack.cc
 DLDataType PrimitiveTypeToDLDataType(xla::PrimitiveType type) {
   switch (type) {
     case xla::PrimitiveType::S8:
@@ -161,6 +163,7 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
   return &(pack.release()->tensor);
 }
 
+// Reference: https://github.com/openxla/xla/blob/main/xla/python/dlpack.cc
 absl::StatusOr<xla::PjRtDevice*> DeviceForDLDevice(const DLDevice& context) {
   switch (context.device_type) {
     case DLDeviceType::kDLCPU:
@@ -262,6 +265,7 @@ absl::StatusOr<xla::PrimitiveType> DLDataTypeToPrimitiveType(DLDataType type) {
   }
 }
 
+// Reference: https://github.com/openxla/xla/blob/main/xla/python/dlpack.cc
 absl::StatusOr<std::vector<int64_t>> StridesToLayout(
     absl::Span<int64_t const> dims, absl::Span<int64_t const> strides) {
   XLA_CHECK_EQ(dims.size(), strides.size());
