@@ -28,6 +28,14 @@ class GraphInfo(NamedTuple):
   num_output: int
 
 
+class PostCompilationInfo(NamedTuple):
+  input_size: str
+  output_size: str
+  aliased_size: str
+  intermediate_size: str
+  program_size: str
+
+
 def extract_graph_infos(lines):
   infos = []
   for i in range(len(lines)):
@@ -39,6 +47,28 @@ def extract_graph_infos(lines):
           'Number of Graph Outputs:')[1].strip()
       infos.append(GraphInfo(hash, int(num_input), int(num_output)))
 
+  return infos
+
+
+def extract_post_compilation_analysis(lines):
+  infos = []
+  i = 0
+  while i < len(lines):
+    if 'Post Compilation Analysis' in lines[i].decode():
+      input_size = lines[i + 1].decode().split('Graph input size: ')[1].strip()
+      output_size = lines[i +
+                          2].decode().split('Graph output size: ')[1].strip()
+      aliased_size = lines[i +
+                           3].decode().split('Aliased Input size: ')[1].strip()
+      intermediate_size = lines[i + 4].decode().split(
+          'Intermediate tensor size: ')[1].strip()
+      program_size = lines[i + 5].decode().split(
+          'Compiled program size: ')[1].strip()
+      infos.append(
+          PostCompilationInfo(input_size, output_size, aliased_size,
+                              intermediate_size, program_size))
+      i += 7
+    i += 1
   return infos
 
 

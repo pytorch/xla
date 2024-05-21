@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <regex>
 #include <sstream>
 #include <unordered_set>
 
@@ -345,6 +346,69 @@ void DebugUtil::analyze_graph_execution_python_frame(
 
   // TODO(JackCaoG): print more information about the graph that is about to get
   // executed.
+  if (debug_file_name == "") {
+    // print to stderr by default
+    std::cerr << ss.str();
+  } else {
+    std::ofstream outFile;
+    outFile.open(debug_file_name, std::ios_base::app);
+    outFile << ss.rdbuf();
+  }
+}
+
+void DebugUtil::post_compilation_analysis(
+    runtime::ComputationClient::ComputationPtr computation) {
+  static const bool pt_xla_debug_enabled =
+      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const bool is_master_process =
+      (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
+  static const std::string debug_file_name =
+      runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
+  if (!pt_xla_debug_enabled || !is_master_process) {
+    return;
+  }
+  static const std::string debug_output_prefix = "Post Compilation Analysis: ";
+  std::stringstream ss;
+  ss << "\n"
+     << debug_output_prefix
+     << "======================================================================"
+        "=========="
+     << "\n";
+  std::string memory_info = computation->get_memory_info();
+
+  std::vector<std::string> keysToExtract = {
+      "generated_code_size_in_bytes", "argument_size_in_bytes",
+      "output_size_in_bytes", "alias_size_in_bytes", "temp_size_in_bytes"};
+  std::vector<std::string> sizes_in_mb;
+
+  for (const std::string& key : keysToExtract) {
+    std::regex pattern(key + "=([0-9]+)");
+    std::smatch match;
+
+    if (std::regex_search(memory_info, match, pattern)) {
+      sizes_in_mb.push_back(std::to_string(std::stoll(match[1]) >> 20));
+    } else {
+      sizes_in_mb.push_back("Unknown ");
+    }
+  }
+
+  ss << debug_output_prefix << "Graph input size: " << sizes_in_mb[1] << "MB\n";
+  ss << debug_output_prefix << "Graph output size: " << sizes_in_mb[2]
+     << "MB\n";
+  ss << debug_output_prefix << "Aliased Input size: " << sizes_in_mb[3]
+     << "MB\n";
+  ss << debug_output_prefix << "Intermediate tensor size: " << sizes_in_mb[4]
+     << "MB\n";
+  ss << debug_output_prefix << "Compiled program size: " << sizes_in_mb[0]
+     << "MB\n";
+  ss << debug_output_prefix
+     << "----------------------------------------------------------------------"
+        "----------"
+     << "\n";
+  ss << debug_output_prefix
+     << "======================================================================"
+        "=========="
+     << "\n";
   if (debug_file_name == "") {
     // print to stderr by default
     std::cerr << ss.str();
