@@ -42,7 +42,7 @@ def _fake_fori_loop(lower, upper, body_fun, *init_val):
 class WhileLoopTest(unittest.TestCase):
 
   # passed: torch pure version: subtraction
-  def test_while_loop_tpu_subtraction_may16_2238pm_pure_torch(self):
+  def test_while_loop_tpu_subtraction_pure_torch(self):
     xm.mark_step()
     device = xm.xla_device()
 
@@ -62,7 +62,7 @@ class WhileLoopTest(unittest.TestCase):
     # self.assertEqual(list(expected), res)
 
   # passed: torch_xla version: subtraction
-  def test_while_loop_tpu_subtraction_may16_2238pm(self):
+  def test_while_loop_tpu_subtraction(self):
     xm.mark_step()
     device = xm.xla_device()
 
@@ -81,7 +81,7 @@ class WhileLoopTest(unittest.TestCase):
     # self.assertEqual(list(expected), res)
 
   # passed: torch pure version: addition
-  def test_while_loop_tpu_addition_may17_1149am_pure_torch(self):
+  def test_while_loop_tpu_addition_pure_torch(self):
     def cond_fn(iteri, x, y):
       return iteri > 0
 
@@ -97,7 +97,7 @@ class WhileLoopTest(unittest.TestCase):
     print("expected: ", expected)
 
   # passed: torch_xla version: addition
-  def test_while_loop_tpu_addition_may17_1153am(self):
+  def test_while_loop_tpu_addition(self):
     xm.mark_step()
     device = xm.xla_device()
 
@@ -116,7 +116,7 @@ class WhileLoopTest(unittest.TestCase):
     # self.assertEqual(list(expected), res)
 
   # passed:  torch pure version: nestes addition
-  def test_while_loop_tpu_addition_nested_may17_1456pm_pure_torch(self):
+  def test_while_loop_tpu_addition_nested_pure_torch(self):
 
     def cond_fn(iteri, x, y):
       return iteri > 0
@@ -134,7 +134,7 @@ class WhileLoopTest(unittest.TestCase):
     self.assertEqual(expected, res)
 
   # passed: torch_xla version: nestes subtraction
-  def test_while_loop_tpu_addition_nested_may17_1456pm(self):
+  def test_while_loop_tpu_addition_nested(self):
     xm.mark_step()
     device = xm.xla_device()
 
@@ -153,7 +153,7 @@ class WhileLoopTest(unittest.TestCase):
     # self.assertEqual(expected, res)
 
   # torch_xla version: linear
-  def test_while_loop_tpu_simple_linear_target_inside_loop_may17_1515pm(self):
+  def test_while_loop_tpu_simple_linear_inside_loop(self):
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
@@ -202,7 +202,7 @@ class WhileLoopTest(unittest.TestCase):
     print("expected: ", expected)
 
   # torch_xla version: MNIST without bn layer
-  def test_while_loop_tpu_MNIST_target_inside_loop_may19_2300pm(self):
+  def test_while_loop_tpu_MNIST_inside_loop(self):
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
@@ -271,7 +271,7 @@ class WhileLoopTest(unittest.TestCase):
     print("expected_res[0]: ", res[0])
 
   # ==================================== test _get_xla_computation ==========================================
-  def test_while_loop_get_xlacomputation(self):
+  def test__get_xlacomputation(self):
 
     xm.mark_step()
     device = xm.xla_device()
@@ -288,8 +288,7 @@ class WhileLoopTest(unittest.TestCase):
     else:
       print("Failed to gain or print computation(null) from _get_xla_computation")
 
-  # while_loop + _get_xla_computation: WIP
-  def test_while_loop_get_xlacomputation_tpu_simple_linear_while_loop(self):
+  def test_PyLoweringContext_and__get_xlacomputation_with_simple_linear_tpu(self):
 
     xm.mark_step()
     device = xm.xla_device()
