@@ -19,9 +19,7 @@ import torch.optim as optim
 def _fake_while_loop_second(cond_fn, body_fn, operands):
   # operands need to be more than one here
   while cond_fn(*operands):
-    # print("1 operands: ", operands)
     operands = body_fn(*operands)
-    # print("operands: ", operands)
   return operands
 
 def _fake_while_loop(cond_fn, body_fn, operands):
@@ -56,11 +54,7 @@ class WhileLoopTest(unittest.TestCase):
 
     init_val = torch.tensor(10)
     out_val = torch.tensor(15)
-    # init_val = torch.tensor(10, dtype=torch.int32, device=device)
-    # out_val = torch.tensor(15, dtype=torch.int32, device=device) # how to rand a torch.tensor?
     iteri = torch.tensor(3)
-    # res =  _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
-    # res =  _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
     res = while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
     print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
@@ -78,14 +72,8 @@ class WhileLoopTest(unittest.TestCase):
     def body_fn(iteri, x):
       return iteri - 1, torch.sub(x, 1)
 
-    # init_val = torch.tensor(10)
-    # out_val = torch.tensor(15)
     init_val = torch.tensor(10, dtype=torch.int32, device=device)
-    # out_val = torch.tensor(15, dtype=torch.int32, device=device) # how to rand a torch.tensor?
-    # iteri = torch.tensor(3)
     iteri = torch.tensor(3, device=device)
-    # res =  _xla_while_loop_target_first_second_clean_version_s32_may16_1603pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
-    # res =  _xla_while_loop_target_first_second_clean_version_s32_may16_2137pm(cond_fn, body_fn, (iteri, init_val, out_val), [], [])
     res = while_loop(cond_fn, body_fn, (iteri, init_val))
     print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
@@ -112,18 +100,14 @@ class WhileLoopTest(unittest.TestCase):
   def test_while_loop_tpu_addition_may17_1153am(self):
     xm.mark_step()
     device = xm.xla_device()
-    # one_val = torch.tensor(1, dtype=torch.int32, device=device) # add this variable avoid body miss input arg in xla_computation, not fori_loop related
 
     def cond_fn(iteri, x): # make sure name of variable match
       return iteri > 0
 
     def body_fn(iteri, x):
-      # return iter - one_val, x, torch.add(x, 2)
-      # return iteri - 1, x, torch.add(x, 1) # 1 and 2 are different, so would not missed input
-      return iteri - 1, torch.add(x, 1) # 1 and 2 are different, so would not missed input # due to `torch.while_loop's body_fn might be aliasing the input!`
+      return iteri - 1, torch.add(x, 1)
 
     init_val = torch.tensor(3, dtype=torch.int32, device=device)
-    # out_val = torch.tensor(15, dtype=torch.int32, device=device) # how to rand a torch.tensor?
     iteri = torch.tensor(10, device=device)
     res =  while_loop(cond_fn, body_fn, (iteri, init_val))
     print("res: ", res)
@@ -193,14 +177,10 @@ class WhileLoopTest(unittest.TestCase):
       def __init__(self):
         super().__init__()
         self.linear = torch.nn.Linear(2, 2)
-        # self.weight_bias_lists = []
-        # self.bn_weight_bias_lists = []
-        # self.register_buffer("dec", torch.tensor(1))
 
       def forward(self, iteri, x):
 
         def cond_fn(iteri, x):
-          # return iter > self.dec
           return iteri > 0
 
         def body_fn(iteri, x):
@@ -208,23 +188,18 @@ class WhileLoopTest(unittest.TestCase):
 
         return while_loop(cond_fn, body_fn, (iteri, x))
 
+      def forward_compare(self, iteri, x):
+        return iteri - 1, self.linear(x)
+
     linear_model = SimpleLinear()
     linear_model.to(device)
     bs=16
     l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
-    # l_out = torch.randn(2, 2, dtype=torch.float32, device=device)
-    iteri = torch.tensor(3, dtype=torch.int32, device=device) # add dtype in iter would miss input
-    res = linear_model(iteri, l_in_0)
-    print("res: ", res[-1])
-    print("res are: ", res)
-
-    # fake_linear = torch.nn.Linear(2, 2).to(xm.xla_device())
-    # fake_linear.weight.data = res[1]
-    # fake_linear.bias.data = res[2]
-    # # expected = _fake_while_loop_second(lower, upper, fake_linear, l_in_0)
-    # expected = fake_linear(l_in_0)
-    # print("expected: ", expected)
-    # print("l_in_0: ", l_in_0)
+    iteri = torch.tensor(3, dtype=torch.int32, device=device)
+    _, res = linear_model(iteri, l_in_0)
+    print("res: ", res)
+    _, expected = linear_model(iteri, l_in_0)
+    print("expected: ", expected)
 
   # torch_xla version: MNIST without bn layer
   def test_while_loop_tpu_MNIST_target_inside_loop_may19_2300pm(self):
@@ -259,55 +234,41 @@ class WhileLoopTest(unittest.TestCase):
 
       def forward(self, iteri, x, y):
         def cond_fn(iteri, x, y):
-        # def cond_fn(iteri, x):
           return iteri > 0
 
         def body_fn(iteri, x, y):
-        # def body_fn(iteri, x):
-
-          # z = self.bn1(F.relu(F.max_pool2d(self.conv1(x), 2)))
-          # # z = self.bn1(z)
-
-          y = F.relu(F.max_pool2d(self.conv1(x), 2)) # [16, 10, 14, 14]
+          y = F.relu(F.max_pool2d(self.conv1(x), 2))
           # z = self.bn1(z) # torch.while_loop's body_fn might be modifying the input!
-          y = F.relu(F.max_pool2d(self.conv2(y), 2)) # [16, 20, 5, 5]
+          y = F.relu(F.max_pool2d(self.conv2(y), 2))
           # y = self.bn2(y)
-          y = torch.flatten(y, 1) # [16, 500]
-          y = F.relu(self.fc1(y)) # [16, 50]
+          y = torch.flatten(y, 1)
+          y = F.relu(self.fc1(y))
           y = self.fc2(y)
 
-          # return iteri - 1, F.log_softmax(y, dim=1)
           return iteri - 1, x.clone(), F.log_softmax(y, dim=1)
-          # return iteri - 1, x.clone(), y
-          # return iteri - 1, z
 
         return while_loop(cond_fn, body_fn, (iteri, x, y))
-        # return while_loop(cond_fn, body_fn, (iteri, x))
-        # return _xla_while_loop_target_second_clean_version_s32_may21_1047am(cond_fn, body_fn, (iteri, x, y), [], [])
 
       def forward_compare(self, iteri, x, y):
-        y = F.relu(F.max_pool2d(self.conv1(x), 2)) # [16, 10, 14, 14]
+        y = F.relu(F.max_pool2d(self.conv1(x), 2))
         # z = self.bn1(z) # torch.while_loop's body_fn might be modifying the input!
-        y = F.relu(F.max_pool2d(self.conv2(y), 2)) # [16, 20, 5, 5]
+        y = F.relu(F.max_pool2d(self.conv2(y), 2))
         # y = self.bn2(y)
-        y = torch.flatten(y, 1) # [16, 500]
-        y = F.relu(self.fc1(y)) # [16, 50]
+        y = torch.flatten(y, 1)
+        y = F.relu(self.fc1(y))
         y = self.fc2(y)
         return iteri - 1, x.clone(), F.log_softmax(y, dim=1)
 
     mnist = MNIST()
     mnist.to(device)
     bs=16
-    # l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
-    l_in_0 = torch.randn(16, 1, 28, 28, dtype=torch.float32, device=device)
-    l_out = torch.randn(16, 10, dtype=torch.float32, device=device)
+    l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
+    l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
-    res = mnist(iteri, l_in_0, l_out)
-    # res = mnist(iteri, l_in_0)
-    print("res: ", res[-1][0])
-    expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
-    # res = mnist(iteri, l_in_0)
-    print("expected res: ", res[-1][0])
+    _, _, res = mnist(iteri, l_in_0, l_out)
+    print("res[0]: ", res[0])
+    _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
+    print("expected_res[0]: ", res[0])
 
   # ==================================== test _get_xla_computation ==========================================
   @unittest.skip("skip _get_xlacomputation now")
