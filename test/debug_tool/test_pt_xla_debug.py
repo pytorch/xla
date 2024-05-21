@@ -9,8 +9,9 @@ import torch_xla.utils.utils as xu
 import torch_xla.distributed.parallel_loader as pl
 import unittest
 from extract_debug_helper import (check_env_flag, extract_execution_cause,
-                                  extract_compilation_cause, GraphInfo,
-                                  extract_graph_infos, extract_python_frames)
+                                  extract_compilation_cause,
+                                  extract_graph_infos, extract_python_frames,
+                                  extract_post_compilation_analysis)
 
 
 class PtXLADebugTest(unittest.TestCase):
@@ -33,6 +34,15 @@ class PtXLADebugTest(unittest.TestCase):
       executation_causes = extract_execution_cause(lines)
       compilation_causes = extract_compilation_cause(lines)
       graph_infos = extract_graph_infos(lines)
+      post_compilation_infos = extract_post_compilation_analysis(lines)
+
+    self.assertEqual(len(post_compilation_infos), 1)
+    # test case is too small, size round to 0 MB
+    self.assertIn('0MB', post_compilation_infos[0].input_size)
+    self.assertIn('0MB', post_compilation_infos[0].output_size)
+    self.assertIn('0MB', post_compilation_infos[0].aliased_size)
+    self.assertIn('0MB', post_compilation_infos[0].intermediate_size)
+    self.assertIn('0MB', post_compilation_infos[0].program_size)
 
     self.assertEqual(len(executation_causes), 1)
     self.assertIn('user mark_step', executation_causes[0])
@@ -192,14 +202,15 @@ class PtXLADebugTest(unittest.TestCase):
       frames = extract_python_frames(lines)
 
     # one for compilation, one for execution
-    self.assertEqual(len(frames), 2)
+    self.assertEqual(len(frames), 3)
     max_frame = os.getenv('PT_XLA_DEBUG_MAX_FRAME', 8)
     # Additonal lines are
     # 1. Python Frame Triggered Execution:
     # 2. ....
     # 3. empty line
     self.assertEqual(len(frames[0].split('\n')), max_frame + 3)
-    self.assertEqual(len(frames[1].split('\n')), max_frame + 3)
+    # second frame will be empty from the post-compilation-analysis
+    self.assertEqual(len(frames[2].split('\n')), max_frame + 3)
     # Check mark_step is the first frame
     self.assertIn('mark_step', frames[0].split('\n')[1])
 
