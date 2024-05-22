@@ -63,27 +63,41 @@ def j2t(x):
   return res
 
 TORCH_DTYPE_TO_JAX = {
-      torch.float16: jnp.dtype('float16'),
-      torch.bfloat16: jnp.dtype('bfloat16'),
-      torch.half: jnp.dtype('float16'),
-      torch.float32: jnp.dtype('float32'),
-      torch.double: jnp.dtype('double'),
-      torch.long: jnp.dtype('int64'),
-      torch.int32: jnp.dtype('int32'),
-      torch.int16: jnp.dtype('int16'),
-      torch.int8: jnp.dtype('int8'),
-      torch.uint8: jnp.dtype('uint8'),
-      torch.bool: jnp.dtype('bool_'),
-      torch.complex64: jnp.dtype('complex64'),
-      torch.complex128: jnp.dtype('complex128'),
-      None: None,
+    # NO_MAPPING        : jnp.float0 (signless scalar int)
+    torch.bool          : jnp.bool_,
+    # NO_MAPPING        : jnp.int4
+    torch.int8          : jnp.int8,
+    torch.int16         : jnp.int16,
+    torch.int32         : jnp.int32,
+    torch.int64         : jnp.int64,
+    torch.long          : jnp.int64,
+    # NO_MAPPING        : jnp.uint4
+    torch.uint8         : jnp.uint8,
+    torch.uint16        : jnp.uint16,
+    torch.uint32        : jnp.uint32,
+    torch.uint64        : jnp.uint64,
+    # NO_MAPPING        : jnp.float8_e4m3b11fnuz
+    torch.float8_e4m3fn : jnp.float8_e4m3fn,
+    # NO_MAPPING        : jnp.float8_e4m3fnuz
+    torch.float8_e5m2   : jnp.float8_e5m2,
+    # NO_MAPPING        : jnp.float8_e5m2fnuz
+    torch.bfloat16      : jnp.bfloat16,
+    torch.half          : jnp.float16,
+    torch.float16       : jnp.float16,
+    torch.float32       : jnp.float32,
+    torch.float64       : jnp.float64,
+    torch.double        : jnp.double,
+    torch.complex64     : jnp.complex64,
+    torch.complex128    : jnp.complex128,
+    None                : None,
 }
 
 JAX_DTYPE_TO_TORCH = {
   value: key for key, value in TORCH_DTYPE_TO_JAX.items()
 }
-# No int4 dtype in torch, map jnp.int4 to torch.int8.
+# Add imprecise mappings for some JAX dtypes which don't have torch analogues
 JAX_DTYPE_TO_TORCH[jnp.dtype('int4')] = torch.int8
+JAX_DTYPE_TO_TORCH[jnp.dtype('uint4')] = torch.uint8
 
 def t2j_dtype(dtype):
   if dtype not in TORCH_DTYPE_TO_JAX:
