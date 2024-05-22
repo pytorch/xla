@@ -21,6 +21,14 @@ the instructions below from scratch (fresh venv / conda environment.)
 
 ### 1. Installing `torch_xla2`
 
+The following instructions assume you are in the `torch_xla2` directory:
+
+```
+$ git clone https://github.com/pytorch/xla.git
+$ cd xla/experimental/torch_xla2
+```
+
+
 #### 1.0 (recommended) Make a virtualenv / conda env
 
 If you are using VSCode, then [you can create a new environment from

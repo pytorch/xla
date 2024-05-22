@@ -8,7 +8,7 @@ name = "torch_xla2"
 dependencies = [
     "absl-py",
     "immutabledict",
-    "jax>=0.4.24",
+    "jax[cpu]>=0.4.24",
     "pytest",
     "tensorflow-cpu",
     # Developers should install `dev-requirements.txt` first
