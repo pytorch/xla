@@ -173,27 +173,32 @@ def extract_avals(exported):
       
       return tuple(sympy.pretty(c, use_unicode=False) for c in constraints)
 
-    def _build_symbolic_shape(scope, sym, constraint):
+    def _build_symbolic_shape(sym, constraint, free_symbols):
       """Returns a JAX symbolic shape for a given symbol and constraint
 
       There are two possible sympy `sym` inputs:
         1. Symbol - (s0) These can have custom constraints.
         2. Expr - (s0*2) These apply the expr to s0's constraints, cannot override.
+      
+      TODO: More testing with more symbolic patterns should be done.
+      - This may break if one var is a power of another (unsure how pow prints)
+      - This may break if `s0` and `s1` are in different scopes but `s2=s0+s1`
+        (not sure if this is allowed, especially if either value has a constraint)
       """
       symbol_name = str(sym)
       constraints = _build_symbolic_constraints(symbol_name, constraint)
       if sym.is_symbol:
         symbolic_shape = jax.experimental.export.symbolic_shape(symbol_name, constraints=constraints)
       else:
+        assert len(sym.free_symbols) > 0
+        scope = free_symbols[str(list(sym.free_symbols)[0])].scope
         symbolic_shape = jax.experimental.export.symbolic_shape(symbol_name, scope=scope)
       assert len(symbolic_shape) == 1
       return symbolic_shape[0]
 
-    scope = jax.experimental.export.SymbolicScope()
     symbolic_shapes = {}
     for sym, constraint in range_constraints.items():
-      symbolic_shape = _build_symbolic_shape(scope, sym, constraint)
-      scope = symbolic_shape.scope
+      symbolic_shape = _build_symbolic_shape(sym, constraint, symbolic_shapes)
       symbol_name = str(sym)
       symbolic_shapes[symbol_name] = symbolic_shape
     return symbolic_shapes
