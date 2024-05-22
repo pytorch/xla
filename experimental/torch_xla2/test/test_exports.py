@@ -135,7 +135,6 @@ class ExportTest(unittest.TestCase):
         ##   jnp.tensor(dtype=None) maps to f64
         continue
       arg = (torch.randn(10).to(torch_dtype),)
-      print(arg)
       with torch.no_grad():
         exported = torch.export.export(model, arg)
       stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)

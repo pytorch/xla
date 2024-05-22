@@ -69,7 +69,6 @@ class SymbolicShapeTest(unittest.TestCase):
     self.assertRegex(module_str, r"shape_assertion.*s[0-9]+ <= 10")
     self.assertRegex(module_str, r"stablehlo.constant.*2")
     self.assertRegex(module_str, r"shape_assertion.*2\*s[0-9]+")
-    print(stablehlo.mlir_module())
   
   def test_constraint_indirection(self):
     """Test a model where none of the shapes are directly symbolic variables
@@ -90,5 +89,4 @@ class SymbolicShapeTest(unittest.TestCase):
 
     self.assertRegex(module_str, r"shape_assertion.*s[0-9]+ <= 10")
     self.assertRegex(module_str, r"shape_assertion.*2\*s[0-9]+")
-    print(stablehlo.mlir_module())
 
