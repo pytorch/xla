@@ -1,6 +1,9 @@
 import os
-
+import os
+example_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
+sys.path.append(example_folder)
 from train_resnet_base import TrainResNetBase
+
 import torch_xla.debug.profiler as xp
 
 # check https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#environment-variables
