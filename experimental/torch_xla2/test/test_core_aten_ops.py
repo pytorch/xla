@@ -41,8 +41,6 @@ def run_export_and_compare(testcase,
       with testcase.env:
         res2 = func(*args2, **kwargs2)
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
-      print(res)
-      print(res2)
       # import pdb; pdb.set_trace()
       with testcase.subTest("torch_xla2_diff:" + str(atol)):
         if ignore_indices and isinstance(res, tuple) and len(res) == 2:
