@@ -590,6 +590,14 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           client_->Compile(instance.computation, compile_options).value();
     }
 
+    auto memory_stats_status_or = executable->GetCompiledMemoryStats();
+    if (memory_stats_status_or.ok()) {
+      xla::CompiledMemoryStats memory_stats = memory_stats_status_or.value();
+      TF_VLOG(3) << "memory usage detail = " << memory_stats.DebugString();
+    } else {
+      TF_VLOG(3) << "memory usage is not availiable";
+    }
+
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
     std::shared_ptr<PjRtComputation> pjrt_computation =
