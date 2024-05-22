@@ -147,7 +147,7 @@ def extract_avals(exported):
     """Convert torch SymInt to JAX symbolic_shape and stores in a map using the
     string name of the torch symbolic int.
  
-    TODO: There is probably a better way of storing a hash for a symbolic int.
+    TODO: There is probably a better way of storing a key for a symbolic int.
     This value needs to be looked up again in `_to_aval` to figure out which
     JAX symbolic to map to for a given torch tensor.
     """
@@ -180,10 +180,9 @@ def extract_avals(exported):
         1. Symbol - (s0) These can have custom constraints.
         2. Expr - (s0*2) These apply the expr to s0's constraints, cannot override.
       
-      TODO: More testing with more symbolic patterns should be done.
-      - This may break if one var is a power of another (unsure how pow prints)
-      - This may break if `s0` and `s1` are in different scopes but `s2=s0+s1`
-        (not sure if this is allowed, especially if either value has a constraint)
+        Currently support is limited to operations with a symbol and and int,
+        in `torch/export/dynamic_shapes.py`:
+        "Only increasing linear operations with integer coefficients are supported."
       """
       symbol_name = str(sym)
       constraints = _build_symbolic_constraints(symbol_name, constraint)
@@ -196,11 +195,19 @@ def extract_avals(exported):
       assert len(symbolic_shape) == 1
       return symbolic_shape[0]
 
+    # Populate symbol variables before expressions, exprs need to use the same
+    # Symbolic scope as the variable they operate on. Expressions can only be
+    # integer compuations on symbol variables, so each symbol variable is OK to
+    # have its own scope.
     symbolic_shapes = {}
-    for sym, constraint in range_constraints.items():
+    symbol_variables = [(s,v) for s,v in range_constraints.items() if s.is_symbol]
+    symbol_exprs = [(s,v) for s,v in range_constraints.items() if not s.is_symbol]
+    for sym, constraint in symbol_variables:
       symbolic_shape = _build_symbolic_shape(sym, constraint, symbolic_shapes)
-      symbol_name = str(sym)
-      symbolic_shapes[symbol_name] = symbolic_shape
+      symbolic_shapes[str(sym)] = symbolic_shape
+    for sym, constraint in symbol_exprs:
+      symbolic_shape = _build_symbolic_shape(sym, constraint, symbolic_shapes)
+      symbolic_shapes[str(sym)] = symbolic_shape
     return symbolic_shapes
 
   symbolic_shapes = _build_symbolic_shapes(exported.range_constraints)
@@ -208,6 +215,7 @@ def extract_avals(exported):
 
   if DEBUG:
     print('Inputs to aval:', args, '--------')
+    print('Symbolic shapes:', symbolic_shapes)
     for arg in args:
       print('Meta2Aval', arg.meta, '--> ', _to_aval(arg.meta, symbolic_shapes))
 

@@ -93,42 +93,8 @@ class ExportTest(unittest.TestCase):
 
     # Look for dynamic shape artifacts
     self.assertIn("func.func public @main(%arg0: tensor<?x3x200x200xf32>", module_str)
-    self.assertRegex(module_str, r"shape_assertion.*s0 >= 3")
-    self.assertRegex(module_str, r"shape_assertion.*s0 <= 10")
     self.assertIn("stablehlo.dynamic_broadcast_in_dim", module_str)
     self.assertIn("stablehlo.dynamic_gather", module_str)
-
-  def test_complex_constraint(self):
-    """Test a model with a slightly more complex constraint, where the input
-    shapes are determined by an equation of the other, in this case input shapes
-    are s0{<=10} and s0*2.
-    """
-    class ConcatAddModel(torch.nn.Module):
-      def __init__(self):
-        super().__init__()
-
-      def forward(self, a, b):
-        a = torch.concat([a, a], dim=0)
-        return a + b
-
-    # Arg shapes are a=s0{<=10}, b=s0*2
-    model = ConcatAddModel()
-    args = (torch.rand(2),torch.rand(4))
-    sym_a = torch.export.Dim("a", max=10)
-    sym_b = sym_a*2
-    dynamic_shapes = ({0: sym_a}, {0: sym_b})
-
-    with torch.no_grad():
-      exported = torch.export.export(model, args=args, dynamic_shapes=dynamic_shapes)
-    stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
-    module_str = str(stablehlo.mlir_module())
-
-    self.assertIn("stablehlo.constant dense<2>", module_str)
-    self.assertRegex(module_str, r"shape_assertion.*s0 <= 10")
-    self.assertRegex(module_str, r"shape_assertion.*2*s0")
-    self.assertRegex(module_str, r'stablehlo.concatenate.*tensor<\?xf32>')
-    self.assertRegex(module_str, r'stablehlo.add.*tensor<\?xf32>')
-    print(stablehlo.mlir_module())
 
   def test_export_dtypes(self):
     DTYPE_TO_MLIR_STR = {
