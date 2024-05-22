@@ -199,6 +199,9 @@ To profile your workload in depth to understand bottlenecks please check the fol
 * [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
 * [Utility script for capturing performance profiles](https://github.com/pytorch/xla/blob/master/scripts/capture_profile.py)
 
+## Simple Benchmarking
+Take a look at [`examples/train_resnet_benchmark.py`](https://github.com/pytorch/xla/blob/master/examples/train_resnet_benchmark.py) for how to benchmark a PyTorch/XLA model.
+
 ## Known Performance Caveats
 
 PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors share the full tensor interface with CPU & GPU tensors.
