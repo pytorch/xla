@@ -97,34 +97,6 @@ class MegabloxTest(unittest.TestCase):
         'n': 256,
         'num_groups': 2
     })
-    # self.tests_cases.append({
-    #     'dtype': torch.bfloat16,
-    #     'm': 128,
-    #     'k': 128,
-    #     'n': 128,
-    #     'num_groups': 1
-    # })
-    # self.tests_cases.append({
-    #     'dtype': torch.bfloat16,
-    #     'm': 256,
-    #     'k': 128,
-    #     'n': 128,
-    #     'num_groups': 1
-    # })
-    # self.tests_cases.append({
-    #     'dtype': torch.bfloat16,
-    #     'm': 128,
-    #     'k': 256,
-    #     'n': 128,
-    #     'num_groups': 8
-    # })
-    # self.tests_cases.append({
-    #     'dtype': torch.bfloat16,
-    #     'm': 512,
-    #     'k': 128,
-    #     'n': 256,
-    #     'num_groups': 2
-    # })
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm(self):
@@ -139,7 +111,7 @@ class MegabloxTest(unittest.TestCase):
 
       lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)  # This is a fxxking cpu tensor!!!!!!!
       out = megablox.gmm(lhs, rhs, group_sizes)
 
       ref_out = self._reference_gmm(lhs.cpu().float().numpy(),
