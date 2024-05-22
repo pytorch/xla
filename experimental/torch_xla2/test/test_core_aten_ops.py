@@ -2697,6 +2697,117 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.native_layer_norm, args, kwargs)
 
+  def test_aten_native_batch_norm_legit(self):
+    batch = 3
+    channel = 2
+    args = (
+        torch.randn((batch,channel,2,2)).to(torch.float32),
+        torch.ones(channel),
+        torch.zeros(channel),
+        torch.zeros(channel),
+        torch.ones(channel),
+        False,
+        0.5,
+        1,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit, args, kwargs)
+
+  def test_aten_native_batch_norm_legit_none(self):
+    batch = 3
+    channel = 2
+    args = (
+        torch.randn((batch,channel,4,4)).to(torch.float32),
+        None,
+        None,
+        torch.ones(channel),
+        torch.zeros(channel),
+        False,
+        0.5,
+        1,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit, args, kwargs)
+
+  def test_aten_native_batch_norm_legit_training_none(self):
+    batch = 3
+    channel = 2
+    args = (
+        torch.randn((batch,channel,4,3)).to(torch.float32),
+        None,
+        None,
+        torch.zeros(channel),
+        torch.ones(channel),
+        True,
+        0.2,
+        2e-5,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit, args, kwargs)
+
+  def test_aten_native_batch_norm_legit_no_training(self):
+    batch = 3
+    channel = 2
+    args = (
+        torch.randn((batch,channel,4,3)).to(torch.float32),
+        torch.ones(channel),
+        torch.zeros(channel),
+        torch.zeros(channel),
+        torch.ones(channel),
+        0.2,
+        2e-5,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit_no_training, args, kwargs)
+
+  def test_aten_native_batch_norm_training(self):
+    batch = 3
+    channel = 2
+    args = (
+        torch.randn((batch,channel,4,3)).to(torch.float32),
+        torch.ones(channel),
+        torch.zeros(channel),
+        torch.zeros(channel),
+        torch.ones(channel),
+        True,
+        0.1,
+        1e-5,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.native_batch_norm, args, kwargs)
+
+  def test_aten_native_batch_norm_training_none(self):
+    batch = 3
+    channel = 2
+    args = (
+        torch.randn((batch,channel,4,3)).to(torch.float32),
+        None,
+        None,
+        torch.zeros(channel),
+        torch.ones(channel),
+        True,
+        0.1,
+        1e-5,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.native_batch_norm, args, kwargs)
+
+  def test_aten_native_batch_norm_eval(self):
+    batch = 3
+    channel = 2
+    args = (
+        torch.randn((batch,channel,4,3)).to(torch.float32),
+        torch.ones(channel),
+        torch.zeros(channel),
+        torch.zeros(channel),
+        torch.ones(channel),
+        False,
+        0.2,
+        2e-5,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.native_batch_norm, args, kwargs)
+
   def test_aten_ne_Scalar_0(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
