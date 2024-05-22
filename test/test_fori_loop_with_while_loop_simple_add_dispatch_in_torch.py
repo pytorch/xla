@@ -47,9 +47,9 @@ class WhileLoopTest(unittest.TestCase):
     out_val = torch.tensor(15)
     iteri = torch.tensor(3)
     res = while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
-    print("res: ", res)
+    # print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
-    print("expected: ", expected)
+    # print("expected: ", expected)
     self.assertEqual(res, expected)
 
   # passed: torch_xla version: subtraction
@@ -66,10 +66,11 @@ class WhileLoopTest(unittest.TestCase):
     init_val = torch.tensor(10, dtype=torch.int32, device=device)
     iteri = torch.tensor(3, device=device)
     _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
-    print("res: ", res)
+    # print("res: ", res)
     _, expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
-    print("expected: ", expected)
-    self.assertEqual(res.item(), expected.item())
+    # print("expected: ", expected)
+    # self.assertEqual(res.item(), expected.item())
+    self.assertTrue(torch.all(torch.eq(res, expected)))
     # self.assertEqual(res, expected) # order of res and expected matter # this code affect res's value?
 
   # passed: torch pure version: addition
@@ -84,9 +85,9 @@ class WhileLoopTest(unittest.TestCase):
     out_val = torch.tensor(15)
     iteri = torch.tensor(10)
     res =  while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
-    print("res: ", res)
+    # print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
-    print("expected: ", expected)
+    # print("expected: ", expected)
     self.assertEqual(res, expected)
 
   # passed: torch_xla version: addition
@@ -106,8 +107,9 @@ class WhileLoopTest(unittest.TestCase):
     print("res: ", res)
     _, expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
     print("expected: ", expected)
-    # self.assertEqual(res.item(), expected.item())
+    # self.assertEqual(res.item(), expected.item()) # more stable result
     # self.assertEqual(res, expected) # order of res and expected matter
+    # self.assertTrue(torch.all(torch.eq(res, expected)))
 
   # passed:  torch pure version: nestes addition
   def test_while_loop_tpu_addition_nested_pure_torch(self):
@@ -122,9 +124,9 @@ class WhileLoopTest(unittest.TestCase):
     out_val = torch.tensor(0)
     iteri = torch.tensor(10)
     res =  while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
-    print("res: ", res)
+    # print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
-    print("expected: ", expected)
+    # print("expected: ", expected)
     self.assertEqual(res, expected) # order of res and expected matter
 
   # passed: torch_xla version: nestes subtraction
@@ -141,10 +143,13 @@ class WhileLoopTest(unittest.TestCase):
     init_val = torch.tensor(2, dtype=torch.int32, device=device)
     iteri = torch.tensor(10, device=device)
     _, res =  while_loop(cond_fn, body_fn, (iteri, init_val))
-    print("res: ", res)
+    # print("res: ", res)
     _, expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
-    print("expected: ", expected)
-    self.assertEqual(res.item(), expected.item())
+    # print("expected: ", expected)
+    # self.assertEqual(res.item(), expected.item())
+    # print("res.item(): ", res.item())
+    # print("expected.item(): ", expected.item())
+    self.assertTrue(torch.all(torch.eq(res, expected)))
     # self.assertEqual(res, expected) # order of res and expected matter
 
   # torch_xla version: linear
@@ -195,18 +200,21 @@ class WhileLoopTest(unittest.TestCase):
     _, res = linear_model(iteri, l_in_0)
     # print("---------------------------------------------------------")
     # print("A: ", A)
-    print("res: ", res)
+
+    # print("res: ", res) ###
     # for i in range(len(res)): print(" res ", i, " size: ", res[i].size())
     # print("---------------------------------------------------------")
     _, expected = linear_model.forward_compare(iteri, l_in_0)
     _, expected = linear_model.forward_compare(iteri, expected)
-    print("expected: ", expected)
+
+    # print("expected: ", expected) ### 
     # print("---------------------------------------------------------")
     # print("l_in_0: ", l_in_0)
     # print("---------------------------------------------------------")
     # self.assertEqual(res.item(), expected.item())
     # self.assertEqual(res, expected)
-    self.assertTrue(torch.eq(res, expected))
+    # self.assertTrue(torch.eq(res, expected))
+    self.assertTrue(torch.all(torch.eq(res, expected)))
     # print("a: ", a)
 
   # torch_xla version: MNIST without bn layer
@@ -274,12 +282,13 @@ class WhileLoopTest(unittest.TestCase):
     l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
     _, _, res = mnist(iteri, l_in_0, l_out)
-    print("res[0]: ", res[0])
+    # print("res[0]: ", res[0])
     # print("res size: ", res.size())
     _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
-    print("expected_res[0]: ", res[0])
+    # print("expected_res[0]: ", res[0])
     # print("expected_res size: ", expected_res.size())
-    self.assertEqual(res.item(), expected.item())
+    # self.assertEqual(res.item(), expected.item()) # RuntimeError: a Tensor with 160 elements cannot be converted to Scalar
+    self.assertTrue(torch.all(torch.eq(res, expected_res)))
 
   # ====== test _get_xla_computation ======
   def test__get_xlacomputation(self):
@@ -294,8 +303,7 @@ class WhileLoopTest(unittest.TestCase):
     res_xla_computation = torch_xla._XLAC._get_xla_computation([t3], [], True)
     if res_xla_computation:
       hlo_print = xb.get_computation_hlo(res_xla_computation)
-      print("Gain and print computation from _get_xla_computation:")
-      print(hlo_print)
+      print("Gain and print computation from _get_xla_computation") # print(hlo_print)
     else:
       print("Failed to gain or print computation(null) from _get_xla_computation")
 
@@ -333,8 +341,7 @@ class WhileLoopTest(unittest.TestCase):
     res_xla_computation = torch_xla._XLAC._get_xla_computation([t3], [], True)
     if res_xla_computation:
       hlo_print = xb.get_computation_hlo(res_xla_computation)
-      print("Gain and print computation from _get_xla_computation:")
-      print(hlo_print)
+      print("Gain and print computation from _get_xla_computation") # print(hlo_print)
     else:
       print("Failed to gain or print computation(null) from _get_xla_computation")
 
@@ -346,8 +353,7 @@ class WhileLoopTest(unittest.TestCase):
     body_computation = xb.computation_from_module_proto("bodycomputation",
                                                         body_hlo)
     body_hlo_print = xb.get_computation_hlo(body_computation)
-    print("Gain and print computation from PyLoweringContext:")
-    print(body_hlo_print)
+    print("Gain and print computation from PyLoweringContext") # print(body_hlo_print)
 
   # ====== fori_loop ======
   def test_fori_loop_addition_tpu(self):
@@ -373,6 +379,8 @@ class WhileLoopTest(unittest.TestCase):
 
     # === compare actual result and expected result
     # self.assertEqual(expected, actual)
+    # self.assertTrue(torch.all(torch.eq(actual, expected)))
+    # self.assertEqual(actual.item(), expected.item()) # maybe not stable? # actually no
 
 
 if __name__ == '__main__':
