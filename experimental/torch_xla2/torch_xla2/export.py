@@ -6,7 +6,6 @@ import torch
 from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
 from torch_xla2.ops import ops_registry
-from jax.experimental import export
 import jax
 import jax.numpy as jnp
 import sympy
@@ -122,11 +121,9 @@ def extract_avals(exported):
         return symbolic_shapes[str(d)]
       return d
 
-    def is_scalar(meta):
-      val = meta['val']
-      return isinstance(val, float) or isinstance(val, int) or isinstance(val, bool)
-
-    if is_scalar(arg_meta):
+    val = arg_meta['val']
+    is_scalar = isinstance(val, float) or isinstance(val, int) or isinstance(val, bool)
+    if is_scalar:
       return jax.ShapeDtypeStruct([], type(arg_meta['val']))
 
     tensor_meta = arg_meta['tensor_meta']
@@ -162,13 +159,13 @@ def extract_avals(exported):
          ==> ("a >= 5", "a <= 10",)
       """
       if not isinstance(torch_constraint, torch.utils._sympy.value_ranges.ValueRanges) or torch_constraint.is_bool:
-        raise TypeError(f"No symbolic constraint handler for: {constraint}")
+        raise TypeError(f"No symbolic constraint handler for: {torch_constraint}")
 
       constraints = []
       symbol = sympy.Symbol(symbol_name)
-      if (torch_constraint.lower != 2):
+      if torch_constraint.lower != 2:
         constraints.append(symbol >= torch_constraint.lower)
-      if (not torch_constraint.upper.is_infinite):
+      if not torch_constraint.upper.is_infinite:
         constraints.append(symbol <= torch_constraint.upper)
       
       return tuple(sympy.pretty(c, use_unicode=False) for c in constraints)
@@ -202,10 +199,7 @@ def extract_avals(exported):
     symbolic_shapes = {}
     symbol_variables = [(s,v) for s,v in range_constraints.items() if s.is_symbol]
     symbol_exprs = [(s,v) for s,v in range_constraints.items() if not s.is_symbol]
-    for sym, constraint in symbol_variables:
-      symbolic_shape = _build_symbolic_shape(sym, constraint, symbolic_shapes)
-      symbolic_shapes[str(sym)] = symbolic_shape
-    for sym, constraint in symbol_exprs:
+    for sym, constraint in symbol_variables + symbol_exprs:
       symbolic_shape = _build_symbolic_shape(sym, constraint, symbolic_shapes)
       symbolic_shapes[str(sym)] = symbolic_shape
     return symbolic_shapes
@@ -232,5 +226,5 @@ def exported_program_to_stablehlo(exported_program):
   """
   weights, func = exported_program_to_jax(exported_program)
   jax_avals = extract_avals(exported_program)
-  jax_export = export.export(func)(weights, (jax_avals,))
+  jax_export = jax.experimental.export.export(func)(weights, (jax_avals,))
   return jax_export

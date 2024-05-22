@@ -21,7 +21,7 @@ the instructions below from scratch (fresh venv / conda environment.)
 
 ### 1. Installing `torch_xla2`
 
-The following instructions assume you are in the `torch_xla2 directory:
+The following instructions assume you are in the `torch_xla2` directory:
 
 ```
 $ git clone https://github.com/pytorch/xla.git

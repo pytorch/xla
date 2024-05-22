@@ -54,9 +54,6 @@ class ExportTest(unittest.TestCase):
     self.assertIn("func.func private @clip(%arg0: tensor<500xf32>", module_str)
     self.assertIn("stablehlo.minimum", module_str)
 
-    # Test with dynamic export
-
-
   def test_constant(self):
 
     # Check Accuracy
