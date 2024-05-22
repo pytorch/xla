@@ -1,3 +1,4 @@
+#include <ATen/dlpack.h>
 #include <Python.h>
 #include <c10/core/Device.h>
 #include <c10/util/Optional.h>
@@ -34,6 +35,7 @@
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/dl_convertor.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
@@ -1096,6 +1098,36 @@ void BuildLoweringContextSubmodule(py::module* m) {
       .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId)
       .def("set_name_string", &PyLoweringContext::SetNameString)
       .def("get_name_string", &PyLoweringContext::GetNameString);
+}
+
+// Used in the to_dlpack.
+void dlPack_Capsule_Destructor(PyObject* data) {
+  if (!PyCapsule_IsValid(data, "dltensor")) {
+    return;
+  }
+  DLManagedTensor* dlMTensor =
+      static_cast<DLManagedTensor*>(PyCapsule_GetPointer(data, "dltensor"));
+  if (dlMTensor) {
+    dlMTensor->deleter(dlMTensor);
+  } else {
+    // The tensor has been deleted. Clear any error from
+    // PyCapsule_GetPointer.
+    PyErr_Clear();
+  }
+}
+
+at::Tensor tensor_fromDLPack(PyObject* data) {
+  DLManagedTensor* dlMTensor =
+      (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
+  XLA_CHECK(dlMTensor != nullptr)
+      << "from_dlpack received an invalid capsule. Note that a DLTensor "
+         "capsule can be consumed only once. You may have already constructed "
+         "a tensor from it once.";
+
+  at::Tensor tensor = torch_xla::fromDLPack(dlMTensor);
+  PyCapsule_SetName(data, "used_dltensor");
+  PyCapsule_SetDestructor(data, nullptr);
+  return tensor;
 }
 
 void InitXlaModuleBindings(py::module m) {
@@ -2506,6 +2538,29 @@ void InitXlaModuleBindings(py::module m) {
           XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
                          "without a data handle or an IR.";
         });
+
+  // from an XLA tensor to a dlpack tensor.
+  // If ext_data is the result of an CUDA computation, we should synchronize
+  // (waits for all kernels in all streams on a CUDA device to complete) if the
+  // current stream is different from the ext_data's stream. Otherwise, we may
+  // risk of getting incorrect results.
+  m.def("_to_dlpack", [](const at::Tensor& input) -> py::handle {
+    DLManagedTensor* dlMTensor;
+    {
+      NoGilSection nogil;
+      dlMTensor = torch_xla::toDLPack(input);
+    }
+    return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
+  });
+
+  // from a dlpack tensor to an XLA tensor
+  // If ext_data is the result of an CUDA computation, we should synchronize
+  // (waits for all kernels in all streams on a CUDA device to complete) if the
+  // current stream is different from the ext_data's stream. Otherwise, we may
+  // risk of getting incorrect results.
+  m.def("_from_dlpack", [](py::handle ext_data) -> at::Tensor {
+    return tensor_fromDLPack(ext_data.ptr());
+  });
 
   // -------------Dynamo Integration API Start-------------------------
   /*

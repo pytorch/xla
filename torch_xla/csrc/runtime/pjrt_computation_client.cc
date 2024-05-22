@@ -184,6 +184,13 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
   return std::make_shared<PjRtData>(std::move(device), std::move(shape));
 }
 
+ComputationClient::DataPtr PjRtComputationClient::CreateData(
+    std::string device, xla::Shape shape,
+    std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) {
+  return std::make_shared<PjRtData>(std::move(device), std::move(shape),
+                                    pjrt_buffer);
+}
+
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
     ComputationClient::DataPtr data) {
   tsl::profiler::TraceMe activity("PjRtComputationClient::GetDataShards",
@@ -462,10 +469,29 @@ std::uintptr_t PjRtComputationClient::UnsafeBufferPointer(
   std::shared_ptr<PjRtData> pjrt_data =
       std::dynamic_pointer_cast<PjRtData>(handle);
   XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
+  XLA_CHECK(pjrt_data->buffer != nullptr)
+      << "PjRt buffer is null in " << __FUNCTION__;
   xla::StatusOr<std::uintptr_t> ptr =
       client_->UnsafeBufferPointer(pjrt_data->buffer.get());
   XLA_CHECK(ptr.ok());
   return ptr.value();
+}
+
+std::shared_ptr<xla::PjRtBuffer> PjRtComputationClient::GetPjRtBuffer(
+    const DataPtr handle) {
+  std::shared_ptr<PjRtData> pjrt_data =
+      std::dynamic_pointer_cast<PjRtData>(handle);
+
+  XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
+  std::shared_ptr<xla::PjRtBuffer> pjrt_buffer = pjrt_data->buffer;
+  if (pjrt_buffer != nullptr) {
+    return pjrt_buffer;
+  } else {
+    TF_VLOG(3) << "The pjrt buffer is null so we need to wait for device ops "
+                  "to finish.";
+    WaitDeviceOps({});
+    return std::dynamic_pointer_cast<PjRtData>(handle)->buffer;
+  }
 }
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
@@ -482,7 +508,9 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
     std::shared_ptr<PjRtData> pjrt_data = ReplicateShardedData(handle);
-    XLA_CHECK(pjrt_data);
+    XLA_CHECK(pjrt_data) << "PjRt_data is null in " << __FUNCTION__;
+    XLA_CHECK(pjrt_data->buffer != nullptr)
+        << "PjRt buffer is null in " << __FUNCTION__;
 
     xla::Literal& literal =
         literals.emplace_back(host_output_shape(pjrt_data->buffer.get()));
@@ -492,7 +520,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
   }
   for (auto& future : futures) {
     absl::Status status = future.Await();
-    XLA_CHECK_OK(status);
+    XLA_CHECK_OK(status) << "Failed to await future from buffer to literal in"
+                         << __FUNCTION__;
   }
   InboundDataMetric()->AddSample(total_size);
 

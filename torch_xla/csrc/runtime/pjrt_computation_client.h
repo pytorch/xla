@@ -32,6 +32,9 @@ class PjRtComputationClient : public ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
+  static DataPtr CreateData(std::string device, xla::Shape shape,
+                            std::shared_ptr<xla::PjRtBuffer> pjrt_buffer);
+
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
   DataPtr GetDataShard(DataPtr data, size_t index) override;
@@ -56,6 +59,8 @@ class PjRtComputationClient : public ComputationClient {
       absl::Span<const DataPtr> handles) override;
 
   std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;
+
+  std::shared_ptr<xla::PjRtBuffer> GetPjRtBuffer(const DataPtr handle) override;
 
   DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
@@ -88,6 +93,16 @@ class PjRtComputationClient : public ComputationClient {
     return torch_xla::DeviceType(
         absl::AsciiStrToUpper(client_->platform_name()));
   };
+
+  xla::PjRtPlatformId GetPlatformID() const override {
+    return client_->platform_id();
+  }
+
+  absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
+      int local_device_id) const override {
+    return client_->LookupAddressableDevice(
+        xla::PjRtLocalDeviceId(local_device_id));
+  }
 
   std::vector<std::string> GetLocalDevices() const override;
 
@@ -122,6 +137,10 @@ class PjRtComputationClient : public ComputationClient {
 
   MemoryInfo GetMemoryInfo(const std::string& device) override;
 
+  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const override;
+  std::vector<std::string> PjRtDevicesToString(
+      absl::Span<xla::PjRtDevice* const> devices) const;
+
  private:
   std::unique_ptr<xla::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;
@@ -136,10 +155,6 @@ class PjRtComputationClient : public ComputationClient {
   torch::lazy::hash_t comp_env_hash_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
-
-  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const;
-  std::vector<std::string> PjRtDevicesToString(
-      absl::Span<xla::PjRtDevice* const> devices) const;
 
   struct PjRtData : public Data {
     PjRtData(std::string device, xla::Shape device_shape)
