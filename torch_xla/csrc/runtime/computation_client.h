@@ -361,6 +361,8 @@ class ComputationClient {
   virtual absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
       int local_device_id) const = 0;
 
+  virtual std::intptr_t GetCudaStreamForDevice(int local_device_id) const = 0;
+
   virtual size_t GetNumDevices() const = 0;
 
   virtual std::vector<std::string> GetLocalDevices() const = 0;
