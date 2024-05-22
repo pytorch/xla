@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+gitf336317 )
+                  master (2.4.0+git8a1ada8 )
                 </div>
               
             
@@ -3703,11 +3703,11 @@ training_or_inference_script_using_spmd.py
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
 
 <span class="c1"># Assume data is 4d and 0th dimension is the batch dimension</span>
-<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-<span class="n">input_mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;W&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">))</span>
-<span class="n">partition_spec</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,)</span>
+<span class="n">input_mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;Data&#39;</span><span class="p">))</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
-<span class="c1"># Shard the batch dimension</span>
+<span class="c1"># Shard the input&#39;s batch dimension along the `data` axis, no sharding along other dimensions</span>
 <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">input_tensor</span><span class="p">,</span> <span class="n">input_mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -3715,9 +3715,9 @@ training_or_inference_script_using_spmd.py
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
 
 <span class="c1"># Assume data is 4d and 0th dimension is the batch dimension</span>
-<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-<span class="n">input_mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;W&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">))</span>
-<span class="n">partition_spec</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+<span class="n">input_mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;Data&#39;</span><span class="p">))</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
 <span class="c1"># Use MpDeviceLoader to load data in background</span>
 <span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
@@ -3732,11 +3732,14 @@ training_or_inference_script_using_spmd.py
 <h3>Use SPMD to express FSDP(Fully Sharded Data Parallel)<a class="headerlink" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch’s FSDP is data parallel + sharded model parameters at 0th dimension. Users first need to use SPMD to express Data Parallels as suggested in the previous section.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">():</span>
-    <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-    <span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
-    <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">shape</span><span class="p">)))</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,)</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">))</span>
+    <span class="n">partition_spec</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">partition_spec</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;fsdp&#39;</span>
+    <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>PyTorch/XLA also provided a convenient wrapper for the FSDP with SPMD, please take a look at this <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/fsdpv2.md">user guide</a>.</p>
 </div>
 <div class="section" id="running-resnet50-example-with-spmd">
 <h3>Running Resnet50 example with SPMD<a class="headerlink" href="#running-resnet50-example-with-spmd" title="Permalink to this heading">¶</a></h3>
@@ -3845,8 +3848,20 @@ the table. The design doc is <a class="reference external" href="https://github.
 <span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters. The autowrapping
-feature will come in the future releases.</p>
+<p>It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters. Here is an example to autowrao each <code class="docutils literal notranslate"><span class="pre">DecoderLayer</span></code>.</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp.wrap</span> <span class="kn">import</span> <span class="n">transformer_auto_wrap_policy</span>
+
+<span class="c1"># Apply FSDP sharding on each DecoderLayer layer.</span>
+<span class="n">auto_wrap_policy</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span>
+    <span class="n">transformer_auto_wrap_policy</span><span class="p">,</span>
+    <span class="n">transformer_layer_cls</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">decoder_only_model</span><span class="o">.</span><span class="n">DecoderLayer</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">auto_wrap_policy</span><span class="o">=</span><span class="n">auto_wrap_policy</span><span class="p">)</span>
+</pre></div>
+</div>
 <div class="section" id="sharding-output">
 <h2>Sharding output<a class="headerlink" href="#sharding-output" title="Permalink to this heading">¶</a></h2>
 <p>To ensure the XLA compiler correctly implements the FSDP algorithm, we need to shard both weights and activations. This means sharding the output of the forward method. Since the forward function output can vary, we offer shard_output to shard activations in cases where your module output doesn’t fall into one of these categories:</p>
