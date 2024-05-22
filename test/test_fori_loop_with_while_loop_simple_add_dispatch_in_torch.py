@@ -28,15 +28,6 @@ def _fake_while_loop(cond_fn, body_fn, operands):
     operands = body_fn(*operands)
   return operands
 
-def _fake_fori_loop(lower, upper, body_fun, *init_val):
-  if len(init_val) > 1:
-    (a, b) = init_val
-    for i in range((upper - lower)[0]):
-      a = body_fun(a, b)
-  else:
-    for i in range((upper - lower)[0]):
-      a = body_fun(*init_val)
-  return a
 
 # test class
 class WhileLoopTest(unittest.TestCase):
@@ -59,7 +50,7 @@ class WhileLoopTest(unittest.TestCase):
     print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
     print("expected: ", expected)
-    # self.assertEqual(list(expected), res)
+    self.assertEqual(res, expected)
 
   # passed: torch_xla version: subtraction
   def test_while_loop_tpu_subtraction(self):
@@ -78,7 +69,7 @@ class WhileLoopTest(unittest.TestCase):
     print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
     print("expected: ", expected)
-    # self.assertEqual(list(expected), res)
+    self.assertEqual(res, expected) # order of res and expected matter
 
   # passed: torch pure version: addition
   def test_while_loop_tpu_addition_pure_torch(self):
@@ -95,6 +86,7 @@ class WhileLoopTest(unittest.TestCase):
     print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
     print("expected: ", expected)
+    self.assertEqual(res, expected)
 
   # passed: torch_xla version: addition
   def test_while_loop_tpu_addition(self):
@@ -113,7 +105,7 @@ class WhileLoopTest(unittest.TestCase):
     print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
     print("expected: ", expected)
-    # self.assertEqual(list(expected), res)
+    self.assertEqual(res, expected) # order of res and expected matter
 
   # passed:  torch pure version: nestes addition
   def test_while_loop_tpu_addition_nested_pure_torch(self):
@@ -131,7 +123,7 @@ class WhileLoopTest(unittest.TestCase):
     print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
     print("expected: ", expected)
-    self.assertEqual(expected, res)
+    self.assertEqual(res, expected) # order of res and expected matter
 
   # passed: torch_xla version: nestes subtraction
   def test_while_loop_tpu_addition_nested(self):
@@ -150,7 +142,7 @@ class WhileLoopTest(unittest.TestCase):
     print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
     print("expected: ", expected)
-    # self.assertEqual(expected, res)
+    # self.assertEqual(res, expected) # order of res and expected matter
 
   # torch_xla version: linear
   def test_while_loop_tpu_simple_linear_inside_loop(self):
@@ -189,17 +181,24 @@ class WhileLoopTest(unittest.TestCase):
         return while_loop(cond_fn, body_fn, (iteri, x))
 
       def forward_compare(self, iteri, x):
-        return iteri - 1, self.linear(x)
+        y = self.linear(x)
+        return iteri - 1, y
 
     linear_model = SimpleLinear()
     linear_model.to(device)
-    bs=16
     l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
+    print("l_in_0: ", l_in_0)
     iteri = torch.tensor(3, dtype=torch.int32, device=device)
-    _, res = linear_model(iteri, l_in_0)
+    A, res = linear_model(iteri, l_in_0)
+    print("---------------------------------------------------------")
+    print("A: ", A)
     print("res: ", res)
-    _, expected = linear_model(iteri, l_in_0)
+    print("---------------------------------------------------------")
+    _, expected = linear_model.forward_compare(iteri, l_in_0)
     print("expected: ", expected)
+    print("---------------------------------------------------------")
+    print("l_in_0: ", l_in_0)
+    print("---------------------------------------------------------")
 
   # torch_xla version: MNIST without bn layer
   def test_while_loop_tpu_MNIST_inside_loop(self):
@@ -270,7 +269,7 @@ class WhileLoopTest(unittest.TestCase):
     _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
     print("expected_res[0]: ", res[0])
 
-  # ==================================== test _get_xla_computation ==========================================
+  # ====== test _get_xla_computation ======
   def test__get_xlacomputation(self):
 
     xm.mark_step()
@@ -337,6 +336,32 @@ class WhileLoopTest(unittest.TestCase):
     body_hlo_print = xb.get_computation_hlo(body_computation)
     print("Gain and print computation from PyLoweringContext:")
     print(body_hlo_print)
+
+  # ====== fori_loop ======
+  def test_fori_loop_addition_tpu(self):
+    xm.mark_step()
+    device = xm.xla_device()
+
+    lower = torch.tensor(0, device=device)
+    upper = torch.tensor(50, device=device)
+    init_val = torch.tensor(1, dtype=torch.int32, device=device)
+
+    def body_fun(x):
+      return torch.add(x, 1)
+
+    _, actual = fori_loop(upper, lower, body_fun, (init_val))
+    print("actual: ", actual)
+
+    # === expected ===
+    x = init_val
+    for i in range(upper - lower):
+      x = torch.add(x, 1)
+    expected = x
+    print("expected: ", expected)
+
+    # === compare actual result and expected result
+    self.assertEqual(expected, actual)
+
 
 if __name__ == '__main__':
   test = unittest.main()

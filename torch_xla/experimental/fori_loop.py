@@ -13,46 +13,62 @@ from torch._higher_order_ops.while_loop import while_loop_op
 from torch._higher_order_ops.while_loop import while_loop as torch_while_loop
 
 
-def fori_loop(upper, lower, body_fun, init_val, input_value):
+def fori_loop(upper, lower, body_fun, *input_value):
 
   device = xm.xla_device()
+  if (upper < lower):
+    print("ERROR: upper should be a larger number than lower")
+  iteri = upper - lower
 
-  one_value = torch.tensor([1], dtype=torch.int32, device=device)
+  def cond_fn(iteri, *input_value): # make sure name of variable match
+    return iteri > 0
 
-  if (hasattr(body_fun, 'weight') or hasattr(body_fun, 'bias')):
-    output_value = torch.zeros([20], dtype=torch.float32, device=device)
+  def new_body_fn(iteri, *input_value):
+    return iteri - 1, body_fun(*input_value)
 
-    def cond_fn(upper, lower, one_value, x, input_value, output_value):
-      return lower[0] < upper[0]
-
-    def body_fn(upper, lower, one_value, x, input_value, output_value):
-      new_lower = torch.add(one_value, lower)
-      output_value = body_fun(input_value)
-      weight = body_fun.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-      bias = body_fun.bias  # not be used actually, initialized as placeholder xlacomputation requirement
-      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-          one_value, x), input_value.clone(), bias.clone(), weight.clone(
-          ), output_value.clone()
-
-    res = torch_while_loop(
-        cond_fn, body_fn,
-        (upper, lower, one_value, init_val, input_value, output_value))
-  else:
-    output_value = torch.tensor([1], dtype=torch.int32, device=device)
-
-    def cond_fn(upper, lower, one_value, x, input_value):
-      return lower[0] < upper[0]
-
-    def body_fn(upper, lower, one_value, x, input_value):
-      new_lower = torch.add(one_value, lower)
-      output_val = body_fun(one_value, input_value)
-      return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-          one_value, x), output_val.clone()
-
-    res = torch_while_loop(cond_fn, body_fn,
-                           (upper, lower, one_value, init_val, input_value))
+  inputs = (iteri, ) + input_value
+  # print("inputs: ", inputs)
+  # res =  while_loop(cond_fn, body_fn, (iteri, *input_value))
+  res =  while_loop(cond_fn, new_body_fn, inputs)
 
   return res
+
+  # one_value = torch.tensor([1], dtype=torch.int32, device=device)
+  # if (hasattr(body_fun, 'weight') or hasattr(body_fun, 'bias')):
+  #   output_value = torch.zeros([20], dtype=torch.float32, device=device)
+
+  #   def cond_fn(upper, lower, one_value, x, input_value, output_value):
+  #     return lower[0] < upper[0]
+
+  #   def body_fn(upper, lower, one_value, x, input_value, output_value):
+  #     new_lower = torch.add(one_value, lower)
+  #     output_value = body_fun(input_value)
+  #     weight = body_fun.weight  # not be used actually, initialized as placeholder xlacomputation requirement
+  #     bias = body_fun.bias  # not be used actually, initialized as placeholder xlacomputation requirement
+  #     return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+  #         one_value, x), input_value.clone(), bias.clone(), weight.clone(
+  #         ), output_value.clone()
+
+  #   res = torch_while_loop(
+  #       cond_fn, body_fn,
+  #       (upper, lower, one_value, init_val, input_value, output_value))
+  # else:
+  #   output_value = torch.tensor([1], dtype=torch.int32, device=device)
+
+  #   def cond_fn(upper, lower, one_value, x, input_value):
+  #     return lower[0] < upper[0]
+
+  #   def body_fn(upper, lower, one_value, x, input_value):
+  #     new_lower = torch.add(one_value, lower)
+  #     output_val = body_fun(one_value, input_value)
+  #     return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
+  #         one_value, x), output_val.clone()
+
+  #   res = torch_while_loop(cond_fn, body_fn,
+  #                          (upper, lower, one_value, init_val, input_value))
+
+  # return res
+
 
 @while_loop_op.py_impl(DispatchKey.XLA)
 def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
@@ -63,6 +79,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
 def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
 
+  print("additional_inputs: ", additional_inputs)
   def new_body_fn(*carried_inputs):
     res = list(body_fn(*carried_inputs))
 
@@ -74,6 +91,7 @@ def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=
       print("arrive here 2 !!!")
       res = [res[0], ] + list(additional_inputs) + res[1:]
     else:
+      print("arrive here 3 !!!")
       res = res
     return res
 
