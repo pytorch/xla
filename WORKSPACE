@@ -68,6 +68,7 @@ load("@xla//third_party/py:python_init_repositories.bzl", "python_init_repositor
 
 python_init_repositories(
     requirements = {
+        "3.10": "//:requirements_lock_3_10.txt",
         "3.11": "//:requirements_lock_3_11.txt",
     },
 )
