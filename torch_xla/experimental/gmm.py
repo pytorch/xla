@@ -1,60 +1,16 @@
 """Grouped matrix multiplication kernels for TPU written in Pallas."""
 
 from typing import Any, Callable, Optional, Union
-from torch_xla.experimental.megablox import common
 from torch_xla.experimental.custom_kernel import jax_import_guard
 import torch
 import torch_xla
 import numpy as np
-
-
-def _validate_args(
-    *,
-    lhs: torch.Tensor,
-    rhs: torch.Tensor,
-    group_sizes: torch.Tensor,
-    expected_rhs_dims: int = 3,
-) -> 'tuple[jnp.ndarray, jnp.ndarray, jnp.dtype]':
-  # Import JAX within the function such that we don't need to call the jax_import_guard()
-  # in the global scope which could cause problems for xmp.spawn.
-  jax_import_guard()
-  import jax
-  import jax.numpy as jnp
-  """Validates the arguments for the gmm function."""
-  # Validate 'lhs'.
-  if lhs.dim() != 2:
-    raise ValueError(f"Expected 2-tensor for 'lhs' but got {lhs.dim()}-tensor.")
-  common.assert_is_supported_dtype(lhs.dtype)
-
-  # Validate 'rhs'.
-  if rhs.dim() != expected_rhs_dims:
-    raise ValueError(f"Expected {expected_rhs_dims}-tensor for 'rhs' but got"
-                     f" {rhs.dim()}-tensor.")
-  common.assert_is_supported_dtype(rhs.dtype)
-
-  # Validate 'group_sizes'.
-  if group_sizes.dtype != torch.int32:
-    raise ValueError(
-        f"Expected 32-bit integer 'group_sizes' but got {group_sizes.dtype}.")
-
-  return lhs, group_sizes, common.select_input_dtype(lhs, rhs)
-
 
 def _calculate_num_tiles(x: int, tx: int) -> int:
   tiles, rem = divmod(x, tx)
   if rem:
     raise ValueError(f"{x} must be divisible by x-dimension tile size ({tx}).")
   return tiles
-
-
-def _calculate_irregular_num_tiles(x: int, tx: int) -> tuple[int, int]:
-  tiles, rem = divmod(x, tx)
-  if rem:
-    tiles += 1
-  return tiles, rem
-
-
-GroupMetadata = Any  # TODO(enriqueps): Clean this up and use a namedtuple
 
 
 def _make_group_metadata(
@@ -65,7 +21,7 @@ def _make_group_metadata(
     start_group: 'jnp.ndarray',
     num_nonzero_groups: int,
     visit_empty_groups: bool = True,
-) -> GroupMetadata:
+) -> Any:
   """Create the metadata needed for grouped matmul computation.
 
   Args:
@@ -236,32 +192,6 @@ def _make_group_metadata(
   group_tiles = jnp.where(active_group_mask, group_tiles, 0)
   num_tiles = group_tiles.sum()
   return (group_offsets, group_ids, m_tile_ids), num_tiles
-
-
-def _zero_uninitialized_memory(
-    out: 'jnp.ndarray',
-    *,
-    start_group: 'jnp.ndarray',
-    num_nonzero_groups: int,
-    group_metadata: GroupMetadata,
-) -> torch.Tensor:
-  """Zero out uninitialized memory from output."""
-  # Import JAX within the function such that we don't need to call the jax_import_guard()
-  # in the global scope which could cause problems for xmp.spawn.
-  jax_import_guard()
-  import jax
-  import jax.numpy as jnp
-
-  group_offsets = group_metadata[0]
-  group_start = group_offsets[start_group]
-  group_end = group_offsets[start_group + num_nonzero_groups]
-  valid_mask = jax.lax.broadcasted_iota(jnp.int32, (out.shape[0],), 0)
-  valid_mask = (valid_mask >= group_start) & (valid_mask < group_end)
-  return torch.from_numpy(np.array(jnp.where(valid_mask[:, None], out,
-                                             0))).to('xla')
-
-
-LutFn = Callable[[int, int, int], Optional[tuple[int, int, int]]]
 
 
 def _gmm(

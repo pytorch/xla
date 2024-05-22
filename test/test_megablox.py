@@ -8,7 +8,7 @@ from typing import Optional, Union, Callable
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.experimental.megablox as megablox
+from torch_xla.experimental.gmm import gmm
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -111,8 +111,8 @@ class MegabloxTest(unittest.TestCase):
 
       lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)  # This is a fxxking cpu tensor!!!!!!!
-      out = megablox.gmm(lhs, rhs, group_sizes)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)  # This is a cpu tensor!!!!!!!
+      out = gmm(lhs, rhs, group_sizes)
 
       ref_out = self._reference_gmm(lhs.cpu().float().numpy(),
                                     rhs.cpu().float().numpy(),
