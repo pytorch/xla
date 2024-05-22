@@ -410,11 +410,11 @@ The SPMD API is general enough to express both data parallelism and model parall
 num_devices = xr.global_runtime_device_count()
 
 # Assume data is 4d and 0th dimension is the batch dimension
-mesh_shape = (num_devices, 1, 1, 1)
-input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
-partition_spec = range(num_devices)
+mesh_shape = (num_devices,)
+input_mesh = xs.Mesh(device_ids, mesh_shape, ('Data'))
+partition_spec = ('data', None, None, None)
 
-# Shard the batch dimension
+# Shard the input's batch dimension along the `data` axis, no sharding along other dimensions
 xs.mark_sharding(input_tensor, input_mesh, partition_spec)
 ```
 
@@ -424,9 +424,9 @@ PyTorch/XLA’s MpDeviceLoader supports input batch sharding, which also loads t
 num_devices = xr.global_runtime_device_count()
 
 # Assume data is 4d and 0th dimension is the batch dimension
-mesh_shape = (num_devices, 1, 1, 1)
-input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
-partition_spec = range(num_devices)
+mesh_shape = (num_devices)
+input_mesh = xs.Mesh(device_ids, mesh_shape, ('Data'))
+partition_spec = ('data', None, None, None)
 
 # Use MpDeviceLoader to load data in background
 train_loader = pl.MpDeviceLoader(
@@ -444,10 +444,13 @@ PyTorch’s FSDP is data parallel + sharded model parameters at 0th dimension. U
 
 ```python
 for name, param in model.named_parameters():
-    shape = (num_devices,) + (1,) * (len(param.shape) - 1)
-    mesh = xs.Mesh(device_ids, shape)
-    xs.mark_sharding(param, mesh, range(len(param.shape)))
+    shape = (num_devices,)
+    mesh = xs.Mesh(device_ids, shape, ('fsdp'))
+    partition_spec = [None] * len(param.shape)
+    partition_spec[0] = 'fsdp'
+    xs.mark_sharding(param, mesh, partition_spec)
 ```
+PyTorch/XLA also provided a convenient wrapper for the FSDP with SPMD, please take a look at this [user guide](https://github.com/pytorch/xla/blob/master/docs/fsdpv2.md).
 
 
 ### Running Resnet50 example with SPMD
