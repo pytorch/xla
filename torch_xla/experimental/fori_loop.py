@@ -20,54 +20,16 @@ def fori_loop(upper, lower, body_fun, *input_value):
     print("ERROR: upper should be a larger number than lower")
   iteri = upper - lower
 
-  def cond_fn(iteri, *input_value): # make sure name of variable match
+  def cond_fn(iteri, *input_value):
     return iteri > 0
 
   def new_body_fn(iteri, *input_value):
     return iteri - 1, body_fun(*input_value)
 
   inputs = (iteri, ) + input_value
-  # print("inputs: ", inputs)
-  # res =  while_loop(cond_fn, body_fn, (iteri, *input_value))
   res =  while_loop(cond_fn, new_body_fn, inputs)
 
   return res
-
-  # one_value = torch.tensor([1], dtype=torch.int32, device=device)
-  # if (hasattr(body_fun, 'weight') or hasattr(body_fun, 'bias')):
-  #   output_value = torch.zeros([20], dtype=torch.float32, device=device)
-
-  #   def cond_fn(upper, lower, one_value, x, input_value, output_value):
-  #     return lower[0] < upper[0]
-
-  #   def body_fn(upper, lower, one_value, x, input_value, output_value):
-  #     new_lower = torch.add(one_value, lower)
-  #     output_value = body_fun(input_value)
-  #     weight = body_fun.weight  # not be used actually, initialized as placeholder xlacomputation requirement
-  #     bias = body_fun.bias  # not be used actually, initialized as placeholder xlacomputation requirement
-  #     return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-  #         one_value, x), input_value.clone(), bias.clone(), weight.clone(
-  #         ), output_value.clone()
-
-  #   res = torch_while_loop(
-  #       cond_fn, body_fn,
-  #       (upper, lower, one_value, init_val, input_value, output_value))
-  # else:
-  #   output_value = torch.tensor([1], dtype=torch.int32, device=device)
-
-  #   def cond_fn(upper, lower, one_value, x, input_value):
-  #     return lower[0] < upper[0]
-
-  #   def body_fn(upper, lower, one_value, x, input_value):
-  #     new_lower = torch.add(one_value, lower)
-  #     output_val = body_fun(one_value, input_value)
-  #     return upper.clone(), new_lower.clone(), one_value.clone(), torch.add(
-  #         one_value, x), output_val.clone()
-
-  #   res = torch_while_loop(cond_fn, body_fn,
-  #                          (upper, lower, one_value, init_val, input_value))
-
-  # return res
 
 
 @while_loop_op.py_impl(DispatchKey.XLA)
@@ -79,8 +41,6 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
 def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
 
-  # print("additional_inputs: ", additional_inputs)
-  # for i in range(len(additional_inputs)): print("additional_inputs [", i, "][0] : ", additional_inputs[i][0])
   def new_body_fn(*carried_inputs):
     res = list(body_fn(*carried_inputs))
 
@@ -99,7 +59,7 @@ def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=
   return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
 
 
-def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]): # bn_additional_inputs=[]: 'NoneType' object is not iterable
+def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
 
   #  ====== fake_carried_inputs ======
   fake_carried_inputs = []
@@ -175,17 +135,8 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
                                                  (total_inputs), computation)
 
-  # return result
-
-  # print("result size: ", result.size())
-  # print("result size: ", result)
-  # for i in range(len(result)): print(" result ", i, " size: ", result[i].size())
-  # for i in range(len(result)): print(" result ", i, " : ", result[i])
-
-  # unwrapper result without additional_inputs and bn_additional_inputs
-  # res = [res[0], ] + list(additional_inputs) + res[1:]
+  # unwrapper result without additional_inputs and bn_additional_inputs for original order
   additional_inputs_len = len(additional_inputs) + 1
-  # print("additional_inputs_len: ", additional_inputs_len)
   final_res = [result[0], ] + result[additional_inputs_len:]
 
   return final_res
