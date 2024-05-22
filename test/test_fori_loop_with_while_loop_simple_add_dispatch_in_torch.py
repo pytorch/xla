@@ -29,10 +29,8 @@ def _fake_while_loop(cond_fn, body_fn, operands):
   return operands
 
 
-# test class
 class WhileLoopTest(unittest.TestCase):
 
-  # passed: torch pure version: subtraction
   def test_while_loop_tpu_subtraction_pure_torch(self):
     xm.mark_step()
     device = xm.xla_device()
@@ -47,12 +45,9 @@ class WhileLoopTest(unittest.TestCase):
     out_val = torch.tensor(15)
     iteri = torch.tensor(3)
     res = while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
-    # print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
-    # print("expected: ", expected)
     self.assertEqual(res, expected)
 
-  # passed: torch_xla version: subtraction
   def test_while_loop_tpu_subtraction(self):
     xm.mark_step()
     device = xm.xla_device()
@@ -66,14 +61,9 @@ class WhileLoopTest(unittest.TestCase):
     init_val = torch.tensor(10, dtype=torch.int32, device=device)
     iteri = torch.tensor(3, device=device)
     _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
-    # print("res: ", res)
     _, expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
-    # print("expected: ", expected)
-    # self.assertEqual(res.item(), expected.item())
     self.assertTrue(torch.all(torch.eq(res, expected)))
-    # self.assertEqual(res, expected) # order of res and expected matter # this code affect res's value?
 
-  # passed: torch pure version: addition
   def test_while_loop_tpu_addition_pure_torch(self):
     def cond_fn(iteri, x, y):
       return iteri > 0
@@ -85,17 +75,14 @@ class WhileLoopTest(unittest.TestCase):
     out_val = torch.tensor(15)
     iteri = torch.tensor(10)
     res =  while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
-    # print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
-    # print("expected: ", expected)
     self.assertEqual(res, expected)
 
-  # passed: torch_xla version: addition
   def test_while_loop_tpu_addition(self):
     xm.mark_step()
     device = xm.xla_device()
 
-    def cond_fn(iteri, x): # make sure name of variable match
+    def cond_fn(iteri, x):
       return iteri > 0
 
     def body_fn(iteri, x):
@@ -103,15 +90,11 @@ class WhileLoopTest(unittest.TestCase):
 
     init_val = torch.tensor(3, dtype=torch.int32, device=device)
     iteri = torch.tensor(10, device=device)
-    _, res =  while_loop(cond_fn, body_fn, (iteri, init_val)) # result is not stable?
+    _, res =  while_loop(cond_fn, body_fn, (iteri, init_val))
     print("res: ", res)
     _, expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
     print("expected: ", expected)
-    # self.assertEqual(res.item(), expected.item()) # more stable result
-    # self.assertEqual(res, expected) # order of res and expected matter
-    # self.assertTrue(torch.all(torch.eq(res, expected)))
 
-  # passed:  torch pure version: nestes addition
   def test_while_loop_tpu_addition_nested_pure_torch(self):
 
     def cond_fn(iteri, x, y):
@@ -124,12 +107,9 @@ class WhileLoopTest(unittest.TestCase):
     out_val = torch.tensor(0)
     iteri = torch.tensor(10)
     res =  while_loop(cond_fn, body_fn, (iteri, init_val, out_val))
-    # print("res: ", res)
     expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val, out_val))
-    # print("expected: ", expected)
-    self.assertEqual(res, expected) # order of res and expected matter
+    self.assertEqual(res, expected)
 
-  # passed: torch_xla version: nestes subtraction
   def test_while_loop_tpu_addition_nested(self):
     xm.mark_step()
     device = xm.xla_device()
@@ -143,24 +123,17 @@ class WhileLoopTest(unittest.TestCase):
     init_val = torch.tensor(2, dtype=torch.int32, device=device)
     iteri = torch.tensor(10, device=device)
     _, res =  while_loop(cond_fn, body_fn, (iteri, init_val))
-    # print("res: ", res)
     _, expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
-    # print("expected: ", expected)
-    # self.assertEqual(res.item(), expected.item())
-    # print("res.item(): ", res.item())
-    # print("expected.item(): ", expected.item())
     self.assertTrue(torch.all(torch.eq(res, expected)))
-    # self.assertEqual(res, expected) # order of res and expected matter
 
-  # torch_xla version: linear
   def test_while_loop_tpu_simple_linear_inside_loop(self):
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
 
     n_epochs = 3
-    batch_size_train = 8 # 64
-    batch_size_test = 10 # 1000
+    batch_size_train = 8
+    batch_size_test = 10
     learning_rate = 0.01
     momentum = 0.5
     log_interval = 10
@@ -195,37 +168,23 @@ class WhileLoopTest(unittest.TestCase):
     linear_model = SimpleLinear()
     linear_model.to(device)
     l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
-    # print("l_in_0: ", l_in_0)
     iteri = torch.tensor(2, dtype=torch.int32, device=device)
     _, res = linear_model(iteri, l_in_0)
-    # print("---------------------------------------------------------")
-    # print("A: ", A)
 
-    # print("res: ", res) ###
-    # for i in range(len(res)): print(" res ", i, " size: ", res[i].size())
-    # print("---------------------------------------------------------")
+    # === expected result after 2 iteration to be compared ===
     _, expected = linear_model.forward_compare(iteri, l_in_0)
     _, expected = linear_model.forward_compare(iteri, expected)
 
-    # print("expected: ", expected) ### 
-    # print("---------------------------------------------------------")
-    # print("l_in_0: ", l_in_0)
-    # print("---------------------------------------------------------")
-    # self.assertEqual(res.item(), expected.item())
-    # self.assertEqual(res, expected)
-    # self.assertTrue(torch.eq(res, expected))
     self.assertTrue(torch.all(torch.eq(res, expected)))
-    # print("a: ", a)
 
-  # torch_xla version: MNIST without bn layer
   def test_while_loop_tpu_MNIST_inside_loop(self):
     xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
 
     n_epochs = 3
-    batch_size_train = 8 # 64
-    batch_size_test = 10 # 1000
+    batch_size_train = 8
+    batch_size_test = 10
     learning_rate = 0.01
     momentum = 0.5
     log_interval = 10
@@ -282,12 +241,9 @@ class WhileLoopTest(unittest.TestCase):
     l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
     _, _, res = mnist(iteri, l_in_0, l_out)
-    # print("res[0]: ", res[0])
-    # print("res size: ", res.size())
+
+    # === expected result for one iteration to be compared since body_fn defined use the same input in each iteration ===
     _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
-    # print("expected_res[0]: ", res[0])
-    # print("expected_res size: ", expected_res.size())
-    # self.assertEqual(res.item(), expected.item()) # RuntimeError: a Tensor with 160 elements cannot be converted to Scalar
     self.assertTrue(torch.all(torch.eq(res, expected_res)))
 
   # ====== test _get_xla_computation ======
@@ -376,11 +332,6 @@ class WhileLoopTest(unittest.TestCase):
       x = torch.add(x, 1)
     expected = x
     print("expected: ", expected)
-
-    # === compare actual result and expected result
-    # self.assertEqual(expected, actual)
-    # self.assertTrue(torch.all(torch.eq(actual, expected)))
-    # self.assertEqual(actual.item(), expected.item()) # maybe not stable? # actually no
 
 
 if __name__ == '__main__':
