@@ -45,16 +45,6 @@ auto_wrap_policy = functools.partial(
 model = FSDPv2(
     model, mesh=mesh, auto_wrap_policy=auto_wrap_policy)
 ```
-You can also use the `size_based_auto_wrap_policy` which will auto wrap each layer if the parameters in its subtree exceed certain amount.
-```python3
-from torch_xla.distributed.fsdp.wrap import size_based_auto_wrap_policy
-
-auto_wrap_min_num_params = 1e6
-auto_wrap_policy = partial(
-    size_based_auto_wrap_policy, min_num_params=auto_wrap_min_num_params)
-model = FSDPv2(
-    model, mesh=mesh, auto_wrap_policy=auto_wrap_policy)
-```
 
 ## Sharding output
 
