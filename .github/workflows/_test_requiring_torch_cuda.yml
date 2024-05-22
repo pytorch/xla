@@ -61,16 +61,6 @@ jobs:
         shell: bash
         run: |
           ls -al /tmp/wheels/
-      - name: Fetch torch_xla (without CUDA enabled) and torchvision wheel.
-        uses: actions/download-artifact@v4
-        with:
-          name: torch-xla-wheels
-          path: /tmp/wheels/
-          pattern: (torch_xla-*.whl|torchvision*.whl)
-      - name: Check torch-xla wheel. TODO(xw32) delete
-        shell: bash
-        run: |
-          ls -al /tmp/wheels/
       - name: Fetch CUDA plugin
         uses: actions/download-artifact@v4
         with:
