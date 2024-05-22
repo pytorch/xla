@@ -269,82 +269,17 @@ def _gmm(
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
     payload: str,
-    preferred_element_type: torch.dtype = torch.float32,
-    tiling: Optional[Union[tuple[int, int, int], LutFn]] = (128, 128, 128),
-    group_offset: Optional[torch.Tensor] = None,
-    existing_out: Optional[torch.Tensor] = None,
-    transpose_rhs: bool = False,
-    interpret: bool = False,
 ) -> torch.Tensor:
-  """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
-
-  Args:
-    lhs: A 2d, torch.Tensor with shape [m, k].
-    rhs: A 3d, torch.Tensor with shape [num_groups, k, n].
-    group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
-    payload: pallas payload extracted from the pallas code on JAX.
-    preferred_element_type: torch.dtype, the element type for the output matrix.
-    tiling: 3-tuple of ints. The m, k and n-dimension tile sizes.
-    group_offset: The group in group sizes to start computing from. This is
-      particularly useful for when rhs num_groups is sharded.
-    existing_out: Existing output to write to.
-    transpose_rhs: True if the rhs needs to be transposed.
-    interpret: Whether or not to run the kernel in interpret mode, helpful for
-      testing and debugging.
-
-  Returns:
-    A 2d, torch.Tensor with shape [m, n].
-  """
-  # Import JAX within the function such that we don't need to call the jax_import_guard()
-  # in the global scope which could cause problems for xmp.spawn.
-  jax_import_guard()
-  import jax
   import jax.numpy as jnp
 
-  if existing_out is not None:
-    assert isinstance(existing_out, jax.Array)
-    expected_dtype = existing_out.dtype
-    if expected_dtype != preferred_element_type:
-      raise ValueError(
-          "Existing output dtype must match preferred_element_type.")
-  if group_offset is None:
-    group_offset = jnp.array([0], dtype=jnp.int32)
-  else:
-    group_offset = jnp.ndarray(group_offset.numpy())
-    if group_offset.shape:
-      raise ValueError(
-          f"group_offset must be a ()-shaped array. Got: {group_offset.shape}.")
-    group_offset = group_offset[None]
-  num_current_groups = rhs.shape[0]
-  num_total_groups = group_sizes.shape[0]
-  lhs, group_sizes, input_dtype = _validate_args(
-      lhs=lhs, rhs=rhs, group_sizes=group_sizes)
-
-  # Gather shape information.
-  m, k, n = (lhs.shape[0], lhs.shape[1], rhs.shape[2])
-  if transpose_rhs:
-    n = rhs.shape[1]
-
-  # If tiling is callable, look up the problem dimensions in the LUT. If no tuned
-  # tile dimensions are available throw an error.
-  if callable(tiling):
-    tiling = tiling(m, k, n)
-
-  if tiling is None:
-    raise ValueError(f"No tuned tiling found for (m, k, n) = ({m}, {k}, {n})")
-
-  tm, tk, tn = tiling
-  tiles_k, k_rem = _calculate_irregular_num_tiles(k, tk)
-  tiles_n, n_rem = _calculate_irregular_num_tiles(n, tn)
-  del n_rem
-
+  m, n = lhs.shape[0], rhs.shape[2]
   # Create the metadata we need for computation.
   group_sizes = jnp.asarray(group_sizes.numpy())
   group_metadata, num_active_tiles = _make_group_metadata(  # pylint: disable=unbalanced-tuple-unpacking
       group_sizes=group_sizes,
-      m=m,
-      tm=tm,
-      start_group=group_offset[0],
+      m=lhs.shape[0],
+      tm=128,
+      start_group=0,
       num_nonzero_groups=rhs.shape[0],
       visit_empty_groups=False,
   )
@@ -353,35 +288,31 @@ def _gmm(
   group_metadata1 = torch.from_numpy(np.array(group_metadata[1])).to("xla")
   group_metadata2 = torch.from_numpy(np.array(group_metadata[2])).to("xla")
   num_active_tiles = torch.tensor(np.array(num_active_tiles)).to("xla")
-  group_offset_torch = torch.from_numpy(np.array(group_offset)).to("xla")
+  group_offset_torch = torch.tensor([0], dtype=torch.int32).to("xla")
   output_shape = torch.Size([m, n])
   out = torch_xla._XLAC._xla_tpu_custom_call([
       num_active_tiles, group_metadata0, group_metadata1, group_metadata2,
       group_offset_torch, lhs, rhs
-  ], payload, [output_shape], [preferred_element_type])
-
-  if existing_out is None and num_current_groups < num_total_groups:
-    out = jnp.asarray(out.cpu().float().numpy())
-    out = _zero_uninitialized_memory(
-        out,
-        start_group=group_offset[0],
-        num_nonzero_groups=rhs.shape[0],
-        group_metadata=group_metadata,
-    )
+  ], payload, [output_shape], [lhs.dtype])
   return out
 
 
 def gmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
-    group_sizes: torch.Tensor,
-    preferred_element_type: torch.dtype = torch.float32,
-    tiling: Optional[Union[tuple[int, int, int], LutFn]] = (128, 128, 128),
-    group_offset: Optional[torch.Tensor] = None,
-    existing_out: Optional[torch.Tensor] = None,
-    transpose_rhs: bool = False,
-    interpret: bool = False,
-):
+    group_sizes: torch.Tensor
+) -> torch.Tensor:
+  """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
+
+  Args:
+    lhs: A 2d, jnp.ndarray with shape [m, k].
+    rhs: A 3d, jnp.ndarray with shape [num_groups, k, n].
+    group_sizes: A 1d, jnp.ndarray with shape [num_groups] and jnp.int32 dtype.
+    preferred_element_type: jnp.dtype, the element type for the output matrix.
+
+  Returns:
+    A 2d, jnp.ndarray with shape [m, n].
+  """
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
@@ -390,6 +321,5 @@ def gmm(
   from torch_xla.experimental.custom_kernel import trace_pallas
 
   payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes)
-  out = _gmm(lhs, rhs, group_sizes, payload, preferred_element_type, tiling,
-             group_offset, existing_out, transpose_rhs, interpret)
+  out = _gmm(lhs, rhs, group_sizes, payload)
   return out
