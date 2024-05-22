@@ -178,14 +178,14 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
   # return result
 
   # print("result size: ", result.size())
-  print("result size: ", result)
+  # print("result size: ", result)
   # for i in range(len(result)): print(" result ", i, " size: ", result[i].size())
   # for i in range(len(result)): print(" result ", i, " : ", result[i])
 
   # unwrapper result without additional_inputs and bn_additional_inputs
   # res = [res[0], ] + list(additional_inputs) + res[1:]
   additional_inputs_len = len(additional_inputs) + 1
-  print("additional_inputs_len: ", additional_inputs_len)
+  # print("additional_inputs_len: ", additional_inputs_len)
   final_res = [result[0], ] + result[additional_inputs_len:]
 
   return final_res
