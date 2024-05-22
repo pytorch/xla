@@ -146,6 +146,7 @@ def extract_avals(exported):
   def _build_symbolic_shapes(range_constraints):
     """Convert torch SymInt to JAX symbolic_shape and stores in a map using the
     string name of the torch symbolic int.
+ 
     TODO: There is probably a better way of storing a hash for a symbolic int.
     This value needs to be looked up again in `_to_aval` to figure out which
     JAX symbolic to map to for a given torch tensor.
@@ -172,27 +173,28 @@ def extract_avals(exported):
       
       return tuple(sympy.pretty(c, use_unicode=False) for c in constraints)
 
-    def _build_symbolic_shape(scope, symbol_name, constraint):
-      """Returns a JAX symbolic shape for a given symbol_name and constraint
+    def _build_symbolic_shape(scope, sym, constraint):
+      """Returns a JAX symbolic shape for a given symbol and constraint
 
-      TODO: JAX has a requirement that you can specify only one of `scope` or
-      `constraints`. It is unclear if the combination is possible in PyTorch,
-      I.e. perhaps this can be triggered by making a symbol which has a max bound
-      of the size of another dimension argument.
+      There are two possible sympy `sym` inputs:
+        1. Symbol - (s0) These can have custom constraints.
+        2. Expr - (s0*2) These apply the expr to s0's constraints, cannot override.
       """
+      symbol_name = str(sym)
       constraints = _build_symbolic_constraints(symbol_name, constraint)
-      if len(constraints) > 0:
+      if sym.is_symbol:
         symbolic_shape = jax.experimental.export.symbolic_shape(symbol_name, constraints=constraints)
       else:
         symbolic_shape = jax.experimental.export.symbolic_shape(symbol_name, scope=scope)
       assert len(symbolic_shape) == 1
       return symbolic_shape[0]
 
-    scope = jax.experimental.export.SymbolicScope(())
+    scope = jax.experimental.export.SymbolicScope()
     symbolic_shapes = {}
     for sym, constraint in range_constraints.items():
+      symbolic_shape = _build_symbolic_shape(scope, sym, constraint)
+      scope = symbolic_shape.scope
       symbol_name = str(sym)
-      symbolic_shape = _build_symbolic_shape(scope, symbol_name, constraint)
       symbolic_shapes[symbol_name] = symbolic_shape
     return symbolic_shapes
 
