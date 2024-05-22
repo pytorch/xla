@@ -2754,7 +2754,6 @@ class TestCoreAtenOps(unittest.TestCase):
         torch.zeros(channel),
         torch.zeros(channel),
         torch.ones(channel),
-        True,
         0.2,
         2e-5,
     )
