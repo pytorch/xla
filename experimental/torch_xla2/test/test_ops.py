@@ -13,7 +13,6 @@ skiplist = {
     "__getitem__",
     "__rmatmul__",
     "__rpow__",
-    "_native_batch_norm_legit",
     "_segment_reduce",
     "_upsample_bilinear2d_aa",
     "argsort",
