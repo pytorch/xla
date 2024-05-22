@@ -6,6 +6,7 @@ import torch
 import torch_xla
 import numpy as np
 
+
 def _calculate_num_tiles(x: int, tx: int) -> int:
   tiles, rem = divmod(x, tx)
   if rem:
@@ -227,11 +228,8 @@ def _gmm(
   return out
 
 
-def gmm(
-    lhs: torch.Tensor,
-    rhs: torch.Tensor,
-    group_sizes: torch.Tensor
-) -> torch.Tensor:
+def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
+        group_sizes: torch.Tensor) -> torch.Tensor:
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
   Args:

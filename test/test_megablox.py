@@ -111,7 +111,8 @@ class MegabloxTest(unittest.TestCase):
 
       lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)  # This is a cpu tensor!!!!!!!
+      group_sizes = self._group_sizes_strategy(
+          m=m, num_groups=num_groups)  # This is a cpu tensor!!!!!!!
       out = gmm(lhs, rhs, group_sizes)
 
       ref_out = self._reference_gmm(lhs.cpu().float().numpy(),
