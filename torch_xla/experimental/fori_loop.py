@@ -79,7 +79,8 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
 def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
 
-  print("additional_inputs: ", additional_inputs)
+  # print("additional_inputs: ", additional_inputs)
+  # for i in range(len(additional_inputs)): print("additional_inputs [", i, "][0] : ", additional_inputs[i][0])
   def new_body_fn(*carried_inputs):
     res = list(body_fn(*carried_inputs))
 
@@ -174,4 +175,17 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
                                                  (total_inputs), computation)
 
-  return result
+  # return result
+
+  # print("result size: ", result.size())
+  print("result size: ", result)
+  # for i in range(len(result)): print(" result ", i, " size: ", result[i].size())
+  # for i in range(len(result)): print(" result ", i, " : ", result[i])
+
+  # unwrapper result without additional_inputs and bn_additional_inputs
+  # res = [res[0], ] + list(additional_inputs) + res[1:]
+  additional_inputs_len = len(additional_inputs) + 1
+  print("additional_inputs_len: ", additional_inputs_len)
+  final_res = [result[0], ] + result[additional_inputs_len:]
+
+  return final_res
