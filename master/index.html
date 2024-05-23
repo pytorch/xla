@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git8ae4c76 )
+                  master (2.4.0+git7350b70 )
                 </div>
               
             
@@ -3824,7 +3824,7 @@ a default device mesh shape of <code class="docutils literal notranslate"><span 
 </div>
 <div class="section" id="fully-sharded-data-parallel-via-spmd">
 <h1>Fully Sharded Data Parallel via SPMD<a class="headerlink" href="#fully-sharded-data-parallel-via-spmd" title="Permalink to this heading">¶</a></h1>
-<p>Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that re-epxresses the famous FSDP algorithm in SPMD. <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/spmd_fully_sharded_data_parallel.py">This</a> is
+<p>Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that re-expresses the famous FSDP algorithm in SPMD. <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/spmd_fully_sharded_data_parallel.py">This</a> is
 an experimental feature that aiming to offer a familiar interface for users to enjoy all the benefits that SPMD brings into
 the table. The design doc is <a class="reference external" href="https://github.com/pytorch/xla/issues/6379">here</a>.</p>
 <p>Please review the <a class="reference external" href="./spmd.md">SPMD user guide</a> before proceeding.</p>
@@ -3853,7 +3853,7 @@ the table. The design doc is <a class="reference external" href="https://github.
 <span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters. Here is an example to autowrao each <code class="docutils literal notranslate"><span class="pre">DecoderLayer</span></code>.</p>
+<p>It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters. Here is an example to autowrap each <code class="docutils literal notranslate"><span class="pre">DecoderLayer</span></code>.</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp.wrap</span> <span class="kn">import</span> <span class="n">transformer_auto_wrap_policy</span>
 
 <span class="c1"># Apply FSDP sharding on each DecoderLayer layer.</span>
