@@ -528,12 +528,11 @@ def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
   group_metadata2 = torch.from_numpy(np.array(group_metadata[2])).to("xla")
   num_active_tiles = torch.tensor(np.array(num_active_tiles)).to("xla")
   group_offset_torch = torch.tensor([0], dtype=torch.int32).to("xla")
-  output_shape = torch.Size([m, n])
-  out = torch_xla._XLAC._xla_tpu_custom_call([
+
+  return torch_xla._XLAC._xla_tpu_custom_call([
       num_active_tiles, group_metadata0, group_metadata1, group_metadata2,
       group_offset_torch, lhs, rhs
-  ], payload, [output_shape], [lhs.dtype])
-  return out
+  ], payload, [torch.Size([m, n])], [lhs.dtype])
 
 
 def non_xla_attetion(q, k, v, attention_type):
