@@ -26,7 +26,8 @@ class TrainDecoderOnlyFSDPv2(TrainDecoderOnlyBase):
     mesh_shape = (num_devices, 1)
     device_ids = np.array(range(num_devices))
     # To be noted, the mesh must have an axis named 'fsdp', which the weights and activations will be sharded on.
-    mesh = xs.Mesh(device_ids, mesh_shape, ('fsdp', 'model'))
+    self.mesh = xs.Mesh(device_ids, mesh_shape, ('fsdp', 'model'))
+    xs.set_global_mesh(self.mesh)
 
     # Shard the input(data parallel).
     # Scale the batch size with num_devices since there will be only one
@@ -40,7 +41,7 @@ class TrainDecoderOnlyFSDPv2(TrainDecoderOnlyBase):
         train_loader,
         self.device,
         # Shard the input's batch dimension along the `fsdp` axis, no sharding along other dimensions
-        input_sharding=xs.ShardingSpec(mesh, ('fsdp', None)))
+        input_sharding=xs.ShardingSpec(self.mesh, ('fsdp', None)))
 
     # Apply FSDP sharding on each DecoderLayer layer.
     auto_wrap_policy = functools.partial(
@@ -49,8 +50,9 @@ class TrainDecoderOnlyFSDPv2(TrainDecoderOnlyBase):
             decoder_only_model.DecoderLayer
         },
     )
+    # FSDPv2 will use the global mesh set above
     self.model = FSDPv2(
-        self.model, mesh=mesh, auto_wrap_policy=auto_wrap_policy)
+        self.model, auto_wrap_policy=auto_wrap_policy)
     self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0001)
 
 

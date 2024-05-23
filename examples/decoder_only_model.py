@@ -119,7 +119,7 @@ class GroupQueryAttention(nn.Module):
       attn_output = torch.einsum('bnsk,bnkh->bnsh', attn_weights, value_states)
     else:
       assert self.flash_attention_impl != None
-      # [B, n_head, S, head_dim], [B, n_head, S, head_dim], [B, n_head, S, head_dim] 
+      # [B, n_head, S, head_dim], [B, n_head, S, head_dim], [B, n_head, S, head_dim]
       # -> [B, n_head, S, head_dim]
       attn_output = self.flash_attention_impl(query_states, key_states,
                                               value_states)
