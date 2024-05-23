@@ -1,6 +1,6 @@
 # Fully Sharded Data Parallel via SPMD
 
-Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that re-epxresses the famous FSDP algorithm in SPMD. [This](https://github.com/pytorch/xla/blob/master/torch_xla/experimental/spmd_fully_sharded_data_parallel.py) is
+Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that re-expresses the famous FSDP algorithm in SPMD. [This](https://github.com/pytorch/xla/blob/master/torch_xla/experimental/spmd_fully_sharded_data_parallel.py) is
 an experimental feature that aiming to offer a familiar interface for users to enjoy all the benefits that SPMD brings into
 the table. The design doc is [here](https://github.com/pytorch/xla/issues/6379).
 
@@ -31,7 +31,7 @@ loss = output.sum()
 loss.backward()
 optim.step()
 ```
-It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters. Here is an example to autowrao each `DecoderLayer`.
+It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters. Here is an example to autowrap each `DecoderLayer`.
 ```python3
 from torch_xla.distributed.fsdp.wrap import transformer_auto_wrap_policy
 
