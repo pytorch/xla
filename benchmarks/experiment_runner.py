@@ -104,10 +104,6 @@ class ExperimentRunner:
         benchmark_experiment = self.experiment_loader.load_experiment(
             experiment_cfg)
 
-        if benchmark_experiment.torch_xla2:
-          import jax
-          self.jax = jax
-
         benchmark_model = self.model_loader.load_model(
             model_cfg, benchmark_experiment, dummy=True)
 
@@ -426,7 +422,8 @@ class ExperimentRunner:
     if benchmark_experiment.xla:
       if benchmark_experiment.torch_xla2:
         assert tensors_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
-        self.jax.block_until_ready(tensors_to_check)
+        import jax
+        jax.block_until_ready(tensors_to_check)
       else:
         xm.mark_step()
 
