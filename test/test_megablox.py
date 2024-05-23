@@ -8,7 +8,7 @@ from typing import Optional, Union, Callable
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental.gmm import gmm
+from torch_xla.experimental.custom_kernel import gmm
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
