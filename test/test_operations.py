@@ -2005,6 +2005,22 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.assertEqual(r, Xr.cpu())
 
+  def test_stack_different_types(self):
+
+    def foo(t0, t1):
+      return torch.stack([t0, t1])
+
+    t0 = torch.rand(10, 10, dtype=torch.bfloat16)
+    t1 = torch.rand(10, 10)
+
+    Xt0 = t0.to(xm.xla_device())
+    Xt1 = t1.to(xm.xla_device())
+
+    r = foo(t0, t1)
+    Xr = foo(Xt0, Xt1)
+
+    self.assertEqual(r, Xr.cpu())
+
 
 class MNISTComparator(nn.Module):
 

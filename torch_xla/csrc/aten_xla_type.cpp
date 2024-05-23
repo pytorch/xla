@@ -3160,8 +3160,12 @@ at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::stack(at::TensorList tensors, int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  at::ScalarType result_type = at::native::result_type(tensors);
+  std::vector<at::Tensor> c_tensors(tensors.size());
+  std::transform(tensors.begin(), tensors.end(), c_tensors.begin(),
+                 [=](const at::Tensor& t) { return t.to(result_type); });
   return bridge::AtenFromXlaTensor(
-      tensor_methods::stack(bridge::GetXlaTensors(tensors), dim));
+      tensor_methods::stack(bridge::GetXlaTensors(c_tensors), dim));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
