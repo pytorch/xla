@@ -513,6 +513,9 @@ def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
 
   m, n = lhs.shape[0], rhs.shape[2]
   # Create the metadata we need for computation.
+  # TODO (alanwaketan): The following assuumes groups_sizes is a cpu tensor.
+  # That means we need to materialize this input in order to use this gmm
+  # kernel, and that will introduce graph breaks in the computation.
   group_sizes = jnp.asarray(group_sizes.numpy())
   group_metadata, num_active_tiles = make_group_metadata(
       group_sizes=group_sizes,
