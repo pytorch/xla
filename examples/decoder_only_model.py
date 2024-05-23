@@ -15,6 +15,7 @@ class DecoderOnlyConfig:
   num_key_value_heads: int = 4
   intermediate_size = 64 * 1024
   vocab_size = 3200
+  use_flash_attention = False
 
 
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
@@ -75,6 +76,7 @@ class GroupQueryAttention(nn.Module):
         self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
     self.o_proj = nn.Linear(
         self.num_heads * self.head_dim, self.hidden_size, bias=False)
+    self.flash_attention_impl = None
 
   def forward(
       self,
@@ -104,16 +106,23 @@ class GroupQueryAttention(nn.Module):
     # [B, n_kv_head, S, head_dim] -> [B, n_head, S, head_dim]
     value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-    # [B, n_head, S, head_dim] @ T([B, n_head, S, head_dim]) -> [B, n_head, S, S]
-    attn_weights = torch.einsum('bnsh,bnkh->bnsk', query_states,
-                                key_states) / math.sqrt(self.head_dim)
+    if not self.config.use_flash_attention:
+      # [B, n_head, S, head_dim] @ T([B, n_head, S, head_dim]) -> [B, n_head, S, S]
+      attn_weights = torch.einsum('bnsh,bnkh->bnsk', query_states,
+                                  key_states) / math.sqrt(self.head_dim)
 
-    # upcast attention to fp32
-    attn_weights = nn.functional.softmax(
-        attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+      # upcast attention to fp32
+      attn_weights = nn.functional.softmax(
+          attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
 
-    # [B, n_head, S, S] @ T([B, n_head, S, head_dim]) -> [B, n_head, S, head_dim]
-    attn_output = torch.einsum('bnsk,bnkh->bnsh', attn_weights, value_states)
+      # [B, n_head, S, S] @ T([B, n_head, S, head_dim]) -> [B, n_head, S, head_dim]
+      attn_output = torch.einsum('bnsk,bnkh->bnsh', attn_weights, value_states)
+    else:
+      assert self.flash_attention_impl != None
+      # [B, n_head, S, head_dim], [B, n_head, S, head_dim], [B, n_head, S, head_dim]
+      # -> [B, n_head, S, head_dim]
+      attn_output = self.flash_attention_impl(query_states, key_states,
+                                              value_states)
 
     # [B, n_head, S, head_dim] -> [B * S * n_head * head_dim]
     attn_output = attn_output.transpose(1, 2).contiguous()
