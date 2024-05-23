@@ -2592,7 +2592,7 @@ class TestDLPack(parameterized.TestCase):
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_pytorch_cuda_to_xla(self):
+  def test_dlpack_pytorch_cuda_to_xla_legacy(self):
     t1_cuda = torch.arange(5).cuda()
     dlt1 = torch.utils.dlpack.to_dlpack(t1_cuda)
     xla_t1 = xdlpack.from_dlpack(dlt1)
@@ -2613,6 +2613,38 @@ class TestDLPack(parameterized.TestCase):
     t3_cuda = torch.tensor(5, device=cuda1)
     dlt3 = torch.utils.dlpack.to_dlpack(t3_cuda)
     xla_t3 = xdlpack.from_dlpack(dlt3)
+    self.assertEqual(xla_t3.device.type, 'xla')
+    self.assertEqual(
+        xla_t3.device.index,
+        t3_cuda.device.index,
+        msg='both value should 1. xla_t3.device should be xla:1.')
+    t3_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_pytorch_cuda_to_xla_protocol_conversion(self):
+    # Unlike the test_dlpack_pytorch_cuda_to_xla_legacy,
+    # torch_cuda_tensor has attribute __dlpack__ and __dlpack_device__.
+    # From cuda tensors to xla tensors, the synchronization is handdled implicitly.
+    t1_cuda = torch.arange(5).cuda()
+    xla_t1 = xdlpack.from_dlpack(t1_cuda)
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
+    t1_cuda[0] = t1_cuda[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
+    print('xw32 test passed')
+
+    t2_cuda = torch.tensor(5).cuda()
+    xla_t2 = xdlpack.from_dlpack(t2_cuda)
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
+    t2_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
+
+    cuda1 = torch.device('cuda:1')
+    t3_cuda = torch.tensor(5, device=cuda1)
+    xla_t3 = xdlpack.from_dlpack(t3_cuda)
     self.assertEqual(xla_t3.device.type, 'xla')
     self.assertEqual(
         xla_t3.device.index,

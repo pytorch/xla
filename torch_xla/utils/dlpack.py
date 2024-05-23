@@ -1,4 +1,5 @@
 from typing import Any
+import enum
 import torch_xla
 
 
@@ -19,8 +20,10 @@ class DLDeviceType(enum.IntEnum):
     kDLOneAPI = 14,
 
 def from_dlpack(ext_tensor: Any):
+  print('xw32 from_dlpack line23 is called')
   if hasattr(ext_tensor, '__dlpack_device__') and hasattr(ext_tensor, '__dlpack__'):
     device_type, device_id = ext_tensor.__dlpack_device__()
+    print('xw32 cuda tensor have the __dlpack__ attr, device_type=', device_type)
     if device_type == DLDeviceType.kDLGPU:
       stream = torch_xla._XLAC._get_stream_for_cuda_device(device_id)
       print('xw32 got cuda stream:', stream)
@@ -28,6 +31,7 @@ def from_dlpack(ext_tensor: Any):
     else:
       dlpack = ext_tensor.__dlpack__()
   else:
+    print('xw32 cuda tensor doesnt have the __dlpack__ attr')
     dlpack = ext_tensor
 
   return torch_xla._XLAC._from_dlpack(dlpack)
