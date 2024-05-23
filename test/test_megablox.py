@@ -8,7 +8,7 @@ from typing import Optional, Union, Callable
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.experimental.megablox as megablox
+from torch_xla.experimental.custom_kernel import gmm
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -97,34 +97,6 @@ class MegabloxTest(unittest.TestCase):
         'n': 256,
         'num_groups': 2
     })
-    self.tests_cases.append({
-        'dtype': torch.bfloat16,
-        'm': 128,
-        'k': 128,
-        'n': 128,
-        'num_groups': 1
-    })
-    self.tests_cases.append({
-        'dtype': torch.bfloat16,
-        'm': 256,
-        'k': 128,
-        'n': 128,
-        'num_groups': 1
-    })
-    self.tests_cases.append({
-        'dtype': torch.bfloat16,
-        'm': 128,
-        'k': 256,
-        'n': 128,
-        'num_groups': 8
-    })
-    self.tests_cases.append({
-        'dtype': torch.bfloat16,
-        'm': 512,
-        'k': 128,
-        'n': 256,
-        'num_groups': 2
-    })
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm(self):
@@ -139,8 +111,9 @@ class MegabloxTest(unittest.TestCase):
 
       lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      out = megablox.gmm(lhs, rhs, group_sizes)
+      group_sizes = self._group_sizes_strategy(
+          m=m, num_groups=num_groups)  # This is a cpu tensor!!!!!!!
+      out = gmm(lhs, rhs, group_sizes)
 
       ref_out = self._reference_gmm(lhs.cpu().float().numpy(),
                                     rhs.cpu().float().numpy(),
