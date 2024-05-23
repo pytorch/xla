@@ -51,25 +51,17 @@ jobs:
         shell: bash
         run: |
           echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
-      - name: Fetch torch wheel with CUDA enabled
+      - name: Fetch torch/torch_xla/torchvision wheels with CUDA enabled
         uses: actions/download-artifact@v4
         with:
           name: torch-with-cuda-xla-with-cuda-wheels
           path: /tmp/wheels/
           pattern: torch-*.whl 
-      - name: Check torch cuda wheel. TODO(xw32) delete
-        shell: bash
-        run: |
-          ls -al /tmp/wheels/
       - name: Fetch CUDA plugin
         uses: actions/download-artifact@v4
         with:
           name: cuda-plugin
           path: /tmp/wheels/
-      - name: Check torch-xla cuda plugin wheel. TODO(xw32) delete
-        shell: bash
-        run: |
-          ls -al /tmp/wheels/
       - name: Setup CUDA environment
         shell: bash
         run: |
@@ -92,7 +84,6 @@ jobs:
           python -c "import torch, torch_xla, torchvision"
           echo "Import check done."
           echo "Check if CUDA is available for PyTorch..."
-          python -c "import torch; print('torch.cuda.is_available()=', torch.cuda.is_available())"
           python -c "import torch; assert torch.cuda.is_available()"
           echo "CUDA is available for PyTorch."
       - name: Record PyTorch commit

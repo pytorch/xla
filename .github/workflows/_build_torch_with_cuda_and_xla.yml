@@ -55,7 +55,6 @@ jobs:
         run: |
           cd pytorch/xla/infra/ansible
           ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=cuda cuda_compute_capabilities=5.2,7.5 src_root=${GITHUB_WORKSPACE} build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci build_pytorch_with_cuda=1" --skip-tags=fetch_srcs,install_deps
-          python -c "import torch; print('torch.cuda.is_available()=', torch.cuda.is_available())"
           python -c "import torch; assert torch.cuda.is_available()"
       - name: Upload wheel
         uses: actions/upload-artifact@v4

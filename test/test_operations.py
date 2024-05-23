@@ -2543,8 +2543,7 @@ class TestGeneric(test_utils.XlaTestCase):
     xla_tensor = cuda_tensor.to(xm.xla_device())
     # Move the XLA tensor back to CPU, and check that it is the same as
     # the original CPU tensor.
-    #self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
-    self.assertFalse(torch.equal(cpu_tensor, xla_tensor.cpu())) # TODO(xiowei): verify that CI fails. If so, remove this line and uncomment the line above. 
+    self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
