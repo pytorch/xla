@@ -28,6 +28,11 @@ on:
         type: boolean
         default: false
         description: Whether to install CUDA plugin package
+      run-tests-requiring-torch-cuda:
+        required: false
+        type: boolean
+        default: false
+        description: Whether to run tests that requires torch with CUDA enabled
 
     secrets:
       gcloud-service-key:
@@ -87,6 +92,14 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
+      # The step below will overwrite the torch wheel
+      # if run-tests-requiring-torch-cuda is true.
+      - name: Fetch torch CUDA wheel
+        uses: actions/download-artifact@v4
+        with:
+          name: torch-with-cuda-xla-with-cuda-wheels
+          path: /tmp/wheels/
+        if: ${{ inputs.run-tests-requiring-torch-cuda }}
       - name: Fetch CPP test binaries
         uses: actions/download-artifact@v4
         with:
@@ -159,6 +172,14 @@ jobs:
       - name: Test
         shell: bash
         run: pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
+        if: false == ${{ inputs.run-tests-requiring-torch-cuda }}
+      - name: Test that requires torch with CUDA enabled
+        shell: bash
+        run: |
+          set -xue
+          PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
+          PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
+        if: ${{ inputs.run-tests-requiring-torch-cuda }}
       - name: Upload coverage results
         if: ${{ inputs.collect-coverage }}
         shell: bash

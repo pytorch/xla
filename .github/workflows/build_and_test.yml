@@ -71,13 +71,15 @@ jobs:
 
   test-cuda-with-pytorch-cuda-enabled:
     name: "GPU tests with PyTorch CUDA enabled"
-    uses: ./.github/workflows/_test_requiring_torch_cuda.yml
-    needs: [build-torch-with-cuda-xla-with-cuda, build-cuda-plugin]
+    uses: ./.github/workflows/_test.yml
+    needs: [build-torch-with-cuda-xla-with-cuda, build-torch-xla, build-cuda-plugin]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
       runner: linux.8xlarge.nvidia.gpu
       timeout-minutes: 300
       collect-coverage: false
+      install-cuda-plugin: true
+      run-tests-requiring-torch-cuda: true
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
