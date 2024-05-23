@@ -19,7 +19,7 @@ def _gmm(
   m, n = lhs.shape[0], rhs.shape[2]
   # Create the metadata we need for computation.
   group_sizes = jnp.asarray(group_sizes.numpy())
-  group_metadata, num_active_tiles = make_group_metadata(  # pylint: disable=unbalanced-tuple-unpacking
+  group_metadata, num_active_tiles = make_group_metadata(
       group_sizes=group_sizes,
       m=lhs.shape[0],
       tm=128,
