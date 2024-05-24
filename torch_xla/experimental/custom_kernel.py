@@ -496,11 +496,17 @@ def _calculate_num_tiles(x: int, tx: int) -> int:
   return tiles
 
 
-def _histogram(input: torch.Tensor, bins: int, min: int, max: int) -> torch.Tensor:
+def _histogram(input: torch.Tensor, min: int, max: int) -> torch.Tensor:
+  """
+  Compute the histogram of a int32 tensor. The bin edges are defined by the min and max values, with step = 1.
+  """
+  assert input.dtype == torch.int32, "input must be of torch.int32 dtype."
+  assert min < max, "min must be less than max."
+
   def searchsorted(sorted_sequence: torch.Tensor, values_to_search: torch.Tensor) -> torch.Tensor:
     return (sorted_sequence.unsqueeze(1) == values_to_search).sum(dim=1)
 
-  bin_edges = torch.linspace(min, max, bins, dtype=input.dtype).to(input.device)
+  bin_edges = torch.linspace(min, max, max - min + 1, dtype=input.dtype).to(input.device)
   return searchsorted(bin_edges, input), bin_edges
 
 

@@ -187,23 +187,36 @@ class MegabloxTest(unittest.TestCase):
     test_grids = [
         {
             'input': [1, 4, 4, 1, 2, 3],
-            'bins': 4,
             'min': 1,
             'max': 4,
+        },
+        {
+            'input': [1, 4, 4, 1, 2, 3],
+            'min': 2,
+            'max': 3,
+        },
+        {
+            'input': [1, 4, 4, 1, 2, 3],
+            'min': 0,
+            'max': 5,
+        },
+        {
+            'input': [],
+            'min': 0,
+            'max': 5,
         },
     ]
 
     for test_grid in test_grids:
       torch_chart = torch.histc(
           torch.tensor(test_grid['input'], dtype=torch.float),
-          bins=test_grid['bins'],
+          bins=test_grid['max'] - test_grid['min'] + 1,
           min=test_grid['min'],
           max=test_grid['max'],
       )
 
       chart, _ = _histogram(
           torch.tensor(test_grid['input'], dtype=torch.int32).to("xla"),
-          bins=test_grid['bins'],
           min=test_grid['min'],
           max=test_grid['max'],
       )
