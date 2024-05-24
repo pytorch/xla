@@ -31,7 +31,7 @@ jobs:
           git fetch target
           echo "HEAD_COMMIT=$(git rev-parse target/main)" >> $GITHUB_ENV
 
-      - name: Update date in setup.py
+      - name: Update OpenXLA commit in WORKSPACE
         run: |
           sed -i "s/xla_hash =.*/xla_hash = '${{ env.GITHUB_ENV }}'/" ${FILE_PATH}
           git add ${FILE_PATH}
