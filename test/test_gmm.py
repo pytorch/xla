@@ -221,11 +221,11 @@ class MegabloxTest(unittest.TestCase):
           max=test_grid['max'],
       )
 
-    self.assertTrue(
-        torch.all(torch_chart == chart.cpu()))
+    self.assertTrue(torch.all(torch_chart == chart.cpu()))
 
   def test_histogram_raise(self):
-    with self.assertRaisesRegex(AssertionError, "input must be of torch.int32 dtype."):
+    with self.assertRaisesRegex(AssertionError,
+                                "input must be of torch.int32 dtype."):
       _histogram(
           torch.tensor([1, 4, 4, 1, 2, 3], dtype=torch.float),
           min=4,

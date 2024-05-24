@@ -503,10 +503,12 @@ def _histogram(input: torch.Tensor, min: int, max: int) -> torch.Tensor:
   assert input.dtype == torch.int32, "input must be of torch.int32 dtype."
   assert min < max, "min must be less than max."
 
-  def searchsorted(sorted_sequence: torch.Tensor, values_to_search: torch.Tensor) -> torch.Tensor:
+  def searchsorted(sorted_sequence: torch.Tensor,
+                   values_to_search: torch.Tensor) -> torch.Tensor:
     return (sorted_sequence.unsqueeze(1) == values_to_search).sum(dim=1)
 
-  bin_edges = torch.linspace(min, max, max - min + 1, dtype=input.dtype).to(input.device)
+  bin_edges = torch.linspace(
+      min, max, max - min + 1, dtype=input.dtype).to(input.device)
   return searchsorted(bin_edges, input), bin_edges
 
 
