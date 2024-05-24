@@ -2734,6 +2734,40 @@ class TestNMS(test_utils.XlaTestCase):
     self.runAtenTest((boxes, scores), fn)
 
 
+class TestHelperFunction(test_utils.XlaTestCase):
+
+  def test_repeat_truncated(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 20
+    input = torch.randn(10).to(device)
+    repeats = torch.tensor([0, 1, 2, 0, 4, 0, 6, 7, 8, 9]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    expected = torch.repeat_interleave(input, repeats)[:total_repeat_length]
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
+  def test_repeat_extended(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 100
+    input = torch.randn(10).to(device)
+    repeats = torch.tensor([0, 5, 2, 0, 4, 9, 6, 7, 8, 0]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    base = torch.repeat_interleave(input, repeats)[:total_repeat_length]
+    # remaining space will be filled with last value in `input`.
+    expected = torch.cat(
+        (base,
+         torch.repeat_interleave(input[-1],
+                                 total_repeat_length - base.size()[0])))
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
+
 if __name__ == '__main__':
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)

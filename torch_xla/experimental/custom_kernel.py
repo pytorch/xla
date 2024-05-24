@@ -655,6 +655,11 @@ def _make_group_metadata(
   return group_offsets, group_ids, m_tile_ids, num_tiles
 
 
+# Repeat the `input` tensor `repeats` number of times. We expect `input` and
+# `repeats` both be 1d tensor with same shape. output shape will be [total_repeat_length].
+# If `total_repeat_length` is larger than the repeated tensor length we will use the last value
+# in the `input` to fill it up. If `total_repeat_length` is smaller than repeated tensor length
+# we will truncate the repeated tensor.
 def repeat_with_fixed_output_size(input: torch.Tensor, repeats: torch.Tensor,
                                   total_repeat_length: int):
   # currently only support 1d input and 1d repeats
