@@ -224,6 +224,21 @@ class MegabloxTest(unittest.TestCase):
     self.assertTrue(
         torch.all(torch_chart == chart.cpu()))
 
+  def test_histogram_raise(self):
+    with self.assertRaisesRegex(AssertionError, "input must be of torch.int32 dtype."):
+      _histogram(
+          torch.tensor([1, 4, 4, 1, 2, 3], dtype=torch.float),
+          min=4,
+          max=5,
+      )
+
+    with self.assertRaisesRegex(AssertionError, "min must be less than max."):
+      _histogram(
+          torch.tensor([1, 4, 4, 1, 2, 3], dtype=torch.int32),
+          min=4,
+          max=3,
+      )
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
