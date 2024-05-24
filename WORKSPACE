@@ -85,6 +85,7 @@ python_init_repositories(
         "3.11": "//:requirements_lock_3_11.txt",
     },
     local_wheel_workspaces = ["@torch//:WORKSPACE"],
+    default_python_version = "system",
 )
 
 load("@xla//third_party/py:python_init_toolchains.bzl", "python_init_toolchains")
