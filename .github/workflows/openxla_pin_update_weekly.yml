@@ -14,6 +14,9 @@ jobs:
       - name: Get current date
         run: echo "CURRENT_DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
 
+      - name: Create new branch
+        run: git checkout -b weekly-update-${{ env.CURRENT_DATE }}
+
       - name: Install sed
         run: sudo apt-get update && sudo apt-get install -y sed
 
@@ -31,8 +34,8 @@ jobs:
           sed -i "s/_date =.*/_date = '${{ env.CURRENT_DATE }}'/" ${FILE_PATH}
           sed -i "s/_jax_version =.*/_jax_version = f'${{ env.JAX_VERSION }}.dev${{ env.CURRENT_DATE }}'/" ${FILE_PATH}
           git add ${FILE_PATH}
-          git commit -m "Weekly update setup.py to (${{ env.CURRENT_DATE }})"
-          git push origin HEAD:weekly-update
+          # git commit -m "Weekly update setup.py to (${{ env.CURRENT_DATE }})"
+          # git push origin HEAD
         env:
           FILE_PATH: setup.py
 
@@ -47,7 +50,7 @@ jobs:
           sed -i "s/xla_hash =.*/xla_hash = '${{ env.GITHUB_ENV }}'/" ${FILE_PATH}
           git add ${FILE_PATH}
           git commit -m "Weekly update WORKSPACE with (${{ env.GITHUB_ENV }})"
-          git push origin HEAD:weekly-update
+          git push origin HEAD
         env:
           FILE_PATH: WORKSPACE
 
