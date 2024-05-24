@@ -278,10 +278,10 @@ torch::lazy::Value EnsureRank1(const torch::lazy::Value& index) {
 }
 
 bool HasZeroElementIndex(absl::Span<const XLATensorPtr> indices) {
-  return std::any_of(
-      indices.begin(), indices.end(), [](const XLATensorPtr& index) {
-        return xla::ShapeUtil::ElementsIn(*index->shape()) == 0;
-      });
+  return std::any_of(indices.begin(), indices.end(),
+                     [](const XLATensorPtr& index) {
+                       return xla::ShapeUtil::ElementsIn(*index->shape()) == 0;
+                     });
 }
 
 XLATensorPtr GetZeroElementTensor(const XLATensorPtr& base,
