@@ -6,7 +6,7 @@ from typing import Optional, Union, Callable
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata
+from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -182,6 +182,34 @@ class MegabloxTest(unittest.TestCase):
         self.assertTrue(
             torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i]))
       self.assertEqual(jax_num_tiles, torch_meta[-1].item())
+
+  def test_histogram(self):
+    test_grids = [
+        {
+            'input': [1, 4, 4, 1, 2, 3],
+            'bins': 4,
+            'min': 1,
+            'max': 4,
+        },
+    ]
+
+    for test_grid in test_grids:
+      torch_chart = torch.histc(
+          torch.tensor(test_grid['input'], dtype=torch.float),
+          bins=test_grid['bins'],
+          min=test_grid['min'],
+          max=test_grid['max'],
+      )
+
+      chart, _ = _histogram(
+          torch.tensor(test_grid['input'], dtype=torch.int32).to("xla"),
+          bins=test_grid['bins'],
+          min=test_grid['min'],
+          max=test_grid['max'],
+      )
+
+    self.assertTrue(
+        torch.all(torch_chart == chart.cpu()))
 
 
 if __name__ == '__main__':

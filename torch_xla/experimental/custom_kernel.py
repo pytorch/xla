@@ -496,6 +496,14 @@ def _calculate_num_tiles(x: int, tx: int) -> int:
   return tiles
 
 
+def _histogram(input: torch.Tensor, bins: int, min: int, max: int) -> torch.Tensor:
+  def searchsorted(sorted_sequence: torch.Tensor, values_to_search: torch.Tensor) -> torch.Tensor:
+    return (sorted_sequence.unsqueeze(1) == values_to_search).sum(dim=1)
+
+  bin_edges = torch.linspace(min, max, bins, dtype=input.dtype).to(input.device)
+  return searchsorted(bin_edges, input), bin_edges
+
+
 # This can only be ran in cpu now as repeat_interleave is not lowered to xla.
 def _make_group_metadata(
     *,
