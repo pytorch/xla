@@ -52,6 +52,12 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
   XLA_CHECK(input_type == output_type)
       << "input and output must have the same element type";
 
+  xla::PrimitiveType original_input_type = input_type;
+  if (xla::primitive_util::IsIntegralType(input_type)) {
+    input = xla::ConvertElementType(input, xla::F32);
+    input_type = xla::F32;
+  }
+
   xla::XlaOp scalar_one_op =
       xla::ConvertElementType(xla::ConstantR0(builder, 1), input_type);
   xla::XlaOp scalar_half_op =
@@ -204,6 +210,9 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
   absl::InlinedVector<int64_t, 4> perm = {2, 0, 1, 3};
   input = xla::Transpose(input, perm);
 
+  if (original_input_type != input_type) {
+    input = xla::ConvertElementType(input, original_input_type);
+  }
   return input;
 }
 
