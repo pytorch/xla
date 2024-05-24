@@ -126,13 +126,41 @@ class MegabloxTest(unittest.TestCase):
     from jax.experimental.pallas.ops.tpu.megablox.gmm import make_group_metadata as jax_make_group_metadata
 
     test_grids = [
-        {'group_sizes': [8, 8, 8, 8], 'm': 32, 'tm': 8},
-        {'group_sizes': [2, 14, 8, 8], 'm': 32, 'tm': 8},
-        {'group_sizes': [16, 0, 8, 8], 'm': 32, 'tm': 8},
-        {'group_sizes': [2, 0, 14, 16], 'm': 32, 'tm': 8},
-        {'group_sizes': [8, 12, 0, 12], 'm': 32, 'tm': 8},
-        {'group_sizes': [6, 12, 0, 14], 'm': 32, 'tm': 8},
-        {'group_sizes': [6, 12, 0, 14], 'm': 32, 'tm': 4},
+        {
+            'group_sizes': [8, 8, 8, 8],
+            'm': 32,
+            'tm': 8
+        },
+        {
+            'group_sizes': [2, 14, 8, 8],
+            'm': 32,
+            'tm': 8
+        },
+        {
+            'group_sizes': [16, 0, 8, 8],
+            'm': 32,
+            'tm': 8
+        },
+        {
+            'group_sizes': [2, 0, 14, 16],
+            'm': 32,
+            'tm': 8
+        },
+        {
+            'group_sizes': [8, 12, 0, 12],
+            'm': 32,
+            'tm': 8
+        },
+        {
+            'group_sizes': [6, 12, 0, 14],
+            'm': 32,
+            'tm': 8
+        },
+        {
+            'group_sizes': [6, 12, 0, 14],
+            'm': 32,
+            'tm': 4
+        },
     ]
 
     for test_grid in test_grids:
@@ -151,7 +179,8 @@ class MegabloxTest(unittest.TestCase):
       )
 
       for i in range(len(jax_meta)):
-        self.assertTrue(torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i]))
+        self.assertTrue(
+            torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i]))
       self.assertEqual(jax_num_tiles, torch_meta[-1].item())
 
 

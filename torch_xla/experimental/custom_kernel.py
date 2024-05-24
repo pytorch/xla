@@ -556,9 +556,7 @@ def _make_group_metadata(
   rounded_group_ends = ((group_ends + tm - 1) // tm * tm).to(torch.int32)
 
   # (2) Round the group_starts down to the nearest multiple of 'tm'.
-  group_starts = torch.cat(
-      [torch.zeros(1, dtype=torch.int32), group_ends[:-1]]
-  )
+  group_starts = torch.cat([torch.zeros(1, dtype=torch.int32), group_ends[:-1]])
   rounded_group_starts = group_starts // tm * tm
 
   # (3) Calculate the number of rows in each group.
@@ -605,7 +603,9 @@ def _make_group_metadata(
       torch.arange(num_groups, dtype=torch.int32),
       group_tiles,
   )
-  group_ids = torch.nn.functional.pad(group_ids, (0, tiles_m + num_groups - 1 - group_ids.shape[0]), value=num_groups - 1)
+  group_ids = torch.nn.functional.pad(
+      group_ids, (0, tiles_m + num_groups - 1 - group_ids.shape[0]),
+      value=num_groups - 1)
 
   # Assign an m-dimension tile id to each grid index.
   #
@@ -626,23 +626,20 @@ def _make_group_metadata(
   # group which is empty.
   #
   # TODO(tgale): Invert the 'partial_tile_mask' predicates to be more clear.
-  partial_tile_mask = torch.logical_or(
-      (group_offsets[:-1] % tm) == 0, group_sizes == 0
-  )
+  partial_tile_mask = torch.logical_or((group_offsets[:-1] % tm) == 0,
+                                       group_sizes == 0)
 
   # Explicitly enable tiles for zero sized groups, if specified. This covers
   # zero sized groups that start on a tile-aligned row and those that do not.
   if visit_empty_groups:
     partial_tile_mask = torch.where(group_sizes == 0, False, partial_tile_mask)
 
-  partial_tile_ids = torch.where(
-      partial_tile_mask, tiles_m, group_offsets[:-1] // tm
-  )
+  partial_tile_ids = torch.where(partial_tile_mask, tiles_m,
+                                 group_offsets[:-1] // tm)
 
   tile_visits = (
-      torch.histc(partial_tile_ids.float(), bins=tiles_m, min=0, max=tiles_m - 1)
-      + 1
-  )
+      torch.histc(
+          partial_tile_ids.float(), bins=tiles_m, min=0, max=tiles_m - 1) + 1)
 
   # Create the m-dimension tile ids for each grid index based on the visit
   # counts for each tile.
@@ -651,7 +648,9 @@ def _make_group_metadata(
       torch.arange(tiles_m, dtype=torch.int32),
       tile_visits.type(torch.int32),
   )
-  m_tile_ids = torch.nn.functional.pad(m_tile_ids, (0, tiles_m + num_groups - 1 - m_tile_ids.shape[0]), value=tiles_m - 1)
+  m_tile_ids = torch.nn.functional.pad(
+      m_tile_ids, (0, tiles_m + num_groups - 1 - m_tile_ids.shape[0]),
+      value=tiles_m - 1)
 
   num_tiles = group_tiles.sum(dtype=torch.int32)
   return group_offsets, group_ids, m_tile_ids, num_tiles
@@ -690,8 +689,10 @@ def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
   group_offset_torch = torch.tensor([0], dtype=torch.int32).to("xla")
 
   return torch_xla._XLAC._xla_tpu_custom_call([
-      num_tiles.to("xla"), group_offsets.to("xla"), group_ids.to("xla"), m_tile_ids.to("xla"),
-      group_offset_torch, lhs, rhs
+      num_tiles.to("xla"),
+      group_offsets.to("xla"),
+      group_ids.to("xla"),
+      m_tile_ids.to("xla"), group_offset_torch, lhs, rhs
   ], payload, [torch.Size([m, n])], [lhs.dtype])
 
 
