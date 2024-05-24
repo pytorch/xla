@@ -539,7 +539,7 @@ def _make_group_metadata(
   # group_offsets[num_groups] = m
   #
   # The row at which group 'i' starts is group_offsets[i].
-  group_ends = torch.cumsum(group_sizes, dim=0)
+  group_ends = torch.cumsum(group_sizes, dim=0, dtype=torch.int32)
   group_offsets = torch.cat([torch.zeros(1, dtype=torch.int32), group_ends])
 
   # Assign a group id to each grid index.
@@ -553,7 +553,7 @@ def _make_group_metadata(
   #
   # NOTE: This does not change group_offsets[num_groups], which is m
   # (because we enforce m is divisible by tm).
-  rounded_group_ends = ((group_ends + tm - 1) // tm * tm).type(torch.int32)
+  rounded_group_ends = ((group_ends + tm - 1) // tm * tm).to(torch.int32)
 
   # (2) Round the group_starts down to the nearest multiple of 'tm'.
   group_starts = torch.cat(
@@ -653,8 +653,8 @@ def _make_group_metadata(
   )
   m_tile_ids = torch.nn.functional.pad(m_tile_ids, (0, tiles_m + num_groups - 1 - m_tile_ids.shape[0]), value=tiles_m - 1)
 
-  num_tiles = group_tiles.sum()
-  return (group_offsets, group_ids, m_tile_ids), num_tiles
+  num_tiles = group_tiles.sum(dtype=torch.int32)
+  return group_offsets, group_ids, m_tile_ids, num_tiles
 
 
 def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
@@ -673,9 +673,7 @@ def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
-  import jax
-  import jax.numpy as jnp
-  from jax.experimental.pallas.ops.tpu.megablox.gmm import gmm, make_group_metadata
+  from jax.experimental.pallas.ops.tpu.megablox.gmm import gmm
 
   payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes)
 
@@ -684,24 +682,15 @@ def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
   # TODO (alanwaketan): The following assuumes groups_sizes is a cpu tensor.
   # That means we need to materialize this input in order to use this gmm
   # kernel, and that will introduce graph breaks in the computation.
-  group_sizes = jnp.asarray(group_sizes.numpy())
-  group_metadata, num_active_tiles = make_group_metadata(
+  group_offsets, group_ids, m_tile_ids, num_tiles = _make_group_metadata(
       group_sizes=group_sizes,
       m=lhs.shape[0],
-      tm=128,
-      start_group=0,
-      num_nonzero_groups=rhs.shape[0],
-      visit_empty_groups=False,
+      tm=128  # TODO (alanwaketan): Tune this later.
   )
-  group_metadata0 = torch.from_numpy(np.array(group_metadata[0])).to(
-      torch.int32).to("xla")
-  group_metadata1 = torch.from_numpy(np.array(group_metadata[1])).to("xla")
-  group_metadata2 = torch.from_numpy(np.array(group_metadata[2])).to("xla")
-  num_active_tiles = torch.tensor(np.array(num_active_tiles)).to("xla")
   group_offset_torch = torch.tensor([0], dtype=torch.int32).to("xla")
 
   return torch_xla._XLAC._xla_tpu_custom_call([
-      num_active_tiles, group_metadata0, group_metadata1, group_metadata2,
+      num_tiles.to("xla"), group_offsets.to("xla"), group_ids.to("xla"), m_tile_ids.to("xla"),
       group_offset_torch, lhs, rhs
   ], payload, [torch.Size([m, n])], [lhs.dtype])
 

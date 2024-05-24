@@ -144,7 +144,7 @@ class MegabloxTest(unittest.TestCase):
           num_nonzero_groups=len(test_grid['group_sizes']),
       )
 
-      torch_meta, torch_num_tiles = _make_group_metadata(
+      torch_meta = _make_group_metadata(
           group_sizes=torch.tensor(test_grid['group_sizes']),
           m=test_grid['m'],
           tm=test_grid['tm'],
@@ -152,7 +152,7 @@ class MegabloxTest(unittest.TestCase):
 
       for i in range(len(jax_meta)):
         self.assertTrue(torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i]))
-      self.assertEqual(jax_num_tiles, torch_num_tiles.item())
+      self.assertEqual(jax_num_tiles, torch_meta[-1].item())
 
 
 if __name__ == '__main__':
