@@ -1,5 +1,6 @@
 name: Weekly Code Update PR
 on:
+  workflow_dispatch: # Manual trigger
   schedule:
     - cron: '0 9 * * 1'  # Each Monday 9:00AM (PDT time)
 
