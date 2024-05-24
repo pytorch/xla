@@ -21,6 +21,10 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
                        bool is_kernel_bilinear) {
   // Code copied from
   // https://github.com/tensorflow/tensorflow/blob/e51d6ab5730092775d516b18fa4ee85d49602cd8/tensorflow/compiler/tf2xla/kernels/image_resize_ops.cc#L477-L672
+  //
+  // Changes:
+  // - Remove F32 data-type conversion when is_kernel_bilinear
+  //   See: https://github.com/pytorch/xla/issues/7095
 
   // We implement bilinear interpolation and nearest neighbor with a Gather op.
   // For each output pixel, we gather the necessary slices of the input.
