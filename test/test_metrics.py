@@ -205,6 +205,54 @@ class MetricsTest(unittest.TestCase):
     torch_xla._XLAC._xla_increment_counter('FakeCounter', 2)
     self.assertEqual(met.counter_value('FakeCounter'), 2)
 
+  def test_get_fallback_ops(self):
+
+    def getAndAssertFallbackOpsLenEquals(count):
+      fallback_ops = met.executed_fallback_ops()
+      fallback_ops_number = len(fallback_ops)
+      self.assertEqual(
+          fallback_ops_number,
+          count,
+          msg=f"found {fallback_ops_number}: {fallback_ops}")
+      return fallback_ops
+
+    # Reset all metrics, and make sure we don't start with any fallback ops.
+    met.clear_all()
+    getAndAssertFallbackOpsLenEquals(0)
+
+    # Create N boxes in the format XYXY.
+    # This should not run any fallback ops.
+    N = 10
+    x = torch.rand(N, 1).to(xm.xla_device())
+    y = torch.rand(N, 1).to(xm.xla_device())
+    width = torch.rand(N, 1).to(xm.xla_device())
+    height = torch.rand(N, 1).to(xm.xla_device())
+    xys = torch.cat((x, x + width, y, y - height), dim=1)
+    getAndAssertFallbackOpsLenEquals(0)
+
+    # tensor.item() is a fallback operation.
+    xys[0, 0].item()
+    ops = getAndAssertFallbackOpsLenEquals(1)
+    self.assertEqual(ops[0], "aten::_local_scalar_dense")
+
+    # Reset all metrics, and make sure we also don't retrieve any
+    # fallback operations.
+    met.clear_all()
+    getAndAssertFallbackOpsLenEquals(0)
+
+    # Run torchvision operations as fallback.
+    import torchvision
+    scores = torch.rand(N).to(xm.xla_device())
+    # NMS doesn't have a PyTorch/XLA implementation without dynamic shapes.
+    torchvision.ops.nms(xys, scores, 0.5)
+    # remove_small_boxes is not implemented in C++. It calls other PyTorch
+    # operations. One of them, nonzero, is a fallback operation.
+    torchvision.ops.remove_small_boxes(
+        xys, torch.median(torch.stack((width, height))))
+    ops = getAndAssertFallbackOpsLenEquals(3)
+    self.assertEqual(
+        set(ops), {"aten::nonzero", "aten::median", "torchvision::nms"})
+
 
 if __name__ == '__main__':
   test = unittest.main()
