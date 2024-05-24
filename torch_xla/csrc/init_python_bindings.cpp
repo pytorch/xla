@@ -33,6 +33,7 @@
 #include "pybind11/stl_bind.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
+#include "torch_xla/csrc/aten_cpu_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/dl_convertor.h"
@@ -1781,6 +1782,7 @@ void InitXlaModuleBindings(py::module m) {
         }
       },
       py::arg("devices"));
+  m.def("_get_executed_fallback_ops", []() { return GetFallbackOperations(); });
   m.def("_xla_counter_names", []() {
     auto counter_names = torch::lazy::GetCounterNames();
     auto xla_counter_names = runtime::metrics::GetCounterNames();
