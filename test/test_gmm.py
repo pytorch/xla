@@ -1,5 +1,3 @@
-"""Grouped matrix multiplication kernels for TPU written in Pallas."""
-
 import logging
 import unittest
 
@@ -8,7 +6,7 @@ from typing import Optional, Union, Callable
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental.custom_kernel import gmm
+from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -122,6 +120,39 @@ class MegabloxTest(unittest.TestCase):
       atol, rtol = self._tolerances(lhs_dtype, rhs_dtype, out_dtype)
       np.testing.assert_allclose(
           ref_out, np.array(out[0].cpu()), rtol=rtol, atol=atol)
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_make_group_metadata(self):
+    from jax.experimental.pallas.ops.tpu.megablox.gmm import make_group_metadata as jax_make_group_metadata
+
+    test_grids = [
+        {'group_sizes': [8, 8, 8, 8], 'm': 32, 'tm': 8},
+        {'group_sizes': [2, 14, 8, 8], 'm': 32, 'tm': 8},
+        {'group_sizes': [16, 0, 8, 8], 'm': 32, 'tm': 8},
+        {'group_sizes': [2, 0, 14, 16], 'm': 32, 'tm': 8},
+        {'group_sizes': [8, 12, 0, 12], 'm': 32, 'tm': 8},
+        {'group_sizes': [6, 12, 0, 14], 'm': 32, 'tm': 8},
+        {'group_sizes': [6, 12, 0, 14], 'm': 32, 'tm': 4},
+    ]
+
+    for test_grid in test_grids:
+      jax_meta, jax_num_tiles = jax_make_group_metadata(
+          group_sizes=jnp.array(test_grid['group_sizes']),
+          m=test_grid['m'],
+          tm=test_grid['tm'],
+          start_group=0,
+          num_nonzero_groups=len(test_grid['group_sizes']),
+      )
+
+      torch_meta, torch_num_tiles = _make_group_metadata(
+          group_sizes=torch.tensor(test_grid['group_sizes']),
+          m=test_grid['m'],
+          tm=test_grid['tm'],
+      )
+
+      for i in range(len(jax_meta)):
+        self.assertTrue(torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i]))
+      self.assertEqual(jax_num_tiles, torch_num_tiles.item())
 
 
 if __name__ == '__main__':
