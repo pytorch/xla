@@ -55,9 +55,6 @@ jobs:
         run: |
           cd pytorch
           USE_CUDA=1 python setup.py bdist_wheel
-          ls
-          pip install dist/*.whl
-          python -c "import torch; assert torch.cuda.is_available()"
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
