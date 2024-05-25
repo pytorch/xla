@@ -501,7 +501,7 @@ def _histogram(input: torch.Tensor, min: int, max: int) -> torch.Tensor:
   Compute the histogram of a int32 tensor. The bin edges are defined by the min and max values, with step = 1.
   """
   assert input.dtype == torch.int32, "input must be of torch.int32 dtype."
-  assert min <= max, "min must be less than max."
+  assert min <= max, "min must be less than or equal to max."
 
   def searchsorted(sorted_sequence: torch.Tensor,
                    values_to_search: torch.Tensor) -> torch.Tensor:
