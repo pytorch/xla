@@ -99,6 +99,8 @@ class MegabloxTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm(self):
+    met.clear_all()
+
     self._init_test_cases()
     for test_case in self.tests_cases:
       num_groups = test_case['num_groups']
@@ -111,20 +113,24 @@ class MegabloxTest(unittest.TestCase):
       lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
       group_sizes = self._group_sizes_strategy(
-          m=m, num_groups=num_groups)  # This is a cpu tensor!!!!!!!
+          m=m, num_groups=num_groups).to('xla')
       out = gmm(lhs, rhs, group_sizes)
 
       ref_out = self._reference_gmm(lhs.cpu().float().numpy(),
                                     rhs.cpu().float().numpy(),
-                                    group_sizes.numpy())
+                                    group_sizes.cpu().numpy())
 
       atol, rtol = self._tolerances(lhs_dtype, rhs_dtype, out_dtype)
       np.testing.assert_allclose(
           ref_out, np.array(out[0].cpu()), rtol=rtol, atol=atol)
 
+    # Make sure _make_group_metadata doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
+
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_make_group_metadata(self):
     from jax.experimental.pallas.ops.tpu.megablox.gmm import make_group_metadata as jax_make_group_metadata
+    met.clear_all()
 
     test_grids = [
         {
@@ -208,6 +214,11 @@ class MegabloxTest(unittest.TestCase):
             'input': [],
             'min': 0,
             'max': 5,
+        },
+        {
+            'input': [1, 4, 4, 1, 2, 3],
+            'min': 2,
+            'max': 2,
         },
     ]
 
