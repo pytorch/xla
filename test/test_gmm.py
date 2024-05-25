@@ -173,14 +173,14 @@ class MegabloxTest(unittest.TestCase):
       )
 
       torch_meta = _make_group_metadata(
-          group_sizes=torch.tensor(test_grid['group_sizes']),
+          group_sizes=torch.tensor(test_grid['group_sizes']).to("xla"),
           m=test_grid['m'],
           tm=test_grid['tm'],
       )
 
       for i in range(len(jax_meta)):
         self.assertTrue(
-            torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i]))
+            torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i].cpu()))
       self.assertEqual(jax_num_tiles, torch_meta[-1].item())
 
   def test_histogram(self):
