@@ -613,14 +613,7 @@ def _make_group_metadata(
   # group_tiles.sum() < tiles_m + num_groups - 1. The kernel grid will be sized
   # such that we only execute the necessary number of tiles.
   tiles_m = _calculate_num_tiles(m, tm)
-  # TODO (alanwaketan): lower jax's version of repeat. This dynamism will force us to compile many times.
-  group_ids = torch.repeat_interleave(
-      torch.arange(num_groups, dtype=torch.int32),
-      group_tiles,
-  )
-  group_ids = torch.nn.functional.pad(
-      group_ids, (0, tiles_m + num_groups - 1 - group_ids.shape[0]),
-      value=num_groups - 1)
+  group_ids = repeat_with_fixed_output_size(torch.arange(num_groups, dtype=torch.int32), group_tiles, tiles_m + num_groups - 1)
 
   # Assign an m-dimension tile id to each grid index.
   #
@@ -658,14 +651,7 @@ def _make_group_metadata(
 
   # Create the m-dimension tile ids for each grid index based on the visit
   # counts for each tile.
-  # TODO (alanwaketan): lower jax's version of repeat. This dynamism will force us to compile many times.
-  m_tile_ids = torch.repeat_interleave(
-      torch.arange(tiles_m, dtype=torch.int32),
-      tile_visits.type(torch.int32),
-  )
-  m_tile_ids = torch.nn.functional.pad(
-      m_tile_ids, (0, tiles_m + num_groups - 1 - m_tile_ids.shape[0]),
-      value=tiles_m - 1)
+  m_tile_ids = repeat_with_fixed_output_size(torch.arange(tiles_m, dtype=torch.int32), tile_visits, tiles_m + num_groups - 1)
 
   num_tiles = group_tiles.sum(dtype=torch.int32)
   return group_offsets, group_ids, m_tile_ids, num_tiles
@@ -706,7 +692,7 @@ def repeat_with_fixed_output_size(input: torch.Tensor, repeats: torch.Tensor,
   # tensor([2, 1, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0])
   block_split_indicators = torch.zeros(
       total_repeat_length, dtype=torch.int64, device=device)
-  block_split_indicators.scatter_add_(0, valid_indices,
+  block_split_indicators.scatter_add_(0, valid_indices.to(torch.int64),
                                       torch.ones_like(block_split_indicators))
   # out_of_bound indices also scatter to index 0, need to offset them
   block_split_indicators[0] -= out_of_bound_count
