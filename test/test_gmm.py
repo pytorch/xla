@@ -6,6 +6,7 @@ from typing import Optional, Union, Callable
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
 from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
@@ -181,7 +182,10 @@ class MegabloxTest(unittest.TestCase):
       for i in range(len(jax_meta)):
         self.assertTrue(
             torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i].cpu()))
-      self.assertEqual(jax_num_tiles, torch_meta[-1].item())
+      self.assertEqual(jax_num_tiles, torch_meta[-1].cpu().item())
+
+    # Make sure _make_group_metadata doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
 
   def test_histogram(self):
     test_grids = [
