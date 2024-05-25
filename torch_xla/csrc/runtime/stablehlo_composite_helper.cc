@@ -62,7 +62,7 @@ struct BoundaryMetadata {
   }
 
  private:
-  template<typename T>
+  template <typename T>
   static bool CopyJsonValue(const nlohmann::basic_json<>& j,
                             llvm::StringRef key, json::value_t expected_type,
                             T& to) {
@@ -84,15 +84,9 @@ struct BoundaryMetadata {
 
     bool is_valid_metadata_json =
         CopyJsonValue(j, "name", json::value_t::string, metadata.name) &&
-            CopyJsonValue(j, "id", json::value_t::string, metadata.id) &&
-            CopyJsonValue(j,
-                          "pos",
-                          json::value_t::number_unsigned,
-                          metadata.pos) &&
-            CopyJsonValue(j,
-                          "is_input",
-                          json::value_t::boolean,
-                          metadata.is_input);
+        CopyJsonValue(j, "id", json::value_t::string, metadata.id) &&
+        CopyJsonValue(j, "pos", json::value_t::number_unsigned, metadata.pos) &&
+        CopyJsonValue(j, "is_input", json::value_t::boolean, metadata.is_input);
 
     if (!is_valid_metadata_json) {
       return nullptr;
@@ -112,7 +106,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
  public:
   explicit BuildStableHLOCompositePass()
       : mlir::OperationPass<mlir::ModuleOp>::OperationPass(
-      mlir::TypeID::get<BuildStableHLOCompositePass>()) {}
+            mlir::TypeID::get<BuildStableHLOCompositePass>()) {}
 
   ~BuildStableHLOCompositePass() override = default;
 
@@ -120,13 +114,13 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     mlir::ModuleOp module_op = getOperation();
     llvm::SmallVector<mlir::func::FuncOp> func_ops(
         module_op.getOps<mlir::func::FuncOp>());
-    for (mlir::func::FuncOp& func_op: func_ops) {
+    for (mlir::func::FuncOp& func_op : func_ops) {
       llvm::DenseMap<const mlir::Operation*, size_t> op_order_map =
           BuildOpOrderMap(func_op);
-      std::unordered_map<std::string, llvm::SmallVector < mlir::Operation * >>
-      boundary_output_ops_map = BuildBoundaryOutputOpsMap(func_op);
+      std::unordered_map<std::string, llvm::SmallVector<mlir::Operation*>>
+          boundary_output_ops_map = BuildBoundaryOutputOpsMap(func_op);
 
-      for (const auto& [unused, ops]: boundary_output_ops_map) {
+      for (const auto& [unused, ops] : boundary_output_ops_map) {
         if (mlir::failed(BuildStableHLOComposite(ops, op_order_map))) {
           func_op.emitError() << "failed to build composite.";
           return signalPassFailure();
@@ -147,20 +141,18 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
   llvm::DenseMap<const mlir::Operation*, size_t> BuildOpOrderMap(
       mlir::func::FuncOp func_op) const {
     llvm::DenseMap<const mlir::Operation*, size_t> op_order_map;
-    for (const auto& op: llvm::enumerate(func_op.getOps())) {
+    for (const auto& op : llvm::enumerate(func_op.getOps())) {
       op_order_map[&op.value()] = op.index();
     }
     return op_order_map;
   }
 
-  std::unordered_map<std::string, llvm::SmallVector < mlir::Operation * >>
-  BuildBoundaryOutputOpsMap(
-  mlir::func::FuncOp func_op
-  ) {
-    std::unordered_map<std::string, llvm::SmallVector < mlir::Operation * >>
-    boundary_output_ops;
+  std::unordered_map<std::string, llvm::SmallVector<mlir::Operation*>>
+  BuildBoundaryOutputOpsMap(mlir::func::FuncOp func_op) {
+    std::unordered_map<std::string, llvm::SmallVector<mlir::Operation*>>
+        boundary_output_ops;
 
-    for (auto op: func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
+    for (auto op : func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
       auto metadata_or = GetBoundaryMetadata(op);
       if (mlir::failed(metadata_or)) {
         continue;
@@ -229,36 +221,33 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         });
         if (!is_homogeneous) {
           return op->emitError()
-              << "invalid JSON to MLIR, arrays must be homogeneous";
+                 << "invalid JSON to MLIR, arrays must be homogeneous";
         }
 
         switch (head_type) {
           case json::value_t::number_integer:
             return builder.getI64TensorAttr(
-                json_value.template get<llvm::SmallVector < int64_t>>
-            ());
+                json_value.template get<llvm::SmallVector<int64_t>>());
           case json::value_t::number_float:
             return mlir::DenseFPElementsAttr::get(
                 mlir::RankedTensorType::get(json_value.size(),
                                             builder.getF32Type()),
-                json_value.template get<llvm::SmallVector < float>>
-            ());
+                json_value.template get<llvm::SmallVector<float>>());
           case json::value_t::boolean:
             return mlir::DenseIntElementsAttr::get(
                 mlir::RankedTensorType::get(json_value.size(),
                                             builder.getI1Type()),
-                json_value.template get<llvm::SmallVector < bool>>
-            ());
+                json_value.template get<llvm::SmallVector<bool>>());
           default:
             return op->emitError()
-                << "invalid JSON to MLIR: invalid array type. arrays must "
-                   "be "
-                   "1-D homogeneous arrays of supported primitive types";
+                   << "invalid JSON to MLIR: invalid array type. arrays must "
+                      "be "
+                      "1-D homogeneous arrays of supported primitive types";
         }
       }
       default:
         return op->emitError()
-            << "invalid JSON to MLIR: unsupported json value type";
+               << "invalid JSON to MLIR: unsupported json value type";
     }
   }
 
@@ -266,7 +255,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       mlir::OpBuilder& builder, mlir::Operation* op,
       const std::unordered_map<std::string, json>& json_map) {
     llvm::SmallVector<mlir::NamedAttribute> named_attrs;
-    for (auto& [key, j]: json_map) {
+    for (auto& [key, j] : json_map) {
       mlir::FailureOr<mlir::Attribute> attribute_or =
           BuildAttrFromJson(builder, op, j);
       if (mlir::failed(attribute_or)) {
@@ -286,7 +275,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
 
     // Get the output op with minimum order num as the representative.
     mlir::Operation* first_output_op = output_ops[0];
-    for (mlir::Operation* op: output_ops) {
+    for (mlir::Operation* op : output_ops) {
       if (op_order_map.at(op) < op_order_map.at(first_output_op)) {
         first_output_op = op;
       }
@@ -314,7 +303,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
 
     mlir::func::FuncOp impl_func = BuildStableHLOCompositeImplFunc(
         output_ops, absl::StrCat(metadata->name, ".impl"), args, impl_ops);
-    mlir::FailureOr < mlir::Operation * > composite_op_or =
+    mlir::FailureOr<mlir::Operation*> composite_op_or =
         BuildStableHLOCompositeOp(first_output_op, impl_func, args, *metadata);
     if (mlir::failed(composite_op_or)) {
       return mlir::failure();
@@ -324,7 +313,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     // Updates all users of this op's result(s) to use the results(s) of impl
     // func call.
     size_t composite_result_i = 0;
-    for (mlir::Operation* op: output_ops) {
+    for (mlir::Operation* op : output_ops) {
       for (size_t i = 0; i < op->getNumResults(); ++i) {
         mlir::OpResult result = op->getResult(i);
         result.replaceAllUsesWith(
@@ -341,17 +330,16 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     return mlir::success();
   }
 
-  mlir::FailureOr<std::pair<llvm::SmallVector < mlir::Value>,
-  llvm::SmallVector<mlir::Operation*>>>
+  mlir::FailureOr<std::pair<llvm::SmallVector<mlir::Value>,
+                            llvm::SmallVector<mlir::Operation*>>>
   GetBoundaryArgsAndOps(
       const llvm::SmallVector<mlir::Operation*> boundary_output_ops,
       const BoundaryMetadata& metadata,
       const llvm::DenseMap<const mlir::Operation*, size_t>& op_order_map) {
-    llvm::SetVector < mlir::Operation * > impl_ops_setvec;
+    llvm::SetVector<mlir::Operation*> impl_ops_setvec;
     llvm::SetVector<std::pair<mlir::Value, int64_t>> arg_pos_setvec;
-    llvm::SmallVector < mlir::Operation *
-        > processing(boundary_output_ops.begin(),
-                     boundary_output_ops.end());
+    llvm::SmallVector<mlir::Operation*> processing(boundary_output_ops.begin(),
+                                                   boundary_output_ops.end());
 
     // Reverse graph traversal: from boundary output op to boundary input op,
     // global function arg, or stablehlo constant.
@@ -379,7 +367,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       }
 
       impl_ops_setvec.insert(curr_op);
-      for (mlir::Value value: curr_op->getOperands()) {
+      for (mlir::Value value : curr_op->getOperands()) {
         mlir::Operation* def_op = value.getDefiningOp();
         if (def_op == nullptr) {
           // Terminal condition: global function arg
@@ -395,12 +383,11 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     // Sorts all ops within the boundary by their line numbers in the input
     // MLIR. The ops will be duplicated to the impl function following this
     // order.
-    llvm::SmallVector < mlir::Operation * > impl_ops =
-        impl_ops_setvec.takeVector();
-    for (auto& op: impl_ops) {
+    llvm::SmallVector<mlir::Operation*> impl_ops = impl_ops_setvec.takeVector();
+    for (auto& op : impl_ops) {
       if (!op_order_map.contains(op)) {
         return op->emitError()
-            << "does not have a ordering number in its outer func.";
+               << "does not have a ordering number in its outer func.";
       }
     }
     std::sort(impl_ops.begin(), impl_ops.end(),
@@ -419,7 +406,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         [](const auto& a, const auto& b) { return a.second < b.second; });
     llvm::SmallVector<mlir::Value> args;
     args.reserve(arg_pos_pairs.size());
-    for (auto& [arg, unused]: arg_pos_pairs) {
+    for (auto& [arg, unused] : arg_pos_pairs) {
       args.push_back(arg);
     }
 
@@ -438,12 +425,12 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     // boundary in the function.
     llvm::SmallVector<mlir::Location> arg_locs;
     llvm::SmallVector<mlir::Type> arg_types;
-    for (auto& arg: args) {
+    for (auto& arg : args) {
       arg_types.push_back(arg.getType());
       arg_locs.push_back(arg.getLoc());
     }
     llvm::SmallVector<mlir::Type> result_types;
-    for (mlir::Operation* op: boundary_output_ops) {
+    for (mlir::Operation* op : boundary_output_ops) {
       result_types.append(op->getResultTypes().begin(),
                           op->getResultTypes().end());
     }
@@ -454,16 +441,16 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     mlir::IRMapping mapping;
     builder.createBlock(&impl_func.getBody(), impl_func.begin(), arg_types,
                         arg_locs);
-    for (const auto& arg: llvm::enumerate(args)) {
+    for (const auto& arg : llvm::enumerate(args)) {
       mapping.map(arg.value(), impl_func.getArgument(arg.index()));
     }
-    for (mlir::Operation* original_op: impl_ops) {
+    for (mlir::Operation* original_op : impl_ops) {
       mlir::Operation* cloned_op = builder.clone(*original_op, mapping);
       mapping.map(original_op, cloned_op);
     }
 
     llvm::SmallVector<mlir::Value> results;
-    for (mlir::Operation* op: boundary_output_ops) {
+    for (mlir::Operation* op : boundary_output_ops) {
       results.append(mapping.lookup(op)->getResults().begin(),
                      mapping.lookup(op)->getResults().end());
     }
@@ -490,8 +477,8 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
                                        metadata.attrs);
     if (mlir::failed(attributes_or)) {
       return boundary_output_op->emitError()
-          << "failed to transform boundary attr "
-             "JSON into composite attributes.";
+             << "failed to transform boundary attr "
+                "JSON into composite attributes.";
     }
 
     // Creates and inserts composite call op.
@@ -510,21 +497,21 @@ class RemoveXlaMarkTensorOpsPass
  public:
   explicit RemoveXlaMarkTensorOpsPass()
       : mlir::OperationPass<mlir::func::FuncOp>::OperationPass(
-      mlir::TypeID::get<RemoveXlaMarkTensorOpsPass>()) {}
+            mlir::TypeID::get<RemoveXlaMarkTensorOpsPass>()) {}
 
   ~RemoveXlaMarkTensorOpsPass() override = default;
 
   void runOnOperation() override {
     mlir::func::FuncOp func_op = getOperation();
-    llvm::SmallVector < mlir::Operation * > ops_to_erase;
+    llvm::SmallVector<mlir::Operation*> ops_to_erase;
 
-    for (auto op: func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
+    for (auto op : func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
       if (!IsXlaMarkTensorOp(op.getOperation())) {
         continue;
       }
       mlir::Value original_value = op.getOperand(0);
 
-      for (mlir::Value result: op.getResults()) {
+      for (mlir::Value result : op.getResults()) {
         result.replaceAllUsesWith(original_value);
       }
     }
@@ -543,12 +530,12 @@ class RemoveXlaMarkTensorOpsPass
 
 }  // namespace
 
-std::unique_ptr<mlir::OperationPass < mlir::ModuleOp>>
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 CreateBuildStableHLOCompositePass() {
   return std::make_unique<BuildStableHLOCompositePass>();
 }
 
-std::unique_ptr<mlir::OperationPass < mlir::func::FuncOp>>
+std::unique_ptr<mlir::OperationPass<mlir::func::FuncOp>>
 CreateRemoveXlaMarkTensorOpsPass() {
   return std::make_unique<RemoveXlaMarkTensorOpsPass>();
 }
