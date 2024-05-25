@@ -8,8 +8,8 @@
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/TopologicalSortUtils.h"
 #include "single_include/nlohmann/json.hpp"
 #include "stablehlo/dialect/StablehloOps.h"
 
