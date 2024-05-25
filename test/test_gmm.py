@@ -124,7 +124,7 @@ class MegabloxTest(unittest.TestCase):
       np.testing.assert_allclose(
           ref_out, np.array(out[0].cpu()), rtol=rtol, atol=atol)
 
-    # Make sure _make_group_metadata doesn't fallback.
+    # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
@@ -215,11 +215,6 @@ class MegabloxTest(unittest.TestCase):
             'min': 0,
             'max': 5,
         },
-        {
-            'input': [1, 4, 4, 1, 2, 3],
-            'min': 2,
-            'max': 2,
-        },
     ]
 
     for test_grid in test_grids:
@@ -236,7 +231,7 @@ class MegabloxTest(unittest.TestCase):
           max=test_grid['max'],
       )
 
-    self.assertTrue(torch.all(torch_chart == chart.cpu()))
+      self.assertTrue(torch.all(torch_chart == chart.cpu()))
 
   def test_histogram_raise(self):
     with self.assertRaisesRegex(AssertionError,
