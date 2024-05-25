@@ -655,6 +655,53 @@ def _make_group_metadata(
   return group_offsets, group_ids, m_tile_ids, num_tiles
 
 
+# Repeat the `input` tensor `repeats` number of times. We expect `input` and
+# `repeats` both be 1d tensor with same shape. output shape will be [total_repeat_length].
+# If `total_repeat_length` is larger than the repeated tensor length we will use the last value
+# in the `input` to fill it up. If `total_repeat_length` is smaller than repeated tensor length
+# we will truncate the repeated tensor.
+def repeat_with_fixed_output_size(input: torch.Tensor, repeats: torch.Tensor,
+                                  total_repeat_length: int):
+  # currently only support 1d input and 1d repeats
+  assert len(input.size()) == 1
+  assert len(repeats.size()) == 1
+  device = input.device
+
+  # to better understand this code, let's assume
+  # input.size() = [10]
+  # repeats = [0, 1, 2, 0, 4, 0, 6, 7, 8, 9]
+  # total_repeat_length = 20
+
+  # shift the repeats by one
+  # tensor([0, 0, 1, 2, 0, 4, 0, 6, 7, 8])
+  exclusive_repeats = torch.roll(repeats, shifts=1)
+  exclusive_repeats[0] = 0
+
+  # tensor([ 0,  0,  1,  3,  3,  7,  7, 13, 20, 28])
+  scatter_indices = torch.cumsum(exclusive_repeats, dim=0)
+  # set the out of bound indices to 0 and calculate how many of them.
+  # tensor([ 0,  0,  1,  3,  3,  7,  7, 13,  0,  0])
+  valid_indices = torch.where(scatter_indices >= total_repeat_length,
+                              torch.zeros_like(scatter_indices),
+                              scatter_indices)
+  out_of_bound_count = torch.where(scatter_indices >= total_repeat_length, 1,
+                                   0).sum()
+
+  # tensor([2, 1, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0])
+  block_split_indicators = torch.zeros(
+      total_repeat_length, dtype=torch.int64, device=device)
+  block_split_indicators.scatter_add_(0, valid_indices,
+                                      torch.ones_like(block_split_indicators))
+  # out_of_bound indices also scatter to index 0, need to offset them
+  block_split_indicators[0] -= out_of_bound_count
+
+  # value in gather_indices represents the index in the input.
+  # tensor([1, 2, 2, 4, 4, 4, 4, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7])
+  gather_indices = torch.cumsum(block_split_indicators, dim=0) - 1
+  res = torch.gather(input, 0, gather_indices)
+  return res
+
+
 def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
         group_sizes: torch.Tensor) -> torch.Tensor:
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
