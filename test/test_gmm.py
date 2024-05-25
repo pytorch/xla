@@ -243,7 +243,8 @@ class MegabloxTest(unittest.TestCase):
           max=5,
       )
 
-    with self.assertRaisesRegex(AssertionError, "min must be less than max."):
+    with self.assertRaisesRegex(AssertionError,
+                                "min must be less than or equal to max."):
       _histogram(
           torch.tensor([1, 4, 4, 1, 2, 3], dtype=torch.int32),
           min=4,
