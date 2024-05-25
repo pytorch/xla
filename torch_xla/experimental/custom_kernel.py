@@ -509,7 +509,7 @@ def _histogram(input: torch.Tensor, min: int, max: int) -> torch.Tensor:
 
   bin_edges = torch.linspace(
       min, max, max - min + 1, dtype=input.dtype).to(input.device)
-  return searchsorted(bin_edges, input), bin_edges
+  return searchsorted(bin_edges, input)
 
 
 # This can only be ran in cpu now as repeat_interleave is not lowered to xla.
@@ -646,8 +646,8 @@ def _make_group_metadata(
                                  group_offsets[:-1] // tm)
 
   tile_visits = (
-      torch.histc(
-          partial_tile_ids.float(), bins=tiles_m, min=0, max=tiles_m - 1) + 1)
+      _histogram(
+          partial_tile_ids, min=0, max=tiles_m - 1) + 1)
 
   # Create the m-dimension tile ids for each grid index based on the visit
   # counts for each tile.

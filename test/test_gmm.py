@@ -215,7 +215,7 @@ class MegabloxTest(unittest.TestCase):
           max=test_grid['max'],
       )
 
-      chart, _ = _histogram(
+      chart = _histogram(
           torch.tensor(test_grid['input'], dtype=torch.int32).to("xla"),
           min=test_grid['min'],
           max=test_grid['max'],
