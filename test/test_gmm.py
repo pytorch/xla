@@ -6,7 +6,7 @@ from typing import Optional, Union, Callable
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata
+from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -182,6 +182,62 @@ class MegabloxTest(unittest.TestCase):
         self.assertTrue(
             torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i]))
       self.assertEqual(jax_num_tiles, torch_meta[-1].item())
+
+  def test_histogram(self):
+    test_grids = [
+        {
+            'input': [1, 4, 4, 1, 2, 3],
+            'min': 1,
+            'max': 4,
+        },
+        {
+            'input': [1, 4, 4, 1, 2, 3],
+            'min': 2,
+            'max': 3,
+        },
+        {
+            'input': [1, 4, 4, 1, 2, 3],
+            'min': 0,
+            'max': 5,
+        },
+        {
+            'input': [],
+            'min': 0,
+            'max': 5,
+        },
+    ]
+
+    for test_grid in test_grids:
+      torch_chart = torch.histc(
+          torch.tensor(test_grid['input'], dtype=torch.float),
+          bins=test_grid['max'] - test_grid['min'] + 1,
+          min=test_grid['min'],
+          max=test_grid['max'],
+      )
+
+      chart, _ = _histogram(
+          torch.tensor(test_grid['input'], dtype=torch.int32).to("xla"),
+          min=test_grid['min'],
+          max=test_grid['max'],
+      )
+
+    self.assertTrue(torch.all(torch_chart == chart.cpu()))
+
+  def test_histogram_raise(self):
+    with self.assertRaisesRegex(AssertionError,
+                                "input must be of torch.int32 dtype."):
+      _histogram(
+          torch.tensor([1, 4, 4, 1, 2, 3], dtype=torch.float),
+          min=4,
+          max=5,
+      )
+
+    with self.assertRaisesRegex(AssertionError, "min must be less than max."):
+      _histogram(
+          torch.tensor([1, 4, 4, 1, 2, 3], dtype=torch.int32),
+          min=4,
+          max=3,
+      )
 
 
 if __name__ == '__main__':
