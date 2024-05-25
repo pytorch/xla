@@ -556,7 +556,8 @@ def _make_group_metadata(
   #
   # The row at which group 'i' starts is group_offsets[i].
   group_ends = torch.cumsum(group_sizes, dim=0, dtype=torch.int32)
-  group_offsets = torch.cat([torch.zeros(1, dtype=torch.int32).to(device), group_ends])
+  group_offsets = torch.cat(
+      [torch.zeros(1, dtype=torch.int32).to(device), group_ends])
 
   # Assign a group id to each grid index.
   #
@@ -572,7 +573,8 @@ def _make_group_metadata(
   rounded_group_ends = ((group_ends + tm - 1) // tm * tm).to(torch.int32)
 
   # (2) Round the group_starts down to the nearest multiple of 'tm'.
-  group_starts = torch.cat([torch.zeros(1, dtype=torch.int32).to(device), group_ends[:-1]])
+  group_starts = torch.cat(
+      [torch.zeros(1, dtype=torch.int32).to(device), group_ends[:-1]])
   rounded_group_starts = group_starts // tm * tm
 
   # (3) Calculate the number of rows in each group.
@@ -614,7 +616,9 @@ def _make_group_metadata(
   # group_tiles.sum() < tiles_m + num_groups - 1. The kernel grid will be sized
   # such that we only execute the necessary number of tiles.
   tiles_m = _calculate_num_tiles(m, tm)
-  group_ids = repeat_with_fixed_output_size(torch.arange(num_groups, dtype=torch.int32).to(device), group_tiles, tiles_m + num_groups - 1)
+  group_ids = repeat_with_fixed_output_size(
+      torch.arange(num_groups, dtype=torch.int32).to(device), group_tiles,
+      tiles_m + num_groups - 1)
 
   # Assign an m-dimension tile id to each grid index.
   #
@@ -646,13 +650,13 @@ def _make_group_metadata(
   partial_tile_ids = torch.where(partial_tile_mask, tiles_m,
                                  group_offsets[:-1] // tm)
 
-  tile_visits = (
-      _histogram(
-          partial_tile_ids, min=0, max=tiles_m - 1) + 1)
+  tile_visits = (_histogram(partial_tile_ids, min=0, max=tiles_m - 1) + 1)
 
   # Create the m-dimension tile ids for each grid index based on the visit
   # counts for each tile.
-  m_tile_ids = repeat_with_fixed_output_size(torch.arange(tiles_m, dtype=torch.int32).to(device), tile_visits, tiles_m + num_groups - 1)
+  m_tile_ids = repeat_with_fixed_output_size(
+      torch.arange(tiles_m, dtype=torch.int32).to(device), tile_visits,
+      tiles_m + num_groups - 1)
 
   num_tiles = group_tiles.sum(dtype=torch.int32)
   return group_offsets, group_ids, m_tile_ids, num_tiles

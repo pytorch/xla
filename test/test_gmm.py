@@ -187,7 +187,8 @@ class MegabloxTest(unittest.TestCase):
 
       for i in range(len(jax_meta)):
         self.assertTrue(
-            torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i].cpu()))
+            torch.all(
+                torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i].cpu()))
       self.assertEqual(jax_num_tiles, torch_meta[-1].cpu().item())
 
     # Make sure _make_group_metadata doesn't fallback.
