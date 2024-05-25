@@ -92,8 +92,12 @@ jobs:
         with:
           name: torch-xla-wheels
           path: /tmp/wheels/
-      # The step below will overwrite the torch wheel
-      # if run-tests-requiring-torch-cuda is true.
+      - name: Remove the torch wheel without CUDA
+        shell: bash
+        run: |
+          rm -rf /tmp/wheels/torch-*
+          ls /tmp/wheels/
+        if: ${{ inputs.run-tests-requiring-torch-cuda }}
       - name: Fetch torch CUDA wheel
         uses: actions/download-artifact@v4
         with:
