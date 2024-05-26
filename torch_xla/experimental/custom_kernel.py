@@ -709,8 +709,12 @@ def repeat_with_fixed_output_size(input: torch.Tensor, repeats: torch.Tensor,
   return res
 
 
-def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
-        group_sizes: torch.Tensor, tiling: tuple[int, int, int] = (512, 512, 512)) -> torch.Tensor:
+def gmm(
+    lhs: torch.Tensor,
+    rhs: torch.Tensor,
+    group_sizes: torch.Tensor,
+    tiling: tuple[int, int, int] = (512, 512, 512)
+) -> torch.Tensor:
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
   Args:
@@ -729,7 +733,13 @@ def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
 
   m, k, n = lhs.shape[0], lhs.shape[1], rhs.shape[2]
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
-  payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes, static_argnames=["tiling"], tiling=(tm, tk, tn))
+  payload, _ = trace_pallas(
+      gmm,
+      lhs,
+      rhs,
+      group_sizes,
+      static_argnames=["tiling"],
+      tiling=(tm, tk, tn))
 
   # Create the metadata we need for computation.
   # TODO (alanwaketan): The following assuumes groups_sizes is a cpu tensor.
