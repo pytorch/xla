@@ -6,6 +6,7 @@ from typing import Optional, Union, Callable
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
 from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
@@ -98,6 +99,8 @@ class MegabloxTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm(self):
+    met.clear_all()
+
     self._init_test_cases()
     for test_case in self.tests_cases:
       num_groups = test_case['num_groups']
@@ -110,20 +113,24 @@ class MegabloxTest(unittest.TestCase):
       lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
       group_sizes = self._group_sizes_strategy(
-          m=m, num_groups=num_groups)  # This is a cpu tensor!!!!!!!
+          m=m, num_groups=num_groups).to('xla')
       out = gmm(lhs, rhs, group_sizes)
 
       ref_out = self._reference_gmm(lhs.cpu().float().numpy(),
                                     rhs.cpu().float().numpy(),
-                                    group_sizes.numpy())
+                                    group_sizes.cpu().numpy())
 
       atol, rtol = self._tolerances(lhs_dtype, rhs_dtype, out_dtype)
       np.testing.assert_allclose(
           ref_out, np.array(out[0].cpu()), rtol=rtol, atol=atol)
 
+    # Make sure gmm doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
+
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_make_group_metadata(self):
     from jax.experimental.pallas.ops.tpu.megablox.gmm import make_group_metadata as jax_make_group_metadata
+    met.clear_all()
 
     test_grids = [
         {
@@ -173,15 +180,19 @@ class MegabloxTest(unittest.TestCase):
       )
 
       torch_meta = _make_group_metadata(
-          group_sizes=torch.tensor(test_grid['group_sizes']),
+          group_sizes=torch.tensor(test_grid['group_sizes']).to("xla"),
           m=test_grid['m'],
           tm=test_grid['tm'],
       )
 
       for i in range(len(jax_meta)):
         self.assertTrue(
-            torch.all(torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i]))
-      self.assertEqual(jax_num_tiles, torch_meta[-1].item())
+            torch.all(
+                torch.from_numpy(np.array(jax_meta[i])) == torch_meta[i].cpu()))
+      self.assertEqual(jax_num_tiles, torch_meta[-1].cpu().item())
+
+    # Make sure _make_group_metadata doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
 
   def test_histogram(self):
     test_grids = [
@@ -215,13 +226,13 @@ class MegabloxTest(unittest.TestCase):
           max=test_grid['max'],
       )
 
-      chart, _ = _histogram(
+      chart = _histogram(
           torch.tensor(test_grid['input'], dtype=torch.int32).to("xla"),
           min=test_grid['min'],
           max=test_grid['max'],
       )
 
-    self.assertTrue(torch.all(torch_chart == chart.cpu()))
+      self.assertTrue(torch.all(torch_chart == chart.cpu()))
 
   def test_histogram_raise(self):
     with self.assertRaisesRegex(AssertionError,
@@ -232,7 +243,8 @@ class MegabloxTest(unittest.TestCase):
           max=5,
       )
 
-    with self.assertRaisesRegex(AssertionError, "min must be less than max."):
+    with self.assertRaisesRegex(AssertionError,
+                                "min must be less than or equal to max."):
       _histogram(
           torch.tensor([1, 4, 4, 1, 2, 3], dtype=torch.int32),
           min=4,

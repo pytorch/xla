@@ -501,7 +501,7 @@ def _histogram(input: torch.Tensor, min: int, max: int) -> torch.Tensor:
   Compute the histogram of a int32 tensor. The bin edges are defined by the min and max values, with step = 1.
   """
   assert input.dtype == torch.int32, "input must be of torch.int32 dtype."
-  assert min < max, "min must be less than max."
+  assert min <= max, "min must be less than or equal to max."
 
   def searchsorted(sorted_sequence: torch.Tensor,
                    values_to_search: torch.Tensor) -> torch.Tensor:
@@ -509,10 +509,10 @@ def _histogram(input: torch.Tensor, min: int, max: int) -> torch.Tensor:
 
   bin_edges = torch.linspace(
       min, max, max - min + 1, dtype=input.dtype).to(input.device)
-  return searchsorted(bin_edges, input), bin_edges
+  return searchsorted(bin_edges, input)
 
 
-# This can only be ran in cpu now as repeat_interleave is not lowered to xla.
+# Refence: https://github.com/google/jax/blob/main/jax/experimental/pallas/ops/tpu/megablox/gmm.py#L78
 def _make_group_metadata(
     *,
     group_sizes: torch.Tensor,
@@ -544,6 +544,7 @@ def _make_group_metadata(
     num_tiles: The number of m-dimension tiles to execute including overlapping
       executions. And don't confuse this with m_tiles which is m // tm.
   """
+  device = group_sizes.device
   num_groups = group_sizes.shape[0]
 
   # Calculate the offset of each group, starting at zero. This metadata is
@@ -555,7 +556,8 @@ def _make_group_metadata(
   #
   # The row at which group 'i' starts is group_offsets[i].
   group_ends = torch.cumsum(group_sizes, dim=0, dtype=torch.int32)
-  group_offsets = torch.cat([torch.zeros(1, dtype=torch.int32), group_ends])
+  group_offsets = torch.cat(
+      [torch.zeros(1, dtype=torch.int32).to(device), group_ends])
 
   # Assign a group id to each grid index.
   #
@@ -571,7 +573,8 @@ def _make_group_metadata(
   rounded_group_ends = ((group_ends + tm - 1) // tm * tm).to(torch.int32)
 
   # (2) Round the group_starts down to the nearest multiple of 'tm'.
-  group_starts = torch.cat([torch.zeros(1, dtype=torch.int32), group_ends[:-1]])
+  group_starts = torch.cat(
+      [torch.zeros(1, dtype=torch.int32).to(device), group_ends[:-1]])
   rounded_group_starts = group_starts // tm * tm
 
   # (3) Calculate the number of rows in each group.
@@ -613,14 +616,9 @@ def _make_group_metadata(
   # group_tiles.sum() < tiles_m + num_groups - 1. The kernel grid will be sized
   # such that we only execute the necessary number of tiles.
   tiles_m = _calculate_num_tiles(m, tm)
-  # TODO (alanwaketan): lower jax's version of repeat. This dynamism will force us to compile many times.
-  group_ids = torch.repeat_interleave(
-      torch.arange(num_groups, dtype=torch.int32),
-      group_tiles,
-  )
-  group_ids = torch.nn.functional.pad(
-      group_ids, (0, tiles_m + num_groups - 1 - group_ids.shape[0]),
-      value=num_groups - 1)
+  group_ids = repeat_with_fixed_output_size(
+      torch.arange(num_groups, dtype=torch.int32).to(device), group_tiles,
+      tiles_m + num_groups - 1)
 
   # Assign an m-dimension tile id to each grid index.
   #
@@ -652,20 +650,13 @@ def _make_group_metadata(
   partial_tile_ids = torch.where(partial_tile_mask, tiles_m,
                                  group_offsets[:-1] // tm)
 
-  tile_visits = (
-      torch.histc(
-          partial_tile_ids.float(), bins=tiles_m, min=0, max=tiles_m - 1) + 1)
+  tile_visits = (_histogram(partial_tile_ids, min=0, max=tiles_m - 1) + 1)
 
   # Create the m-dimension tile ids for each grid index based on the visit
   # counts for each tile.
-  # TODO (alanwaketan): lower jax's version of repeat. This dynamism will force us to compile many times.
-  m_tile_ids = torch.repeat_interleave(
-      torch.arange(tiles_m, dtype=torch.int32),
-      tile_visits.type(torch.int32),
-  )
-  m_tile_ids = torch.nn.functional.pad(
-      m_tile_ids, (0, tiles_m + num_groups - 1 - m_tile_ids.shape[0]),
-      value=tiles_m - 1)
+  m_tile_ids = repeat_with_fixed_output_size(
+      torch.arange(tiles_m, dtype=torch.int32).to(device), tile_visits,
+      tiles_m + num_groups - 1)
 
   num_tiles = group_tiles.sum(dtype=torch.int32)
   return group_offsets, group_ids, m_tile_ids, num_tiles
@@ -706,7 +697,7 @@ def repeat_with_fixed_output_size(input: torch.Tensor, repeats: torch.Tensor,
   # tensor([2, 1, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0])
   block_split_indicators = torch.zeros(
       total_repeat_length, dtype=torch.int64, device=device)
-  block_split_indicators.scatter_add_(0, valid_indices,
+  block_split_indicators.scatter_add_(0, valid_indices.to(torch.int64),
                                       torch.ones_like(block_split_indicators))
   # out_of_bound indices also scatter to index 0, need to offset them
   block_split_indicators[0] -= out_of_bound_count
