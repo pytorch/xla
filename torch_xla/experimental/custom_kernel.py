@@ -710,7 +710,7 @@ def repeat_with_fixed_output_size(input: torch.Tensor, repeats: torch.Tensor,
 
 
 def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
-        group_sizes: torch.Tensor) -> torch.Tensor:
+        group_sizes: torch.Tensor, tiling: tuple[int, int, int] = (512, 512, 512)) -> torch.Tensor:
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
   Args:
@@ -727,17 +727,18 @@ def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
   jax_import_guard()
   from jax.experimental.pallas.ops.tpu.megablox.gmm import gmm
 
-  payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes)
+  m, k, n = lhs.shape[0], lhs.shape[1], rhs.shape[2]
+  tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
+  payload, _ = trace_pallas(gmm, lhs, rhs, group_sizes, static_argnames=["tiling"], tiling=(tm, tk, tn))
 
-  m, n = lhs.shape[0], rhs.shape[2]
   # Create the metadata we need for computation.
   # TODO (alanwaketan): The following assuumes groups_sizes is a cpu tensor.
   # That means we need to materialize this input in order to use this gmm
   # kernel, and that will introduce graph breaks in the computation.
   group_offsets, group_ids, m_tile_ids, num_tiles = _make_group_metadata(
       group_sizes=group_sizes,
-      m=lhs.shape[0],
-      tm=128  # TODO (alanwaketan): Tune this later.
+      m=m,
+      tm=tm,
   )
   group_offset_torch = torch.tensor([0], dtype=torch.int32).to("xla")
 
