@@ -722,6 +722,7 @@ def gmm(
     rhs: A 3d, jnp.ndarray with shape [num_groups, k, n].
     group_sizes: A 1d, jnp.ndarray with shape [num_groups] and jnp.int32 dtype.
     preferred_element_type: jnp.dtype, the element type for the output matrix.
+    tiling: 3-tuple of ints. The m, k and n-dimension tile sizes.
 
   Returns:
     A 2d, jnp.ndarray with shape [m, n].
