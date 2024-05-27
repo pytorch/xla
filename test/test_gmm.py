@@ -122,7 +122,7 @@ class MegabloxTest(unittest.TestCase):
 
       atol, rtol = self._tolerances(lhs_dtype, rhs_dtype, out_dtype)
       np.testing.assert_allclose(
-          ref_out, np.array(out[0].cpu()), rtol=rtol, atol=atol)
+          ref_out, np.array(out.cpu()), rtol=rtol, atol=atol)
 
     # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())

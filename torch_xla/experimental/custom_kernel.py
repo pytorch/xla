@@ -746,7 +746,7 @@ def gmm(lhs: torch.Tensor, rhs: torch.Tensor,
       group_offsets.to("xla"),
       group_ids.to("xla"),
       m_tile_ids.to("xla"), group_offset_torch, lhs, rhs
-  ], payload, [torch.Size([m, n])], [lhs.dtype])
+  ], payload, [torch.Size([m, n])], [lhs.dtype])[0]
 
 
 def non_xla_attetion(q, k, v, attention_type):
