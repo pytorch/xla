@@ -264,14 +264,18 @@ class MegabloxTest(unittest.TestCase):
     top_flat = top2.flatten()
     lhs_order = top_flat.argsort()
     lhs_reverse_order = lhs_order.argsort()
-    lhs_indices = torch.arange(top2.shape[0], device="xla").repeat_interleave(2)[lhs_order]
+    lhs_indices = torch.arange(
+        top2.shape[0], device="xla").repeat_interleave(2)[lhs_order]
     group_sizes = _histogram(top_flat.to(torch.int32), 0, 3)
     xm.mark_step()
 
     # Make sure it doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
-    self.assertTrue(torch.all(lhs_indices == torch.tensor([0, 1, 2, 0, 3, 2, 1, 3], device="xla")))
-    self.assertTrue(torch.all(group_sizes == torch.tensor([1, 2, 3, 2], device="xla")))
+    self.assertTrue(
+        torch.all(lhs_indices == torch.tensor([0, 1, 2, 0, 3, 2, 1, 3],
+                                              device="xla")))
+    self.assertTrue(
+        torch.all(group_sizes == torch.tensor([1, 2, 3, 2], device="xla")))
 
 
 if __name__ == '__main__':
