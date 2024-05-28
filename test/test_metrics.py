@@ -9,6 +9,11 @@ import torch_xla.debug.metrics as met
 import unittest
 
 
+def XLAExperimentalContains(feat):
+  experimental = os.environ.get("XLA_EXPERIMENTAL", "").split(":")
+  return feat in experimental
+
+
 class MetricsTest(unittest.TestCase):
 
   def test_clear_counters(self):
@@ -240,18 +245,19 @@ class MetricsTest(unittest.TestCase):
     met.clear_all()
     getAndAssertFallbackOpsLenEquals(0)
 
-    # Run torchvision operations as fallback.
-    import torchvision
-    scores = torch.rand(N).to(xm.xla_device())
-    # NMS doesn't have a PyTorch/XLA implementation without dynamic shapes.
-    torchvision.ops.nms(xys, scores, 0.5)
-    # remove_small_boxes is not implemented in C++. It calls other PyTorch
-    # operations. One of them, nonzero, is a fallback operation.
-    torchvision.ops.remove_small_boxes(
-        xys, torch.median(torch.stack((width, height))))
-    ops = getAndAssertFallbackOpsLenEquals(3)
-    self.assertEqual(
-        set(ops), {"aten::nonzero", "aten::median", "torchvision::nms"})
+    if not XLAExperimentalContains("nms"):
+      # Run torchvision operations as fallback.
+      import torchvision
+      scores = torch.rand(N).to(xm.xla_device())
+      # NMS doesn't have a PyTorch/XLA implementation without dynamic shapes.
+      torchvision.ops.nms(xys, scores, 0.5)
+      # remove_small_boxes is not implemented in C++. It calls other PyTorch
+      # operations. One of them, nonzero, is a fallback operation.
+      torchvision.ops.remove_small_boxes(
+          xys, torch.median(torch.stack((width, height))))
+      ops = getAndAssertFallbackOpsLenEquals(3)
+      self.assertEqual(
+          set(ops), {"aten::nonzero", "aten::median", "torchvision::nms"})
 
 
 if __name__ == '__main__':
