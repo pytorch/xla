@@ -2633,7 +2633,6 @@ class TestDLPack(parameterized.TestCase):
     self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
     t1_cuda[0] = t1_cuda[0] + 20
     self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
-    print('xw32 test passed')
 
     t2_cuda = torch.tensor(5).cuda()
     xla_t2 = xdlpack.from_dlpack(t2_cuda)
