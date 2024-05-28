@@ -2021,6 +2021,54 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.assertEqual(r, Xr.cpu())
 
+  def test_index_zero_tensor_by_zero_tensor(self):
+
+    # Test if simple one-tensor indexing works.
+    # Should return a non-permuted tensor.
+    def f1(x, i):
+      return x[i]
+
+    # Test if scattered two-tensor indexing works.
+    # Should return a permuted tensor, with indexed dimensions first.
+    def f2(x, i0, i1):
+      return x[:, i0, :, i1]
+
+    cases = {
+        f1: [
+            ((0,), (0,)),
+            ((0, 10), (0, 5, 5)),
+            ((0, 3, 3), (5, 5, 0)),
+        ],
+        f2: [
+            ((10, 0, 10, 10), (5, 0, 5), (5, 1, 1)),
+            ((0, 0, 10, 0), (5, 5, 0), (5, 5, 1)),
+        ]
+    }
+
+    def make_tensor(shape):
+      return torch.rand(shape)
+
+    def make_index(shape):
+      return torch.randint(0, 100, shape, dtype=torch.long)
+
+    def test(f, xshape, ishapes):
+      x = make_tensor(xshape)
+      ilist = [make_index(s) for s in ishapes]
+
+      Xx = x.to(xm.xla_device())
+      Xilist = [i.to(xm.xla_device()) for i in ilist]
+
+      out = f(x, *ilist)
+      Xout = f(Xx, *Xilist)
+
+      self.assertEqual(out, Xout.cpu())
+
+    for xshape, ishape in cases[f1]:
+      test(f1, xshape, (ishape,))
+
+    for xshape, i0shape, i1shape in cases[f2]:
+      test(f2, xshape, (i0shape, i1shape))
+
 
 class MNISTComparator(nn.Module):
 

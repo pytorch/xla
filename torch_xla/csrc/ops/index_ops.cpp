@@ -277,11 +277,58 @@ torch::lazy::Value EnsureRank1(const torch::lazy::Value& index) {
              : index;
 }
 
+bool HasZeroElementIndex(absl::Span<const XLATensorPtr> indices) {
+  return std::any_of(indices.begin(), indices.end(),
+                     [](const XLATensorPtr& index) {
+                       return xla::ShapeUtil::ElementsIn(*index->shape()) == 0;
+                     });
+}
+
+XLATensorPtr GetZeroElementTensor(const XLATensorPtr& base,
+                                  absl::Span<const XLATensorPtr> indices,
+                                  int64_t start_dim) {
+  // Returns a 0-element tensor described by the indexing.
+  //
+  // At this point, we know that we are indexing 'base' with 0-element
+  // tensors, i.e. one of its dimensions has size 0. Therefore, we
+  // need to return a 0-element tensor of the appropriate size.
+  //
+  // This function computes the output size and calls 'full' to create the
+  // desired 0-element tensor.
+  std::vector<int64_t> dimensions;
+
+  // In the beginning, we add all dimensions that come before the ones that
+  // correspond to the indices.
+  absl::Span<const int64_t> base_dimensions = base->shape().get().dimensions();
+  dimensions.insert(dimensions.end(), base_dimensions.begin(),
+                    base_dimensions.begin() + start_dim);
+
+  // Then, we add the dimensions of the first index. Notice that, at this
+  // point, all indices are already broadcasted, i.e. have the same size.
+  // So, we grab the first one for convenience.
+  for (auto dim : indices.front()->shape().get().dimensions()) {
+    dimensions.push_back(dim);
+  }
+
+  // Finally, add the remaining dimensions that weren't indexed.
+  dimensions.insert(dimensions.end(),
+                    base_dimensions.begin() + start_dim + indices.size(),
+                    base_dimensions.end());
+
+  return tensor_methods::full(dimensions, 0, base->GetDevice(), base->dtype());
+}
+
 XLATensorPtr IndexByTensors(const XLATensorPtr& base,
                             absl::Span<const XLATensorPtr> indices,
                             int64_t start_dim) {
   if (indices.empty()) {
     return base;
+  }
+  // Check whether we are trying to index with a 0-element tensor.
+  // If so, there's no need to compute anything. We simply return
+  // a 0-element tensor.
+  if (HasZeroElementIndex(indices)) {
+    return GetZeroElementTensor(base, indices, start_dim);
   }
   auto canonical_indices = WrapIndicesOnce(base, indices, start_dim);
   int64_t indices_rank = canonical_indices.front()->shape().get().rank();
