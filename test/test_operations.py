@@ -2069,6 +2069,42 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for xshape, i0shape, i1shape in cases[f2]:
       test(f2, xshape, (i0shape, i1shape))
 
+  def test_inplace_mul_scalar_different_dtype(self):
+    # This tests whether the returned output data-type agrees on PyTorch
+    # and XLA sides.
+    #
+    # Technical details: even though we were computing the common data-type
+    # inside PyTorch/XLA XLANativeFunctions::mul function, we were using it
+    # just for telling PyTorch what the output data-type would be, i.e. creating
+    # an IR node of that data-type). Meanwhile, in the XLA side of things,
+    # it would just promote the tensors using other data-type promotion rules.
+    #
+    # In summary, given the expressions below, the problem this test covers is:
+    #
+    #   >>> t = torch.rand(10, dtype=torch.half)
+    #   >>> s = torch.tensor(5, dtype=torch.double)
+    #   >>> out = t.mul_(s)
+    #
+    #   out.dtype is torch.float16, but its underlying XLA type (xla::Shape's
+    #   element_type) is F64
+    #
+    # See: https://github.com/pytorch/xla/issues/7084
+
+    def fn(inp, s):
+      return inp.mul_(s)
+
+    inp = torch.rand(10, dtype=torch.half)
+    s = torch.tensor(7, dtype=torch.double)
+
+    Xinp = inp.to(xm.xla_device())
+    Xs = s.to(xm.xla_device())
+
+    out = fn(inp, s)
+    Xout = fn(Xinp, Xs)
+
+    self.assertEqual(out, Xout.cpu())
+    self.assertEqual("f16", torch_xla._XLAC._get_xla_tensor_shape_type(Xout))
+
 
 class MNISTComparator(nn.Module):
 
