@@ -54,8 +54,9 @@ Note: `dev-requirements.txt` will install the CPU-only version of PyTorch.
 
 #### 1.1 Install this package
 
-If you don't want to install torch_xla2 without the jax dependency:
+If you want to install torch_xla2 without the jax dependency and use the jax dependency from torch_xla:
 ```bash
+pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 pip install -e .
 ```
 
