@@ -188,6 +188,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                        const torch::lazy::BackendDevice& device);
 
   runtime::ComputationClient::ComputationPtr GetXLAComputation(
+//   xla::XlaComputation GetXLAComputation(
         std::vector<XLATensorPtr>* tensors,
         absl::Span<const std::string> devices, bool warm_up_cache_only = false);
 
