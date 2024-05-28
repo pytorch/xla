@@ -12,7 +12,7 @@ import functools
 
 def _jit_composite_impl(composite_name, jaxpr_impl, **jit_args):
   """Wrap a jaxpr in a jitted function with the proper composite name
-  TODO: Make this produce a composite instead of a call.
+  TODO: Wrap JIT in a `stablehlo.composite` op, instead of generating a call op.
   """
   def composite_impl(*args):
     return jaxpr_impl(*args)
@@ -22,6 +22,10 @@ def _jit_composite_impl(composite_name, jaxpr_impl, **jit_args):
 
 def register_jax_composite(composite_name, impl, *ops, **jit_args):
   """Register a composite using a JAX implementation.
+    composite_name - The name of the library op to use in the exported composite
+    impl           - A JAX lowering for the library operation
+    *ops           - Variadic torch.ops to lower using `impl`.
+    **jit_args     - Additional parameters to forward to JAX jit.
   
   This is used to register custom lowerings with an explicit jaxpr
   implementation, such as preserving a specific aten op using a jaten impl.
