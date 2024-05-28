@@ -156,6 +156,14 @@ jobs:
           if [[ ! -z "$RUN_BENCHMARK_TESTS" ]]; then
             pip install -r pytorch/xla/benchmarks/requirements.txt
           fi
+      - name: Test triton
+        shell: bash
+        run: |
+            pip install -U --pre jaxlib -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+            pip install -U --pre jax-cuda12-pjrt jax-cuda12-plugin -f https://storage.googleapis.com/jax-releases/jax_cuda_plugin_nightly_releases.html
+            pip install -U --pre jax -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
+            pip install --no-deps triton==2.3.0
+            TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas python pytorch/xla/test/test_triton.py
       - name: Test
         shell: bash
         run: pytorch/xla/.github/scripts/run_tests.sh pytorch/ pytorch/xla/ $USE_COVERAGE
