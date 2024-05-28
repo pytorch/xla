@@ -1566,6 +1566,7 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
 }
 
 runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
+// xla::XlaComputation XLAGraphExecutor::GetXLAComputation(
         std::vector<XLATensorPtr>* tensors,
         absl::Span<const std::string> devices, bool warm_up_cache_only) {
   // coll
@@ -1619,6 +1620,12 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
 
   // TODO(@manfei): abstract xla_computation and wrap them for xla::while requirement
 
+  // const xla::XlaComputation& xla_computation = pjrt_computation->xla_computation();
+  runtime::ComputationClient::ComputationPtr compile_result_ptr = compile_result0.computation;
+  // xla::XlaComputation& xla_computation = compile_result_ptr.move_computation(); // ->computation_; // ->computation();
+  // xla::XlaComputation xla_computation = compile_result_ptr->move_computation();
+
+  // return xla_computation;
   return compile_result0.computation;
 }
 
