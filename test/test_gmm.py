@@ -23,23 +23,15 @@ if xr.device_type() == 'TPU':
 
 class MegabloxTest(unittest.TestCase):
 
-  def _reference_gmm(
-      self,
-      lhs: np.array,
-      rhs: np.array,
-      group_sizes: np.array,
-      preferred_element_type: np.dtype = np.float32,
-  ) -> np.array:
-
+  def _reference_gmm(self, lhs: torch.Tensor, rhs: torch.Tensor,
+                     group_sizes: torch.Tensor) -> np.array:
     start = 0
     out = []
     for i, size in enumerate(group_sizes):
-      result = np.dot(lhs[start:start + size, :], rhs[i, :, :])
-
-      result = result.astype(preferred_element_type)
+      result = lhs[start:start + size, :] @ rhs[i, :, :]
       out.append(result)
       start += group_sizes[i]
-    return np.array(np.concatenate(out, axis=0))
+    return torch.cat(out)
 
   def _group_sizes_strategy(self, m: int, num_groups: int) -> torch.Tensor:
     # Randomly sample the ends of the groups in the m-dimension. Let the fuzzer
@@ -56,15 +48,6 @@ class MegabloxTest(unittest.TestCase):
     # starts at zero.
     starts = np.concatenate([np.zeros(1, dtype=np.int32), ends_no_final])
     return torch.from_numpy(ends - starts).to(torch.int32)
-
-  def _tolerances(self, lhs_dtype: torch.dtype, rhs_dtype: torch.dtype,
-                  out_dtype: torch.dtype) -> tuple[float, float]:
-    if (lhs_dtype == torch.bfloat16 or rhs_dtype == torch.bfloat16 or
-        out_dtype == torch.bfloat16):
-      return 1e-3, 1e-2  # atol, rtol
-    return 1e-4, 1e-2  # atol, rtol
-
-  LutFn = Callable[[int, int, int], Optional[tuple[int, int, int]]]
 
   def _init_test_cases(self):
     self.tests_cases = []
@@ -100,6 +83,7 @@ class MegabloxTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm(self):
     met.clear_all()
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
 
     self._init_test_cases()
     for test_case in self.tests_cases:
@@ -108,21 +92,39 @@ class MegabloxTest(unittest.TestCase):
       m = test_case['m']
       n = test_case['n']
       lhs_dtype = rhs_dtype = test_case['dtype']
-      out_dtype = torch.float32
 
-      lhs = torch.rand(m, k, dtype=lhs_dtype).to('xla')
-      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype).to('xla')
-      group_sizes = self._group_sizes_strategy(
-          m=m, num_groups=num_groups).to('xla')
-      out = gmm(lhs, rhs, group_sizes)
+      lhs = torch.rand(m, k, dtype=lhs_dtype)
+      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
-      ref_out = self._reference_gmm(lhs.cpu().float().numpy(),
-                                    rhs.cpu().float().numpy(),
-                                    group_sizes.cpu().numpy())
+      out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+      self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
-      atol, rtol = self._tolerances(lhs_dtype, rhs_dtype, out_dtype)
-      np.testing.assert_allclose(
-          ref_out, np.array(out.cpu()), rtol=rtol, atol=atol)
+    # Make sure gmm doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_gmm_bf16(self):
+    met.clear_all()
+
+    self._init_test_cases()
+    for test_case in self.tests_cases:
+      num_groups = test_case['num_groups']
+      k = test_case['k']
+      m = test_case['m']
+      n = test_case['n']
+      lhs_dtype = rhs_dtype = torch.bfloat16
+
+      lhs = torch.rand(m, k, dtype=lhs_dtype)
+      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+
+      out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+
+      self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
@@ -183,6 +185,7 @@ class MegabloxTest(unittest.TestCase):
           group_sizes=torch.tensor(test_grid['group_sizes']).to("xla"),
           m=test_grid['m'],
           tm=test_grid['tm'],
+          visit_empty_groups=True,
       )
 
       for i in range(len(jax_meta)):

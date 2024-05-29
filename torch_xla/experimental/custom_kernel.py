@@ -56,38 +56,43 @@ def jax_import_guard():
   torch_xla._XLAC._init_computation_client()
 
 
+def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  import jax.numpy as jnp
+
+  if dtype == torch.float32:
+    if _XLA_USE_BF16:
+      return jnp.bfloat16
+    return jnp.float32
+  elif dtype == torch.float64:
+    if _XLA_USE_BF16:
+      return jnp.bfloat16
+    return jnp.float64
+  elif dtype == torch.float16:
+    return jnp.float16
+  elif dtype == torch.bfloat16:
+    return jnp.bfloat16
+  elif dtype == torch.int32:
+    return jnp.int32
+  elif dtype == torch.int64:
+    return jnp.int64
+  elif dtype == torch.int16:
+    return jnp.int16
+  elif dtype == torch.int8:
+    return jnp.int8
+  elif dtype == torch.uint8:
+    return jnp.uint8
+  else:
+    raise ValueError(f"Unsupported dtype: {dtype}")
+
+
 def to_jax_shape_dtype_struct(tensor: torch.Tensor) -> "jax.ShapeDtypeStruct":
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
   import jax
-  import jax.numpy as jnp
-
-  def convert_torch_dtype_to_jax(dtype: torch.dtype) -> jnp.dtype:
-    if dtype == torch.float32:
-      if _XLA_USE_BF16:
-        return jnp.bfloat16
-      return jnp.float32
-    elif dtype == torch.float64:
-      if _XLA_USE_BF16:
-        return jnp.bfloat16
-      return jnp.float64
-    elif dtype == torch.float16:
-      return jnp.float16
-    elif dtype == torch.bfloat16:
-      return jnp.bfloat16
-    elif dtype == torch.int32:
-      return jnp.int32
-    elif dtype == torch.int64:
-      return jnp.int64
-    elif dtype == torch.int16:
-      return jnp.int16
-    elif dtype == torch.int8:
-      return jnp.int8
-    elif dtype == torch.uint8:
-      return jnp.uint8
-    else:
-      raise ValueError(f"Unsupported dtype: {dtype}")
 
   return jax.ShapeDtypeStruct(tensor.shape,
                               convert_torch_dtype_to_jax(tensor.dtype))
@@ -518,7 +523,7 @@ def _make_group_metadata(
     group_sizes: torch.Tensor,
     m: int,
     tm: int,
-    visit_empty_groups: bool = True,
+    visit_empty_groups: bool,
 ) -> Any:
   """Create the metadata needed for grouped matmul computation.
 
@@ -734,31 +739,31 @@ def gmm(
 
   m, k, n = lhs.shape[0], lhs.shape[1], rhs.shape[2]
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
+  preferred_element_type = lhs.dtype
+
   payload, _ = trace_pallas(
       gmm,
       lhs,
       rhs,
       group_sizes,
-      static_argnames=["tiling"],
+      static_argnames=["tiling", "preferred_element_type"],
+      preferred_element_type=convert_torch_dtype_to_jax(preferred_element_type),
       tiling=(tm, tk, tn))
 
-  # Create the metadata we need for computation.
-  # TODO (alanwaketan): The following assuumes groups_sizes is a cpu tensor.
-  # That means we need to materialize this input in order to use this gmm
-  # kernel, and that will introduce graph breaks in the computation.
+  # Create the metadata we need for computation, and that's why need to separate
+  # the tracing and execution part.
   group_offsets, group_ids, m_tile_ids, num_tiles = _make_group_metadata(
       group_sizes=group_sizes,
       m=m,
       tm=tm,
+      visit_empty_groups=False,
   )
-  group_offset_torch = torch.tensor([0], dtype=torch.int32).to("xla")
+  group_offset_torch = torch.tensor([0], dtype=torch.int32).to(lhs.device)
 
   return torch_xla._XLAC._xla_tpu_custom_call([
-      num_tiles.to("xla"),
-      group_offsets.to("xla"),
-      group_ids.to("xla"),
-      m_tile_ids.to("xla"), group_offset_torch, lhs, rhs
-  ], payload, [torch.Size([m, n])], [lhs.dtype])[0]
+      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs,
+      rhs
+  ], payload, [torch.Size([m, n])], [preferred_element_type])[0]
 
 
 def non_xla_attetion(q, k, v, attention_type):
