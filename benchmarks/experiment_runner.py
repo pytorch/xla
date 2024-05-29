@@ -428,6 +428,9 @@ class ExperimentRunner:
         xm.mark_step()
 
   def _synchronize(self, benchmark_experiment):
+    if benchmark_experiment.torch_xla2:
+      # torch_xla2 synchronization happens in _mark_step
+      return
     if benchmark_experiment.xla:
       xm.wait_device_ops()
     elif benchmark_experiment.accelerator == "cuda":
