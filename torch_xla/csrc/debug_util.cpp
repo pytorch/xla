@@ -239,6 +239,8 @@ void DebugUtil::analyze_graph_execution_python_frame(
     const xla::ProgramShape* program_shape) {
   static const bool pt_xla_debug_enabled =
       runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const int pt_xla_debug_level =
+      runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_LEVEL", -1);
   static const bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
   static const std::string debug_file_name =
@@ -249,7 +251,12 @@ void DebugUtil::analyze_graph_execution_python_frame(
   static const std::string executation_output_prefix = "Execution Analysis: ";
   static const std::string compilation_output_prefix = "Compilation Analysis: ";
 
-  if (!pt_xla_debug_enabled) {
+  if (!pt_xla_debug_enabled && pt_xla_debug_level <= 0) {
+    return;
+  }
+
+  if (pt_xla_debug_level <= 1 && source != GraphAnalysisSource::Compilation) {
+    // for debug level <=1, only output compilation analysis in this function.
     return;
   }
 
@@ -360,11 +367,14 @@ void DebugUtil::post_compilation_analysis(
     runtime::ComputationClient::ComputationPtr computation) {
   static const bool pt_xla_debug_enabled =
       runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const int pt_xla_debug_level =
+      runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_LEVEL", -1);
   static const bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
   static const std::string debug_file_name =
       runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
-  if (!pt_xla_debug_enabled || !is_master_process) {
+  if ((!pt_xla_debug_enabled && pt_xla_debug_level <= 0) ||
+      !is_master_process) {
     return;
   }
   static const std::string debug_output_prefix = "Post Compilation Analysis: ";
