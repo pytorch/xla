@@ -41,6 +41,8 @@ We recommend you to use our prebuilt Docker image to start your development work
 
   ```bash
   cd pytorch/
+  # pytorch/xla requires pytorch wheel to be presented under pytorch/dist
+  python setup.py bdist_wheel
   python setup.py install
   cd xla/
   python setup.py develop
@@ -81,6 +83,8 @@ We recommend you to use our prebuilt Docker image to start your development work
 
 * Build PyTorch
   ```Shell
+  # pytorch/xla requires pytorch wheel to be presented under pytorch/dist
+  python setup.py bdist_wheel
   python setup.py develop
   ```
 * Build PyTorch/XLA
