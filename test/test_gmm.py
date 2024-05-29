@@ -7,7 +7,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
-from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram
+from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram, tgmm
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -24,7 +24,7 @@ if xr.device_type() == 'TPU':
 class MegabloxTest(unittest.TestCase):
 
   def _reference_gmm(self, lhs: torch.Tensor, rhs: torch.Tensor,
-                     group_sizes: torch.Tensor) -> np.array:
+                     group_sizes: torch.Tensor) -> torch.Tensor:
     start = 0
     out = []
     for i, size in enumerate(group_sizes):
@@ -32,6 +32,16 @@ class MegabloxTest(unittest.TestCase):
       out.append(result)
       start += group_sizes[i]
     return torch.cat(out)
+
+  def _reference_tgmm(self, lhs: torch.Tensor, rhs: torch.Tensor,
+                     group_sizes: torch.Tensor) -> torch.Tensor:
+    start = 0
+    out = []
+    for i, size in enumerate(group_sizes):
+      result = lhs[:, start:start + size] @ rhs[start:start + size, :]
+      out.append(result)
+      start += group_sizes[i]
+    return torch.stack(out)
 
   def _group_sizes_strategy(self, m: int, num_groups: int) -> torch.Tensor:
     # Randomly sample the ends of the groups in the m-dimension. Let the fuzzer
@@ -279,6 +289,54 @@ class MegabloxTest(unittest.TestCase):
                                               device="xla")))
     self.assertTrue(
         torch.all(group_sizes == torch.tensor([1, 2, 3, 2], device="xla")))
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_tgmm(self):
+    met.clear_all()
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+
+    self._init_test_cases()
+    for test_case in self.tests_cases:
+      num_groups = test_case['num_groups']
+      k = test_case['k']
+      m = test_case['m']
+      n = test_case['n']
+      lhs_dtype = rhs_dtype = test_case['dtype']
+
+      lhs = torch.rand(k, m, dtype=lhs_dtype)
+      rhs = torch.rand(m, n, dtype=rhs_dtype)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      ref_out = self._reference_tgmm(lhs, rhs, group_sizes)
+
+      out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+
+    # Make sure tgmm doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
+    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_tgmm_bf16(self):
+    met.clear_all()
+
+    self._init_test_cases()
+    for test_case in self.tests_cases:
+      num_groups = test_case['num_groups']
+      k = test_case['k']
+      m = test_case['m']
+      n = test_case['n']
+      lhs_dtype = rhs_dtype = torch.bfloat16
+
+      lhs = torch.rand(k, m, dtype=lhs_dtype)
+      rhs = torch.rand(m, n, dtype=rhs_dtype)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      ref_out = self._reference_tgmm(lhs, rhs, group_sizes)
+
+      out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+
+    # Make sure tgmm doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
 
 
 if __name__ == '__main__':

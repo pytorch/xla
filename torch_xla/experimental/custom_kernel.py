@@ -528,7 +528,7 @@ def _make_group_metadata(
   """Create the metadata needed for grouped matmul computation.
 
   Args:
-    group_sizes: A 1d, jnp.ndarray with shape [num_groups] and jnp.int32 dtype.
+    group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
     m: The number of rows in lhs.
     tm: The m-dimension tile size being used.
     visit_empty_groups: If True, do not squeeze tiles for empty groups out of
@@ -537,14 +537,14 @@ def _make_group_metadata(
 
   Returns:
     tuple of:
-      group_offsets: A 1d, jnp.ndarray with shape [num_groups + 1] and jnp.int32
+      group_offsets: A 1d, torch.Tensor with shape [num_groups + 1] and torch.int32
         dtype. group_offsets[i] indicates the row at which group [i] starts in
         the lhs matrix and group_offsets[i-1] = m.
-      group_ids: A 1d, jnp.ndarray with shape [m_tiles + num_groups - 1] and
-        jnp.int32 dtype. group_ids[i] indicates which group grid index 'i' will
+      group_ids: A 1d, torch.Tensor with shape [m_tiles + num_groups - 1] and
+        torch.int32 dtype. group_ids[i] indicates which group grid index 'i' will
         work on.
-      m_tile_ids: A 1d, jnp.ndarray with shape [m_tiles + num_groups - 1] and
-        jnp.int32. m_tile_ids[i] indicates which m-dimension tile grid index 'i'
+      m_tile_ids: A 1d, torch.Tensor with shape [m_tiles + num_groups - 1] and
+        torch.int32. m_tile_ids[i] indicates which m-dimension tile grid index 'i'
         will work on.
     num_tiles: The number of m-dimension tiles to execute including overlapping
       executions. And don't confuse this with m_tiles which is m // tm.
@@ -723,14 +723,13 @@ def gmm(
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
   Args:
-    lhs: A 2d, jnp.ndarray with shape [m, k].
-    rhs: A 3d, jnp.ndarray with shape [num_groups, k, n].
-    group_sizes: A 1d, jnp.ndarray with shape [num_groups] and jnp.int32 dtype.
-    preferred_element_type: jnp.dtype, the element type for the output matrix.
+    lhs: A 2d, torch.Tensor with shape [m, k].
+    rhs: A 3d, torch.Tensor with shape [num_groups, k, n].
+    group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
     tiling: 3-tuple of ints. The m, k and n-dimension tile sizes.
 
   Returns:
-    A 2d, jnp.ndarray with shape [m, n].
+    A 2d, torch.Tensor with shape [m, n].
   """
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
@@ -764,6 +763,58 @@ def gmm(
       num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs,
       rhs
   ], payload, [torch.Size([m, n])], [preferred_element_type])[0]
+
+
+def tgmm(
+    lhs: torch.Tensor,
+    rhs: torch.Tensor,
+    group_sizes: torch.Tensor,
+    tiling: tuple[int, int, int] = (128, 128, 128)
+) -> torch.Tensor:
+  """Compute lhs[:, sizes[i-1]:sizes[i]] @ rhs[sizes[i-1]:sizes[i], :].
+
+  Args:
+    lhs: A 2d, torch.Tensor with shape [k, m].
+    rhs: A 2d, torch.Tensor with shape [m, n].
+    group_sizes: A 1d, torch.Tensor with shape [num_groups] and torch.int32 dtype.
+    tiling: 3-tuple of ints. The m, k and n-dimension tile sizes.
+
+  Returns:
+    A  3d, torch.Tensor with shape [num_groups, k, n].
+  """
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  from jax.experimental.pallas.ops.tpu.megablox.gmm import tgmm
+
+  k, m, n, num_groups = lhs.shape[0], lhs.shape[1], rhs.shape[1], group_sizes.shape[0]
+  tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
+  preferred_element_type = lhs.dtype
+
+  payload, _ = trace_pallas(
+      tgmm,
+      lhs,
+      rhs,
+      group_sizes,
+      static_argnames=["tiling", "preferred_element_type"],
+      preferred_element_type=convert_torch_dtype_to_jax(preferred_element_type),
+      tiling=(tm, tk, tn))
+
+  # Create the metadata we need for computation, and that's why need to separate
+  # the tracing and execution part.
+  group_offsets, group_ids, m_tile_ids, num_tiles = _make_group_metadata(
+      group_sizes=group_sizes,
+      m=m,
+      tm=tm,
+      visit_empty_groups=True,
+  )
+  group_offset_torch = torch.tensor([0], dtype=torch.int32).to(lhs.device)
+
+  lhs = lhs.swapaxes(0, 1)
+  return torch_xla._XLAC._xla_tpu_custom_call([
+      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs,
+      rhs
+  ], payload, [torch.Size([num_groups, k, n])], [preferred_element_type])[0]
 
 
 def non_xla_attetion(q, k, v, attention_type):
