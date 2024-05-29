@@ -21,10 +21,6 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
                        bool is_kernel_bilinear) {
   // Code copied from
   // https://github.com/tensorflow/tensorflow/blob/e51d6ab5730092775d516b18fa4ee85d49602cd8/tensorflow/compiler/tf2xla/kernels/image_resize_ops.cc#L477-L672
-  //
-  // Changes:
-  // - Remove F32 data-type conversion when is_kernel_bilinear
-  //   See: https://github.com/pytorch/xla/issues/7095
 
   // We implement bilinear interpolation and nearest neighbor with a Gather op.
   // For each output pixel, we gather the necessary slices of the input.
@@ -57,7 +53,7 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
       << "input and output must have the same element type";
 
   xla::PrimitiveType original_input_type = input_type;
-  if (xla::primitive_util::IsIntegralType(input_type)) {
+  if (is_kernel_bilinear || xla::primitive_util::IsIntegralType(input_type)) {
     input = xla::ConvertElementType(input, xla::F32);
     input_type = xla::F32;
   }
@@ -214,7 +210,7 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
   absl::InlinedVector<int64_t, 4> perm = {2, 0, 1, 3};
   input = xla::Transpose(input, perm);
 
-  if (original_input_type != input_type) {
+  if (!is_kernel_bilinear && original_input_type != input_type) {
     input = xla::ConvertElementType(input, original_input_type);
   }
   return input;
