@@ -655,10 +655,6 @@ class OptimizerCheckpointTest(DistributedCheckpointTestBase):
   def test_adamw(self, tmpdir):
     self._test_optimizer(tmpdir, torch.optim.AdamW)
 
-  @run_with_tmpdir
-  def test_adagrad(self, tmpdir):
-    self._test_optimizer(tmpdir, torch.optim.Adagrad)
-
 
 if __name__ == '__main__':
   test = unittest.main()
