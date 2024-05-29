@@ -13,19 +13,22 @@ import torch_xla.distributed.spmd as spmd
 from torch_xla.distributed.fsdp.wrap import recursive_wrap
 
 
-def _prepare_spmd_partition_spec(param, extra_data_axis=None):
-  partition_spec = [None] * len(param.shape)
+def _prepare_spmd_partition_spec(param, extra_data_axis=None, shard_maximal=False):
+  shape = param.shape
+  partition_spec = [None] * len(shape)
   # Skip scalar tensors and it replicated.
   if len(partition_spec) == 0:
     return partition_spec
 
-  # Only shard the 0th dimension of the parameter according to the
-  # fsdp axis of the mesh.
-  # TODO: should we shard on the maximal dim for param? Then we need
-  # another helper for the output.
-  partition_spec[0] = "fsdp"
+  # Shard the 0th dimension of the parameter according to the
+  # fsdp axis of the mesh, if shard_maximal is not specified.
+  index = 0
+  if shard_maximal:
+    index = shape.index(max(shape))
+
+  partition_spec[index] = "fsdp"
   if extra_data_axis:
-    partition_spec[0] = (extra_data_axis, "fsdp")
+    partition_spec[index] = (extra_data_axis, "fsdp")
   return tuple(partition_spec)
 
 
@@ -113,7 +116,7 @@ class SpmdFullyShardedDataParallel(nn.Module):
     for param in module.parameters():
       if torch_xla._XLAC._get_xla_sharding_spec(param) != "":
         continue
-      spmd.mark_sharding(param, mesh, _prepare_spmd_partition_spec(param))
+      spmd.mark_sharding(param, mesh, _prepare_spmd_partition_spec(param, shard_maximal=True))
 
     # Register a backward hook to place optimization barrier to prevent
     # gigantic fusions on syncing the gradients.
