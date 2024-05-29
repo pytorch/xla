@@ -787,7 +787,8 @@ def tgmm(
   jax_import_guard()
   from jax.experimental.pallas.ops.tpu.megablox.gmm import tgmm
 
-  k, m, n, num_groups = lhs.shape[0], lhs.shape[1], rhs.shape[1], group_sizes.shape[0]
+  k, m, n, num_groups = lhs.shape[0], lhs.shape[1], rhs.shape[
+      1], group_sizes.shape[0]
   tm, tk, tn = min(tiling[0], m), min(tiling[1], k), min(tiling[2], n)
   preferred_element_type = lhs.dtype
 

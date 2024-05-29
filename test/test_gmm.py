@@ -34,7 +34,7 @@ class MegabloxTest(unittest.TestCase):
     return torch.cat(out)
 
   def _reference_tgmm(self, lhs: torch.Tensor, rhs: torch.Tensor,
-                     group_sizes: torch.Tensor) -> torch.Tensor:
+                      group_sizes: torch.Tensor) -> torch.Tensor:
     start = 0
     out = []
     for i, size in enumerate(group_sizes):
