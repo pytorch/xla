@@ -23,18 +23,14 @@ if xr.device_type() == 'TPU':
 
 class MegabloxTest(unittest.TestCase):
 
-  def _reference_gmm(
-      self,
-      lhs: torch.Tensor,
-      rhs: torch.Tensor,
-      group_sizes: torch.Tensor
-  ) -> np.array:
+  def _reference_gmm(self, lhs: torch.Tensor, rhs: torch.Tensor,
+                     group_sizes: torch.Tensor) -> np.array:
     start = 0
     out = []
     for i, size in enumerate(group_sizes):
-        result = lhs[start:start + size, :] @ rhs[i, :, :]
-        out.append(result)
-        start += group_sizes[i]
+      result = lhs[start:start + size, :] @ rhs[i, :, :]
+      out.append(result)
+      start += group_sizes[i]
     return torch.cat(out)
 
   def _group_sizes_strategy(self, m: int, num_groups: int) -> torch.Tensor:
@@ -99,8 +95,7 @@ class MegabloxTest(unittest.TestCase):
 
       lhs = torch.rand(m, k, dtype=lhs_dtype)
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-      group_sizes = self._group_sizes_strategy(
-          m=m, num_groups=num_groups)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
       ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
       out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
@@ -124,8 +119,7 @@ class MegabloxTest(unittest.TestCase):
 
       lhs = torch.rand(m, k, dtype=lhs_dtype)
       rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-      group_sizes = self._group_sizes_strategy(
-          m=m, num_groups=num_groups)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
       ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
       out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
