@@ -32,7 +32,7 @@ jobs:
       - name: Clean up workspace
         run: |
           ls -la
-          sudo rm -rvf ${GITHUB_WORKSPACE}/*
+          rm -rvf ${GITHUB_WORKSPACE}/*
       - name: Setup gcloud
         shell: bash
         run: |
