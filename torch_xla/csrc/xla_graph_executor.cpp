@@ -1673,68 +1673,10 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
   TF_VLOG(4) << "Parameter sequence graph hash "
              << torch::lazy::HashToString(coll.hash);
 
-  // CompilationResult compile_result0 =
-  //     Compile(*tensors, devices, coll, &po_data, ir_values);
-
-  // xla::XlaComputation compile_result0 =
   CompilationResult compile_result0 =
       CompileForiLoop(*tensors, devices, coll, &po_data, ir_values, fn_type, additional_inputs_list);
 
-  // TODO(@manfei): abstract xla_computation and wrap them for xla::while requirement
-
-  // const xla::XlaComputation& xla_computation = pjrt_computation->xla_computation();
-  // runtime::ComputationClient::ComputationPtr compile_result_ptr = compile_result0.computation; // used use one
-  // xla::XlaComputation& xla_computation = compile_result_ptr.move_computation(); // ->computation_; // ->computation();
-  // xla::XlaComputation xla_computation = compile_result_ptr->move_computation();
-
-  /////////////////////////////////////
-    // // add dummy parameter to cond xlacomputation's input for xla::while requriement
-    // if (GetNameString() == "condctx") {
-    //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    //   int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
-    //   int64_t additional_inputs_list_size = additional_inputs_list.size();
-    //   for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
-    //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
-    //     xla::Shape shape = xtensor->shape().get();
-    //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-    //                                   "UnusedArgumentsPlaceholder");
-    //     parameter_idx += 1;
-    //   }
-    // }
-
-    // // add dummy parameter to body xlacomputation's input for xla::while requriement
-    // if (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0) {
-    //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
-    //   int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
-    //   int64_t additional_inputs_list_size = additional_inputs_list.size();
-    //   for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
-    //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
-    //     xla::Shape shape = xtensor->shape().get();
-    //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-    //                                   "UnusedArgumentsPlaceholder");
-    //     parameter_idx += 1;
-    //   }
-    // }
-
-    // // wrap inputs of cond/body_computation
-    // if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
-    //   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-    //   std::vector<size_t> buffer_donor_indices;
-    //   xla::ProgramShape program_shape =
-    //       ConsumeValue(computation.GetProgramShape());
-    //   // TODO(@manfei): please confirm whether we check for more than two or use
-    //   // default value true
-    //   bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
-    //   if (should_wrap_parameter) {
-    //     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-    //         computation, program_shape.parameters(), buffer_donor_indices));
-    //   }
-    // }
-  /////////////////////////////////////
-
-  // return xla_computation;
   return compile_result0.computation;
-  // return compile_result0;
 }
 
 }  // namespace torch_xla
