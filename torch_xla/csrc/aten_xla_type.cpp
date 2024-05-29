@@ -114,10 +114,10 @@ class OpConfig {
   static OpConfig From(const InnerFnType& inner_impl) {
     return OpConfig(
         [&](const XLAInputVector& inputs, at::ScalarType common_dtype) {
-          constexpr size_t tensor_args =
+          constexpr size_t num_tensor_args =
               NumberOfXLATensorArgs<std::remove_pointer_t<InnerFnType>>::value;
           return CallInner(inner_impl, inputs, common_dtype,
-                           std::make_index_sequence<tensor_args>{});
+                           std::make_index_sequence<num_tensor_args>{});
         });
   }
 
