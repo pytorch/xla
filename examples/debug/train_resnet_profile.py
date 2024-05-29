@@ -1,5 +1,5 @@
 import os
-import os
+import sys
 example_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(example_folder)
 from train_resnet_base import TrainResNetBase
@@ -13,9 +13,11 @@ os.environ["XLA_HLO_DEBUG"] = "1"
 if __name__ == '__main__':
   base = TrainResNetBase()
   profile_port = 9012
+  # you can also set profile_logdir to a gs bucket, for example
+  # profile_logdir = "gs://your_gs_bucket/profile"
   profile_logdir = "/tmp/profile/"
   duration_ms = 30000
-  assert os.path.exists(profile_logdir)
+  assert profile_logdir.startswith('gs://') or os.path.exists(profile_logdir)
   server = xp.start_server(profile_port)
   # Ideally you want to start the profile tracing after the initial compilation, for example
   # at step 5.
