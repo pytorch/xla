@@ -2208,6 +2208,19 @@ class TestOpBuilder(test_utils.XlaTestCase):
     self.runOpBuilderTest(
         'test_mul', [torch.randn(2, 2), torch.randn(2, 2)], op_fn)
 
+  def test_cumsum(self):
+    # cumsum won't work with int64 type on TPU
+    data = torch.tensor([1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32).to("xla")
+    result = torch.cumsum(data, dim=0)
+
+    # As long as it doesn't crash, it's good.
+    result.cpu()
+
   def test_conditional(self):
 
     def op_fn(k, a, b, k0=None):
@@ -2813,6 +2826,20 @@ class TestHelperFunction(test_utils.XlaTestCase):
         (base,
          torch.repeat_interleave(input[-1],
                                  total_repeat_length - base.size()[0])))
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
+  def test_repeat_special(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 135
+    num_groups = 8
+    input = torch.arange(num_groups, dtype=torch.int32).to(device)
+    repeats = torch.tensor([3, 6, 2, 14, 27, 47, 8, 28]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    expected = torch.repeat_interleave(input, repeats)[:total_repeat_length]
     self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
 
 
