@@ -187,6 +187,11 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
                        const torch::lazy::BackendDevice& device);
 
+  runtime::ComputationClient::ComputationPtr GetXLAComputation(
+        std::vector<XLATensorPtr>* tensors,
+        absl::Span<const std::string> devices, bool warm_up_cache_only = false,
+        const std::string fn_type = "_", std::vector<at::Tensor> additional_inputs_list = {});
+
  private:
   // This is just to group results from compile(). Since our computation is
   // different, we don't reuse the upstream CompilationResult.
@@ -345,6 +350,13 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   std::vector<size_t> SetBufferDonorsFromUserConfig(
       LoweringContext* lowering_ctx);
+
+  CompilationResult CompileForiLoop(std::vector<XLATensorPtr>& tensors,
+                            absl::Span<const std::string> devices,
+                            const SyncTensorCollection& coll,
+                            PostOrderData* po_data,
+                            const std::vector<torch::lazy::Value>& ir_values,
+                            const std::string fn_type, std::vector<at::Tensor> additional_inputs_list);
 
   // TODO(yeounoh) auto-sharding can change tensors shardings, which needs to be
   // accounted for in Dynamo integration.
