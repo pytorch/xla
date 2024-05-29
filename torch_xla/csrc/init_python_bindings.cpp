@@ -2434,7 +2434,9 @@ void InitXlaModuleBindings(py::module m) {
   BuildLoweringContextSubmodule(&m);
 
   m.def("_get_xla_computation", [](const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices, const bool warm_up_cache_only) {
+    const std::vector<std::string>& devices, const bool warm_up_cache_only,
+    const std::string fn_type,
+    std::vector<at::Tensor> additional_inputs_list) {
     // convert list of at::Tensor to list of XLATensorPtr
     std::vector<XLATensorPtr> xtensors;
     xtensors.reserve(tensors.size());
@@ -2443,7 +2445,9 @@ void InitXlaModuleBindings(py::module m) {
     }
 
     // create xlacomputation based on treated tensors
-    runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true);
+    // runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
+    // xla::XlaComputation xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
+    runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
 
     // TODO(@manfei): wrap inputs of cond/body_computation
 
