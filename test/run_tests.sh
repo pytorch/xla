@@ -274,6 +274,11 @@ function run_xla_op_tests3 {
   fi
 }
 
+function run_tests_requiring_torch_cuda {
+  PJRT_DEVICE=CUDA python3 "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY 
+  PJRT_DEVICE=CUDA python3 "$CDIR/dynamo/test_dynamo.py" "$@" --verbosity=$VERBOSITY 
+}
+
 #######################################################################################
 
 function run_op_tests {
@@ -281,6 +286,7 @@ function run_op_tests {
   run_xla_op_tests1
   run_xla_op_tests2
   run_xla_op_tests3
+  run_tests_requiring_torch_cuda
 }
 
 function run_mp_op_tests {
@@ -315,6 +321,9 @@ function run_tests {
   elif [[ "$RUN_XLA_OP_TESTS3" == "xla_op3" ]]; then
     echo "Running xla op tests..."
     run_xla_op_tests3
+  elif [[ "$RUN_TESTS_REQUIRING_TORCH_CUDA" == "run_tests_requiring_torch_cuda"]]; then
+    echo "Running xla tests that requires torch CUDA..."
+    run_tests_requiring_torch_cuda
   elif [[ "$RUN_TORCH_MP_OP_TESTS" == "torch_mp_op" ]]; then
     echo "Running torch op tests..."
     run_torch_op_tests
@@ -325,6 +334,7 @@ function run_tests {
       run_xla_op_tests1
       run_xla_op_tests2
       run_xla_op_tests3
+      run_tests_requiring_torch_cuda
     fi
     if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
       run_torch_op_tests
