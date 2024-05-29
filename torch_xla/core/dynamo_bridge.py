@@ -100,15 +100,7 @@ class GraphInputMatcher:
 
 
 def get_fallback_ops():
-  fallback_ops = []
-  for opname in metrics.counter_names():
-    if "aten::" not in opname:
-      continue
-    val = int(metrics.counter_value(opname))
-    if val > 0:
-      fallback_ops.append(f"{opname}={val}")
-
-  return fallback_ops
+  return metrics.executed_fallback_ops()
 
 
 # Checks that all input args that are tensors are on the same device.

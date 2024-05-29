@@ -79,3 +79,8 @@ def short_metrics_report(counter_names: list = None, metric_names: list = None):
         'TransferToDeviceTime', 'TransferFromDeviceTime'
     ]
   return torch_xla._XLAC._short_xla_metrics_report(counter_names, metric_names)
+
+
+def executed_fallback_ops():
+  """Retrieves a list of operations that were run in fallback mode."""
+  return torch_xla._XLAC._get_executed_fallback_ops()
