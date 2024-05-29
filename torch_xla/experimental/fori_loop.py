@@ -38,13 +38,16 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   if additional_inputs is None:
     additional_inputs = tuple()
   return _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs)
+  # return _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs)
 
 def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
 
+  # potentional_res = 
+  # l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
   def new_body_fn(*carried_inputs):
     res = list(body_fn(*carried_inputs))
     if additional_inputs and (bn_additional_inputs != []):
-      bn_additional_inputs.insert(0, one)
+      # bn_additional_inputs.insert(0, one)
       res = list(res_iter_inputs) + list(additional_inputs) + bn_additional_inputs + [res_outputs, ]
     elif additional_inputs and (bn_additional_inputs == []):
       res = [res[0], ] + list(additional_inputs) + res[1:]
@@ -55,6 +58,7 @@ def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=
   return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
 
 def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
+# def _xla_while_loop(original_cond_fn, original_body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
 
   #  ====== fake_carried_inputs ======
   fake_carried_inputs = []
@@ -81,10 +85,30 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
   dummy_inputs_list = [fake_carried_inputs[0], ] + fake_additiona_args + fake_carried_inputs[1:]
 
   #  ====== body_fn ======
+
+  # _, potentional_res = original_body_fn(*carried_inputs, *additional_inputs)
+  # fake_potentional_res = []
+  # for i in potentional_res:
+  #   fake_potentional_res.append(
+  #     torch.randint(10, potentional_res.size(), dtype=potentional_res.dtype).to(device))
+  # print("fake_potentional_res: ", fake_potentional_res)
+
+  # def body_fn(*carried_inputs, fake_potentional_res):
+  #   iter, y = list(body_fn(*carried_inputs))
+  #   # if additional_inputs and (bn_additional_inputs != []):
+  #   #   bn_additional_inputs.insert(0, one)
+  #   #   res = list(res_iter_inputs) + list(additional_inputs) + bn_additional_inputs + [res_outputs, ]
+  #   if additional_inputs and (bn_additional_inputs == []):
+  #     # res = [res[0], ] + list(additional_inputs) + res[1:]
+  #     res = [iter, ] + carried_inputs[1:] + list(additional_inputs) + [y, ]
+  #   else:
+  #     # res = res
+  #     res = [iter, ] + carried_inputs[1:] + [y, ]
+  #   return res
+
   body_result = body_fn(carried_inputs[0], *fake_carried_inputs[1:], *additional_inputs)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
-
 
   #  ====== body xlacomputation ======
   body_ctx.buildforiloop(list(body_result), dummy_inputs_list)
@@ -93,6 +117,10 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
                                                       body_hlo)
 
   #  ====== cond_fn ======
+
+  # def cond_fn(*carried_inputs, fake_potentional_res):
+  #   return original_cond_fn(*carried_inputs)
+
   cond_result = cond_fn(*carried_inputs, *additional_inputs)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
