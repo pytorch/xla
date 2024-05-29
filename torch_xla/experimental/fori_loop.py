@@ -41,7 +41,7 @@ def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
 def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
 
-  # for i in range(len(additional_inputs)): print("additional_inputs: ", i, " size: ", additional_inputs[i].size())
+  for i in range(len(additional_inputs)): print("additional_inputs: ", i, " size: ", additional_inputs[i].size())
 
   def new_body_fn(*carried_inputs):
     res = list(body_fn(*carried_inputs))
