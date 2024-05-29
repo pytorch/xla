@@ -51,6 +51,16 @@ jobs:
         shell: bash
         run: |
           echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
+      - name: Fetch torch/torch_xla/torchvision wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: torch-xla-wheels
+          path: /tmp/wheels/
+          pattern: torch-*.whl 
+      - name: Remove torch wheel
+        shell: bash
+        run: |
+          rm -rf /tmp/wheels/torch-*
       - name: Fetch torch/torch_xla/torchvision wheels with CUDA enabled
         uses: actions/download-artifact@v4
         with:
