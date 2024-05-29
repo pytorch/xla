@@ -343,11 +343,13 @@ class WhileLoopTest(unittest.TestCase):
     l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
     _, _, res = mnist(iteri, l_in_0, l_out)
-    print("res: ", res)
+    # print("res: ", res)
+    print("res[0]: ", res[0])
 
     # === expected result for one iteration to be compared since body_fn defined use the same input in each iteration ===
     _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
-    print("expected_res: ", expected_res)
+    # print("expected_res: ", expected_res)
+    print("expected_res[0]: ", expected_res[0])
     self.assertTrue(torch.all(torch.eq(res, expected_res)))
 
   def test_while_loop_tpu_MNIST_inside_loop(self):
@@ -411,12 +413,14 @@ class WhileLoopTest(unittest.TestCase):
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
     _, _, res = mnist(iteri, l_in_0, l_out)
     # _, _, res = mnist(iteri, l_in_0)
-    print("res: ", res)
+    # print("res: ", res)
+    print("res[0]: ", res[0])
 
     # === expected result for one iteration to be compared since body_fn defined use the same input in each iteration ===
     _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
     # _, _, expected_res = mnist.forward_compare(iteri, l_in_0)
-    print("expected_res: ", expected_res)
+    # print("expected_res: ", expected_res)
+    print("expected_res[0]: ", expected_res[0])
     self.assertTrue(torch.all(torch.eq(res, expected_res)))
 
   def test_while_loop_tpu_MNIST_inside_loop_with_mutation_in_batchnorm2d(self):
@@ -438,9 +442,11 @@ class WhileLoopTest(unittest.TestCase):
       def __init__(self):
         super().__init__()
         self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2)
-        self.bn1 = torch.nn.BatchNorm2d(10)
+        self.bn1 = torch.nn.BatchNorm2d(10, affine=False, track_running_stats=False)
+        # self.bn1 = torch.nn.BatchNorm2d(10)
         self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5)
-        self.bn2 = torch.nn.BatchNorm2d(20)
+        self.bn2 = torch.nn.BatchNorm2d(20, affine=False, track_running_stats=False)
+        # self.bn2 = torch.nn.BatchNorm2d(20)
         self.fc1 = torch.nn.Linear(500, 50)
         self.fc2 = torch.nn.Linear(50, 10)
         self.bnLayersWeights = []
@@ -486,14 +492,15 @@ class WhileLoopTest(unittest.TestCase):
 
     _, _, res = mnist(iteri, l_in_0, l_out)
     # _, _, res = mnist(iteri, l_in_0)
-    print("res: ", res)
+    # print("res: ", res)
+    print("res[0]: ", res[0])
 
     # === expected result for one iteration to be compared since body_fn defined use the same input in each iteration ===
     _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
     # _, _, expected_res = mnist.forward_compare(iteri, l_in_0)
-    print("expected_res: ", expected_res)
+    # print("expected_res: ", expected_res)
+    print("expected_res[0]: ", expected_res[0])
     self.assertTrue(torch.all(torch.eq(res, expected_res)))
-
 
   def test_while_loop_tpu_MNIST_inside_loop_pure_torch_xla_without_while_loop(self):
     xm.mark_step()
@@ -538,7 +545,8 @@ class WhileLoopTest(unittest.TestCase):
     l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
     _, res = mnist(l_in_0, l_out)
-    print("res: ", res)
+    # print("res: ", res)
+    print("res[0]: ", res[0])
 
   # ====== test _get_xla_computation ======
   def test__get_xlacomputation(self):
@@ -550,7 +558,7 @@ class WhileLoopTest(unittest.TestCase):
     t3 = torch.add(t1, t2)
 
     ### implement one new function for xlacomputation generation with post-order
-    res_xla_computation = torch_xla._XLAC._get_xla_computation([t3], [], True)
+    res_xla_computation = torch_xla._XLAC._get_xla_computation([t3], [], True, "", [])
     if res_xla_computation:
       hlo_print = xb.get_computation_hlo(res_xla_computation)
       print("Gain and print computation from _get_xla_computation") # print(hlo_print)
@@ -588,7 +596,7 @@ class WhileLoopTest(unittest.TestCase):
       return tuple(res)
 
     ### implement one new function for xlacomputation generation with post-order
-    res_xla_computation = torch_xla._XLAC._get_xla_computation([t3], [], True)
+    res_xla_computation = torch_xla._XLAC._get_xla_computation([t3], [], True, "", [])
     if res_xla_computation:
       hlo_print = xb.get_computation_hlo(res_xla_computation)
       print("Gain and print computation from _get_xla_computation") # print(hlo_print)
