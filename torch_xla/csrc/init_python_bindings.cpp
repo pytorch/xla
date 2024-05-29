@@ -2442,11 +2442,7 @@ void InitXlaModuleBindings(py::module m) {
     }
 
     // create xlacomputation based on treated tensors
-    // runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
-    // xla::XlaComputation xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
     runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
-
-    // TODO(@manfei): wrap inputs of cond/body_computation
 
     return xla_computation;
   });
