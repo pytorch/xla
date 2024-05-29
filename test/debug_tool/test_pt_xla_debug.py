@@ -37,12 +37,11 @@ class PtXLADebugTest(unittest.TestCase):
       post_compilation_infos = extract_post_compilation_analysis(lines)
 
     self.assertEqual(len(post_compilation_infos), 1)
-    # test case is too small, size round to 0 MB
-    self.assertIn('0MB', post_compilation_infos[0].input_size)
-    self.assertIn('0MB', post_compilation_infos[0].output_size)
-    self.assertIn('0MB', post_compilation_infos[0].aliased_size)
-    self.assertIn('0MB', post_compilation_infos[0].intermediate_size)
-    self.assertIn('0MB', post_compilation_infos[0].program_size)
+    self.assertIn('GB', post_compilation_infos[0].input_size)
+    self.assertIn('GB', post_compilation_infos[0].output_size)
+    self.assertIn('GB', post_compilation_infos[0].aliased_size)
+    self.assertIn('GB', post_compilation_infos[0].intermediate_size)
+    self.assertIn('GB', post_compilation_infos[0].program_size)
 
     self.assertEqual(len(executation_causes), 1)
     self.assertIn('user mark_step', executation_causes[0])

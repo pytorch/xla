@@ -389,28 +389,30 @@ void DebugUtil::post_compilation_analysis(
   std::vector<std::string> keysToExtract = {
       "generated_code_size_in_bytes", "argument_size_in_bytes",
       "output_size_in_bytes", "alias_size_in_bytes", "temp_size_in_bytes"};
-  std::vector<std::string> sizes_in_mb;
+  std::vector<std::string> sizes_in_gb;
 
   for (const std::string& key : keysToExtract) {
     std::regex pattern(key + "=([0-9]+)");
     std::smatch match;
 
     if (std::regex_search(memory_info, match, pattern)) {
-      sizes_in_mb.push_back(std::to_string(std::stoll(match[1]) >> 20));
+      sizes_in_gb.push_back(
+          std::to_string(std::stoll(match[1]) * 1.0 / 1024 / 1024 / 1024));
     } else {
-      sizes_in_mb.push_back("Unknown ");
+      sizes_in_gb.push_back("Unknown ");
     }
   }
 
-  ss << debug_output_prefix << "Graph input size: " << sizes_in_mb[1] << "MB\n";
-  ss << debug_output_prefix << "Graph output size: " << sizes_in_mb[2]
-     << "MB\n";
-  ss << debug_output_prefix << "Aliased Input size: " << sizes_in_mb[3]
-     << "MB\n";
-  ss << debug_output_prefix << "Intermediate tensor size: " << sizes_in_mb[4]
-     << "MB\n";
-  ss << debug_output_prefix << "Compiled program size: " << sizes_in_mb[0]
-     << "MB\n";
+  ss << debug_output_prefix << "Graph input size: " << sizes_in_gb[1]
+     << " GB\n";
+  ss << debug_output_prefix << "Graph output size: " << sizes_in_gb[2]
+     << " GB\n";
+  ss << debug_output_prefix << "Aliased Input size: " << sizes_in_gb[3]
+     << " GB\n";
+  ss << debug_output_prefix << "Intermediate tensor size: " << sizes_in_gb[4]
+     << " GB\n";
+  ss << debug_output_prefix << "Compiled program size: " << sizes_in_gb[0]
+     << " GB\n";
   ss << debug_output_prefix
      << "----------------------------------------------------------------------"
         "----------"
