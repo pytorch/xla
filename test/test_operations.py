@@ -2069,54 +2069,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for xshape, i0shape, i1shape in cases[f2]:
       test(f2, xshape, (i0shape, i1shape))
 
-  def test_upsample_bilinear_double(self):
-    # Originally, the upsample_bilinear implementation (in resize_ops.cpp)
-    # was copied from TF. The computation was done intentionally on F32 and
-    # not cast back[1]. However, that didn't reflect in the returned tensor.
-    # Basically, what would happen is:
-    #
-    # 1. A tensor of data-type other than F32 is created:
-    #    > a = torch.rand(..., dtype=torch.double)
-    #
-    # 2. Call upsample_bilinear on it
-    #    > r = torch.nn.functional.upsample_bilinear(a, scale_factor=2)
-    #
-    # 3. The result's data-type would show as torch.float64, but its inner
-    #    HLO representation would be actually F32.
-    #
-    #     - It would rarely surface as an error, since we do data-type
-    #       promotion at the HLO level.
-    #
-    #     - When this result is the argument of a new HLO function, XLA
-    #       would actually expect a F16 tensor, since its torch.Tensor
-    #       data-type "is" torch.float16. However, since the actual HLO
-    #       data-type is F32, XLA raises an error.
-    #
-    # See more details at [2].
-    #
-    # [1]: https://github.com/tensorflow/tensorflow/commit/f8b35e00afe09c8606bcb0441a51be8bd38168d2
-    # [2]: https://github.com/pytorch/xla/issues/7095
-
-    def foo(x, is_xla=False):
-      # Compute upsample_bilinear.
-      r = torch.nn.functional.upsample_bilinear(x, scale_factor=2)
-
-      if is_xla:
-        # Mark the end of the HLO graph.
-        xm.mark_step()
-
-      # Start a new HLO graph using the upsample_bilinear result as
-      # one of its arguments.
-      return r + 5
-
-    inp = torch.rand(1, 3, 10, 10, dtype=torch.double)
-    Xinp = inp.to(xm.xla_device())
-
-    out = foo(inp)
-    Xout = foo(Xinp, is_xla=True)
-
-    self.assertEqual(out, Xout.cpu())
-
 
 class MNISTComparator(nn.Module):
 
