@@ -2592,7 +2592,7 @@ class TestDLPack(parameterized.TestCase):
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
-  def test_dlpack_pytorch_cuda_to_xla_legacy(self):
+  def test_dlpack_pytorch_cuda_to_xla(self):
     t1_cuda = torch.arange(5).cuda()
     dlt1 = torch.utils.dlpack.to_dlpack(t1_cuda)
     xla_t1 = xdlpack.from_dlpack(dlt1)
@@ -2624,7 +2624,7 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_pytorch_cuda_to_xla_protocol_conversion(self):
-    # Unlike the test_dlpack_pytorch_cuda_to_xla_legacy,
+    # Unlike the test_dlpack_pytorch_cuda_to_xla,
     # torch_cuda_tensor has attribute __dlpack__ and __dlpack_device__.
     # From cuda tensors to xla tensors, the synchronization is handdled implicitly.
     t1_cuda = torch.arange(5).cuda()
