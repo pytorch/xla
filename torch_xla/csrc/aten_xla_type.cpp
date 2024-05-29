@@ -1147,6 +1147,8 @@ at::Tensor XLANativeFunctions::cumprod(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
                                       c10::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_CHECK_NE(self.dtype(), at::ScalarType::Long)
+      << "cumsum is not supported for long tensors.";
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(
       tensor_methods::cumsum(self_tensor, dim, dtype));
