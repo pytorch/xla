@@ -13,7 +13,9 @@ import torch_xla.distributed.spmd as spmd
 from torch_xla.distributed.fsdp.wrap import recursive_wrap
 
 
-def _prepare_spmd_partition_spec(param, extra_data_axis=None, shard_maximal=False):
+def _prepare_spmd_partition_spec(param,
+                                 extra_data_axis=None,
+                                 shard_maximal=False):
   shape = param.shape
   partition_spec = [None] * len(shape)
   # Skip scalar tensors and it replicated.
@@ -116,7 +118,8 @@ class SpmdFullyShardedDataParallel(nn.Module):
     for param in module.parameters():
       if torch_xla._XLAC._get_xla_sharding_spec(param) != "":
         continue
-      spmd.mark_sharding(param, mesh, _prepare_spmd_partition_spec(param, shard_maximal=True))
+      spmd.mark_sharding(
+          param, mesh, _prepare_spmd_partition_spec(param, shard_maximal=True))
 
     # Register a backward hook to place optimization barrier to prevent
     # gigantic fusions on syncing the gradients.
