@@ -40,4 +40,5 @@ def prime_optimizer(optimizer: torch.optim.Optimizer) -> torch.optim.Optimizer:
   tree_map(zero_grad, optimizer.param_groups)
   optimizer.step()
   xm.mark_step()
+  xm.wait_device_ops()
   return optimizer
