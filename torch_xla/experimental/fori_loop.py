@@ -81,8 +81,8 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
             dtype=additional_input.dtype).to(device))
 
   #  ====== additional_inputs_list_cond ======
-  dummy_inputs_list = [fake_carried_inputs[0], ] + fake_additiona_args + fake_carried_inputs[1:]
-  # dummy_inputs_list = fake_carried_inputs[:-1] + fake_additiona_args + fake_carried_inputs[-1:]
+  # dummy_inputs_list = [fake_carried_inputs[0], ] + fake_additiona_args + fake_carried_inputs[1:]
+  dummy_inputs_list = fake_carried_inputs[:-1] + fake_additiona_args + fake_carried_inputs[-1:]
 
   #  ====== body_fn ======
   body_result = body_fn(carried_inputs[0], *fake_carried_inputs[1:], *additional_inputs)
@@ -93,14 +93,14 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
 
 
   #  ====== body xlacomputation ======
-  body_ctx.buildforiloop(list(body_result), dummy_inputs_list)
-  body_hlo = body_ctx.hlo()
-  body_computation = xb.computation_from_module_proto("bodycomputation",
-                                                      body_hlo)
+  # body_ctx.buildforiloop(list(body_result), dummy_inputs_list)
+  # body_hlo = body_ctx.hlo()
+  # body_computation = xb.computation_from_module_proto("bodycomputation",
+  #                                                     body_hlo)
 
-  # # for i in range(len(body_result)): print("body_result ", i, " size: ", body_result[i].size())
-  # # for i in range(len(dummy_inputs_list)): print("dummy_inputs_list ", i, " size: ", dummy_inputs_list[i].size())
-  # body_computation = torch_xla._XLAC._get_xla_computation(list(body_result), list(""), False, "bodyctx", dummy_inputs_list)
+  # for i in range(len(body_result)): print("body_result ", i, " size: ", body_result[i].size())
+  # for i in range(len(dummy_inputs_list)): print("dummy_inputs_list ", i, " size: ", dummy_inputs_list[i].size())
+  body_computation = torch_xla._XLAC._get_xla_computation(list(body_result), list(""), False, "bodyctx", dummy_inputs_list)
   
   # body_hlo_print = xb.get_computation_hlo(body_computation)
   # print("Gain and print body_computation: ")
@@ -114,24 +114,24 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
   cond_ctx.set_name_string("condctx")
 
   #  ====== cond xlacomputation ======
-  cond_ctx.buildforiloop([cond_result], dummy_inputs_list)
-  cond_hlo = cond_ctx.hlo()
-  cond_computation = xb.computation_from_module_proto("condcomputation",
-                                                      cond_hlo)
-  # cond_computation = torch_xla._XLAC._get_xla_computation([cond_result], list(""), False, "condctx", dummy_inputs_list)
+  # cond_ctx.buildforiloop([cond_result], dummy_inputs_list)
+  # cond_hlo = cond_ctx.hlo()
+  # cond_computation = xb.computation_from_module_proto("condcomputation",
+  #                                                     cond_hlo)
+  cond_computation = torch_xla._XLAC._get_xla_computation([cond_result], list(""), False, "condctx", dummy_inputs_list)
 
   # cond_hlo_print = xb.get_computation_hlo(cond_computation)
   # print("Gain and print cond computation:")
   # print(cond_hlo_print)
 
   #  ====== xla::while ======
-  iter_value = carried_inputs[0]
-  input_and_outputs_value = carried_inputs[1:]
-  total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
+  # iter_value = carried_inputs[0]
+  # input_and_outputs_value = carried_inputs[1:]
+  # total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
 
-  # iter_value = carried_inputs[:-1]
-  # input_and_outputs_value = carried_inputs[-1:]
-  # total_inputs = tuple(iter_value) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
+  iter_value = carried_inputs[:-1]
+  input_and_outputs_value = carried_inputs[-1:]
+  total_inputs = tuple(iter_value) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
 
   kwargs = {}
   if type(total_inputs) is tuple:
