@@ -914,21 +914,9 @@ class PyLoweringContext {
   }
 
   // Builds a HLO graph given a set of output tensors, and add unused parameters
-  // needed in xlacomputation.
+  // needed in xlacomputation for fori_loop/while_loop.
   void BuildForiLoop(std::vector<at::Tensor> tensors,
-                     std::vector<at::Tensor> input_arguments = {}) {
-    if (GetNameString() == "condctx") {
-      xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      // hard-code parameter_idx to 2 to skip existing upper/lower arguments
-      int64_t parameter_idx = 2;
-      for (at::Tensor input_argument : input_arguments) {
-        xla::Shape shape =
-            xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
-        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-                                      "UnusedArgumentsPlaceholder");
-        parameter_idx += 1;
-      }
-    }
+                     std::vector<at::Tensor> additional_inputs_list = {}) {
 
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
@@ -947,6 +935,35 @@ class PyLoweringContext {
           torch::lazy::Output(ir_value.node.get(), ir_value.index));
       lowering_ctx.AddResult(root);
     }
+
+    // add dummy parameter to cond xlacomputation's input for xla::while requriement
+    if (GetNameString() == "condctx") {
+      xla::XlaBuilder* local_builder = lowering_ctx.builder();
+      int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
+      int64_t additional_inputs_list_size = additional_inputs_list.size();
+      for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
+        xla::Shape shape = xtensor->shape().get();
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameter_idx += 1;
+      }
+    }
+
+    // add dummy parameter to body xlacomputation's input for xla::while requriement
+    if (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0) {
+      xla::XlaBuilder* local_builder = lowering_ctx.builder();
+      int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
+      int64_t additional_inputs_list_size = additional_inputs_list.size();
+      for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
+        xla::Shape shape = xtensor->shape().get();
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameter_idx += 1;
+      }
+    }
+
     computation = ConsumeValue(lowering_ctx.BuildXla());
 
     // wrap inputs of cond/body_computation
@@ -2413,6 +2430,26 @@ void InitXlaModuleBindings(py::module m) {
   BuildProfilerSubmodule(&m);
   BuildLoweringContextSubmodule(&m);
 
+  m.def("_get_xla_computation", [](const std::vector<at::Tensor>& tensors,
+    const std::vector<std::string>& devices, const bool warm_up_cache_only,
+    const std::string fn_type,
+    std::vector<at::Tensor> additional_inputs_list) {
+    // convert list of at::Tensor to list of XLATensorPtr
+    std::vector<XLATensorPtr> xtensors;
+    xtensors.reserve(tensors.size());
+    for (auto& tensor : tensors) {
+      xtensors.push_back(bridge::GetXlaTensor(tensor));
+    }
+
+    // create xlacomputation based on treated tensors
+    // runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
+    // xla::XlaComputation xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
+    runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
+
+    // TODO(@manfei): wrap inputs of cond/body_computation
+
+    return xla_computation;
+  });
   m.def("_get_tensors_handle",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<int64_t> {
           std::vector<torch::lazy::BackendData::Handle> handles;
