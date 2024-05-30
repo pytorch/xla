@@ -59,6 +59,7 @@ def _xla_while_loop_wrapper(cond_fn,
   return _xla_while_loop(cond_fn, new_body_fn, carried_inputs,
                          additional_inputs)
 
+
 def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
   #  ====== fake_carried_inputs ======
