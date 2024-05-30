@@ -19,7 +19,7 @@ class PtXLADebugTest(unittest.TestCase):
   @classmethod
   def setUpClass(cls):
     pt_xla_debug_enabled = xu.getenv_as('PT_XLA_DEBUG', bool, False)
-    cls.debug_level = xu.getenv_as('PT_XLA_DEBUG_LEVEL', int, '-1')
+    cls.debug_level = xu.getenv_as('PT_XLA_DEBUG_LEVEL', int, -1)
     cls.debug_level = 100 if (cls.debug_level == -1 and
                               pt_xla_debug_enabled) else cls.debug_level
     if not check_env_flag('PT_XLA_DEBUG') and cls.debug_level == -1:
