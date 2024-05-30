@@ -24,6 +24,11 @@ jobs:
         run: |
           ls -la
           rm -rvf ${GITHUB_WORKSPACE}/*
+      - name: Setup CUDA environment
+        shell: bash
+        run: |
+          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
