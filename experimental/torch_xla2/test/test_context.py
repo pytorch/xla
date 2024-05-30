@@ -39,9 +39,19 @@ class TestContext(unittest.TestCase):
       y = torch.randn((3, 3))
       self.assertIsInstance(y, tensor.XLATensor2)
 
-      print(x, y)
+    self.assertTrue(torch.equal(torch_xla2.tensor.j2t(x._elem), torch_xla2.tensor.j2t(y._elem)))
 
-    torch.testing.assert_close(torch_xla2.tensor.j2t(x._elem), torch_xla2.tensor.j2t(y._elem))
+  def test_different_manual_seed(self):
+    with xla_env:
+      torch.manual_seed(1234)
+      x = torch.randn((3, 3))
+      self.assertIsInstance(x, tensor.XLATensor2)
+
+      torch.manual_seed(12345)
+      y = torch.randn((3, 3))
+      self.assertIsInstance(y, tensor.XLATensor2)
+
+    self.assertFalse(torch.equal(torch_xla2.tensor.j2t(x._elem), torch_xla2.tensor.j2t(y._elem)))
 
 if __name__ == "__main__":
   unittest.main()

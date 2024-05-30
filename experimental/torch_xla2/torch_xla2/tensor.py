@@ -1,10 +1,12 @@
 import contextlib
+from typing import Optional
 import jax
 from jax import dlpack as jaxdl
 import jax.numpy as jnp
 import numpy
 import torch
 import torch.func
+import torch.utils._mode_utils as mode_utils
 import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
 import torch.utils.dlpack as torchdl
@@ -338,15 +340,11 @@ class Environment(contextlib.ContextDecorator):
             needs_env=False
           )
 
-    def get_and_rotate_prng_key(self):
-      # self._prng_key, key = jax.random.split(self._prng_key)
-      # if not generator:
-
-      # error: torch_xla2.tensor.OperatorNotFound: Operator with name aten::randint.low has no lowering
-      next_key = torch.randint(0, 2**32, (), dtype=torch.uint32).numpy()
-      # key = jax.random.key(numpy.uint64(torch.random.seed()))
-      # else:
-      # key = jax.random.key(generator.seed())
+    def get_and_rotate_prng_key(self, generator: Optional[torch.Generator]=None):
+      # Always use the default `randint` to get the next seed
+      with mode_utils.no_dispatch():
+        next_key = torch.randint(
+            0, 2**32, (), dtype=torch.uint32, generator=generator).numpy()
 
       return jax.random.key(next_key)
 
