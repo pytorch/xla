@@ -14,9 +14,10 @@ from torch_xla import runtime as xr
 server = xp.start_server(9012)
 
 xr.use_spmd()
-device = xm.xla_device()
-# device = 'cpu'
+# device = xm.xla_device()
+device = 'cpu'
 torch.set_default_dtype(torch.bfloat16)
+torch.manual_seed(42)
 
 @xp.trace_me("Eager gmm")
 def eager_gmm(
@@ -188,9 +189,9 @@ class RoutedGMMFunction(torch.autograd.Function):
     ctx.save_for_backward(lhs, rhs)
 
     # Enter manual sharding zone
-    lhs = xs.enable_manual_sharding(lhs, (0, None)).global_tensor
-    rhs = xs.enable_manual_sharding(rhs, (None, None, None)).global_tensor
-    top = xs.enable_manual_sharding(top, (0, None)).global_tensor
+    # lhs = xs.enable_manual_sharding(lhs, (0, None)).global_tensor
+    # rhs = xs.enable_manual_sharding(rhs, (None, None, None)).global_tensor
+    # top = xs.enable_manual_sharding(top, (0, None)).global_tensor
 
     # We want to create one big batch of tokens that has all top-k choices in it.
     # Our tokens will thus be duplicated k-times in the batch. To do this we,
@@ -205,11 +206,12 @@ class RoutedGMMFunction(torch.autograd.Function):
     lhs_sorted = lhs[lhs_indices]
 
     group_sizes = _histogram(top_flat.to(torch.int32), 0, rhs.shape[0] - 1)
-    out = gmm_kernel(lhs_sorted, rhs, group_sizes)
+    out = lhs_sorted
+    # out = gmm_kernel(lhs_sorted, rhs, group_sizes)
     out = out[lhs_reverse_order].reshape(-1, 2, out.shape[-1]).sum(dim=1)
 
     # Exit manual sharding zone
-    out = xs.disable_manual_sharding(out, (0, None), (m, n))
+    # out = xs.disable_manual_sharding(out, (0, None), (m, n))
 
     # Saved for backward
     ctx.lhs_indices = lhs_indices
@@ -224,22 +226,25 @@ class RoutedGMMFunction(torch.autograd.Function):
     lhs_reverse_order = ctx.lhs_reverse_order
     group_sizes = ctx.group_sizes
 
+    grad_rhs = None
+
     # Enter manual sharding zone
-    lhs = xs.enable_manual_sharding(lhs_full, (0, None)).global_tensor
-    rhs = xs.enable_manual_sharding(rhs_full, (None, None, None)).global_tensor
-    grad_output = xs.enable_manual_sharding(grad_output, (0, None)).global_tensor
+    # lhs = xs.enable_manual_sharding(lhs_full, (0, None)).global_tensor
+    # rhs = xs.enable_manual_sharding(rhs_full, (None, None, None)).global_tensor
+    # grad_output = xs.enable_manual_sharding(grad_output, (0, None)).global_tensor
 
     grad_sum = torch.ones((grad_output.shape[0], 2, grad_output.shape[-1]), device=device) * grad_output.unsqueeze(1)
     grad_reshape = grad_sum.reshape(-1, grad_sum.shape[-1])
     grad_index = grad_reshape[lhs_indices]
-    grad_lhs_sorted, grad_rhs = gmm_backward(grad_index, lhs, rhs, group_sizes)
+    # grad_lhs_sorted, grad_rhs = gmm_backward(grad_index, lhs, rhs, group_sizes)
+    grad_lhs_sorted = grad_index
     grad_lhs_sorted = grad_lhs_sorted[lhs_reverse_order]
     grad_lhs = grad_lhs_sorted.reshape(-1, 2, grad_lhs_sorted.shape[-1]).sum(dim=1)
 
 
     # Exit manual sharding zone
-    grad_lhs = xs.disable_manual_sharding(grad_lhs, (0, None), lhs_full.shape)
-    grad_rhs = xs.disable_manual_sharding(grad_rhs, (None, None, None), rhs_full.shape)
+    # grad_lhs = xs.disable_manual_sharding(grad_lhs, (0, None), lhs_full.shape)
+    # grad_rhs = xs.disable_manual_sharding(grad_rhs, (None, None, None), rhs_full.shape)
 
     return grad_lhs, grad_rhs
 
@@ -253,15 +258,16 @@ xs.set_global_mesh(mesh)
 # rhs = torch.randn(16384 * n_devices, 14336).to(device)
 
 # xp.trace_detached('localhost:9012', '.', 4000)
-lhs = torch.randn(128, 128, requires_grad=True).to(device)
-rhs = torch.randn(8, 128, 128, requires_grad=True).to(device)
+lhs = torch.randn(8, 8, requires_grad=True).to(device)
+rhs = torch.randn(8, 8, 8, requires_grad=True).to(device)
 lhs.retain_grad()
 rhs.retain_grad()
 
-xs.mark_sharding(lhs, mesh, (0, None))
-xs.mark_sharding(rhs, mesh, (None, 0, None))
+# xs.mark_sharding(lhs, mesh, (0, None))
+# xs.mark_sharding(rhs, mesh, (None, 0, None))
 
-out = RoutedGMMFunction.apply(lhs, rhs)
+# out = RoutedGMMFunction.apply(lhs, rhs)
+out = RoutedGMMFunction.forward(RoutedGMMFunction, lhs, rhs)
 out.sum().backward()
 print(out, lhs.grad, rhs.grad)
 
