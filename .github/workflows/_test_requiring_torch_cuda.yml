@@ -23,10 +23,7 @@ on:
         description: |
           Set the maximum (in minutes) how long the workflow should take to finish
             timeout-minutes:
-    secrets:
-      gcloud-service-key:
-        required: true
-        description: Secret to access Bazel build cache
+
 jobs:
   test:
     runs-on: ${{ inputs.runner }}
