@@ -771,7 +771,7 @@ def tgmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: tuple[int, int, int] = (128, 128, 128)
+    tiling: tuple[int, int, int] = (512, 512, 512)
 ) -> torch.Tensor:
   """Compute lhs[:, sizes[i-1]:sizes[i]] @ rhs[sizes[i-1]:sizes[i], :].
 
@@ -818,6 +818,12 @@ def tgmm(
       num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs,
       rhs
   ], payload, [torch.Size([num_groups, k, n])], [preferred_element_type])[0]
+
+
+def gmm_backward(grad, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
+  grad_lhs = gmm(grad, rhs.transpose(-1, -2), group_sizes, tiling)
+  grad_rhs = tgmm(lhs.swapaxes(0, 1), grad, group_sizes, tiling)
+  return grad_lhs, grad_rhs
 
 
 def non_xla_attetion(q, k, v, attention_type):
