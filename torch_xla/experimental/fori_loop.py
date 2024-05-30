@@ -56,12 +56,10 @@ def _xla_while_loop_wrapper(cond_fn,
       res = res
     return res
 
-  return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
+  return _xla_while_loop(cond_fn, new_body_fn, carried_inputs,
+                         additional_inputs)
 
-def _xla_while_loop(cond_fn,
-                    body_fn,
-                    carried_inputs,
-                    additional_inputs=None):
+def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
 
   #  ====== fake_carried_inputs ======
   fake_carried_inputs = []
@@ -86,7 +84,7 @@ def _xla_while_loop(cond_fn,
 
   #  ====== additional_inputs_list_cond ======
   dummy_inputs_list = [
-    fake_carried_inputs[0],
+      fake_carried_inputs[0],
   ] + fake_additiona_args + fake_carried_inputs[1:]
 
   #  ====== body_fn ======
