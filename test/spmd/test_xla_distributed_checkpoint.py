@@ -155,6 +155,22 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         save_planner=SPMDSavePlanner(),
         load_planner=SPMDLoadPlanner())
 
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
+  "Multiple devices needed to change mesh")
+  def test_padded_tensor(self):
+    # Use a linear layer with shape not divisible by the number of devices.
+    model1 = torch.nn.Linear(127, 63).to('xla')
+    model2 = torch.nn.Linear(127, 63).to('xla')
+    mesh = xs.Mesh(range(self.n_devices), (self.n_devices,))
+    # Transpose the sharding to induce resharding in the restore path
+    xs.mark_sharding(model1.weight, mesh, (0, None))
+    xs.mark_sharding(model2.weight, mesh, (None, 0))
+    self._save_and_restore(
+        model1,
+        model2,
+        save_planner=SPMDSavePlanner(),
+        load_planner=SPMDLoadPlanner())
+
   @unittest.skipUnless('CHKPT_PATH' in os.environ,
                        'CHKPT_PATH must be set for multihost checkpoint')
   def test_multihost_checkpoint(self):
