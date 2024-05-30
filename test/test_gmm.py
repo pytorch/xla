@@ -7,7 +7,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
-from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram, tgmm
+from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram, tgmm, gmm_backward
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -342,6 +342,36 @@ class MegabloxTest(unittest.TestCase):
       self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure tgmm doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_gmm_backward(self):
+    self._init_test_cases()
+    for test_case in self.tests_cases:
+      num_groups = test_case['num_groups']
+      k = test_case['k']
+      m = test_case['m']
+      n = test_case['n']
+      lhs_dtype = rhs_dtype = torch.bfloat16
+
+      lhs = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True)
+      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype, requires_grad=True)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      lhs.retain_grad()
+      rhs.retain_grad()
+
+      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+      ref_out.sum().backward()
+
+      ref_out_backward = torch.ones_like(ref_out)
+      grad_lhs, grad_rhs = gmm_backward(
+          ref_out_backward.to("xla"), lhs.to("xla"), rhs.to("xla"),
+          group_sizes.to("xla"))
+
+      self.assertTrue(torch.allclose(lhs.grad, grad_lhs.cpu()))
+      self.assertTrue(torch.allclose(rhs.grad, grad_rhs.cpu()))
+
+    # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
 
 
