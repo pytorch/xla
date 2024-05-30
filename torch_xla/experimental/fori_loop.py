@@ -27,32 +27,41 @@ def fori_loop(upper, lower, body_fun, *input_value):
   def new_body_fn(iteri, *input_value):
     return iteri - 1, body_fun(*input_value)
 
-  inputs = (iteri, ) + input_value
-  res =  while_loop(cond_fn, new_body_fn, inputs)
+  inputs = (iteri,) + input_value
+  res = while_loop(cond_fn, new_body_fn, inputs)
 
   return res
+
 
 @while_loop_op.py_impl(DispatchKey.XLA)
 def while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   if additional_inputs is None:
     additional_inputs = tuple()
-  return _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs)
+  return _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs,
+                                 additional_inputs)
 
-def _xla_while_loop_wrapper(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
+
+def _xla_while_loop_wrapper(cond_fn,
+                            body_fn,
+                            carried_inputs,
+                            additional_inputs=None):
 
   def new_body_fn(*carried_inputs):
     res = list(body_fn(*carried_inputs))
-    if additional_inputs and (bn_additional_inputs != []):
-      res = list(res_iter_inputs) + list(additional_inputs) + bn_additional_inputs + [res_outputs, ]
-    elif additional_inputs and (bn_additional_inputs == []):
-      res = [res[0], ] + list(additional_inputs) + res[1:]
+    if additional_inputs:
+      res = [
+          res[0],
+      ] + list(additional_inputs) + res[1:]
     else:
       res = res
     return res
 
-  return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs, bn_additional_inputs)
+  return _xla_while_loop(cond_fn, new_body_fn, carried_inputs, additional_inputs)
 
-def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn_additional_inputs=[]):
+def _xla_while_loop(cond_fn,
+                    body_fn,
+                    carried_inputs,
+                    additional_inputs=None):
 
   #  ====== fake_carried_inputs ======
   fake_carried_inputs = []
@@ -76,10 +85,13 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
             dtype=additional_input.dtype).to(device))
 
   #  ====== additional_inputs_list_cond ======
-  dummy_inputs_list = [fake_carried_inputs[0], ] + fake_additiona_args + fake_carried_inputs[1:]
+  dummy_inputs_list = [
+    fake_carried_inputs[0],
+  ] + fake_additiona_args + fake_carried_inputs[1:]
 
   #  ====== body_fn ======
-  body_result = body_fn(carried_inputs[0], *fake_carried_inputs[1:], *additional_inputs)
+  body_result = body_fn(carried_inputs[0], *fake_carried_inputs[1:],
+                        *additional_inputs)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
 
@@ -103,7 +115,9 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
   #  ====== xla::while ======
   iter_value = carried_inputs[0]
   input_and_outputs_value = carried_inputs[1:]
-  total_inputs = tuple([iter_value,]) + tuple(additional_inputs) + tuple(bn_additional_inputs) + tuple(input_and_outputs_value)
+  total_inputs = tuple([
+      iter_value,
+  ]) + tuple(additional_inputs) + tuple(input_and_outputs_value)
 
   kwargs = {}
   if type(total_inputs) is tuple:
@@ -128,8 +142,10 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None, bn
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
                                                  (total_inputs), computation)
 
-  # unwrapper result without additional_inputs and bn_additional_inputs for original order
+  # unwrapper result without additional_inputs for original order
   additional_inputs_len = len(additional_inputs) + 1
-  final_res = [result[0], ] + result[additional_inputs_len:]
+  final_res = [
+      result[0],
+  ] + result[additional_inputs_len:]
 
   return final_res
