@@ -180,6 +180,11 @@ class MegabloxTest(unittest.TestCase):
             'm': 32,
             'tm': 4
         },
+        {
+            'group_sizes': [377, 588, 153, 1638, 3261, 5890, 996, 3481],
+            'm': 16384,
+            'tm': 128
+        },
     ]
 
     for test_grid in test_grids:
@@ -192,7 +197,8 @@ class MegabloxTest(unittest.TestCase):
       )
 
       torch_meta = _make_group_metadata(
-          group_sizes=torch.tensor(test_grid['group_sizes']).to("xla"),
+          group_sizes=torch.tensor(test_grid['group_sizes']).to(
+              torch.int32).to("xla"),
           m=test_grid['m'],
           tm=test_grid['tm'],
           visit_empty_groups=True,

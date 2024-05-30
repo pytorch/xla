@@ -549,6 +549,8 @@ def _make_group_metadata(
     num_tiles: The number of m-dimension tiles to execute including overlapping
       executions. And don't confuse this with m_tiles which is m // tm.
   """
+  assert group_sizes.dtype == torch.int32, "group_sizes must be of torch.int32 dtype."
+
   device = group_sizes.device
   num_groups = group_sizes.shape[0]
 
@@ -701,7 +703,7 @@ def repeat_with_fixed_output_size(input: torch.Tensor, repeats: torch.Tensor,
 
   # tensor([2, 1, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0])
   block_split_indicators = torch.zeros(
-      total_repeat_length, dtype=torch.int64, device=device)
+      total_repeat_length, dtype=torch.int32, device=device)
   block_split_indicators.scatter_add_(0, valid_indices.to(torch.int64),
                                       torch.ones_like(block_split_indicators))
   # out_of_bound indices also scatter to index 0, need to offset them

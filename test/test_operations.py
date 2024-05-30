@@ -2828,6 +2828,20 @@ class TestHelperFunction(test_utils.XlaTestCase):
                                  total_repeat_length - base.size()[0])))
     self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
 
+  def test_repeat_special(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 135
+    num_groups = 8
+    input = torch.arange(num_groups, dtype=torch.int32).to(device)
+    repeats = torch.tensor([3, 6, 2, 14, 27, 47, 8, 28]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    expected = torch.repeat_interleave(input, repeats)[:total_repeat_length]
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
 
 if __name__ == '__main__':
   torch.set_default_dtype(torch.float32)
