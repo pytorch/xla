@@ -111,4 +111,4 @@ jobs:
           set -xue
           PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
           PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
-          PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas python pytorch/xla/test/test_triton.py
+          PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.1/bin/ptxas python pytorch/xla/test/test_triton.py
