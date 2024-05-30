@@ -33,9 +33,6 @@ def _fake_while_loop(cond_fn, body_fn, operands):
 class WhileLoopTest(unittest.TestCase):
 
   def test_while_loop_tpu_subtraction_pure_torch(self):
-    xm.mark_step()
-    device = xm.xla_device()
-
     def cond_fn(iteri, x, y):
       return iteri > 0
 
@@ -50,7 +47,6 @@ class WhileLoopTest(unittest.TestCase):
     self.assertEqual(res, expected)
 
   def test_while_loop_tpu_subtraction(self):
-    xm.mark_step()
     device = xm.xla_device()
 
     def cond_fn(iteri, x):
@@ -60,12 +56,12 @@ class WhileLoopTest(unittest.TestCase):
       return iteri - 1, torch.sub(x, 1)
 
     init_val = torch.tensor(10, dtype=torch.int32, device=device)
-    iteri = torch.tensor(3, device=device)
+    iteri = torch.tensor(4, device=device)
     _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
     _, expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
     print("res: ", res)
     print("expected: ", expected)
-    # self.assertTrue(torch.all(torch.eq(res, expected)))
+    self.assertTrue(torch.all(torch.eq(res, expected)))
 
   def test_while_loop_tpu_addition_pure_torch(self):
     def cond_fn(iteri, x, y):
@@ -82,7 +78,6 @@ class WhileLoopTest(unittest.TestCase):
     self.assertEqual(res, expected)
 
   def test_while_loop_tpu_addition(self):
-    xm.mark_step()
     device = xm.xla_device()
 
     def cond_fn(iteri, x):
@@ -97,8 +92,7 @@ class WhileLoopTest(unittest.TestCase):
     print("res: ", res)
     _, expected = _fake_while_loop_second(cond_fn, body_fn, (iteri, init_val))
     print("expected: ", expected)
-    # self.assertTrue(torch.all(torch.eq(res, expected)))
-    # self.assertEqual(res, expected)
+    self.assertTrue(torch.all(torch.eq(res, expected)))
 
   def test_while_loop_tpu_addition_nested_pure_torch(self):
 
@@ -116,7 +110,6 @@ class WhileLoopTest(unittest.TestCase):
     self.assertEqual(res, expected)
 
   def test_while_loop_tpu_addition_nested(self):
-    xm.mark_step()
     device = xm.xla_device()
 
     def cond_fn(iteri, x):
@@ -134,16 +127,6 @@ class WhileLoopTest(unittest.TestCase):
   def test_while_loop_tpu_simple_linear_inside_loop_pure_torch(self):
 
     torch.set_grad_enabled(False)
-
-    n_epochs = 3
-    batch_size_train = 8
-    batch_size_test = 10
-    learning_rate = 0.01
-    momentum = 0.5
-    log_interval = 10
-    random_seed = 1
-    torch.backends.cudnn.enabled = False
-    torch.manual_seed(random_seed)
 
     class SimpleLinear(torch.nn.Module):
       def __init__(self):
@@ -176,19 +159,8 @@ class WhileLoopTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(res, expected)))
 
   def test_while_loop_tpu_simple_linear_inside_loop(self):
-    xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
-
-    n_epochs = 3
-    batch_size_train = 8
-    batch_size_test = 10
-    learning_rate = 0.01
-    momentum = 0.5
-    log_interval = 10
-    random_seed = 1
-    torch.backends.cudnn.enabled = False
-    torch.manual_seed(random_seed)
 
     class SimpleLinear(torch.nn.Module):
       def __init__(self):
@@ -225,16 +197,6 @@ class WhileLoopTest(unittest.TestCase):
 
     torch.set_grad_enabled(False)
 
-    n_epochs = 3
-    batch_size_train = 8
-    batch_size_test = 10
-    learning_rate = 0.01
-    momentum = 0.5
-    log_interval = 10
-    random_seed = 1
-    torch.backends.cudnn.enabled = False
-    torch.manual_seed(random_seed)
-
     class MNIST(torch.nn.Module):
       def __init__(self):
         super().__init__()
@@ -251,7 +213,7 @@ class WhileLoopTest(unittest.TestCase):
 
         def body_fn(iteri, x, y):
           y = F.relu(F.max_pool2d(self.conv1(x), 2))
-          y = self.bn1(y) # torch.while_loop's body_fn might be modifying the input!
+          y = self.bn1(y)
           y = F.relu(F.max_pool2d(self.conv2(y), 2))
           y = self.bn2(y)
           y = torch.flatten(y, 1)
@@ -264,7 +226,7 @@ class WhileLoopTest(unittest.TestCase):
 
       def forward_compare(self, iteri, x, y):
         y = F.relu(F.max_pool2d(self.conv1(x), 2))
-        y = self.bn1(y) # torch.while_loop's body_fn might be modifying the input!
+        y = self.bn1(y)
         y = F.relu(F.max_pool2d(self.conv2(y), 2))
         y = self.bn2(y)
         y = torch.flatten(y, 1)
@@ -283,172 +245,17 @@ class WhileLoopTest(unittest.TestCase):
     _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
     self.assertTrue(torch.all(torch.eq(res, expected_res)))
 
-  def test_while_loop_tpu_MNIST_inside_loop_without_BN(self):
-    xm.mark_step()
-    device = xm.xla_device()
-    torch.set_grad_enabled(False)
-
-    n_epochs = 3
-    batch_size_train = 8
-    batch_size_test = 10
-    learning_rate = 0.01
-    momentum = 0.5
-    log_interval = 10
-    random_seed = 1
-    torch.backends.cudnn.enabled = False
-    torch.manual_seed(random_seed)
-
-    class MNIST(torch.nn.Module):
-      def __init__(self):
-        super().__init__()
-        self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2)
-        self.bn1 = torch.nn.BatchNorm2d(10)
-        self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5)
-        self.bn2 = torch.nn.BatchNorm2d(20)
-        self.fc1 = torch.nn.Linear(500, 50)
-        self.fc2 = torch.nn.Linear(50, 10)
-
-      def forward(self, iteri, x, y):
-        def cond_fn(iteri, x, y):
-          return iteri > 0
-
-        def body_fn(iteri, x, y):
-          y = F.relu(F.max_pool2d(self.conv1(x), 2))
-          # y = self.bn1(y)
-          y = F.relu(F.max_pool2d(self.conv2(y), 2))
-          # y = self.bn2(y)
-          y = torch.flatten(y, 1)
-          y = F.relu(self.fc1(y))
-          y = self.fc2(y)
-
-          return iteri - 1, x.clone(), F.log_softmax(y, dim=1)
-
-        return while_loop(cond_fn, body_fn, (iteri, x, y))
-
-      def forward_compare(self, iteri, x, y):
-        y = F.relu(F.max_pool2d(self.conv1(x), 2))
-        # y = self.bn1(y)
-        y = F.relu(F.max_pool2d(self.conv2(y), 2))
-        # y = self.bn2(y)
-        y = torch.flatten(y, 1)
-        y = F.relu(self.fc1(y))
-        y = self.fc2(y)
-        return iteri - 1, x.clone(), F.log_softmax(y, dim=1)
-
-
-    mnist = MNIST()
-    mnist.to(device)
-    bs=16
-    l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
-    l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
-    iteri = torch.tensor(3, dtype=torch.int64, device=device)
-    _, _, res = mnist(iteri, l_in_0, l_out)
-    # print("res: ", res)
-    print("res[0]: ", res[0])
-
-    # === expected result for one iteration to be compared since body_fn defined use the same input in each iteration ===
-    _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
-    # print("expected_res: ", expected_res)
-    print("expected_res[0]: ", expected_res[0])
-    self.assertTrue(torch.all(torch.eq(res, expected_res)))
-
   def test_while_loop_tpu_MNIST_inside_loop(self):
-    xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
-
-    n_epochs = 3
-    batch_size_train = 8
-    batch_size_test = 10
-    learning_rate = 0.01
-    momentum = 0.5
-    log_interval = 10
-    random_seed = 1
-    torch.backends.cudnn.enabled = False
-    torch.manual_seed(random_seed)
 
     class MNIST(torch.nn.Module):
       def __init__(self):
         super().__init__()
         self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2)
-        self.bn1 = torch.nn.BatchNorm2d(10, affine=False, track_running_stats=False)
-        self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5)
-        self.bn2 = torch.nn.BatchNorm2d(20, affine=False, track_running_stats=False)
-        self.fc1 = torch.nn.Linear(500, 50)
-        self.fc2 = torch.nn.Linear(50, 10)
-        self.bnLayersWeights = []
-
-      def forward(self, iteri, x, y):
-        def cond_fn(iteri, x, y):
-          return iteri > 0
-
-        def body_fn(iteri, x, y):
-          y = F.relu(F.max_pool2d(self.conv1(x), 2))
-          y = self.bn1(y)
-          y = F.relu(F.max_pool2d(self.conv2(y), 2))
-          y = self.bn2(y)
-          y = torch.flatten(y, 1)
-          y = F.relu(self.fc1(y))
-          y = self.fc2(y)
-
-          return iteri - 1, x.clone(), F.log_softmax(y, dim=1)
-
-        return while_loop(cond_fn, body_fn, (iteri, x, y))
-
-      def forward_compare(self, iteri, x, y):
-        y = F.relu(F.max_pool2d(self.conv1(x), 2))
-        y = self.bn1(y)
-        y = F.relu(F.max_pool2d(self.conv2(y), 2))
-        y = self.bn2(y)
-        y = torch.flatten(y, 1)
-        y = F.relu(self.fc1(y))
-        y = self.fc2(y)
-        return iteri - 1, x.clone(), F.log_softmax(y, dim=1)
-
-    mnist = MNIST()
-    mnist.to(device)
-    bs=16
-    l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
-    l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
-    iteri = torch.tensor(3, dtype=torch.int64, device=device)
-    _, _, res = mnist(iteri, l_in_0, l_out)
-    # _, _, res = mnist(iteri, l_in_0)
-    # print("res: ", res)
-    print("res[0]: ", res[0])
-
-    # === expected result for one iteration to be compared since body_fn defined use the same input in each iteration ===
-    _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
-    # _, _, expected_res = mnist.forward_compare(iteri, l_in_0)
-    # print("expected_res: ", expected_res)
-    print("expected_res[0]: ", expected_res[0])
-    self.assertTrue(torch.all(torch.eq(res, expected_res)))
-
-  def test_while_loop_tpu_MNIST_inside_loop_with_mutation_in_batchnorm2d(self):
-    xm.mark_step()
-    device = xm.xla_device()
-    torch.set_grad_enabled(False)
-
-    n_epochs = 3
-    batch_size_train = 8
-    batch_size_test = 10
-    learning_rate = 0.01
-    momentum = 0.5
-    log_interval = 10
-    random_seed = 1
-    torch.backends.cudnn.enabled = False
-    torch.manual_seed(random_seed)
-
-    class MNIST(torch.nn.Module):
-      def __init__(self):
-        super().__init__()
-        self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2)
-        # self.bn1 = torch.nn.BatchNorm2d(10, affine=False, track_running_stats=False)
         self.bn1 = torch.nn.BatchNorm2d(10).eval()
-        # self.bn1 = torch.nn.BatchNorm2d(10)
         self.conv2 = torch.nn.Conv2d(10, 20, kernel_size=5)
-        # self.bn2 = torch.nn.BatchNorm2d(20, affine=False, track_running_stats=False)
         self.bn2 = torch.nn.BatchNorm2d(20).eval()
-        # self.bn2 = torch.nn.BatchNorm2d(20)
         self.fc1 = torch.nn.Linear(500, 50)
         self.fc2 = torch.nn.Linear(50, 10)
         self.bnLayersWeights = []
@@ -486,38 +293,15 @@ class WhileLoopTest(unittest.TestCase):
     l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
     l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
-
-    # print("print and check behavior by exporting the model")
-    # ep = torch.export.export(mnist, (iteri, l_in_0, l_out))
-    # ep.module().print_readable()
-    # print("after print and check behavior by exporting the model")
-
     _, _, res = mnist(iteri, l_in_0, l_out)
-    # _, _, res = mnist(iteri, l_in_0)
-    # print("res: ", res)
-    print("res[0]: ", res[0])
 
     # === expected result for one iteration to be compared since body_fn defined use the same input in each iteration ===
     _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
-    # _, _, expected_res = mnist.forward_compare(iteri, l_in_0)
-    # print("expected_res: ", expected_res)
-    print("expected_res[0]: ", expected_res[0])
     self.assertTrue(torch.all(torch.eq(res, expected_res)))
 
   def test_while_loop_tpu_MNIST_inside_loop_pure_torch_xla_without_while_loop(self):
-    xm.mark_step()
     device = xm.xla_device()
     torch.set_grad_enabled(False)
-
-    n_epochs = 3
-    batch_size_train = 8
-    batch_size_test = 10
-    learning_rate = 0.01
-    momentum = 0.5
-    log_interval = 10
-    random_seed = 1
-    torch.backends.cudnn.enabled = False
-    torch.manual_seed(random_seed)
 
     class MNIST(torch.nn.Module):
       def __init__(self):
@@ -532,7 +316,7 @@ class WhileLoopTest(unittest.TestCase):
 
       def forward(self, x, y):
         y = F.relu(F.max_pool2d(self.conv1(x), 2))
-        y = self.bn1(y) # torch.while_loop's body_fn might be modifying the input!
+        y = self.bn1(y)
         y = F.relu(F.max_pool2d(self.conv2(y), 2))
         y = self.bn2(y)
         y = torch.flatten(y, 1)
@@ -547,8 +331,7 @@ class WhileLoopTest(unittest.TestCase):
     l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
     _, res = mnist(l_in_0, l_out)
-    # print("res: ", res)
-    print("res[0]: ", res[0])
+    print("res[0]: ", res[0][0])
 
   # ====== test _get_xla_computation ======
   def test__get_xlacomputation(self):
@@ -636,6 +419,8 @@ class WhileLoopTest(unittest.TestCase):
       x = torch.add(x, 1)
     expected = x
     print("expected: ", expected)
+
+    self.assertTrue(torch.all(torch.eq(actual, expected)))
 
 
 if __name__ == '__main__':

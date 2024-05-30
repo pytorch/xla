@@ -1442,42 +1442,33 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::CompileForiLoop(
     const SyncTensorCollection& coll, PostOrderData* po_data,
     const std::vector<torch::lazy::Value>& ir_values,
     const std::string fn_type, std::vector<at::Tensor> additional_inputs_list = {}) {
-  tsl::profiler::TraceMe activity(
-      [&] {
-        return tsl::profiler::TraceMeEncode(
-            "XLAGraphExecutor::Compile",
-            {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
-      },
-      tsl::profiler::TraceMeLevel::kInfo);
-  static const bool enable_aliasing =
-      runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
-  static const size_t parameter_wrapping_threadshold =
-      runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
+
+  static const bool enable_aliasing = runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
+  // static const size_t parameter_wrapping_threadshold = runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
   static const bool use_autosharding = ShardingUtil::GetAutoSharding();
-  LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
-                               po_data->post_order,
-                               std::move(po_data->emission_map));
+
+  LoweringContext lowering_ctx("SyncTensorsGraph", coll.device, po_data->post_order, std::move(po_data->emission_map));
   lowering_ctx.set_name_string(fn_type);
+
   for (auto ir_value : ir_values) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
+
   // Always execute sharded when running in SPMD mode
   // bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
-  bool is_sharded = true; // false;
+  bool is_sharded = false; // true;
   // Annotate HLO sharding selectively in the compuation.
-  ShardingUtil::SetHloSharding(&lowering_ctx);
+  // ShardingUtil::SetHloSharding(&lowering_ctx); // current
 
   std::vector<size_t> buffer_donor_indices;
 
   if (enable_aliasing && !use_autosharding) {
     if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
-      buffer_donor_indices =
-          SetBufferDonors(tensors, coll.indices, &lowering_ctx);
+      buffer_donor_indices = SetBufferDonors(tensors, coll.indices, &lowering_ctx);
     } else if (GetAliasWithBufferDonorConfig()) {
-      // only alias based on buffer donor if LTC can't auto infer the input
-      // output aliasing.
+      // only alias based on buffer donor if LTC can't auto infer the input output aliasing.
       buffer_donor_indices = SetBufferDonorsFromUserConfig(&lowering_ctx);
     }
   }
@@ -1513,20 +1504,21 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::CompileForiLoop(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
 
-  // // wrap inputs of cond/body_computation
-  // if ((fn_type == "condctx") || (fn_type == "bodyctx")) {
-  //   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-  //   std::vector<size_t> buffer_donor_indices;
-  //   xla::ProgramShape program_shape =
-  //       ConsumeValue(computation.GetProgramShape());
-  //   // TODO(@manfei): please confirm whether we check for more than two or use
-  //   // default value true
-  //   bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
-  //   if (should_wrap_parameter) {
-  //     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-  //         computation, program_shape.parameters(), buffer_donor_indices));
-  //   }
-  // }
+  //
+    // // wrap inputs of cond/body_computation
+    // if ((fn_type == "condctx") || (fn_type == "bodyctx")) {
+    //   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+    //   std::vector<size_t> buffer_donor_indices;
+    //   xla::ProgramShape program_shape =
+    //       ConsumeValue(computation.GetProgramShape());
+    //   // TODO(@manfei): please confirm whether we check for more than two or use
+    //   // default value true
+    //   bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
+    //   if (should_wrap_parameter) {
+    //     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+    //         computation, program_shape.parameters(), buffer_donor_indices));
+    //   }
+    // }
 
   // return computation;
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
@@ -1549,73 +1541,74 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::CompileForiLoop(
 
   std::vector<runtime::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(computation), coll.device.toString(),
-                       runtime::GetComputationClient()->GetCompilationDevices(
-                           coll.device.toString(), devices),
+                       runtime::GetComputationClient()->GetCompilationDevices(coll.device.toString(), devices),
                        &shape, should_wrap_parameter, is_sharded});
-  // XLA_ERROR() << "ARRIVER HERE get instances";
+  // 
+    // XLA_ERROR() << "ARRIVER HERE get instances";
 
-  // if (use_autosharding) {
-  //   TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
-  //   TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
-  //   instances.front().use_auto_spmd_partitioning = use_autosharding;
-  //   TORCH_LAZY_COUNTER("CompileWithAutoSharding", 1);
+    // if (use_autosharding) {
+    //   TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
+    //   TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
+    //   instances.front().use_auto_spmd_partitioning = use_autosharding;
+    //   TORCH_LAZY_COUNTER("CompileWithAutoSharding", 1);
 
-  //   // Apply XLA_AUTO_SPMD_MESH if it is set.
-  //   // TODO(yeounoh) allow multi mesh exploration.
-  //   std::vector<int64_t> auto_spmd_mesh_shape =
-  //       ShardingUtil::GetAutoShardingMesh();
-  //   std::vector<int64_t> auto_spmd_mesh_ids =
-  //       ShardingUtil::GetAutoShardingMeshIds(
-  //           instances.front().computation.proto());
-  //   instances.front().auto_spmd_mesh_shape = auto_spmd_mesh_shape;
-  //   instances.front().auto_spmd_mesh_ids = auto_spmd_mesh_ids;
-  //   TF_VLOG(5) << "auto_spmd_mesh_shape={"
-  //              << absl::StrJoin(auto_spmd_mesh_shape, ",") << "}\n"
-  //              << "auto_spmd_mesh_ids={"
-  //              << absl::StrJoin(auto_spmd_mesh_ids, ",") << "}";
-  // }
+    //   // Apply XLA_AUTO_SPMD_MESH if it is set.
+    //   // TODO(yeounoh) allow multi mesh exploration.
+    //   std::vector<int64_t> auto_spmd_mesh_shape =
+    //       ShardingUtil::GetAutoShardingMesh();
+    //   std::vector<int64_t> auto_spmd_mesh_ids =
+    //       ShardingUtil::GetAutoShardingMeshIds(
+    //           instances.front().computation.proto());
+    //   instances.front().auto_spmd_mesh_shape = auto_spmd_mesh_shape;
+    //   instances.front().auto_spmd_mesh_ids = auto_spmd_mesh_ids;
+    //   TF_VLOG(5) << "auto_spmd_mesh_shape={"
+    //              << absl::StrJoin(auto_spmd_mesh_shape, ",") << "}\n"
+    //              << "auto_spmd_mesh_ids={"
+    //              << absl::StrJoin(auto_spmd_mesh_ids, ",") << "}";
+    // }
 
-  // DebugUtil::analyze_graph_execution_python_frame(
-  //     DebugUtil::GraphAnalysisSource::Compilation,
-  //     /*graph_hash=*/coll.hash, /*program_shape=*/&program_shape);
+    // DebugUtil::analyze_graph_execution_python_frame(
+    //     DebugUtil::GraphAnalysisSource::Compilation,
+    //     /*graph_hash=*/coll.hash, /*program_shape=*/&program_shape);
 
-  // TF_VLOG(3) << "Compiling IR graph hash "
+    // TF_VLOG(3) << "Compiling IR graph hash "
   //            << torch::lazy::HashToString(coll.hash) << " on device "
   //            << coll.device << " ...";
   std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
       computations =
           runtime::GetComputationClient()->Compile(std::move(instances));
-  // XLA_ERROR() << "ARRIVER HERE get computation";
-  // DebugUtil::post_compilation_analysis(computations[0]);
-  // TF_VLOG(3) << "Compiling IR graph hash "
-  //            << torch::lazy::HashToString(coll.hash) << " on device "
-  //            << coll.device << " done!";
-  // TF_VLOG(5) << "Compiled program shape "
-  //            << computations.front()->program_shape().ToString() << std::endl;
-  // TF_VLOG(5)
-  //     << "Graph hash " << torch::lazy::HashToString(coll.hash)
-  //     << " is computation hash "
-  //     << torch::lazy::HashToString(torch::lazy::Hash(
-  //            computations.front()->computation().proto().SerializeAsString()));
+  // 
+    // XLA_ERROR() << "ARRIVER HERE get computation";
+    // DebugUtil::post_compilation_analysis(computations[0]);
+    // TF_VLOG(3) << "Compiling IR graph hash "
+    //            << torch::lazy::HashToString(coll.hash) << " on device "
+    //            << coll.device << " done!";
+    // TF_VLOG(5) << "Compiled program shape "
+    //            << computations.front()->program_shape().ToString() << std::endl;
+    // TF_VLOG(5)
+    //     << "Graph hash " << torch::lazy::HashToString(coll.hash)
+    //     << " is computation hash "
+    //     << torch::lazy::HashToString(torch::lazy::Hash(
+    //            computations.front()->computation().proto().SerializeAsString()));
 
-  // if (use_autosharding) {
-  //   const xla::HloModuleProto& computation_proto =
-  //       computations.front()->computation().proto();
-  //   ShardingUtil::ReshardParameters(computation_proto, &tensors,
-  //                                   &po_data->parameters_data,
-  //                                   &po_data->post_order);
-  //   TF_VLOG(5) << "Parameter sequence hash after resharding: "
-  //              << torch::lazy::Hash(po_data->parameter_sequence);
-  // }
+    // if (use_autosharding) {
+    //   const xla::HloModuleProto& computation_proto =
+    //       computations.front()->computation().proto();
+    //   ShardingUtil::ReshardParameters(computation_proto, &tensors,
+    //                                   &po_data->parameters_data,
+    //                                   &po_data->post_order);
+    //   TF_VLOG(5) << "Parameter sequence hash after resharding: "
+    //              << torch::lazy::Hash(po_data->parameter_sequence);
+    // }
 
-  // if (should_wrap_parameter) {
-  //   XLA_CHECK_EQ(program_shape.parameters_size(), 1);
-  //   XLA_CHECK_EQ(program_shape.parameters()[0].tuple_shapes_size(),
-  //                po_data->parameters_data.size());
-  // } else {
-  //   XLA_CHECK_EQ(program_shape.parameters_size(),
-  //                po_data->parameters_data.size());
-  // }
+    // if (should_wrap_parameter) {
+    //   XLA_CHECK_EQ(program_shape.parameters_size(), 1);
+    //   XLA_CHECK_EQ(program_shape.parameters()[0].tuple_shapes_size(),
+    //                po_data->parameters_data.size());
+    // } else {
+    //   XLA_CHECK_EQ(program_shape.parameters_size(),
+    //                po_data->parameters_data.size());
+    // }
 
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
@@ -1706,7 +1699,6 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
 }
 
 runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
-// xla::XlaComputation XLAGraphExecutor::GetXLAComputation(
         std::vector<XLATensorPtr>* tensors,
         absl::Span<const std::string> devices, bool warm_up_cache_only,
         const std::string fn_type, std::vector<at::Tensor> additional_inputs_list) {
@@ -1757,12 +1749,12 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
   TF_VLOG(4) << "Parameter sequence graph hash "
              << torch::lazy::HashToString(coll.hash);
 
-  // CompilationResult compile_result0 =
-  //     Compile(*tensors, devices, coll, &po_data, ir_values);
-
-  // xla::XlaComputation compile_result0 =
   CompilationResult compile_result0 =
-      CompileForiLoop(*tensors, devices, coll, &po_data, ir_values, fn_type, additional_inputs_list);
+      Compile(*tensors, devices, coll, &po_data, ir_values);
+
+  // // xla::XlaComputation compile_result0 =
+  // CompilationResult compile_result0 =
+  //     CompileForiLoop(*tensors, devices, coll, &po_data, ir_values, fn_type, additional_inputs_list);
 
   // TODO(@manfei): abstract xla_computation and wrap them for xla::while requirement
 
@@ -1771,50 +1763,50 @@ runtime::ComputationClient::ComputationPtr XLAGraphExecutor::GetXLAComputation(
   // xla::XlaComputation& xla_computation = compile_result_ptr.move_computation(); // ->computation_; // ->computation();
   // xla::XlaComputation xla_computation = compile_result_ptr->move_computation();
 
-/////////////////////////////////////
-  // // add dummy parameter to cond xlacomputation's input for xla::while requriement
-  // if (GetNameString() == "condctx") {
-  //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
-  //   int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
-  //   int64_t additional_inputs_list_size = additional_inputs_list.size();
-  //   for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
-  //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
-  //     xla::Shape shape = xtensor->shape().get();
-  //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-  //                                   "UnusedArgumentsPlaceholder");
-  //     parameter_idx += 1;
-  //   }
-  // }
+  /////////////////////////////////////
+    // // add dummy parameter to cond xlacomputation's input for xla::while requriement
+    // if (GetNameString() == "condctx") {
+    //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
+    //   int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
+    //   int64_t additional_inputs_list_size = additional_inputs_list.size();
+    //   for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
+    //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
+    //     xla::Shape shape = xtensor->shape().get();
+    //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+    //                                   "UnusedArgumentsPlaceholder");
+    //     parameter_idx += 1;
+    //   }
+    // }
 
-  // // add dummy parameter to body xlacomputation's input for xla::while requriement
-  // if (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0) {
-  //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
-  //   int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
-  //   int64_t additional_inputs_list_size = additional_inputs_list.size();
-  //   for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
-  //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
-  //     xla::Shape shape = xtensor->shape().get();
-  //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-  //                                   "UnusedArgumentsPlaceholder");
-  //     parameter_idx += 1;
-  //   }
-  // }
+    // // add dummy parameter to body xlacomputation's input for xla::while requriement
+    // if (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0) {
+    //   xla::XlaBuilder* local_builder = lowering_ctx.builder();
+    //   int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
+    //   int64_t additional_inputs_list_size = additional_inputs_list.size();
+    //   for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
+    //     XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
+    //     xla::Shape shape = xtensor->shape().get();
+    //     xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+    //                                   "UnusedArgumentsPlaceholder");
+    //     parameter_idx += 1;
+    //   }
+    // }
 
-  // // wrap inputs of cond/body_computation
-  // if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
-  //   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-  //   std::vector<size_t> buffer_donor_indices;
-  //   xla::ProgramShape program_shape =
-  //       ConsumeValue(computation.GetProgramShape());
-  //   // TODO(@manfei): please confirm whether we check for more than two or use
-  //   // default value true
-  //   bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
-  //   if (should_wrap_parameter) {
-  //     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-  //         computation, program_shape.parameters(), buffer_donor_indices));
-  //   }
-  // }
-/////////////////////////////////////
+    // // wrap inputs of cond/body_computation
+    // if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
+    //   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+    //   std::vector<size_t> buffer_donor_indices;
+    //   xla::ProgramShape program_shape =
+    //       ConsumeValue(computation.GetProgramShape());
+    //   // TODO(@manfei): please confirm whether we check for more than two or use
+    //   // default value true
+    //   bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
+    //   if (should_wrap_parameter) {
+    //     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+    //         computation, program_shape.parameters(), buffer_donor_indices));
+    //   }
+    // }
+  /////////////////////////////////////
 
   // return xla_computation;
   return compile_result0.computation;
