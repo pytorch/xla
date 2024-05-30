@@ -70,7 +70,7 @@ jobs:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   test-cuda-with-pytorch-cuda-enabled:
-    name: "GPU tests with PyTorch CUDA enabled"
+    name: "GPU tests requiring torch CUDA"
     uses: ./.github/workflows/_test_requiring_torch_cuda.yml
     needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin]
     with:
