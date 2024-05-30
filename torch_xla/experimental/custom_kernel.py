@@ -514,7 +514,7 @@ def _histogram(input: torch.Tensor, min: int, max: int) -> torch.Tensor:
 
   bin_edges = torch.linspace(
       min, max, max - min + 1, dtype=input.dtype).to(input.device)
-  return searchsorted(bin_edges, input)
+  return searchsorted(bin_edges, input).to(input.dtype)
 
 
 # Refence: https://github.com/google/jax/blob/main/jax/experimental/pallas/ops/tpu/megablox/gmm.py#L78

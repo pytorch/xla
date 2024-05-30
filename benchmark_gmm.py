@@ -133,7 +133,7 @@ def _group_sizes_strategy(m: int, num_groups: int) -> torch.Tensor:
   return torch.from_numpy(ends - starts).to(torch.int32)
 
 
-def routed_gmm(lhs, rhs, tiling):
+def routed_gmm(lhs, rhs):
   device = lhs.device
   m, k, n = lhs.shape[0], lhs.shape[1], rhs.shape[2]
 
@@ -161,7 +161,7 @@ def routed_gmm(lhs, rhs, tiling):
   lhs_sorted = lhs[lhs_indices]
 
   group_sizes = _histogram(top_flat.to(torch.int32), 0, rhs.shape[0] - 1)
-  out = gmm_kernel(lhs_sorted, rhs, group_sizes, tiling)
+  out = gmm_kernel(lhs_sorted, rhs, group_sizes)
   out = out[lhs_reverse_order].reshape(-1, 2, out.shape[-1]).sum(dim=1)
 
   # Exit manual sharding zone
@@ -169,32 +169,49 @@ def routed_gmm(lhs, rhs, tiling):
   return out
 
 
+# class RoutedGMMFunction(torch.autograd.Function):
+#   @staticmethod
+#   def forward(ctx, lhs, rhs):
+#     out = routed_gmm(lhs, rhs)
+#     ctx.save_for_backward(out)
+#     return out
+
+#   @staticmethod
+#   def backward(ctx, grad_output):
+#     out, = ctx.saved_tensors
+#     torch.autograd.backward([out], [grad_output])
+#     return lhs.grad, rhs.grad
+
+
 n_devices = xr.global_runtime_device_count()
 mesh = xs.Mesh(range(n_devices), (n_devices, 1))
 xs.set_global_mesh(mesh)
 # lhs = torch.randn(8192 * n_devices, 4096).to(device)  # 2 * 4096
 # rhs = torch.randn(8, 4096, 14336).to(device)
-lhs = torch.randn(4096, 16384 * n_devices).to(device)  # 2 * 2 * 4096
-rhs = torch.randn(16384 * n_devices, 14336).to(device)
+# lhs = torch.randn(4096, 16384 * n_devices).to(device)  # 2 * 2 * 4096
+# rhs = torch.randn(16384 * n_devices, 14336).to(device)
 
-xp.trace_detached('localhost:9012', '.', 4000)
-# lhs = torch.randn(128, 512).to(device)
-# rhs = torch.randn(512, 128).to(device)
+# xp.trace_detached('localhost:9012', '.', 4000)
+lhs = torch.randn(128, 128, requires_grad=True).to(device)
+rhs = torch.randn(8, 128, 128, requires_grad=True).to(device)
+lhs.retain_grad()
+rhs.retain_grad()
 
-xs.mark_sharding(lhs, mesh, (None, 0))
-xs.mark_sharding(rhs, mesh, (0, None))
+xs.mark_sharding(lhs, mesh, (0, None))
+xs.mark_sharding(rhs, mesh, (None, 0, None))
 
-# out = routed_gmm(lhs, rhs, (128, 128, 128))
-# print(out)
+out = routed_gmm(lhs, rhs)
+out.sum().backward()
+print(out, lhs.grad, rhs.grad)
 
-for i in [512, 512, 512, 512, 512]:
-  group_sizes = _group_sizes_strategy(lhs.shape[1], 8).to(torch.int32).to(device)
-  print(f"group_sizes: {group_sizes}")
-  print(f"block_size: {i}")
+# for i in range(5):
+#   # group_sizes = _group_sizes_strategy(lhs.shape[1], 8).to(torch.int32).to(device)
+#   # print(f"group_sizes: {group_sizes}")
+#   print(f"iteration: {i}")
 
-  # Warm up
-  repeat_n(lambda: time_execution(tgmm_kernel, lhs, rhs, group_sizes, (i, i, i)), itr=1)
-  repeat_n(lambda: time_execution(tgmm_kernel, lhs, rhs, group_sizes, (i, i, i)))
+#   # Warm up
+#   repeat_n(lambda: time_execution(routed_gmm, lhs, rhs), itr=1)
+#   repeat_n(lambda: time_execution(routed_gmm, lhs, rhs))
 
 # xm.mark_step()
 # print(met.metrics_report())
