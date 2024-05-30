@@ -2433,26 +2433,7 @@ void InitXlaModuleBindings(py::module m) {
   BuildProfilerSubmodule(&m);
   BuildLoweringContextSubmodule(&m);
 
-  m.def("_get_xla_computation", [](const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices, const bool warm_up_cache_only,
-    const std::string fn_type,
-    std::vector<at::Tensor> additional_inputs_list) {
-    // convert list of at::Tensor to list of XLATensorPtr
-    std::vector<XLATensorPtr> xtensors;
-    xtensors.reserve(tensors.size());
-    for (auto& tensor : tensors) {
-      xtensors.push_back(bridge::GetXlaTensor(tensor));
-    }
 
-    // create xlacomputation based on treated tensors
-    // runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
-    // xla::XlaComputation xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
-    runtime::ComputationClient::ComputationPtr xla_computation = XLAGraphExecutor::Get()->GetXLAComputation(&xtensors, {}, true, fn_type, additional_inputs_list);
-
-    // TODO(@manfei): wrap inputs of cond/body_computation
-
-    return xla_computation;
-  });
   m.def("_get_tensors_handle",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<int64_t> {
           std::vector<torch::lazy::BackendData::Handle> handles;
