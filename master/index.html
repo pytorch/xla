@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git8fd051f )
+                  master (2.4.0+gitcb482bc )
                 </div>
               
             
@@ -511,16 +511,14 @@
 <li><a class="reference internal" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel">Use SPMD to express FSDP(Fully Sharded Data Parallel)</a></li>
 <li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
 <li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
+<li><a class="reference internal" href="#auto-sharding">Auto-Sharding</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y">Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’</a></li>
-<li><a class="reference internal" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method</a></li>
-<li><a class="reference internal" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module">Currently, model should be loaded to xla device via distribute_module.</a></li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-via-spmd">Fully Sharded Data Parallel via SPMD</a><ul>
 <li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
-<li><a class="reference internal" href="#id51">Gradient checkpointing</a></li>
+<li><a class="reference internal" href="#id39">Gradient checkpointing</a></li>
 <li><a class="reference internal" href="#huggingface-llama-2-example">HuggingFace Llama 2 Example</a></li>
 </ul>
 </li>
@@ -3766,57 +3764,58 @@ training_or_inference_script_using_spmd.py
 <h3>SPMD Debugging Tool<a class="headerlink" href="#spmd-debugging-tool" title="Permalink to this heading">¶</a></h3>
 <p>We provide a <code class="docutils literal notranslate"><span class="pre">shard</span> <span class="pre">placement</span> <span class="pre">visualization</span> <span class="pre">debug</span> <span class="pre">tool</span></code> for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> to visualize sharded tensor, or you could use <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> or <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code>:</p>
 <ul class="simple">
-<li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:
-<a href="#id36"><span class="problematic" id="id37">``</span></a><a href="#id38"><span class="problematic" id="id39">`</span></a>python
-import rich</p></li>
+<li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:</p></li>
 </ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">rich</span>
+
+<span class="c1"># Here, mesh is a 2x2 mesh with axes &#39;x&#39; and &#39;y&#39;</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+
+<span class="c1"># A tensor&#39;s sharding can be visualized using the `visualize_tensor_sharding` method</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd.debugging</span> <span class="kn">import</span> <span class="n">visualize_tensor_sharding</span>
+<span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_tensor_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="here-mesh-is-a-2x2-mesh-with-axes-x-and-y">
-<h1>Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’<a class="headerlink" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y" title="Permalink to this heading">¶</a></h1>
-<p>t = torch.randn(8, 4, device=’xla’)
-xs.mark_sharding(t, mesh, (‘x’, ‘y’))</p>
-</div>
-<div class="section" id="a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">
-<h1>A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method<a class="headerlink" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method" title="Permalink to this heading">¶</a></h1>
-<p>from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-generated_table = visualize_tensor_sharding(t, use_color=False)</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>![alt_text](assets/spmd_debug_1.png &quot;visualize_tensor_sharding example on TPU v4-8(single-host)&quot;)
-- Code snippet used `visualize_sharding` and visualization result:
-```python
-from torch_xla.distributed.spmd.debugging import visualize_sharding
-sharding = &#39;{devices=[2,2]0,1,2,3}&#39;
-generated_table = visualize_sharding(sharding, use_color=False)
+<a class="reference external image-reference" href="assets/spmd_debug_1.png"><img alt="alt_text" src="assets/spmd_debug_1.png" /></a>
+<ul class="simple">
+<li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> and visualization result:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd.debugging</span> <span class="kn">import</span> <span class="n">visualize_sharding</span>
+<span class="n">sharding</span> <span class="o">=</span> <span class="s1">&#39;{devices=[2,2]0,1,2,3}&#39;</span>
+<span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_sharding</span><span class="p">(</span><span class="n">sharding</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
 <a class="reference external image-reference" href="assets/spmd_debug_2.png"><img alt="alt_text" src="assets/spmd_debug_2.png" /></a>
 <p>You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style <code class="docutils literal notranslate"><span class="pre">tiled</span></code>, <code class="docutils literal notranslate"><span class="pre">partial_replication</span></code> and <code class="docutils literal notranslate"><span class="pre">replicated</span></code>.</p>
+</div>
+<div class="section" id="auto-sharding">
+<h3>Auto-Sharding<a class="headerlink" href="#auto-sharding" title="Permalink to this heading">¶</a></h3>
 <p>We are introducing a new PyTorch/XLA SPMD feature, called <code class="docutils literal notranslate"><span class="pre">auto-sharding</span></code>, <a class="reference external" href="https://github.com/pytorch/xla/issues/6322">RFC</a>. This is an experimental feature in <code class="docutils literal notranslate"><span class="pre">r2.3</span></code> and <code class="docutils literal notranslate"><span class="pre">nightly</span></code>, that supports <code class="docutils literal notranslate"><span class="pre">XLA:TPU</span></code> and a single TPUVM host.</p>
 <p>PyTorch/XLA auto-sharding can be enabled by one of the following:</p>
-<ul>
+<ul class="simple">
 <li><p>Setting envvar <code class="docutils literal notranslate"><span class="pre">XLA_SPMD_AUTO=1</span></code></p></li>
-<li><p>Calling the SPMD API in the beginning of your code:
-.. code-block:: python</p>
-<blockquote>
-<div><p>import torch_xla.runtime as xr
-xr.use_spmd(auto=True)</p>
-</div></blockquote>
-</li>
-<li><p>Calling <code class="docutils literal notranslate"><span class="pre">pytorch.distributed._tensor.distribute_module</span></code> with <code class="docutils literal notranslate"><span class="pre">auto-policy</span></code> and <code class="docutils literal notranslate"><span class="pre">xla</span></code>:
-<a href="#id41"><span class="problematic" id="id42">``</span></a><a href="#id43"><span class="problematic" id="id44">`</span></a>python
-import torch_xla.runtime as xr
-from torch.distributed._tensor import DeviceMesh, distribute_module
-from torch_xla.distributed.spmd import auto_policy</p></li>
+<li><p>Calling the SPMD API in the beginning of your code:</p></li>
 </ul>
-<p>device_count = xr.global_runtime_device_count()
-device_mesh = DeviceMesh(“xla”, list(range(device_count)))</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">(</span><span class="n">auto</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
 </div>
-<div class="section" id="currently-model-should-be-loaded-to-xla-device-via-distribute-module">
-<h1>Currently, model should be loaded to xla device via distribute_module.<a class="headerlink" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module" title="Permalink to this heading">¶</a></h1>
-<p>model = MyModule()  # nn.module
-sharded_model = distribute_module(model, device_mesh, auto_policy)
-<a href="#id45"><span class="problematic" id="id46">``</span></a><a href="#id47"><span class="problematic" id="id48">`</span></a></p>
+<ul class="simple">
+<li><p>Calling <code class="docutils literal notranslate"><span class="pre">pytorch.distributed._tensor.distribute_module</span></code> with <code class="docutils literal notranslate"><span class="pre">auto-policy</span></code> and <code class="docutils literal notranslate"><span class="pre">xla</span></code>:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">from</span> <span class="nn">torch.distributed._tensor</span> <span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">distribute_module</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">auto_policy</span>
+
+<span class="n">device_count</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+<span class="n">device_mesh</span> <span class="o">=</span> <span class="n">DeviceMesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">device_count</span><span class="p">)))</span>
+
+<span class="c1"># Currently, model should be loaded to xla device via distribute_module.</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">MyModule</span><span class="p">()</span>  <span class="c1"># nn.module</span>
+<span class="n">sharded_model</span> <span class="o">=</span> <span class="n">distribute_module</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">device_mesh</span><span class="p">,</span> <span class="n">auto_policy</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>Optionally, one can set the following options/env-vars to control the behvaior of
 the XLA-based auto-sharding pass:</p>
 <ul class="simple">
@@ -3825,6 +3824,8 @@ the XLA-based auto-sharding pass:</p>
 <code class="docutils literal notranslate"><span class="pre">XLA_AUTO_SPMD_MESH=2,2</span></code> corresponds to a 2-by-2 mesh with 4 global devices. If unset,
 a default device mesh shape of <code class="docutils literal notranslate"><span class="pre">num_devices,1</span></code> will be used.</p></li>
 </ul>
+</div>
+</div>
 </div>
 <div class="section" id="fully-sharded-data-parallel-via-spmd">
 <h1>Fully Sharded Data Parallel via SPMD<a class="headerlink" href="#fully-sharded-data-parallel-via-spmd" title="Permalink to this heading">¶</a></h1>
@@ -3886,8 +3887,8 @@ the table. The design doc is <a class="reference external" href="https://github.
 </pre></div>
 </div>
 </div>
-<div class="section" id="id51">
-<h2>Gradient checkpointing<a class="headerlink" href="#id51" title="Permalink to this heading">¶</a></h2>
+<div class="section" id="id39">
+<h2>Gradient checkpointing<a class="headerlink" href="#id39" title="Permalink to this heading">¶</a></h2>
 <p>Currently, gradient checkpointing needs to be applied to the module before the FSDP wrapper. Otherwise, recursively loop into children modules will end up with infinite loop. We will fix this issue in the future releases.</p>
 <p>Example usage:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">checkpoint_module</span>
@@ -4152,16 +4153,14 @@ the table. The design doc is <a class="reference external" href="https://github.
 <li><a class="reference internal" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel">Use SPMD to express FSDP(Fully Sharded Data Parallel)</a></li>
 <li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
 <li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
+<li><a class="reference internal" href="#auto-sharding">Auto-Sharding</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y">Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’</a></li>
-<li><a class="reference internal" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method</a></li>
-<li><a class="reference internal" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module">Currently, model should be loaded to xla device via distribute_module.</a></li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-via-spmd">Fully Sharded Data Parallel via SPMD</a><ul>
 <li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
-<li><a class="reference internal" href="#id51">Gradient checkpointing</a></li>
+<li><a class="reference internal" href="#id39">Gradient checkpointing</a></li>
 <li><a class="reference internal" href="#huggingface-llama-2-example">HuggingFace Llama 2 Example</a></li>
 </ul>
 </li>
