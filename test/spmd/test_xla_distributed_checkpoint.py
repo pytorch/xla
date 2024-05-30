@@ -156,7 +156,7 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         load_planner=SPMDLoadPlanner())
 
   @unittest.skipIf(xr.global_runtime_device_count() == 1,
-  "Multiple devices needed to change mesh")
+                   "Multiple devices needed to change mesh")
   def test_padded_tensor(self):
     # Use a linear layer with shape not divisible by the number of devices.
     model1 = torch.nn.Linear(127, 63).to('xla')
