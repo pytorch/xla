@@ -76,13 +76,21 @@ def _torch_argsort(input, dim=-1, descending=False, stable=False):
     # behavior is the same as a jnp array of rank 1
     expanded = True
     input = jnp.expand_dims(input, 0)
-  res = jnp.argsort(input, axis=dim, descending=descending, 
+  res = jnp.argsort(input, axis=dim, descending=descending,
                      stable=stable)
   if expanded:
     res = res.squeeze()
   return res
 
+
 @register_function(torch.einsum)
 def _einsum(equation, *operands):
   assert isinstance(equation, str), 'Only accept str equation'
   return jnp.einsum(equation, *operands)
+
+
+@register_function(torch.empty)
+@op_base.convert_dtype()
+def _empty(size: Sequence[int], *, dtype=None):
+  return jnp.empty(size, dtype=dtype)
+

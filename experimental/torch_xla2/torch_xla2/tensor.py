@@ -325,7 +325,7 @@ class Environment(contextlib.ContextDecorator):
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
 
-      decomps = torch._decomp.core_aten_decompositions() 
+      decomps = torch._decomp.core_aten_decompositions()
       from torch_xla2.decompositions import EXTRA_DECOMP
       decomps.update(EXTRA_DECOMP)
       for k, v in decomps.items():
@@ -339,8 +339,16 @@ class Environment(contextlib.ContextDecorator):
           )
 
     def get_and_rotate_prng_key(self):
-        self._prng_key, key = jax.random.split(self._prng_key)
-        return key
+      # self._prng_key, key = jax.random.split(self._prng_key)
+      # if not generator:
+
+      # error: torch_xla2.tensor.OperatorNotFound: Operator with name aten::randint.low has no lowering
+      next_key = torch.randint(0, 2**32, (), dtype=torch.uint32).numpy()
+      # key = jax.random.key(numpy.uint64(torch.random.seed()))
+      # else:
+      # key = jax.random.key(generator.seed())
+
+      return jax.random.key(next_key)
 
     def dispatch(self, func, types, args, kwargs):
       with jax.named_scope(_name_of_func(func)):
@@ -368,7 +376,7 @@ class Environment(contextlib.ContextDecorator):
 
         if op.is_jax_function:
           res = self.j2t_iso(res)
-        
+
         #if self.config.debug_accuracy_for_each_op:
         #  debug_accuracy(func, args, kwargs, res)
         return res
@@ -407,9 +415,6 @@ class Environment(contextlib.ContextDecorator):
     def j2t_iso(self, jaxarray):
       return torch_pytree.tree_map_only(
         jnp.ndarray, lambda x: XLATensor2(x, self), jaxarray)
-
-    def j2t_copy(self, args):
-      pass
 
     def j2t_copy(self, args):
       pass

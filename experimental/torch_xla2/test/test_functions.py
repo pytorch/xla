@@ -41,5 +41,22 @@ class TestTorchFunctions(parameterized.TestCase):
     torch.testing.assert_close(torch_xla2.tensor.j2t(actual._elem), expected)
 
 
+  @parameterized.named_parameters(
+      ('empty_2d', lambda: torch.empty((2, 3), dtype=torch.int64)),
+      ('randn_1d', lambda: torch.randn(4)),
+      ('randn_2d', lambda: torch.randn(2, 3)),
+  )
+  def test_random_tensor(self, func: Callable[[], torch.Tensor]):
+    expected = func()
+
+    with self.env:
+      actual = func()
+      self.assertIsInstance(actual, torch_xla2.tensor.XLATensor2)
+
+    # Values will be different, but still check device, layout, dtype, etc
+    torch.testing.assert_close(torch_xla2.tensor.j2t(actual._elem), expected,
+                               rtol=float('inf'), atol=float('inf'))
+
+
 if __name__ == '__main__':
   absltest.main()
