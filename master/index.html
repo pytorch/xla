@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+gitc96c95a )
+                  master (2.4.0+gitaf51f06 )
                 </div>
               
             
@@ -2217,7 +2217,7 @@ doesn’t have.</p>
 software stack.</p>
 <p>Setting such variables will cause different degrees of performance degradation, so they should
 only be enabled for debugging.</p>
-<ul>
+<ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_IR_DEBUG</span></code>: Enables the <em>Python</em> stack trace to be captured where creating IR nodes,
 hence allowing to understand which <em>PyTorch</em> operation was responsible for generating the IR.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_HLO_DEBUG</span></code>: Enables the <em>Python</em> stack frame captured when _XLA_IR<em>DEBUG</em> is active,
@@ -2238,23 +2238,6 @@ moving to the next step.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_EAGER_DEBUG_MODE</span></code>: Forces the XLA tensor to execute eagerly, meaning compile and execute the torch operations one
 by one. This is useful to bypass the long compilation time but overall step time will be a lot slower and memory usage will be higher
 since all compiler optimizaiton will be skipped.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16</span></code>: If set to 1, transforms all the <em>PyTorch</em> <em>Float</em> values into <em>BiFloat16</em>
-when sending to the <em>TPU</em> device. Note that when using <code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16=1</span></code> tensor arithmetic will
-be done in reduced precision and so tensors will not be accurate if accumulated over time.
-For example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># In reduced bfloat16 precision</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mi">4096</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
-<span class="n">tensor</span><span class="p">(</span><span class="mf">4096.</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span><span class="p">)</span>
-<span class="c1"># Whereas in full float32 precision</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mi">4096</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">tensor</span><span class="p">(</span><span class="mi">4097</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>So to get accurate metrics such as average loss value over many steps, use manual mixed
-precision where metrics stay in FP32.</p>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_F16</span></code>: If set to 1, transforms all the <em>PyTorch</em> <em>Float</em> values into <em>Float16</em>
-(<em>PyTorch</em> <em>Half</em> type) when sending to devices which supports them.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">TF_CPP_LOG_THREAD_ID</span></code>: If set to 1, the TF logs will show the thread ID
 helping with debugging multithreaded processes.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">TF_CPP_VMODULE</span></code>: Environment variable used for TF VLOGs and takes the
