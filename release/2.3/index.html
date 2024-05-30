@@ -72,132 +72,170 @@
 
       <div class="main-menu">
         <ul>
-          <li>
-            <a href="https://pytorch.org/get-started">Get Started</a>
-          </li>
 
-          <li>
-            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          <li class="main-menu-item">
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Learn
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/get-started">
+                  <span class=dropdown-title>Get Started</span>
+                  <p>Run PyTorch locally or get started quickly with one of the supported cloud platforms</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials">
+                  <span class="dropdown-title">Tutorials</span>
+                  <p>Whats new in PyTorch tutorials</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/basics/intro.html">
+                  <span class="dropdown-title">Learn the Basics</span>
+                  <p>Familiarize yourself with PyTorch concepts and modules</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/recipes/recipes_index.html">
+                  <span class="dropdown-title">PyTorch Recipes</span>
+                  <p>Bite-size, ready-to-deploy PyTorch code examples</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/introyt.html">
+                  <span class="dropdown-title">Intro to PyTorch - YouTube Series</span>
+                  <p>Master PyTorch basics with our engaging YouTube tutorial series</p>
+                </a>
+              </div>
+            </div>
           </li>
 
           <li>
           <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
-              <a class="resource-option with-down-arrow">
+              <a class="with-down-arrow">
+                Ecosystem
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem">
+                  <span class="dropdown-title">Tools</span>
+                  <p>Learn about the tools and frameworks in the PyTorch Ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class=dropdown-title>Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class=dropdown-title>Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class=dropdown-title>Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
+                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                  <p>Award winners announced at this year's PyTorch Conference</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
                 Edge
               </a>
               <div class="resources-dropdown-menu">
                 <a class="nav-dropdown-item" href="https://pytorch.org/edge">
                   <span class="dropdown-title">About PyTorch Edge</span>
+                  <p>Build innovative and privacy-aware AI experiences for edge devices</p>
                 </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/executorch">
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
                   <span class="dropdown-title">ExecuTorch</span>
+                  <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
                 </a>
               </div>
             </div>  
           </li>
 
-          <li>
-            <a href="https://pytorch.org/blog/">Blog</a>
-          </li>
-
-          <li>
-            <a href="https://pytorch.org/tutorials">Tutorials</a>
-          </li>
-
-          <li class="active docs-active">
+          <li class="main-menu-item">
             <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
-              <a class="resource-option with-down-orange-arrow">
+              <a class="with-down-arrow">
                 Docs
               </a>
               <div class="resources-dropdown-menu">
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                <a class="nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
                   <span class="dropdown-title">PyTorch</span>
-                  <p></p>
+                  <p>Explore the documentation for comprehensive guidance on how to use PyTorch</p>
                 </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/audio/stable/index.html">
-                  <span class="dropdown-title">torchaudio</span>
-                  <p></p>
-                </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/text/stable/index.html">
-                  <span class="dropdown-title">torchtext</span>
-                  <p></p>
-                </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/vision/stable/index.html">
-                  <span class="dropdown-title">torchvision</span>
-                  <p></p>
-                </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torcharrow">
-                  <span class="dropdown-title">torcharrow</span>
-                  <p></p>
-                </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
-                  <span class="dropdown-title">TorchData</span>
-                  <p></p>
-                </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
-                  <span class="dropdown-title">TorchRec</span>
-                  <p></p>
-                </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
-                  <span class="dropdown-title">TorchServe</span>
-                  <p></p>
-                </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchx/">
-                  <span class="dropdown-title">TorchX</span>
-                  <p></p>
-                </a>
-                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/xla">
-                  <span class="dropdown-title">PyTorch on XLA Devices</span>
-                  <p></p>
-                </a>
-            </div>
-          </li>
-
-          <li>
-            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
-              <a class="resource-option with-down-arrow">
-                Resources
-              </a>
-              <div class="resources-dropdown-menu">
-                <a class="nav-dropdown-item" href="https://pytorch.org/features">
-                  <span class="dropdown-title">About</span>
-                  <p>Learn about PyTorch’s features and capabilities</p>
-                </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
-                  <span class="dropdown-title">PyTorch Foundation</span>
-                  <p>Learn about the PyTorch foundation</p>
-                </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
-                  <span class="dropdown-title">Community</span>
-                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered.</p>
-                </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
-                  <span class="dropdown-title">Community Stories</span>
-                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch.</p>
-                </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
-                  <span class="dropdown-title">Developer Resources</span>
-                  <p>Find resources and get questions answered</p>
-                </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/events">
-                  <span class="dropdown-title">Events</span>
-                  <p>Find events, webinars, and podcasts</p>
-                </a>
-                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
-                  <span class="dropdown-title">Forums</span>
-                  <p>A place to discuss PyTorch code, issues, install, research</p>
-                </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/hub">
-                  <span class="dropdown-title">Models (Beta)</span>
-                  <p>Discover, publish, and reuse pre-trained models</p>
+                <a class="nav-dropdown-item" href="https://pytorch.org/pytorch-domains">
+                  <span class="dropdown-title">PyTorch Domains</span>
+                  <p>Read the PyTorch Domains documentation to learn more about domain-specific libraries</p>
                 </a>
               </div>
             </div>
           </li>
 
           <li>
-            <a href="https://github.com/pytorch/pytorch">GitHub</a>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Blogs & News 
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/blog/">
+                  <span class="dropdown-title">PyTorch Blog</span>
+                  <p>Catch up on the latest technical news and happenings</p>
+                </a>
+                 <a class="nav-dropdown-item" href="https://pytorch.org/community-blog">
+                  <span class="dropdown-title">Community Blog</span>
+                  <p>Stories from the PyTorch ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/videos">
+                  <span class="dropdown-title">Videos</span>
+                  <p>Learn about the latest PyTorch tutorials, new, and more </p>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+            </div>
           </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                About
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn more about the PyTorch Foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
+                  <span class="dropdown-title">Governing Board</span>
+                  <p></p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li class="main-menu-item">
+            <div class="no-dropdown">
+              <a href="https://pytorch.org/join" data-cta="join">
+                Become a Member
+              </a>
+            </div>
+          </li>
+          <li>
+           <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="github-icon">
+             </a>
+           </div>
+          </li>
+          <!--- TODO: This block adds the search icon to the nav bar. We will enable it later. 
+          <li>
+            <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="search-icon">
+             </a>
+            </div>
+          </li>
+          --->
         </ul>
       </div>
 
@@ -227,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.3.0+git6f93cc1 )
+                  master (2.3.0+gitb1f2167 )
                 </div>
               
             
@@ -470,16 +508,14 @@
 <li><a class="reference internal" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel">Use SPMD to express FSDP(Fully Sharded Data Parallel)</a></li>
 <li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
 <li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
+<li><a class="reference internal" href="#auto-sharding">Auto-Sharding</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y">Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’</a></li>
-<li><a class="reference internal" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method</a></li>
-<li><a class="reference internal" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module">Currently, model should be loaded to xla device via distribute_module.</a></li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-via-spmd">Fully Sharded Data Parallel via SPMD</a><ul>
 <li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
-<li><a class="reference internal" href="#id50">Gradient checkpointing</a></li>
+<li><a class="reference internal" href="#id38">Gradient checkpointing</a></li>
 <li><a class="reference internal" href="#huggingface-llama-2-example">HuggingFace Llama 2 Example</a></li>
 </ul>
 </li>
@@ -3725,57 +3761,58 @@ training_or_inference_script_using_spmd.py
 <h3>SPMD Debugging Tool<a class="headerlink" href="#spmd-debugging-tool" title="Permalink to this heading">¶</a></h3>
 <p>We provide a <code class="docutils literal notranslate"><span class="pre">shard</span> <span class="pre">placement</span> <span class="pre">visualization</span> <span class="pre">debug</span> <span class="pre">tool</span></code> for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> to visualize sharded tensor, or you could use <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> or <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code>:</p>
 <ul class="simple">
-<li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:
-<a href="#id35"><span class="problematic" id="id36">``</span></a><a href="#id37"><span class="problematic" id="id38">`</span></a>python
-import rich</p></li>
+<li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:</p></li>
 </ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">rich</span>
+
+<span class="c1"># Here, mesh is a 2x2 mesh with axes &#39;x&#39; and &#39;y&#39;</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+
+<span class="c1"># A tensor&#39;s sharding can be visualized using the `visualize_tensor_sharding` method</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd.debugging</span> <span class="kn">import</span> <span class="n">visualize_tensor_sharding</span>
+<span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_tensor_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="here-mesh-is-a-2x2-mesh-with-axes-x-and-y">
-<h1>Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’<a class="headerlink" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y" title="Permalink to this heading">¶</a></h1>
-<p>t = torch.randn(8, 4, device=’xla’)
-xs.mark_sharding(t, mesh, (‘x’, ‘y’))</p>
-</div>
-<div class="section" id="a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">
-<h1>A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method<a class="headerlink" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method" title="Permalink to this heading">¶</a></h1>
-<p>from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-generated_table = visualize_tensor_sharding(t, use_color=False)</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>![alt_text](assets/spmd_debug_1.png &quot;visualize_tensor_sharding example on TPU v4-8(single-host)&quot;)
-- Code snippet used `visualize_sharding` and visualization result:
-```python
-from torch_xla.distributed.spmd.debugging import visualize_sharding
-sharding = &#39;{devices=[2,2]0,1,2,3}&#39;
-generated_table = visualize_sharding(sharding, use_color=False)
+<a class="reference external image-reference" href="assets/spmd_debug_1.png"><img alt="alt_text" src="assets/spmd_debug_1.png" /></a>
+<ul class="simple">
+<li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> and visualization result:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd.debugging</span> <span class="kn">import</span> <span class="n">visualize_sharding</span>
+<span class="n">sharding</span> <span class="o">=</span> <span class="s1">&#39;{devices=[2,2]0,1,2,3}&#39;</span>
+<span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_sharding</span><span class="p">(</span><span class="n">sharding</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
 <a class="reference external image-reference" href="assets/spmd_debug_2.png"><img alt="alt_text" src="assets/spmd_debug_2.png" /></a>
 <p>You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style <code class="docutils literal notranslate"><span class="pre">tiled</span></code>, <code class="docutils literal notranslate"><span class="pre">partial_replication</span></code> and <code class="docutils literal notranslate"><span class="pre">replicated</span></code>.</p>
+</div>
+<div class="section" id="auto-sharding">
+<h3>Auto-Sharding<a class="headerlink" href="#auto-sharding" title="Permalink to this heading">¶</a></h3>
 <p>We are introducing a new PyTorch/XLA SPMD feature, called <code class="docutils literal notranslate"><span class="pre">auto-sharding</span></code>, <a class="reference external" href="https://github.com/pytorch/xla/issues/6322">RFC</a>. This is an experimental feature in <code class="docutils literal notranslate"><span class="pre">r2.3</span></code> and <code class="docutils literal notranslate"><span class="pre">nightly</span></code>, that supports <code class="docutils literal notranslate"><span class="pre">XLA:TPU</span></code> and a single TPUVM host.</p>
 <p>PyTorch/XLA auto-sharding can be enabled by one of the following:</p>
-<ul>
+<ul class="simple">
 <li><p>Setting envvar <code class="docutils literal notranslate"><span class="pre">XLA_SPMD_AUTO=1</span></code></p></li>
-<li><p>Calling the SPMD API in the beginning of your code:
-.. code-block:: python</p>
-<blockquote>
-<div><p>import torch_xla.runtime as xr
-xr.use_spmd(auto=True)</p>
-</div></blockquote>
-</li>
-<li><p>Calling <code class="docutils literal notranslate"><span class="pre">pytorch.distributed._tensor.distribute_module</span></code> with <code class="docutils literal notranslate"><span class="pre">auto-policy</span></code> and <code class="docutils literal notranslate"><span class="pre">xla</span></code>:
-<a href="#id40"><span class="problematic" id="id41">``</span></a><a href="#id42"><span class="problematic" id="id43">`</span></a>python
-import torch_xla.runtime as xr
-from torch.distributed._tensor import DeviceMesh, distribute_module
-from torch_xla.distributed.spmd import auto_policy</p></li>
+<li><p>Calling the SPMD API in the beginning of your code:</p></li>
 </ul>
-<p>device_count = xr.global_runtime_device_count()
-device_mesh = DeviceMesh(“xla”, list(range(device_count)))</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">(</span><span class="n">auto</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
 </div>
-<div class="section" id="currently-model-should-be-loaded-to-xla-device-via-distribute-module">
-<h1>Currently, model should be loaded to xla device via distribute_module.<a class="headerlink" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module" title="Permalink to this heading">¶</a></h1>
-<p>model = MyModule()  # nn.module
-sharded_model = distribute_module(model, device_mesh, auto_policy)
-<a href="#id44"><span class="problematic" id="id45">``</span></a><a href="#id46"><span class="problematic" id="id47">`</span></a></p>
+<ul class="simple">
+<li><p>Calling <code class="docutils literal notranslate"><span class="pre">pytorch.distributed._tensor.distribute_module</span></code> with <code class="docutils literal notranslate"><span class="pre">auto-policy</span></code> and <code class="docutils literal notranslate"><span class="pre">xla</span></code>:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">from</span> <span class="nn">torch.distributed._tensor</span> <span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">distribute_module</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">auto_policy</span>
+
+<span class="n">device_count</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+<span class="n">device_mesh</span> <span class="o">=</span> <span class="n">DeviceMesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">device_count</span><span class="p">)))</span>
+
+<span class="c1"># Currently, model should be loaded to xla device via distribute_module.</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">MyModule</span><span class="p">()</span>  <span class="c1"># nn.module</span>
+<span class="n">sharded_model</span> <span class="o">=</span> <span class="n">distribute_module</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">device_mesh</span><span class="p">,</span> <span class="n">auto_policy</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>Optionally, one can set the following options/env-vars to control the behvaior of
 the XLA-based auto-sharding pass:</p>
 <ul class="simple">
@@ -3784,6 +3821,8 @@ the XLA-based auto-sharding pass:</p>
 <code class="docutils literal notranslate"><span class="pre">XLA_AUTO_SPMD_MESH=2,2</span></code> corresponds to a 2-by-2 mesh with 4 global devices. If unset,
 a default device mesh shape of <code class="docutils literal notranslate"><span class="pre">num_devices,1</span></code> will be used.</p></li>
 </ul>
+</div>
+</div>
 </div>
 <div class="section" id="fully-sharded-data-parallel-via-spmd">
 <h1>Fully Sharded Data Parallel via SPMD<a class="headerlink" href="#fully-sharded-data-parallel-via-spmd" title="Permalink to this heading">¶</a></h1>
@@ -3833,8 +3872,8 @@ feature will come in the future releases.</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id50">
-<h2>Gradient checkpointing<a class="headerlink" href="#id50" title="Permalink to this heading">¶</a></h2>
+<div class="section" id="id38">
+<h2>Gradient checkpointing<a class="headerlink" href="#id38" title="Permalink to this heading">¶</a></h2>
 <p>Currently, gradient checkpointing needs to be applied to the module before the FSDP wrapper. Otherwise, recursively loop into children modules will end up with infinite loop. We will fix this issue in the future releases.</p>
 <p>Example usage:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">checkpoint_module</span>
@@ -4096,16 +4135,14 @@ feature will come in the future releases.</p>
 <li><a class="reference internal" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel">Use SPMD to express FSDP(Fully Sharded Data Parallel)</a></li>
 <li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
 <li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
+<li><a class="reference internal" href="#auto-sharding">Auto-Sharding</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y">Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’</a></li>
-<li><a class="reference internal" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method</a></li>
-<li><a class="reference internal" href="#currently-model-should-be-loaded-to-xla-device-via-distribute-module">Currently, model should be loaded to xla device via distribute_module.</a></li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-via-spmd">Fully Sharded Data Parallel via SPMD</a><ul>
 <li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
-<li><a class="reference internal" href="#id50">Gradient checkpointing</a></li>
+<li><a class="reference internal" href="#id38">Gradient checkpointing</a></li>
 <li><a class="reference internal" href="#huggingface-llama-2-example">HuggingFace Llama 2 Example</a></li>
 </ul>
 </li>
@@ -4263,114 +4300,111 @@ feature will come in the future releases.</p>
     <div class="mobile-main-menu-links-container">
       <div class="main-menu">
         <ul>
-          <li>
-            <a href="https://pytorch.org/get-started">Get Started</a>
-          </li>
+           <li class="resources-mobile-menu-title">
+             <a>Learn</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/get-started">Get Started</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials">Tutorials</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/basics/intro.html">Learn the Basics</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/recipes/recipes_index.html">PyTorch Recipes</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/introyt.html">Introduction to PyTorch - YouTube Series</a>
+             </li>
+           </ul>
+           <li class="resources-mobile-menu-title">
+             <a>Ecosystem</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/ecosystem">Tools</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/#community-module">Community</a>
+             </li>
+             <li>
+               <a href="https://discuss.pytorch.org/">Forums</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/resources">Developer Resources</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+             </li>
+           </ul>
 
-          <li>
-            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
-          </li>
-            
-          <li>
-            <a href="">Mobile</a>
-          </li>
+           <li class="resources-mobile-menu-title">
+             <a>Edge</a>
+           </li>
 
-          <li>
-            <a href="https://pytorch.org/blog/">Blog</a>
-          </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/edge">About PyTorch Edge</a>
+             </li>
+             
+             <li>
+               <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+           </ul>
 
-          <li>
-            <a href="https://pytorch.org/tutorials">Tutorials</a>
-          </li>
+           <li class="resources-mobile-menu-title">
+             <a>Docs</a>
+           </li>
 
-          <li class="resources-mobile-menu-title" class="active">
-            Docs
-          </li>
-
-          <ul class="resources-mobile-menu-items">
+           <ul class="resources-mobile-menu-items">
             <li>
               <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
             </li>
 
             <li>
-              <a href="https://pytorch.org/audio/stable/index.html">torchaudio</a>
-            </li>
-
-            <li>
-              <a href="https://pytorch.org/text/stable/index.html">torchtext</a>
-            </li>
-
-            <li>
-              <a href="https://pytorch.org/vision/stable/index.html">torchvision</a>
-            </li>
-
-            <li>
-              <a href="https://pytorch.org/torcharrow">torcharrow</a>
-            </li>
-
-            <li>
-              <a href="https://pytorch.org/data">TorchData</a>
-            </li>
-
-            <li>
-              <a href="https://pytorch.org/torchrec">TorchRec</a>
-            </li>
-
-            <li>
-              <a href="https://pytorch.org/serve/">TorchServe</a>
-            </li>
-
-            <li>
-              <a href="https://pytorch.org/torchx/">TorchX</a>
-            </li>
-
-            <li>
-              <a href="https://pytorch.org/xla">PyTorch on XLA Devices</a>
+              <a href="https://pytorch.org/pytorch-domains">PyTorch Domains</a>
             </li>
           </ul>
 
           <li class="resources-mobile-menu-title">
-            Resources
+            <a>Blog & News</a>
           </li>
             
            <ul class="resources-mobile-menu-items">
-
             <li>
-              <a href="https://pytorch.org/features">About</a>
+              <a href="https://pytorch.org/blog/">PyTorch Blog</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/community-blog">Community Blog</a>
             </li>
 
             <li>
-              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
-            </li>
-
-            <li>
-              <a href="https://pytorch.org/#community-module">Community</a>
+              <a href="https://pytorch.org/videos">Videos</a>
             </li>
 
             <li>
               <a href="https://pytorch.org/community-stories">Community Stories</a>
             </li>
-
-            <li>
-              <a href="https://pytorch.org/resources">Developer Resources</a>
-            </li>
-
             <li>
               <a href="https://pytorch.org/events">Events</a>
             </li>
+          </ul>
+          
+          <li class="resources-mobile-menu-title">
+            <a>About</a>
+          </li>
 
+          <ul class="resources-mobile-menu-items">
             <li>
-              <a href="https://discuss.pytorch.org/">Forums</a>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
             </li>
-
             <li>
-              <a href="https://pytorch.org/hub">Models (Beta)</a>
+              <a href="https://pytorch.org/governing-board">Governing Board</a>
             </li>
           </ul>
-
-          <li>
-            <a href="https://github.com/pytorch/pytorch">Github</a>
-          </li>
         </ul>
       </div>
     </div>
