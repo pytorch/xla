@@ -95,7 +95,7 @@ def repeat_n(func, itr=10):
   print(f"Execution time: {sum * 1000:.2f} ms")
 
 
-from torch_xla.experimental.custom_kernel import gmm, _histogram, tgmm
+from torch_xla.experimental.custom_kernel import gmm, _histogram, tgmm, gmm_backward
 
 @xp.trace_me("gmm")
 def gmm_kernel(*args):
@@ -169,18 +169,79 @@ def routed_gmm(lhs, rhs):
   return out
 
 
-# class RoutedGMMFunction(torch.autograd.Function):
-#   @staticmethod
-#   def forward(ctx, lhs, rhs):
-#     out = routed_gmm(lhs, rhs)
-#     ctx.save_for_backward(out)
-#     return out
+class RoutedGMMFunction(torch.autograd.Function):
+  @staticmethod
+  def forward(ctx, lhs, rhs):
+    device = lhs.device
+    m, k, n = lhs.shape[0], lhs.shape[1], rhs.shape[2]
 
-#   @staticmethod
-#   def backward(ctx, grad_output):
-#     out, = ctx.saved_tensors
-#     torch.autograd.backward([out], [grad_output])
-#     return lhs.grad, rhs.grad
+    # Create TopK
+    top1 = torch.randint(0, rhs.shape[0], (lhs.shape[0], 1)).to(device)
+    top2 = torch.randint(0, rhs.shape[0], (lhs.shape[0], 1)).to(device)
+    top = torch.cat([top1, top2], dim=1)
+
+    # To create a new node such that lhs/rhs can keep its sharding.
+    lhs = lhs + 0
+    rhs = rhs + 0
+
+    # Saved for backward
+    ctx.save_for_backward(lhs, rhs)
+
+    # Enter manual sharding zone
+    lhs = xs.enable_manual_sharding(lhs, (0, None)).global_tensor
+    rhs = xs.enable_manual_sharding(rhs, (None, None, None)).global_tensor
+    top = xs.enable_manual_sharding(top, (0, None)).global_tensor
+
+    # We want to create one big batch of tokens that has all top-k choices in it.
+    # Our tokens will thus be duplicated k-times in the batch. To do this we,
+    # first flatten the expert choices list and argsort it. This gives us an array
+    # of length B * K. We then create a tiled arange of size B * K and index
+    # into the expert choices list. This will give us the set of indices we need
+    # to gather from the xs to create this big batch.
+    top_flat = top.flatten()
+    lhs_order = top_flat.argsort()
+    lhs_reverse_order = lhs_order.argsort()
+    lhs_indices = torch.arange(lhs.shape[0], device=device).repeat_interleave(2)[lhs_order]  # Always replicated, so okay to skip manual sharding.
+    lhs_sorted = lhs[lhs_indices]
+
+    group_sizes = _histogram(top_flat.to(torch.int32), 0, rhs.shape[0] - 1)
+    out = gmm_kernel(lhs_sorted, rhs, group_sizes)
+    out = out[lhs_reverse_order].reshape(-1, 2, out.shape[-1]).sum(dim=1)
+
+    # Exit manual sharding zone
+    out = xs.disable_manual_sharding(out, (0, None), (m, n))
+
+    # Saved for backward
+    ctx.lhs_indices = lhs_indices
+    ctx.lhs_reverse_order = lhs_reverse_order
+    ctx.group_sizes = group_sizes
+    return out
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    lhs_full, rhs_full = ctx.saved_tensors
+    lhs_indices = ctx.lhs_indices
+    lhs_reverse_order = ctx.lhs_reverse_order
+    group_sizes = ctx.group_sizes
+
+    # Enter manual sharding zone
+    lhs = xs.enable_manual_sharding(lhs_full, (0, None)).global_tensor
+    rhs = xs.enable_manual_sharding(rhs_full, (None, None, None)).global_tensor
+    grad_output = xs.enable_manual_sharding(grad_output, (0, None)).global_tensor
+
+    grad_sum = torch.ones((grad_output.shape[0], 2, grad_output.shape[-1]), device=device) * grad_output.unsqueeze(1)
+    grad_reshape = grad_sum.reshape(-1, grad_sum.shape[-1])
+    grad_index = grad_reshape[lhs_indices]
+    grad_lhs_sorted, grad_rhs = gmm_backward(grad_index, lhs, rhs, group_sizes)
+    grad_lhs_sorted = grad_lhs_sorted[lhs_reverse_order]
+    grad_lhs = grad_lhs_sorted.reshape(-1, 2, grad_lhs_sorted.shape[-1]).sum(dim=1)
+
+
+    # Exit manual sharding zone
+    grad_lhs = xs.disable_manual_sharding(grad_lhs, (0, None), lhs_full.shape)
+    grad_rhs = xs.disable_manual_sharding(grad_rhs, (None, None, None), rhs_full.shape)
+
+    return grad_lhs, grad_rhs
 
 
 n_devices = xr.global_runtime_device_count()
@@ -200,7 +261,7 @@ rhs.retain_grad()
 xs.mark_sharding(lhs, mesh, (0, None))
 xs.mark_sharding(rhs, mesh, (None, 0, None))
 
-out = routed_gmm(lhs, rhs)
+out = RoutedGMMFunction.apply(lhs, rhs)
 out.sum().backward()
 print(out, lhs.grad, rhs.grad)
 
