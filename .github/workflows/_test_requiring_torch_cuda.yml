@@ -39,24 +39,33 @@ jobs:
       BAZEL_REMOTE_CACHE: 1
     steps:
       # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+      # TODO: need to find a way to reuse these steps.
       - name: Clean up workspace
         run: |
           ls -la
           rm -rvf ${GITHUB_WORKSPACE}/*
-      - name: Setup gcloud
-        shell: bash
-        run: |
-          echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
-      - name: Fetch torch/torch_xla/torchvision wheels with CUDA enabled
+      - name: Fetch torch/torch_xla/torchvision wheels
         uses: actions/download-artifact@v4
         with:
-          name: torch-with-cuda-xla-with-cuda-wheels
+          name: torch-xla-wheels
           path: /tmp/wheels/
-          pattern: torch-*.whl 
+      - name: Remove torch wheel built with CUDA disabled
+        shell: bash
+        run: |
+          rm -rf /tmp/wheels/torch-*
+      - name: Fetch the torch wheel built with CUDA enabled
+        uses: actions/download-artifact@v4
+        with:
+          name: torch-with-cuda
+          path: /tmp/wheels/
+      - name: Fetch CUDA plugin
+        uses: actions/download-artifact@v4
+        with:
+          name: cuda-plugin
+          path: /tmp/wheels/
       - name: Setup CUDA environment
         shell: bash
         run: |
-          # TODO: Make PJRT_DEVICE=CPU work with XLA_REGISTER_INSTALLED_PLUGINS=1
           echo "XLA_REGISTER_INSTALLED_PLUGINS=1" >> $GITHUB_ENV
           echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
