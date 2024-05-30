@@ -58,5 +58,19 @@ class TestTorchFunctions(parameterized.TestCase):
                                rtol=float('inf'), atol=float('inf'))
 
 
+  @parameterized.named_parameters(
+      ('randn', lambda g: torch.randn(2, 3, generator=g)),
+  )
+  def test_random_generator(self, func: Callable[[torch.Generator], torch.Tensor]):
+
+    with self.env:
+      x = func(torch.Generator().manual_seed(0))
+      y = func(torch.Generator().manual_seed(0))
+
+    # Values will be different, but still check device, layout, dtype, etc
+    torch.testing.assert_close(
+        torch_xla2.tensor.j2t(x._elem),
+        torch_xla2.tensor.j2t(y._elem))
+
 if __name__ == '__main__':
   absltest.main()
