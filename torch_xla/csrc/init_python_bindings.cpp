@@ -2061,6 +2061,16 @@ void InitXlaModuleBindings(py::module m) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     return GetXLAShardingSpec(xtensor);
   });
+  m.def("_get_xla_op_sharding",
+        [](const at::Tensor& input) -> std::optional<xla::OpSharding> {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          XLATensor::ShardingSpecPtr sharding_spec =
+              xtensor ? xtensor->sharding_spec() : nullptr;
+          if (sharding_spec != nullptr) {
+            return sharding_spec->sharding;
+          }
+          return std::nullopt;
+        });
   m.def("_get_xla_sharding_specs",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<std::string> {
           tsl::profiler::TraceMe activity("_get_xla_sharding_specs",
