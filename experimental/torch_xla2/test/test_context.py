@@ -3,6 +3,7 @@ import unittest
 import torch
 import torch_xla2
 from torch_xla2 import tensor
+import torch_xla2.interop
 
 xla_env = tensor.Environment(0)
 
@@ -52,6 +53,17 @@ class TestContext(unittest.TestCase):
       self.assertIsInstance(y, tensor.XLATensor2)
 
     self.assertFalse(torch.equal(torch_xla2.tensor.j2t(x._elem), torch_xla2.tensor.j2t(y._elem)))
+
+  def test_jit_with_rng(self):
+    @xla_env
+    def random():
+      x = torch.randn(3, 3)
+      y = torch.randn(3, 3)
+      return x @ y
+
+    random_jit = torch_xla2.interop.jax_jit(random)
+    self.assertIsInstance(random_jit(), tensor.XLATensor2)
+
 
 if __name__ == "__main__":
   unittest.main()
