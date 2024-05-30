@@ -364,7 +364,9 @@ class MegabloxTest(unittest.TestCase):
       ref_out.sum().backward()
 
       ref_out_backward = torch.ones_like(ref_out)
-      grad_lhs, grad_rhs = gmm_backward(ref_out_backward.to("xla"), lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+      grad_lhs, grad_rhs = gmm_backward(
+          ref_out_backward.to("xla"), lhs.to("xla"), rhs.to("xla"),
+          group_sizes.to("xla"))
 
       self.assertTrue(torch.allclose(lhs.grad, grad_lhs.cpu()))
       self.assertTrue(torch.allclose(rhs.grad, grad_rhs.cpu()))
