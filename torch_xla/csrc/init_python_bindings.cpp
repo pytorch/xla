@@ -948,7 +948,6 @@ class PyLoweringContext {
   // needed in xlacomputation for fori_loop/while_loop.
   void BuildForiLoop(std::vector<at::Tensor> tensors,
                      std::vector<at::Tensor> additional_inputs_list = {}) {
-
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
@@ -967,12 +966,14 @@ class PyLoweringContext {
       lowering_ctx.AddResult(root);
     }
 
-    // add dummy parameter to cond xlacomputation's input for xla::while requriement
+    // add dummy parameter to cond xlacomputation's input for xla::while
+    // requriement
     if (GetNameString() == "condctx") {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
+      int64_t parameter_idx =
+          local_builder->GetProgramShape()->parameters_size();
       int64_t additional_inputs_list_size = additional_inputs_list.size();
-      for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
+      for (int64_t i = parameter_idx; i < additional_inputs_list_size; i++) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
         xla::Shape shape = xtensor->shape().get();
         xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
@@ -981,12 +982,14 @@ class PyLoweringContext {
       }
     }
 
-    // add dummy parameter to body xlacomputation's input for xla::while requriement
+    // add dummy parameter to body xlacomputation's input for xla::while
+    // requriement
     if (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0) {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      int64_t parameter_idx = local_builder->GetProgramShape()->parameters_size();
+      int64_t parameter_idx =
+          local_builder->GetProgramShape()->parameters_size();
       int64_t additional_inputs_list_size = additional_inputs_list.size();
-      for (int64_t i = parameter_idx; i < additional_inputs_list_size ; i++) {
+      for (int64_t i = parameter_idx; i < additional_inputs_list_size; i++) {
         XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
         xla::Shape shape = xtensor->shape().get();
         xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
