@@ -14,8 +14,8 @@ from torch_xla import runtime as xr
 server = xp.start_server(9012)
 
 xr.use_spmd()
-# device = xm.xla_device()
-device = 'cpu'
+device = xm.xla_device()
+# device = 'cpu'
 torch.set_default_dtype(torch.bfloat16)
 torch.manual_seed(42)
 
@@ -189,9 +189,9 @@ class RoutedGMMFunction(torch.autograd.Function):
     ctx.save_for_backward(lhs, rhs)
 
     # Enter manual sharding zone
-    # lhs = xs.enable_manual_sharding(lhs, (0, None)).global_tensor
-    # rhs = xs.enable_manual_sharding(rhs, (None, None, None)).global_tensor
-    # top = xs.enable_manual_sharding(top, (0, None)).global_tensor
+    lhs = xs.enable_manual_sharding(lhs, (0, None)).global_tensor
+    rhs = xs.enable_manual_sharding(rhs, (None, None, None)).global_tensor
+    top = xs.enable_manual_sharding(top, (0, None)).global_tensor
 
     # We want to create one big batch of tokens that has all top-k choices in it.
     # Our tokens will thus be duplicated k-times in the batch. To do this we,
@@ -206,12 +206,11 @@ class RoutedGMMFunction(torch.autograd.Function):
     lhs_sorted = lhs[lhs_indices]
 
     group_sizes = _histogram(top_flat.to(torch.int32), 0, rhs.shape[0] - 1)
-    out = lhs_sorted
-    # out = gmm_kernel(lhs_sorted, rhs, group_sizes)
+    out = gmm_kernel(lhs_sorted, rhs, group_sizes)
     out = out[lhs_reverse_order].reshape(-1, 2, out.shape[-1]).sum(dim=1)
 
     # Exit manual sharding zone
-    # out = xs.disable_manual_sharding(out, (0, None), (m, n))
+    out = xs.disable_manual_sharding(out, (0, None), (m, n))
 
     # Saved for backward
     ctx.lhs_indices = lhs_indices
@@ -226,25 +225,22 @@ class RoutedGMMFunction(torch.autograd.Function):
     lhs_reverse_order = ctx.lhs_reverse_order
     group_sizes = ctx.group_sizes
 
-    grad_rhs = None
-
     # Enter manual sharding zone
-    # lhs = xs.enable_manual_sharding(lhs_full, (0, None)).global_tensor
-    # rhs = xs.enable_manual_sharding(rhs_full, (None, None, None)).global_tensor
-    # grad_output = xs.enable_manual_sharding(grad_output, (0, None)).global_tensor
+    lhs = xs.enable_manual_sharding(lhs_full, (0, None)).global_tensor
+    rhs = xs.enable_manual_sharding(rhs_full, (None, None, None)).global_tensor
+    grad_output = xs.enable_manual_sharding(grad_output, (0, None)).global_tensor
 
     grad_sum = grad_output.unsqueeze(1).expand(-1, 2, -1)
     grad_reshape = grad_sum.reshape(-1, grad_sum.shape[-1])
     grad_index = grad_reshape[lhs_indices]
-    # grad_lhs_sorted, grad_rhs = gmm_backward(grad_index, lhs, rhs, group_sizes)
-    grad_lhs_sorted = grad_index
+    grad_lhs_sorted, grad_rhs = gmm_backward(grad_index, lhs, rhs, group_sizes)
     grad_lhs_sorted = grad_lhs_sorted[lhs_reverse_order]
     grad_lhs = grad_lhs_sorted.reshape(-1, 2, grad_lhs_sorted.shape[-1]).sum(dim=1)
 
 
     # Exit manual sharding zone
-    # grad_lhs = xs.disable_manual_sharding(grad_lhs, (0, None), lhs_full.shape)
-    # grad_rhs = xs.disable_manual_sharding(grad_rhs, (None, None, None), rhs_full.shape)
+    grad_lhs = xs.disable_manual_sharding(grad_lhs, (0, None), lhs_full.shape)
+    grad_rhs = xs.disable_manual_sharding(grad_rhs, (None, None, None), rhs_full.shape)
 
     return grad_lhs, grad_rhs
 
@@ -252,33 +248,33 @@ class RoutedGMMFunction(torch.autograd.Function):
 n_devices = xr.global_runtime_device_count()
 mesh = xs.Mesh(range(n_devices), (n_devices, 1))
 xs.set_global_mesh(mesh)
-# lhs = torch.randn(8192 * n_devices, 4096).to(device)  # 2 * 4096
-# rhs = torch.randn(8, 4096, 14336).to(device)
+lhs = torch.randn(8192 * n_devices, 4096, requires_grad=True).to(device)  # 2 * 4096
+rhs = torch.randn(8, 4096, 14336, requires_grad=True).to(device)
 # lhs = torch.randn(4096, 16384 * n_devices).to(device)  # 2 * 2 * 4096
 # rhs = torch.randn(16384 * n_devices, 14336).to(device)
 
-# xp.trace_detached('localhost:9012', '.', 4000)
-lhs = torch.randn(8, 8, requires_grad=True).to(device)
-rhs = torch.randn(8, 8, 8, requires_grad=True).to(device)
+xp.trace_detached('localhost:9012', '.', 30000)
+# lhs = torch.randn(128, 128, requires_grad=True).to(device)
+# rhs = torch.randn(8, 128, 128, requires_grad=True).to(device)
 lhs.retain_grad()
 rhs.retain_grad()
 
-# xs.mark_sharding(lhs, mesh, (0, None))
-# xs.mark_sharding(rhs, mesh, (None, 0, None))
+xs.mark_sharding(lhs, mesh, (0, None))
+xs.mark_sharding(rhs, mesh, (None, 0, None))
 
 # out = RoutedGMMFunction.apply(lhs, rhs)
-out = RoutedGMMFunction.forward(RoutedGMMFunction, lhs, rhs)
-out.sum().backward()
-print(out, lhs.grad, rhs.grad)
+# out = RoutedGMMFunction.forward(RoutedGMMFunction, lhs, rhs)
+# out.sum().backward()
+# print(out, lhs.grad, rhs.grad)
 
-# for i in range(5):
-#   # group_sizes = _group_sizes_strategy(lhs.shape[1], 8).to(torch.int32).to(device)
-#   # print(f"group_sizes: {group_sizes}")
-#   print(f"iteration: {i}")
+for i in range(5):
+  # group_sizes = _group_sizes_strategy(lhs.shape[1], 8).to(torch.int32).to(device)
+  # print(f"group_sizes: {group_sizes}")
+  print(f"iteration: {i}")
 
-#   # Warm up
-#   repeat_n(lambda: time_execution(routed_gmm, lhs, rhs), itr=1)
-#   repeat_n(lambda: time_execution(routed_gmm, lhs, rhs))
+  # Warm up
+  repeat_n(lambda: time_execution(RoutedGMMFunction.apply, lhs, rhs, backward=True), itr=1)
+  repeat_n(lambda: time_execution(RoutedGMMFunction.apply, lhs, rhs, backward=True))
 
 # xm.mark_step()
 # print(met.metrics_report())
