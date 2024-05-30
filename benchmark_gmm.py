@@ -233,7 +233,7 @@ class RoutedGMMFunction(torch.autograd.Function):
     # rhs = xs.enable_manual_sharding(rhs_full, (None, None, None)).global_tensor
     # grad_output = xs.enable_manual_sharding(grad_output, (0, None)).global_tensor
 
-    grad_sum = torch.ones((grad_output.shape[0], 2, grad_output.shape[-1]), device=device) * grad_output.unsqueeze(1)
+    grad_sum = grad_output.unsqueeze(1).expand(-1, 2, -1)
     grad_reshape = grad_sum.reshape(-1, grad_sum.shape[-1])
     grad_index = grad_reshape[lhs_indices]
     # grad_lhs_sorted, grad_rhs = gmm_backward(grad_index, lhs, rhs, group_sizes)
