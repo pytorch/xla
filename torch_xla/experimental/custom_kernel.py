@@ -825,6 +825,20 @@ def gmm_backward(grad, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
   return grad_lhs, grad_rhs
 
 
+class GMM(torch.autograd.Function):
+  @staticmethod
+  def forward(ctx, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
+    ctx.save_for_backward(lhs, rhs, group_sizes)
+    ctx.tiling = tiling
+    return gmm(lhs, rhs, group_sizes, tiling)
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    lhs, rhs, group_sizes = ctx.saved_tensors
+    grad_lhs, grad_rhs = gmm_backward(grad_output, lhs, rhs, group_sizes, ctx.tiling)
+    return grad_lhs, grad_rhs, None, None
+
+
 def non_xla_attetion(q, k, v, attention_type):
   # This will be called when dynamo use fake tensor to construct the fake output.
   # We need to make sure output tensor's shape is correct.
