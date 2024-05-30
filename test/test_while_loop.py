@@ -22,6 +22,7 @@ def _fake_while_loop(cond_fn, body_fn, operands):
     operands = body_fn(*operands)
   return operands
 
+
 class WhileLoopTest(unittest.TestCase):
 
   def test_while_loop_tpu_addition(self):
@@ -35,7 +36,7 @@ class WhileLoopTest(unittest.TestCase):
 
     init_val = torch.tensor(3, dtype=torch.int32, device=device)
     iteri = torch.tensor(10, device=device)
-    _, res =  while_loop(cond_fn, body_fn, (iteri, init_val))
+    _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
     print("res: ", res)
     _, expected = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
     print("expected: ", expected)
@@ -52,7 +53,7 @@ class WhileLoopTest(unittest.TestCase):
 
     init_val = torch.tensor(2, dtype=torch.int32, device=device)
     iteri = torch.tensor(10, device=device)
-    _, res =  while_loop(cond_fn, body_fn, (iteri, init_val))
+    _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
     _, expected = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
     self.assertTrue(torch.all(torch.eq(res, expected)))
 
@@ -61,6 +62,7 @@ class WhileLoopTest(unittest.TestCase):
     torch.set_grad_enabled(False)
 
     class SimpleLinear(torch.nn.Module):
+
       def __init__(self):
         super().__init__()
         self.linear = torch.nn.Linear(2, 2)
@@ -96,6 +98,7 @@ class WhileLoopTest(unittest.TestCase):
     torch.set_grad_enabled(False)
 
     class MNIST(torch.nn.Module):
+
       def __init__(self):
         super().__init__()
         self.conv1 = torch.nn.Conv2d(1, 10, kernel_size=5, stride=1, padding=2)
@@ -107,6 +110,7 @@ class WhileLoopTest(unittest.TestCase):
         self.bnLayersWeights = []
 
       def forward(self, iteri, x, y):
+
         def cond_fn(iteri, x, y):
           return iteri > 0
 
@@ -135,9 +139,8 @@ class WhileLoopTest(unittest.TestCase):
 
     mnist = MNIST()
     mnist.to(device)
-    bs=16
-    l_in_0 = torch.randn(bs, 1, 28, 28, dtype=torch.float32, device=device)
-    l_out = torch.randn(bs, 10, dtype=torch.float32, device=device)
+    l_in_0 = torch.randn(16, 1, 28, 28, dtype=torch.float32, device=device)
+    l_out = torch.randn(16, 10, dtype=torch.float32, device=device)
     iteri = torch.tensor(3, dtype=torch.int64, device=device)
     _, _, res = mnist(iteri, l_in_0, l_out)
 
