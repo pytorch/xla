@@ -7,15 +7,14 @@ import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
 from torch_xla.experimental.fori_loop import fori_loop
-# from torch_xla.experimental.fori_loop import _xla_while_loop_warpper_bn
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
 import torch_xla.utils.utils as xu
-
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+
 
 def _fake_while_loop(cond_fn, body_fn, operands):
   # operands need to be more than one here
