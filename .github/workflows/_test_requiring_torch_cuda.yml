@@ -43,6 +43,7 @@ jobs:
       BAZEL_REMOTE_CACHE: 1
     steps:
       # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+      # TODO: need to find a way to reuse these steps.
       - name: Clean up workspace
         run: |
           ls -la

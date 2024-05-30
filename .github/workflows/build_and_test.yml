@@ -29,7 +29,7 @@ jobs:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   build-torch-with-cuda:
-    name: "Build PyTorch with CUDA and PyTorch/XLA"
+    name: "Build PyTorch with CUDA"
     uses: ./.github/workflows/_build_torch_with_cuda.yml
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1

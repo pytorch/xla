@@ -2686,7 +2686,6 @@ class TestDLPack(parameterized.TestCase):
     cuda_t = torch.arange(25, device=torch.device('cuda')).reshape(5, 5)
 
     t1 = cuda_t.t()
-    print('xw32 t1.device=', t1.device)
     xla_t1 = xdlpack.from_dlpack(t1.__dlpack__())
     self.assertEqual(xla_t1.device.type, 'xla')
     self.assertEqual(xla_t1.device.index, t1.device.index)

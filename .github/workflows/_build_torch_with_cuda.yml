@@ -28,6 +28,7 @@ jobs:
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
       BUILD_CPP_TESTS: 1
+      _GLIBCXX_USE_CXX11_ABI: 0
     steps:
       # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
       - name: Clean up workspace
