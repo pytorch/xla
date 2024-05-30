@@ -399,6 +399,8 @@ class MegabloxTest(unittest.TestCase):
       lhs_xla = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True).to("xla")
       rhs_xla = torch.rand(
           num_groups, k, n, dtype=rhs_dtype, requires_grad=True).to("xla")
+      rhs_xla = torch.rand(
+          num_groups, k, n, dtype=rhs_dtype, requires_grad=True).to("xla")
       lhs_xla.retain_grad()
       rhs_xla.retain_grad()
 
