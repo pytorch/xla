@@ -248,14 +248,16 @@ class RoutedGMMFunction(torch.autograd.Function):
 n_devices = xr.global_runtime_device_count()
 mesh = xs.Mesh(range(n_devices), (n_devices, 1))
 xs.set_global_mesh(mesh)
-lhs = torch.randn(8192 * n_devices, 4096, requires_grad=True).to(device)  # 2 * 4096
-rhs = torch.randn(8, 4096, 14336, requires_grad=True).to(device)
+lhs = torch.randn(8192 * n_devices, 4096).to(device)  # 2 * 4096
+rhs = torch.randn(8, 4096, 14336).to(device)
 # lhs = torch.randn(4096, 16384 * n_devices).to(device)  # 2 * 2 * 4096
 # rhs = torch.randn(16384 * n_devices, 14336).to(device)
 
 xp.trace_detached('localhost:9012', '.', 30000)
 # lhs = torch.randn(128, 128, requires_grad=True).to(device)
 # rhs = torch.randn(8, 128, 128, requires_grad=True).to(device)
+lhs.requires_grad = True
+rhs.requires_grad = True
 lhs.retain_grad()
 rhs.retain_grad()
 
