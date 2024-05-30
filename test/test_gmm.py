@@ -8,6 +8,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram, tgmm, gmm_backward, GMM
+from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram, tgmm, gmm_backward, GMM
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
