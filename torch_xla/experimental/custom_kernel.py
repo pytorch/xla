@@ -826,6 +826,7 @@ def gmm_backward(grad, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
 
 
 class GMM(torch.autograd.Function):
+
   @staticmethod
   def forward(ctx, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
     ctx.save_for_backward(lhs, rhs, group_sizes)
@@ -835,7 +836,8 @@ class GMM(torch.autograd.Function):
   @staticmethod
   def backward(ctx, grad_output):
     lhs, rhs, group_sizes = ctx.saved_tensors
-    grad_lhs, grad_rhs = gmm_backward(grad_output, lhs, rhs, group_sizes, ctx.tiling)
+    grad_lhs, grad_rhs = gmm_backward(grad_output, lhs, rhs, group_sizes,
+                                      ctx.tiling)
     return grad_lhs, grad_rhs, None, None
 
 
