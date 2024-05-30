@@ -234,13 +234,25 @@ static bool endsWith(const std::string& str, const std::string& suffix) {
          0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
 }
 
+int GetDebugLevel() {
+  static const bool pt_xla_debug_enabled =
+      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const int pt_xla_debug_level_env =
+      runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_LEVEL", -1);
+  static const int default_debug_level_if_enabled = 100;
+  // default the pt_xla_debug_level to 100 if PT_XLA_DEBUG is set but
+  // PT_XLA_DEBUG_LEVEL is not specified.
+  static const int pt_xla_debug_level =
+      (pt_xla_debug_level_env == -1) && pt_xla_debug_enabled
+          ? default_debug_level_if_enabled
+          : pt_xla_debug_level_env;
+  return pt_xla_debug_level;
+}
+
 void DebugUtil::analyze_graph_execution_python_frame(
     GraphAnalysisSource source, torch::lazy::hash_t graph_hash,
     const xla::ProgramShape* program_shape) {
-  static const bool pt_xla_debug_enabled =
-      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
-  static const int pt_xla_debug_level =
-      runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_LEVEL", -1);
+  static const int pt_xla_debug_level = GetDebugLevel();
   static const bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
   static const std::string debug_file_name =
@@ -251,7 +263,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
   static const std::string executation_output_prefix = "Execution Analysis: ";
   static const std::string compilation_output_prefix = "Compilation Analysis: ";
 
-  if (!pt_xla_debug_enabled && pt_xla_debug_level <= 0) {
+  if (pt_xla_debug_level <= 0) {
     return;
   }
 
@@ -365,16 +377,12 @@ void DebugUtil::analyze_graph_execution_python_frame(
 
 void DebugUtil::post_compilation_analysis(
     runtime::ComputationClient::ComputationPtr computation) {
-  static const bool pt_xla_debug_enabled =
-      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
-  static const int pt_xla_debug_level =
-      runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_LEVEL", -1);
+  static const int pt_xla_debug_level = GetDebugLevel();
   static const bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
   static const std::string debug_file_name =
       runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
-  if ((!pt_xla_debug_enabled && pt_xla_debug_level <= 0) ||
-      !is_master_process) {
+  if (pt_xla_debug_level <= 0 || !is_master_process) {
     return;
   }
   static const std::string debug_output_prefix = "Post Compilation Analysis: ";
