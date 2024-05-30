@@ -313,8 +313,7 @@ class Environment(contextlib.ContextDecorator):
     _prng_key: jax.random.PRNGKey
 
 
-    def __init__(self, random_seed):
-        self._prng_key = jax.random.PRNGKey(random_seed)
+    def __init__(self):
         self._function_mode = XLAFunctionMode(self)
         self._dispatch_mode = XLADispatchMode(self)
 

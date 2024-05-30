@@ -5,7 +5,7 @@ import torch_xla2
 from torch_xla2 import tensor
 import torch_xla2.interop
 
-xla_env = tensor.Environment(0)
+xla_env = tensor.Environment()
 
 
 class TestContext(unittest.TestCase):

@@ -10,7 +10,7 @@ env = None
 def default_env():
   global env
   if env is None:
-    env = tensor.Environment(0)
+    env = tensor.Environment()
   return env
 
 

@@ -9,7 +9,7 @@ import torch_xla2.tensor
 class TestTorchFunctions(parameterized.TestCase):
 
   def setUp(self):
-    self.env = torch_xla2.tensor.Environment(0)
+    self.env = torch_xla2.tensor.Environment()
 
   @parameterized.named_parameters(
       ('tensor_2d', lambda: torch.tensor([[0.1, 1.2], [2.2, 3.1], [4.9, 5.2]])),
