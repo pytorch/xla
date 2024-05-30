@@ -814,8 +814,8 @@ def tgmm(
   group_offset_torch = torch.tensor([0], dtype=torch.int32).to(lhs.device)
 
   return torch_xla._XLAC._xla_tpu_custom_call([
-      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs.t(),
-      rhs
+      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch,
+      lhs.t(), rhs
   ], payload, [torch.Size([num_groups, k, n])], [preferred_element_type])[0]
 
 
