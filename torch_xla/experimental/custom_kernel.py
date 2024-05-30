@@ -813,16 +813,15 @@ def tgmm(
   )
   group_offset_torch = torch.tensor([0], dtype=torch.int32).to(lhs.device)
 
-  lhs = lhs.swapaxes(0, 1)
   return torch_xla._XLAC._xla_tpu_custom_call([
-      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs,
+      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs.t(),
       rhs
   ], payload, [torch.Size([num_groups, k, n])], [preferred_element_type])[0]
 
 
 def gmm_backward(grad, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
   grad_lhs = gmm(grad, rhs.transpose(-1, -2), group_sizes, tiling)
-  grad_rhs = tgmm(lhs.swapaxes(0, 1), grad, group_sizes, tiling)
+  grad_rhs = tgmm(lhs.t(), grad, group_sizes, tiling)
   return grad_lhs, grad_rhs
 
 
