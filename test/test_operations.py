@@ -2684,13 +2684,13 @@ class TestDLPack(parameterized.TestCase):
     t1 = cuda_t.t()
     xla_t1 = xdlpack.from_dlpack(t1.__dlpack__())
     self.assertEqual(xla_t1.device.type, 'xla')
-    self.assertEqual(xla_t1.device.index, 0)
+    self.assertEqual(xla_t1.device.index, t1.device.index)
     self.assertTrue(torch.allclose(t1.cpu(), xla_t1.cpu()))
 
     t2 = cuda_t[0]
     xla_t2 = xdlpack.from_dlpack(t2.__dlpack__())
     self.assertEqual(xla_t2.device.type, 'xla')
-    self.assertEqual(xla_t2.device.index, 0)
+    self.assertEqual(xla_t2.device.index, t2.device.index)
     self.assertTrue(torch.allclose(t2.cpu(), xla_t2.cpu()))
 
     t3 = cuda_t[:, 0]
@@ -2702,13 +2702,13 @@ class TestDLPack(parameterized.TestCase):
     t4 = cuda_t[1, :]
     xla_t4 = xdlpack.from_dlpack(t4.__dlpack__())
     self.assertEqual(xla_t4.device.type, 'xla')
-    self.assertEqual(xla_t4.device.index, 0)
+    self.assertEqual(xla_t4.device.index, t4.device.index)
     self.assertTrue(torch.allclose(t4.cpu(), xla_t4.cpu()))
 
     t5 = cuda_t[1]
     xla_t5 = xdlpack.from_dlpack(t5.__dlpack__())
     self.assertEqual(xla_t5.device.type, 'xla')
-    self.assertEqual(xla_t5.device.index, 0)
+    self.assertEqual(xla_t5.device.index, t5.device.index)
     self.assertTrue(torch.allclose(t5.cpu(), xla_t5.cpu()))
 
 
