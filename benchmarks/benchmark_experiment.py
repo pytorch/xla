@@ -77,10 +77,10 @@ class ExperimentLoader:
         exclude_tags=()):
       return False
 
-    # torch_xla2 doesn't support dynamo at this time.
-    if cfg_dynamo is not None and cfg_torch_xla2:
-      return False
     use_xla2 = True if cfg_torch_xla2 else False
+    # torch_xla2 doesn't support dynamo at this time.
+    if cfg_dynamo is not None and use_xla2:
+      return False
 
     # Check dynamo backend-specifics constraints.
     if cfg_dynamo == "inductor":
@@ -177,6 +177,7 @@ class BenchmarkExperiment:
   def get_device(self):
     if self.torch_xla2:
       # Initiate the model in CPU first for xla2. We will move the model to jax device later.
+      # This is because we don't have xm.xla_device() function in torch_xla2.
       return torch.device("cpu")
     if self.xla:
       return xm.xla_device(devkind=self.accelerator.upper())
