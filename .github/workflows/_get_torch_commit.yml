@@ -1,0 +1,35 @@
+name: get-torch-commit
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: false
+        type: string
+        description: Runner type for the test
+        default: linux.12xlarge
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    outputs: 
+      torch_commit: ${{ steps.get_torch_commit.outputs.torch_commit }}
+    steps:
+      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+      - name: Clean up workspace
+        run: |
+          ls -la
+          rm -rvf ${GITHUB_WORKSPACE}/*
+      - name: Checkout PyTorch Repo
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/pytorch
+          path: pytorch
+          submodules: recursive
+      - id: get_torch_commit
+        name: Get torch commit
+        run: |
+          cd pytorch
+          torch_commit=$(git rev-parse HEAD) 
+          echo "xw32: got torch_commit" $torch_commit
+          echo "torch_commit=$GITHUB_OUTPUT" >> "$GITHUB_OUTPUT"
+      

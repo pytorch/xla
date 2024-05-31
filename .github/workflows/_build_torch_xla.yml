@@ -6,6 +6,10 @@ on:
         required: true
         type: string
         description: Base image for builds
+      torch-commit:
+          required: true
+          type: string
+          description: torch-commit
       runner:
         required: false
         type: string
@@ -32,11 +36,14 @@ jobs:
         shell: bash
         run: |
           echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
+
+          echo 'xw32 got torch-commit:' ${{ inputs.torch-commit }}
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
           repository: pytorch/pytorch
           path: pytorch
+          ref: ${{ inputs.torch-commit }}
           submodules: recursive
       - name: Checkout PyTorch/XLA Repo
         uses: actions/checkout@v4
