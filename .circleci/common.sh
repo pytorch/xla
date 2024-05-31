@@ -99,7 +99,6 @@ function install_deps_pytorch_xla() {
   if ls $CUBLAS_PATTERN 1> /dev/null 2>&1; then
     sudo ln -s $CUBLAS_PATTERN /usr/local/cuda/include
   fi
-  pip install --no-deps triton==2.3.0
 }
 
 function build_torch_xla() {
