@@ -28,7 +28,7 @@ def fori_loop(upper, lower, body_fun, *input_value):
     return iteri - 1, body_fun(*input_value)
 
   inputs = (iteri,) + input_value
-  res =  _xla_while_loop_wrapper(
+  res = _xla_while_loop_wrapper(
       cond_fn, new_body_fn, inputs, (), fake_tensor=True)
 
   return res
