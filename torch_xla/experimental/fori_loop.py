@@ -87,10 +87,15 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
   dummy_inputs_list = [
       fake_carried_inputs[0],
   ] + fake_additiona_args + fake_carried_inputs[1:]
+  if additional_inputs:
+    body_fn_inputs = carried_inputs + additional_inputs
+    cond_fn_inputs = carried_inputs + additional_inputs
+  else:
+    body_fn_inputs = [carried_inputs[0], ] + fake_carried_inputs[1:] + additional_inputs
+    cond_fn_inputs = carried_inputs + additional_inputs
 
   #  ====== body_fn ======
-  body_result = body_fn(carried_inputs[0], *fake_carried_inputs[1:],
-                        *additional_inputs)
+  body_result = body_fn(*body_fn_inputs)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
 
@@ -101,7 +106,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
                                                       body_hlo)
 
   #  ====== cond_fn ======
-  cond_result = cond_fn(*carried_inputs, *additional_inputs)
+  cond_result = cond_fn(*cond_fn_inputs)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
 
