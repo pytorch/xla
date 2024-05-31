@@ -137,6 +137,46 @@
   ansible.builtin.pip:
     name: "{{ torchvision_wheels.files | map(attribute='path') }}"
 
+- name: Read Torchaudio pin
+  ansible.builtin.command: cat {{ (src_root, 'pytorch') | path_join }}/.github/ci_commit_pins/audio.txt
+  register: torchaudio_pin
+
+- name: Build Torchaudio wheel
+  ansible.builtin.command:
+    cmd: pip wheel --no-build-isolation --no-deps "git+https://github.com/pytorch/audio.git@{{ torchaudio_pin.stdout }}"
+    chdir: /dist
+  environment: "{{ env_vars }}"
+
+- name: Find Torchaudio *.whl files in /dist
+  ansible.builtin.find:
+    path: /dist
+    pattern: "torchaudio*.whl"
+  register: torchaudio_wheels
+
+- name: Install Torchaudio wheel
+  ansible.builtin.pip:
+    name: "{{ torchaudio_wheels.files | map(attribute='path') }}"
+
+- name: Read Torchtext pin
+  ansible.builtin.command: cat {{ (src_root, 'pytorch') | path_join }}/.github/ci_commit_pins/text.txt
+  register: torchtext_pin
+
+- name: Build Torchtext wheel
+  ansible.builtin.command:
+    cmd: pip wheel --no-build-isolation --no-deps "git+https://github.com/pytorch/text.git@{{ torchtext_pin.stdout }}"
+    chdir: /dist
+  environment: "{{ env_vars }}"
+
+- name: Find Torchtext *.whl files in /dist
+  ansible.builtin.find:
+    path: /dist
+    pattern: "torchtext*.whl"
+  register: torchtext_wheels
+
+- name: Install Torchtext wheel
+  ansible.builtin.pip:
+    name: "{{ torchtext_wheels.files | map(attribute='path') }}"
+
 - name: "Tests"
   include_tasks: tests.yaml
   tags:

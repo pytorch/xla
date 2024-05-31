@@ -124,7 +124,7 @@ class ExperimentLoader:
     return True
 
   def load_experiment(self, experiment_config):
-    accelerator = experiment_config["accelerator"]
+    accelerator = experiment_config["accelerator"].lower()
     xla = experiment_config["xla"]
     xla_flags = experiment_config["xla_flags"]
     dynamo = experiment_config["dynamo"]
