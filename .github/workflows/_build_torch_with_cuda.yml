@@ -11,12 +11,20 @@ on:
         type: string
         description: Runner type for the test
         default: linux.12xlarge
+    secrets:
+      gcloud-service-key:
+        required: true
+        description: Secret to access Bazel build cache
 jobs:
   build:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
     env:
+      GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
+      GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
+      BAZEL_JOBS: 16
+      BAZEL_REMOTE_CACHE: 1
       _GLIBCXX_USE_CXX11_ABI: 0
     steps:
       # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
@@ -24,6 +32,10 @@ jobs:
         run: |
           ls -la
           rm -rvf ${GITHUB_WORKSPACE}/*
+      - name: Setup gcloud
+        shell: bash
+        run: |
+          echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
       - name: Setup CUDA environment
         shell: bash
         run: |
@@ -35,14 +47,17 @@ jobs:
           repository: pytorch/pytorch
           path: pytorch
           submodules: recursive
+      - name: Checkout PyTorch/XLA Repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
       - name: Build
         shell: bash
         run: |
-          cd pytorch
-          USE_CUDA=1 TORCH_CUDA_ARCH_LIST='8.6' python setup.py bdist_wheel
-          ls dist/
+          cd pytorch/xla/infra/ansible
+          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=cuda src_root=${GITHUB_WORKSPACE} cuda_compute_capabilities=compute_86 torch_cuda_arch_list=8.6 build_pytorch_with_cuda=1 bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: torch-with-cuda
-          path: pytorch/dist/*.whl
+          name: torch-cuda-wheels
+          path: /dist/*.whl
