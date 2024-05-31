@@ -92,7 +92,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
     body_fn_inputs = [
         carried_inputs[0],
     ] + fake_carried_inputs[1:] + list(additional_inputs)
-    cond_inputs = carried_inputs + additional_inputs
+    cond_fn_inputs = carried_inputs + additional_inputs
   else:
     body_fn_inputs = carried_inputs + additional_inputs
     cond_fn_inputs = carried_inputs + additional_inputs
