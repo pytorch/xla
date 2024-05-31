@@ -297,7 +297,7 @@ checkpointing directly to any fsspec-compatible filesystem, including GCS.
 Example usage of the CheckpointManager is below:
 
 ```python
-from torch_xla.experimental.distributed_checkpoint import CheckpointManager
+from torch_xla.experimental.distributed_checkpoint import CheckpointManager, prime_optimizer
 
 # Create a CheckpointManager to checkpoint every 10 steps into GCS.
 chkpt_mgr = CheckpointManager('gs://my-bucket/my-experiment', 10)
@@ -307,9 +307,13 @@ tracked_steps = chkpt_mgr.all_steps()
 if tracked_steps:
     # Choose the highest step
     best_step = max(tracked_steps)
-    state_dict = {'model': model.state_dict()}
+    # Before restoring the checkpoint, the optimizer state must be primed
+    # to allow state to be loaded into it.
+    prime_optimizer(optim)
+    state_dict = {'model': model.state_dict(), 'optim': optim.state_dict()}
     chkpt_mgr.restore(best_step, state_dict)
     model.load_state_dict(state_dict['model'])
+    optim.load_state_dict(state_dict['optim'])
 
 # Call `save` or `save_async` every step within the train loop. These methods
 # return True when a checkpoint is taken.
@@ -319,6 +323,18 @@ for step, data in enumerate(dataloader):
     if chkpt_mgr.save_async(step, state_dict):
         print(f'Checkpoint taken at step {step}')
 ```
+
+##### Restoring Optimizer State
+
+In distributed checkpointing, the state_dicts are loaded in-place, and only the
+required shards of the checkpoint are loaded. Since optimizer states are lazily
+created, the state isn't present until the first `optimizer.step` call, and
+attempts to load an unprimed optimizer will fail.
+
+The utility method `prime_optimizer` is provided for this: it runs a fake train
+step by setting all gradients to zero and calling `optimizer.step`. *This is a
+destructive method and will touch both model parameters and optimizer state*,
+so it should only be called just prior to restoration.
 
 ### Process Groups
 To use `torch.distributed` APIs such as distributed checkpointing, a process
@@ -410,11 +426,11 @@ The SPMD API is general enough to express both data parallelism and model parall
 num_devices = xr.global_runtime_device_count()
 
 # Assume data is 4d and 0th dimension is the batch dimension
-mesh_shape = (num_devices, 1, 1, 1)
-input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
-partition_spec = range(num_devices)
+mesh_shape = (num_devices,)
+input_mesh = xs.Mesh(device_ids, mesh_shape, ('Data'))
+partition_spec = ('data', None, None, None)
 
-# Shard the batch dimension
+# Shard the input's batch dimension along the `data` axis, no sharding along other dimensions
 xs.mark_sharding(input_tensor, input_mesh, partition_spec)
 ```
 
@@ -424,9 +440,9 @@ PyTorch/XLA’s MpDeviceLoader supports input batch sharding, which also loads t
 num_devices = xr.global_runtime_device_count()
 
 # Assume data is 4d and 0th dimension is the batch dimension
-mesh_shape = (num_devices, 1, 1, 1)
-input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
-partition_spec = range(num_devices)
+mesh_shape = (num_devices)
+input_mesh = xs.Mesh(device_ids, mesh_shape, ('Data'))
+partition_spec = ('data', None, None, None)
 
 # Use MpDeviceLoader to load data in background
 train_loader = pl.MpDeviceLoader(
@@ -444,10 +460,13 @@ PyTorch’s FSDP is data parallel + sharded model parameters at 0th dimension. U
 
 ```python
 for name, param in model.named_parameters():
-    shape = (num_devices,) + (1,) * (len(param.shape) - 1)
-    mesh = xs.Mesh(device_ids, shape)
-    xs.mark_sharding(param, mesh, range(len(param.shape)))
+    shape = (num_devices,)
+    mesh = xs.Mesh(device_ids, shape, ('fsdp'))
+    partition_spec = [None] * len(param.shape)
+    partition_spec[0] = 'fsdp'
+    xs.mark_sharding(param, mesh, partition_spec)
 ```
+PyTorch/XLA also provided a convenient wrapper for the FSDP with SPMD, please take a look at this [user guide](https://github.com/pytorch/xla/blob/master/docs/fsdpv2.md).
 
 
 ### Running Resnet50 example with SPMD
@@ -470,6 +489,7 @@ Note that I used a batch size 4 times as large since I am running it on a TPU v4
 
 We provide a `shard placement visualization debug tool` for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use `visualize_tensor_sharding` to visualize sharded tensor, or you could use `visualize_sharding` to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with `visualize_tensor_sharding` or `visualize_sharding`:
 - Code snippet used `visualize_tensor_sharding` and visualization result:
+
 ```python
 import rich
 
@@ -482,7 +502,9 @@ from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 generated_table = visualize_tensor_sharding(t, use_color=False)
 ```
 ![alt_text](assets/spmd_debug_1.png "visualize_tensor_sharding example on TPU v4-8(single-host)")
+
 - Code snippet used `visualize_sharding` and visualization result:
+
 ```python
 from torch_xla.distributed.spmd.debugging import visualize_sharding
 sharding = '{devices=[2,2]0,1,2,3}'
@@ -498,11 +520,13 @@ We are introducing a new PyTorch/XLA SPMD feature, called ``auto-sharding``, [RF
 PyTorch/XLA auto-sharding can be enabled by one of the following:
 - Setting envvar `XLA_SPMD_AUTO=1`
 - Calling the SPMD API in the beginning of your code:
+
 ```python
 import torch_xla.runtime as xr
 xr.use_spmd(auto=True)
 ```
 - Calling `pytorch.distributed._tensor.distribute_module` with `auto-policy` and `xla`:
+
 ```python
 import torch_xla.runtime as xr
 from torch.distributed._tensor import DeviceMesh, distribute_module

@@ -7,7 +7,7 @@ import re
 import threading
 import time
 import warnings
-from typing import List, Optional
+from typing import List, Optional, TypedDict
 import torch
 import torch.distributed._functional_collectives
 from torch.library import Library
@@ -1434,15 +1434,19 @@ def fork_rng(device=None, enabled=True):
     set_rng_state(xla_rng_state, device=device)
 
 
-def get_memory_info(device):
-  """Retrieves the device memory information.
+class MemoryInfo(TypedDict):
+  bytes_used: str
+  bytes_limit: int
+
+
+def get_memory_info(device: torch.device) -> MemoryInfo:
+  """Retrieves the device memory usage.
 
   Args:
-    device (string): The device whose memory information are requested.
+    device: The device whose memory information are requested.
 
   Returns:
-    A dictionary with `kb_free` (free memory in KB) and `kb_total` (total
-    memory in KB) keys.
+    MemoryInfo dict with memory usage for the given device.
   """
   return torch_xla._XLAC._xla_memory_info(str(device))
 

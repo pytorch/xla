@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/tensor_methods.h"
 
+#include <ATen/OpMathType.h>
 #include <ATen/core/Reduction.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/helpers.h>
@@ -40,6 +41,7 @@
 #include "torch_xla/csrc/ops/count_nonzero.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
+#include "torch_xla/csrc/ops/custom_call.h"
 #include "torch_xla/csrc/ops/dequant_tensor.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
@@ -48,6 +50,7 @@
 #include "torch_xla/csrc/ops/dynamic_view.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/einsum_backward.h"
+#include "torch_xla/csrc/ops/embedding_bag.h"
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/expand_symint.h"
 #include "torch_xla/csrc/ops/exponential.h"
@@ -517,6 +520,41 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
       input->GetIrValue(), token, std::move(source_target_pairs));
   return {input->CreateFrom(torch::lazy::Value(node, 0)),
           torch::lazy::Value(node, 1)};
+}
+
+std::vector<XLATensorPtr> custom_call(
+    const std::vector<XLATensorPtr>& inputs, const std::string& target,
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<at::ScalarType>& output_dtypes, bool has_side_effect,
+    const std::string& backend_config, const int api_version) {
+  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+
+  std::vector<torch::lazy::Value> values;
+  values.reserve(inputs.size());
+  for (const auto& input : inputs) {
+    values.push_back(input->GetIrValue());
+  }
+
+  XLA_CHECK_EQ(output_shapes.size(), output_dtypes.size());
+  std::vector<xla::Shape> output_xla_shapes;
+  output_xla_shapes.reserve(output_shapes.size());
+  for (size_t i = 0; i < output_shapes.size(); ++i) {
+    output_xla_shapes.push_back(xla::ShapeUtil::MakeShape(
+        MakeXlaPrimitiveType(output_dtypes[i], &(inputs[0]->GetDevice())),
+        output_shapes[i]));
+  }
+
+  auto node = torch::lazy::MakeNode<CustomCall>(
+      values, target, xla::ShapeUtil::MakeTupleShape(output_xla_shapes),
+      has_side_effect, backend_config, api_version);
+
+  std::vector<XLATensorPtr> outputs;
+  outputs.reserve(output_shapes.size());
+  for (size_t i = 0; i < output_shapes.size(); ++i) {
+    outputs.push_back(
+        inputs[0]->CreateFrom(torch::lazy::Value(node, i), output_dtypes[i]));
+  }
+  return outputs;
 }
 
 void custom_sharding_(
@@ -1223,10 +1261,14 @@ XLATensorPtr div(const XLATensorPtr& input, const at::Scalar& other) {
   if (input_is_float) {
     scalar_type = MaybeUpcastToHostTorchType(input_type);
   }
-  torch::lazy::Value input_value = GetFloatingIrValue(input, scalar_type);
+  at::ScalarType op_math_type = at::toOpMathType(scalar_type);
+  torch::lazy::Value input_value =
+      torch::lazy::MakeNode<Cast>(input->GetIrValue(), op_math_type);
   torch::lazy::Value other_value = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      other, GetXlaShape(input_value).element_type(), input->GetDevice());
-  return input->CreateFrom(Div(input_value, other_value), scalar_type);
+      other, XlaTypeFromTorchType(op_math_type), input->GetDevice());
+  return input->CreateFrom(
+      torch::lazy::MakeNode<Cast>(Div(input_value, other_value), scalar_type),
+      scalar_type);
 }
 
 XLATensorPtr einsum(const std::string& equation,
@@ -1290,6 +1332,20 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
 XLATensorPtr embedding(const XLATensorPtr& weight,
                        const XLATensorPtr& indices) {
   return tensor_ops::Embedding(weight, indices);
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr, XLATensorPtr>
+embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
+              const XLATensorPtr& offsets, int64_t mode,
+              const XLATensorPtr& per_sample_weights,
+              bool include_last_offset) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<EmbeddingBag>(
+      weight->GetIrValue(), indices->GetIrValue(), offsets->GetIrValue(), mode,
+      per_sample_weights->GetIrValue(), include_last_offset);
+  return std::make_tuple(weight->CreateFrom(torch::lazy::Value(node, 0)),
+                         weight->CreateFrom(torch::lazy::Value(node, 1)),
+                         weight->CreateFrom(torch::lazy::Value(node, 2)),
+                         weight->CreateFrom(torch::lazy::Value(node, 3)));
 }
 
 XLATensorPtr exp(const XLATensorPtr& input) {

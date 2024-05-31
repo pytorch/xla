@@ -13,6 +13,7 @@ parser.add_argument('--max_diff_count', type=int, default=25)
 parser.add_argument('--verbosity', type=int, default=0)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
+from absl.testing import absltest, parameterized
 
 # Normal imports section starts here.
 import collections
@@ -28,6 +29,11 @@ import torch.autograd as ad
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.testing._internal.common_device_type import dtypes
+from torch.testing._internal.common_dtype import (
+    all_types_and_complex_and,
+    all_types_and,
+)
 import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
@@ -40,6 +46,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 import torch_xla.test.test_utils as xtu
+import torch_xla.utils.dlpack as xdlpack
 import torch_xla.utils.utils as xu
 import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
@@ -86,6 +93,12 @@ def skipIfFunctionalizationDisabled(reason):
 def onlyOnCUDA(fn):
   accelerator = os.environ.get("PJRT_DEVICE").lower()
   return unittest.skipIf(accelerator != "cuda", "PJRT_DEVICE=CUDA required")(fn)
+
+
+def onlyIfXLAExperimentalContains(feat):
+  experimental = os.environ.get("XLA_EXPERIMENTAL", "").split(":")
+  return unittest.skipIf(feat not in experimental,
+                         f"XLA_EXPERIMENTAL={feat} required")
 
 
 def _gen_tensor(*args, **kwargs):
@@ -1361,6 +1374,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         ), dtype=torch.int64)
     self.runAtenTest([token_type_ids, cat_ids], test_fn)
 
+  def test_one_hot_no_fallback(self):
+
+    def test_fn(t):
+      met.clear_all()
+      res = F.one_hot(t, num_classes=5)
+      # make sure there is no graph break
+      assert 'aten::' not in met.short_metrics_report()
+      return res
+
+    t1 = torch.arange(0, 5) % 3
+
+    self.runAtenTest([t1], test_fn)
+
   @skipIfFunctionalizationEnabled("views do not exist")
   def test_save_view_alias_check(self):
 
@@ -1976,6 +2002,86 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for dtype in test_dtypes:
       test(dtype)
 
+  def test_gelu_backward_different_types(self):
+
+    def foo(grad, inp):
+      return torch.ops.aten.gelu_backward.default(grad, inp)
+
+    grad = torch.rand(10, 10, dtype=torch.bfloat16)
+    inp = torch.rand(10, 10)
+
+    Xgrad = grad.to(xm.xla_device())
+    Xinp = inp.to(xm.xla_device())
+
+    r = foo(grad, inp)
+    Xr = foo(Xgrad, Xinp)
+
+    self.assertEqual(r, Xr.cpu())
+
+  def test_stack_different_types(self):
+
+    def foo(t0, t1):
+      return torch.stack([t0, t1])
+
+    t0 = torch.rand(10, 10, dtype=torch.bfloat16)
+    t1 = torch.rand(10, 10)
+
+    Xt0 = t0.to(xm.xla_device())
+    Xt1 = t1.to(xm.xla_device())
+
+    r = foo(t0, t1)
+    Xr = foo(Xt0, Xt1)
+
+    self.assertEqual(r, Xr.cpu())
+
+  def test_index_zero_tensor_by_zero_tensor(self):
+
+    # Test if simple one-tensor indexing works.
+    # Should return a non-permuted tensor.
+    def f1(x, i):
+      return x[i]
+
+    # Test if scattered two-tensor indexing works.
+    # Should return a permuted tensor, with indexed dimensions first.
+    def f2(x, i0, i1):
+      return x[:, i0, :, i1]
+
+    cases = {
+        f1: [
+            ((0,), (0,)),
+            ((0, 10), (0, 5, 5)),
+            ((0, 3, 3), (5, 5, 0)),
+        ],
+        f2: [
+            ((10, 0, 10, 10), (5, 0, 5), (5, 1, 1)),
+            ((0, 0, 10, 0), (5, 5, 0), (5, 5, 1)),
+        ]
+    }
+
+    def make_tensor(shape):
+      return torch.rand(shape)
+
+    def make_index(shape):
+      return torch.randint(0, 100, shape, dtype=torch.long)
+
+    def test(f, xshape, ishapes):
+      x = make_tensor(xshape)
+      ilist = [make_index(s) for s in ishapes]
+
+      Xx = x.to(xm.xla_device())
+      Xilist = [i.to(xm.xla_device()) for i in ilist]
+
+      out = f(x, *ilist)
+      Xout = f(Xx, *Xilist)
+
+      self.assertEqual(out, Xout.cpu())
+
+    for xshape, ishape in cases[f1]:
+      test(f1, xshape, (ishape,))
+
+    for xshape, i0shape, i1shape in cases[f2]:
+      test(f2, xshape, (i0shape, i1shape))
+
 
 class MNISTComparator(nn.Module):
 
@@ -2416,6 +2522,195 @@ class TestGeneric(test_utils.XlaTestCase):
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
 
+  def test_unsafe_buffer_pointer(self):
+    xla_device = xm.xla_device()
+    xla_tensor_0 = torch.tensor(42).to(xla_device)
+    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
+    xm.mark_step()
+    buf_ptr_0 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_0)
+    self.assertGreaterEqual(buf_ptr_0, 0)
+
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    xla_tensor_1 = torch.tensor(42, device=xm.xla_device())
+    buf_ptr_1 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_1)
+    self.assertGreaterEqual(buf_ptr_1, 0)
+
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    xla_tensor_2 = torch.ones((5, 5)).to(xla_device)
+    buf_ptr_2 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_2)
+    self.assertGreaterEqual(buf_ptr_2, 0)
+
+    xla_tensor_3 = torch.arange(5, device=xm.xla_device())
+    xm.mark_step()
+    # Without the `wait_device_ops()`, the pjrt buffer (pjrt_data->buffer) at https://github.com/pytorch/xla/blob/e3fc03314dab5f44e3ed9ccbba6c15fbca3285cd/torch_xla/csrc/runtime/pjrt_computation_client.cc#L467 will be nullptr.
+    xm.wait_device_ops()
+    buf_ptr_3 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_3)
+    self.assertGreaterEqual(buf_ptr_3, 0)
+
+
+class TestDLPack(parameterized.TestCase):
+
+  def _test_dlpack_capsule_conversion_helper(self, xla_tensor):
+    dlpt = xdlpack.to_dlpack(xla_tensor)  # dlpt1 has type PyCapsule
+    xla_tensor2 = xdlpack.from_dlpack(dlpt)
+
+    self.assertEqual(xla_tensor.device, xla_tensor2.device)
+    self.assertTrue(torch.allclose(xla_tensor.cpu(), xla_tensor2.cpu()))
+    self.assertRaisesRegex(RuntimeError,
+                           "DLTensor capsule can be consumed only once",
+                           lambda: xdlpack.from_dlpack(dlpt))
+
+    self.assertEqual(
+        torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor),
+        torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor2))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  @parameterized.parameters(*all_types_and(torch.half, torch.bfloat16))
+  def test_dlpack_roundtrip_tensor(self, dtype):
+    xla_device = xm.xla_device()
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    # xla_tensor_2 uses XLANativeFunctions::_to_copy
+    xla_tensor_2 = torch.arange(5, dtype=dtype).to(xla_device)
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_2)
+
+    # xla_tensor_3 uses arange_out IR node.
+    xla_tensor_3 = torch.arange(5, dtype=dtype, device=xm.xla_device())
+    xm.mark_step()
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  @parameterized.parameters(*all_types_and_complex_and(torch.half,
+                                                       torch.bfloat16,
+                                                       torch.bool, torch.uint16,
+                                                       torch.uint32,
+                                                       torch.uint64))
+  def test_dlpack_roundtrip_scalar(self, dtype):
+    xla_device = xm.xla_device()
+    xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
+    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
+    xm.mark_step()
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_0)
+
+    xla_tensor_1 = torch.tensor(42, dtype=dtype).to(xla_device)
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_1)
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_roundtrip_bool(self):
+    xla_tensor = torch.ones(1, dtype=torch.bool).to(xm.xla_device())
+    self._test_dlpack_capsule_conversion_helper(xla_tensor)
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_pytorch_cuda_to_xla(self):
+    t1_cuda = torch.arange(5).cuda()
+    dlt1 = torch.utils.dlpack.to_dlpack(t1_cuda)
+    xla_t1 = xdlpack.from_dlpack(dlt1)
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
+    t1_cuda[0] = t1_cuda[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
+
+    t2_cuda = torch.tensor(5).cuda()
+    dlt2 = torch.utils.dlpack.to_dlpack(t2_cuda)
+    xla_t2 = xdlpack.from_dlpack(dlt2)
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
+    t2_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
+
+    cuda1 = torch.device('cuda:1')
+    t3_cuda = torch.tensor(5, device=cuda1)
+    dlt3 = torch.utils.dlpack.to_dlpack(t3_cuda)
+    xla_t3 = xdlpack.from_dlpack(dlt3)
+    self.assertEqual(xla_t3.device.type, 'xla')
+    self.assertEqual(
+        xla_t3.device.index,
+        t3_cuda.device.index,
+        msg='both value should 1. xla_t3.device should be xla:1.')
+    t3_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_pytorch_cuda_to_xla_protocol_conversion(self):
+    # Unlike the test_dlpack_pytorch_cuda_to_xla,
+    # torch_cuda_tensor has attribute __dlpack__ and __dlpack_device__.
+    # From cuda tensors to xla tensors, the synchronization is handdled implicitly.
+    t1_cuda = torch.arange(5).cuda()
+    xla_t1 = xdlpack.from_dlpack(t1_cuda)
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
+    t1_cuda[0] = t1_cuda[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
+
+    t2_cuda = torch.tensor(5).cuda()
+    xla_t2 = xdlpack.from_dlpack(t2_cuda)
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
+    t2_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
+
+    cuda1 = torch.device('cuda:1')
+    t3_cuda = torch.tensor(5, device=cuda1)
+    xla_t3 = xdlpack.from_dlpack(t3_cuda)
+    self.assertEqual(xla_t3.device.type, 'xla')
+    self.assertEqual(
+        xla_t3.device.index,
+        t3_cuda.device.index,
+        msg='both value should 1. xla_t3.device should be xla:1.')
+    t3_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_xla_to_pytorch_cuda(self):
+    xla_t1 = torch.arange(5).to(xm.xla_device())
+    dlt1 = xdlpack.to_dlpack(xla_t1)
+    cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
+    self.assertEqual(cuda_t1.device.type, 'cuda')
+    self.assertEqual(cuda_t1.device.index, xla_t1.device.index)
+    cuda_t1[0] = cuda_t1[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), cuda_t1.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_non_default_layout(self):
+    cuda_t = torch.arange(25, device=torch.device('cuda')).reshape(5, 5)
+
+    t1 = cuda_t.t()
+    xla_t1 = xdlpack.from_dlpack(t1.__dlpack__())
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, t1.device.index)
+    self.assertTrue(torch.allclose(t1.cpu(), xla_t1.cpu()))
+
+    t2 = cuda_t[0]
+    xla_t2 = xdlpack.from_dlpack(t2.__dlpack__())
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, t2.device.index)
+    self.assertTrue(torch.allclose(t2.cpu(), xla_t2.cpu()))
+
+    t3 = cuda_t[:, 0]
+    self.assertRaisesRegex(
+        RuntimeError,
+        r"Only DLPack tensors with trivial \(compact\) striding are supported",
+        lambda: xdlpack.from_dlpack(t3.__dlpack__()))
+
+    t4 = cuda_t[1, :]
+    xla_t4 = xdlpack.from_dlpack(t4.__dlpack__())
+    self.assertEqual(xla_t4.device.type, 'xla')
+    self.assertEqual(xla_t4.device.index, t4.device.index)
+    self.assertTrue(torch.allclose(t4.cpu(), xla_t4.cpu()))
+
+    t5 = cuda_t[1]
+    xla_t5 = xdlpack.from_dlpack(t5.__dlpack__())
+    self.assertEqual(xla_t5.device.type, 'xla')
+    self.assertEqual(xla_t5.device.index, t5.device.index)
+    self.assertTrue(torch.allclose(t5.cpu(), xla_t5.cpu()))
+
 
 class SimpleModelWithDropout(torch.nn.Module):
 
@@ -2454,6 +2749,7 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
 
 # These tests were extracted and adapted from torchvision.
 # Source: vision/test/test_ops.py
+@onlyIfXLAExperimentalContains("nms")
 class TestNMS(test_utils.XlaTestCase):
 
   def _reference_nms(self, boxes, scores, iou_threshold):
@@ -2528,6 +2824,54 @@ class TestNMS(test_utils.XlaTestCase):
     boxes = torch.tensor(BOXES, dtype=torch.float)
     scores = torch.tensor(SCORES, dtype=torch.float)
     self.runAtenTest((boxes, scores), fn)
+
+
+class TestHelperFunction(test_utils.XlaTestCase):
+
+  def test_repeat_truncated(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 20
+    input = torch.randn(10).to(device)
+    repeats = torch.tensor([0, 1, 2, 0, 4, 0, 6, 7, 8, 9]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    expected = torch.repeat_interleave(input, repeats)[:total_repeat_length]
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
+  def test_repeat_extended(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 100
+    input = torch.randn(10).to(device)
+    repeats = torch.tensor([0, 5, 2, 0, 4, 9, 6, 7, 8, 0]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    base = torch.repeat_interleave(input, repeats)[:total_repeat_length]
+    # remaining space will be filled with last value in `input`.
+    expected = torch.cat(
+        (base,
+         torch.repeat_interleave(input[-1],
+                                 total_repeat_length - base.size()[0])))
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
+  def test_repeat_special(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 135
+    num_groups = 8
+    input = torch.arange(num_groups, dtype=torch.int32).to(device)
+    repeats = torch.tensor([3, 6, 2, 14, 27, 47, 8, 28]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    expected = torch.repeat_interleave(input, repeats)[:total_repeat_length]
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
 
 
 if __name__ == '__main__':

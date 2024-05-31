@@ -224,7 +224,7 @@ class TorchBenchModel(BenchmarkModel):
     gc.collect()
 
     # If we are using CUDA, clean-up its cache left-over.
-    if self.benchmark_experiment.accelerator == "cuda":
+    if self.is_accelerator_cuda():
       torch.cuda.empty_cache()
 
   def set_up(self):
@@ -246,14 +246,16 @@ class TorchBenchModel(BenchmarkModel):
     benchmark = self.load_benchmark()
 
     self.module, self.example_inputs = benchmark.get_module()
-
+    if isinstance(self.example_inputs,
+                  dict) and "input_ids" in self.example_inputs:
+      self.example_inputs = (self.example_inputs['input_ids'],)
     self.benchmark_experiment.batch_size = benchmark.batch_size
 
     # Move the initialized model to XLA device.
     if self.benchmark_experiment.xla:
       # First, move the model and the inputs to CPU.
       # This avoids having dupplicated data on CUDA.
-      if self.benchmark_experiment.accelerator == "cuda":
+      if self.is_accelerator_cuda():
         self.module = self.module.to("cpu")
         self.example_inputs = move_to_device(self.example_inputs, "cpu")
         self._cleanup()
@@ -305,8 +307,9 @@ class TorchBenchModel(BenchmarkModel):
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
     # torchbench uses `xla` as device instead of `tpu`
-    if (device := self.benchmark_experiment.accelerator) == 'tpu':
-      device = str(self.benchmark_experiment.get_device())
+    device = (
+        str(self.benchmark_experiment.get_device())
+        if self.is_accelerator_tpu() else self.benchmark_experiment.accelerator)
 
     return self.benchmark_cls()(
         test=self.benchmark_experiment.test,
@@ -330,6 +333,12 @@ class TorchBenchModel(BenchmarkModel):
   def is_training(self):
     return self.benchmark_experiment.test == "train"
 
+  def is_accelerator_cuda(self):
+    return self.benchmark_experiment.accelerator == "cuda"
+
+  def is_accelerator_tpu(self):
+    return self.benchmark_experiment.accelerator == "tpu"
+
   def use_amp(self):
     return self.is_training(
     ) or self.model_name in FORCE_AMP_FOR_FP16_BF16_MODELS
@@ -350,23 +359,27 @@ class TorchBenchModel(BenchmarkModel):
 
   def _get_autocast_with_kwargs(self):
     kwargs = {}
-
     if self.use_amp():
-      # Set the default data-type based on the accelerator.
-      if self.benchmark_experiment.accelerator == "cuda":
+      # TODO: Should call device specific autocast implementations.
+      # Specifically, we should be using:
+      #   - torch.cuda.amp.autocast for inductor
+      #   - torch_xla.amp.autocast for PyTorch/XLA experiments.
+      # PyTorch/XLA autocast does not run with dynamo, though:
+      # https://github.com/pytorch/xla/issues/6511
+      if self.is_accelerator_cuda():
+        # For inductor and XLA:CUDA, we use CUDA autocast.
+        autocast = torch.cuda.amp.autocast
         kwargs["dtype"] = torch.float16
-      else:
-        # Both CPU and TPU autocast mode defaults to bfloat16.
-        kwargs["dtype"] = torch.bfloat16
-
-      if self.benchmark_experiment.xla:
-        # Should call device specific autocast implementations.
-        # PyTorch/XLA autocast does not run with dynamo, though:
-        # https://github.com/pytorch/xla/issues/6511
+      elif self.is_accelerator_tpu():
         autocast = torch.amp.autocast
         kwargs["device_type"] = "xla"
+        kwargs["dtype"] = torch.bfloat16
       else:
-        autocast = torch.cuda.amp.autocast
+        # Error: AMP is only supported on XLA:CUDA and XLA:TPU.
+        name = self.model_name
+        accelerator = self.benchmark_experiment.accelerator
+        raise RuntimeError(f"Tried to run {name} with AMP on {accelerator}. "
+                           "However, AMP is only supported on cuda and tpu.")
     else:
       autocast = contextlib.nullcontext
     return (autocast, kwargs)

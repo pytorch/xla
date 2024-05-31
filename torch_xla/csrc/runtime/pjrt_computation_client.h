@@ -32,6 +32,9 @@ class PjRtComputationClient : public ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
+  static DataPtr CreateData(std::string device, xla::Shape shape,
+                            std::shared_ptr<xla::PjRtBuffer> pjrt_buffer);
+
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
   DataPtr GetDataShard(DataPtr data, size_t index) override;
@@ -54,6 +57,10 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
+
+  std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;
+
+  std::shared_ptr<xla::PjRtBuffer> GetPjRtBuffer(const DataPtr handle) override;
 
   DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
@@ -87,6 +94,27 @@ class PjRtComputationClient : public ComputationClient {
         absl::AsciiStrToUpper(client_->platform_name()));
   };
 
+  xla::PjRtPlatformId GetPlatformID() const override {
+    return client_->platform_id();
+  }
+
+  absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
+      int local_device_id) const override {
+    return client_->LookupAddressableDevice(
+        xla::PjRtLocalDeviceId(local_device_id));
+  }
+
+  std::intptr_t GetCudaStreamForDevice(int local_device_id) const override {
+    absl::StatusOr<xla::PjRtDevice*> pjrt_device =
+        client_->LookupAddressableDevice(
+            xla::PjRtLocalDeviceId(local_device_id));
+    XLA_CHECK(pjrt_device.ok()) << "Failed to get a PjRt device.";
+    absl::StatusOr<std::intptr_t> stream =
+        pjrt_device.value()->GetStreamForExternalReadyEvents();
+    XLA_CHECK(stream.ok()) << "Failed to get a stream.";
+    return stream.value();
+  }
+
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
@@ -118,11 +146,11 @@ class PjRtComputationClient : public ComputationClient {
 
   bool CoordinatorInitialized() const override;
 
-  // NOT IMPLEMENTED
+  MemoryInfo GetMemoryInfo(const std::string& device) override;
 
-  MemoryInfo GetMemoryInfo(const std::string& device) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
+  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const override;
+  std::vector<std::string> PjRtDevicesToString(
+      absl::Span<xla::PjRtDevice* const> devices) const;
 
  private:
   std::unique_ptr<xla::PjRtClient> client_;
@@ -138,10 +166,6 @@ class PjRtComputationClient : public ComputationClient {
   torch::lazy::hash_t comp_env_hash_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
-
-  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const;
-  std::vector<std::string> PjRtDevicesToString(
-      absl::Span<xla::PjRtDevice* const> devices) const;
 
   struct PjRtData : public Data {
     PjRtData(std::string device, xla::Shape device_shape)
@@ -259,6 +283,15 @@ class PjRtComputationClient : public ComputationClient {
         : Computation(std::move(computation), std::move(devices)),
           executable(std::move(executable)) {
       output_shardings_ = this->executable->GetOutputShardings();
+    }
+
+    const std::string get_memory_info() const override {
+      auto memory_stats_status_or = executable->GetCompiledMemoryStats();
+      if (memory_stats_status_or.ok()) {
+        return memory_stats_status_or.value().DebugString();
+      } else {
+        return "memory usage is not availiable";
+      }
     }
 
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;

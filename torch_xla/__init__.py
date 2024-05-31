@@ -6,6 +6,7 @@ import tempfile
 import torch
 import _XLAC
 from ._internal import tpu
+from .version import __version__
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -27,8 +28,6 @@ def _set_missing_flags(flags, sets):
 def _setup_xla_flags():
   flags = os.environ.get('XLA_FLAGS', '').split(' ')
   flags = _set_missing_flags(flags, (('xla_cpu_enable_fast_math', 'false'),))
-  flags = _set_missing_flags(
-      flags, (('xla_gpu_simplify_all_fp_conversions', 'false'),))
   flags = _set_missing_flags(flags,
                              (('xla_gpu_force_compilation_parallelism', '8'),))
   os.environ['XLA_FLAGS'] = ' '.join(flags)
@@ -76,6 +75,8 @@ def _setup_default_env():
 
     os.environ.setdefault('ALLOW_MULTIPLE_LIBTPU_LOAD', '1')
     os.environ.setdefault('TPU_ML_PLATFORM', 'PyTorch/XLA')
+    # This is used for ML Framework Telemetry.
+    os.environ.setdefault('TPU_ML_PLATFORM_VERSION', __version__)
 
     if tpu.version() == 4:
       os.environ.setdefault('TPU_MEGACORE', 'megacore_dense')
@@ -149,7 +150,6 @@ if os.environ.get('TF_CPP_MIN_LOG_LEVEL') == '0':
 
 import atexit
 from ._patched_functions import _apply_patches
-from .version import __version__
 
 _found_libtpu = _setup_tpu_vm_library_path()
 
@@ -185,6 +185,27 @@ _init_xla_lazy_backend()
 # keep PyTorch/XLA CI healthy.
 # TODO @wonjoo come up with a long term fix in Dynamo.
 torch._dynamo.config.automatic_dynamic_shapes = False
+
+# Activate view-replay on AOTAutograd.
+# See: https://github.com/pytorch/pytorch/pull/124488
+import torch._functorch.config
+
+torch._functorch.config.view_replay_for_aliased_outputs = True
+
+import importlib.metadata
+import warnings
+
+try:
+  # TensorFlow TPU distribution has the same package name as GPU, but not CPU
+  dist = importlib.metadata.distribution('tensorflow')
+  warnings.warn(
+      "`tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when"
+      " using PyTorch/XLA. To silence this warning, `pip uninstall -y "
+      "tensorflow && pip install tensorflow-cpu`. If you are in a notebook "
+      "environment such as Colab or Kaggle, restart your notebook runtime "
+      "afterwards.")
+except importlib.metadata.PackageNotFoundError:
+  pass
 
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
 

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
@@ -60,6 +61,9 @@ class DebugUtil {
   static void analyze_graph_execution_python_frame(
       GraphAnalysisSource source, torch::lazy::hash_t graph_hash = 0,
       const xla::ProgramShape* program_shape = nullptr);
+
+  static void post_compilation_analysis(
+      runtime::ComputationClient::ComputationPtr computation);
 };
 
 }  // namespace torch_xla

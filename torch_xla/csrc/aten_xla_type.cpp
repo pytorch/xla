@@ -29,6 +29,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
+#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal_view_update.h"
 #include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/ops/index_ops.h"
@@ -1290,6 +1291,38 @@ at::Tensor XLANativeFunctions::embedding_dense_backward(
       num_weights, padding_idx, scale_grad_by_freq));
 }
 
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::_embedding_bag_forward_only(
+    const at::Tensor& weight, const at::Tensor& indices,
+    const at::Tensor& offsets, bool scale_grad_by_freq, int64_t mode,
+    bool sparse, const c10::optional<at::Tensor>& per_sample_weights,
+    bool include_last_offset, int64_t padding_idx) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  if (mode == 1 || scale_grad_by_freq || sparse || padding_idx != -1) {
+    return at::native::call_fallback_fn<
+        &xla_cpu_fallback,
+        ATEN_OP(_embedding_bag_forward_only)>::call(weight, indices, offsets,
+                                                    scale_grad_by_freq, mode,
+                                                    sparse, per_sample_weights,
+                                                    include_last_offset,
+                                                    padding_idx);
+  }
+  auto indices_tensor = bridge::GetXlaTensor(indices);
+  auto sample_weights =
+      per_sample_weights.has_value() && per_sample_weights.value().defined()
+          ? bridge::GetXlaTensor(per_sample_weights.value())
+          : tensor_methods::full_like(indices_tensor, 1.0,
+                                      *torch_xla::bridge::GetXlaDevice(weight),
+                                      at::ScalarType::Float);
+  auto result = tensor_methods::embedding_bag(
+      bridge::GetXlaTensor(weight), indices_tensor,
+      bridge::GetXlaTensor(offsets), mode, sample_weights, include_last_offset);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result)),
+                         bridge::AtenFromXlaTensor(std::get<1>(result)),
+                         bridge::AtenFromXlaTensor(std::get<2>(result)),
+                         bridge::AtenFromXlaTensor(std::get<3>(result)));
+}
+
 at::Tensor XLANativeFunctions::empty_symint(
     at::SymIntArrayRef sym_size, c10::optional<at::ScalarType> dtype,
     c10::optional<at::Layout> layout, c10::optional<at::Device> device,
@@ -1438,9 +1471,18 @@ at::Tensor XLANativeFunctions::full(at::IntArrayRef size,
     return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(full)>::call(
         size, fill_value, dtype, layout, device, pin_memory);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::full(
-      absl::Span<const int64_t>(size), fill_value,
-      GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+  at::ScalarType intend_dtype;
+  if (dtype || fill_value.isFloatingPoint()) {
+    // Respect the dtype if it is being explictlly passed in.
+    // All python scalar will be passed in as float64 to the backend, but the
+    // default behavior for pytorch is to return a float32 tensor in this case.
+    intend_dtype = at::dtype_or_default(dtype);
+  } else {
+    intend_dtype = fill_value.type();
+  }
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::full(absl::Span<const int64_t>(size), fill_value,
+                           GetXlaDeviceOrCurrent(device), intend_dtype));
 }
 
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
@@ -1462,8 +1504,10 @@ at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
                                              const at::Tensor& self,
                                              c10::string_view approximate) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  at::ScalarType result_type = at::result_type(grad, self);
   return bridge::AtenFromXlaTensor(tensor_methods::gelu_backward(
-      bridge::GetXlaTensor(grad), bridge::GetXlaTensor(self), approximate));
+      bridge::GetXlaTensor(grad.to(result_type)),
+      bridge::GetXlaTensor(self.to(result_type)), approximate));
 }
 
 at::Tensor XLANativeFunctions::hardtanh(const at::Tensor& self,
@@ -2497,7 +2541,38 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
   // 1) Aid XLA's InputOutputAlias.
   auto input_tensor = bridge::GetXlaTensor(input);
   auto output_tensor = bridge::GetXlaTensor(output);
-  output_tensor->data()->alias_id = input_tensor->GetUniqueId();
+  if (input_tensor->CurrentDataHandle() != nullptr ||
+      (input_tensor->CurrentIrValue().node != nullptr &&
+       torch_xla::DeviceData::Cast(
+           input_tensor->CurrentIrValue().node.get()))) {
+    /*
+    if input has a XLAData or holds a devicedata node, set alias_id to
+    tensor_id. Consider the case.
+
+    // x.tensor_id = 1, x.alias_id = 1
+    x = torch.randn(5,5).to(xla_device())
+    // x.tensor_id = 2, x.alias_id should be 1
+    x += 1
+    xm.mark_step()
+    // x.tensor_id =3, x.alias_id should be 2 since input tensor id will be 2
+    // for this graph
+    x *= 1 of 1
+    */
+    output_tensor->data()->alias_id = input_tensor->GetUniqueId();
+  } else {
+    /*
+    Consider the case
+
+    // x.tensor_id = 1, x.alias_id = 1
+    x = torch.randn(5,5).to(xla_device())
+    // x.tensor_id = 2, x.alias_id should be 1
+    x += 1
+    // x.tensor_id = 3, x.alias_id should still be 1
+    x * = 2
+    xm.mark_step()
+    */
+    output_tensor->data()->alias_id = input_tensor->data()->alias_id;
+  }
 
   // 2) Aid SPMD.
   XLATensor::ShardingSpecPtr sharding = input_tensor->sharding_spec();
@@ -3085,8 +3160,12 @@ at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::stack(at::TensorList tensors, int64_t dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  at::ScalarType result_type = at::native::result_type(tensors);
+  std::vector<at::Tensor> c_tensors(tensors.size());
+  std::transform(tensors.begin(), tensors.end(), c_tensors.begin(),
+                 [=](const at::Tensor& t) { return t.to(result_type); });
   return bridge::AtenFromXlaTensor(
-      tensor_methods::stack(bridge::GetXlaTensors(tensors), dim));
+      tensor_methods::stack(bridge::GetXlaTensors(c_tensors), dim));
 }
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self, bool unbiased) {
@@ -3709,6 +3788,7 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
                                         scale_grad_by_freq, sparse);
   }
 
+  // TODO: We need to make use of the TPU embedding core here eventually.
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::embedding(
       bridge::GetXlaTensor(weight), bridge::GetXlaTensor(indices)));

@@ -459,9 +459,9 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
       shape = &ShapeHelper::ShapeOfXlaOp(operand);
     }
   }
-  xla::XlaOp result = xla::ArgMin(
+  xla::XlaOp result = xla::ArgMinMax(
       operand, GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::S64),
-      dim);
+      dim, /* is_min */ true);
   if (keepdim) {
     auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
     if (dim_is_none) {

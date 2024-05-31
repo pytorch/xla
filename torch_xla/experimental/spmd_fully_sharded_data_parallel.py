@@ -13,17 +13,24 @@ import torch_xla.distributed.spmd as spmd
 from torch_xla.distributed.fsdp.wrap import recursive_wrap
 
 
-def _prepare_spmd_partition_spec(param):
-  partition_spec = [None] * len(param.shape)
+def _prepare_spmd_partition_spec(param,
+                                 extra_data_axis=None,
+                                 shard_maximal=False):
+  shape = param.shape
+  partition_spec = [None] * len(shape)
   # Skip scalar tensors and it replicated.
   if len(partition_spec) == 0:
     return partition_spec
 
-  # Only shard the 0th dimension of the parameter according to the
-  # fsdp axis of the mesh.
-  # TODO: should we shard on the maximal dim for param? Then we need
-  # another helper for the output.
-  partition_spec[0] = "fsdp"
+  # Shard the 0th dimension of the parameter according to the
+  # fsdp axis of the mesh, if shard_maximal is not specified.
+  index = 0
+  if shard_maximal:
+    index = shape.index(max(shape))
+
+  partition_spec[index] = "fsdp"
+  if extra_data_axis:
+    partition_spec[index] = (extra_data_axis, "fsdp")
   return tuple(partition_spec)
 
 
@@ -44,10 +51,12 @@ class SpmdFullyShardedDataParallel(nn.Module):
   def __init__(
       self,
       module: nn.Module,
+      *,
       mesh: Optional[spmd.Mesh] = None,
       shard_output: Optional[Callable] = None,
       auto_wrap_policy: Optional[Callable] = None,
       auto_wrapper_callable: Optional[Callable] = None,
+      extra_data_axis: Optional[str] = None,
   ):
     if isinstance(module, SpmdFullyShardedDataParallel):
       raise RuntimeError(
@@ -74,6 +83,9 @@ class SpmdFullyShardedDataParallel(nn.Module):
         )
     if "fsdp" not in mesh.axis_names:
       raise ValueError("The mesh must have an axis named 'fsdp'.")
+    if extra_data_axis and extra_data_axis not in mesh.axis_names:
+      raise ValueError(
+          f"The provided {extra_data_axis} axis is not in the mesh.")
 
     super().__init__()
 
@@ -106,7 +118,8 @@ class SpmdFullyShardedDataParallel(nn.Module):
     for param in module.parameters():
       if torch_xla._XLAC._get_xla_sharding_spec(param) != "":
         continue
-      spmd.mark_sharding(param, mesh, _prepare_spmd_partition_spec(param))
+      spmd.mark_sharding(
+          param, mesh, _prepare_spmd_partition_spec(param, shard_maximal=True))
 
     # Register a backward hook to place optimization barrier to prevent
     # gigantic fusions on syncing the gradients.
@@ -130,8 +143,9 @@ class SpmdFullyShardedDataParallel(nn.Module):
               f"The output type is not supported: {type(output)}. Please provide your own shard_output callable."
           )
 
-        spmd.mark_sharding(real_output, mesh,
-                           _prepare_spmd_partition_spec(real_output))
+        spmd.mark_sharding(
+            real_output, mesh,
+            _prepare_spmd_partition_spec(real_output, extra_data_axis))
 
       shard_output = shard_output_impl
 

@@ -31,6 +31,17 @@ python_configure(
     name = "local_config_python",
     python_version = "3",  # required to use `python3-config`
 )
+
+################################ PyTorch Setup ################################
+
+load("//bazel:dependencies.bzl", "PYTORCH_LOCAL_DIR")
+
+new_local_repository(
+    name = "torch",
+    build_file = "//bazel:torch.BUILD",
+    path = PYTORCH_LOCAL_DIR,
+)
+
 ############################# OpenXLA Setup ###############################
 
 # To update OpenXLA to a new revision,
@@ -38,6 +49,9 @@ python_configure(
 # b) get the sha256 hash of the commit by running:
 #    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
+
+xla_hash = '98db3e8c8f64dede911fd97605f76aaf6ede1153'
+
 http_archive(
     name = "xla",
     patch_args = [
@@ -50,11 +64,41 @@ http_archive(
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
     ],
-    strip_prefix = "xla-1acf05ef0d41181caaf0cd691aa9d453ffc41a73",
+    strip_prefix = "xla-" + xla_hash,
     urls = [
-        "https://github.com/openxla/xla/archive/1acf05ef0d41181caaf0cd691aa9d453ffc41a73.tar.gz",
+        "https://github.com/openxla/xla/archive/" + xla_hash + ".tar.gz",
     ],
 )
+
+# Initialize hermetic Python
+load("@xla//third_party/py:python_init_rules.bzl", "python_init_rules")
+
+python_init_rules()
+
+load("@xla//third_party/py:python_init_repositories.bzl", "python_init_repositories")
+
+python_init_repositories(
+    requirements = {
+        "3.8": "//:requirements_lock_3_8.txt",
+        "3.9": "//:requirements_lock_3_9.txt",
+        "3.10": "//:requirements_lock_3_10.txt",
+        "3.11": "//:requirements_lock_3_11.txt",
+    },
+    local_wheel_workspaces = ["@torch//:WORKSPACE"],
+    default_python_version = "system",
+)
+
+load("@xla//third_party/py:python_init_toolchains.bzl", "python_init_toolchains")
+
+python_init_toolchains()
+
+load("@xla//third_party/py:python_init_pip.bzl", "python_init_pip")
+
+python_init_pip()
+
+load("@pypi//:requirements.bzl", "install_deps")
+
+install_deps()
 
 # For development, one often wants to make changes to the OpenXLA repository as well
 # as the PyTorch/XLA repository. You can override the pinned repository above with a
@@ -90,12 +134,3 @@ load("@xla//:workspace0.bzl", "xla_workspace0")
 
 xla_workspace0()
 
-################################ PyTorch Setup ################################
-
-load("//bazel:dependencies.bzl", "PYTORCH_LOCAL_DIR")
-
-new_local_repository(
-    name = "torch",
-    build_file = "//bazel:torch.BUILD",
-    path = PYTORCH_LOCAL_DIR,
-)

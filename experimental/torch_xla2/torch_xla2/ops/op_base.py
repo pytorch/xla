@@ -1,22 +1,15 @@
+import functools
 import torch
-from torch_xla2 import extra 
+from torch_xla2 import interop, tensor
+from torch_xla2 import types
 
-class JaxOperator:
-    """This is a aten op backed by jax function."""
-
-    def __init__(self, jax_callable):
-        self.jax = jax_callable
-
-    def __call__(self, *args, **kwargs):
-        # args are torch.Tensor
-        res = call_jax(self.jax, args, kwargs)
-        return res
+from typing import Callable, Optional, ParamSpec, Sequence
 
 
 class BinaryOpWithPromotion:
 
-    def __init__(self, jax_callable):
-        self.jax = jax_callable
+    def __init__(self, inner):
+        self.inner = inner 
 
     def _get_dtype(self, obj):
         if isinstance(obj, torch.Tensor):
@@ -31,7 +24,7 @@ class BinaryOpWithPromotion:
 
     def __call__(self, *args, **kwargs):
         # args are torch.Tensor
-        res = extra.torch_view(self.jax)(*args, **kwargs)
+        res = interop.torch_view(self.jax)(*args, **kwargs)
 
         dtype = torch.promote_types(
             self._get_dtype(args[0]), 
@@ -39,15 +32,6 @@ class BinaryOpWithPromotion:
         if dtype != res.dtype:
             res = res.to(dtype)
         return res
-
-
-class TorchLowering:
-
-    def __init__(self, lowering):
-        self.lowering = lowering
-
-    def __call__(self, *args, **kwargs):
-        return self.lowering(*args, **kwargs)
 
 
 class InplaceOp:
@@ -58,7 +42,7 @@ class InplaceOp:
 
     def __call__(self, *args, **kwargs):
         to_mutate = args[0]
-        to_mutate._elem = self.functional(*args, **kwargs)._elem
+        to_mutate.copy_(self.functional(*args, **kwargs))
         return to_mutate
 
 
@@ -72,4 +56,29 @@ class OutVariant:
 
 
 
+P = ParamSpec('P')
+def convert_dtype(use_default_dtype: bool = True):
+  """Converts `dtype` kwarg of function from torch to JAX.
 
+  Args:
+    use_default_dtype: Whether to use torch default dtype if none is provided.
+
+  Returns:
+    A decorator that wraps a JAX implementation of a torch function.
+  """
+
+  def decorator(func: types.TorchCallable):
+
+    @functools.wraps(func)
+    def wrapper(*args: P.args,
+                dtype: Optional[torch.dtype] = None,
+                **kwargs: P.kwargs):
+      if not dtype and use_default_dtype:
+        dtype = torch.get_default_dtype()
+      jax_dtype = tensor.t2j_dtype(dtype)
+
+      return func(*args, dtype=jax_dtype, **kwargs)
+
+    return wrapper
+
+  return decorator

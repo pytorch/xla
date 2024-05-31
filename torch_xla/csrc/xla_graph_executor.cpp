@@ -45,6 +45,7 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
@@ -1396,6 +1397,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
       computations =
           runtime::GetComputationClient()->Compile(std::move(instances));
+  DebugUtil::post_compilation_analysis(computations[0]);
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " done!";

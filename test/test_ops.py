@@ -225,6 +225,7 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('norm', 'fro'),
             AllowedOpInfoEntry('special.erfcx'),
             AllowedOpInfoEntry('_native_batch_norm_legit'),
+            AllowedOpInfoEntry('full'),
 
             # Duplicate Redundant entries for this test.
             # AllowedOpInfoEntry('polygamma', 'polygamma_n_1'),
@@ -393,7 +394,7 @@ class TestOpInfo(TestCase):
           return tuple(map(to_cpu, x))
         elif isinstance(x, dict):
           return {k: to_cpu(v) for k, v in x.items()}
-        elif isinstance(x, (numbers.Number, bool, str)):
+        elif isinstance(x, (numbers.Number, bool, str, torch.dtype)):
           return x
 
         # Passthrough None because some functions wrapped with type promotion
@@ -426,5 +427,4 @@ class TestOpInfo(TestCase):
 instantiate_device_type_tests(TestOpInfo, globals())
 
 if __name__ == '__main__':
-  #run_tests()
   unittest.main()

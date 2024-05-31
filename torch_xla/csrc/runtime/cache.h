@@ -173,6 +173,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
       TORCH_LAZY_COUNTER("PersistentCacheMiss", 1);
       return nullptr;
     }
+    TORCH_LAZY_TIMED("PersistentCacheLoad");
     std::stringstream ss;
     std::ifstream in(path, std::ios::binary);
     ss << in.rdbuf();

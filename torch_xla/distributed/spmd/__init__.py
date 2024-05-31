@@ -27,4 +27,6 @@ __all__ = [
     "_mark_manual_sharding",
     "enable_manual_sharding",
     "disable_manual_sharding",
+    "enable_manual_sharding",
+    "disable_manual_sharding",
 ]

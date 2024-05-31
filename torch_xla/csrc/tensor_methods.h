@@ -80,6 +80,12 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
+std::vector<XLATensorPtr> custom_call(
+    const std::vector<XLATensorPtr>& inputs, const std::string& target,
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<at::ScalarType>& output_dtypes, bool has_side_effect,
+    const std::string& backend_config, const int api_version);
+
 void custom_sharding_(
     const XLATensorPtr& input,
     const std::shared_ptr<XLATensor::ShardingSpec>& spec,
@@ -380,6 +386,11 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                       const XLATensorPtr& indices,
                                       int64_t num_weights, int64_t padding_idx,
                                       bool scale_grad_by_freq);
+
+std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr, XLATensorPtr>
+embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
+              const XLATensorPtr& offsets, int64_t mode,
+              const XLATensorPtr& per_sample_weights, bool include_last_offset);
 
 XLATensorPtr embedding(const XLATensorPtr& weight, const XLATensorPtr& indices);
 

@@ -2,29 +2,29 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-
 [project]
 version = "0.0.1"
 name = "torch_xla2"
 dependencies = [
     "absl-py",
-    "flatbuffers",
+    "immutabledict",
     "pytest",
-    "tensorflow",
-
-    # Note: Exclude these because otherwise on pip install .
-    # pip will install libs from pypi which is the GPU version
-    # of these libs.
-    # We most likely need CPU version of torch and TPU version of 
-    # jax. So it's best for users to install them by hand
-    # See more at README.md
-    # "jax>=0.4.24",
-    # "jaxlib>=0.4.24",
-    # "torch",
+    "tensorflow-cpu",
+    # Developers should install `dev-requirements.txt` first
+    "torch>=2.2.1",
 ]
-
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
 
+[project.optional-dependencies]
+cpu = ["jax[cpu]>=0.4.24", "jax[cpu]"]
+# Add libtpu index `-f https://storage.googleapis.com/libtpu-releases/index.html`
+tpu = ["jax[cpu]>=0.4.24", "jax[tpu]"]
+cuda = ["jax[cpu]>=0.4.24", "jax[cuda12]"]
+
 [tool.pytest.ini_options]
 addopts="-n auto"
+
+[tool.ruff]
+line-length = 80
+indent-width = 2

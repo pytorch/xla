@@ -8,26 +8,13 @@ from torch.testing._internal.common_device_type import (
 from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
 
+
 skiplist = {
     "__getitem__",
     "__rmatmul__",
     "__rpow__",
-    "_native_batch_norm_legit",
     "_segment_reduce",
     "_upsample_bilinear2d_aa",
-    "addbmm",
-    "addmm",
-    "addmv",
-    "addr",
-    "all",
-    "allclose",
-    "amax",
-    "amin",
-    "aminmax",
-    "angle",
-    "any",
-    "argmax",
-    "argmin",
     "argsort",
     "as_strided",
     "as_strided_scatter",
@@ -210,7 +197,6 @@ skiplist = {
     "nansum",
     "narrow_copy",
     "narrow",
-    "native_batch_norm",
     "native_layer_norm",
     "new_empty",
     "new_empty_strided",
@@ -570,6 +556,7 @@ skiplist = {
     "special.xlog1py",
     "split",
     "split_with_sizes",
+    "split_with_sizes_copy",
     "sqrt",
     "square",
     "stack",
@@ -636,10 +623,10 @@ def run_export_and_compare(testcase,
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):
-      input2, args2, kwargs2 = pytree.tree_map_only(
-          torch.Tensor, tensor.move_to_device,
-          (sample_input.input, sample_input.args, sample_input.kwargs))
-      res2 = func(input2, *args2, **kwargs2)
+      input2, args2, kwargs2 = testcase.env.to_xla((
+        sample_input.input, sample_input.args, sample_input.kwargs))
+      with testcase.env:
+        res2 = func(input2, *args2, **kwargs2)
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
       with testcase.subTest("torch_xla2_diff:" + str(atol)):
         if ignore_indices and isinstance(res, tuple) and len(res) == 2:
@@ -663,6 +650,9 @@ class TestOpInfo(TestCase):
   @classmethod
   def setUpClass(cls):
     print('op_db size: ', len(op_db), 'testing: ', len(ops_to_test))
+
+  def setUp(self):
+    self.env = tensor.Environment(0)
 
   @ops(ops_to_test, allowed_dtypes=(torch.float32, torch.long))
   def test_reference_eager(self, device, dtype, op):

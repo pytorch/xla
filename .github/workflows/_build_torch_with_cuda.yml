@@ -1,0 +1,55 @@
+name: build-torch-with-cuda
+on:
+  workflow_call:
+    inputs:
+      dev-image:
+        required: true
+        type: string
+        description: Base image for builds
+      torch-commit:
+          required: true
+          type: string
+          description: torch-commit
+      runner:
+        required: false
+        type: string
+        description: Runner type for the test
+        default: linux.12xlarge
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.dev-image }}
+      options: "--gpus all --shm-size 16g"
+    env:
+      _GLIBCXX_USE_CXX11_ABI: 0
+    steps:
+      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
+      - name: Clean up workspace
+        run: |
+          ls -la
+          rm -rvf ${GITHUB_WORKSPACE}/*
+      - name: Setup CUDA environment
+        shell: bash
+        run: |
+          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
+      - name: Check GPU
+        run: nvidia-smi
+      - name: Checkout PyTorch Repo
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/pytorch
+          path: pytorch
+          ref: ${{ inputs.torch-commit }}
+          submodules: recursive
+      - name: Build
+        shell: bash
+        run: |
+          cd pytorch
+          USE_CUDA=1 python setup.py bdist_wheel
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: torch-with-cuda
+          path: pytorch/dist/*.whl

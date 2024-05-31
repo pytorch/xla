@@ -3,11 +3,13 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import torch
 import torch_xla2
-import torch_xla2.functions
 import torch_xla2.tensor
 
 
 class TestTorchFunctions(parameterized.TestCase):
+
+  def setUp(self):
+    self.env = torch_xla2.tensor.Environment(0)
 
   @parameterized.named_parameters(
       ('tensor_2d', lambda: torch.tensor([[0.1, 1.2], [2.2, 3.1], [4.9, 5.2]])),
@@ -32,7 +34,7 @@ class TestTorchFunctions(parameterized.TestCase):
   def test_tensor_constructor(self, func: Callable[[], torch.Tensor]):
     expected = func()
 
-    with torch_xla2.functions.XLAFunctionMode():
+    with self.env:
       actual = func()
       self.assertIsInstance(actual, torch_xla2.tensor.XLATensor2)
 

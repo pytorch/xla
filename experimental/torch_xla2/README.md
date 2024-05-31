@@ -4,7 +4,8 @@
 
 Currently this is only source-installable. Requires Python version >= 3.10.
 
-### NOTE: 
+### NOTE:
+
 Please don't install torch-xla from instructions in
 https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md .
 In particular, the following are not needed:
@@ -18,61 +19,60 @@ TorchXLA2 and torch-xla have different installation instructions, please follow
 the instructions below from scratch (fresh venv / conda environment.)
 
 
-### 1. Install dependencies
+### 1. Installing `torch_xla2`
 
-#### 1.0 (optional) Make a virtualenv / conda env, and activate it.
+The following instructions assume you are in the `torch_xla2` directory:
 
-```bash
-conda create --name <your_name> python=3.10
-conda activate <your_name>
 ```
-Or,
+$ git clone https://github.com/pytorch/xla.git
+$ cd xla/experimental/torch_xla2
+```
+
+
+#### 1.0 (recommended) Make a virtualenv / conda env
+
+If you are using VSCode, then [you can create a new environment from
+UI](https://code.visualstudio.com/docs/python/environments). Select the
+`dev-requirements.txt` when asked to install project dependencies.
+
+Otherwise create a new environment from the command line.
+
 ```bash
+# Option 1: venv
 python -m venv create my_venv
 source my_venv/bin/activate
+
+# Option 2: conda
+conda create --name <your_name> python=3.10
+conda activate <your_name>
+
+# Either way, install the dev requirements.
+pip install -r dev-requirements.txt
 ```
 
-#### 1.1 Install torch CPU, even if your device has GPU or TPU:
+Note: `dev-requirements.txt` will install the CPU-only version of PyTorch.
 
+#### 1.1 Install this package
+
+If you want to install torch_xla2 without the jax dependency and use the jax dependency from torch_xla:
 ```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-```
-
-Or, follow official instructions in [pytorch.org](https://pytorch.org/get-started/locally/) to install for your OS.
-
-#### 1.2 Install Jax for either GPU or TPU
-
-If you are using Google Cloud TPU, then
-```bash
-pip install jax[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
-```
-
-If you are using a machine with NVidia GPU:
-
-```bash
-pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-```
-
-If you are using a CPU-only machine:
-```bash
-pip install --upgrade "jax[cpu]"
-```
-
-Or, follow the official instructions in https://jax.readthedocs.io/en/latest/installation.html to install for your OS or Device.
-
-#### 1.3 Install this package
-
-```bash
+pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 pip install -e .
 ```
 
-#### 1.4 (optional) verify installation by running tests
-
+Otherwise, install `torch_xla2` from source for your platform:
 ```bash
-pip install -r test_requirements.txt
-pytest test
+pip install -e .[cpu]
+pip install -e .[cuda]
+pip install -e .[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
 
+#### 1.2 (optional) verify installation by running tests
+
+```bash
+pip install -r test-requirements.txt
+pytest test
+```
 
 ## Run a model
 
@@ -80,9 +80,10 @@ Now let's execute a model under torch_xla2. We'll start with a simple 2-layer mo
 it can be in theory any instance of `torch.nn.Module`.
 
 ```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-import torch_xla2
-from torch import nn
 
 class MyModel(nn.Module):
     def __init__(self):
@@ -101,8 +102,8 @@ class MyModel(nn.Module):
 m = MyModel()
 
 # Execute this model using torch
-inputs = (torch.randn(3, 3, 28, 28), )
-print(m(*inputs))
+inputs = torch.randn(3, 3, 28, 28)
+print(m(inputs))
 ```
 
 This model `m` contains 2 parts: the weights that is stored inside of the model
@@ -114,6 +115,7 @@ to `XLA` devices. This can be accomplished with `torch_xla2.tensor.move_to_devic
 We need move both the weights and the input to xla devices:
 
 ```python
+import torch_xla2
 from torch.utils import _pytree as pytree
 from torch_xla2.tensor import move_to_device
 
@@ -121,7 +123,7 @@ inputs = move_to_device(inputs)
 new_state_dict = pytree.tree_map_only(torch.Tensor, move_to_device, m.state_dict())
 m.load_state_dict(new_state_dict, assign=True)
 
-res = m(*inputs)
+res = m(inputs)
 
 print(type(res))  # outputs XLATensor2
 ```
@@ -164,5 +166,3 @@ from torch_xla2.extra import jax_jit
 model_func_jitted = jax_jit(model_func)
 print(model_func_jitted(new_state_dict, inputs))
 ```
-
-

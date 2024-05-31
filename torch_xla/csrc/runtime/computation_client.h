@@ -27,6 +27,8 @@
 #include "xla/client/xla_computation.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/pjrt/pjrt_common.h"
 #include "xla/types.h"
 
 namespace torch_xla {
@@ -191,6 +193,10 @@ class ComputationClient {
       return module->ToString();
     }
 
+    virtual const std::string get_memory_info() const {
+      XLA_ERROR() << "Unimplemented";
+    }
+
    private:
     xla::XlaComputation computation_;
     xla::ProgramShape program_shape_;
@@ -246,8 +252,8 @@ class ComputationClient {
   struct ExecuteReplicatedOptions : public ClientExecuteOptions {};
 
   struct MemoryInfo {
-    int64_t kb_free = 0;
-    int64_t kb_total = 0;
+    int64_t bytes_used = 0;
+    int64_t bytes_limit = 0;
   };
 
   virtual ~ComputationClient() {}
@@ -275,6 +281,9 @@ class ComputationClient {
   // structure will be empty if there is no sharding, like with PjRtData.
   virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
 
+  virtual std::string PjRtDeviceToString(
+      xla::PjRtDevice* const device) const = 0;
+
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
@@ -301,6 +310,11 @@ class ComputationClient {
   // python while holding the GIL can cause deadlocks!
   virtual std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) = 0;
+
+  virtual std::uintptr_t UnsafeBufferPointer(const DataPtr handle) = 0;
+
+  virtual std::shared_ptr<xla::PjRtBuffer> GetPjRtBuffer(
+      const DataPtr handle) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(
@@ -341,6 +355,13 @@ class ComputationClient {
   virtual std::string GetDefaultDevice() const = 0;
 
   virtual torch_xla::DeviceType GetDeviceType() const = 0;
+
+  virtual xla::PjRtPlatformId GetPlatformID() const = 0;
+
+  virtual absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
+      int local_device_id) const = 0;
+
+  virtual std::intptr_t GetCudaStreamForDevice(int local_device_id) const = 0;
 
   virtual size_t GetNumDevices() const = 0;
 

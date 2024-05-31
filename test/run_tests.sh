@@ -8,7 +8,7 @@ VERBOSITY=2
 
 # Note [Keep Going]
 #
-# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CircleCI tests continue on error.
+# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CI tests continue on error.
 # This will allow you to see all the failures on your PR, not stopping with the first
 # test failure like the default behavior.
 CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
@@ -104,7 +104,7 @@ function run_xla_hlo_debug {
 
 function run_dynamic {
   echo "Running in DynamicShape mode: $@"
-  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
+  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter:nms" run_test "$@"
 }
 
 function run_eager_debug {
@@ -125,6 +125,11 @@ function run_save_tensor_hlo {
 function run_pt_xla_debug {
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
+}
+
+function run_pt_xla_debug_level1 {
+  echo "Running in save tensor file mode: $@"
+  PT_XLA_DEBUG_LEVEL=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
 function run_torchrun {
@@ -162,10 +167,10 @@ function run_xla_op_tests1 {
   run_dynamic "$CDIR/ds/test_dynamic_shapes.py"
   run_dynamic "$CDIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_test "$CDIR/test_grad_checkpoint.py"
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_pt_xla_debug "$CDIR/debug_tool/test_pt_xla_debug.py"
+  run_pt_xla_debug_level1 "$CDIR/debug_tool/test_pt_xla_debug.py"
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_hlo_metadata.py"
   run_test "$CDIR/test_profiler.py"
@@ -210,8 +215,9 @@ function run_xla_op_tests3 {
   run_test "$CDIR/stablehlo/test_exports.py"
   run_test "$CDIR/stablehlo/test_export_fx_passes.py"
   run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
-  run_test "$CDIR/stablehlo/test_mark_pattern.py"
+  run_test "$CDIR/stablehlo/test_composite.py"
   run_test "$CDIR/stablehlo/test_pt2e_qdq.py"
+  run_test "$CDIR/stablehlo/test_stablehlo_custom_call.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_test "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/stablehlo/test_unbounded_dynamism.py"

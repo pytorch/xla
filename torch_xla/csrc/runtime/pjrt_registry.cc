@@ -21,8 +21,24 @@ namespace runtime {
 
 namespace {
 
+// Placeholder plugin for testing only. Does not implement multiprocessing or
+// configuration. Very likely will not work from Python code.
+class LibraryPlugin : public PjRtPlugin {
+ public:
+  std::string library_path() const override {
+    return sys_util::GetEnvString("PJRT_LIBRARY_PATH", "");
+  }
+
+  const std::unordered_map<std::string, xla::PjRtValueType>
+  client_create_options() const override {
+    return {};
+  }
+
+  bool requires_xla_coordinator() const override { return false; }
+};
+
 std::unordered_map<std::string, std::shared_ptr<const PjRtPlugin>>
-    pjrt_plugins_;
+    pjrt_plugins_ = {{"LIBRARY", std::make_shared<LibraryPlugin>()}};
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   auto allocator_config = xla::GpuAllocatorConfig{};
@@ -60,7 +76,8 @@ InitializePjRt(const std::string& device_type) {
   std::unique_ptr<xla::PjRtClient> client;
   std::unique_ptr<XlaCoordinator> coordinator;
 
-  if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false)) {
+  if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false) &&
+      device_type != "CPU") {
     std::shared_ptr<const PjRtPlugin> plugin = GetPjRtPlugin(device_type);
     if (plugin) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
