@@ -28,6 +28,5 @@ jobs:
         run: |
           cd pytorch
           torch_commit=$(git rev-parse HEAD) 
-          echo "xw32: got torch_commit" $torch_commit
           echo "torch_commit=$torch_commit" >> "$GITHUB_OUTPUT"
       

@@ -36,8 +36,6 @@ jobs:
         shell: bash
         run: |
           echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
-
-          echo 'xw32 got torch-commit:' ${{ inputs.torch-commit }}
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
