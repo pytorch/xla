@@ -37,9 +37,8 @@ class WhileLoopTest(unittest.TestCase):
     init_val = torch.tensor(3, dtype=torch.int32, device=device)
     iteri = torch.tensor(10, device=device)
     _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
-    print("res: ", res)
     _, expected = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
-    print("expected: ", expected)
+    self.assertTrue(torch.all(torch.eq(res, expected)))
 
   def test_while_loop_tpu_addition_nested(self):
     device = xm.xla_device()
@@ -54,8 +53,7 @@ class WhileLoopTest(unittest.TestCase):
     iteri = torch.tensor(10, device=device)
     _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
     _, expected = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
-    print("res: ", res)
-    print("expected: ", expected)
+    self.assertTrue(torch.all(torch.eq(res, expected)))
 
   def test_while_loop_tpu_simple_linear_inside_loop(self):
     device = xm.xla_device()
@@ -159,15 +157,14 @@ class WhileLoopTest(unittest.TestCase):
     def body_fun(x):
       return torch.add(x, 1)
 
-    _, actual = fori_loop(upper, lower, body_fun, (init_val))
-    print("actual: ", actual)
+    _, res = fori_loop(upper, lower, body_fun, (init_val))
 
     # === expected ===
     x = init_val
     for i in range(upper - lower):
       x = torch.add(x, 1)
     expected = x
-    print("expected: ", expected)
+    self.assertTrue(torch.all(torch.eq(res, expected)))
 
 
 if __name__ == '__main__':
