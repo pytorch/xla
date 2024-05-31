@@ -116,7 +116,6 @@ class PT2EExportTest(unittest.TestCase):
       save_torch_module_as_tf_saved_model(m, args, tmp_path)
       self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
-  @unittest.skip
   def test_resnet18_per_channel(self):
     # Step 1: export resnet18
     args = (torch.randn(1, 3, 224, 224),)
@@ -127,8 +126,10 @@ class PT2EExportTest(unittest.TestCase):
     quantizer = XNNPACKQuantizer().set_global(
         get_symmetric_quantization_config(is_per_channel=True))
     m = prepare_pt2e(m, quantizer)
-
-    # Step 3: Quantize the model
+    # Step 3: Run through example inputs, otherwise per-channel
+    # quant may have scalar scale/zero_point
+    m(*args)
+    # Step 4: Quantize the model
     m = convert_pt2e(m, fold_quantize=False)
 
     # Trace with torch/xla and export stablehlo

@@ -5,6 +5,7 @@ import re
 import torch
 import torch.nn as nn
 from torch._dynamo.testing import collect_results
+from torch.utils import _pytree as pytree
 from util import cast_to_dtype, move_to_device
 
 logger = logging.getLogger(__name__)
@@ -110,13 +111,9 @@ class BenchmarkModel:
   def prepare_for_experiment(self, dynamo_compilation_opts):
     self.device = self.benchmark_experiment.get_device()
     self.dtype = self.conversion_dtype()
-
     if self.dtype is not None:
       self.module = self.module.to(self.dtype)
       self.example_inputs = cast_to_dtype(self.example_inputs, self.dtype)
-
-    self.module = self.module.to(self.device)
-    self.example_inputs = move_to_device(self.example_inputs, self.device)
 
     if self.benchmark_experiment.test == "eval":
       self._prepare_for_eval()
@@ -124,6 +121,32 @@ class BenchmarkModel:
       self._prepare_for_train()
     else:
       raise NotImplementedError
+
+    if self.benchmark_experiment.torch_xla2:
+      import torch_xla2.export
+      import torch_xla2
+      import jax
+      import jax.numpy as jnp
+      device = jax.devices()[0]
+      if self.benchmark_experiment.torch_xla2 == 'torch_export':
+        # for torch_xla2, we export model to FX graph and move weights to JAX device
+        exported = torch.export.export(self.module, self.example_inputs)
+        weights, jax_func = torch_xla2.export.exported_program_to_jax(exported)
+      elif self.benchmark_experiment.torch_xla2 == 'extract_jax':
+        weights, jax_func = torch_xla2.extract_jax(self.module)
+      else:
+        raise ValueError("torch_xla2 option unavailable")
+      weights = pytree.tree_map_only(jnp.ndarray,
+                                     lambda x: jax.device_put(x, device),
+                                     weights)
+      jax_func = jax.jit(jax_func)
+      self.module = lambda *x: jax_func(weights, x)
+      self.example_inputs = move_to_device(self.example_inputs, device,
+                                           self.benchmark_experiment.torch_xla2)
+    else:
+      self.module = self.module.to(self.device)
+      self.example_inputs = move_to_device(self.example_inputs, self.device,
+                                           self.benchmark_experiment.torch_xla2)
 
     if self.benchmark_experiment.dynamo:
       compilation_opts = dynamo_compilation_opts.copy()

@@ -1,3 +1,4 @@
+#include <ATen/dlpack.h>
 #include <Python.h>
 #include <c10/core/Device.h>
 #include <c10/util/Optional.h>
@@ -32,8 +33,10 @@
 #include "pybind11/stl_bind.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
+#include "torch_xla/csrc/aten_cpu_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/dl_convertor.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
@@ -744,8 +747,8 @@ py::dict GetMemoryInfo(const std::string& device_str) {
         runtime::GetComputationClient()->GetMemoryInfo(device.toString());
   }
   auto py_dict = py::dict();
-  py_dict["kb_free"] = mem_info.kb_free;
-  py_dict["kb_total"] = mem_info.kb_total;
+  py_dict["bytes_used"] = mem_info.bytes_used;
+  py_dict["bytes_limit"] = mem_info.bytes_limit;
   return py_dict;
 }
 
@@ -1117,6 +1120,36 @@ void BuildLoweringContextSubmodule(py::module* m) {
       .def("get_name_string", &PyLoweringContext::GetNameString);
 }
 
+// Used in the to_dlpack.
+void dlPack_Capsule_Destructor(PyObject* data) {
+  if (!PyCapsule_IsValid(data, "dltensor")) {
+    return;
+  }
+  DLManagedTensor* dlMTensor =
+      static_cast<DLManagedTensor*>(PyCapsule_GetPointer(data, "dltensor"));
+  if (dlMTensor) {
+    dlMTensor->deleter(dlMTensor);
+  } else {
+    // The tensor has been deleted. Clear any error from
+    // PyCapsule_GetPointer.
+    PyErr_Clear();
+  }
+}
+
+at::Tensor tensor_fromDLPack(PyObject* data) {
+  DLManagedTensor* dlMTensor =
+      (DLManagedTensor*)PyCapsule_GetPointer(data, "dltensor");
+  XLA_CHECK(dlMTensor != nullptr)
+      << "from_dlpack received an invalid capsule. Note that a DLTensor "
+         "capsule can be consumed only once. You may have already constructed "
+         "a tensor from it once.";
+
+  at::Tensor tensor = torch_xla::fromDLPack(dlMTensor);
+  PyCapsule_SetName(data, "used_dltensor");
+  PyCapsule_SetDestructor(data, nullptr);
+  return tensor;
+}
+
 void InitXlaModuleBindings(py::module m) {
   m.def("_prepare_to_exit", []() { PrepareToExit(); });
   m.def("_xla_runtime_is_initialized", []() {
@@ -1281,6 +1314,9 @@ void InitXlaModuleBindings(py::module m) {
     } else {
       return runtime::GetComputationClient()->GetLocalDevices();
     }
+  });
+  m.def("_get_stream_for_cuda_device", [](const int device_id) {
+    return runtime::GetComputationClient()->GetCudaStreamForDevice(device_id);
   });
   m.def("_xla_num_devices", []() -> int64_t {
     if (UseVirtualDevice()) {
@@ -1768,6 +1804,7 @@ void InitXlaModuleBindings(py::module m) {
         }
       },
       py::arg("devices"));
+  m.def("_get_executed_fallback_ops", []() { return GetFallbackOperations(); });
   m.def("_xla_counter_names", []() {
     auto counter_names = torch::lazy::GetCounterNames();
     auto xla_counter_names = runtime::metrics::GetCounterNames();
@@ -1844,9 +1881,8 @@ void InitXlaModuleBindings(py::module m) {
         return GetLiveTensorsReport(nodes_threshold, device);
       },
       py::arg("nodes_threshold") = 100, py::arg("device") = "");
-  m.def("_xla_memory_info", [](const std::string& device) -> py::object {
-    return GetMemoryInfo(device);
-  });
+  m.def("_xla_memory_info",
+        [](const std::string& device) { return GetMemoryInfo(device); });
   m.def(
       "_xla_set_use_full_mat_mul_precision",
       [](bool use_full_mat_mul_precision) {
@@ -2044,6 +2080,16 @@ void InitXlaModuleBindings(py::module m) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     return GetXLAShardingSpec(xtensor);
   });
+  m.def("_get_xla_op_sharding",
+        [](const at::Tensor& input) -> std::optional<xla::OpSharding> {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          XLATensor::ShardingSpecPtr sharding_spec =
+              xtensor ? xtensor->sharding_spec() : nullptr;
+          if (sharding_spec != nullptr) {
+            return sharding_spec->sharding;
+          }
+          return std::nullopt;
+        });
   m.def("_get_xla_sharding_specs",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<std::string> {
           tsl::profiler::TraceMe activity("_get_xla_sharding_specs",
@@ -2532,6 +2578,29 @@ void InitXlaModuleBindings(py::module m) {
           XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
                          "without a data handle or an IR.";
         });
+
+  // from an XLA tensor to a dlpack tensor.
+  // If ext_data is the result of an CUDA computation, we should synchronize
+  // (waits for all kernels in all streams on a CUDA device to complete) if the
+  // current stream is different from the ext_data's stream. Otherwise, we may
+  // risk of getting incorrect results.
+  m.def("_to_dlpack", [](const at::Tensor& input) -> py::handle {
+    DLManagedTensor* dlMTensor;
+    {
+      NoGilSection nogil;
+      dlMTensor = torch_xla::toDLPack(input);
+    }
+    return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
+  });
+
+  // from a dlpack tensor to an XLA tensor
+  // If ext_data is the result of an CUDA computation, we should synchronize
+  // (waits for all kernels in all streams on a CUDA device to complete) if the
+  // current stream is different from the ext_data's stream. Otherwise, we may
+  // risk of getting incorrect results.
+  m.def("_from_dlpack", [](py::handle ext_data) -> at::Tensor {
+    return tensor_fromDLPack(ext_data.ptr());
+  });
 
   // -------------Dynamo Integration API Start-------------------------
   /*

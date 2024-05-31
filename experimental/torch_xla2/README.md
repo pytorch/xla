@@ -21,6 +21,14 @@ the instructions below from scratch (fresh venv / conda environment.)
 
 ### 1. Installing `torch_xla2`
 
+The following instructions assume you are in the `torch_xla2` directory:
+
+```
+$ git clone https://github.com/pytorch/xla.git
+$ cd xla/experimental/torch_xla2
+```
+
+
 #### 1.0 (recommended) Make a virtualenv / conda env
 
 If you are using VSCode, then [you can create a new environment from
@@ -46,8 +54,13 @@ Note: `dev-requirements.txt` will install the CPU-only version of PyTorch.
 
 #### 1.1 Install this package
 
-Install `torch_xla2` from source for your platform:
+If you want to install torch_xla2 without the jax dependency and use the jax dependency from torch_xla:
+```bash
+pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+pip install -e .
+```
 
+Otherwise, install `torch_xla2` from source for your platform:
 ```bash
 pip install -e .[cpu]
 pip install -e .[cuda]

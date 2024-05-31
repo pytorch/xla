@@ -25,7 +25,7 @@ jobs:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
       BAZEL_JOBS: 16
-      BAZEL_REMOTE_CACHE: 1
+      BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Setup gcloud
         shell: bash

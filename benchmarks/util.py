@@ -50,7 +50,7 @@ def reset_rng_state(benchmark_experiment=None):
   torch.manual_seed(1337)
   random.seed(1337)
   np.random.seed(1337)
-  if benchmark_experiment is not None and benchmark_experiment.xla is not None:
+  if benchmark_experiment is not None and benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is not None:
     device = benchmark_experiment.get_device()
     xm.set_rng_state(1337, str(device))
 
@@ -76,8 +76,15 @@ def is_xla_device_available(devkind):
   return r.returncode == 0
 
 
-def move_to_device(item, device):
-  return pytree.tree_map_only(torch.Tensor, lambda t: t.to(device), item)
+def move_to_device(item, device, torch_xla2=False):
+  if torch_xla2:
+    import torch_xla2
+    import jax
+    move_to_device_func = lambda t: jax.device_put(
+        torch_xla2.tensor.t2j(t), device)
+  else:
+    move_to_device_func = lambda t: t.to(device)
+  return pytree.tree_map_only(torch.Tensor, move_to_device_func, item)
 
 
 def cast_to_dtype(item, dtype):

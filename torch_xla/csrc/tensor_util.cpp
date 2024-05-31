@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
+#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
@@ -929,6 +930,26 @@ xla::PrimitiveType GetShapeDimensionType(
   // In case in the future the type start depending on the underlying
   // hardware, we leave the `device` in the function argument.
   return xla::PrimitiveType::S32;
+}
+
+std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(
+    const at::Tensor& input) {
+  XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+  if (xtensor->CurrentDataHandle() != nullptr) {
+    TF_VLOG(4) << "The xla tensor has a current data handle.";
+    return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+        xtensor->CurrentDataHandle());
+  } else if (xtensor->CurrentIrValue().node != nullptr) {
+    DeviceData* device_data =
+        DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+    if (device_data != nullptr) {
+      return UnwrapXlaData(device_data->data());
+    }
+    TF_VLOG(4) << "The xla tensor has IR value but does not have device data.";
+  }
+  TF_VLOG(4)
+      << "The xla tensor either has no current data handle or has no IR value.";
+  return nullptr;
 }
 
 }  // namespace torch_xla

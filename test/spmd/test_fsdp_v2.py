@@ -32,7 +32,7 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
 
     # Make sure all weights are sharded.
     if self.n_devices > 1:
-      annotation = '{devices=[%d,1]%s}' % (self.n_devices, ','.join(
+      annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
           [str(i) for i in range(self.n_devices)]))
       self.assertEqual(annotation,
                        torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
@@ -147,9 +147,9 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     model = FSDPv2(model, mesh=mesh, extra_data_axis="data")
 
     # Make sure all weights are sharded.
-    annotation = '{devices=[2,1,2]0,2,1,3 last_tile_dim_replicate}'
+    annotation = '{devices=[1,2,2]0,2,1,3 last_tile_dim_replicate}'
     if self.n_devices == 8:
-      annotation = '{devices=[4,1,2]0,4,1,5,2,6,3,7 last_tile_dim_replicate}'
+      annotation = '{devices=[1,4,2]0,4,1,5,2,6,3,7 last_tile_dim_replicate}'
     self.assertEqual(annotation,
                      torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
     self.assertEqual(annotation,

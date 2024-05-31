@@ -41,7 +41,7 @@ RUN python setup.py install
 # install torch xla
 ADD ./ /pytorch/xla
 WORKDIR /pytorch/xla
-RUN cp keystore_content/77422_pytorch_tpu_cloud_build default_credentials.json
+# TODO: to reenable kokoro back, please request security key and save in default_credentials.json
 ARG SCCACHE="$(which sccache)"
 
 WORKDIR /pytorch/xla

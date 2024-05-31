@@ -16,6 +16,18 @@ namespace torch_xla {
 static std::unordered_map<std::string, ::torch_xla::runtime::metrics::Counter*>
     _cpu_fallback_counters;
 
+// Get all the executed fallback operations.
+// In other words, get all of them whose counters are not zero.
+std::vector<std::string> GetFallbackOperations() {
+  std::vector<std::string> fallback;
+  for (auto const& pair : _cpu_fallback_counters) {
+    if (pair.second->Value() != 0) {
+      fallback.push_back(pair.first);
+    }
+  }
+  return fallback;
+}
+
 void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
   XLA_FN_TRACK(3);
   const auto name = c10::toString(op.operator_name());

@@ -8,7 +8,6 @@
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
-#include "pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_hash.h"
@@ -183,6 +182,13 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
   }
 
   return std::make_shared<PjRtData>(std::move(device), std::move(shape));
+}
+
+ComputationClient::DataPtr PjRtComputationClient::CreateData(
+    std::string device, xla::Shape shape,
+    std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) {
+  return std::make_shared<PjRtData>(std::move(device), std::move(shape),
+                                    pjrt_buffer);
 }
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
@@ -463,10 +469,29 @@ std::uintptr_t PjRtComputationClient::UnsafeBufferPointer(
   std::shared_ptr<PjRtData> pjrt_data =
       std::dynamic_pointer_cast<PjRtData>(handle);
   XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
+  XLA_CHECK(pjrt_data->buffer != nullptr)
+      << "PjRt buffer is null in " << __FUNCTION__;
   xla::StatusOr<std::uintptr_t> ptr =
       client_->UnsafeBufferPointer(pjrt_data->buffer.get());
   XLA_CHECK(ptr.ok());
   return ptr.value();
+}
+
+std::shared_ptr<xla::PjRtBuffer> PjRtComputationClient::GetPjRtBuffer(
+    const DataPtr handle) {
+  std::shared_ptr<PjRtData> pjrt_data =
+      std::dynamic_pointer_cast<PjRtData>(handle);
+
+  XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
+  std::shared_ptr<xla::PjRtBuffer> pjrt_buffer = pjrt_data->buffer;
+  if (pjrt_buffer != nullptr) {
+    return pjrt_buffer;
+  } else {
+    TF_VLOG(3) << "The pjrt buffer is null so we need to wait for device ops "
+                  "to finish.";
+    WaitDeviceOps({});
+    return std::dynamic_pointer_cast<PjRtData>(handle)->buffer;
+  }
 }
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
@@ -483,7 +508,9 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
     std::shared_ptr<PjRtData> pjrt_data = ReplicateShardedData(handle);
-    XLA_CHECK(pjrt_data);
+    XLA_CHECK(pjrt_data) << "PjRt_data is null in " << __FUNCTION__;
+    XLA_CHECK(pjrt_data->buffer != nullptr)
+        << "PjRt buffer is null in " << __FUNCTION__;
 
     xla::Literal& literal =
         literals.emplace_back(host_output_shape(pjrt_data->buffer.get()));
@@ -493,7 +520,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
   }
   for (auto& future : futures) {
     absl::Status status = future.Await();
-    XLA_CHECK_OK(status);
+    XLA_CHECK_OK(status) << "Failed to await future from buffer to literal in"
+                         << __FUNCTION__;
   }
   InboundDataMetric()->AddSample(total_size);
 
@@ -589,6 +617,14 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     } else {
       executable =
           client_->Compile(instance.computation, compile_options).value();
+    }
+
+    auto memory_stats_status_or = executable->GetCompiledMemoryStats();
+    if (memory_stats_status_or.ok()) {
+      xla::CompiledMemoryStats memory_stats = memory_stats_status_or.value();
+      TF_VLOG(3) << "memory usage detail = " << memory_stats.DebugString();
+    } else {
+      TF_VLOG(3) << "memory usage is not availiable";
     }
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
@@ -924,6 +960,20 @@ void PjRtComputationClient::WaitDeviceOps(
 std::map<std::string, Metric> PjRtComputationClient::GetMetrics() const {
   // TODO(jonbolin): Add any PJRt-client-specific metrics here
   return {};
+}
+
+ComputationClient::MemoryInfo PjRtComputationClient::GetMemoryInfo(
+    const std::string& device) {
+  XLA_CHECK_NE(device, spmd_device_str)
+      << "MemoryInfo not supported for SPMD virtual device.";
+  xla::PjRtDevice* pjrt_device =
+      PjRtComputationClient::StringToPjRtDevice(device);
+  tsl::AllocatorStats stats = pjrt_device->GetAllocatorStats().value();
+
+  return {
+      stats.bytes_in_use,
+      *stats.bytes_limit,
+  };
 }
 
 }  // namespace runtime

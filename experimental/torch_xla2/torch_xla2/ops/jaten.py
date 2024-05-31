@@ -30,6 +30,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.eq_: torch.ops.aten.eq,
   torch.ops.aten.ne_: torch.ops.aten.ne,
   torch.ops.aten.uniform_: torch.ops.aten.uniform,
+  torch.ops.aten.relu_: torch.ops.aten.relu,
 }
 
 
@@ -318,7 +319,6 @@ def _aten_index_put(self, indexes, values, accumulate=False):
 @op(torch.ops.aten._unsafe_index)
 @op(torch.ops.aten.index.Tensor)
 def _aten_index(self, indexes):
-  print(indexes)
   indexes = [slice(None, None, None) if i is None else i for i in indexes]
   indexes = tuple(indexes)
   return self[indexes]
@@ -546,35 +546,67 @@ def _aten_convolution(
 def _aten__native_batch_norm_legit(
   input, weight, bias, running_mean, running_var, training, momentum, eps
 ):
-  return _aten__native_batch_norm_legit_no_training(
-    input, weight, bias, running_mean, running_var, momentum, eps
-  )
+  """JAX implementation of batch normalization with optional parameters.
+  Refers to https://github.com/pytorch/pytorch/blob/cd3a71f754a2248bcfe500de7c9860bd7d2002bf/torch/_decomp/decompositions.py#L1713.
+
+  Args:
+    input (DeviceArray): Input data (N, C, H, W).
+    running_mean ([DeviceArray]): Running mean of input (C,).
+    running_var ([DeviceArray]): Running variance of input (C,).
+    weight (Optional[DeviceArray]): Scaling factor (gamma) (C,). Can be None.
+    bias (Optional[DeviceArray]): Shift factor (beta) (C,). Can be None.
+    training (bool): If True, use batch statistics for normalization. 
+                     If False, use running statistics.
+    momentum (float): Momentum factor for updating running statistics.
+    eps (float): Small constant for numerical stability.
+
+  Returns:
+    DeviceArray: Normalized output
+    DeviceArray: Batch mean (C,) or empty if training is False
+    DeviceArray: Reversed batch variance (C,) or empty if training is False
+  """
+  reduction_dims = [0] + list(range(2, input.ndim))
+  reshape_dims = [1, -1] + [1]*(input.ndim-2)
+
+  if training:
+    # Calculate batch mean and variance
+    mean = jnp.mean(input, axis=reduction_dims, keepdims=True)
+    saved_mean = jnp.squeeze(mean, reduction_dims)
+    var = jnp.var(input, axis=reduction_dims) 
+    rstd = jax.lax.rsqrt(var.reshape(reshape_dims) + eps)
+    # Update running statistics using momentum
+    running_mean = (1 - momentum) * running_mean + momentum * saved_mean
+    running_var = (1 - momentum) * running_var + momentum * var
+    saved_rstd = jnp.squeeze(rstd, reduction_dims)
+  else:
+    rstd = jax.lax.rsqrt(running_var.reshape(reshape_dims) + eps) 
+    saved_mean = jnp.array([])  # No need to calculate batch statistics in inference mode
+    saved_rstd = jnp.array([])
+
+  # Normalize
+  if training:
+    # use batch statistics if training
+    x_hat = (input - mean) * rstd 
+  else:
+    # Use running statistics in inference mode
+    x_hat = (input - running_mean.reshape(reshape_dims)) * rstd
+
+  # Scale and shift
+  if weight is not None:
+    x_hat *= weight.reshape(reshape_dims)  # Reshape weight for broadcasting
+  if bias is not None:
+    x_hat += bias.reshape(reshape_dims)    # Reshape bias for broadcasting
+
+  return x_hat, saved_mean, saved_rstd 
+
 
 
 @op(torch.ops.aten._native_batch_norm_legit_no_training)
 def _aten__native_batch_norm_legit_no_training(
   input, weight, bias, running_mean, running_var, momentum, eps
 ):
-  if weight is None:
-    weight = jnp.ones_like(running_mean)
-  if bias is None:
-    bias = jnp.zeros_like(running_mean)
-
-  def broadcast(t):
-    return jax.lax.broadcast_in_dim(t, input.shape, broadcast_dimensions=(1,))
-
-  if running_mean is not None:
-    a = input - broadcast(running_mean)
-  else:
-    a = input
-  if running_var is not None:
-    b = broadcast(jnp.sqrt(running_var + eps))
-  else:
-    b = broadcast(jnp.sqrt(eps))
-  return (
-    a / b * broadcast(weight) + broadcast(bias),
-    jnp.array([]),
-    jnp.array([]),
+    return _aten__native_batch_norm_legit(
+    input, weight, bias, running_mean, running_var, False, momentum, eps
   )
 
 
@@ -1671,8 +1703,11 @@ def _aten_topk(input, k, dim=None, largest=True, sorted=True, *, out=None):
           - indices: The indices of the top k values in the original array.
   """
   if dim is None:
-    input = input.flatten()
-    dim = 0
+    # last dim is chosen
+    dim = input.ndim - 1
+
+  if dim < 0:
+    dim = dim + input.ndim
 
   if not largest:
     input = -input  # Find top-k of negated input if we want the smallest
@@ -1948,3 +1983,15 @@ def _aten_outer(a, b):
 def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
   return jnp.allclose(input, other, rtol, atol, equal_nan)
 
+@op(torch.ops.aten.native_batch_norm)
+def _aten_native_batch_norm(input, weight, bias, running_mean, running_var, training=False, momentum=0.1, eps=1e-5):
+  
+  if running_mean is None:
+    running_mean = jnp.zeros(input.shape[1])  # Initialize running mean if None
+  if running_var is None:
+    running_var = jnp.ones(input.shape[1])   # Initialize running variance if None
+  
+  if training:
+    return torch.ops.aten._native_batch_norm_legit(input, weight, bias, running_mean, running_var, training, momentum, eps)
+  else:
+    return torch.ops.aten._native_batch_norm_legit_no_training(input, weight, bias, running_mean, running_var, momentum, eps) 

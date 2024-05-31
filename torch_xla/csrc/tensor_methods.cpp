@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/tensor_methods.h"
 
+#include <ATen/OpMathType.h>
 #include <ATen/core/Reduction.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/helpers.h>
@@ -1294,10 +1295,14 @@ XLATensorPtr div(const XLATensorPtr& input, const at::Scalar& other) {
   if (input_is_float) {
     scalar_type = MaybeUpcastToHostTorchType(input_type);
   }
-  torch::lazy::Value input_value = GetFloatingIrValue(input, scalar_type);
+  at::ScalarType op_math_type = at::toOpMathType(scalar_type);
+  torch::lazy::Value input_value =
+      torch::lazy::MakeNode<Cast>(input->GetIrValue(), op_math_type);
   torch::lazy::Value other_value = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      other, GetXlaShape(input_value).element_type(), input->GetDevice());
-  return input->CreateFrom(Div(input_value, other_value), scalar_type);
+      other, XlaTypeFromTorchType(op_math_type), input->GetDevice());
+  return input->CreateFrom(
+      torch::lazy::MakeNode<Cast>(Div(input_value, other_value), scalar_type),
+      scalar_type);
 }
 
 XLATensorPtr einsum(const std::string& equation,

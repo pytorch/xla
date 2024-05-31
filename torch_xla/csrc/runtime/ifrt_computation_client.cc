@@ -402,6 +402,11 @@ std::uintptr_t IfrtComputationClient::UnsafeBufferPointer(
   XLA_ERROR() << __FUNCTION__ << " not implemented";
 }
 
+std::shared_ptr<xla::PjRtBuffer> IfrtComputationClient::GetPjRtBuffer(
+    const DataPtr handle) {
+  XLA_ERROR() << __FUNCTION__ << " not implemented";
+}
+
 std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromDeviceMetric());
@@ -480,7 +485,7 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
                                      &mlir_module);
     std::unique_ptr<xla::ifrt::LoadedExecutable> executable =
         ConsumeValue(client_->GetDefaultCompiler()->Compile(
-            std::make_unique<xla::ifrt::XlaProgram>(std::move(mlir_module)),
+            std::make_unique<xla::ifrt::HloProgram>(std::move(mlir_module)),
             std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options)));
     StableHloCompileCounter()->AddValue(1);
 

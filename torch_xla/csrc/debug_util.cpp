@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <regex>
 #include <sstream>
 #include <unordered_set>
 
@@ -233,11 +234,25 @@ static bool endsWith(const std::string& str, const std::string& suffix) {
          0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
 }
 
+int GetDebugLevel() {
+  static const bool pt_xla_debug_enabled =
+      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const int pt_xla_debug_level_env =
+      runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_LEVEL", -1);
+  static const int default_debug_level_if_enabled = 100;
+  // default the pt_xla_debug_level to 100 if PT_XLA_DEBUG is set but
+  // PT_XLA_DEBUG_LEVEL is not specified.
+  static const int pt_xla_debug_level =
+      (pt_xla_debug_level_env == -1) && pt_xla_debug_enabled
+          ? default_debug_level_if_enabled
+          : pt_xla_debug_level_env;
+  return pt_xla_debug_level;
+}
+
 void DebugUtil::analyze_graph_execution_python_frame(
     GraphAnalysisSource source, torch::lazy::hash_t graph_hash,
     const xla::ProgramShape* program_shape) {
-  static const bool pt_xla_debug_enabled =
-      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const int pt_xla_debug_level = GetDebugLevel();
   static const bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
   static const std::string debug_file_name =
@@ -248,7 +263,12 @@ void DebugUtil::analyze_graph_execution_python_frame(
   static const std::string executation_output_prefix = "Execution Analysis: ";
   static const std::string compilation_output_prefix = "Compilation Analysis: ";
 
-  if (!pt_xla_debug_enabled) {
+  if (pt_xla_debug_level <= 0) {
+    return;
+  }
+
+  if (pt_xla_debug_level <= 1 && source != GraphAnalysisSource::Compilation) {
+    // for debug level <=1, only output compilation analysis in this function.
     return;
   }
 
@@ -345,6 +365,70 @@ void DebugUtil::analyze_graph_execution_python_frame(
 
   // TODO(JackCaoG): print more information about the graph that is about to get
   // executed.
+  if (debug_file_name == "") {
+    // print to stderr by default
+    std::cerr << ss.str();
+  } else {
+    std::ofstream outFile;
+    outFile.open(debug_file_name, std::ios_base::app);
+    outFile << ss.rdbuf();
+  }
+}
+
+void DebugUtil::post_compilation_analysis(
+    runtime::ComputationClient::ComputationPtr computation) {
+  static const int pt_xla_debug_level = GetDebugLevel();
+  static const bool is_master_process =
+      (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
+  static const std::string debug_file_name =
+      runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
+  if (pt_xla_debug_level <= 0 || !is_master_process) {
+    return;
+  }
+  static const std::string debug_output_prefix = "Post Compilation Analysis: ";
+  std::stringstream ss;
+  ss << "\n"
+     << debug_output_prefix
+     << "======================================================================"
+        "=========="
+     << "\n";
+  std::string memory_info = computation->get_memory_info();
+
+  std::vector<std::string> keysToExtract = {
+      "generated_code_size_in_bytes", "argument_size_in_bytes",
+      "output_size_in_bytes", "alias_size_in_bytes", "temp_size_in_bytes"};
+  std::vector<std::string> sizes_in_gb;
+
+  for (const std::string& key : keysToExtract) {
+    std::regex pattern(key + "=([0-9]+)");
+    std::smatch match;
+
+    if (std::regex_search(memory_info, match, pattern)) {
+      sizes_in_gb.push_back(
+          std::to_string(std::stoll(match[1]) * 1.0 / 1024 / 1024 / 1024));
+    } else {
+      sizes_in_gb.push_back("Unknown ");
+    }
+  }
+
+  ss << debug_output_prefix << "Graph input size: " << sizes_in_gb[1]
+     << " GB\n";
+  ss << debug_output_prefix << "Graph output size: " << sizes_in_gb[2]
+     << " GB\n";
+  ss << debug_output_prefix << "Aliased Input size: " << sizes_in_gb[3]
+     << " GB\n";
+  ss << debug_output_prefix << "Intermediate tensor size: " << sizes_in_gb[4]
+     << " GB\n";
+  ss << debug_output_prefix << "Compiled program size: " << sizes_in_gb[0]
+     << " GB\n";
+  ss << debug_output_prefix
+     << "----------------------------------------------------------------------"
+        "----------"
+     << "\n";
+  ss << debug_output_prefix
+     << "======================================================================"
+        "=========="
+     << "\n";
   if (debug_file_name == "") {
     // print to stderr by default
     std::cerr << ss.str();

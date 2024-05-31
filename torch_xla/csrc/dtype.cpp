@@ -10,6 +10,9 @@ namespace {
 bool ShouldUseBF16() {
   bool use_bf16 = runtime::sys_util::GetEnvBool("XLA_USE_BF16", false);
   if (use_bf16) {
+    std::cout
+        << "XLA_USE_BF16 will be deprecated after the 2.4 release, please "
+           "convert your model to bf16 directly\n";
     TF_LOG(INFO) << "Using BF16 data type for floating point values";
   }
   return use_bf16;
@@ -18,6 +21,9 @@ bool ShouldUseBF16() {
 bool ShouldUseF16() {
   bool use_fp16 = runtime::sys_util::GetEnvBool("XLA_USE_FP16", false);
   if (use_fp16) {
+    std::cout
+        << "XLA_USE_FP16 will be deprecated after the 2.4 release, please "
+           "convert your model to fp16 directly\n";
     TF_LOG(INFO) << "Using F16 data type for floating point values";
   }
   return use_fp16;
@@ -27,6 +33,9 @@ bool ShouldDowncastToBF16() {
   bool downcast_bf16 =
       runtime::sys_util::GetEnvBool("XLA_DOWNCAST_BF16", false);
   if (downcast_bf16) {
+    std::cout
+        << "XLA_DOWNCAST_BF16 will be deprecated after the 2.4 release, please "
+           "downcast your model directly\n";
     TF_LOG(INFO) << "Downcasting floating point values, F64->F32, F32->BF16";
   }
   return downcast_bf16;
@@ -36,6 +45,9 @@ bool ShouldDowncastToF16() {
   bool downcast_fp16 =
       runtime::sys_util::GetEnvBool("XLA_DOWNCAST_FP16", false);
   if (downcast_fp16) {
+    std::cout
+        << "XLA_DOWNCAST_FP16 will be deprecated after the 2.4 release, please "
+           "downcast your model directly\n";
     TF_LOG(INFO) << "Downcasting floating point values, F64->F32, F32->FP16";
   }
   return downcast_fp16;
@@ -45,6 +57,8 @@ bool ShouldUse32BitLong() {
   bool use_32bit_long =
       runtime::sys_util::GetEnvBool("XLA_USE_32BIT_LONG", false);
   if (use_32bit_long) {
+    std::cout
+        << "XLA_USE_32BIT_LONG will be deprecated after the 2.4 release\n";
     TF_LOG(INFO) << "Using 32bit integers for kLong values";
   }
   return use_32bit_long;
