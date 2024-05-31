@@ -28,7 +28,7 @@ def fori_loop(upper, lower, body_fun, *input_value):
     return iteri - 1, body_fun(*input_value)
 
   inputs = (iteri,) + input_value
-  res = while_loop(cond_fn, new_body_fn, inputs)
+  res = _xla_while_loop_wrapper(cond_fn, new_body_fn, inputs, tuple())
 
   return res
 
@@ -88,7 +88,7 @@ def _xla_while_loop(cond_fn, body_fn, carried_inputs, additional_inputs=None):
       fake_carried_inputs[0],
   ] + fake_additiona_args + fake_carried_inputs[1:]
 
-  if additional_inputs:
+  if additional_inputs or (additional_inputs == tuple()):
     body_fn_inputs = [
         carried_inputs[0],
     ] + fake_carried_inputs[1:] + list(additional_inputs)
