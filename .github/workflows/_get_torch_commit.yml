@@ -1,15 +1,13 @@
 name: get-torch-commit
 on:
   workflow_call:
-    inputs:
-      runner:
-        required: false
-        type: string
-        description: Runner type for the test
-        default: linux.12xlarge
+    outputs:
+      torch_commit:
+        description: "torch commit to be used"
+        value: ${{ jobs.get-commit.outputs.torch_commit }}
 
 jobs:
-  build:
+  get-commit:
     runs-on: ubuntu-20.04
     outputs: 
       torch_commit: ${{ steps.get_torch_commit.outputs.torch_commit }}
