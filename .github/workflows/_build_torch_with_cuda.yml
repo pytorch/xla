@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           cd pytorch
-          USE_CUDA=1 TORCH_CUDA_ARCH_LIST='8.6' python setup.py bdist_wheel
+          USE_CUDA=1 TORCH_CUDA_ARCH_LIST='7.5,8.6' python setup.py bdist_wheel
           ls dist/
       - name: Upload wheel
         uses: actions/upload-artifact@v4
