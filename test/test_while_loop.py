@@ -149,10 +149,10 @@ class WhileLoopTest(unittest.TestCase):
     _, _, res = mnist(iteri, l_in_0, l_out)
 
     # === expected result for one iteration to be compared since body_fn defined use the same input in each iteration ===
-    _, _, expected_res = mnist.forward_compare(iteri, l_in_0, l_out)
+    _, _, expected = mnist.forward_compare(iteri, l_in_0, l_out)
     print("res: ", res)
     print("expected: ", expected)
-    self.assertTrue(torch.all(torch.eq(res, expected_res)))
+    self.assertTrue(torch.all(torch.eq(res, expected)))
 
   # ====== fori_loop ======
   def test_fori_loop_addition_tpu(self):
