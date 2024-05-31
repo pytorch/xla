@@ -164,6 +164,8 @@ class WhileLoopTest(unittest.TestCase):
     for i in range(upper - lower):
       x = torch.add(x, 1)
     expected = x
+    print("res: ", res)
+    print("expected: ", expected)
     self.assertTrue(torch.all(torch.eq(res, expected)))
 
 
