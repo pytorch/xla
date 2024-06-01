@@ -28,6 +28,10 @@ on:
         type: boolean
         default: false
         description: Whether to install CUDA plugin package
+      torch-commit:
+          required: true
+          type: string
+          description: torch-commit
 
     secrets:
       gcloud-service-key:
@@ -128,20 +132,12 @@ jobs:
 
           echo "Import check..."
           python -c "import torch_xla"
-      - name: Record PyTorch commit
-        run: |
-          # Don't just pipe output in shell because imports may do extra logging
-          python -c "
-          import torch_xla.version
-          with open('$GITHUB_ENV', 'a') as f:
-            f.write(f'PYTORCH_COMMIT={torch_xla.version.__torch_gitrev__}\n')
-          "
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
           repository: pytorch/pytorch
           path: pytorch
-          ref: ${{ env.PYTORCH_COMMIT }}
+          ref: ${{ inputs.torch-commit }}
       - name: Checkout PyTorch/XLA Repo
         uses: actions/checkout@v4
         with:

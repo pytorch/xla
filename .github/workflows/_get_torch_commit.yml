@@ -17,16 +17,9 @@ jobs:
         run: |
           ls -la
           rm -rvf ${GITHUB_WORKSPACE}/*
-      - name: Checkout PyTorch Repo
-        uses: actions/checkout@v4
-        with:
-          repository: pytorch/pytorch
-          path: pytorch
-          submodules: recursive
       - id: get_torch_commit
         name: Get torch commit
         run: |
-          cd pytorch
-          torch_commit=$(git rev-parse HEAD) 
+          torch_commit=$(git ls-remote https://github.com/pytorch/pytorch.git HEAD | awk '{print $1}') 
           echo "torch_commit=$torch_commit" >> "$GITHUB_OUTPUT"
       
