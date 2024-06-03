@@ -2118,6 +2118,11 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(out, Xout.cpu())
     self.assertEqual("f16", torch_xla._XLAC._get_xla_tensor_shape_type(Xout))
 
+  # We skip TPU for 2 reasons:
+  #   1. upsample_bilinear on f64 tensors doesn't work on TPUs
+  #   2. This issue only affects non-TPU and non-Neuron devices (i.e. there's
+  #      a short-circuit for both devices that don't go through the bug path)
+  @skipOnTpu
   def test_upsample_bilinear_double(self):
     # Originally, the upsample_bilinear implementation (in resize_ops.cpp)
     # was copied from TF. The computation was done intentionally on F32 and
