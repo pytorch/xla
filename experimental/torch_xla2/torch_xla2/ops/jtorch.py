@@ -91,6 +91,6 @@ def _einsum(equation, *operands):
 
 @register_function(torch.empty)
 @op_base.convert_dtype()
-def _empty(size: Sequence[int], *, dtype=None):
+def _empty(size: Sequence[int], *, dtype=None, **kwargs):
   return jnp.empty(size, dtype=dtype)
 
