@@ -50,13 +50,14 @@ def reset_rng_state(benchmark_experiment=None):
   torch.manual_seed(1337)
   random.seed(1337)
   np.random.seed(1337)
-  if benchmark_experiment is not None and benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is not None:
+  # TODO(piz): setup the rng state on jax for torch_xla2.
+  if benchmark_experiment is not None and benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is None:
     device = benchmark_experiment.get_device()
     xm.set_rng_state(1337, str(device))
 
 
 @functools.lru_cache(maxsize=3)
-def is_xla_device_available(devkind):
+def is_xla_device_available(devkind, use_xla2: bool = False):
   if devkind not in ["CPU", "CUDA", "TPU"]:
     raise ValueError(devkind)
   # Checking the availability of a given device kind.
@@ -72,7 +73,7 @@ def is_xla_device_available(devkind):
   # For more information: https://github.com/pytorch/xla/pull/5960
   CHECK_XLA_DEVICE_PY = "check_xla_device.py"
   python_file = os.path.join(os.path.dirname(__file__), CHECK_XLA_DEVICE_PY)
-  r = subprocess.run([sys.executable, python_file, devkind])
+  r = subprocess.run([sys.executable, python_file, devkind, str(use_xla2)])
   return r.returncode == 0
 
 

@@ -77,8 +77,9 @@ class ExperimentLoader:
         exclude_tags=()):
       return False
 
+    use_xla2 = True if cfg_torch_xla2 else False
     # torch_xla2 doesn't support dynamo at this time.
-    if cfg_dynamo is not None and cfg_torch_xla2:
+    if cfg_dynamo is not None and use_xla2:
       return False
 
     # Check dynamo backend-specifics constraints.
@@ -97,8 +98,8 @@ class ExperimentLoader:
       raise NotImplementedError
 
     # Check XLA device available if requested.
-    if cfg_xla is not None and not is_xla_device_available(
-        cfg_accelerator.upper()):
+    if not use_xla2 and cfg_xla is not None and not is_xla_device_available(
+        cfg_accelerator.upper(), use_xla2):
       return False
 
     # Check accelerator constraints.
@@ -151,8 +152,10 @@ class BenchmarkExperiment:
       process_env.pop("XRT_TPU_CONFIG", None)
       process_env.pop("XLA_FLAGS", None)
 
+    use_xla2 = False
     if self.torch_xla2:
       process_env["JAX_PLATFORMS"] = self.accelerator.lower()
+      use_xla2 = True
 
     if self.xla == "PJRT":
       process_env["PJRT_DEVICE"] = self.accelerator.upper()
@@ -165,13 +168,17 @@ class BenchmarkExperiment:
     elif self.xla is None:
       # In non-xla CPU training experiments, an env var is still needed if an
       # xla device exists, or there will be "Missing XLA configuration" error.
-      if is_xla_device_available(self.accelerator.upper()):
+      if is_xla_device_available(self.accelerator.upper(), use_xla2):
         process_env["PJRT_DEVICE"] = self.accelerator.upper()
 
     if self.xla_flags:
       process_env["XLA_FLAGS"] = self.xla_flags
 
   def get_device(self):
+    if self.torch_xla2:
+      # Initiate the model in CPU first for xla2. We will move the model to jax device later.
+      # This is because we don't have xm.xla_device() function in torch_xla2.
+      return torch.device("cpu")
     if self.xla:
       return xm.xla_device(devkind=self.accelerator.upper())
     elif self.accelerator == "cpu":
