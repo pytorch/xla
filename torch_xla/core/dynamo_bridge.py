@@ -22,8 +22,10 @@ from torch.utils import _pytree as pytree
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
+import torch_xla.core.xla_env_vars as xenv
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
+import torch_xla.utils.dlpack as torch_xla_dlpack
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
@@ -130,6 +132,43 @@ def _args_on_cuda(input_args: tuple) -> bool:
 # Given an input list, moves the tensors to the given target_device.
 # The output order will be the same as the input. Non tensors will also still
 # be in the list.
+# def _maybe_move_tensors_to_device(tensors: tuple,
+#                                   target_device: torch.device) -> tuple:
+#   assert target_device, "Moving tensors to None device not supported"
+# 
+#   moved_tensors = []
+#   cpu_device: torch.device = torch.device("cpu")
+# 
+#   for tensor in tensors:
+#     if not isinstance(tensor, torch.Tensor):
+#       moved_tensors.append(tensor)
+#       continue
+# 
+#     if tensor.device == target_device:
+#       moved_tensors.append(tensor)
+#       continue
+# 
+#     if dynamo_debug:
+#       print("Moving Tensor {} to device {}".format(tensor, target_device))
+# 
+#     zero_copy_enabled = xu.getenv_as(xenv.ZERO_COPY_ENABLED, bool, defval=False)
+#     if zero_copy_enabled and tensor.device.type == 'cuda' and target_device.type == 'xla':
+#       print('xw32: move cuda tensor to xla tensors')
+#       moved_tensor = torch_xla_dlpack.from_dlpack(tensor)
+#     elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
+#       print('xw32: move xla tensor to cuda tensors')
+#     else:
+#       # Have to move to CPU before moving it to target device.
+#       moved_tensor = tensor.to(cpu_device)
+#       moved_tensor = moved_tensor.to(target_device)
+# 
+#     # Explicitly have to copy requires_grad attribute because it's dropped
+#     # with torch.to(..)
+#     moved_tensor.requires_grad = tensor.requires_grad
+#     moved_tensors.append(moved_tensor)
+# 
+#   return tuple(moved_tensors)
+
 def _maybe_move_tensors_to_device(tensors: tuple,
                                   target_device: torch.device) -> tuple:
   if not torch.cuda.is_available():
@@ -162,7 +201,6 @@ def _maybe_move_tensors_to_device(tensors: tuple,
     moved_tensors.append(moved_tensor)
 
   return tuple(moved_tensors)
-
 
 class Deduper:
 
@@ -598,6 +636,7 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+  # TODO(xw32): use the new flag xenv.ZERO_COPY_ENABLED and make sure the test fails.
   if _args_on_cuda(xla_args):
     xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
 
