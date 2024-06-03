@@ -74,6 +74,14 @@ among the flags `--dynamo`, `--xla`, and `--test`, 4 of which are supported:
   - `dynamo=inductor`, `xla=None`, `test=train`
 
 
+## Run benchmarking for a single configuration
+
+The section `Experiment runner` above shows how to run the benchmarking script for a combination of configurations. For each configuration,
+the script starts a process and run the benchmarking. This section shows how to run the benchmarking for a single configuration without spawning new processes.
+
+
+
+
 ## Verification module
 
 Verification flag, enabled by running the experiment runner script with `--verify`
