@@ -121,5 +121,4 @@ EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten.replication_pad3d,
     torch.ops.aten.bernoulli,
     torch.ops.aten.rand_like,
-    torch.ops.aten.uniform_,
 ])

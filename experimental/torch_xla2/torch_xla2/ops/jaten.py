@@ -28,7 +28,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.ge_: torch.ops.aten.ge,
   torch.ops.aten.eq_: torch.ops.aten.eq,
   torch.ops.aten.ne_: torch.ops.aten.ne,
-  # torch.ops.aten.uniform_: torch.ops.aten.uniform,
+  torch.ops.aten.uniform_: torch.ops.aten.uniform,
   torch.ops.aten.relu_: torch.ops.aten.relu,
   torch.ops.aten.normal_: torch.ops.aten.normal,
   torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
@@ -2007,6 +2007,20 @@ def _aten_rand_like(
 ):
   key = env.get_and_rotate_prng_key()
   return jax.random.uniform(key, dtype=dtype or input.dtype, shape=input.shape)
+
+
+@op(torch.ops.aten.uniform, needs_env=True)
+def _aten_uniform(
+  x,
+  low = 0.0,
+  high = 1.0,
+  *,
+  generator = None,
+  env=None,
+):
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.uniform(key, shape=x.shape, minval=low, maxval=high)
+  return res
 
 
 @op(torch.ops.aten.scalar_tensor.default)
