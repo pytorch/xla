@@ -325,7 +325,7 @@ skiplist = {
     "unbind",
     "unfold_copy",
     "unfold",
-    "uniform",
+    # "uniform",
     "unique_consecutive",
     "unique",
     "unravel_index",
