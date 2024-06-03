@@ -10,7 +10,7 @@ from torch_xla2 import tensor
 
 
 skiplist = {
-    "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior 
+    "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
                  # such as 0 to negative power.
     "_segment_reduce",
     "_upsample_bilinear2d_aa",
@@ -267,9 +267,7 @@ skiplist = {
     "put",
     "qr",
     "quantile",
-    "rand_like",
     "randint_like",
-    "randn_like",
     "renorm",
     "repeat_interleave",
     "resize_",
@@ -325,7 +323,6 @@ skiplist = {
     "unbind",
     "unfold_copy",
     "unfold",
-    # "uniform",
     "unique_consecutive",
     "unique",
     "unravel_index",
@@ -509,9 +506,13 @@ variant_test_name_to_skip = {
 }
 
 random_ops = {
-  'randn',
   'empty',
   'bernoulli',
+  'randn',
+  'randn_like',
+  'rand',
+  'rand_like',
+  'uniform',
 }
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
@@ -567,7 +568,7 @@ def run_export_and_compare(testcase,
 
 ops_to_test = [
     test for test in op_db
-    if (test.name not in skiplist and 
+    if (test.name not in skiplist and
         test.variant_test_name not in variant_test_name_to_skip)
 ]
 

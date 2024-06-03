@@ -1970,6 +1970,22 @@ def _randn(
   return res
 
 
+@op(torch.ops.aten.randn_like, needs_env=True)
+@op_base.convert_dtype()
+def _aten_rand_like(
+  x,
+  *,
+  dtype=None,
+  layout=None,
+  device=None,
+  pin_memory=False,
+  memory_format=torch.preserve_format,
+  env=None,
+):
+  key = env.get_and_rotate_prng_key()
+  return jax.random.normal(key, dtype=dtype or x.dtype, shape=x.shape)
+
+
 @op(torch.ops.aten.rand, needs_env=True)
 @op_base.convert_dtype()
 def _rand(
@@ -1996,17 +2012,17 @@ def _rand(
 @op(torch.ops.aten.rand_like, needs_env=True)
 @op_base.convert_dtype()
 def _aten_rand_like(
-  input,
+  x,
   *,
   dtype=None,
   layout=None,
   device=None,
-  requires_grad=False,
+  pin_memory=False,
   memory_format=torch.preserve_format,
   env=None,
 ):
   key = env.get_and_rotate_prng_key()
-  return jax.random.uniform(key, dtype=dtype or input.dtype, shape=input.shape)
+  return jax.random.uniform(key, dtype=dtype or x.dtype, shape=x.shape)
 
 
 @op(torch.ops.aten.uniform, needs_env=True)
