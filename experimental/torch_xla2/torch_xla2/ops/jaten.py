@@ -2035,8 +2035,7 @@ def _aten_uniform(
   env=None,
 ):
   key = env.get_and_rotate_prng_key(generator)
-  res = jax.random.uniform(key, shape=x.shape, minval=low, maxval=high)
-  return res
+  return jax.random.uniform(key, shape=x.shape, minval=low, maxval=high)
 
 
 @op(torch.ops.aten.scalar_tensor.default)
