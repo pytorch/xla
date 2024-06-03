@@ -66,11 +66,21 @@ class TestContext(unittest.TestCase):
 
     # Result always expected to be the same for a jitted function because seeds
     # are baked in
-    self.assertTrue(
-      torch.equal(
+    torch.testing.assert_close(
         torch_xla2.tensor.j2t(random_jit()._elem),
-        torch_xla2.tensor.j2t(random_jit()._elem)))
+        torch_xla2.tensor.j2t(random_jit()._elem),
+        atol=0,
+        rtol=0)
 
+  def test_generator_seed(self):
+    with xla_env:
+      x = torch.randn(2, 3, generator=torch.Generator().manual_seed(0))
+      y = torch.randn(2, 3, generator=torch.Generator().manual_seed(0))
+
+    # Values will be different, but still check device, layout, dtype, etc
+    torch.testing.assert_close(
+        torch_xla2.tensor.j2t(x._elem),
+        torch_xla2.tensor.j2t(y._elem))
 
 if __name__ == "__main__":
   unittest.main()
