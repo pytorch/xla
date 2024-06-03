@@ -100,10 +100,13 @@ XLAGraphExecutor::ComputationCache* CreateComputationCache() {
       return std::make_shared<XLAGraphExecutor::CachedComputation>(
           computation, /*is_sharded=*/UseVirtualDevice());
     };
-    if (runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false)) {
-      TF_LOG(WARNING) << "Using persistent compilation cache with XLA_HLO_DEBUG=1 "
-        "is not recommended. Changes to the HLO metadata will not be "
-        "reflected in loaded executables.";
+    if (runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false) ||
+        runtime::sys_util::GetEnvBool("XLA_IR_DEBUG", false)) {
+      TF_LOG(WARNING)
+          << "Using persistent compilation cache with XLA_HLO_DEBUG=1 "
+             "or XLA_IR_DEBUG=1 is not recommended. Changes to the HLO "
+             "metadata "
+             "will not be reflected in loaded executables.";
     }
     return new XLAGraphExecutor::PersistentCache(
         kMaxCacheSize, persistentCacheDir, readonlyPersistentCache,
