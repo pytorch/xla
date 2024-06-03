@@ -3,11 +3,13 @@ import sys
 assert len(sys.argv) in (2, 3)
 devkind = sys.argv[1]
 
+
 def use_torch_xla2():
   use_xla2 = False
   if len(sys.argv) == 3 and sys.argv[2].lower() == 'true':
     use_xla2 = True
   return use_xla2
+
 
 import os
 os.environ["PJRT_DEVICE"] = devkind

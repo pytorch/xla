@@ -50,6 +50,7 @@ def reset_rng_state(benchmark_experiment=None):
   torch.manual_seed(1337)
   random.seed(1337)
   np.random.seed(1337)
+  # TODO(piz): setup the rng state on jax for torch_xla2.
   if benchmark_experiment is not None and benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is None:
     device = benchmark_experiment.get_device()
     xm.set_rng_state(1337, str(device))
