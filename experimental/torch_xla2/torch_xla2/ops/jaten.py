@@ -300,8 +300,9 @@ def _aten__to_copy(self, **kwargs):
 
 
 @op(torch.ops.aten.empty)
-def _aten_empty(sizes, **kwargs):
-  return jnp.zeros(sizes)
+@op_base.convert_dtype()
+def _aten_empty(sizes, *, dtype=None, **kwargs):
+  return jnp.empty(sizes, dtype=dtype)
 
 
 @op(torch.ops.aten.index_put_)

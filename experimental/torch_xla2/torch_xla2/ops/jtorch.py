@@ -87,10 +87,3 @@ def _torch_argsort(input, dim=-1, descending=False, stable=False):
 def _einsum(equation, *operands):
   assert isinstance(equation, str), 'Only accept str equation'
   return jnp.einsum(equation, *operands)
-
-
-@register_function(torch.empty)
-@op_base.convert_dtype()
-def _empty(size: Sequence[int], *, dtype=None, **kwargs):
-  return jnp.empty(size, dtype=dtype)
-
