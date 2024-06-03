@@ -7,7 +7,7 @@ from torch.testing._internal.common_utils import TestCase
 class TestMutations(TestCase):
 
   def setUp(self):
-    self.env = torch_xla2.tensor.Environment(0)
+    self.env = torch_xla2.tensor.Environment()
 
   def test_add(self):
     with self.env:

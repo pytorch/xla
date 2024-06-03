@@ -300,8 +300,9 @@ def _aten__to_copy(self, **kwargs):
 
 
 @op(torch.ops.aten.empty)
-def _aten_empty(sizes, **kwargs):
-  return jnp.zeros(sizes)
+@op_base.convert_dtype()
+def _aten_empty(sizes, *, dtype=None, **kwargs):
+  return jnp.empty(sizes, dtype=dtype)
 
 
 @op(torch.ops.aten.index_put_)
@@ -555,7 +556,7 @@ def _aten__native_batch_norm_legit(
     running_var ([DeviceArray]): Running variance of input (C,).
     weight (Optional[DeviceArray]): Scaling factor (gamma) (C,). Can be None.
     bias (Optional[DeviceArray]): Shift factor (beta) (C,). Can be None.
-    training (bool): If True, use batch statistics for normalization. 
+    training (bool): If True, use batch statistics for normalization.
                      If False, use running statistics.
     momentum (float): Momentum factor for updating running statistics.
     eps (float): Small constant for numerical stability.
@@ -572,21 +573,21 @@ def _aten__native_batch_norm_legit(
     # Calculate batch mean and variance
     mean = jnp.mean(input, axis=reduction_dims, keepdims=True)
     saved_mean = jnp.squeeze(mean, reduction_dims)
-    var = jnp.var(input, axis=reduction_dims) 
+    var = jnp.var(input, axis=reduction_dims)
     rstd = jax.lax.rsqrt(var.reshape(reshape_dims) + eps)
     # Update running statistics using momentum
     running_mean = (1 - momentum) * running_mean + momentum * saved_mean
     running_var = (1 - momentum) * running_var + momentum * var
     saved_rstd = jnp.squeeze(rstd, reduction_dims)
   else:
-    rstd = jax.lax.rsqrt(running_var.reshape(reshape_dims) + eps) 
+    rstd = jax.lax.rsqrt(running_var.reshape(reshape_dims) + eps)
     saved_mean = jnp.array([])  # No need to calculate batch statistics in inference mode
     saved_rstd = jnp.array([])
 
   # Normalize
   if training:
     # use batch statistics if training
-    x_hat = (input - mean) * rstd 
+    x_hat = (input - mean) * rstd
   else:
     # Use running statistics in inference mode
     x_hat = (input - running_mean.reshape(reshape_dims)) * rstd
@@ -597,7 +598,7 @@ def _aten__native_batch_norm_legit(
   if bias is not None:
     x_hat += bias.reshape(reshape_dims)    # Reshape bias for broadcasting
 
-  return x_hat, saved_mean, saved_rstd 
+  return x_hat, saved_mean, saved_rstd
 
 
 
@@ -1877,7 +1878,7 @@ def _randn(
   shape = size
   if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
     shape = shape[0]
-  key = env.get_and_rotate_prng_key()
+  key = env.get_and_rotate_prng_key(generator)
   res = jax.random.normal(key, shape)
   if dtype is not None:
     res = res.astype(dtype)
@@ -1900,7 +1901,7 @@ def _rand(
   shape = size
   if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
     shape = shape[0]
-  key = env.get_and_rotate_prng_key()
+  key = env.get_and_rotate_prng_key(generator)
   res = jax.random.uniform(key, shape)
   if dtype is not None:
     res = res.astype(dtype)
@@ -1985,13 +1986,13 @@ def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
 
 @op(torch.ops.aten.native_batch_norm)
 def _aten_native_batch_norm(input, weight, bias, running_mean, running_var, training=False, momentum=0.1, eps=1e-5):
-  
+
   if running_mean is None:
     running_mean = jnp.zeros(input.shape[1])  # Initialize running mean if None
   if running_var is None:
     running_var = jnp.ones(input.shape[1])   # Initialize running variance if None
-  
+
   if training:
     return torch.ops.aten._native_batch_norm_legit(input, weight, bias, running_mean, running_var, training, momentum, eps)
   else:
-    return torch.ops.aten._native_batch_norm_legit_no_training(input, weight, bias, running_mean, running_var, momentum, eps) 
+    return torch.ops.aten._native_batch_norm_legit_no_training(input, weight, bias, running_mean, running_var, momentum, eps)

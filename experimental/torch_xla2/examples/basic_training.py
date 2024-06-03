@@ -13,7 +13,7 @@ import torchvision.transforms as transforms
 import torch_xla2.tensor
 
 
-xla_env = torch_xla2.tensor.Environment(0)
+xla_env = torch_xla2.tensor.Environment()
 mode = xla_env.mode()
 
 # PyTorch TensorBoard support

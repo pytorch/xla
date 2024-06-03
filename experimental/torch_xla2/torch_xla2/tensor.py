@@ -1,10 +1,12 @@
 import contextlib
+from typing import Optional
 import jax
 from jax import dlpack as jaxdl
 import jax.numpy as jnp
 import numpy
 import torch
 import torch.func
+import torch.utils._mode_utils as mode_utils
 import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
 import torch.utils.dlpack as torchdl
@@ -311,8 +313,7 @@ class Environment(contextlib.ContextDecorator):
     _prng_key: jax.random.PRNGKey
 
 
-    def __init__(self, random_seed):
-        self._prng_key = jax.random.PRNGKey(random_seed)
+    def __init__(self):
         self._function_mode = XLAFunctionMode(self)
         self._dispatch_mode = XLADispatchMode(self)
 
@@ -325,7 +326,7 @@ class Environment(contextlib.ContextDecorator):
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
 
-      decomps = torch._decomp.core_aten_decompositions() 
+      decomps = torch._decomp.core_aten_decompositions()
       from torch_xla2.decompositions import EXTRA_DECOMP
       decomps.update(EXTRA_DECOMP)
       for k, v in decomps.items():
@@ -338,9 +339,13 @@ class Environment(contextlib.ContextDecorator):
             needs_env=False
           )
 
-    def get_and_rotate_prng_key(self):
-        self._prng_key, key = jax.random.split(self._prng_key)
-        return key
+    def get_and_rotate_prng_key(self, generator: Optional[torch.Generator]=None):
+      # Always use the default `randint` to get the next seed
+      with mode_utils.no_dispatch():
+        next_key = torch.randint(
+            0, 2**32, (), dtype=torch.uint32, generator=generator).numpy()
+
+      return jax.random.key(next_key)
 
     def dispatch(self, func, types, args, kwargs):
       with jax.named_scope(_name_of_func(func)):
@@ -368,7 +373,7 @@ class Environment(contextlib.ContextDecorator):
 
         if op.is_jax_function:
           res = self.j2t_iso(res)
-        
+
         #if self.config.debug_accuracy_for_each_op:
         #  debug_accuracy(func, args, kwargs, res)
         return res
@@ -407,9 +412,6 @@ class Environment(contextlib.ContextDecorator):
     def j2t_iso(self, jaxarray):
       return torch_pytree.tree_map_only(
         jnp.ndarray, lambda x: XLATensor2(x, self), jaxarray)
-
-    def j2t_copy(self, args):
-      pass
 
     def j2t_copy(self, args):
       pass
