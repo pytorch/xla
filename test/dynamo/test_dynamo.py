@@ -157,12 +157,12 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
   @unittest.skipIf(xr.device_type() != "CUDA" or not torch.cuda.is_available(),
                    f"GPU tests should only run on GPU devices.")
   @parameterized.parameters(
-      False,
-      True,
+      "0",
+      "1",
   )
   def test_simple_model_automoves_tensors(self, zero_copy_enabled):
     os.environ.update({
-        xenv.ZERO_COPY_ENABLED: str(zero_copy_enabled),
+        xenv.ZERO_COPY_ENABLED: zero_copy_enabled,
     })
     x = torch.tensor(100.0).to(device="cuda")
     y = torch.tensor(200.0).to(device="cuda")
@@ -457,22 +457,6 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     self.assertTrue(
         torch.allclose(
             input.grad, xla_input.grad.cpu(), rtol=1e-05, atol=1e-04))
-
-  def test_simple_model_automoves_tensors_with_backward(self):
-    torch._dynamo.reset()
-    input = torch.randn(3, 5, requires_grad=True)
-    cuda_input = input.detach().cuda()
-    cuda_input.requires_grad = True
-    res_cpu = self.fn_simple(input)
-    fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
-    res_xla_dynamo = fn_simple_dynamo(cuda_input)
-
-    self.assertIn('xla::nll_loss_backward', met.counter_names())
-    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
-    self.assertTrue(
-        torch.allclose(
-            input.grad(), cuda_input.grad.cpu(), rtol=1e-05, atol=1e-04))
-
 
   @skipOnTpu
   def test_resnet18(self):

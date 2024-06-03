@@ -128,51 +128,41 @@ def _args_on_cuda(input_args: tuple) -> bool:
 
   return input_device.type == "cuda"
 
+def _move_xla_cuda_tensor_to_cuda(tensor):
+  is_xla_cuda = True if xu.getenv_as("PJRT_DEVICE", str, "").lower() == "cuda" else False
+  assert tensor.device.type == "xla"
+  assert is_xla_cuda
+  print('xw32: move xla tensor to cuda tensors')
+  # consumer is torch, producer is torch_xla
+
+  # get the xla_tensor_device_type and xla_tensor_device_id
+  # if xla_tensor_device_type is CUDA then
+  #   get xla_tensor_device_id then get the xla_tensor_stream.
+  #   Then get the xla_tensor_stream_id.
+  #   assert stream is not None and type(stream) is not int.
+  #   if stream is not None and stream!=-1, then synchronize
+  #   then call torch_xla.utils.to_dlpack
+  #   then call torch.utils.from_dlpack
+  device_id = tensor.device.index
+  stream = torch_xla._XLAC._get_stream_for_cuda_device(device_id)
+  stream = 1 if stream == 0 else stream
+  assert stream is None or type(stream) is int
+  external_stream = torch.cuda.ExternalStream(stream)
+  current_stream = torch.cuda.current_stream()
+  if external_stream != current_stream:
+    event = torch.cuda.Event()
+    event.record(current_stream)
+    external_stream.wait_event(current_stream)
+  dlpack = torch_xla_dlpack.to_dlpack(tensor)
+  cuda_tensor = torch.utils.dlpack.from_dlpack(dlpack)
+  return cuda_tensor
 
 # Given an input list, moves the tensors to the given target_device.
 # The output order will be the same as the input. Non tensors will also still
 # be in the list.
-# def _maybe_move_tensors_to_device(tensors: tuple,
-#                                   target_device: torch.device) -> tuple:
-#   assert target_device, "Moving tensors to None device not supported"
-# 
-#   moved_tensors = []
-#   cpu_device: torch.device = torch.device("cpu")
-# 
-#   for tensor in tensors:
-#     if not isinstance(tensor, torch.Tensor):
-#       moved_tensors.append(tensor)
-#       continue
-# 
-#     if tensor.device == target_device:
-#       moved_tensors.append(tensor)
-#       continue
-# 
-#     if dynamo_debug:
-#       print("Moving Tensor {} to device {}".format(tensor, target_device))
-# 
-#     zero_copy_enabled = xu.getenv_as(xenv.ZERO_COPY_ENABLED, bool, defval=False)
-#     if zero_copy_enabled and tensor.device.type == 'cuda' and target_device.type == 'xla':
-#       print('xw32: move cuda tensor to xla tensors')
-#       moved_tensor = torch_xla_dlpack.from_dlpack(tensor)
-#     elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
-#       print('xw32: move xla tensor to cuda tensors')
-#     else:
-#       # Have to move to CPU before moving it to target device.
-#       moved_tensor = tensor.to(cpu_device)
-#       moved_tensor = moved_tensor.to(target_device)
-# 
-#     # Explicitly have to copy requires_grad attribute because it's dropped
-#     # with torch.to(..)
-#     moved_tensor.requires_grad = tensor.requires_grad
-#     moved_tensors.append(moved_tensor)
-# 
-#   return tuple(moved_tensors)
-
 def _maybe_move_tensors_to_device(tensors: tuple,
                                   target_device: torch.device) -> tuple:
-  if not torch.cuda.is_available():
-    return tensors
+  assert target_device, "Moving tensors to None device not supported"
 
   moved_tensors = []
   cpu_device: torch.device = torch.device("cpu")
@@ -186,14 +176,19 @@ def _maybe_move_tensors_to_device(tensors: tuple,
       moved_tensors.append(tensor)
       continue
 
-    assert target_device is not None, "Moving tensors to None device not supported"
-
     if dynamo_debug:
       print("Moving Tensor {} to device {}".format(tensor, target_device))
 
-    # Have to move to CPU before moving it to target device.
-    moved_tensor = tensor.to(cpu_device)
-    moved_tensor = moved_tensor.to(target_device)
+    zero_copy_enabled = xu.getenv_as(xenv.ZERO_COPY_ENABLED, bool, defval=False)
+    if zero_copy_enabled and tensor.device.type == 'cuda' and target_device.type == 'xla':
+      print('xw32: move cuda tensor to xla tensors')
+      moved_tensor = torch_xla_dlpack.from_dlpack(tensor)
+    elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
+      moved_tensor = _move_xla_cuda_tensor_to_cuda(tensor)
+    else:
+      # Have to move to CPU before moving it to target device.
+      moved_tensor = tensor.to(cpu_device)
+      moved_tensor = moved_tensor.to(target_device)
 
     # Explicitly have to copy requires_grad attribute because it's dropped
     # with torch.to(..)
