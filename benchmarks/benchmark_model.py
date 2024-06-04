@@ -143,12 +143,12 @@ class BenchmarkModel:
                                      weights)
       jax_func = jax.jit(jax_func)
       self.module = lambda *x: jax_func(weights, x)
-      self.example_inputs = move_to_device(self.example_inputs, device,
-                                           torch_xla2=True)
+      self.example_inputs = move_to_device(
+          self.example_inputs, device, torch_xla2=True)
     elif not keep_model_data_on_cuda:
       self.module = self.module.to(self.device)
-      self.example_inputs = move_to_device(self.example_inputs, self.device,
-                                           torch_xla2=False)
+      self.example_inputs = move_to_device(
+          self.example_inputs, self.device, torch_xla2=False)
 
     if self.benchmark_experiment.dynamo:
       compilation_opts = dynamo_compilation_opts.copy()
@@ -156,9 +156,10 @@ class BenchmarkModel:
 
       logger.info(f"Running torch.compile with opts {compilation_opts}")
       self.model_iter_fn = torch.compile(self.model_iter_fn, **compilation_opts)
-    
+
     if keep_model_data_on_cuda:
-      assert self.example_inputs[0].device.type.lower() == 'cuda', 'When xla_take_cuda_model_and_data is set, the input data should remain on the CUDA device.'
+      assert self.example_inputs[0].device.type.lower(
+      ) == 'cuda', 'When xla_take_cuda_model_and_data is set, the input data should remain on the CUDA device.'
 
   def pick_grad(self):
     if self.benchmark_experiment.test == "eval":

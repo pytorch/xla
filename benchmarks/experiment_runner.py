@@ -243,7 +243,8 @@ class ExperimentRunner:
   def run_single_config(self):
 
     # Load experiment and model.
-    print('xw32 line246 run_single_config self._args.experiment_config=', self._args.experiment_config)
+    print('xw32 line246 run_single_config self._args.experiment_config=',
+          self._args.experiment_config)
     experiment_config = json.loads(self._args.experiment_config)
     model_config = json.loads(self._args.model_config)
     benchmark_experiment = self.experiment_loader.load_experiment(
