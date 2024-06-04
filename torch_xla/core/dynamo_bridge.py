@@ -150,9 +150,10 @@ def _move_xla_cuda_tensor_to_cuda(tensor):
   external_stream = torch.cuda.ExternalStream(stream)
   current_stream = torch.cuda.current_stream()
   if external_stream != current_stream:
+    print('xw32 cuda syncronization')
     event = torch.cuda.Event()
     event.record(current_stream)
-    external_stream.wait_event(current_stream)
+    external_stream.wait_event(event)
   dlpack = torch_xla_dlpack.to_dlpack(tensor)
   cuda_tensor = torch.utils.dlpack.from_dlpack(dlpack)
   return cuda_tensor
