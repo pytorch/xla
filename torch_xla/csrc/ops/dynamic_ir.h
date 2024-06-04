@@ -102,6 +102,21 @@ class SizeGe : public XlaNode, public torch::lazy::DimensionNode {
   }
 };
 
+class SizeGt : public XlaNode, public torch::lazy::DimensionNode {
+ public:
+  SizeGt(torch::lazy::Value a, torch::lazy::Value b);
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override {
+    TORCH_CHECK(false, "Comparison operators should be using getDynamicValue");
+  }
+  bool isSymbolic() const override { return true; }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override {
+    // TODO: not sure we will ever need it?
+    TORCH_CHECK(false, "Lowering comparison nodes isn't supported yet!");
+  }
+};
+
 class SizeLt : public XlaNode, public torch::lazy::DimensionNode {
  public:
   SizeLt(torch::lazy::Value a, torch::lazy::Value b);
