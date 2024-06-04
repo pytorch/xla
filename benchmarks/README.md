@@ -79,7 +79,16 @@ among the flags `--dynamo`, `--xla`, and `--test`, 4 of which are supported:
 The section `Experiment runner` above shows how to run the benchmarking script for a combination of configurations. For each configuration,
 the script starts a process and run the benchmarking. This section shows how to run the benchmarking for a single configuration without spawning new processes.
 
-
+```
+cd pytorch
+python xla/benchmarks/experiment_runner.py \
+    --suite-name=torchbench \
+    --accelerator=cuda \
+    --progress-bar  \
+    --model-config=\{\"model_name\":\"BERT_pytorch\"\} \
+    --experiment-config=\{\"accelerator\":\"cuda\",\"xla\":\"PJRT\",\"xla_flags\":null,\"dynamo\":\"openxla\",\"torch_xla2\":null,\"test\":\"train\"\} \
+    --repeat 1
+```
 
 
 ## Verification module

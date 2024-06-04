@@ -54,8 +54,10 @@ class ExperimentRunner:
     is_main_process = self._args.experiment_config is None and \
       self._args.model_config is None
     if is_main_process:
+      print('xw32 is_main_process is true')
       self.generate_and_run_all_configs()
     else:
+      print('xw32 is_main_process is false')
       assert self._args.experiment_config is not None and \
         self._args.model_config is not None
       self.run_single_config()
@@ -241,6 +243,7 @@ class ExperimentRunner:
   def run_single_config(self):
 
     # Load experiment and model.
+    print('xw32 line246 run_single_config self._args.experiment_config=', self._args.experiment_config)
     experiment_config = json.loads(self._args.experiment_config)
     model_config = json.loads(self._args.model_config)
     benchmark_experiment = self.experiment_loader.load_experiment(
@@ -863,6 +866,11 @@ def parse_args(args=None):
         CPU fallbacks.""",
   )
   parser.add_argument(
+      "--xla-take-cuda-model-and-data",
+      action="store_true",
+      help="""Whether PyTorch/XLA takes models and data on CUDA.""",
+  )
+  parser.add_argument(
       "--xla-flags",
       type=str,
       action="append",
@@ -942,6 +950,7 @@ def main():
 
   logging.basicConfig(level=args.log_level.value, force=True)
   logger.debug(f"Parsed args: {args}")
+  # args.xla_take_cuda_model_and_data available
 
   if not args.disable_tf32:
     logger.warning('Enabling fast F32 multiplication for PyTorch')

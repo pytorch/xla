@@ -24,6 +24,7 @@ class ExperimentLoader:
         "dynamo": [None, "inductor", "openxla_eval", "openxla"],
         "torch_xla2": [None],  # options only apply to torch_xla2
         "test": ["eval", "train"],
+        "xla_take_cuda_model_and_data": [False],
     }
 
     # Apply command line choices.
@@ -42,6 +43,8 @@ class ExperimentLoader:
     if self._args.xla_flags:
       config_choices["xla_flags"] = list(
           map(parse_none_str, set(self._args.xla_flags)))
+    if self._args.xla_take_cuda_model_and_data:
+      config_choices["xla_take_cuda_model_and_data"] = [self._args.xla_take_cuda_model_and_data]
 
     # Expand experiment configs and add env vars.
     logger.debug(f"Expand experiment configs")
@@ -71,6 +74,7 @@ class ExperimentLoader:
     cfg_xla = experiment_config["xla"]
     cfg_test = experiment_config["test"]
     cfg_torch_xla2 = experiment_config["torch_xla2"]
+    cfg_xla_take_cuda_model_and_data = experiment_config["xla_take_cuda_model_and_data"]
 
     # Check that dynamo refers to an existing backend.
     if cfg_dynamo is not None and cfg_dynamo not in dynamo.list_backends(
@@ -109,6 +113,10 @@ class ExperimentLoader:
       pass
     else:
       raise NotImplementedError
+    
+    # cfg_xla_take_cuda_model_and_data is only avaible when using dynamo
+    if cfg_xla_take_cuda_model_and_data and cfg_dynamo != "openxla":
+      return False
 
     return True
 
@@ -120,25 +128,28 @@ class ExperimentLoader:
     test = experiment_config["test"]
     batch_size = experiment_config.get("batch_size", self._args.batch_size)
     torch_xla2 = experiment_config["torch_xla2"]
+    xla_take_cuda_model_and_data = experiment_config["xla_take_cuda_model_and_data"]
     return BenchmarkExperiment(
         accelerator=accelerator,
         xla=xla,
         xla_flags=xla_flags,
         dynamo=dynamo,
         torch_xla2=torch_xla2,
+        xla_take_cuda_model_and_data=xla_take_cuda_model_and_data,
         test=test,
         batch_size=batch_size)
 
 
 class BenchmarkExperiment:
 
-  def __init__(self, accelerator, xla, xla_flags, dynamo, torch_xla2, test,
+  def __init__(self, accelerator, xla, xla_flags, dynamo, torch_xla2, xla_take_cuda_model_and_data, test,
                batch_size):
     self.accelerator = accelerator
     self.xla = xla
     self.xla_flags = xla_flags
     self.dynamo = dynamo
     self.torch_xla2 = torch_xla2
+    self.xla_take_cuda_model_and_data = xla_take_cuda_model_and_data
     self.test = test
     self.batch_size = batch_size
     self.accelerator_model = get_accelerator_model(self.accelerator)
@@ -202,6 +213,7 @@ class BenchmarkExperiment:
     d["xla_flags"] = self.xla_flags
     d["dynamo"] = self.dynamo
     d["torch_xla2"] = self.torch_xla2
+    d["xla_take_cuda_model_and_data"] = self.xla_take_cuda_model_and_data
     d["test"] = self.test
     d["batch_size"] = self.batch_size
     return d
