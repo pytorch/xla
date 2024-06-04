@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git0d75493 )
+                  master (2.4.0+gitbcf46c7 )
                 </div>
               
             
@@ -408,7 +408,7 @@
   <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">start_method</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="MpModelWrapper"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpModelWrapper">[docs]</a><span class="k">class</span> <span class="nc">MpModelWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">MpModelWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps a model to minimize host memory usage when `fork` method is used.</span>
 
 <span class="sd">  This class should be used together with the `spawn(..., start_method=&#39;fork&#39;)`</span>
@@ -443,7 +443,7 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">model</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
 
-<div class="viewcode-block" id="MpModelWrapper.to"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to">[docs]</a>  <span class="k">def</span> <span class="nf">to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieves the model moved onto the specified device.</span>
 
 <span class="sd">    Args:</span>
@@ -453,10 +453,10 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span></div></div>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span>
 
 
-<div class="viewcode-block" id="MpSerialExecutor"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor">[docs]</a><span class="k">class</span> <span class="nc">MpSerialExecutor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">MpSerialExecutor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Utility to run a function in a serialized fashion among multi-core processes.</span>
 
 <span class="sd">  Example::</span>
@@ -478,7 +478,7 @@
   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
 
-<div class="viewcode-block" id="MpSerialExecutor.run"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run">[docs]</a>  <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Runs the provided function serialized WRT each per-core process.</span>
 
 <span class="sd">    Args:</span>
@@ -487,7 +487,7 @@
 <span class="sd">      The `fn` return value.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-      <span class="k">return</span> <span class="n">fn</span><span class="p">()</span></div></div>
+      <span class="k">return</span> <span class="n">fn</span><span class="p">()</span>
 </pre></div>
 
              </article>

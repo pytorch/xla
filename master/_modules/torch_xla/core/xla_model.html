@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git0d75493 )
+                  master (2.4.0+gitbcf46c7 )
                 </div>
               
             
@@ -451,7 +451,7 @@
     <span class="k">return</span> <span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span>
 
 
-<div class="viewcode-block" id="get_xla_supported_devices"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_xla_supported_devices">[docs]</a><span class="k">def</span> <span class="nf">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_devices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_devices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a list of supported devices of a given kind.</span>
 
 <span class="sd">  Args:</span>
@@ -481,10 +481,10 @@
     <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">devkind</span> <span class="o">+</span> <span class="sa">r</span><span class="s1">&#39;:\d+$&#39;</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
       <span class="n">kind_devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;xla:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
   <span class="k">if</span> <span class="n">kind_devices</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">kind_devices</span><span class="p">[:</span><span class="n">max_devices</span><span class="p">]</span> <span class="k">if</span> <span class="n">max_devices</span> <span class="k">else</span> <span class="n">kind_devices</span></div>
+    <span class="k">return</span> <span class="n">kind_devices</span><span class="p">[:</span><span class="n">max_devices</span><span class="p">]</span> <span class="k">if</span> <span class="n">max_devices</span> <span class="k">else</span> <span class="n">kind_devices</span>
 
 
-<div class="viewcode-block" id="xrt_world_size"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xrt_world_size">[docs]</a><span class="k">def</span> <span class="nf">xrt_world_size</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">xrt_world_size</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the number of devices which is taking part of the replication.</span>
 
 <span class="sd">  Args:</span>
@@ -499,10 +499,10 @@
   <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">_WORLD_SIZE</span>
 
-  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span></div>
+  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="get_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">get_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the replication ordinal of the current thread.</span>
 
 <span class="sd">  The ordinals range from 0 to `xrt_world_size()` minus 1.</span>
@@ -519,10 +519,10 @@
   <span class="k">if</span> <span class="n">_ORDINAL</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">_ORDINAL</span>
 
-  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span></div>
+  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="get_local_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_local_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_local_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">get_local_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the replication local ordinal of the current thread.</span>
 
 <span class="sd">  The local ordinals range from 0 to the number of local devices minus 1.</span>
@@ -535,7 +535,7 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The replication local ordinal of the current thread.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">()</span></div>
+  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="is_master_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.is_master_ordinal">[docs]</a><span class="k">def</span> <span class="nf">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -1701,7 +1701,7 @@
   <span class="k">return</span> <span class="n">xla_rendezvous</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="n">tag</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="do_on_ordinals"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.do_on_ordinals">[docs]</a><span class="k">def</span> <span class="nf">do_on_ordinals</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">(),</span> <span class="n">ordinals</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,)):</span>
+<span class="k">def</span> <span class="nf">do_on_ordinals</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">(),</span> <span class="n">ordinals</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,)):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Runs a function only on a given set of ordinals.</span>
 
 <span class="sd">  Args:</span>
@@ -1726,7 +1726,7 @@
   <span class="k">else</span><span class="p">:</span>
     <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
   <span class="n">rendezvous</span><span class="p">(</span><span class="s1">&#39;torch_xla.core.xla_model.do_on_ordinals&#39;</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">result</span></div>
+  <span class="k">return</span> <span class="n">result</span>
 
 
 <div class="viewcode-block" id="mesh_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.mesh_reduce">[docs]</a><span class="k">def</span> <span class="nf">mesh_reduce</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">reduce_fn</span><span class="p">):</span>
