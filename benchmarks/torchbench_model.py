@@ -258,8 +258,6 @@ class TorchBenchModel(BenchmarkModel):
       keep_model_data_on_cuda = self.benchmark_experiment.xla_take_cuda_model_and_data
       if self.is_accelerator_cuda() and not keep_model_data_on_cuda:
         self.module = self.module.to("cpu")
-        print('xw32 line260 self.example_inputs[0].device=',
-              self.example_inputs[0].device)
         self.example_inputs = move_to_device(self.example_inputs, "cpu")
         self._cleanup()
 

@@ -110,7 +110,6 @@ class BenchmarkModel:
 
   def prepare_for_experiment(self, dynamo_compilation_opts):
     self.device = self.benchmark_experiment.get_device()
-    print('xw32 line113 prepare_for_experiment begin self.device=', self.device)
     self.dtype = self.conversion_dtype()
     if self.dtype is not None:
       self.module = self.module.to(self.dtype)

@@ -54,10 +54,8 @@ class ExperimentRunner:
     is_main_process = self._args.experiment_config is None and \
       self._args.model_config is None
     if is_main_process:
-      print('xw32 is_main_process is true')
       self.generate_and_run_all_configs()
     else:
-      print('xw32 is_main_process is false')
       assert self._args.experiment_config is not None and \
         self._args.model_config is not None
       self.run_single_config()
@@ -243,8 +241,6 @@ class ExperimentRunner:
   def run_single_config(self):
 
     # Load experiment and model.
-    print('xw32 line246 run_single_config self._args.experiment_config=',
-          self._args.experiment_config)
     experiment_config = json.loads(self._args.experiment_config)
     model_config = json.loads(self._args.model_config)
     benchmark_experiment = self.experiment_loader.load_experiment(
