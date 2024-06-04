@@ -214,8 +214,8 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     torch::lazy::BackendDataPtr handle = CurrentDataHandle();
     if (handle != nullptr) {
       XLA_CHECK(handle->HasValue())
-          << "Trying to access XLA data while an async operation is in flight: "
-          << handle->shape();
+          << "Trying to access XLA data for tensor with ID " << GetUniqueId()
+          << " while an async operation is in flight: " << handle->shape();
       return handle;
     }
   }
