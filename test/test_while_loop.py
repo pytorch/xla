@@ -90,8 +90,12 @@ class WhileLoopTest(unittest.TestCase):
     _, res = linear_model(iteri, l_in_0)
 
     # === expected result after 2 iteration to be compared ===
-    _, expected = linear_model.forward_compare(iteri, l_in_0)
-    _, expected = linear_model.forward_compare(iteri, expected)
+    test_value = l_in_0
+    for i in range(iteri):
+      _, test_value = linear_model.forward_compare(iteri, test_value)
+    # _, res1 = linear_model.forward_compare(iteri, l_in_0)
+    # _, expected = linear_model.forward_compare(iteri, res1)
+    expected = test_value
 
     # print("res: ", res)
     # print("expected: ", expected)
