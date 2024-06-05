@@ -1,10 +1,9 @@
 Quantized Operations for XLA device (Experimental feature)
 --------------------------
 
-This document describes how to enable quantization on XLA device by the quantized operations.
+This document outlines how to utilize quantized operations to enable quantization on XLA devices.
 
-XLA Quantized ops provide a high level abstraction on the quantized operations. (e.g. blockwise int4 quantized matmul) 
-The XLA quantized ops are equiavlent to the quantized CUDA kernels in the CUDA world ([example](https://github.com/vllm-project/vllm/blob/main/csrc/quantization/gptq/q_gemm.cu)).
+XLA Quantized ops offer a high-level abstraction for quantized operations (e.g., blockwise int4 quantized matrix multiplication). These ops are analogous to quantized CUDA kernels ([example](https://github.com/vllm-project/vllm/blob/main/csrc/quantization/gptq/q_gemm.cu)) in the CUDA ecosystem, providing similar functionality and performance benefits within the XLA framework.
 
 **NOTE:** Currently this is classified as experimental feature. It's API specifics 
 will change in the next (2.5) release.
@@ -12,15 +11,15 @@ will change in the next (2.5) release.
 
 ## How to use:
 
-XLA quantized operations can be used as `torch op`, or `torch.nn.Module`. These 2 options give model developers the flexibility to choose the best way to integrate XLA quantized ops into their solution.
+XLA quantized operations can be used as `torch op`, or a `torch.nn.Module` that wraps the `torch.op`. These 2 options give model developers the flexibility to choose the best way to integrate XLA quantized ops into their solution.
 
 Both `torch op` and `nn.Module` are compatible with `torch.compile( backend='openxla')`.
 
 ### Call XLA quantized op in model code
 
-Users can call XLA quantized ops just like regular PyTorch ops. This provides the most flexibility to users to integrate quantized ops into the applications. The quantized ops work in both eager mode and Dynamo, regular PyTorch CPU tensors or XLA tensors.
+Users can call XLA quantized ops in the same way as calling other regular PyTorch ops. This provides maximum flexibility in integrating XLA quantized ops into their applications. The quantized ops work in both eager mode and Dynamo, with regular PyTorch CPU tensor and XLA tensor.
 
-Please check the docstring of the quantized ops for the layout of the quantized weights.
+**Note** Please check the docstring of the quantized ops for the layout of the quantized weights.
 
 ```Python
 import torch
@@ -78,7 +77,7 @@ class MyQLinearForXLABackend(torch.nn.Module):
 
 ### Module Swap
 
-Users can also use the `nn.Module` that wraps the XLA quantized ops and do module swap in the model code:
+Alternatively, users can also use the `nn.Module` that wraps the XLA quantized ops and do module swap in the model code:
 
 ```Python
 orig_model = MyModel()
@@ -93,8 +92,6 @@ q_linear = XlaQuantizedLinear(self.linear.in_features,
 q_linear.load_quantized_weight(q_weights_for_xla)
 orig_model.linear = q_linear
 ```
-
-
 
 ## Supported Quantized Operations:
 
