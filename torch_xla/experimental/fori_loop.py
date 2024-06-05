@@ -137,7 +137,7 @@ def _xla_while_loop(cond_fn,
     shapes = xb.tensor_shape(total_inputs)
   else:
     shapes = xb.tensor_shape((total_inputs))
-  builder = xb.create_builder('test_while')
+  builder = xb.create_builder('while_loop')
   params = []
   for shape in shapes:
     p = xb.mkparam(builder, len(params), shape)
