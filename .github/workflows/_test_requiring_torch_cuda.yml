@@ -23,6 +23,10 @@ on:
         description: |
           Set the maximum (in minutes) how long the workflow should take to finish
             timeout-minutes:
+      torch-commit:
+        required: true
+        type: string
+        description: torch-commit
 
 jobs:
   test:
@@ -67,20 +71,12 @@ jobs:
           echo "Check if CUDA is available for PyTorch..."
           python -c "import torch; assert torch.cuda.is_available()"
           echo "CUDA is available for PyTorch."
-      - name: Record PyTorch commit
-        run: |
-          # Don't just pipe output in shell because imports may do extra logging
-          python -c "
-          import torch_xla.version
-          with open('$GITHUB_ENV', 'a') as f:
-            f.write(f'PYTORCH_COMMIT={torch_xla.version.__torch_gitrev__}\n')
-          "
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
           repository: pytorch/pytorch
           path: pytorch
-          ref: ${{ env.PYTORCH_COMMIT }}
+          ref: ${{ inputs.torch-commit }}
       - name: Checkout PyTorch/XLA Repo
         uses: actions/checkout@v4
         with:

@@ -55,7 +55,6 @@ skiplist = {
     "digamma",
     "dist",
     "div",
-    "empty",
     "empty_like",
     "empty_permuted",
     "empty_strided",
@@ -515,7 +514,6 @@ skiplist = {
     "pow",
     "rad2deg",
     "randint",
-    "randn",
     "ravel",
     "real",
     "reciprocal",
@@ -592,6 +590,10 @@ skiplist = {
     "zeros",
 }
 
+random_ops = {
+  'randn',
+  'empty',
+}
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
   if isinstance(output1, torch.Tensor):
@@ -599,11 +601,8 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
     output2_cpu = output2.detach().cpu()
     if output2_cpu.dtype != output1.dtype:
       output2_cpu = output2_cpu.to(output1.dtype)
-    testcase.assertEqual(output1.shape, output2_cpu.shape)
-    testcase.assertEqual(output1.dtype, output2_cpu.dtype)
-    testcase.assertTrue(
-        torch.allclose(
-            output1, output2_cpu, atol=atol, rtol=rtol, equal_nan=equal_nan))
+    torch.testing.assert_close(
+        output2_cpu, output1, rtol=rtol, atol=atol, equal_nan=equal_nan)
   elif isinstance(output1, (tuple, list)):
     testcase.assertIsInstance(output2, (tuple, list))
     testcase.assertEqual(len(output1), len(output2))
@@ -616,10 +615,11 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
 def run_export_and_compare(testcase,
                            func,
                            sample_input,
-                           atol=1e-3,
-                           rtol=1e-5,
+                           check_output=True,
                            equal_nan=True,
                            ignore_indices=False):
+  atol=1e-3 if check_output else float('inf')
+  rtol=1e-5 if check_output else float('inf')
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):
@@ -652,7 +652,7 @@ class TestOpInfo(TestCase):
     print('op_db size: ', len(op_db), 'testing: ', len(ops_to_test))
 
   def setUp(self):
-    self.env = tensor.Environment(0)
+    self.env = tensor.Environment()
 
   @ops(ops_to_test, allowed_dtypes=(torch.float32, torch.long))
   def test_reference_eager(self, device, dtype, op):
@@ -661,7 +661,8 @@ class TestOpInfo(TestCase):
       t = sample_input.input
       if isinstance(t, torch.Tensor) and t.is_sparse:
         continue
-      run_export_and_compare(self, op, sample_input)
+      check_output = op.name not in random_ops
+      run_export_and_compare(self, op, sample_input, check_output)
 
 
 instantiate_device_type_tests(TestOpInfo, globals())

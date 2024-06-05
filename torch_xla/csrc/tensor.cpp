@@ -214,8 +214,8 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     torch::lazy::BackendDataPtr handle = CurrentDataHandle();
     if (handle != nullptr) {
       XLA_CHECK(handle->HasValue())
-          << "Trying to access XLA data while an async operation is in flight: "
-          << handle->shape();
+          << "Trying to access XLA data for tensor with ID " << GetUniqueId()
+          << " while an async operation is in flight: " << handle->shape();
       return handle;
     }
   }
@@ -739,8 +739,12 @@ c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  auto n_gt = torch::lazy::MakeNode<SizeGt>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_gt, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {

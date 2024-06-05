@@ -1195,6 +1195,16 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor) -> std::string {
           return GetXLATensorDebugInfo(tensor);
         });
+  m.def("_get_xla_tensor_shape_type",
+        [](const at::Tensor& tensor) -> std::string {
+          XLATensorPtr xla_tensor = bridge::TryGetXlaTensor(tensor);
+          if (xla_tensor) {
+            xla::Shape shape = xla_tensor->shape().get();
+            return xla::primitive_util::LowercasePrimitiveTypeName(
+                shape.element_type());
+          }
+        });
+
   py::class_<XLATensor::ShardingSpec, XLATensor::ShardingSpecPtr>(
       m, "XlaShardingSpec")
       .def(py::init([](at::Tensor tensor, const py::list& tile_assignment,
