@@ -251,6 +251,7 @@ class MegabloxTest(unittest.TestCase):
           max=test_grid['max'],
       )
 
+      self.assertEqual(chart.dtype, torch.int32)
       self.assertTrue(torch.all(torch_chart == chart.cpu()))
 
   def test_histogram_raise(self):
