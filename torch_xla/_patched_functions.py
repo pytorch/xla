@@ -47,7 +47,9 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
         f'The norm of order {norm_type} for a gradient from `parameters` '
         'is non-finite, so it cannot be clipped. This error can be '
         'disabled with `error_if_nonfinite=False`')
-  clip_coef = torch.tensor(max_norm, dtype=dtype, device=device) / (total_norm + 1e-6)
+  clip_coef = torch.tensor(
+      max_norm, dtype=dtype, device=device) / (
+          total_norm + 1e-6)
   clip_value = torch.where(clip_coef < 1, clip_coef,
                            torch.tensor(1., dtype=dtype, device=device))
   for p in parameters:

@@ -2020,20 +2020,20 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_clip_grad_norm_(self):
 
-      def foo(t):
-        torch.nn.utils.clip_grad_norm_(t, 1.0)
+    def foo(t):
+      torch.nn.utils.clip_grad_norm_(t, 1.0)
 
-      t = torch.rand(10, 10, requires_grad=True, dtype=torch.bfloat16)
-      t.retain_grad()
-      t.grad = torch.rand(10, 10, dtype=torch.bfloat16)
-      xt = t.to(xm.xla_device())
-      xt.grad = t.grad.to(xm.xla_device(), dtype=torch.bfloat16)
+    t = torch.rand(10, 10, requires_grad=True, dtype=torch.bfloat16)
+    t.retain_grad()
+    t.grad = torch.rand(10, 10, dtype=torch.bfloat16)
+    xt = t.to(xm.xla_device())
+    xt.grad = t.grad.to(xm.xla_device(), dtype=torch.bfloat16)
 
-      foo(t)
-      foo(xt)
+    foo(t)
+    foo(xt)
 
-      self.assertEqual(xt.grad.dtype, torch.bfloat16)
-      self.assertEqual(t.grad, xt.grad.cpu())
+    self.assertEqual(xt.grad.dtype, torch.bfloat16)
+    self.assertEqual(t.grad, xt.grad.cpu())
 
   def test_stack_different_types(self):
 
