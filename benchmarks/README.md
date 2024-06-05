@@ -83,10 +83,9 @@ the script starts a process and run the benchmarking. This section shows how to 
 cd pytorch
 python xla/benchmarks/experiment_runner.py \
     --suite-name=torchbench \
-    --accelerator=cuda \
     --progress-bar  \
-    --model-config=\{\"model_name\":\"BERT_pytorch\"\} \
-    --experiment-config=\{\"accelerator\":\"cuda\",\"xla\":\"PJRT\",\"xla_flags\":null,\"dynamo\":\"openxla\",\"torch_xla2\":null,\"test\":\"train\"\} \
+    --model-config='{"model_name":"BERT_pytorch"}' \
+    --experiment-config='{"accelerator":"cuda","xla":"PJRT","xla_flags":null,"dynamo":"openxla","torch_xla2":null,"test":"train","xla_take_cuda_model_and_data":"false"}' \
     --repeat 1
 ```
 

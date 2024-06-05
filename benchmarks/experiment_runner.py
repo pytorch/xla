@@ -947,7 +947,6 @@ def main():
 
   logging.basicConfig(level=args.log_level.value, force=True)
   logger.debug(f"Parsed args: {args}")
-  # args.xla_take_cuda_model_and_data available
 
   if not args.disable_tf32:
     logger.warning('Enabling fast F32 multiplication for PyTorch')
