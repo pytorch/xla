@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git73346d7 )
+                  master (2.4.0+gitcdb4aec )
                 </div>
               
             
@@ -3850,8 +3850,10 @@ training_or_inference_script_using_spmd.py
 <span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_tensor_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
-<a class="reference external image-reference" href="assets/spmd_debug_1.png"><img alt="alt_text" src="assets/spmd_debug_1.png" /></a>
-<ul class="simple">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/spmd_debug_1.png">
+  <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="assets/spmd_debug_1_light.png">
+</picture><ul class="simple">
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> and visualization result:</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd.debugging</span> <span class="kn">import</span> <span class="n">visualize_sharding</span>
@@ -3859,8 +3861,10 @@ training_or_inference_script_using_spmd.py
 <span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_sharding</span><span class="p">(</span><span class="n">sharding</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
-<a class="reference external image-reference" href="assets/spmd_debug_2.png"><img alt="alt_text" src="assets/spmd_debug_2.png" /></a>
-<p>You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style <code class="docutils literal notranslate"><span class="pre">tiled</span></code>, <code class="docutils literal notranslate"><span class="pre">partial_replication</span></code> and <code class="docutils literal notranslate"><span class="pre">replicated</span></code>.</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/spmd_debug_2.png">
+  <img alt="visualize_sharding example on TPU v4-8(single-host)" src="assets/spmd_debug_2_light.png">
+</picture><p>You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style <code class="docutils literal notranslate"><span class="pre">tiled</span></code>, <code class="docutils literal notranslate"><span class="pre">partial_replication</span></code> and <code class="docutils literal notranslate"><span class="pre">replicated</span></code>.</p>
 </div>
 <div class="section" id="auto-sharding">
 <h3>Auto-Sharding<a class="headerlink" href="#auto-sharding" title="Permalink to this heading">¶</a></h3>
