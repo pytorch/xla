@@ -160,7 +160,7 @@ class WhileLoopTest(unittest.TestCase):
     def body_fun(x):
       return torch.add(x, 1)
 
-    _, res = fori_loop(upper, lower, body_fun, (init_val))
+    _, res = fori_loop(lower, upper, body_fun, (init_val))
 
     # === expected ===
     x = init_val
