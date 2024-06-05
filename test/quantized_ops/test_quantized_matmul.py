@@ -1,10 +1,11 @@
+import re
 import unittest
 
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_quantized_matmul
-from torch_xla.experimental.xla_quantized_matmul import XlaQuantizedMatmul
+from torch_xla.experimental.xla_quantized_matmul import XlaQuantizedLinear
 from torch.ao.quantization.utils import determine_qparams
 
 torch.manual_seed(123456)
@@ -47,7 +48,7 @@ class M(torch.nn.Module):
   def replace_with_xla_quantized_matmul(self):
     assert isinstance(self.linear, torch.nn.Linear)
     w_int, scaler, _ = self.weight_quantization_rtn(self.linear)
-    q_linear = XlaQuantizedMatmul(self.linear.in_features,
+    q_linear = XlaQuantizedLinear(self.linear.in_features,
                                   self.linear.out_features)
     q_linear.load_quantized_weight(w_int, scaler)
     self.linear = q_linear
@@ -83,10 +84,21 @@ class QuantizedTest(unittest.TestCase):
       m.replace_with_xla_quantized_matmul()
       out_quant = m(x)
       m = m.to(device)
-      m_dynamo = torch.compile(m, backend="openxla", fullgraph=True)
+      m_dynamo = torch.compile(m, backend="openxla")
       out_quant_dynamo = m_dynamo(x.to(device))
       self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.01))
       self.assertTrue(torch.allclose(out_quant_dynamo.cpu(), out_quant))
+
+  def test_q_linear_hlo(self):
+    with torch.no_grad():
+      x = torch.randn((3, 5), dtype=torch.bfloat16).to(device)
+      w_int = torch.randint(-128, 127, (8, 5), dtype=torch.int8).to(device)
+      scaler = torch.randn((8,), dtype=torch.bfloat16).to(device)
+
+      output = torch.ops.xla.quantized_matmul(x, w_int, scaler)
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+      print(hlo)
+      self.assertTrue(re.search(r'bf16.*dot.*bf16.*s8', hlo) is not None)
 
 
 if __name__ == '__main__':

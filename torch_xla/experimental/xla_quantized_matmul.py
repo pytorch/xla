@@ -39,7 +39,7 @@ def quantized_matmul_xla(x: torch.Tensor,
   # Per-channel quant.
   _check_per_channel_quant_weight_dtype_shapes(x.shape[-1], scaler.shape[0], w,
                                                scaler)
-  return torch.mul(F.linear(x, w), scaler)
+  return F.linear(x, w) * scaler
 
 
 @impl(XLA_LIB, "quantized_matmul", "CompositeExplicitAutograd")
@@ -55,19 +55,7 @@ def quantized_matmul(x: torch.Tensor,
   return torch.mul(F.linear(x, w), scaler)
 
 
-# @impl(XLA_LIB, "quantized_matmul", "Meta")
-# def quantized_matmul_meta(x: torch.Tensor,
-#                           w: torch.Tensor,
-#                           scaler: torch.Tensor,
-#                           blocksize: int = -1):
-#   assert blocksize == -1, "blockwise quantization is not supported yet."
-#   # Per-channel quant.
-#   _check_per_channel_quant_weight_dtype_shapes(x.shape[-1], scaler.shape[0],
-#                                                w, scaler)
-#   return torch.empty(x.shape[:-1] + w.shape[:1])
-
-
-class XlaQuantizedMatmul(torch.nn.Module):
+class XlaQuantizedLinear(torch.nn.Module):
 
   def __init__(self, input_dim, output_dim, blocksize=-1):
     super().__init__()
@@ -95,4 +83,7 @@ class XlaQuantizedMatmul(torch.nn.Module):
       assert False, "Only per-channel quantization is supported."
 
   def forward(self, x):
-    return torch.ops.xla.quantized_matmul(x, self.weight, self.weight_scaler)
+    if self.blocksize == -1:
+      return torch.ops.xla.quantized_matmul(x, self.weight, self.weight_scaler)
+    else:
+      assert False, "Only per-channel quantization is supported."
