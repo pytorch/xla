@@ -163,7 +163,7 @@ class ExperimentRunnerTest(expecttest.TestCase):
         "--test=train",
         "--suite-name=dummy",
         "--accelerator=cuda",
-        "--xla-take-cuda-model-and-data",
+        "--keep-model-data-on-cuda",
         "--dry-run",
     ],
                            capture_output=True,
