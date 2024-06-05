@@ -14,7 +14,7 @@ from torch._higher_order_ops.while_loop import while_loop as torch_while_loop
 from torch._higher_order_ops.utils import _has_potential_branch_input_mutation
 
 
-def fori_loop(upper, lower, body_fun, *input_value):
+def fori_loop(lower, upper, body_fun, *input_value):
 
   device = xm.xla_device()
   if (upper < lower):
