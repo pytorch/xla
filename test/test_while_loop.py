@@ -38,8 +38,6 @@ class WhileLoopTest(unittest.TestCase):
     iteri = torch.tensor(10, device=device)
     _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
     _, expected = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
-    # print("res: ", res)
-    # print("expected: ", expected)
     self.assertTrue(torch.all(torch.eq(res, expected)))
 
   def test_while_loop_tpu_addition_nested(self):
@@ -55,8 +53,6 @@ class WhileLoopTest(unittest.TestCase):
     iteri = torch.tensor(10, device=device)
     _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
     _, expected = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
-    # print("res: ", res)
-    # print("expected: ", expected)
     self.assertTrue(torch.all(torch.eq(res, expected)))
 
   def test_while_loop_tpu_simple_linear_inside_loop(self):
@@ -93,12 +89,8 @@ class WhileLoopTest(unittest.TestCase):
     test_value = l_in_0
     for i in range(iteri):
       _, test_value = linear_model.forward_compare(iteri, test_value)
-    # _, res1 = linear_model.forward_compare(iteri, l_in_0)
-    # _, expected = linear_model.forward_compare(iteri, res1)
     expected = test_value
 
-    # print("res: ", res)
-    # print("expected: ", expected)
     self.assertTrue(torch.all(torch.eq(res, expected)))
 
   def test_while_loop_tpu_MNIST_inside_loop(self):
@@ -154,8 +146,7 @@ class WhileLoopTest(unittest.TestCase):
 
     # === expected result for one iteration to be compared since body_fn defined use the same input in each iteration ===
     _, _, expected = mnist.forward_compare(iteri, l_in_0, l_out)
-    # print("res: ", res)
-    # print("expected: ", expected)
+
     self.assertTrue(torch.all(torch.eq(res, expected)))
 
   # ====== fori_loop ======
@@ -176,8 +167,7 @@ class WhileLoopTest(unittest.TestCase):
     for i in range(upper - lower):
       x = torch.add(x, 1)
     expected = x
-    # print("res: ", res)
-    # print("expected: ", expected)
+
     self.assertTrue(torch.all(torch.eq(res, expected)))
 
 
