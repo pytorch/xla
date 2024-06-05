@@ -2823,6 +2823,7 @@ class SimpleModelWithDropout(torch.nn.Module):
   def __init__(self):
     super().__init__()
     self.x = torch.nn.Linear(128, 128)
+    self.register_buffer("buffer", torch.zeros(64, 64))
     self.dropout = torch.nn.Dropout(p=0.1)
     self.to_save = []
 
@@ -2851,6 +2852,19 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
     same_output = torch.allclose(model.to_save[0], model.to_save[1])
     self.assertTrue(same_output,
                     f"in fwd {model.to_save[0]}, in bwd {model.to_save[1]}")
+
+  def test_opt_barrier(self):
+    device = xm.xla_device()
+    model = SimpleModelWithDropout().to(device)
+    model = checkpoint_module(model)
+    _input = torch.randn(128, 128, requires_grad=True)
+    _input = _input.to(device)
+    output = model(_input)
+    output = torch.sum(output)
+    output.backward()
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([model.x.weight.grad])
+    self.assertIn("%opt-barrier.48 = (f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128]{0}, f32[64,64]{1,0}) opt-barrier((f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128]{0}, f32[64,64]{1,0}) %tuple.47)", hlo)
 
 
 # These tests were extracted and adapted from torchvision.
