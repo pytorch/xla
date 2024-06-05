@@ -148,11 +148,13 @@ class CheckpointFunction(torch.autograd.Function):
     # the next forward + backward pass.
     weights = []
     buffers = []
-    if inspect.ismethod(ctx.run_function) and isinstance(ctx.run_function.__self__, torch.nn.Module):
+    if inspect.ismethod(ctx.run_function) and isinstance(
+        ctx.run_function.__self__, torch.nn.Module):
       weights = list(ctx.run_function.__self__.parameters())
       buffers = list(ctx.run_function.__self__.buffers())
     xm.optimization_barrier_(
-        CheckpointFunction._extract_tensors_from_list(inputs + list(args) + weights + buffers))
+        CheckpointFunction._extract_tensors_from_list(inputs + list(args) +
+                                                      weights + buffers))
 
     # torch.random.fork_rng will handle the cpu and gpu seed
     # xm.fork_rng will handle the xla device seed

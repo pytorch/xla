@@ -2864,7 +2864,9 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
     output.backward()
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([model.x.weight.grad])
-    self.assertIn("%opt-barrier.48 = (f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128]{0}, f32[64,64]{1,0}) opt-barrier((f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128]{0}, f32[64,64]{1,0}) %tuple.47)", hlo)
+    self.assertIn(
+        "%opt-barrier.48 = (f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128]{0}, f32[64,64]{1,0}) opt-barrier((f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128,128]{1,0}, f32[128]{0}, f32[64,64]{1,0}) %tuple.47)",
+        hlo)
 
 
 # These tests were extracted and adapted from torchvision.
