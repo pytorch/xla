@@ -58,13 +58,13 @@ StatusOr<std::unique_ptr<PjRtBuffer>> CompileOnlyPjRtBuffer::CopyToMemorySpace(
 }
 
 void CompileOnlyPjRtBuffer::CopyToRemoteDevice(
-    PjRtFuture<StatusOr<std::string>> serialized_descriptor,
+    PjRtFuture<std::string> serialized_descriptor,
     RemoteSendCallback on_done) {
   return;
 }
 
 void CompileOnlyPjRtBuffer::CopyToRemoteDeviceScattered(
-    PjRtFuture<StatusOr<std::vector<std::string>>> serialized_descriptors,
+    PjRtFuture<std::vector<std::string>> serialized_descriptors,
     std::vector<RemoteSendCallback> callbacks,
     const ScatterDetails& scatter_details) {
   return;
