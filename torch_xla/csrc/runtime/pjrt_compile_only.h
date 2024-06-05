@@ -58,9 +58,8 @@ class CompileOnlyPjRtBuffer final : public PjRtBuffer {
       PjRtDevice* dst_device) override;
   StatusOr<std::unique_ptr<PjRtBuffer>> CopyToMemorySpace(
       PjRtMemorySpace* dst_memory_space) override;
-  void CopyToRemoteDevice(
-      PjRtFuture<std::string> serialized_descriptor,
-      RemoteSendCallback on_done) override;
+  void CopyToRemoteDevice(PjRtFuture<std::string> serialized_descriptor,
+                          RemoteSendCallback on_done) override;
   void CopyToRemoteDeviceScattered(
       PjRtFuture<std::vector<std::string>> serialized_descriptors,
       std::vector<RemoteSendCallback> callbacks,

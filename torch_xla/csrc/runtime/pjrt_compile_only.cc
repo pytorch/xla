@@ -58,8 +58,7 @@ StatusOr<std::unique_ptr<PjRtBuffer>> CompileOnlyPjRtBuffer::CopyToMemorySpace(
 }
 
 void CompileOnlyPjRtBuffer::CopyToRemoteDevice(
-    PjRtFuture<std::string> serialized_descriptor,
-    RemoteSendCallback on_done) {
+    PjRtFuture<std::string> serialized_descriptor, RemoteSendCallback on_done) {
   return;
 }
 
