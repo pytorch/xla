@@ -114,7 +114,6 @@ load("@pypi//:requirements.bzl", "install_deps")
 install_deps()
 
 
-
 # Initialize OpenXLA's external dependencies.
 load("@xla//:workspace4.bzl", "xla_workspace4")
 
