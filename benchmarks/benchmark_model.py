@@ -122,7 +122,7 @@ class BenchmarkModel:
     else:
       raise NotImplementedError
 
-    keep_model_data_on_cuda = self.benchmark_experiment.xla_take_cuda_model_and_data
+    keep_model_data_on_cuda = self.benchmark_experiment.keep_model_data_on_cuda
     if self.benchmark_experiment.torch_xla2:
       import torch_xla2.export
       import torch_xla2
@@ -158,7 +158,7 @@ class BenchmarkModel:
 
     if keep_model_data_on_cuda:
       assert self.example_inputs[0].device.type.lower(
-      ) == 'cuda', 'When xla_take_cuda_model_and_data is set, the input data should remain on the CUDA device.'
+      ) == 'cuda', 'When keep_model_data_on_cuda is set, the input data should remain on the CUDA device.'
 
   def pick_grad(self):
     if self.benchmark_experiment.test == "eval":
