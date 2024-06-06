@@ -8,7 +8,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
 
-from typing import Any, List, Callable
+from typing import Any, List, Callable, Optional
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
@@ -16,7 +16,7 @@ _XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
 
 
 def _extract_backend_config(
-    module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> str | None:
+    module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> Optional[str]:
   """
   This algorithm intends to extract the backend config from the compiler IR like the following,
   and it is not designed to traverse any generic MLIR module.
