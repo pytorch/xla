@@ -32,7 +32,7 @@ x = torch.randn((3, N_INPUT_FEATURES), dtype=torch.bfloat16)
 w_int = torch.randint(-128, 127, (N_OUTPUT_FEATURES, N_INPUT_FEATURES), dtype=torch.int8)
 scaler = torch.randn((N_OUTPUT_FEATURES,), dtype=torch.bfloat16)
 
-# Call with torch CPU tensor
+# Call with torch CPU tensor (For debugging purpose)
 matmul_output = torch.ops.xla.quantized_matmul(x, w_int, scaler)
 
 device = xm.xla_device()
