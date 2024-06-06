@@ -2871,6 +2871,7 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
         opt_barrier = line
         break
 
+    self.assertNotEqual(opt_barrier, "")
     self.assertEqual(opt_barrier.count("f32[128,128]"), 6)
     self.assertEqual(opt_barrier.count("f32[128]"), 2)
     self.assertEqual(opt_barrier.count("f32[64,64]"), 2)
