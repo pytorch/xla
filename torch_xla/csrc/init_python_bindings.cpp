@@ -254,6 +254,12 @@ at::Tensor DynamicView(const at::Tensor& input,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
+at::Tensor ReinterpretCast4bit(const at::Tensor& input, const at::Tensor& weight) {
+  auto result = tensor_methods::reinterpret_cast_4bit( 
+                  bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight));
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
 at::Tensor QuantizeTensor(const at::Tensor& input,
                           const std::vector<float>& scale_list,
                           const std::vector<int>& zero_point_list,
