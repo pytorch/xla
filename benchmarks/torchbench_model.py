@@ -255,7 +255,8 @@ class TorchBenchModel(BenchmarkModel):
     if self.benchmark_experiment.xla:
       # First, move the model and the inputs to CPU.
       # This avoids having dupplicated data on CUDA.
-      if self.is_accelerator_cuda():
+      keep_model_data_on_cuda = self.benchmark_experiment.keep_model_data_on_cuda
+      if self.is_accelerator_cuda() and not keep_model_data_on_cuda:
         self.module = self.module.to("cpu")
         self.example_inputs = move_to_device(self.example_inputs, "cpu")
         self._cleanup()
