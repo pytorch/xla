@@ -77,7 +77,7 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     auto results = at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(max_pool2d_with_indices)>::call(self,
+        &xla_fallback, ATEN_OP(max_pool2d_with_indices)>::call(self,
                                                                    kernel_size,
                                                                    stride,
                                                                    padding,
@@ -132,7 +132,7 @@ torch::autograd::variable_list MaxPool2dAutogradFunction::backward(
   if (IsNonTrivialDilation(dilation)) {
     auto indices = saved[1];
     grad = at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(max_pool2d_with_indices_backward)>::call(grad_output[0], self,
                                                          kernel_size, stride,
                                                          padding, dilation,
@@ -181,7 +181,7 @@ torch::Tensor MaxPool3dAutogradFunction::forward(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     auto results = at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(max_pool3d_with_indices)>::call(self,
+        &xla_fallback, ATEN_OP(max_pool3d_with_indices)>::call(self,
                                                                    kernel_size,
                                                                    stride,
                                                                    padding,
@@ -213,7 +213,7 @@ torch::autograd::variable_list MaxPool3dAutogradFunction::backward(
   if (IsNonTrivialDilation(dilation)) {
     auto indices = saved[1];
     grad = at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(max_pool3d_with_indices_backward)>::call(grad_output[0], self,
                                                          kernel_size, stride,
                                                          padding, dilation,
