@@ -351,11 +351,16 @@ xla::XlaOp BuildReduceScatter(
     const std::vector<std::vector<int64_t>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  // Just a dummy channel handle, and it's required to set the use_global_device_ids
+  // which is requried for SPMD.
+  xla::ChannelHandle channel_handle;
+  channel_handle.set_handle(1);
+  channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
   xla::XlaOp reduce_result;
     reduce_result = xla::ReduceScatter(
         input,
         GetReduceComutation(reduce_type, input_shape.element_type()),
-        scatter_dim, shard_count, reduce_groups);
+        scatter_dim, shard_count, std::move(reduce_groups), std::move(channel_handle), std::nullopt, true);
   if (scale != 1.0) {
     xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
         scale, input_shape.element_type(), input.builder());

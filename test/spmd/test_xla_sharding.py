@@ -1221,7 +1221,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Reduce scatter
     x = xs.enable_manual_sharding(x, (None, None)).global_tensor
     x = torch_xla._XLAC._xla_spmd_reduce_scatter(xm.REDUCE_SUM, x, 1.0, 0, 4, [[0, 1, 2, 3]])
-    x = xs.disable_manual_sharding(x, (1, None), (4, 4)).global_tensor
+    x = xs.disable_manual_sharding(x, (None, None), (1, 4)).global_tensor
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
     print(hlo)
