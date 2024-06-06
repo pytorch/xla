@@ -19,7 +19,7 @@ on:
       timeout-minutes:
         required: false
         type: number
-        default: 270
+        default: 30
         description: |
           Set the maximum (in minutes) how long the workflow should take to finish
             timeout-minutes:
@@ -46,14 +46,29 @@ jobs:
         run: |
           ls -la
           rm -rvf ${GITHUB_WORKSPACE}/*
+      - name: Fetch torch/torch_xla/torchvision wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: torch-xla-wheels
+          path: /tmp/wheels/
+      - name: Remove torch wheel built with CUDA disabled
+        shell: bash
+        run: |
+          rm -rf /tmp/wheels/torch-*
       - name: Fetch the torch wheel built with CUDA enabled
         uses: actions/download-artifact@v4
         with:
           name: torch-cuda-wheels
           path: /tmp/wheels/
+      - name: Fetch CUDA plugin
+        uses: actions/download-artifact@v4
+        with:
+          name: cuda-plugin
+          path: /tmp/wheels/
       - name: Setup CUDA environment
         shell: bash
         run: |
+          echo "XLA_REGISTER_INSTALLED_PLUGINS=1" >> $GITHUB_ENV
           echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
       - name: Check GPU
@@ -67,6 +82,7 @@ jobs:
           pip install rich
           echo "Import check..."
           python -c "import torch, torch_xla, torchvision"
+
           echo "Import check done."
           echo "Check if CUDA is available for PyTorch..."
           python -c "import torch; assert torch.cuda.is_available()"
@@ -81,19 +97,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
-      - name: Extra CI deps
-        shell: bash
-        run: |
-          set -x
-          pip install expecttest unittest-xml-reporting
-          pip install -U --pre jaxlib -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-          pip install -U --pre jax-cuda12-pjrt jax-cuda12-plugin -f https://storage.googleapis.com/jax-releases/jax_cuda_plugin_nightly_releases.html
-          pip install -U --pre jax -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
-          pip install --no-deps triton==2.3.0
       - name: Test
         shell: bash
         run: |
           set -xue
-          PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.1/bin/ptxas python pytorch/xla/test/test_triton.py
           PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
           PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v

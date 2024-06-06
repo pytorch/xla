@@ -42,9 +42,7 @@ jobs:
       # note that to build a torch wheel with CUDA enabled, we do not need a GPU runner.
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-      runner: linux.24xlarge
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+      runner: linux.8xlarge.nvidia.gpu
 
   build-cuda-plugin:
     name: "Build XLA CUDA plugin"
@@ -53,17 +51,6 @@ jobs:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
-
-  test-cuda-with-pytorch-cuda-enabled:
-    name: "GPU tests requiring torch CUDA"
-    uses: ./.github/workflows/_test_requiring_torch_cuda.yml
-    needs: [build-torch-with-cuda, get-torch-commit]
-    with:
-      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
-      runner: linux.g5.4xlarge.nvidia.gpu
-      timeout-minutes: 300
-      collect-coverage: false
-      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
 
   test-python-cpu:
     name: "CPU tests"
@@ -90,6 +77,17 @@ jobs:
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
+  test-cuda-with-pytorch-cuda-enabled:
+    name: "GPU tests requiring torch CUDA"
+    uses: ./.github/workflows/_test_requiring_torch_cuda.yml
+    needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, get-torch-commit]
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+      runner: linux.8xlarge.nvidia.gpu
+      timeout-minutes: 300
+      collect-coverage: false
+      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
 
   test-tpu:
     name: "TPU tests"

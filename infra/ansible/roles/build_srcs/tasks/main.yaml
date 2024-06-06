@@ -27,7 +27,8 @@
     cmd: python setup.py bdist_wheel
     chdir: "{{ (src_root, 'pytorch') | path_join }}"
     creates: "{{ (src_root, 'pytorch/dist/*.whl') | path_join }}"
-  environment: "{{ env_vars }}"
+  # Set `USE_CUDA=0` as PyTorch cannot be used with GPU in eager and XLA mode.
+  environment: "{{ env_vars | combine({'USE_CUDA': 0}) }}"
 
 - name: Find PyTorch *.whl files in pytorch/dist
   ansible.builtin.find:
