@@ -3,11 +3,14 @@ set -ex
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 echo $CDIR
 
-PYTORCH_DIR=$1
-XLA_DIR=$2
-TORCHBENCH_DIR=$PYTORCH_DIR/benchmark
-shift 2
 TORCHBENCH_MODELS=("$@")
+# construct the absolute path
+XLA_DIR=$CDIR/../
+PYTORCH_DIR=$XLA_DIR/../
+TORCHVISION_DIR=$PYTORCH_DIR/vision
+TORCHAUDIO_DIR=$PYTORCH_DIR/audio
+TORCHTEXT_DIR=$PYTORCH_DIR/text
+TORCHBENCH_DIR=$PYTORCH_DIR/benchmark
 
 # Note [Keep Going]
 #
@@ -19,9 +22,40 @@ if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
   set +e
 fi
 
+
+function install_package() {
+  pushd $CDIR
+
+  torchvision_commit_hash=$(cat $PYTORCH_DIR/.github/ci_commit_pins/vision.txt)
+  echo torchvision_commit_hash: "$torchvision_commit_hash"
+  git clone --quiet https://github.com/pytorch/vision.git "$TORCHVISION_DIR"
+  cd $TORCHVISION_DIR
+  git checkout $torchvision_commit_hash
+  python setup.py install
+
+  torchaudio_commit_hash=$(cat $PYTORCH_DIR/.github/ci_commit_pins/audio.txt)
+  echo torchaudio_commit_hash: "$torchaudio_commit_hash"
+  git clone --quiet https://github.com/pytorch/audio.git "$TORCHAUDIO_DIR"
+  cd $TORCHAUDIO_DIR
+  git checkout $torchaudio_commit_hash
+  python setup.py install
+
+  torchtext_commit_hash=$(cat $PYTORCH_DIR/.github/ci_commit_pins/text.txt)
+  echo torchtext_commit_hash: "$torchtext_commit_hash"
+  git clone --quiet https://github.com/pytorch/audio.git "$TORCHTEXT_DIR"
+  cd $TORCHTEXT_DIR
+  git checkout $torchtext_commit_hash
+  git submodule update --init --recursive
+  python setup.py clean install
+
+  popd
+}
+
 function install_torchbench_models() {
   pushd $CDIR
-  cd ../../../benchmark/
+
+  # git clone --quiet https://github.com/pytorch/benchmark.git "$TORCHBENCH_DIR"
+  cd $TORCHBENCH_DIR
   for model in "${TORCHBENCH_MODELS[@]}"; do
       echo "Installing model: $model"
       python install.py models "$model"

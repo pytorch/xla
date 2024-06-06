@@ -20,9 +20,6 @@
       dest: "{{ (src_root, 'pytorch/xla') | path_join }}"
       version: "{{ xla_git_rev }}"
 
-    - repo: https://github.com/pytorch/benchmark
-      dest: "{{ (src_root, 'pytorch/benchmark') | path_join }}"
-      version: "{{ benchmark_git_rev }}"
 - name: "Tests"
   include_tasks: tests.yaml
   tags:

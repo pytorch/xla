@@ -84,7 +84,7 @@ function run_torch_xla_torchbench_tests() {
   TORCHBENCH_MODELS=(BERT_pytorch dcgan)
   pushd $XLA_DIR
   echo "Running Torchbench Tests"
-  test/torchbench/run_tests.sh "$PYTORCH_DIR" "$XLA_DIR" "${TORCHBENCH_MODELS[@]}"
+  test/torchbench/run_tests.sh "${TORCHBENCH_MODELS[@]}"
   popd
 }
 
