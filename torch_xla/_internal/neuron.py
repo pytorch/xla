@@ -1,6 +1,8 @@
 import os
 import logging
 
+from torch_xla.experimental import plugins
+
 
 def num_local_processes() -> int:
   if 'MASTER_ADDR' not in os.environ:
@@ -19,3 +21,15 @@ def num_local_processes() -> int:
 def initialize_env(local_rank):
   os.environ["NEURON_PJRT_PROCESS_INDEX"] = str(local_rank)
   os.environ["NEURON_RT_VISIBLE_CORES"] = str(local_rank)
+
+
+class NeuronPlugin(plugins.DevicePlugin):
+
+  def library_path(self):
+    return os.environ.get("NEURON_LIBRARY_PATH", "libneuronpjrt.so")
+
+  def configure_multiprocess(self, local_rank, local_world_size):
+    initialize_env(local_rank)
+
+  def physical_chip_count(self):
+    return num_local_processes()
