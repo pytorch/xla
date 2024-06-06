@@ -20,6 +20,7 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
+      options: "--gpus all --shm-size 16g"
     env:
       _GLIBCXX_USE_CXX11_ABI: 0
     steps:
@@ -42,10 +43,6 @@ jobs:
           path: pytorch
           ref: ${{ inputs.torch-commit }}
           submodules: recursive
-      - name: Checkout PyTorch/XLA Repo
-        uses: actions/checkout@v4
-        with:
-          path: pytorch/xla
       - name: Build
         shell: bash
         run: |
