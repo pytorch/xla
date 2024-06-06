@@ -1,5 +1,5 @@
 import jax
-import jax._src import config
+from jax._src import config
 import os
 import torch
 from torch._functorch import make_functional
