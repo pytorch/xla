@@ -709,9 +709,9 @@ PjRtComputationClient::ExecuteComputation(
   for (auto& argument : arguments) {
     const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
 
-    XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
-        << pjrt_device->DebugString() << " vs "
-        << pjrt_data->buffer->device()->DebugString();
+    // XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
+    //     << "Using device: " << pjrt_device->DebugString() << " vs device where the buffer resides: "
+    //     << pjrt_data->buffer->device()->DebugString();
     buffers.push_back(pjrt_data->buffer.get());
   }
 

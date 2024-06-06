@@ -164,8 +164,8 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     os.environ.update({
         xenv.ZERO_COPY_ENABLED: zero_copy_enabled,
     })
-    x = torch.tensor(100.0).to(device="cuda")
-    y = torch.tensor(200.0).to(device="cuda")
+    x = torch.tensor(100.0).to(device="cuda:0")
+    y = torch.tensor(200.0).to(device="cuda:0")
     original_device = x.device
     eager_result = self.fn_simple(x, y)
 
