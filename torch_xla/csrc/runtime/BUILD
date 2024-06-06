@@ -237,6 +237,7 @@ cc_library(
     deps = [
         ":debug_macros",
         ":sys_util",
+        ":env_vars",
         "@xla//xla/tsl/distributed_runtime/preemption:preemption_sync_manager",
         "@xla//xla/pjrt/distributed",
     ],
