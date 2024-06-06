@@ -129,19 +129,13 @@ def _args_on_cuda(input_args: tuple) -> bool:
   return input_device.type == "cuda"
 
 def _move_xla_cuda_tensor_to_cuda(tensor):
+  assert tensor.device.type == "xla", "The tensor is not an XLA tensor"
   is_xla_cuda = True if xu.getenv_as("PJRT_DEVICE", str, "").lower() == "cuda" else False
-  assert tensor.device.type == "xla"
-  assert is_xla_cuda
+  assert is_xla_cuda, "The XLA tensor is not on CUDA"
   # consumer is torch, producer is torch_xla
 
-  # get the xla_tensor_device_type and xla_tensor_device_id
-  # if xla_tensor_device_type is CUDA then
-  #   get xla_tensor_device_id then get the xla_tensor_stream.
-  #   Then get the xla_tensor_stream_id.
-  #   assert stream is not None and type(stream) is not int.
-  #   if stream is not None and stream!=-1, then synchronize
-  #   then call torch_xla.utils.to_dlpack
-  #   then call torch.utils.from_dlpack
+  # Similar logic as torch.utils.dlpack.from_dlpack
+  # https://github.com/pytorch/pytorch/blob/b0ef363972203b163cddc95e4c6054b8221c2300/torch/utils/dlpack.py#L114-L115
   device_id = tensor.device.index
   stream = torch_xla._XLAC._get_stream_for_cuda_device(device_id)
   stream = 1 if stream == 0 else stream
@@ -164,8 +158,6 @@ def _maybe_move_tensors_to_device(tensors: tuple,
   assert target_device, "Moving tensors to None device not supported"
 
   moved_tensors = []
-  cpu_device: torch.device = torch.device("cpu")
-
   for tensor in tensors:
     if not isinstance(tensor, torch.Tensor):
       moved_tensors.append(tensor)
@@ -185,6 +177,7 @@ def _maybe_move_tensors_to_device(tensors: tuple,
       moved_tensor = _move_xla_cuda_tensor_to_cuda(tensor)
     else:
       # Have to move to CPU before moving it to target device.
+      cpu_device: torch.device = torch.device("cpu")
       moved_tensor = tensor.to(cpu_device)
       moved_tensor = moved_tensor.to(target_device)
 
@@ -194,6 +187,7 @@ def _maybe_move_tensors_to_device(tensors: tuple,
     moved_tensors.append(moved_tensor)
 
   return tuple(moved_tensors)
+
 
 class Deduper:
 
