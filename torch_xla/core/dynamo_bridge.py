@@ -132,7 +132,6 @@ def _move_xla_cuda_tensor_to_cuda(tensor):
   is_xla_cuda = True if xu.getenv_as("PJRT_DEVICE", str, "").lower() == "cuda" else False
   assert tensor.device.type == "xla"
   assert is_xla_cuda
-  print('xw32: move xla tensor to cuda tensors')
   # consumer is torch, producer is torch_xla
 
   # get the xla_tensor_device_type and xla_tensor_device_id
@@ -150,11 +149,9 @@ def _move_xla_cuda_tensor_to_cuda(tensor):
   external_stream = torch.cuda.ExternalStream(stream)
   current_stream = torch.cuda.current_stream()
   if external_stream != current_stream:
-    print('xw32 cuda synchronization')
     event = torch.cuda.Event()
     event.record(current_stream)
     external_stream.wait_event(event)
-  xm.mark_step()
   dlpack = torch_xla_dlpack.to_dlpack(tensor)
   cuda_tensor = torch.utils.dlpack.from_dlpack(dlpack)
   return cuda_tensor
@@ -183,7 +180,6 @@ def _maybe_move_tensors_to_device(tensors: tuple,
 
     zero_copy_enabled = xu.getenv_as(xenv.ZERO_COPY_ENABLED, bool, defval=False)
     if zero_copy_enabled and tensor.device.type == 'cuda' and target_device.type == 'xla':
-      print('xw32: move cuda tensor to xla tensors')
       moved_tensor = torch_xla_dlpack.from_dlpack(tensor)
     elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
       moved_tensor = _move_xla_cuda_tensor_to_cuda(tensor)
@@ -633,7 +629,6 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
-  # TODO(xw32): use the new flag xenv.ZERO_COPY_ENABLED and make sure the test fails.
   if _args_on_cuda(xla_args):
     xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
 
