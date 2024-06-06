@@ -403,6 +403,17 @@ std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
           torch::lazy::Value(node, 1)};
 }
 
+XLATensorPtr reduce_scatter(const XLATensorPtr& input,
+                            AllReduceType reduce_type, double scale,
+                            int64_t scatter_dim, int64_t shard_count,
+                            std::vector<std::vector<int64_t>> groups) {
+  auto canonical_scatter_dim = torch::lazy::GetCanonicalDimensionIndex(
+      scatter_dim, input->shape().get().rank());
+  return input->CreateFrom(torch::lazy::MakeNode<ReduceScatter>(
+      reduce_type, input->GetIrValue(), scale, canonical_scatter_dim,
+      shard_count, std::move(groups)));
+}
+
 torch::lazy::Value reduce_scatter_out(XLATensorPtr& output,
                                       const XLATensorPtr& input,
                                       const torch::lazy::Value& token,
