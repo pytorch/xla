@@ -1,4 +1,6 @@
 import jax
+import jax._src import config
+import os
 import torch
 from torch._functorch import make_functional
 from torch.utils import _pytree as pytree
@@ -6,9 +8,17 @@ from torch_xla2 import export, tensor, tf_integration
 
 jax.config.update('jax_enable_x64', True)
 
+config.update(
+  'jax_pjrt_client_create_options',
+  f'ml_framework_name:PyTorch/XLA2;ml_framework_version:{"v0.0.1"}'
+)
+
 env = None
 def default_env():
   global env
+
+  os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
+
   if env is None:
     env = tensor.Environment()
   return env
