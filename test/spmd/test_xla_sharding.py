@@ -1213,6 +1213,20 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(xxx.shape, (8, 8))
     self.assertTrue(torch.allclose(x.cpu() + 1, xxx.cpu()))
 
+  def test_spmd_reduce_scatter(self):
+    xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
+    x = torch.randn(4, 4).to(xm.xla_device())
+    print(x)
+
+    # Reduce scatter
+    x = xs.enable_manual_sharding(x, (None, None)).global_tensor
+    x = torch_xla._XLAC._xla_spmd_reduce_scatter(xm.REDUCE_SUM, x, 1.0, 0, 4, [[0, 1, 2, 3]])
+    x = xs.disable_manual_sharding(x, (1, None), (4, 4)).global_tensor
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
+    print(hlo)
+    print(x)
+
 
 if __name__ == '__main__':
   test = unittest.main()
