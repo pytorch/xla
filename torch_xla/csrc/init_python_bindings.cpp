@@ -1557,6 +1557,16 @@ void InitXlaModuleBindings(py::module m) {
           result_tuple[1] = new_token;
           return result_tuple;
         });
+  m.def("_xla_spmd_reduce_scatter",
+        [](const std::string& reduce_type, const at::Tensor& input,
+           double scale, int64_t scatter_dim, int64_t shard_count, const py::list& groups) {
+          std::vector<std::vector<int64_t>> replica_groups =
+              CreateReduceGroups(groups);
+          auto result =
+              tensor_methods::reduce_scatter(bridge::GetXlaTensor(input), GetReduceType(reduce_type), scale, scatter_dim,
+                            shard_count, replica_groups);
+          return bridge::AtenFromXlaTensor(std::move(result));
+        });
   m.def("_xla_reduce_scatter",
         [](const std::string& reduce_type, const at::Tensor& input,
            const std::shared_ptr<torch::lazy::Value>& token, double scale,

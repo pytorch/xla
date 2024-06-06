@@ -345,6 +345,25 @@ ReduceScatterResult BuildReduceScatter(
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
 }
 
+xla::XlaOp BuildReduceScatter(
+    AllReduceType reduce_type, xla::XlaOp input, double scale,
+    int64_t scatter_dim, int64_t shard_count,
+    const std::vector<std::vector<int64_t>>& groups) {
+  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  xla::XlaOp reduce_result;
+    reduce_result = xla::ReduceScatter(
+        input,
+        GetReduceComutation(reduce_type, input_shape.element_type()),
+        scatter_dim, shard_count, reduce_groups);
+  if (scale != 1.0) {
+    xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
+        scale, input_shape.element_type(), input.builder());
+    reduce_result = reduce_result * scaling_value;
+  }
+  return reduce_result;
+}
+
 ReduceScatterResultCoalesced BuildReduceScatterCoalesced(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> inputs,
     xla::XlaOp token, double scale, int64_t scatter_dim, int64_t shard_count,
