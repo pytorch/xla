@@ -152,7 +152,7 @@ class PjRtComputationClient : public ComputationClient {
   std::string PjRtDeviceToString(xla::PjRtDevice* const device) const override;
   std::vector<std::string> PjRtDevicesToString(
       absl::Span<xla::PjRtDevice* const> devices) const;
-  
+
   const PJRT_Api* GetPjRtCApiIfAvailable() const;
 
  private:
