@@ -5,7 +5,7 @@ echo $CDIR
 
 TORCHBENCH_MODELS=("$@")
 # construct the absolute path
-XLA_DIR=$CDIR/../
+XLA_DIR=$CDIR/../../
 PYTORCH_DIR=$XLA_DIR/../
 TORCHVISION_DIR=$PYTORCH_DIR/vision
 TORCHAUDIO_DIR=$PYTORCH_DIR/audio
