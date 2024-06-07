@@ -24,6 +24,12 @@ const char* const kEnvPjrtAllocatorCudaAsync = "PJRT_ALLOCATOR_CUDA_ASYNC";
 const char* const kEnvPjrtAllocatorPreallocate = "PJRT_ALLOCATOR_PREALLOCATE";
 const char* const kEnvPjrtAllocatorFraction = "PJRT_ALLOCATOR_FRACTION";
 const char* const kEnvPjrtDynamicPlugins = "PJRT_DYNAMIC_PLUGINS";
+const char* const kEnvDistSvcHeartbeatIntervalInSec =
+    "DIST_SERVICE_HEARTBEAT_INTERVAL_IN_SEC";
+const char* const kEnvDistSvcMaxMissingHeartbeats =
+    "DIST_SERVICE_MAX_MISSING_HEARTBEATS";
+const char* const kEnvDistSvcShutdownTimeoutInMin =
+    "DIST_SERVICE_SHUTDOWN_TIMEOUT_IN_MIN";
 
 }  // namespace env
 }  // namespace runtime

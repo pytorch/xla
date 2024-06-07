@@ -2018,6 +2018,23 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.assertEqual(r, Xr.cpu())
 
+  def test_clip_grad_norm_(self):
+
+    def foo(t):
+      torch.nn.utils.clip_grad_norm_(t, 1.0)
+
+    t = torch.rand(10, 10, requires_grad=True, dtype=torch.bfloat16)
+    t.retain_grad()
+    t.grad = torch.rand(10, 10, dtype=torch.bfloat16)
+    xt = t.to(xm.xla_device())
+    xt.grad = t.grad.to(xm.xla_device(), dtype=torch.bfloat16)
+
+    foo(t)
+    foo(xt)
+
+    self.assertEqual(xt.grad.dtype, torch.bfloat16)
+    self.assertEqual(t.grad, xt.grad.cpu())
+
   def test_stack_different_types(self):
 
     def foo(t0, t1):
@@ -2783,6 +2800,7 @@ class SimpleModelWithDropout(torch.nn.Module):
   def __init__(self):
     super().__init__()
     self.x = torch.nn.Linear(128, 128)
+    self.register_buffer("buffer", torch.zeros(64, 64))
     self.dropout = torch.nn.Dropout(p=0.1)
     self.to_save = []
 
@@ -2811,6 +2829,30 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
     same_output = torch.allclose(model.to_save[0], model.to_save[1])
     self.assertTrue(same_output,
                     f"in fwd {model.to_save[0]}, in bwd {model.to_save[1]}")
+
+  def test_opt_barrier(self):
+    device = xm.xla_device()
+    model = SimpleModelWithDropout().to(device)
+    model = checkpoint_module(model)
+    _input = torch.randn(128, 128, requires_grad=True)
+    _input = _input.to(device)
+    output = model(_input)
+    output = torch.sum(output)
+    output.backward()
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([model.x.weight.grad])
+    lines = hlo.splitlines()
+    opt_barrier = ""
+    for line in lines:
+      if "opt-barrier" in line:
+        opt_barrier = line
+        break
+
+    # Somehow the CPU/GPU CI will not have the opt-barrier.
+    if opt_barrier != "":
+      self.assertEqual(opt_barrier.count("f32[128,128]"), 6)
+      self.assertEqual(opt_barrier.count("f32[128]"), 2)
+      self.assertEqual(opt_barrier.count("f32[64,64]"), 2)
 
 
 # These tests were extracted and adapted from torchvision.
