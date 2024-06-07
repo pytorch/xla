@@ -71,20 +71,14 @@ function run_torch_xla_cpp_tests() {
 
 function run_torch_xla_benchmark_tests() {
   XLA_DIR=$1
+  TORCHBENCH_MODELS=(BERT_pytorch dcgan)
   pushd $XLA_DIR
   echo "Running Benchmark Tests"
   test/benchmarks/run_tests.sh -L""
   popd
-}
-
-function run_torch_xla_torchbench_tests() {
-  PYTORCH_DIR=$1
-  XLA_DIR=$2
-  # specify the torchbench models we want to do sanity test
-  TORCHBENCH_MODELS=(BERT_pytorch dcgan)
   pushd $XLA_DIR
   echo "Running Torchbench Tests"
-  test/torchbench/run_tests.sh "${TORCHBENCH_MODELS[@]}"
+  test/benchmarks/run_torchbench_tests.sh "${TORCHBENCH_MODELS[@]}"
   popd
 }
 
@@ -100,19 +94,16 @@ fi
 export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
-if [[ -z "$RUN_BENCHMARK_TESTS" && -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" && -z "$RUN_TORCHBENCH_TESTS" ]]; then
+if [[ -z "$RUN_BENCHMARK_TESTS" && -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" ]]; then
   run_torch_xla_python_tests $XLA_DIR $USE_COVERAGE
   run_torch_xla_cpp_tests $XLA_DIR $USE_COVERAGE
   run_torch_xla_benchmark_tests $XLA_DIR
-  run_torch_xla_torchbench_tests $PYTORCH_DIR $XLA_DIR
 else
   # run tests separately.
   if [[ "$RUN_PYTHON_TESTS" == "python_tests" ]]; then
     run_torch_xla_python_tests $XLA_DIR $USE_COVERAGE
   elif [[ "$RUN_BENCHMARK_TESTS" == "benchmark_tests" ]]; then
     run_torch_xla_benchmark_tests $XLA_DIR
-  elif [[ "$RUN_TORCHBENCH_TESTS" == "torchbench_tests" ]]; then
-    run_torch_xla_torchbench_tests $PYTORCH_DIR $XLA_DIR
   else
     run_torch_xla_cpp_tests $XLA_DIR $USE_COVERAGE
   fi

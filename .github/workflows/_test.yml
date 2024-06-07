@@ -49,7 +49,6 @@ jobs:
         include:
           # Use readable strings as they define the workflow titles.
           - run_benchmark_tests: 'benchmark_tests'
-          - run_torchbench_tests: 'torchbench_tests'
           - run_python_tests: 'python_tests'
             run_xla_op_tests1: 'xla_op1'
           - run_python_tests: 'python_tests'
@@ -68,7 +67,6 @@ jobs:
       GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
       RUN_BENCHMARK_TESTS: ${{ matrix.run_benchmark_tests }}
-      RUN_TORCHBENCH_TESTS: ${{ matrix.run_torchbench_tests }}
       RUN_PYTHON_TESTS: ${{ matrix.run_python_tests }}
       RUN_XLA_OP_TESTS1: ${{ matrix.run_xla_op_tests1 }}
       RUN_XLA_OP_TESTS2: ${{ matrix.run_xla_op_tests2 }}
@@ -151,7 +149,7 @@ jobs:
 
           pip install expecttest unittest-xml-reporting
 
-          if [[ ! -z "$RUN_BENCHMARK_TESTS" || ! -z "$RUN_TORCHBENCH_TESTS" ]]; then
+          if [[ ! -z "$RUN_BENCHMARK_TESTS" ]]; then
             pip install -r pytorch/xla/benchmarks/requirements.txt
           fi
       - name: Test
