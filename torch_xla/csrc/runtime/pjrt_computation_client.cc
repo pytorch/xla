@@ -27,6 +27,7 @@
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
+#include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/protobuf_util.h"
 #include "xla/shape.h"
 
@@ -974,6 +975,14 @@ ComputationClient::MemoryInfo PjRtComputationClient::GetMemoryInfo(
       stats.bytes_in_use,
       *stats.bytes_limit,
   };
+}
+
+const PJRT_Api* PjRtComputationClient::pjrt_c_api() const {
+  auto* c_api_client = dynamic_cast<xla::PjRtCApiClient*>(client_.get());
+  if (c_api_client) {
+    return c_api_client->pjrt_c_api();
+  }
+  return nullptr;
 }
 
 }  // namespace runtime

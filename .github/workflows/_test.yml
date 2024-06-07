@@ -39,13 +39,13 @@ on:
         description: Secret to access Bazel build cache
 jobs:
   test:
-    runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
       options: "${{ inputs.install-cuda-plugin && '--gpus all' || '' }} --shm-size 16g"
     strategy:
       fail-fast: false
       matrix:
+        runner: ${{ inputs.runner }}
         include:
           # Use readable strings as they define the workflow titles.
           - run_benchmark_tests: 'benchmark_tests'
@@ -61,6 +61,9 @@ jobs:
             run_cpp_tests1: 'cpp_tests1'
           - run_cpp_tests: 'cpp_tests'
             run_cpp_tests2: 'cpp_tests2'
+          - run_triton_tests: 'triton_tests'
+            runner: 'linux.g5.4xlarge.nvidia.gpu'
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
