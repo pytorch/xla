@@ -144,11 +144,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
-      - name: Checkout PyTorch/benchmark Repo
-        uses: actions/checkout@v4
-        with:
-          repository: pytorch/benchmark
-          path: pytorch/benchmark
       - name: Extra CI deps
         shell: bash
         run: |

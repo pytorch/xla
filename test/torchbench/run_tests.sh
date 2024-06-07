@@ -54,7 +54,7 @@ function install_package() {
 function install_torchbench_models() {
   pushd $CDIR
 
-  # git clone --quiet https://github.com/pytorch/benchmark.git "$TORCHBENCH_DIR"
+  git clone --quiet https://github.com/pytorch/benchmark.git "$TORCHBENCH_DIR"
   cd $TORCHBENCH_DIR
   for model in "${TORCHBENCH_MODELS[@]}"; do
       echo "Installing model: $model"
@@ -82,7 +82,7 @@ function run_tests {
     echo "testing model: $model"
     PJRT_DEVICE=$pjrt_device python -u benchmarks/experiment_runner.py \
     --suite-name=torchbench \
-    --experiment-config='{"accelerator":"'"$pjrt_device"'","xla":"PJRT","dynamo":"openxla","test":"eval","torch_xla2":null,"xla_flags":null}' \
+    --experiment-config='{"accelerator":"'"$pjrt_device"'","xla":"PJRT","dynamo":"openxla","test":"eval","torch_xla2":null,"xla_flags":null,"keep_model_data_on_cuda":false}' \
     --model-config='{"model_name":"'"$model"'"}'
     if [ $? -ne 0 ]; then
       echo "ERROR: Failed to test $model. Exiting with failure." >&2
