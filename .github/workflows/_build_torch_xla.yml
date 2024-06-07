@@ -10,11 +10,6 @@ on:
           required: true
           type: string
           description: torch-commit
-      torchbench-commit:
-          required: false
-          type: string
-          description: torchbench-commit
-          default: main
       runner:
         required: false
         type: string
@@ -57,12 +52,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
-      - name: Checkout PyTorch/benchmark Repo
-        uses: actions/checkout@v4
-        with:
-          repository: pytorch/benchmark
-          path: pytorch/benchmark
-          ref: ${{ inputs.torchbench-commit }}
       - name: Build
         shell: bash
         run: |
