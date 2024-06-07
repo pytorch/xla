@@ -10,15 +10,16 @@
 namespace torch_xla {
 
 static xla::Shape NodeOutputShape(const torch::lazy::Value& lhs, const torch::lazy::Value& rhs) {
-    xla::Shape lhs_shape = GetXlaShape(lhs);
+    // xla::Shape lhs_shape = GetXlaShape(lhs);
     xla::Shape rhs_shape = GetXlaShape(rhs);
-    int64_t bs = lhs_shape.dimensions()[0];
-    int64_t num_in_feature = lhs_shape.dimensions()[1];
-    int64_t num_out_feature = rhs_shape.dimensions()[1] * 2;
-    xla::Shape output_shape = lhs_shape;
-    output_shape.set_dimensions(1, num_out_feature);
-    std::cout << "check dim after casting: " << output_shape << std::endl;
-    return output_shape;
+    return rhs_shape;
+    // int64_t bs = lhs_shape.dimensions()[0];
+    // int64_t num_in_feature = lhs_shape.dimensions()[1];
+    // int64_t num_out_feature = rhs_shape.dimensions()[1] * 2;
+    // xla::Shape output_shape = lhs_shape;
+    // output_shape.set_dimensions(1, num_out_feature);
+    // std::cout << "check dim after casting: " << output_shape << std::endl;
+    // return output_shape;
 }
 
 ReinterpretCast4bit::ReinterpretCast4bit(const torch::lazy::Value& lhs, const torch::lazy::Value& rhs)
@@ -37,8 +38,9 @@ XlaOpVector ReinterpretCast4bit::Lower(LoweringContext* loctx) const {
 
   xla::XlaOp weight_4bit = xla::BitcastConvertType(rhs, xla::PrimitiveType::S4);
   xla::XlaOp weight_4bit_flattened = xla::Collapse(weight_4bit, {1, 2});
-  xla::XlaOp dot = xla::Dot(lhs, weight_4bit_flattened);
-  return ReturnOp(dot, loctx);
+  return ReturnOp(weight_4bit_flattened, loctx);
+  // xla::XlaOp dot = xla::Dot(lhs, weight_4bit_flattened);
+  // return ReturnOp(dot, loctx);
 }
 
 std::string ReinterpretCast4bit::ToString() const {

@@ -1404,6 +1404,15 @@ void InitXlaModuleBindings(py::module m) {
     return torch::autograd::make_variable(
         result, /*requires_grad=*/input.requires_grad());
   });
+  m.def("_xla_reinterpret_cast_4bit",
+        [](const at::Tensor& input, const at::Tensor& weight) -> at::Tensor {
+          at::Tensor result;
+          {
+            NoGilSection nogil;
+            result = ReinterpretCast4bit(input, weight);
+          }
+          return result;
+        });
   m.def("_xla_quantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
            const std::vector<int>& zero_point_list, int quant_min,

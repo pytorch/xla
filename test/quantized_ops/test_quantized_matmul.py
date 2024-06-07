@@ -5,7 +5,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_quantized_matmul
-from torch_xla.experimental.xla_quantized_matmul import XlaQuantizedLinear
+from torch_xla.experimental.xla_quantized_matmul import XlaQuantizedLinear, pack_4bit, unpack_4bit
 from torch.ao.quantization.utils import determine_qparams
 
 torch.manual_seed(123456)
@@ -99,6 +99,41 @@ class QuantizedTest(unittest.TestCase):
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
       print(hlo)
       self.assertTrue(re.search(r'bf16.*dot.*bf16.*s8', hlo) is not None)
+
+
+  def test_int4_pack_unpack(self):
+    x = torch.randint(-8, 7, (2,12), dtype=torch.int8)
+    orig_dtypes = [torch.int8, ]
+    for dtype in orig_dtypes:
+      data = x.to(dtype) # make sure the tensor is within the range of dtype.
+      packed = pack_4bit(data, dtype=dtype)
+      unpacked = unpack_4bit(packed, dtype=dtype)
+      self.assertTrue(packed.dtype == dtype)
+      self.assertTrue(unpacked.dtype == dtype)
+      self.assertTrue(torch.equal(data, unpacked))
+
+  def test_int4_per_channel_matmul(self):
+
+    weight = torch.randint(-8,7, (2,4)).to(torch.int8)
+    packed_weight = pack_4bit(weight, torch.int8)
+    weight_scaler = torch.randn(4),to(torch.bfloat16)
+
+    x = torch.randn(3,2).to(torch.bfloat16).to(device)
+    weight = weight.to(device)
+    packed_weight = packed_weight.to(device)
+    weight_scaler = weight_scaler.to(device)
+
+    # matmul_int8 = torch.matmul(x, weight)
+    matmul_int8 = torch.ops.xla.quantized_matmul(x, weight, weight_scaler)
+    # int4_weight = torch_xla._XLAC._xla_reinterpret_cast_4bit(x, packed_weight)
+    # matmul_int4 = torch.matmul(x, int4_weight)
+    matmul_int4 = torch.ops.xla.quantized_matmul(x, packed_weight, weight_scaler, int4_packed_weight=True)
+    
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([matmul_int4])
+    print(hlo)
+
+    print(matmul_int8)
+    print(matmul_int4)
 
 
 if __name__ == '__main__':
