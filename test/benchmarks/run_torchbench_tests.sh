@@ -31,14 +31,14 @@ function install_package() {
   git clone --quiet https://github.com/pytorch/vision.git "$TORCHVISION_DIR"
   cd $TORCHVISION_DIR
   git checkout $torchvision_commit_hash
-  python setup.py install
+  python setup.py install 1>/dev/null
 
   torchaudio_commit_hash=$(cat $PYTORCH_DIR/.github/ci_commit_pins/audio.txt)
   echo torchaudio_commit_hash: "$torchaudio_commit_hash"
   git clone --quiet https://github.com/pytorch/audio.git "$TORCHAUDIO_DIR"
   cd $TORCHAUDIO_DIR
   git checkout $torchaudio_commit_hash
-  python setup.py install
+  python setup.py install 1>/dev/null
 
   torchtext_commit_hash=$(cat $PYTORCH_DIR/.github/ci_commit_pins/text.txt)
   echo torchtext_commit_hash: "$torchtext_commit_hash"
@@ -46,7 +46,7 @@ function install_package() {
   cd $TORCHTEXT_DIR
   git checkout $torchtext_commit_hash
   git submodule update --init --recursive
-  python setup.py clean install
+  python setup.py clean install 1>/dev/null
 
   popd
 }
