@@ -54,7 +54,7 @@ function install_package() {
 function install_torchbench_models() {
   pushd $CDIR
 
-  # git clone --quiet https://github.com/pytorch/benchmark.git "$TORCHBENCH_DIR"
+  git clone --quiet https://github.com/pytorch/benchmark.git "$TORCHBENCH_DIR"
   cd $TORCHBENCH_DIR
   for model in "${TORCHBENCH_MODELS[@]}"; do
       echo "Installing model: $model"
@@ -94,7 +94,7 @@ function run_tests {
   return $overall_status
 }
 
-
+install_package
 install_torchbench_models
 run_tests
 if [ $? -ne 0 ]; then
