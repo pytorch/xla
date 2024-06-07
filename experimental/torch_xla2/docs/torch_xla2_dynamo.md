@@ -8,7 +8,7 @@ The users should be able to do the following:
 
 ```python
 m = model ...
-m_compiled = torch.compile(m, backend='openxla2')  # backend name TBD
+m_compiled = torch.compile(m, backend='torch_xla2_compile')  # backend name TBD
 result = m_compiled(*inputs)
 ```
 
@@ -189,4 +189,6 @@ class Subclass(torch.Tensor):
     return "Subclass({} {})".format(str(type(self._elem)), str(self._elem))
 
 ``` 
+
+This fails with an error saying that exhausted subclasses and all the `__torch_dispatch__` returned `NotImplemented`.
 
