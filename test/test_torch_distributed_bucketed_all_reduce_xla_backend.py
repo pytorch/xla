@@ -21,7 +21,7 @@ def _mp_fn(index):
     ]
     for j, t in enumerate(tensor_list):
       t.fill_(float(j))
-    dist.bucketed_allreduce(tensor_list)
+    dist.all_reduce_bucketized_gradients(tensor_list, 1.0, None, True)
     for j, t in enumerate(tensor_list):
       assert torch.all(torch.eq(t.cpu(),
                                 float(j) * world_size)) == torch.tensor(True)
