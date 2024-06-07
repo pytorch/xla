@@ -11,6 +11,8 @@ import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
 import torch.utils.dlpack as torchdl
 
+from torch_xla2 import config
+
 class OperatorNotFound(Exception):
   pass
 
@@ -313,13 +315,16 @@ class Environment(contextlib.ContextDecorator):
     _prng_key: jax.random.PRNGKey
 
 
-    def __init__(self):
+    def __init__(self, configuration=None):
         self._function_mode = XLAFunctionMode(self)
         self._dispatch_mode = XLADispatchMode(self)
 
         # name is torch callable
         self._ops = {}
         self.load_ops()
+
+        self._mesh = None
+        self.config = configuration or config.Configuration()
 
     def load_ops(self):
       from torch_xla2.ops import jaten, jtorch, ops_registry
@@ -406,8 +411,10 @@ class Environment(contextlib.ContextDecorator):
       return res
 
     def t2j_iso(self, torchtensors):
-      return torch_pytree.tree_map_only(
-        XLATensor2, lambda x: x.jax(), torchtensors)
+      def to_jax(x):
+        assert isinstance(x, XLATensor2)
+        return x.jax()
+      return torch_pytree.tree_map_only(torch.Tensor, to_jax, torchtensors)
 
     def j2t_iso(self, jaxarray):
       return torch_pytree.tree_map_only(
