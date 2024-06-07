@@ -42,7 +42,7 @@ function install_package() {
 
   torchtext_commit_hash=$(cat $PYTORCH_DIR/.github/ci_commit_pins/text.txt)
   echo torchtext_commit_hash: "$torchtext_commit_hash"
-  git clone --quiet https://github.com/pytorch/audio.git "$TORCHTEXT_DIR"
+  git clone --quiet https://github.com/pytorch/text.git "$TORCHTEXT_DIR"
   cd $TORCHTEXT_DIR
   git checkout $torchtext_commit_hash
   git submodule update --init --recursive
