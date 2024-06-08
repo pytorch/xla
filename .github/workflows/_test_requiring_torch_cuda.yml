@@ -120,6 +120,7 @@ jobs:
           set -xue
           PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
           PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
+        if: ${{ matrix.run_python_tests }}
       - name: Triton Tests
         shell: bash
         run: |
