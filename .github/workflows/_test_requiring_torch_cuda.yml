@@ -35,9 +35,9 @@ jobs:
       options: "--gpus all --shm-size 16g"
     strategy:
       matrix:
-        runner: ${{ inputs.runner }}
         include:
           - run_python_tests: 'python_tests'
+            runner: ${{ inputs.runner }}
           - run_triton_tests: 'triton_tests'
             runner: 'linux.g5.4xlarge.nvidia.gpu'
     runs-on: ${{ matrix.runner }}
