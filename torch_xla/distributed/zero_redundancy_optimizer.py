@@ -106,6 +106,7 @@ class ZeroRedundancyOptimizer(Optimizer):
     self.bucket_cap_mb_reduce_scatter = bucket_cap_mb_reduce_scatter
     self.coalesce_cc_all_gather = bucket_cap_mb_all_gather > 0
     self.coalesce_cc_reduce_scatter = bucket_cap_mb_reduce_scatter > 0
+    self.save_master_weights = save_master_weights
     self.higher_cc_precision = higher_cc_precision
     self.use_grad_acc_hook = use_grad_acc_hook
     self.grad_accs = []

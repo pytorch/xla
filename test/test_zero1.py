@@ -2,12 +2,15 @@ import torch
 import torch.nn as nn
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
 from torch_xla.distributed.zero_redundancy_optimizer import ZeroRedundancyOptimizer
 from torch_xla import runtime as xr
-from torch.testing._internal.common_utils import TestCase
 from copy import deepcopy
 
+import sys
 import unittest
+
+import test_utils
 
 
 def _get_partial_states(s):
@@ -28,31 +31,34 @@ def _get_partial_states(s):
   return xm.ToXlaTensorArena(convert_fn, select_fn).transform(s)
 
 
-class XlaZeRO1Test(TestCase):
+class XlaZeRO1Test(test_utils.XlaTestCase):
 
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU")
   def test_zero1(self):
     device = xm.xla_device()
 
-    model = nn.Linear(8, 8)
-    x = torch.ones((8, 8))
+    model = nn.Linear(32, 32)
+    x = torch.ones((32, 32))
+    x.requires_grad = True
     model = model.to(device)
     x = x.to(device)
     y = model(x).sum()
     y.backward()
+    xm.mark_step()
 
     opt1 = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    opt1.step()
+    xm.mark_step()
+
     opt2 = ZeroRedundancyOptimizer(
         model.parameters(),
         torch.optim.SGD,
         lr=0.01,
         momentum=0.9,
         grad_clipping=False)
-
-    opt1.step()
     opt2.step()
-
     xm.mark_step()
+
     s1 = opt1.state_dict()
     s2 = opt2.state_dict()
     self.assertEqual(_get_partial_states(s1['state']), s2['base_state'])
@@ -83,6 +89,16 @@ class XlaZeRO1Test(TestCase):
     opt2.step()
 
 
+def _mp_fn(index):
+  device = xm.xla_device()
+  if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
+    test = unittest.main(exit=False)
+    sys.exit(0 if test.result.wasSuccessful() else 1)
+  else:
+    print(
+        'Default device {} is not a TPU or CUDA device'.format(device),
+        file=sys.stderr)
+
+
 if __name__ == '__main__':
-  test = unittest.main()
-  sys.exit(0 if test.result.wasSuccessful() else 1)
+  xmp.spawn(_mp_fn, args=())
