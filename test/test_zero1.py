@@ -22,7 +22,7 @@ def _get_partial_states(s):
         tensors, devices=[], wait=True, sync_xla_data=True)
     ret = []
     for t in tensors:
-      ret.append(t.chunk(dp_size)[dp_rank])
+      ret.append(t.chunk(dp_size)[dp_rank].detach().cpu())
     return ret
 
   def select_fn(v):
@@ -63,9 +63,8 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     s2 = opt2.state_dict()
     self.assertEqual(_get_partial_states(s1['state']), s2['base_state'])
 
-    # deepcopy s1 to load later because pytorch optimizers do not guarantee the input
-    # state_dict will not be modified. on the other hand, s2 has this guarantee.
-    s1_clone = deepcopy(s1)
+    s1_clone = deepcopy(xm._maybe_convert_to_cpu(s1))
+    s2_clone = deepcopy(xm._maybe_convert_to_cpu(s2))
 
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
@@ -76,10 +75,11 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     # step still runnable
     opt1.step()
     opt2.step()
-
     xm.mark_step()
+
     opt1.load_state_dict(s1_clone)
-    opt2.load_state_dict(s2)
+    opt2.load_state_dict(s2_clone)
+    xm.mark_step()
     self.assertEqual(
         _get_partial_states(opt1.state_dict()['state']),
         opt2.state_dict()['base_state'])
@@ -87,6 +87,7 @@ class XlaZeRO1Test(test_utils.XlaTestCase):
     # step still runnable
     opt1.step()
     opt2.step()
+    xm.mark_step()
 
 
 def _mp_fn(index):
