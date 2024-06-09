@@ -524,7 +524,7 @@ You could use these examples on TPU/GPU/CPU single-host and modify it to run on 
 We are introducing a new PyTorch/XLA SPMD feature, called ``auto-sharding``, [RFC](https://github.com/pytorch/xla/issues/6322). This is an experimental feature in `r2.3` and `nightly`, that supports `XLA:TPU` and a single TPUVM host.
 
 PyTorch/XLA auto-sharding can be enabled by one of the following:
-- Setting envvar `XLA_SPMD_AUTO=1`
+- Setting envvar `XLA_AUTO_SPMD=1`
 - Calling the SPMD API in the beginning of your code:
 
 ```python
