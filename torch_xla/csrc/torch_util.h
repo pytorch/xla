@@ -67,8 +67,8 @@ at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype);
 // only unwrap tensors that are functional. So, nothing needs to be done there.
 at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor);
 
-// Checks whether a c10::optional<Tensor> is defined.
-inline bool IsDefined(const c10::optional<at::Tensor>& tensor) {
+// Checks whether a std::optional<Tensor> is defined.
+inline bool IsDefined(const std::optional<at::Tensor>& tensor) {
   return tensor.has_value() && tensor.value().defined();
 }
 

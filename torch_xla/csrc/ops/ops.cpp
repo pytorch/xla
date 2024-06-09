@@ -105,7 +105,7 @@ torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
 }
 
 torch::lazy::NodePtr Logit(const torch::lazy::Value& input,
-                           c10::optional<double> eps) {
+                           std::optional<double> eps) {
   auto lower_fn = [eps](const XlaNode& node,
                         LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
@@ -526,8 +526,8 @@ torch::lazy::NodePtr BroadcastTensors(
 }
 
 torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
-                          const c10::optional<at::Scalar>& p,
-                          c10::optional<at::ScalarType> dtype,
+                          const std::optional<at::Scalar>& p,
+                          std::optional<at::ScalarType> dtype,
                           absl::Span<const int64_t> dims, bool keepdim) {
   torch::lazy::ScopePusher ir_scope(at::aten::norm.toQualString());
   auto dimensions = torch::lazy::ToVector<int64_t>(dims);
@@ -568,8 +568,8 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
 }
 
 torch::lazy::NodePtr Pdist_forward(const torch::lazy::Value& input,
-                                   const c10::optional<at::Scalar>& p,
-                                   c10::optional<at::ScalarType> dtype) {
+                                   const std::optional<at::Scalar>& p,
+                                   std::optional<at::ScalarType> dtype) {
   // pdist(x, p) is equal to norm(x[:, None]-x, dim=2, p) and we only take the
   // upper triangle without diagonal line.
   auto lower_fn = [=](const XlaNode& node,
@@ -625,7 +625,7 @@ torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
                                       const at::Scalar& ord,
                                       std::vector<int64_t> dimensions,
                                       bool keepdim,
-                                      c10::optional<at::ScalarType> dtype) {
+                                      std::optional<at::ScalarType> dtype) {
   torch::lazy::ScopePusher ir_scope(at::aten::norm.toQualString());
   double ord_value = ord.to<double>();
   auto input_shape = GetXlaShape(input);
