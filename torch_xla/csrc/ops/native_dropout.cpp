@@ -16,7 +16,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
 
 NativeDropout::NativeDropout(const torch::lazy::Value& input,
                              const torch::lazy::Value& seed, float p,
-                             c10::optional<bool> train)
+                             std::optional<bool> train)
     : XlaNode(
           torch::lazy::OpKind(at::aten::native_dropout), {input, seed},
           [&]() { return NodeOutputShape(input); }, 2,

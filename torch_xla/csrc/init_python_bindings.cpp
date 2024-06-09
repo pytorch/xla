@@ -105,10 +105,10 @@ class PyPjRtPlugin : public runtime::PjRtPlugin {
   }
 };
 
-c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(
+std::optional<torch::lazy::BackendDevice> GetOptionalDevice(
     const std::string& device_str) {
   if (device_str.empty()) {
-    return c10::nullopt;
+    return std::nullopt;
   }
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
 }

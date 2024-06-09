@@ -379,11 +379,11 @@ void TestBackward(
     // Calculating higher order derivative requires create_graph=true
     bool create_graph = d != derivative_level;
     outs = torch::autograd::grad({sum}, inputs_w_grad, /*grad_outputs=*/{},
-                                 /*retain_graph=*/c10::nullopt,
+                                 /*retain_graph=*/std::nullopt,
                                  /*create_graph=*/create_graph,
                                  /*allow_unused=*/true);
     xouts = torch::autograd::grad({xsum}, xinputs_w_grad, /*grad_outputs=*/{},
-                                  /*retain_graph=*/c10::nullopt,
+                                  /*retain_graph=*/std::nullopt,
                                   /*create_graph=*/create_graph,
                                   /*allow_unused=*/true);
     for (size_t i = 0; i < outs.size(); ++i) {

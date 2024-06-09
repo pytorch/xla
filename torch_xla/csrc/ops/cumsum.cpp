@@ -15,7 +15,7 @@ namespace torch_xla {
 namespace {
 
 xla::XlaOp LowerCumSum(xla::XlaOp input, int64_t dim,
-                       c10::optional<at::ScalarType> dtype) {
+                       std::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input = CastToScalarType(input, dtype);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(casted_input);
   xla::XlaOp init = XlaHelpers::ScalarValue<float>(
@@ -26,7 +26,7 @@ xla::XlaOp LowerCumSum(xla::XlaOp input, int64_t dim,
 }
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
-                           c10::optional<at::ScalarType> dtype) {
+                           std::optional<at::ScalarType> dtype) {
   if (dtype) {
     return xla::ShapeUtil::ChangeElementType(
         GetXlaShape(input), MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
@@ -37,7 +37,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 CumSum::CumSum(const torch::lazy::Value& input, int64_t dim,
-               c10::optional<at::ScalarType> dtype)
+               std::optional<at::ScalarType> dtype)
     : XlaNode(
           torch::lazy::OpKind(at::aten::cumsum), {input},
           [&]() { return NodeOutputShape(input, dtype); },

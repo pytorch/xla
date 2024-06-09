@@ -12,13 +12,13 @@ namespace torch_xla {
 namespace {
 
 xla::XlaOp LowerSoftmax(xla::XlaOp input, int64_t dim,
-                        const c10::optional<at::ScalarType>& dtype) {
+                        const std::optional<at::ScalarType>& dtype) {
   xla::XlaOp result = BuildSoftmax(input, dim);
   return CastToScalarType(result, dtype);
 }
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
-                           const c10::optional<at::ScalarType>& dtype) {
+                           const std::optional<at::ScalarType>& dtype) {
   if (dtype) {
     return xla::ShapeUtil::ChangeElementType(
         GetXlaShape(input), MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
@@ -29,7 +29,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 Softmax::Softmax(const torch::lazy::Value& input, int64_t dim,
-                 c10::optional<at::ScalarType> dtype)
+                 std::optional<at::ScalarType> dtype)
     : XlaNode(
           torch::lazy::OpKind(at::aten::softmax), {input},
           [&]() { return NodeOutputShape(input, dtype); },

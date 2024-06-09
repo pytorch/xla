@@ -26,7 +26,7 @@ XLATensorPtr IndexAcrossDims(const XLATensorPtr& input, int64_t dim,
 }  // namespace
 
 XLATensorPtr Cross(const XLATensorPtr& input, const XLATensorPtr& other,
-                   c10::optional<int64_t> dim) {
+                   std::optional<int64_t> dim) {
   int64_t canonical_dim;
   if (dim) {
     canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
