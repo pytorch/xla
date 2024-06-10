@@ -139,6 +139,35 @@ class QuantizedTest(unittest.TestCase):
     # print(matmul_int8)
     print(matmul_int4)
 
+  def test_int4_blockwise_matmul(self):
+
+    input_features = 6
+    block_size = 2
+    out_features = 8
+    weight = torch.randint(-8,7, (int(input_features / block_size), block_size, out_features)).to(torch.int8)
+    weight_scaler = torch.randn(int(input_features / block_size), out_features).to(torch.bfloat16)
+
+    x = torch.randn(3, int(input_features / block_size), block_size).to(torch.bfloat16).to(device)
+    
+    weight = weight.to(device)
+    weight_scaler = weight_scaler.to(device)
+
+    # matmul_int8 = torch.matmul(x, weight)
+    # matmul_int8 = torch.ops.xla.quantized_matmul(x, weight, weight_scaler)
+    # x = x.unsqueeze(0)
+    print(weight)
+    
+    weight_int4 = torch_xla._XLAC._xla_reinterpret_cast_4bit(x, weight, weight.cpu().flatten().numpy().tolist())
+    matmul_int4 = torch.einsum('scn,bsc->bsn', weight_int4, x)
+    matmul_int4 = torch.einsum('sn,bsn->bn', weight_scaler, matmul_int4)
+    
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([matmul_int4])
+    print(hlo)
+
+    # print(matmul_int8)
+    print(matmul_int4)
+
+
 
 if __name__ == '__main__':
   unittest.main()
