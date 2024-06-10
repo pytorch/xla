@@ -100,7 +100,7 @@ orig_model.linear = q_linear
 | Weight Quantization Type | Activation Quantization Type | Dtype | Supported |
 |---|---|---|---|
 | per-channel | N/A | W8A16 | Yes |
-| per-channel | N/A | W4A16 | No |
+| per-channel | N/A | W4A16 | Yes |
 | per-channel | per-token | W8A8 | No |
 | per-channel | per-token | W4A8 | No |
 | blockwise | N/A | W8A16 | No |

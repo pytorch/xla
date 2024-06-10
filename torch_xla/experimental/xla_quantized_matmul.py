@@ -76,6 +76,8 @@ def quantized_matmul_xla(x: torch.Tensor,
       scaler: torch.Tensor - Weight scaler.
          per-channel quant: [out_channel,].
       blocksize: blocksize for blockwise quantization, -1 for per-channel quantization.
+      int4_weight: if the weights are int4, the int4 weights need to be stored in a int8
+                   container (unpacked).
   """
   assert blocksize == -1, "blockwise quantization is not supported yet."
   if int4_weight:
