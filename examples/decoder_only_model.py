@@ -13,7 +13,7 @@ class DecoderOnlyConfig:
   num_hidden_layers: int = 2
   num_attention_heads: int = 8
   num_key_value_heads: int = 4
-  intermediate_size = 64 * 1024
+  intermediate_size = 32 * 1024
   vocab_size = 3200
   use_flash_attention = False
 

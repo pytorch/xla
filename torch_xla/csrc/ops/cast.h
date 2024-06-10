@@ -12,7 +12,7 @@ class Cast : public XlaNode {
  public:
   Cast(const torch::lazy::Value& input, xla::PrimitiveType type);
   Cast(const torch::lazy::Value& input, at::ScalarType dtype,
-       c10::optional<at::ScalarType> stype = c10::nullopt);
+       std::optional<at::ScalarType> stype = std::nullopt);
 
   std::string ToString() const override;
 
@@ -22,14 +22,14 @@ class Cast : public XlaNode {
 
   xla::PrimitiveType type() const { return type_; }
 
-  const c10::optional<at::ScalarType>& dtype() const { return dtype_; };
+  const std::optional<at::ScalarType>& dtype() const { return dtype_; };
 
-  const c10::optional<at::ScalarType>& stype() const { return stype_; };
+  const std::optional<at::ScalarType>& stype() const { return stype_; };
 
  private:
   xla::PrimitiveType type_;
-  c10::optional<at::ScalarType> dtype_;
-  c10::optional<at::ScalarType> stype_;
+  std::optional<at::ScalarType> dtype_;
+  std::optional<at::ScalarType> stype_;
 };
 
 }  // namespace torch_xla

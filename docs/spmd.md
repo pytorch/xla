@@ -501,7 +501,10 @@ xs.mark_sharding(t, mesh, ('x', 'y'))
 from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 generated_table = visualize_tensor_sharding(t, use_color=False)
 ```
-![alt_text](assets/spmd_debug_1.png "visualize_tensor_sharding example on TPU v4-8(single-host)")
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/spmd_debug_1.png">
+  <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="assets/spmd_debug_1_light.png">
+</picture>
 
 - Code snippet used `visualize_sharding` and visualization result:
 
@@ -510,7 +513,10 @@ from torch_xla.distributed.spmd.debugging import visualize_sharding
 sharding = '{devices=[2,2]0,1,2,3}'
 generated_table = visualize_sharding(sharding, use_color=False)
 ```
-![alt_text](assets/spmd_debug_2.png "visualize_sharding example on TPU v4-8(single-host")
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/spmd_debug_2.png">
+  <img alt="visualize_sharding example on TPU v4-8(single-host)" src="assets/spmd_debug_2_light.png">
+</picture>
 
 You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style `tiled`, `partial_replication` and `replicated`.
 
@@ -518,7 +524,7 @@ You could use these examples on TPU/GPU/CPU single-host and modify it to run on 
 We are introducing a new PyTorch/XLA SPMD feature, called ``auto-sharding``, [RFC](https://github.com/pytorch/xla/issues/6322). This is an experimental feature in `r2.3` and `nightly`, that supports `XLA:TPU` and a single TPUVM host.
 
 PyTorch/XLA auto-sharding can be enabled by one of the following:
-- Setting envvar `XLA_SPMD_AUTO=1`
+- Setting envvar `XLA_AUTO_SPMD=1`
 - Calling the SPMD API in the beginning of your code:
 
 ```python

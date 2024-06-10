@@ -16,7 +16,7 @@ namespace {
 
 xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions,
-                    c10::optional<at::ScalarType> dtype) {
+                    std::optional<at::ScalarType> dtype) {
   return BuildSum(CastToScalarType(input, dtype), dimensions,
                   keep_reduced_dimensions);
 }
@@ -24,7 +24,7 @@ xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> dimensions,
                            bool keep_reduced_dimensions,
-                           c10::optional<at::ScalarType> dtype) {
+                           std::optional<at::ScalarType> dtype) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerSum(operands[0], dimensions, keep_reduced_dimensions, dtype);
@@ -35,7 +35,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 Sum::Sum(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
-         bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
+         bool keep_reduced_dimensions, std::optional<at::ScalarType> dtype)
     : XlaNode(
           torch::lazy::OpKind(at::aten::sum), {input},
           [&]() {

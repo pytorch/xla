@@ -85,7 +85,7 @@ def _aten_copy(x, y, memory_format=None):
 @op(torch.ops.aten.clone)
 @op(torch.ops.aten.clone.default)
 def _aten_clone(x, memory_format=None):
-  return jnp.copy(x)
+  return x
 
 
 @op(torch.ops.aten.full)
@@ -1316,7 +1316,7 @@ def _aten_any(self, dim=None, keepdim=False):
 def _aten_arange(
   start,
   end=None,
-  step=1,
+  step=None,
   *,
   dtype=None,
   layout=None,
@@ -1324,9 +1324,6 @@ def _aten_arange(
   device=None,
   pin_memory=False,
 ):
-  if end is None:
-    end = start
-    start = 0
   if dtype:
     dtype = tensor.t2j_dtype(dtype)
   return jnp.arange(

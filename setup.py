@@ -64,7 +64,7 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_date = '20240527'
+_date = '20240605'
 _libtpu_version = f'0.1.dev{_date}'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 _jax_version = f'0.4.29.dev{_date}'
@@ -302,7 +302,11 @@ setup(
         'console_scripts': [
             'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
         ],
-        'torch_xla.plugins': ['tpu = torch_xla._internal.tpu:TpuPlugin',],
+        'torch_xla.plugins': [
+            'tpu = torch_xla._internal.tpu:TpuPlugin',
+            'neuron = torch_xla._internal.neuron:NeuronPlugin',
+            'xpu = torch_xla._internal.xpu:XpuPlugin'
+        ],
     },
     extras_require={
         # On Cloud TPU VM install with:

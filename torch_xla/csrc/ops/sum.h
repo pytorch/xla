@@ -12,7 +12,7 @@ namespace torch_xla {
 class Sum : public XlaNode {
  public:
   Sum(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
-      bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype);
+      bool keep_reduced_dimensions, std::optional<at::ScalarType> dtype);
 
   std::string ToString() const override;
 
@@ -24,12 +24,12 @@ class Sum : public XlaNode {
 
   bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
 
-  const c10::optional<at::ScalarType>& dtype() const { return dtype_; }
+  const std::optional<at::ScalarType>& dtype() const { return dtype_; }
 
  private:
   std::vector<int64_t> dimensions_;
   bool keep_reduced_dimensions_;
-  c10::optional<at::ScalarType> dtype_;
+  std::optional<at::ScalarType> dtype_;
 };
 
 }  // namespace torch_xla

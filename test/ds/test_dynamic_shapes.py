@@ -566,13 +566,31 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t1[3][0] = 1
     # t2 has size [<=10, 2]
     t2 = torch.nonzero(t1)
-    # Create a SizeAdd IR node.
+    # Create a SizeLt IR node.
     # t2.shape[1] generates a SizeConstant node.
     dyn_size = t2.shape[0] < t2.shape[1]
     self.assertGreater(met.counter_value("xla::size_lt"), 0)
     # Exercises SizeLt::getDynamicValue.
     dynamic_size = int(dyn_size)
     self.assertEqual(dynamic_size, 1)
+
+  def test_sizeGt(self):
+    met.clear_all()
+
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    # t2 has size [<=10, 2]
+    t2 = torch.nonzero(t1)
+    # Create a SizeGt IR node.
+    # t2.shape[1] generates a SizeConstant node.
+    dyn_size = t2.shape[0] > t2.shape[1]
+    self.assertGreater(met.counter_value("xla::size_gt"), 0)
+    # Exercises SizeGt::getDynamicValue.
+    dynamic_size = int(dyn_size)
+    # To evaluate dynamic value (1 > 2), hence false.
+    self.assertEqual(dynamic_size, 0)
 
   def test_sizeNe(self):
     met.clear_all()

@@ -25,6 +25,6 @@ if __name__ == '__main__':
       f'localhost:{profile_port}', profile_logdir, duration_ms=duration_ms)
   base.start_training()
   # You can view the profile at tensorboard by
-  # 1. pip install tensorflow tensorboard-plugin-profile
+  # 1. pip install tensorflow-cpu tensorboard-plugin-profile
   # 2. tensorboard --logdir /tmp/profile/ --port 6006
   # For more detail plase take a look at https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm

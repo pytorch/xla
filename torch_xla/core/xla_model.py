@@ -967,7 +967,7 @@ def reduce_scatter_bucketized(reduce_type,
     see reduce_scatter for reduce_type, scale, scatter_dim, shard_count, groups, pin_layout
     input_list: List of input tensors
     output: Optional list of output torch.Tensor
-    bucket_cap_mb: Number of MegaBytes of the tensor bucket to fill before doing all-gather.
+    bucket_cap_mb: Number of MegaBytes of the tensor bucket to fill before doing reduce-scatter.
 
   Returns:
     A list of `torch.Tensors` with all the values reduced across replicas. Each process

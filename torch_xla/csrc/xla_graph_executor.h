@@ -80,12 +80,12 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
-      c10::optional<at::ScalarType> logical_element_type,
+      std::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
       SymIntElements size_elements,
-      c10::optional<at::ScalarType> logical_element_type,
+      std::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
 
   // Override to use our own DeviceContextArena.

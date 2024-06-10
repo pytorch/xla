@@ -81,8 +81,8 @@ class QuantizedTest(unittest.TestCase):
       m = m.to(device)
       x = x.to(device)
       out_quant_xla = m(x)
-      # self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.01))
-      # self.assertTrue(torch.allclose(out_quant_xla.cpu(), out_quant))
+      self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.01))
+      self.assertTrue(torch.allclose(out_quant_xla.cpu(), out_quant))
 
   def test_q_linear_module_dynamo(self):
 
@@ -95,8 +95,8 @@ class QuantizedTest(unittest.TestCase):
       m = m.to(device)
       m_dynamo = torch.compile(m, backend="openxla")
       out_quant_dynamo = m_dynamo(x.to(device))
-      # self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.01))
-      # self.assertTrue(torch.allclose(out_quant_dynamo.cpu(), out_quant))
+      self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.01))
+      self.assertTrue(torch.allclose(out_quant_dynamo.cpu(), out_quant))
 
   def test_q_linear_hlo(self):
     with torch.no_grad():

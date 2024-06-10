@@ -289,6 +289,7 @@ ptxla_cc_library(
         "@xla//xla/service:hlo_verifier",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
+        "@xla//xla/service:custom_call_target_registry",
     ],
 )
 
