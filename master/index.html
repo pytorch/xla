@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git5338a3b )
+                  master (2.4.0+git28c5e14 )
                 </div>
               
             
@@ -3871,7 +3871,7 @@ training_or_inference_script_using_spmd.py
 <p>We are introducing a new PyTorch/XLA SPMD feature, called <code class="docutils literal notranslate"><span class="pre">auto-sharding</span></code>, <a class="reference external" href="https://github.com/pytorch/xla/issues/6322">RFC</a>. This is an experimental feature in <code class="docutils literal notranslate"><span class="pre">r2.3</span></code> and <code class="docutils literal notranslate"><span class="pre">nightly</span></code>, that supports <code class="docutils literal notranslate"><span class="pre">XLA:TPU</span></code> and a single TPUVM host.</p>
 <p>PyTorch/XLA auto-sharding can be enabled by one of the following:</p>
 <ul class="simple">
-<li><p>Setting envvar <code class="docutils literal notranslate"><span class="pre">XLA_SPMD_AUTO=1</span></code></p></li>
+<li><p>Setting envvar <code class="docutils literal notranslate"><span class="pre">XLA_AUTO_SPMD=1</span></code></p></li>
 <li><p>Calling the SPMD API in the beginning of your code:</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
