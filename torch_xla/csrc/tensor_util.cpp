@@ -883,7 +883,6 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
 xla::Shape CreateComputationShapeFromTensor(
     const at::Tensor& tensor, const torch::lazy::BackendDevice* device) {
   torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
-  // XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
   return MakeArrayShapeFromDimensions(
       XlaHelpers::I64List(tensor.sizes()),
       /*dynamic_dimensions=*/{},
