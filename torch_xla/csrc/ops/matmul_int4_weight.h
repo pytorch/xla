@@ -8,7 +8,7 @@ namespace torch_xla {
 class ReinterpretCast4bit : public XlaNode {
  public:
   ReinterpretCast4bit(const torch::lazy::Value& lhs, const torch::lazy::Value& rhs,
-                      const std::vector<int8_t>& int4_weight_values);
+                      const std::vector<int>& int4_weight_values);
 
   std::string ToString() const override;
 
@@ -17,7 +17,7 @@ class ReinterpretCast4bit : public XlaNode {
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
  private:
-  std::vector<int8_t> int4_vals_;
+  std::vector<int> int4_vals_;
 };
 
 }  // namespace torch_xla

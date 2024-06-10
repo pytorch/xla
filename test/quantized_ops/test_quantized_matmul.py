@@ -113,12 +113,11 @@ class QuantizedTest(unittest.TestCase):
       self.assertTrue(torch.equal(data, unpacked))
 
   def test_int4_per_channel_matmul(self):
-
     weight = torch.randint(-8,7, (4,2)).to(torch.int8)
     packed_weight = pack_4bit(weight, torch.int8)
     weight_scaler = torch.randn(4).to(torch.bfloat16)
 
-    x = torch.randn(3, 2).to(torch.bfloat16).to(device)
+    x = torch.ones(3, 2).to(torch.bfloat16).to(device)
     weight = weight.to(device)
     packed_weight = packed_weight.to(device)
     weight_scaler = weight_scaler.to(device)
@@ -129,7 +128,7 @@ class QuantizedTest(unittest.TestCase):
     print(weight)
     import torch.nn.functional as F
     # matmul_int4 = torch_xla._XLAC._xla_reinterpret_cast_4bit(x, weight, weight.cpu().flatten().numpy().tolist()) * weight_scaler
-    matmul_int4 = F.linear(x, torch_xla._XLAC._xla_reinterpret_cast_4bit(x, weight, weight.cpu().flatten().numpy().tolist())) * weight_scaler
+    matmul_int4 = F.linear(x, torch_xla._XLAC._xla_reinterpret_cast_4bit(x, weight, weight.cpu().flatten().numpy().tolist()))
     # matmul_int4 = matmul_int4.squeeze(0)
     # matmul_int4 = torch.matmul(x, int4_weight)
     # matmul_int4 = torch.ops.xla.quantized_matmul(x, packed_weight, weight_scaler, int4_packed_weight=True)
@@ -138,7 +137,7 @@ class QuantizedTest(unittest.TestCase):
     print(hlo)
 
     # print(matmul_int8)
-    # print(matmul_int4)
+    print(matmul_int4)
 
 
 if __name__ == '__main__':

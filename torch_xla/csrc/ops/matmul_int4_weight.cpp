@@ -23,9 +23,9 @@ static xla::Shape NodeOutputShape(const torch::lazy::Value& lhs, const torch::la
 }
 
 ReinterpretCast4bit::ReinterpretCast4bit(const torch::lazy::Value& lhs, const torch::lazy::Value& rhs, 
-                                         const std::vector<int8_t>& int4_vals)
+                                         const std::vector<int>& int4_vals)
     : XlaNode(xla_reinterpret_cast_4ibt, {lhs, rhs}, NodeOutputShape(lhs, rhs),
-                    /*num_outputs=*/1, torch::lazy::MHash(int4_vals_)),
+                    /*num_outputs=*/1, torch::lazy::MHash(int4_vals)),
       int4_vals_(int4_vals) {}
 
 torch::lazy::NodePtr ReinterpretCast4bit::Clone(torch::lazy::OpList operands) const {
@@ -50,7 +50,8 @@ XlaOpVector ReinterpretCast4bit::Lower(LoweringContext* loctx) const {
   std::vector<xla::s4> values(int4_vals_.begin(), int4_vals_.end());
   // const auto literal = xla::LiteralUtil::CreateR2<xla::s4>({{xla::s4(-1), xla::s4(-1), xla::s4(-1), xla::s4(-1)}, {xla::s4(-1), xla::s4(-1), xla::s4(-1), xla::s4(-1)}});
   const auto literal = xla::LiteralUtil::CreateR1(absl::Span<const xla::s4>(values));
-  auto reshaped_literal = literal.Reshape({rhs_shape.dimensions()[0], rhs_shape.dimensions()[1]});
+  // auto reshaped_literal = literal.Reshape({rhs_shape.dimensions()[0], rhs_shape.dimensions()[1]});
+  auto reshaped_literal = literal.Reshape(rhs_shape.dimensions());
   
   return ReturnOp(xla::ConstantLiteral(lhs.builder(), reshaped_literal.value()), loctx);
   

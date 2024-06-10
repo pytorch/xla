@@ -140,7 +140,7 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
                                const std::string& dtype, int axis);
 
 XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& input, const XLATensorPtr& weight,
-                                   const std::vector<int8_t>& int4_vals);
+                                   const std::vector<int>& int4_vals);
 
 //////////////////////////////////////////////////////////////////////////////
 // Dynamic Reshape ops here.
