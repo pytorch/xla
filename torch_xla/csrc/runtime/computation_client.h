@@ -46,6 +46,7 @@ class XlaCoordinator;
 // ComputationClient.
 struct ClientExecuteOptions {
   bool explode_tuple{true};
+  bool eager_mode{false};
 };
 
 class ComputationClient {
@@ -213,16 +214,14 @@ class ComputationClient {
   // of torch::lazy::Computation?
   struct CompileInstance {
     CompileInstance() = default;
-    CompileInstance(xla::XlaComputation computation,
-                    std::string compilation_device,
-                    std::vector<std::string> devices,
-                    const xla::Shape* output_shape,
-                    bool parameter_is_tupled_arguments = false,
-                    bool is_sharded = false,
-                    bool allow_spmd_sharding_propagation_to_output = true,
-                    bool use_auto_spmd_partitioning = false,
-                    std::vector<int64_t> auto_spmd_mesh_shape = {},
-                    std::vector<int64_t> auto_spmd_mesh_ids = {})
+    CompileInstance(
+        xla::XlaComputation computation, std::string compilation_device,
+        std::vector<std::string> devices, const xla::Shape* output_shape,
+        bool parameter_is_tupled_arguments = false, bool is_sharded = false,
+        bool allow_spmd_sharding_propagation_to_output = true,
+        bool use_auto_spmd_partitioning = false,
+        std::vector<int64_t> auto_spmd_mesh_shape = {},
+        std::vector<int64_t> auto_spmd_mesh_ids = {}, bool eager_mode = false)
         : computation(std::move(computation)),
           compilation_device(std::move(compilation_device)),
           devices(std::move(devices)),
@@ -233,7 +232,8 @@ class ComputationClient {
               allow_spmd_sharding_propagation_to_output),
           use_auto_spmd_partitioning(use_auto_spmd_partitioning),
           auto_spmd_mesh_shape(auto_spmd_mesh_shape),
-          auto_spmd_mesh_ids(auto_spmd_mesh_ids) {}
+          auto_spmd_mesh_ids(auto_spmd_mesh_ids),
+          eager_mode(eager_mode) {}
 
     xla::XlaComputation computation;
     std::string compilation_device;
@@ -245,6 +245,7 @@ class ComputationClient {
     bool use_auto_spmd_partitioning;
     std::vector<int64_t> auto_spmd_mesh_shape;
     std::vector<int64_t> auto_spmd_mesh_ids;
+    bool eager_mode;
   };
 
   struct ExecuteComputationOptions : public ClientExecuteOptions {};
@@ -430,7 +431,9 @@ class ComputationClient {
   static metrics::Metric* TransferToDeviceTransformMetric();
   static metrics::Metric* TransferFromDeviceMetric();
   static metrics::Metric* CompileMetric();
+  static metrics::Metric* EagerCompileMetric();
   static metrics::Metric* ExecuteMetric();
+  static metrics::Metric* EagerExecuteMetric();
   static metrics::Metric* ExecuteReplicatedMetric();
   static metrics::Metric* ExecuteParallelMetric();
   static metrics::Metric* ExecuteChainedMetric();

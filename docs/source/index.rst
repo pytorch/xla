@@ -9,6 +9,7 @@ torch_xla
 .. autofunction:: device
 .. autofunction:: devices
 .. autofunction:: device_count
+.. autofunction:: use_eager_mode
 .. autofunction:: sync
 .. autofunction:: step
 
