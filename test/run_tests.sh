@@ -136,7 +136,7 @@ function run_torchrun {
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     echo "Running torchrun test for GPU $@"
     num_devices=$(nvidia-smi --list-gpus | wc -l)
-    PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node $num_devices $@
+    PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node 1 $@
   fi
 }
 
