@@ -2449,19 +2449,16 @@ void InitXlaModuleBindings(py::module m) {
     }
     if (runtime::sys_util::GetEnvBool(runtime::env::kEnvPjrtDynamicPlugins,
                                       false)) {
-      std::cout << "HERE" << std::endl;
       runtime::PjRtComputationClient* client =
           dynamic_cast<runtime::PjRtComputationClient*>(
               runtime::GetComputationClient());
       if (!client) {
         return;
       }
-      std::cout << "HERE1" << std::endl;
       const PJRT_Api* pjrt_api = client->GetPjRtCApiIfAvailable();
       if (!pjrt_api) {
         return;
       }
-      std::cout << "HERE1" << std::endl;
       const PJRT_Extension_Base* next =
           reinterpret_cast<const PJRT_Extension_Base*>(
               pjrt_api->extension_start);
@@ -2473,7 +2470,6 @@ void InitXlaModuleBindings(py::module m) {
       if (next == nullptr) {
         return;
       }
-      std::cout << "HERE2" << std::endl;
       PJRT_Gpu_Register_Custom_Call_Args args;
       args.struct_size = PJRT_Gpu_Register_Custom_Call_Args_STRUCT_SIZE;
       args.function_name = fn_name.c_str();
