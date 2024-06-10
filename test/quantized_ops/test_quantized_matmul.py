@@ -6,7 +6,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_quantized_matmul
 from torch_xla import runtime as xr
-from torch_xla.experimental.xla_quantized_matmul import XlaQuantizedLinear, pack_4bit, unpack_4bit
+from torch_xla.experimental.xla_quantized_matmul import XlaQuantizedLinear
 from torch.ao.quantization.utils import determine_qparams
 
 torch.manual_seed(123456)
