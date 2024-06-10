@@ -326,15 +326,15 @@ class ZeroRedundancyOptimizer(Optimizer):
 
   def _get_sharding_scheme(self, **kwargs):
     if "sharding_scheme" in kwargs:
-    ¦ return kwargs["sharding_scheme"]
+      return kwargs["sharding_scheme"]
     else:
-    ¦ return [
-    ¦   ¦ {
-    ¦   ¦   ¦ "scale_factor": 1.0,
-    ¦   ¦   ¦ "sharding_group": self.sharding_groups,
-    ¦   ¦   ¦ "group_size": self.local_world_size,
-    ¦   ¦ },
-    ¦ ]
+      return [
+          {
+              "scale_factor": 1.0,
+              "sharding_group": self.sharding_groups,
+              "group_size": self.local_world_size,
+          },
+      ]
 
   def _reduce_gradients(self, **kwargs):
     sharding_scheme = self._get_sharding_scheme(**kwargs)
