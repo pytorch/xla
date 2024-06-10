@@ -1009,11 +1009,11 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
 
 torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
   at::ScalarType scalar_type = MaybeUpcastToHostTorchType(shape.element_type());
-  c10::optional<std::vector<bool>> is_symbolic = c10::nullopt;
+  std::optional<std::vector<bool>> is_symbolic = std::nullopt;
   if (shape.is_dynamic()) {
     std::vector<bool> xla_dynamic_dimensions =
         runtime::util::ToVector<bool>(shape.dynamic_dimensions());
-    is_symbolic = c10::make_optional(xla_dynamic_dimensions);
+    is_symbolic = std::make_optional(xla_dynamic_dimensions);
   }
 
   return torch::lazy::Shape(

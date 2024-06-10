@@ -311,7 +311,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const at::Scalar& value, const xla::Shape& shape,
-    c10::optional<at::ScalarType> logical_element_type,
+    std::optional<at::ScalarType> logical_element_type,
     const torch::lazy::BackendDevice& device) {
   xla::PrimitiveType type =
       logical_element_type
@@ -323,7 +323,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const at::Scalar& value, const xla::Shape& shape,
     SymIntElements size_elements,
-    c10::optional<at::ScalarType> logical_element_type,
+    std::optional<at::ScalarType> logical_element_type,
     const torch::lazy::BackendDevice& device) {
   xla::PrimitiveType primitive_type =
       logical_element_type
@@ -597,7 +597,7 @@ void XLAGraphExecutor::ClearPendingIrs(
         }
         tensors[i]->AssignIrValue(torch::lazy::Value());
         tensors[i]->data()->view = nullptr;
-        tensors[i]->data()->tensor_data = c10::nullopt;
+        tensors[i]->data()->tensor_data = std::nullopt;
       }
     }
   }
@@ -673,7 +673,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
       } else if (config.force_ltc_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
         // device upload.
-        c10::optional<at::Tensor> tensor_data = tensors[i]->CurrentTensorData();
+        std::optional<at::Tensor> tensor_data = tensors[i]->CurrentTensorData();
         XLA_CHECK(tensor_data);
         at_tensors.push_back(*tensor_data);
         shardings.push_back(tensors[i]->sharding_spec());
@@ -997,7 +997,7 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
       // of ExtractIRAndPrepareXlaData_ to overlap with previous execution.
       tensor->data()->handle = handle;
       tensor->data()->view = nullptr;
-      tensor->data()->tensor_data = c10::nullopt;
+      tensor->data()->tensor_data = std::nullopt;
       tensor->data()->is_cloned = false;
     }
     tensors_data.emplace_back(std::move(handle));
@@ -1056,7 +1056,7 @@ std::vector<at::Tensor> XLAGraphExecutor::FetchTensors(
       ++literals_index;
       ++sync_index;
     } else {
-      c10::optional<at::Tensor> tensor_data =
+      std::optional<at::Tensor> tensor_data =
           (*tensors)[i]->CurrentTensorData();
       if (tensor_data) {
         results.push_back(*tensor_data);

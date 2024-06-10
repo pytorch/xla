@@ -198,8 +198,8 @@ class XlaHelpers {
     return torch::lazy::ToVector<int64_t>(input);
   }
 
-  static c10::optional<int64_t> I64Optional(c10::optional<int64_t> opt) {
-    return opt ? c10::optional<int64_t>(*opt) : c10::nullopt;
+  static std::optional<int64_t> I64Optional(std::optional<int64_t> opt) {
+    return opt ? std::optional<int64_t>(*opt) : std::nullopt;
   }
 
   // Creates an XLA padding configuration from a n-dimensional padding list.
