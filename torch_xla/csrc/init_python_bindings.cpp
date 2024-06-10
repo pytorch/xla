@@ -254,9 +254,9 @@ at::Tensor DynamicView(const at::Tensor& input,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
-at::Tensor ReinterpretCast4bit(const at::Tensor& input, const at::Tensor& weight) {
+at::Tensor ReinterpretCast4bit(const at::Tensor& input, const at::Tensor& weight, const std::vector<int8_t>& int4_weight_values) {
   auto result = tensor_methods::reinterpret_cast_4bit( 
-                  bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight));
+                  bridge::GetXlaTensor(input), bridge::GetXlaTensor(weight), int4_weight_values);
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
@@ -1405,11 +1405,12 @@ void InitXlaModuleBindings(py::module m) {
         result, /*requires_grad=*/input.requires_grad());
   });
   m.def("_xla_reinterpret_cast_4bit",
-        [](const at::Tensor& input, const at::Tensor& weight) -> at::Tensor {
+        [](const at::Tensor& input, const at::Tensor& weight,
+           const std::vector<int8_t>& int4_weight_values) -> at::Tensor {
           at::Tensor result;
           {
             NoGilSection nogil;
-            result = ReinterpretCast4bit(input, weight);
+            result = ReinterpretCast4bit(input, weight, int4_weight_values);
           }
           return result;
         });

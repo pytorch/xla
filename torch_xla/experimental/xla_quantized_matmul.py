@@ -14,7 +14,7 @@ def _check_per_channel_quant_weight_dtype_shapes(input_dim, output_dim, w,
   assert w.dtype == torch.int8, f"Weight dtype is expected to be torch.int8, got {w.dtype}."
   assert w.dim(
   ) == 2, f"Weight tensor is expected to be 2D, got {w.dim()}D Tensor."
-  w_shape = w.shape
+  w_shape = list(w.shape)
   if int4_packed_weight:
     w_shape[-1] *= 2
   assert output_dim == w_shape[0] and input_dim == w_shape[
@@ -75,8 +75,10 @@ def quantized_matmul_xla(x: torch.Tensor,
     # Reinterpret cast the weight to s4 dtype in XLA.
     w = torch_xla._XLAC._xla_reinterpret_cast_4bit(w, w)
   # Per-channel quant.
-  _check_per_channel_quant_weight_dtype_shapes(x.shape[-1], scaler.shape[0], w,
-                                               scaler, int4_packed_weight)
+  # _check_per_channel_quant_weight_dtype_shapes(x.shape[-1], scaler.shape[0], w,
+  #                                              scaler, int4_packed_weight)
+  if int4_packed_weight:
+    return torch.matmul(x, w) * scaler
   return F.linear(x, w) * scaler
 
 
