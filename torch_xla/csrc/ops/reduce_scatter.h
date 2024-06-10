@@ -13,8 +13,7 @@ class ReduceScatter : public XlaNode {
                 int64_t scatter_dim, int64_t shard_count,
                 std::vector<std::vector<int64_t>> groups, bool pin_layout);
   ReduceScatter(AllReduceType reduce_type, const torch::lazy::Value& input,
-                double scale,
-                int64_t scatter_dim, int64_t shard_count,
+                double scale, int64_t scatter_dim, int64_t shard_count,
                 std::vector<std::vector<int64_t>> groups);
 
   std::string ToString() const override;
@@ -38,7 +37,7 @@ class ReduceScatter : public XlaNode {
   int64_t shard_count_;
   std::vector<std::vector<int64_t>> groups_;
   bool pin_layout_;
-  bool has_token_ {true};
+  bool has_token_{true};
 };
 
 class ReduceScatterCoalesced : public XlaNode {

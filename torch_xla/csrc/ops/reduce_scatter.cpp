@@ -29,14 +29,13 @@ xla::Shape NodeOutputShape(AllReduceType reduce_type,
 }
 
 xla::Shape NodeOutputShape(AllReduceType reduce_type,
-                           const torch::lazy::Value input,
-                           double scale,
+                           const torch::lazy::Value input, double scale,
                            int64_t scatter_dim, int64_t shard_count,
                            const std::vector<std::vector<int64_t>>& groups) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     xla::XlaOp inputOp = operands[0];
     return BuildReduceScatter(reduce_type, inputOp, scale, scatter_dim,
-                           shard_count, groups);
+                              shard_count, groups);
   };
   return InferOutputShape({GetXlaShape(input)}, shape_fn);
 }
@@ -87,15 +86,14 @@ ReduceScatter::ReduceScatter(AllReduceType reduce_type,
       pin_layout_(pin_layout) {}
 
 ReduceScatter::ReduceScatter(AllReduceType reduce_type,
-                             const torch::lazy::Value& input,
-                             double scale,
+                             const torch::lazy::Value& input, double scale,
                              int64_t scatter_dim, int64_t shard_count,
                              std::vector<std::vector<int64_t>> groups)
     : XlaNode(
           xla_reduce_scatter, {input},
           [&]() {
-            return NodeOutputShape(reduce_type, input, scale,
-                                   scatter_dim, shard_count, groups);
+            return NodeOutputShape(reduce_type, input, scale, scatter_dim,
+                                   shard_count, groups);
           },
           /*num_outputs=*/1,
           torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
@@ -147,8 +145,8 @@ torch::lazy::NodePtr ReduceScatterCoalesced::Clone(
 XlaOpVector ReduceScatter::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   if (!has_token_) {
-    auto result = BuildReduceScatter(
-        reduce_type_, input, scale_, scatter_dim_, shard_count_, groups_);
+    auto result = BuildReduceScatter(reduce_type_, input, scale_, scatter_dim_,
+                                     shard_count_, groups_);
     return ReturnOp(result, loctx);
   }
   xla::XlaOp token = loctx->GetOutputOp(operand(1));
