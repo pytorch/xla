@@ -1219,11 +1219,15 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     # Reduce scatter
     x = xs.enable_manual_sharding(x, (None, None)).global_tensor
-    x = torch_xla._XLAC._xla_spmd_reduce_scatter(xm.REDUCE_SUM, x, 1.0, 0, self.n_devices, [self.device_ids])
+    x = torch_xla._XLAC._xla_spmd_reduce_scatter(xm.REDUCE_SUM, x, 1.0, 0,
+                                                 self.n_devices,
+                                                 [self.device_ids])
     x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
-    self.assertIn(f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{0}}, to_apply=%AddComputation.3", hlo)
+    self.assertIn(
+        f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{0}}, to_apply=%AddComputation.3",
+        hlo)
 
     expected_x = torch.ones(2, 8) * 4
     self.assertTrue(torch.allclose(x.cpu(), expected_x))
@@ -1234,11 +1238,15 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     # Reduce scatter
     x = xs.enable_manual_sharding(x, (None, None)).global_tensor
-    x = torch_xla._XLAC._xla_spmd_reduce_scatter(xm.REDUCE_SUM, x, 1.0, -1, self.n_devices, [self.device_ids])
+    x = torch_xla._XLAC._xla_spmd_reduce_scatter(xm.REDUCE_SUM, x, 1.0, -1,
+                                                 self.n_devices,
+                                                 [self.device_ids])
     x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
-    self.assertIn(f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{1}}, to_apply=%AddComputation.3", hlo)
+    self.assertIn(
+        f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{1}}, to_apply=%AddComputation.3",
+        hlo)
 
     expected_x = torch.ones(8, 2) * 4
     self.assertTrue(torch.allclose(x.cpu(), expected_x))
