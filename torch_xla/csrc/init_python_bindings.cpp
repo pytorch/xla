@@ -274,7 +274,7 @@ at::Tensor DynamicView(const at::Tensor& input,
 }
 
 at::Tensor CastInt4(const at::Tensor& weight,
-                               const std::vector<int>& int4_weight_values) {
+                    const std::vector<int>& int4_weight_values) {
   auto result = tensor_methods::cast_int4(bridge::GetXlaTensor(weight),
                                           int4_weight_values);
   return bridge::AtenFromXlaTensor(std::move(result));

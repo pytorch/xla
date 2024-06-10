@@ -28,8 +28,7 @@ CastInt4::CastInt4(const torch::lazy::Value& weight,
               /*num_outputs=*/1, torch::lazy::MHash(int4_vals)),
       int4_vals_(int4_vals) {}
 
-torch::lazy::NodePtr CastInt4::Clone(
-    torch::lazy::OpList operands) const {
+torch::lazy::NodePtr CastInt4::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<CastInt4>(operands.at(0), int4_vals_);
 }
 
