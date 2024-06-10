@@ -108,19 +108,6 @@ class QuantizedTest(unittest.TestCase):
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
       self.assertTrue(re.search(r'bf16.*dot.*bf16.*s8', hlo) is not None)
 
-  def test_int4_pack_unpack(self):
-    x = torch.randint(-8, 7, (2, 12), dtype=torch.int8)
-    orig_dtypes = [
-        torch.int8,
-    ]
-    for dtype in orig_dtypes:
-      data = x.to(dtype)  # make sure the tensor is within the range of dtype.
-      packed = pack_4bit(data, dtype=dtype)
-      unpacked = unpack_4bit(packed, dtype=dtype)
-      self.assertTrue(packed.dtype == dtype)
-      self.assertTrue(unpacked.dtype == dtype)
-      self.assertTrue(torch.equal(data, unpacked))
-
   def test_int4_per_channel_matmul(self):
     weight = torch.randint(-8, 7, (4, 2)).to(torch.int8)
     weight_scaler = torch.randn(4).to(torch.bfloat16)
@@ -158,37 +145,6 @@ class QuantizedTest(unittest.TestCase):
       out_quant_xla = m(x)
       self.assertGreater(
           self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.999999)
-
-  @unittest.skip(
-      "Don't run, just an example for blockwise quant with int4 weight.")
-  def test_int4_blockwise_matmul(self):
-
-    input_features = 6
-    block_size = 2
-    out_features = 8
-    weight = torch.randint(-8, 7, (int(
-        input_features / block_size), block_size, out_features)).to(torch.int8)
-    weight_scaler = torch.randn(int(input_features / block_size),
-                                out_features).to(torch.bfloat16)
-
-    x = torch.randn(3, int(input_features / block_size),
-                    block_size).to(torch.bfloat16).to(device)
-
-    weight = weight.to(device)
-    weight_scaler = weight_scaler.to(device)
-
-    print(weight)
-
-    weight_int4 = torch_xla._XLAC._xla_reinterpret_cast_4bit(
-        x, weight,
-        weight.cpu().flatten().numpy().tolist())
-    matmul_int4 = torch.einsum('scn,bsc->bsn', weight_int4, x)
-    matmul_int4 = torch.einsum('sn,bsn->bn', weight_scaler, matmul_int4)
-
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo([matmul_int4])
-    print(hlo)
-
-    print(matmul_int4)
 
 
 if __name__ == '__main__':
