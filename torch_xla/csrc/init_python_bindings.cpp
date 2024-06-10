@@ -273,10 +273,10 @@ at::Tensor DynamicView(const at::Tensor& input,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
-at::Tensor ReinterpretCastInt4(const at::Tensor& weight,
+at::Tensor CastInt4(const at::Tensor& weight,
                                const std::vector<int>& int4_weight_values) {
-  auto result = tensor_methods::reinterpret_cast_4bit(
-      bridge::GetXlaTensor(weight), int4_weight_values);
+  auto result = tensor_methods::cast_int4(bridge::GetXlaTensor(weight),
+                                          int4_weight_values);
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
@@ -1424,13 +1424,13 @@ void InitXlaModuleBindings(py::module m) {
     return torch::autograd::make_variable(
         result, /*requires_grad=*/input.requires_grad());
   });
-  m.def("_xla_reinterpret_cast_int4",
+  m.def("_xla_cast_int4",
         [](const at::Tensor& weight,
            const std::vector<int>& int4_weight_values) -> at::Tensor {
           at::Tensor result;
           {
             NoGilSection nogil;
-            result = ReinterpretCastInt4(weight, int4_weight_values);
+            result = CastInt4(weight, int4_weight_values);
           }
           return result;
         });

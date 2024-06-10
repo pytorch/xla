@@ -31,6 +31,7 @@
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/bernoulli.h"
 #include "torch_xla/csrc/ops/cast.h"
+#include "torch_xla/csrc/ops/cast_int4.h"
 #include "torch_xla/csrc/ops/cat.h"
 #include "torch_xla/csrc/ops/cdist.h"
 #include "torch_xla/csrc/ops/collective_permute.h"
@@ -104,7 +105,6 @@
 #include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
-#include "torch_xla/csrc/ops/reinterpret_cast_int4.h"
 #include "torch_xla/csrc/ops/replication_pad.h"
 #include "torch_xla/csrc/ops/replication_pad_backward.h"
 #include "torch_xla/csrc/ops/resize.h"
@@ -2400,9 +2400,9 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
   return input->CreateFrom(torch::lazy::Value(node));
 }
 
-XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& weight,
-                                   const std::vector<int>& int4_weight_values) {
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<ReinterpretCastInt4>(
+XLATensorPtr cast_int4(const XLATensorPtr& weight,
+                       const std::vector<int>& int4_weight_values) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<CastInt4>(
       weight->GetIrValue(), int4_weight_values);
   return weight->CreateFrom(torch::lazy::Value(node));
 }

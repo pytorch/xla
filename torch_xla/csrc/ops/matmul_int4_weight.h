@@ -1,13 +1,14 @@
-#ifndef XLA_TORCH_XLA_CSRC_OPS_REINTERPRET_CAST_INT4
-#define XLA_TORCH_XLA_CSRC_OPS_REINTERPRET_CAST_INT4
+#ifndef XLA_TORCH_XLA_CSRC_OPS_CAST_INT4
+#define XLA_TORCH_XLA_CSRC_OPS_CAST_INT4
 
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 
-class ReinterpretCastInt4 : public XlaNode {
+class ReinterpretCast4bit : public XlaNode {
  public:
-  ReinterpretCastInt4(const torch::lazy::Value& weight,
+  ReinterpretCast4bit(const torch::lazy::Value& lhs,
+                      const torch::lazy::Value& rhs,
                       const std::vector<int>& int4_weight_values);
 
   std::string ToString() const override;
@@ -22,4 +23,4 @@ class ReinterpretCastInt4 : public XlaNode {
 
 }  // namespace torch_xla
 
-#endif  // XLA_TORCH_XLA_CSRC_OPS_REINTERPRET_CAST_INT4
+#endif  // XLA_TORCH_XLA_CSRC_OPS_CAST_INT4

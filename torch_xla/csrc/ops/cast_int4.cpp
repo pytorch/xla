@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/reinterpret_cast_int4.h"
+#include "torch_xla/csrc/ops/cast_int4.h"
 
 #include <torch/csrc/lazy/core/tensor_util.h>
 
@@ -22,18 +22,18 @@ static xla::Shape NodeOutputShape(const torch::lazy::Value& weight) {
   // << std::endl; return output_shape;
 }
 
-ReinterpretCastInt4::ReinterpretCastInt4(const torch::lazy::Value& weight,
+CastInt4::CastInt4(const torch::lazy::Value& weight,
                                          const std::vector<int>& int4_vals)
-    : XlaNode(xla_reinterpret_cast_int4, {weight}, NodeOutputShape(weight),
+    : XlaNode(xla_cast_int4, {weight}, NodeOutputShape(weight),
               /*num_outputs=*/1, torch::lazy::MHash(int4_vals)),
       int4_vals_(int4_vals) {}
 
-torch::lazy::NodePtr ReinterpretCastInt4::Clone(
+torch::lazy::NodePtr CastInt4::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<ReinterpretCastInt4>(operands.at(0), int4_vals_);
+  return torch::lazy::MakeNode<CastInt4>(operands.at(0), int4_vals_);
 }
 
-XlaOpVector ReinterpretCastInt4::Lower(LoweringContext* loctx) const {
+XlaOpVector CastInt4::Lower(LoweringContext* loctx) const {
   xla::XlaOp weight = loctx->GetOutputOp(operand(0));
   xla::Shape weight_shape = ShapeHelper::ShapeOfXlaOp(weight);
   std::vector<xla::s4> values(int4_vals_.begin(), int4_vals_.end());
@@ -44,7 +44,7 @@ XlaOpVector ReinterpretCastInt4::Lower(LoweringContext* loctx) const {
       xla::ConstantLiteral(weight.builder(), reshaped_literal.value()), loctx);
 }
 
-std::string ReinterpretCastInt4::ToString() const {
+std::string CastInt4::ToString() const {
   std::stringstream ss;
   ss << XlaNode::ToString();
   return ss.str();
