@@ -8,7 +8,7 @@ namespace torch_xla {
 class CastInt4 : public XlaNode {
  public:
   CastInt4(const torch::lazy::Value& weight,
-                      const std::vector<int>& int4_weight_values);
+           const std::vector<int>& int4_weight_values);
 
   std::string ToString() const override;
 

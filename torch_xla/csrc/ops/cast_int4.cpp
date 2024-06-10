@@ -23,7 +23,7 @@ static xla::Shape NodeOutputShape(const torch::lazy::Value& weight) {
 }
 
 CastInt4::CastInt4(const torch::lazy::Value& weight,
-                                         const std::vector<int>& int4_vals)
+                   const std::vector<int>& int4_vals)
     : XlaNode(xla_cast_int4, {weight}, NodeOutputShape(weight),
               /*num_outputs=*/1, torch::lazy::MHash(int4_vals)),
       int4_vals_(int4_vals) {}
