@@ -344,12 +344,12 @@ class ZeroRedundancyOptimizer(Optimizer):
       return kwargs["sharding_scheme"]
     else:
       return [
-               {
-                 "scale_factor": 1.0,
-                 "sharding_group": self.sharding_groups,
-                 "group_size": self.local_world_size,
-               },
-             ]
+          {
+              "scale_factor": 1.0,
+              "sharding_group": self.sharding_groups,
+              "group_size": self.local_world_size,
+          },
+      ]
 
   def _reduce_gradients(self, **kwargs):
     sharding_scheme = self._get_sharding_scheme(kwargs)
@@ -440,8 +440,7 @@ class ZeroRedundancyOptimizer(Optimizer):
         if param.grad is not None or (self.use_grad_acc_hook and
                                       hasattr(shard, 'main_grad')):
           shard_data = shard.data
-          if not self.higher_cc_precision:
-            shard_data = shard_data.to(dtype=param.dtype)
+          shard_data = shard_data.to(dtype=param.dtype)
           if self.coalesce_cc:
             sharded_data.append(shard_data)
           else:
