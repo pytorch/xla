@@ -14,12 +14,6 @@ static xla::Shape NodeOutputShape(const torch::lazy::Value& weight) {
   xla::Shape out_shape = GetXlaShape(weight);
   out_shape.set_element_type(xla::PrimitiveType::S4);
   return out_shape;
-  // int64_t num_in_feature = lhs_shape.dimensions()[lhs_shape.dimensions_size()
-  // - 1]; int64_t num_out_feature = rhs_shape.dimensions()[1] * 2; xla::Shape
-  // output_shape = lhs_shape;
-  // output_shape.set_dimensions(lhs_shape.dimensions_size() - 1,
-  // num_out_feature); std::cout << "check dim after casting: " << output_shape
-  // << std::endl; return output_shape;
 }
 
 CastInt4::CastInt4(const torch::lazy::Value& weight,
