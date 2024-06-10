@@ -627,8 +627,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       TF_VLOG(3) << "memory usage is not availiable";
     }
 
-    const auto& hlo_modules =
-        ConsumeValueNoStackDump(executable->GetHloModules());
+    const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
