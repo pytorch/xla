@@ -128,27 +128,6 @@ def _args_on_cuda(input_args: tuple) -> bool:
 
   return input_device.type == "cuda"
 
-def _move_xla_cuda_tensor_to_cuda(tensor):
-  assert tensor.device.type == "xla", "The tensor is not an XLA tensor"
-  is_xla_cuda = True if xu.getenv_as("PJRT_DEVICE", str, "").lower() == "cuda" else False
-  assert is_xla_cuda, "The XLA tensor is not on CUDA"
-  # consumer is torch, producer is torch_xla
-
-  # Similar logic as torch.utils.dlpack.from_dlpack
-  # https://github.com/pytorch/pytorch/blob/b0ef363972203b163cddc95e4c6054b8221c2300/torch/utils/dlpack.py#L114-L115
-  device_id = tensor.device.index
-  stream = torch_xla._XLAC._get_stream_for_cuda_device(device_id)
-  stream = 1 if stream == 0 else stream
-  assert stream is None or type(stream) is int
-  external_stream = torch.cuda.ExternalStream(stream)
-  current_stream = torch.cuda.current_stream()
-  if external_stream != current_stream:
-    event = torch.cuda.Event()
-    event.record(current_stream)
-    external_stream.wait_event(event)
-  dlpack = torch_xla_dlpack.to_dlpack(tensor)
-  cuda_tensor = torch.utils.dlpack.from_dlpack(dlpack)
-  return cuda_tensor
 
 # Given an input list, moves the tensors to the given target_device.
 # The output order will be the same as the input. Non tensors will also still
@@ -174,7 +153,7 @@ def _maybe_move_tensors_to_device(tensors: tuple,
     if zero_copy_enabled and tensor.device.type == 'cuda' and target_device.type == 'xla':
       moved_tensor = torch_xla_dlpack.from_dlpack(tensor)
     elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
-      moved_tensor = _move_xla_cuda_tensor_to_cuda(tensor)
+      moved_tensor = torch_xla_dlpack.from_xla_cuda_to_cuda(tensor)
     else:
       # Have to move to CPU before moving it to target device.
       cpu_device: torch.device = torch.device("cpu")
