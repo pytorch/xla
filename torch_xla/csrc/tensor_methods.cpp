@@ -69,7 +69,6 @@
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/logsumexp.h"
 #include "torch_xla/csrc/ops/mark_tensor.h"
-#include "torch_xla/csrc/ops/matmul_int4_weight.h"
 #include "torch_xla/csrc/ops/masked_scatter.h"
 #include "torch_xla/csrc/ops/masked_select.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
@@ -102,6 +101,7 @@
 #include "torch_xla/csrc/ops/randperm.h"
 #include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
+#include "torch_xla/csrc/ops/reinterpret_cast_int4.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 #include "torch_xla/csrc/ops/replication_pad.h"
@@ -2366,11 +2366,11 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
   return input->CreateFrom(torch::lazy::Value(node));
 }
 
-XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& input, const XLATensorPtr& weight,
+XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& weight,
                                    const std::vector<int>& int4_weight_values) {
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<ReinterpretCast4bit>(
-      input->GetIrValue(), weight->GetIrValue(), int4_weight_values);
-  return input->CreateFrom(torch::lazy::Value(node));
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ReinterpretCastInt4>(
+      weight->GetIrValue(), int4_weight_values);
+  return weight->CreateFrom(torch::lazy::Value(node));
 }
 
 //////////////////////////////////////////////////////////////////////////////

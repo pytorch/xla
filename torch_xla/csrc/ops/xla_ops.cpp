@@ -26,7 +26,7 @@ const OpKindWrapper xla_optimization_barrier("xla::optimization_barrier");
 const OpKindWrapper xla_quantize_tensor("xla::quantize_tensor");
 const OpKindWrapper xla_recv("xla::recv");
 const OpKindWrapper xla_reduce_scatter("xla::reduce_scatter");
-const OpKindWrapper xla_reinterpret_cast_4ibt("xla::reinterpret_cast_4ibt");
+const OpKindWrapper xla_reinterpret_cast_int4("xla::reinterpret_cast_int4");
 const OpKindWrapper xla_replication_pad("xla::replication_pad");
 const OpKindWrapper xla_replication_pad_backward(
     "xla::replication_pad_backward");

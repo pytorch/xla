@@ -105,7 +105,6 @@ class QuantizedTest(unittest.TestCase):
 
       output = torch.ops.xla.quantized_matmul(x, w_int, scaler)
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
-      print(hlo)
       self.assertTrue(re.search(r'bf16.*dot.*bf16.*s8', hlo) is not None)
 
 
@@ -134,7 +133,6 @@ class QuantizedTest(unittest.TestCase):
     xla_out = torch.ops.xla.quantized_matmul(x, weight, weight_scaler, int4_weight=True)
     
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xla_out])
-    # print(hlo)
     self.assertTrue(re.search(r'bf16.*dot.*bf16.*s4', hlo) is not None)
 
     # Dot with int4 weight is only supported on TPU
@@ -148,9 +146,6 @@ class QuantizedTest(unittest.TestCase):
     out_fp = m(x)
     m.replace_with_xla_quantized_matmul(n_bit=4)
     out_quant = m(x)
-    # print(out_fp)
-    # print(out_quant)
-    # print(f"cos dist: {self._calc_cosine_dist(out_fp, out_quant)}")
     self.assertGreater(self._calc_cosine_dist(out_fp, out_quant), 0.99)
     
     # Dot with int4 weight is only supported on TPU
@@ -158,7 +153,6 @@ class QuantizedTest(unittest.TestCase):
       m = m.to(device)
       x = x.to(device)
       out_quant_xla = m(x)
-      print(out_quant_xla)
       self.assertGreater(self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.999999)
 
   

@@ -139,7 +139,7 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
                                int quant_min, int quant_max,
                                const std::string& dtype, int axis);
 
-XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& input, const XLATensorPtr& weight,
+XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& weight,
                                    const std::vector<int>& int4_vals);
 
 //////////////////////////////////////////////////////////////////////////////

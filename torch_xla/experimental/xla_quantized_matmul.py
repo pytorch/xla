@@ -75,7 +75,7 @@ def quantized_matmul_xla(x: torch.Tensor,
   assert blocksize == -1, "blockwise quantization is not supported yet."
   if int4_weight:
     # Reinterpret cast the weight to s4 dtype in XLA.
-    w = torch_xla._XLAC._xla_reinterpret_cast_4bit(w, w, w.cpu().flatten().numpy().tolist())
+    w = torch_xla._XLAC._xla_reinterpret_cast_int4(w, w.cpu().flatten().numpy().tolist())
   # Per-channel quant.
   _check_per_channel_quant_weight_dtype_shapes(x.shape[-1], scaler.shape[0], w,
                                                scaler)
