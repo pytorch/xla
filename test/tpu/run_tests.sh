@@ -36,3 +36,4 @@ python3 examples/data_parallel/train_resnet_xla_ddp.py
 python3 examples/fsdp/train_decoder_only_fsdp_v2.py
 python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py
 python3 examples/train_resnet_amp.py
+python3 examples/eager/train_decoder_only_eager.py
