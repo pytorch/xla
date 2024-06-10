@@ -23,7 +23,7 @@ class M(torch.nn.Module):
 
   def weight_quantization_rtn(self,
                               linear,
-                              n_bits = 8,
+                              n_bits=8,
                               quant_method=torch.per_channel_symmetric):
     '''
     Quantize linear weight using Round-To-Nearest(RTN) algorithm.
@@ -50,9 +50,10 @@ class M(torch.nn.Module):
     assert isinstance(self.linear, torch.nn.Linear)
     w_int, scaler, _ = self.weight_quantization_rtn(self.linear, n_bit)
     use_int4_weight = n_bit == 4
-    q_linear = XlaQuantizedLinear(self.linear.in_features,
-                                  self.linear.out_features,
-                                  int4_weight=use_int4_weight)
+    q_linear = XlaQuantizedLinear(
+        self.linear.in_features,
+        self.linear.out_features,
+        int4_weight=use_int4_weight)
     q_linear.load_quantized_weight(w_int, scaler)
     self.linear = q_linear
 
@@ -62,7 +63,7 @@ class M(torch.nn.Module):
 
 
 class QuantizedTest(unittest.TestCase):
-  
+
   def _calc_cosine_dist(self, x, y):
     x = x.flatten().to(torch.float32)
     y = y.flatten().to(torch.float32)
@@ -107,12 +108,13 @@ class QuantizedTest(unittest.TestCase):
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
       self.assertTrue(re.search(r'bf16.*dot.*bf16.*s8', hlo) is not None)
 
-
   def test_int4_pack_unpack(self):
-    x = torch.randint(-8, 7, (2,12), dtype=torch.int8)
-    orig_dtypes = [torch.int8, ]
+    x = torch.randint(-8, 7, (2, 12), dtype=torch.int8)
+    orig_dtypes = [
+        torch.int8,
+    ]
     for dtype in orig_dtypes:
-      data = x.to(dtype) # make sure the tensor is within the range of dtype.
+      data = x.to(dtype)  # make sure the tensor is within the range of dtype.
       packed = pack_4bit(data, dtype=dtype)
       unpacked = unpack_4bit(packed, dtype=dtype)
       self.assertTrue(packed.dtype == dtype)
@@ -120,25 +122,26 @@ class QuantizedTest(unittest.TestCase):
       self.assertTrue(torch.equal(data, unpacked))
 
   def test_int4_per_channel_matmul(self):
-    weight = torch.randint(-8,7, (4,2)).to(torch.int8)
+    weight = torch.randint(-8, 7, (4, 2)).to(torch.int8)
     weight_scaler = torch.randn(4).to(torch.bfloat16)
     x = torch.ones(3, 2).to(torch.bfloat16)
-    
+
     torch_out = torch.ops.xla.quantized_matmul(x, weight, weight_scaler)
-    
+
     x = x.to(device)
     weight = weight.to(device)
     weight_scaler = weight_scaler.to(device)
-    
-    xla_out = torch.ops.xla.quantized_matmul(x, weight, weight_scaler, int4_weight=True)
-    
+
+    xla_out = torch.ops.xla.quantized_matmul(
+        x, weight, weight_scaler, int4_weight=True)
+
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xla_out])
     self.assertTrue(re.search(r'bf16.*dot.*bf16.*s4', hlo) is not None)
 
     # Dot with int4 weight is only supported on TPU
     if xr.device_type() == 'TPU':
-      self.assertGreater(self._calc_cosine_dist(xla_out.cpu(), torch_out), 0.999999)
-
+      self.assertGreater(
+          self._calc_cosine_dist(xla_out.cpu(), torch_out), 0.999999)
 
   def test_int4_per_channel_linear_module(self):
     m = M(5, 8)
@@ -147,40 +150,45 @@ class QuantizedTest(unittest.TestCase):
     m.replace_with_xla_quantized_matmul(n_bit=4)
     out_quant = m(x)
     self.assertGreater(self._calc_cosine_dist(out_fp, out_quant), 0.99)
-    
+
     # Dot with int4 weight is only supported on TPU
     if xr.device_type() == 'TPU':
       m = m.to(device)
       x = x.to(device)
       out_quant_xla = m(x)
-      self.assertGreater(self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.999999)
+      self.assertGreater(
+          self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.999999)
 
-  
-  @unittest.skip("Don't run, just an example for blockwise quant with int4 weight.")
+  @unittest.skip(
+      "Don't run, just an example for blockwise quant with int4 weight.")
   def test_int4_blockwise_matmul(self):
 
     input_features = 6
     block_size = 2
     out_features = 8
-    weight = torch.randint(-8,7, (int(input_features / block_size), block_size, out_features)).to(torch.int8)
-    weight_scaler = torch.randn(int(input_features / block_size), out_features).to(torch.bfloat16)
+    weight = torch.randint(-8, 7, (int(
+        input_features / block_size), block_size, out_features)).to(torch.int8)
+    weight_scaler = torch.randn(int(input_features / block_size),
+                                out_features).to(torch.bfloat16)
 
-    x = torch.randn(3, int(input_features / block_size), block_size).to(torch.bfloat16).to(device)
-    
+    x = torch.randn(3, int(input_features / block_size),
+                    block_size).to(torch.bfloat16).to(device)
+
     weight = weight.to(device)
     weight_scaler = weight_scaler.to(device)
 
     print(weight)
-    
-    weight_int4 = torch_xla._XLAC._xla_reinterpret_cast_4bit(x, weight, weight.cpu().flatten().numpy().tolist())
+
+    weight_int4 = torch_xla._XLAC._xla_reinterpret_cast_4bit(
+        x, weight,
+        weight.cpu().flatten().numpy().tolist())
     matmul_int4 = torch.einsum('scn,bsc->bsn', weight_int4, x)
     matmul_int4 = torch.einsum('sn,bsn->bn', weight_scaler, matmul_int4)
-    
+
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([matmul_int4])
     print(hlo)
 
     print(matmul_int4)
-
 
 
 if __name__ == '__main__':

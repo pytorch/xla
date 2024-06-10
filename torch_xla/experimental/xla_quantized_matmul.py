@@ -27,9 +27,11 @@ def pack_4bit(x, dtype=torch.int8):
   # Pack 4 bit tensor into (u)int8 or (u)int32
   # Always pack along the last dim
   assert dtype == torch.int8, "Only int8 pack/unpack is supported now."
-  num_int4_per_element = 2 if (dtype == torch.int8 or dtype == torch.uint8) else 8
+  num_int4_per_element = 2 if (dtype == torch.int8 or
+                               dtype == torch.uint8) else 8
   assert x.shape[-1] % num_int4_per_element == 0
-  packed = x.reshape(*x.shape[:-1], x.shape[-1]//num_int4_per_element, num_int4_per_element)
+  packed = x.reshape(*x.shape[:-1], x.shape[-1] // num_int4_per_element,
+                     num_int4_per_element)
   shift = torch.arange(num_int4_per_element).to(packed.dtype)
   shift *= 4
   # Clear higher bits.
@@ -39,18 +41,21 @@ def pack_4bit(x, dtype=torch.int8):
   packed = packed.view(x.dtype)
   return packed
 
+
 def unpack_4bit(x, dtype=torch.int8):
   # Not used now, we don't do packed weight because reinterpret_cast
   # doesn't work on TPU.
   # Unpack 4 bit tensor into int8 or int32
   # Always unpack along the last dim
   assert dtype == torch.int8, "Only int8 pack/unpack is supported now."
-  num_int4_per_element = 2 if (dtype == torch.int8 or dtype == torch.uint8) else 8
+  num_int4_per_element = 2 if (dtype == torch.int8 or
+                               dtype == torch.uint8) else 8
   unpacked = x.unsqueeze(-1).expand(*x.shape, 2)
   shift = torch.arange(num_int4_per_element).flip(0).to(unpacked.dtype)
   shift *= 4
   # Left shift first then right shift to preserve the sign bit in int8.
-  unpacked = unpacked.bitwise_left_shift(shift).bitwise_right_shift(num_int4_per_element * 4 - 4)
+  unpacked = unpacked.bitwise_left_shift(shift).bitwise_right_shift(
+      num_int4_per_element * 4 - 4)
   unpacked = unpacked.flatten(-2)
   unpacked = unpacked.view(dtype)
   return unpacked
@@ -75,7 +80,9 @@ def quantized_matmul_xla(x: torch.Tensor,
   assert blocksize == -1, "blockwise quantization is not supported yet."
   if int4_weight:
     # Reinterpret cast the weight to s4 dtype in XLA.
-    w = torch_xla._XLAC._xla_reinterpret_cast_int4(w, w.cpu().flatten().numpy().tolist())
+    w = torch_xla._XLAC._xla_reinterpret_cast_int4(
+        w,
+        w.cpu().flatten().numpy().tolist())
   # Per-channel quant.
   _check_per_channel_quant_weight_dtype_shapes(x.shape[-1], scaler.shape[0], w,
                                                scaler)
@@ -98,7 +105,11 @@ def quantized_matmul(x: torch.Tensor,
 
 class XlaQuantizedLinear(torch.nn.Module):
 
-  def __init__(self, input_dim, output_dim, blocksize=-1, int4_weight: bool = False):
+  def __init__(self,
+               input_dim,
+               output_dim,
+               blocksize=-1,
+               int4_weight: bool = False):
     super().__init__()
     assert blocksize == -1, "Only per-channel quantization is supported."
     self.input_dim = input_dim
@@ -126,6 +137,7 @@ class XlaQuantizedLinear(torch.nn.Module):
 
   def forward(self, x):
     if self.blocksize == -1:
-      return torch.ops.xla.quantized_matmul(x, self.weight, self.weight_scaler, int4_weight=self.int4_weight)
+      return torch.ops.xla.quantized_matmul(
+          x, self.weight, self.weight_scaler, int4_weight=self.int4_weight)
     else:
       assert False, "Only per-channel quantization is supported."
