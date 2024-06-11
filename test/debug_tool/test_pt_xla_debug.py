@@ -30,7 +30,7 @@ class PtXLADebugTest(unittest.TestCase):
     open(cls.debug_file_name, 'w').close()
 
   def test_eager_mark_step(self):
-    torch_xla.experimental.use_eager_mode(True)
+    torch_xla.experimental.eager_mode(True)
     device = xm.xla_device()
     t1 = torch.randn(5, 9, device=device)
     xm.mark_step()
@@ -38,7 +38,7 @@ class PtXLADebugTest(unittest.TestCase):
       lines = f.readlines()
     # We expect PT_XLA_BUDEG not to output anything under the eager mode
     self.assertEqual(len(lines), 0)
-    torch_xla.experimental.use_eager_mode(False)
+    torch_xla.experimental.eager_mode(False)
     open(self.debug_file_name, 'w').close()
 
   def test_user_mark_step(self):

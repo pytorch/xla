@@ -1,9 +1,9 @@
 import torch_xla
 
 
-def use_eager_mode(shoud_use_eager_mode: bool):
+def eager_mode(enable: bool):
   """Configure torch_xla's default executation mode.
   Under eager mode only functions that was `torch_xla.compile`d will be
   traced and compiled. Other torch ops will be executed eagerly.
   """
-  torch_xla._XLAC._set_use_eager_mode(shoud_use_eager_mode)
+  torch_xla._XLAC._set_use_eager_mode(enable)

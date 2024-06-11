@@ -53,7 +53,7 @@ class MetricsTest(unittest.TestCase):
     self.assertGreater(met.metric_data('LazyTracing')[0], 1)
 
   def test_eager_metrics(self):
-    torch_xla.experimental.use_eager_mode(True)
+    torch_xla.experimental.eager_mode(True)
     xla_device = xm.xla_device()
     met.clear_all()
     t1 = torch.tensor(156, device=xla_device)
@@ -68,7 +68,7 @@ class MetricsTest(unittest.TestCase):
     xm.mark_step()
     self.assertNotIn('CompileTime', met.metric_names())
     self.assertNotIn('ExecuteTime', met.metric_names())
-    torch_xla.experimental.use_eager_mode(False)
+    torch_xla.experimental.eager_mode(False)
 
   def test_short_metrics_report_default_list(self):
     xla_device = xm.xla_device()

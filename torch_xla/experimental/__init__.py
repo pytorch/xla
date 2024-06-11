@@ -1,5 +1,5 @@
-from .eager import use_eager_mode
+from .eager import eager_mode
 
 __all__ = [
-    "use_eager_mode",
+    "eager_mode",
 ]
