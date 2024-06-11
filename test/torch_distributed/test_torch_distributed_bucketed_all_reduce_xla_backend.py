@@ -14,7 +14,7 @@ def _mp_fn(index):
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
 
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
+    dist.init_process_group('xla', init_method='xla://', world_size=world_size, rank=rank)
 
     tensor_list = [
         torch.empty((i, i), device=device) for i in range(1, 1000, 101)
