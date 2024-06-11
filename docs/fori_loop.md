@@ -111,4 +111,4 @@ tensor([11], device='xla:0', dtype=torch.int32))
 tensor([51], device='xla:0', dtype=torch.int32)
 ```
 
-For more example and detailed user guide, please read [this test file](https://github.com/pytorch/xla/blob/master/test/test_while_loop.py). PyTorch/XLA would include `while_loop` support in 2.3 for simple test case, complex test case and support for `fori_loop` and `scan` would be added after 2.3
+For more example and detailed user guide, please read [this test file](https://github.com/pytorch/xla/blob/master/test/test_while_loop.py). PyTorch/XLA would include `while_loop` support in 2.4 for simple test case and complex test case, support for `fori_loop` and `scan` would be added after 2.4
