@@ -123,7 +123,8 @@ class ResultAnalyzer:
       torch_xla2_value = "None" if torch_xla2 is None else torch_xla2
       keep_model_data_on_cuda = dataline["experiment"][
           "keep_model_data_on_cuda"]
-      keep_model_data_on_cuda_value = "None" if keep_model_data_on_cuda is None else str(keep_model_data_on_cuda)
+      keep_model_data_on_cuda_value = "None" if keep_model_data_on_cuda is None else str(
+          keep_model_data_on_cuda)
       test = dataline["experiment"]["test"]
       test_value = "None" if test is None else test
       outputs_file = dataline["experiment"].get("outputs_file", None)
