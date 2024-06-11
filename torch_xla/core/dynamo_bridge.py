@@ -154,6 +154,8 @@ def _maybe_move_tensors_to_device(tensors: tuple,
       # If the input cuda tensor requires gradient, we need to call detach. Otherwise, we'd get the error "RuntimeError: Can't export tensors that require gradient, use tensor.detach()"
       moved_tensor = torch_xla_dlpack.from_dlpack(tensor.detach())
     elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
+      # mark_step is need to make sure the pjrt buffer is valid.
+      xm.mark_step()
       moved_tensor = torch_xla_dlpack.from_xla_cuda_to_cuda(tensor)
     else:
       # Have to move to CPU before moving it to target device.
