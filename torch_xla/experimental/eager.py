@@ -1,5 +1,6 @@
 import torch_xla
 
+
 def use_eager_mode(shoud_use_eager_mode: bool):
   """Configure torch_xla's default executation mode.
   Under eager mode only functions that was `torch_xla.compile`d will be
