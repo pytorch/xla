@@ -2617,8 +2617,8 @@ void InitXlaModuleBindings(py::module m) {
                          "without a data handle or an IR.";
         });
 
-  // from an XLA tensor to a dlpack tensor.
-  // If ext_data is the result of an CUDA computation, we should synchronize
+  // from an XLA tensor to a PyCapsule.
+  // When consuming the PyCapsule, we should synchronize
   // (waits for all kernels in all streams on a CUDA device to complete) if the
   // current stream is different from the ext_data's stream. Otherwise, we may
   // risk of getting incorrect results.
@@ -2631,11 +2631,12 @@ void InitXlaModuleBindings(py::module m) {
     return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
   });
 
-  // from a dlpack tensor to an XLA tensor
+  // from a dlpack PyCapsule to an XLA tensor
   // If ext_data is the result of an CUDA computation, we should synchronize
   // (waits for all kernels in all streams on a CUDA device to complete) if the
   // current stream is different from the ext_data's stream. Otherwise, we may
-  // risk of getting incorrect results.
+  // risk of getting incorrect results. Or you can use torch_xla's
+  // from_dlpack(cuda_tensor) and it will handle the synchronization for you.
   m.def("_from_dlpack", [](py::handle ext_data) -> at::Tensor {
     return tensor_fromDLPack(ext_data.ptr());
   });
