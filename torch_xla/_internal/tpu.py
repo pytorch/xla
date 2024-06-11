@@ -349,6 +349,8 @@ class TpuPlugin(plugins.DevicePlugin):
     return {
         'max_inflight_computations':
             xu.getenv_as('XLA_TPU_MAX_INFLIGHT_COMPUTATIONS', int, 4),
-        'ml_framework_name':'PyTorch/XLA',
-        'ml_framework_version':__version__
+        'ml_framework_name':
+            'PyTorch/XLA',
+        'ml_framework_version':
+            __version__
     }
