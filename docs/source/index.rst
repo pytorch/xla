@@ -77,6 +77,7 @@ experimental
 ----------------------------------
 .. automodule:: torch_xla.experimental
 .. autofunction:: use_eager_mode
+.. autofunction:: compile
 
 debug
 ----------------------------------
