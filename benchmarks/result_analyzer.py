@@ -104,6 +104,7 @@ class ResultAnalyzer:
     return d
 
   # TODO: handle error message properly (database length restriction)
+  # Do not use bool. This will mess up with the bigquery parsing.
   def extract_metrics_jsonl(self, file):
     with open(file, mode="r", encoding="utf-8") as f:
       jsonlines = f.read().splitlines()
@@ -122,7 +123,8 @@ class ResultAnalyzer:
       torch_xla2_value = "None" if torch_xla2 is None else torch_xla2
       keep_model_data_on_cuda = dataline["experiment"][
           "keep_model_data_on_cuda"]
-      keep_model_data_on_cuda_value = "None" if keep_model_data_on_cuda is None else keep_model_data_on_cuda
+      keep_model_data_on_cuda_value = "None" if keep_model_data_on_cuda is None else str(
+          keep_model_data_on_cuda)
       test = dataline["experiment"]["test"]
       test_value = "None" if test is None else test
       outputs_file = dataline["experiment"].get("outputs_file", None)
