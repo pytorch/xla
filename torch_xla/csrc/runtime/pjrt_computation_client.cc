@@ -531,7 +531,11 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
 
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
-  metrics::TimedSection timed(CompileMetric());
+  auto metrics_fn = CompileMetric;
+  if (instances[0].eager_mode) {
+    metrics_fn = EagerCompileMetric;
+  }
+  metrics::TimedSection timed(metrics_fn());
   tsl::profiler::TraceMe activity("PjRtComputationClient::Compile",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
@@ -695,7 +699,11 @@ PjRtComputationClient::ExecuteComputation(
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
   // complete; a copy is held from the lambda that releases it when done.
-  auto timed = std::make_shared<metrics::TimedSection>(ExecuteMetric());
+  auto metrics_fn = ExecuteMetric;
+  if (options.eager_mode) {
+    metrics_fn = EagerExecuteMetric;
+  }
+  auto timed = std::make_shared<metrics::TimedSection>(metrics_fn());
   tsl::profiler::TraceMe activity("PjRtComputationClient::ExecuteComputation",
                                   tsl::profiler::TraceMeLevel::kInfo);
   TF_VLOG(1) << "Executing PjRt computation on " << device;

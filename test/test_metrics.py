@@ -52,6 +52,25 @@ class MetricsTest(unittest.TestCase):
     self.assertIn('LazyTracing', met.metric_names())
     self.assertGreater(met.metric_data('LazyTracing')[0], 1)
 
+  def test_eager_metrics(self):
+    torch_xla.experimental.eager_mode(True)
+    xla_device = xm.xla_device()
+    met.clear_all()
+    t1 = torch.tensor(156, device=xla_device)
+    t2 = t1 + 100
+    xm.wait_device_ops()
+    self.assertIn('EagerOpCompileTime', met.metric_names())
+    # one for cosntant, one for add
+    self.assertEqual(met.metric_data('EagerOpCompileTime')[0], 2)
+    self.assertIn('EagerOpExecuteTime', met.metric_names())
+    # one for add
+    self.assertEqual(met.metric_data('EagerOpExecuteTime')[0], 2)
+    # mark_step should be a no-op
+    xm.mark_step()
+    self.assertNotIn('CompileTime', met.metric_names())
+    self.assertNotIn('ExecuteTime', met.metric_names())
+    torch_xla.experimental.eager_mode(False)
+
   def test_short_metrics_report_default_list(self):
     xla_device = xm.xla_device()
     t1 = torch.tensor(1456, device=xla_device)

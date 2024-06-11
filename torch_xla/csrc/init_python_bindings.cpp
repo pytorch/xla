@@ -2403,6 +2403,11 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_xla_enable_device_data_cache",
         []() { return FLAGS_torch_lazy_enable_device_data_cache; });
+  m.def("_set_use_eager_mode", [](bool use_eager_mode) {
+    XLAGraphExecutor::Get()->SetUseEagerMode(use_eager_mode);
+  });
+  m.def("_get_use_eager_mode",
+        []() { return XLAGraphExecutor::Get()->UseEagerMode(); });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
