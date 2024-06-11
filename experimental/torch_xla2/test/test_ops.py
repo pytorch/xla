@@ -10,7 +10,6 @@ from torch_xla2 import tensor
 
 
 skiplist = {
-    "__getitem__",
     "__rmatmul__",
     "__rpow__",
     "_segment_reduce",
