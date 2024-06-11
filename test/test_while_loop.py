@@ -36,9 +36,9 @@ class WhileLoopTest(unittest.TestCase):
 
     init_val = torch.tensor(3, dtype=torch.int32, device=device)
     iteri = torch.tensor(10, device=device)
-    _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
-    _, expected = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
-    self.assertTrue(torch.all(torch.eq(res, expected)))
+    _, res_with_loop = while_loop(cond_fn, body_fn, (iteri, init_val))
+    _, res_without_loop = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
+    self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
   def test_while_loop_tpu_addition_nested(self):
     device = xm.xla_device()
@@ -51,9 +51,9 @@ class WhileLoopTest(unittest.TestCase):
 
     init_val = torch.tensor(2, dtype=torch.int32, device=device)
     iteri = torch.tensor(10, device=device)
-    _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
-    _, expected = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
-    self.assertTrue(torch.all(torch.eq(res, expected)))
+    _, res_with_loop = while_loop(cond_fn, body_fn, (iteri, init_val))
+    _, res_without_loop = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
+    self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
   def test_while_loop_tpu_simple_linear_inside_loop(self):
     device = xm.xla_device()
@@ -83,15 +83,14 @@ class WhileLoopTest(unittest.TestCase):
     linear_model.to(device)
     l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
     iteri = torch.tensor(2, dtype=torch.int32, device=device)
-    _, res = linear_model(iteri, l_in_0)
+    _, res_with_loop = linear_model(iteri, l_in_0)
 
     # === expected result after 2 iteration to be compared ===
-    test_value = l_in_0
     for i in range(iteri):
-      _, test_value = linear_model.forward_compare(iteri, test_value)
-    expected = test_value
+      _, l_in_0 = linear_model.forward_compare(iteri, l_in_0)
+    res_without_loop = l_in_0
 
-    self.assertTrue(torch.all(torch.eq(res, expected)))
+    self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
   # ====== fori_loop ======
   def test_fori_loop_addition_tpu(self):
@@ -104,13 +103,12 @@ class WhileLoopTest(unittest.TestCase):
     def body_fun(x):
       return torch.add(x, 1)
 
-    _, res = fori_loop(lower, upper, body_fun, (init_val))
+    _, res_with_loop = fori_loop(lower, upper, body_fun, (init_val))
 
     # === expected ===
-    x = init_val
     for i in range(upper - lower):
-      x = torch.add(x, 1)
-    expected = x
+      init_val = torch.add(init_val, 1)
+    res_without_loop = init_val
 
 
 if __name__ == '__main__':
