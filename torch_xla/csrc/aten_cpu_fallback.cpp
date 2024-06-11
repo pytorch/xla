@@ -259,7 +259,7 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
 
 void xla_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
   XLA_FN_TRACK(3);
-  const auto name = c10::toString(op.operator_name()) + " (fallback)";
+  const auto name = c10::toString(op.operator_name());
 
   // Manually applying the XLA_COUNTER macro.
   // We need to do it ourselves and explicitly keep a mapping of counters
