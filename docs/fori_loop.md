@@ -1,45 +1,55 @@
-# Fori_loop
-`fori_loop` is a replacement of pure python for loop, PyTorch/XLA would enable `torch_xla.experimental.fori_loop` to keep loop computation graph as rolled during compilation
+# `Fori_loop` | `While_loop` | `Scan` optimize memory utilization and compilation
+
+### `fori_loop`
+\
+`fori_loop` replace pure python `for` loop, PyTorch/XLA would enable `torch_xla.experimental.fori_loop` to keep loop computation graph as rolled during compilation
 like [`jax.lax.fori_loop`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.fori_loop.html), not like currently repeat computations by enumerating all execution steps
 of each iteration. `fori_loop` might help memory utilization and might help faster compilation.
-
-User could use `fori_loop` like this:
+\
+#### Usage:
 ```python
 from torch_xla.experimental.fori_loop import fori_loop
 res = fori_loop(upper, lower, /*user defined*/body_fun, init)
 ```
+- `upper`, `lower`: Loop boundaries.
+- `body_fun`: User-defined function for loop body operations.
+- `init`: Initial value for the loop.
 
-current fori_loop only support simple test like [link](https://github.com/pytorch/xla/blob/master/test/test_while_loop.py), and user could try [simple user guide](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#simple-example-with-fori_loop) with `fori_loop` on TPU too.
+Currently, `fori_loop` support simple test, and can be explored on TPUs using [user guide](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#simple-example-with-fori_loop).
 
-For detailed implementation:
-- for situation that loop range is dynamic, [`fori_loop`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#fori_loop) is implemented with [`while_loop`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#while_loop),
+#### Implementation:
+- **dynamic loop range**: [`fori_loop`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#fori_loop) is implemented with [`while_loop`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#while_loop),
 like [`jax.lax.while_loop`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.while_loop.html), PyTorch/XLA would support `while_loop` with the
 native PyTorch and the XLA backend: XLA::While. Due to `while_loop` didn't support autograd, so it would be used for inference only.
 
-- for situation that loop range is not dynamic, [`fori_loop`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#fori_loop) is implemented with [`scan`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#wipscan),
+- **not dynamic loop range**, [`fori_loop`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#fori_loop) is implemented with [`scan`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#wipscan),
 like [`jax.lax.scan`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html), PyTorch/XLA would enable `scan` using XLA::While operator.
 This implementation would be very similar like `while_loop`. `scan` support autograd, and it could be used in both training and inference.
 
-# while_loop
-`while_loop` is a replacement of pure python while loop, PyTorch has supported `while_loop` in
+### `while_loop`
+`while_loop` replace pure python `while` loop, PyTorch has supported `while_loop` in
 [code](https://github.com/pytorch/pytorch/blob/ca6a0e1348ba7dcade1833d983b1b4ca12a5c1e1/torch/_higher_order_ops/while_loop.py#L69). 
-PyTorch/XLA want to support `while_loop` with the native PyTorch and the XLA backend: XLA::While.
+PyTorch/XLA want to support `while_loop` with the native PyTorch and the XLA backend: `XLA::While`.
 
-User could use `while_loop` like this:
+#### Usage:
 ```python
 import torch_xla.experimental.fori_loop
 from torch._higher_order_ops.while_loop import while_loop
 res = while_loop(/*user-defined*/cond_fn, /*user-defined*/body_fn, /*tuple or list*/init)
 ```
-current while_loop only support simple test like [link](https://github.com/pytorch/xla/blob/master/test/test_while_loop.py), and user could try [simple user guide](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#simple-example-with-while_loop) with `while_loop` on TPU too.
+- `cond_fn`: User-defined condition function.
+- `body_fn`: User-defined loop body function.
+- `init`: Initial values (tuple or list).
 
-
-# [WIP]scan
+Currently, while_loop support simple test, and can be explored on TPUs using [user guide](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#simple-example-with-while_loop).
+\
+\
+### `scan` (Work in Progress)
 like [`jax.lax.scan`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html), PyTorch/XLA would enable `scan` for training and inference since it support autograd.
 `scan` is WIP.
-
-
-# Simple user guide
+\
+\
+### Simple user guide
 User could try these three simple test case to better compare difference between `pure python for loop` and `fori_loop` and `while_loop`, these three test case have similar logic: cumulative plus 1 for ten times:
 
 ### simple example with pure python for loop
