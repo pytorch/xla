@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git7bedfe6 )
+                  master (2.4.0+git71c25e6 )
                 </div>
               
             
@@ -497,7 +497,11 @@
 <li><a class="reference internal" href="#wheel">Wheel</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#run-a-simple-model">Run a simple model</a></li>
+<li><a class="reference internal" href="#run-some-simple-models">Run some simple models</a><ul>
+<li><a class="reference internal" href="#mp-imagenet-example">MP_ImageNet Example</a></li>
+<li><a class="reference internal" href="#resnet-example">ResNet Example</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#amp-automatic-mixed-precision">AMP (AUTOMATIC MIXED PRECISION)</a></li>
 <li><a class="reference internal" href="#develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support">Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)</a></li>
 </ul>
@@ -3336,9 +3340,12 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 <p>Wheels for other Python version and CUDA version can be found <a class="reference external" href="https://github.com/pytorch/xla?tab=readme-ov-file#available-docker-images-and-wheels">here</a>.</p>
 </div>
 </div>
-<div class="section" id="run-a-simple-model">
-<h2>Run a simple model<a class="headerlink" href="#run-a-simple-model" title="Permalink to this heading">¶</a></h2>
-<p>In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).</p>
+<div class="section" id="run-some-simple-models">
+<h2>Run some simple models<a class="headerlink" href="#run-some-simple-models" title="Permalink to this heading">¶</a></h2>
+<p>In order to run below examples, you need to clone the pytorch/xla repository.</p>
+<div class="section" id="mp-imagenet-example">
+<h3>MP_ImageNet Example<a class="headerlink" href="#mp-imagenet-example" title="Permalink to this heading">¶</a></h3>
+<p>This example uses ImageNet. It is included in what we already cloned in our Docker container.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># export GPU_NUM_DEVICES=1 PJRT_DEVICE=CUDA</span>
 <span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># git clone --recursive https://github.com/pytorch/xla.git</span>
 <span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># python xla/test/test_train_mp_imagenet.py --fake_data</span>
@@ -3352,6 +3359,27 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 <span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">100</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">3.92699</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">384.33</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">152.40</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">14</span><span class="p">:</span><span class="mi">02</span>
 <span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">120</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">2.68816</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">388.35</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">169.49</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">14</span><span class="p">:</span><span class="mi">09</span>
 </pre></div>
+</div>
+</div>
+<div class="section" id="resnet-example">
+<h3>ResNet Example<a class="headerlink" href="#resnet-example" title="Permalink to this heading">¶</a></h3>
+<p>This example uses ResNet.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># python3 /xla/examples/train_resnet_base.py</span>
+<span class="mi">1</span><span class="p">:</span><span class="mi">35</span><span class="n">PM</span> <span class="n">UTC</span> <span class="n">on</span> <span class="n">Jun</span> <span class="mi">08</span><span class="p">,</span> <span class="mi">2024</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.887794017791748</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">8.746502586051985</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.877807140350342</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">238.4789458412044</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.867819786071777</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">329.86095958663503</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">30</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.857839584350586</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">367.3038003653586</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.847847938537598</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">381.53141087190835</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.837860584259033</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">387.80462249591113</span>
+<span class="o">...</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">260</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.628140926361084</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">391.135639565343</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">270</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.618192195892334</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">391.6901797745233</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">280</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.608224391937256</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">391.1602680460045</span>
+<span class="n">epoch</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="mi">290</span><span class="p">,</span> <span class="n">loss</span><span class="p">:</span> <span class="mf">6.598264217376709</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="mf">391.6731498290759</span>
+<span class="n">Epoch</span> <span class="mi">1</span> <span class="n">train</span> <span class="n">end</span>  <span class="mi">1</span><span class="p">:</span><span class="mi">36</span><span class="n">PM</span> <span class="n">UTC</span>
+</pre></div>
+</div>
 </div>
 </div>
 <div class="section" id="amp-automatic-mixed-precision">
@@ -3398,8 +3426,8 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 <ol class="arabic simple">
 <li><p>Verify if PyTorch and PyTorch/XLA have been installed successfully.</p></li>
 </ol>
-<p>If you can run the test in the section
-<a class="reference external" href="#run-a-simple-model">Run a simple model</a> successfully, then PyTorch and
+<p>If you can run the tests in the section
+<a class="reference external" href="#run-some-simple-models">Run some simple models</a> successfully, then PyTorch and
 PyTorch/XLA should have been installed successfully.</p>
 </div>
 </div>
@@ -4216,7 +4244,11 @@ the table. The design doc is <a class="reference external" href="https://github.
 <li><a class="reference internal" href="#wheel">Wheel</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#run-a-simple-model">Run a simple model</a></li>
+<li><a class="reference internal" href="#run-some-simple-models">Run some simple models</a><ul>
+<li><a class="reference internal" href="#mp-imagenet-example">MP_ImageNet Example</a></li>
+<li><a class="reference internal" href="#resnet-example">ResNet Example</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#amp-automatic-mixed-precision">AMP (AUTOMATIC MIXED PRECISION)</a></li>
 <li><a class="reference internal" href="#develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support">Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)</a></li>
 </ul>
