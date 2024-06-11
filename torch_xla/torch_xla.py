@@ -69,12 +69,3 @@ def step():
     yield
   finally:
     xm.mark_step()
-
-
-def use_eager_mode(shoud_use_eager_mode: bool):
-  """Configure torch_xla's default executation mode.
-
-  Under eager mode only functions that was `torch_xla.compile`d will be
-  traced and compiled. Other torch ops will be executed eagerly.
-  """
-  torch_xla._XLAC._set_use_eager_mode(shoud_use_eager_mode)
