@@ -1213,6 +1213,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(xxx.shape, (8, 8))
     self.assertTrue(torch.allclose(x.cpu() + 1, xxx.cpu()))
 
+  @unittest.skipIf(xr.device_type() != 'TPU', "Skip non-TPU device")
   def test_spmd_reduce_scatter(self):
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
     x = torch.ones(8, 8).to(xm.xla_device())
@@ -1232,6 +1233,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     expected_x = torch.ones(2, 8) * 4
     self.assertTrue(torch.allclose(x.cpu(), expected_x))
 
+  @unittest.skipIf(xr.device_type() != 'TPU', "Skip non-TPU device")
   def test_spmd_reduce_scatter_canonical_index(self):
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
     x = torch.ones(8, 8).to(xm.xla_device())
