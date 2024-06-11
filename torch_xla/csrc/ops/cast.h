@@ -2,7 +2,8 @@
 #define XLA_TORCH_XLA_CSRC_OPS_CAST_H_
 
 #include <c10/core/ScalarType.h>
-#include <c10/util/Optional.h>
+
+#include <optional>
 
 #include "torch_xla/csrc/ir.h"
 
