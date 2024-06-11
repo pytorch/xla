@@ -97,6 +97,22 @@ versioned_builds = [
     pytorch_git_rev = "v2.4.0-rc1"
     accelerator     = "cuda"
     cuda_version    = "12.4"
+    python_version  = "3.9"
+  },
+  {
+    git_tag         = "v2.4.0-rc1"
+    package_version = "2.4.0-rc1"
+    pytorch_git_rev = "v2.4.0-rc1"
+    accelerator     = "cuda"
+    cuda_version    = "12.4"
+    python_version  = "3.10"
+  },
+  {
+    git_tag         = "v2.4.0-rc1"
+    package_version = "2.4.0-rc1"
+    pytorch_git_rev = "v2.4.0-rc1"
+    accelerator     = "cuda"
+    cuda_version    = "12.4"
     python_version  = "3.11"
   },
   # Remove libtpu from PyPI builds
