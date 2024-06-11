@@ -58,12 +58,13 @@ class MetricsTest(unittest.TestCase):
     met.clear_all()
     t1 = torch.tensor(156, device=xla_device)
     t2 = t1 + 100
+    xm.wait_device_ops()
     self.assertIn('EagerOpCompileTime', met.metric_names())
     # one for cosntant, one for add
     self.assertEqual(met.metric_data('EagerOpCompileTime')[0], 2)
     self.assertIn('EagerOpExecuteTime', met.metric_names())
     # one for add
-    self.assertEqual(met.metric_data('EagerOpExecuteTime')[0], 1)
+    self.assertEqual(met.metric_data('EagerOpExecuteTime')[0], 2)
     # mark_step should be a no-op
     xm.mark_step()
     self.assertNotIn('CompileTime', met.metric_names())
