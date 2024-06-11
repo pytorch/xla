@@ -9,7 +9,7 @@ from torch_xla.experimental.fori_loop import fori_loop
 res = fori_loop(upper, lower, /*user defined*/body_fun, init)
 ```
 
-current fori_loop only support simple test like [link](https://github.com/pytorch/xla/blob/ManfeiBai-patch-87/test/test_while_loop.py), and user could try [simple user guide](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#simple-example-with-fori_loop) with `fori_loop` on TPU too.
+current fori_loop only support simple test like [link](https://github.com/pytorch/xla/blob/master/test/test_while_loop.py), and user could try [simple user guide](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#simple-example-with-fori_loop) with `fori_loop` on TPU too.
 
 For detailed implementation:
 - for situation that loop range is dynamic, [`fori_loop`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#fori_loop) is implemented with [`while_loop`](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#while_loop),
@@ -31,7 +31,7 @@ import torch_xla.experimental.fori_loop
 from torch._higher_order_ops.while_loop import while_loop
 res = while_loop(/*user-defined*/cond_fn, /*user-defined*/body_fn, /*tuple or list*/init)
 ```
-current while_loop only support simple test like [link](https://github.com/pytorch/xla/blob/ManfeiBai-patch-87/test/test_while_loop.py), and user could try [simple user guide](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#simple-example-with-while_loop) with `while_loop` on TPU too.
+current while_loop only support simple test like [link](https://github.com/pytorch/xla/blob/master/test/test_while_loop.py), and user could try [simple user guide](https://github.com/pytorch/xla/blob/master/docs/fori_loop.md#simple-example-with-while_loop) with `while_loop` on TPU too.
 
 
 # [WIP]scan
@@ -111,4 +111,4 @@ tensor([11], device='xla:0', dtype=torch.int32))
 tensor([51], device='xla:0', dtype=torch.int32)
 ```
 
-For more example and detailed user guide, please read [this test file](https://github.com/pytorch/xla/blob/ManfeiBai-patch-87/test/test_while_loop.py). PyTorch/XLA would include `while_loop` support in 2.3 for simple test case, complex test case and support for `fori_loop` and `scan` would be added after 2.3
+For more example and detailed user guide, please read [this test file](https://github.com/pytorch/xla/blob/master/test/test_while_loop.py). PyTorch/XLA would include `while_loop` support in 2.3 for simple test case, complex test case and support for `fori_loop` and `scan` would be added after 2.3
