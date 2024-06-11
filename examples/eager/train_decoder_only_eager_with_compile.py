@@ -6,11 +6,14 @@ from train_decoder_only_base import TrainDecoderOnlyBase
 
 import torch_xla
 
+
 class TrainDecoderOnlyEagerWithCompile(TrainDecoderOnlyBase):
-    def __init__(self):
-        super().__init__()
-        # step fn will be compiled and rest will be run eagerly.
-        self.step_fn = torch_xla.experimental.compile(self.step_fn)
+
+  def __init__(self):
+    super().__init__()
+    # step fn will be compiled and rest will be run eagerly.
+    self.step_fn = torch_xla.experimental.compile(self.step_fn)
+
 
 if __name__ == '__main__':
   torch_xla.experimental.eager_mode(True)

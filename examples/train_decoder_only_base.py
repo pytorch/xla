@@ -48,7 +48,7 @@ class TrainDecoderOnlyBase():
         logits.view(-1, self.config.vocab_size), target.view(-1))
     loss.backward()
     self.run_optimizer()
-    return loss    
+    return loss
 
   def train_loop_fn(self, loader, epoch):
     tracker = xm.RateTracker()
