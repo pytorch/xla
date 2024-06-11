@@ -31,6 +31,7 @@
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/bernoulli.h"
 #include "torch_xla/csrc/ops/cast.h"
+#include "torch_xla/csrc/ops/cast_int4.h"
 #include "torch_xla/csrc/ops/cat.h"
 #include "torch_xla/csrc/ops/cdist.h"
 #include "torch_xla/csrc/ops/collective_permute.h"
@@ -2397,6 +2398,13 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
       input->GetIrValue(), scale_list, zero_point_list, quant_min, quant_max,
       dtype, axis);
   return input->CreateFrom(torch::lazy::Value(node));
+}
+
+XLATensorPtr cast_int4(const XLATensorPtr& weight,
+                       const std::vector<int>& int4_weight_values) {
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<CastInt4>(weight->GetIrValue(), int4_weight_values);
+  return weight->CreateFrom(torch::lazy::Value(node));
 }
 
 //////////////////////////////////////////////////////////////////////////////

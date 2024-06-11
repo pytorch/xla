@@ -273,6 +273,13 @@ at::Tensor DynamicView(const at::Tensor& input,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
+at::Tensor CastInt4(const at::Tensor& weight,
+                    const std::vector<int>& int4_weight_values) {
+  auto result = tensor_methods::cast_int4(bridge::GetXlaTensor(weight),
+                                          int4_weight_values);
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
 at::Tensor QuantizeTensor(const at::Tensor& input,
                           const std::vector<float>& scale_list,
                           const std::vector<int>& zero_point_list,
@@ -1417,6 +1424,16 @@ void InitXlaModuleBindings(py::module m) {
     return torch::autograd::make_variable(
         result, /*requires_grad=*/input.requires_grad());
   });
+  m.def("_xla_cast_int4",
+        [](const at::Tensor& weight,
+           const std::vector<int>& int4_weight_values) -> at::Tensor {
+          at::Tensor result;
+          {
+            NoGilSection nogil;
+            result = CastInt4(weight, int4_weight_values);
+          }
+          return result;
+        });
   m.def("_xla_quantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
            const std::vector<int>& zero_point_list, int quant_min,

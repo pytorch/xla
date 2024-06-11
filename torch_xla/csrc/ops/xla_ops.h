@@ -52,6 +52,7 @@ extern const OpKindWrapper xla_optimization_barrier;
 extern const OpKindWrapper xla_quantize_tensor;
 extern const OpKindWrapper xla_recv;
 extern const OpKindWrapper xla_reduce_scatter;
+extern const OpKindWrapper xla_cast_int4;
 extern const OpKindWrapper xla_replication_pad;
 extern const OpKindWrapper xla_replication_pad_backward;
 extern const OpKindWrapper xla_select;
