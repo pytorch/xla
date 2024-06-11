@@ -2439,7 +2439,6 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_register_custom_call_target", [](const std::string& fn_name,
                                                const py::capsule& function_ptr,
                                                const std::string& platform) {
-    std::cout << "Start" << std::endl;
     if (runtime::sys_util::GetEnvBool("XLA_USE_IFRT", false) ||
         platform != "CUDA") {
       XLA_ERROR() << "Custom call targets can only be registered for "
@@ -2459,6 +2458,8 @@ void InitXlaModuleBindings(py::module m) {
       if (!pjrt_api) {
         return;
       }
+      // See openxla reference:
+      // https://github.com/openxla/xla/blob/b604c8d87df842002a7a8de79a434026329fbcb2/xla/pjrt/c/pjrt_c_api_gpu_test.cc#L414
       const PJRT_Extension_Base* next =
           reinterpret_cast<const PJRT_Extension_Base*>(
               pjrt_api->extension_start);
