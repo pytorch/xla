@@ -7,7 +7,6 @@ from train_decoder_only_base import TrainDecoderOnlyBase
 import torch_xla
 
 if __name__ == '__main__':
-  breakpoint()
   torch_xla.experimental.use_eager_mode(True)
   base = TrainDecoderOnlyBase()
   base.start_training()
