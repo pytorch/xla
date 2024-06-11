@@ -140,13 +140,6 @@ function run_torchrun {
   fi
 }
 
-function run_torchrun_single_process {
-  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
-    echo "Running torchrun test with one proc per node for GPU $@"
-    PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node 1 $@
-  fi
-}
-
 function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test_without_functionalization "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
