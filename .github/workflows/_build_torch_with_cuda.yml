@@ -7,9 +7,9 @@ on:
         type: string
         description: Base image for builds
       torch-commit:
-          required: true
-          type: string
-          description: torch-commit
+        required: true
+        type: string
+        description: torch-commit
       runner:
         required: false
         type: string

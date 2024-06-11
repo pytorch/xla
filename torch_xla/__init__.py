@@ -211,6 +211,7 @@ except importlib.metadata.PackageNotFoundError:
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
 
 from .experimental import plugins
+from ._internal import neuron, xpu  # Additional built-in plugins
 
 if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS') == '1':
   plugins.use_dynamic_plugins()

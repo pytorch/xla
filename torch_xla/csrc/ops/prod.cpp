@@ -16,7 +16,7 @@ namespace {
 
 xla::XlaOp LowerProd(xla::XlaOp input, const std::vector<int64_t>& dimensions,
                      bool keep_reduced_dimensions,
-                     c10::optional<at::ScalarType> dtype) {
+                     std::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input;
   if (dtype) {
     casted_input = ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),
@@ -30,7 +30,7 @@ xla::XlaOp LowerProd(xla::XlaOp input, const std::vector<int64_t>& dimensions,
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions,
-                           c10::optional<at::ScalarType> dtype) {
+                           std::optional<at::ScalarType> dtype) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerProd(operands[0], dimensions, keep_reduced_dimensions, dtype);
@@ -41,7 +41,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 Prod::Prod(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
-           bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
+           bool keep_reduced_dimensions, std::optional<at::ScalarType> dtype)
     : XlaNode(
           torch::lazy::OpKind(at::aten::prod), {input},
           [&]() {

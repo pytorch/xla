@@ -71,7 +71,7 @@ XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
 
 XLATensorPtr XLATensor::Create(
     torch::lazy::BackendDataPtr handle,
-    c10::optional<at::ScalarType> logical_element_type) {
+    std::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(handle), logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -80,20 +80,21 @@ XLATensorPtr XLATensor::Create(
 
 XLATensorPtr XLATensor::Create(
     torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-    c10::optional<at::ScalarType> logical_element_type) {
+    std::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
-  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
-  if (UseEagerDebugMode()) {
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  graph_executor->RegisterTensor(xtensor->data());
+  if (UseEagerDebugMode() || graph_executor->UseEagerMode()) {
     std::vector<XLATensorPtr> xtensors({xtensor});
-    XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
+    graph_executor->ApplyEagerSync(xtensors);
   }
   return xtensor;
 }
 
 XLATensorPtr XLATensor::Create(
     std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
-    c10::optional<at::ScalarType> logical_element_type) {
+    std::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(view), device, logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -109,7 +110,7 @@ XLATensor::XLATensor(const at::Tensor& tensor,
     : XLATensor(std::make_shared<Data>(tensor, device)) {}
 
 XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
-                     c10::optional<at::ScalarType> logical_element_type)
+                     std::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(handle, handle->device(),
                                        logical_element_type)) {
   // if data is sharded we need to carry the sharding spec over.
@@ -123,7 +124,7 @@ XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
 
 XLATensor::XLATensor(torch::lazy::Value ir_value,
                      const torch::lazy::BackendDevice& device,
-                     c10::optional<at::ScalarType> logical_element_type)
+                     std::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(std::move(ir_value), device,
                                        logical_element_type)) {
   // Preserve sharding if a new tensor is created from a sharded IR node.
@@ -141,7 +142,7 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
 
 XLATensor::XLATensor(std::shared_ptr<View> view,
                      const torch::lazy::BackendDevice& device,
-                     c10::optional<at::ScalarType> logical_element_type)
+                     std::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(std::move(view), device,
                                        logical_element_type)) {}
 
@@ -171,7 +172,7 @@ at::ScalarType XLATensor::dtype() const {
              : MaybeUpcastToHostTorchType(shape().get().element_type());
 }
 
-c10::optional<at::ScalarType> XLATensor::dtype_optional() const {
+std::optional<at::ScalarType> XLATensor::dtype_optional() const {
   return data()->logical_element_type;
 }
 
@@ -322,14 +323,14 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
   AssignIrValue(torch::lazy::Value());
   if (sync) {
     data()->view = nullptr;
-    data()->tensor_data = c10::nullopt;
+    data()->tensor_data = std::nullopt;
   }
   data()->is_cloned = false;
 }
 
 void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
   data()->handle = nullptr;
-  data()->tensor_data = c10::nullopt;
+  data()->tensor_data = std::nullopt;
   if (data()->view != nullptr && inplace) {
     // If we have an active view, SetIrValue() happens, and we are
     // within an in-place execution context, we need to update the view's
@@ -383,10 +384,10 @@ torch::lazy::Value XLATensor::GetIrValue() const {
     AssignIrValue(CreateTensorNode(handle, /*read_only=*/false));
     return data()->ir_value;
   }
-  c10::optional<at::Tensor> tensor_data = CurrentTensorData();
+  std::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
   AssignIrValue(GetIrValueForTensor(*tensor_data, GetDevice()));
-  data()->tensor_data = c10::nullopt;
+  data()->tensor_data = std::nullopt;
   return data()->ir_value;
 }
 
@@ -397,9 +398,9 @@ torch::lazy::Value XLATensor::CurrentIrValue() const {
   return data()->ir_value;
 }
 
-c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
+std::optional<at::Tensor> XLATensor::CurrentTensorData() const {
   if (data()->view != nullptr && !data()->view->IsUpToDate()) {
-    return c10::nullopt;
+    return std::nullopt;
   }
   return data()->tensor_data;
 }
@@ -427,7 +428,7 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
   View::IrNode ir_value_updated = view->GetViewIrNode();
   if (ir_value_updated.updated) {
     data()->handle = nullptr;
-    data()->tensor_data = c10::nullopt;
+    data()->tensor_data = std::nullopt;
   }
   return ir_value_updated;
 }
@@ -492,7 +493,7 @@ XLATensorPtr XLATensor::CreateViewTensor(ViewInfo view_info) const {
 
 at::Tensor XLATensor::ToTensor(bool detached) {
   at::Tensor tensor;
-  c10::optional<at::Tensor> tensor_data = CurrentTensorData();
+  std::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
     XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
@@ -510,7 +511,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
           data()->view != nullptr) {
         // If we have other authoritive sources, just drop our reference and
         // transfer it to the caller.
-        data()->tensor_data = c10::nullopt;
+        data()->tensor_data = std::nullopt;
       } else {
         // Otherwise we need to make a copy to prevent the caller changing our
         // version.
@@ -530,7 +531,7 @@ void XLATensor::ShallowCopyTo(XLATensorPtr dest) const {
 }
 
 void XLATensor::SetScalarType(
-    c10::optional<at::ScalarType> logical_element_type) {
+    std::optional<at::ScalarType> logical_element_type) {
   data()->logical_element_type = logical_element_type;
 }
 
@@ -586,7 +587,7 @@ std::vector<XLATensorPtr> XLATensor::MakeOutputTensors(
       tensors.push_back(CreateFrom(torch::lazy::Value(node, i)));
     } else {
       tensors.push_back(CreateFrom(torch::lazy::Value(node, i),
-                                   /*logical_element_type=*/c10::nullopt));
+                                   /*logical_element_type=*/std::nullopt));
     }
   }
   return tensors;
@@ -600,7 +601,7 @@ XLATensorPtr XLATensor::CopyTensorToDevice(
 
 torch::lazy::Value XLATensor::MaybeCastIrValue(
     torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-    c10::optional<at::ScalarType> logical_element_type) const {
+    std::optional<at::ScalarType> logical_element_type) const {
   if (!logical_element_type) {
     logical_element_type = dtype_optional();
   }
@@ -613,13 +614,13 @@ torch::lazy::Value XLATensor::MaybeCastIrValue(
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
-                              /*logical_element_type=*/c10::nullopt);
+                              /*logical_element_type=*/std::nullopt);
   return Create(std::move(ir_value), GetDevice(), dtype_optional());
 }
 
 XLATensorPtr XLATensor::CreateFrom(
     torch::lazy::Value ir_value,
-    c10::optional<at::ScalarType> logical_element_type_opt) const {
+    std::optional<at::ScalarType> logical_element_type_opt) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               logical_element_type_opt);
   return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);

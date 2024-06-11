@@ -69,6 +69,7 @@
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
+#include "xla/service/custom_call_target_registry.h"
 #include "xla/service/hlo_parser.h"
 
 namespace torch_xla {
@@ -104,10 +105,10 @@ class PyPjRtPlugin : public runtime::PjRtPlugin {
   }
 };
 
-c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(
+std::optional<torch::lazy::BackendDevice> GetOptionalDevice(
     const std::string& device_str) {
   if (device_str.empty()) {
-    return c10::nullopt;
+    return std::nullopt;
   }
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
 }
@@ -202,6 +203,24 @@ std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   return replica_groups;
 }
 
+std::vector<at::Tensor> XlaCustomCall(
+    const std::vector<at::Tensor>& inputs, const std::string& payload,
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<py::object>& output_dtypes, bool is_tpu) {
+  std::vector<at::ScalarType> dtypes;
+  dtypes.reserve(output_dtypes.size());
+  for (auto& dtype : output_dtypes) {
+    dtypes.push_back(reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
+  }
+
+  if (is_tpu) {
+    return bridge::AtenFromXlaTensors(tensor_methods::tpu_custom_call(
+        bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes));
+  }
+  return bridge::AtenFromXlaTensors(tensor_methods::gpu_custom_call(
+      bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes));
+}
+
 std::vector<std::pair<int64_t, int64_t>> CreateSourceTargetPairs(
     const py::list& pairs) {
   std::vector<std::pair<int64_t, int64_t>> source_target_pairs;
@@ -251,6 +270,13 @@ at::Tensor DynamicView(const at::Tensor& input,
   XLATensorPtr result = tensor_methods::dynamic_view(
       bridge::GetXlaTensor(input), size, bridge::GetXlaTensor(src_tensor),
       src_dim, target_dim, mul_scaler);
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
+at::Tensor CastInt4(const at::Tensor& weight,
+                    const std::vector<int>& int4_weight_values) {
+  auto result = tensor_methods::cast_int4(bridge::GetXlaTensor(weight),
+                                          int4_weight_values);
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
@@ -1398,6 +1424,16 @@ void InitXlaModuleBindings(py::module m) {
     return torch::autograd::make_variable(
         result, /*requires_grad=*/input.requires_grad());
   });
+  m.def("_xla_cast_int4",
+        [](const at::Tensor& weight,
+           const std::vector<int>& int4_weight_values) -> at::Tensor {
+          at::Tensor result;
+          {
+            NoGilSection nogil;
+            result = CastInt4(weight, int4_weight_values);
+          }
+          return result;
+        });
   m.def("_xla_quantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
            const std::vector<int>& zero_point_list, int quant_min,
@@ -1557,6 +1593,17 @@ void InitXlaModuleBindings(py::module m) {
           result_tuple[1] = new_token;
           return result_tuple;
         });
+  m.def(
+      "_xla_spmd_reduce_scatter",
+      [](const std::string& reduce_type, const at::Tensor& input, double scale,
+         int64_t scatter_dim, int64_t shard_count, const py::list& groups) {
+        std::vector<std::vector<int64_t>> replica_groups =
+            CreateReduceGroups(groups);
+        auto result = tensor_methods::reduce_scatter(
+            bridge::GetXlaTensor(input), GetReduceType(reduce_type), scale,
+            scatter_dim, shard_count, replica_groups);
+        return bridge::AtenFromXlaTensor(std::move(result));
+      });
   m.def("_xla_reduce_scatter",
         [](const std::string& reduce_type, const at::Tensor& input,
            const std::shared_ptr<torch::lazy::Value>& token, double scale,
@@ -2374,6 +2421,11 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_xla_enable_device_data_cache",
         []() { return FLAGS_torch_lazy_enable_device_data_cache; });
+  m.def("_set_use_eager_mode", [](bool use_eager_mode) {
+    XLAGraphExecutor::Get()->SetUseEagerMode(use_eager_mode);
+  });
+  m.def("_get_use_eager_mode",
+        []() { return XLAGraphExecutor::Get()->UseEagerMode(); });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
@@ -2401,16 +2453,22 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<std::vector<int64_t>>& output_shapes,
            const std::vector<py::object>& output_dtypes)
             -> std::vector<at::Tensor> {
-          std::vector<at::ScalarType> dtypes;
-          dtypes.reserve(output_dtypes.size());
-          for (auto& dtype : output_dtypes) {
-            dtypes.push_back(
-                reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
-          }
-
-          auto xtensors = tensor_methods::tpu_custom_call(
-              bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes);
-          return bridge::AtenFromXlaTensors(xtensors);
+          return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
+                               /*is_tpu=*/true);
+        });
+  m.def("_xla_gpu_custom_call",
+        [](const std::vector<at::Tensor>& inputs, const std::string& payload,
+           const std::vector<std::vector<int64_t>>& output_shapes,
+           const std::vector<py::object>& output_dtypes)
+            -> std::vector<at::Tensor> {
+          return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
+                               /*is_tpu=*/false);
+        });
+  m.def("_xla_register_custom_call_target",
+        [](const std::string& fn_name, const py::capsule& function_ptr,
+           const std::string& platform) {
+          XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(
+              fn_name, function_ptr.get_pointer(), platform);
         });
   m.def("_set_xla_custom_op_name_prefix",
         [](const at::Tensor& input, const std::string& op_name_prefix,

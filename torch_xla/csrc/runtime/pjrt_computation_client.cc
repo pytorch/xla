@@ -530,7 +530,11 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
 
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
-  metrics::TimedSection timed(CompileMetric());
+  auto metrics_fn = CompileMetric;
+  if (instances[0].eager_mode) {
+    metrics_fn = EagerCompileMetric;
+  }
+  metrics::TimedSection timed(metrics_fn());
   tsl::profiler::TraceMe activity("PjRtComputationClient::Compile",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
@@ -627,7 +631,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       TF_VLOG(3) << "memory usage is not availiable";
     }
 
-    const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
+    const auto& hlo_modules =
+        ConsumeValueNoStackDump(executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
@@ -693,7 +698,11 @@ PjRtComputationClient::ExecuteComputation(
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
   // complete; a copy is held from the lambda that releases it when done.
-  auto timed = std::make_shared<metrics::TimedSection>(ExecuteMetric());
+  auto metrics_fn = ExecuteMetric;
+  if (options.eager_mode) {
+    metrics_fn = EagerExecuteMetric;
+  }
+  auto timed = std::make_shared<metrics::TimedSection>(metrics_fn());
   tsl::profiler::TraceMe activity("PjRtComputationClient::ExecuteComputation",
                                   tsl::profiler::TraceMeLevel::kInfo);
   TF_VLOG(1) << "Executing PjRt computation on " << device;

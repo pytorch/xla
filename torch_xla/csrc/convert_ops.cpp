@@ -80,7 +80,7 @@ xla::XlaOp ConvertToNumeric(xla::XlaOp op) {
 }
 
 xla::XlaOp CastToScalarType(xla::XlaOp input,
-                            c10::optional<at::ScalarType> dtype) {
+                            std::optional<at::ScalarType> dtype) {
   if (dtype) {
     torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     return ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),

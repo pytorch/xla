@@ -77,9 +77,21 @@ metrics::Metric* ComputationClient::CompileMetric() {
   return metric;
 }
 
+metrics::Metric* ComputationClient::EagerCompileMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("EagerOpCompileTime", metrics::MetricFnTime);
+  return metric;
+}
+
 metrics::Metric* ComputationClient::ExecuteMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("ExecuteTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::EagerExecuteMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("EagerOpExecuteTime", metrics::MetricFnTime);
   return metric;
 }
 

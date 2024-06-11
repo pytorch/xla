@@ -1080,10 +1080,10 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DWithScale) {
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor result = torch::upsample_nearest2d(
-          input, c10::nullopt,
+          input, std::nullopt,
           at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
       torch::Tensor xla_result = torch::upsample_nearest2d(
-          xla_input, c10::nullopt,
+          xla_input, std::nullopt,
           at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
       AllClose(result, xla_result);
     });
@@ -1116,7 +1116,7 @@ TEST_F(AtenXlaTensorTest, TestUpsampleNearest2DBackwardWithScale) {
       auto testfn =
           [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
         return torch::upsample_nearest2d(
-            inputs[0], c10::nullopt,
+            inputs[0], std::nullopt,
             at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
       };
       ForEachDevice([&](const torch::Device& device) {
@@ -1208,10 +1208,10 @@ TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DWithScale) {
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor xla_input = CopyToDevice(input, device);
         torch::Tensor result = torch::upsample_bilinear2d(
-            input, c10::nullopt, align_corners,
+            input, std::nullopt, align_corners,
             at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
         torch::Tensor xla_result = torch::upsample_bilinear2d(
-            xla_input, c10::nullopt, align_corners,
+            xla_input, std::nullopt, align_corners,
             at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
         AllClose(result, xla_result, /*rtol=*/1e-4, /*atol=*/1e-4);
       });
@@ -1266,7 +1266,7 @@ TEST_F(AtenXlaTensorTest, TestUpsampleBilinear2DBackwardWithScale) {
       auto testfn =
           [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
         return torch::upsample_bilinear2d(
-            inputs[0], c10::nullopt, align_corners,
+            inputs[0], std::nullopt, align_corners,
             at::ArrayRef<double>{img_info.scale_h, img_info.scale_w});
       };
       ForEachDevice([&](const torch::Device& device) {
@@ -2389,7 +2389,7 @@ TEST_F(AtenXlaTensorTest, TestCount_Nonzero_with_single_dim) {
   a[0][1] = 1.0;
   a[0][2] = 1.0;
   a[2][2] = 1.0;
-  std::vector<c10::optional<long int>> dims = {0, -1};
+  std::vector<std::optional<long int>> dims = {0, -1};
   for (int i = 0; i < dims.size(); i++) {
     torch::Tensor b = torch::count_nonzero(a, dims[i]);
     ForEachDevice([&](const torch::Device& device) {

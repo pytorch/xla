@@ -32,8 +32,8 @@ python3 test/torch_distributed/test_torch_distributed_reduce_scatter_xla_backend
 
 # run examples, each test should takes <2 minutes
 python3 examples/data_parallel/train_resnet_spmd_data_parallel.py
-python3 examples/data_parallel/train_resnet_ddp.py
 python3 examples/data_parallel/train_resnet_xla_ddp.py
 python3 examples/fsdp/train_decoder_only_fsdp_v2.py
 python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py
 python3 examples/train_resnet_amp.py
+python3 examples/eager/train_decoder_only_eager.py
