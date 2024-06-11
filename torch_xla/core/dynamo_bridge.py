@@ -151,7 +151,8 @@ def _maybe_move_tensors_to_device(tensors: tuple,
 
     zero_copy_enabled = xu.getenv_as(xenv.ZERO_COPY_ENABLED, bool, defval=False)
     if zero_copy_enabled and tensor.device.type == 'cuda' and target_device.type == 'xla':
-      moved_tensor = torch_xla_dlpack.from_dlpack(tensor)
+      # If the input cuda tensor requires gradient, we need to call detach. Otherwise, we'd get the error "RuntimeError: Can't export tensors that require gradient, use tensor.detach()"
+      moved_tensor = torch_xla_dlpack.from_dlpack(tensor.detach())
     elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
       moved_tensor = torch_xla_dlpack.from_xla_cuda_to_cuda(tensor)
     else:
