@@ -164,3 +164,12 @@ def scaled_dot_product_attention(
     return env.j2t_iso(res)
 
    return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal, scale)
+
+@register_function(torch.Tensor.__getitem__)
+def getitem(self, indexes):
+  if isinstance(indexes, list) and isinstance(indexes[0], int):
+    # list of int, i.e. x[[1, 2]] NOT x[1, 2] (the second would be tuple of int)
+    indexes = (indexes, )
+  elif isinstance(indexes, list):
+    indexes = tuple(indexes)
+  return self[indexes]
