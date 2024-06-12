@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torch_xla.torch_xla &mdash; PyTorch/XLA master documentation</title>
+  <title>torch_xla.experimental.eager &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -25,12 +25,12 @@
 
   
 
-  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-    <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -41,16 +41,16 @@
   
 
   
-  <script src="../../_static/js/modernizr.min.js"></script>
+  <script src="../../../_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -277,7 +277,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -325,7 +325,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="../../index.html">
+        <a href="../../../index.html">
           
             Docs
           
@@ -333,9 +333,9 @@
       </li>
 
         
-          <li><a href="../index.html">Module code</a> &gt;</li>
+          <li><a href="../../index.html">Module code</a> &gt;</li>
         
-      <li>torch_xla.torch_xla</li>
+      <li>torch_xla.experimental.eager</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
@@ -367,78 +367,16 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <h1>Source code for torch_xla.torch_xla</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">contextlib</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
-
-<span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+  <h1>Source code for torch_xla.experimental.eager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch_xla</span>
 
 
-<div class="viewcode-block" id="device"><a class="viewcode-back" href="../../index.html#torch_xla.device">[docs]</a><span class="k">def</span> <span class="nf">device</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a given instance of an XLA device.</span>
-
-<span class="sd">  If SPMD enables, returns a virtual device that wraps all devices available</span>
-<span class="sd">  to this process.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    index: index of the XLA device to be returned. Corresponds to index in</span>
-<span class="sd">      `torch_xla.devices()`.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    An XLA `torch.device`.</span>
+<div class="viewcode-block" id="eager_mode"><a class="viewcode-back" href="../../../index.html#torch_xla.experimental.eager_mode">[docs]</a><span class="k">def</span> <span class="nf">eager_mode</span><span class="p">(</span><span class="n">enable</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Configure torch_xla&#39;s default executation mode.</span>
+<span class="sd">  Under eager mode only functions that was `torch_xla.compile`d will be</span>
+<span class="sd">  traced and compiled. Other torch ops will be executed eagerly.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="k">return</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">index</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="devices"><a class="viewcode-back" href="../../index.html#torch_xla.devices">[docs]</a><span class="k">def</span> <span class="nf">devices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns all devices available in the current process.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    A list of XLA `torch.devices`.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="k">return</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">()]</span></div>
-
-
-<span class="k">def</span> <span class="nf">real_devices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns local XLA device types and indices.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    A list strings representing the XLA devices available in the current</span>
-<span class="sd">    process, e.g. `[&#39;TPU:0&#39;, &#39;TPU:1&#39;, ...]`.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_real_devices</span><span class="p">()</span>
-
-
-<div class="viewcode-block" id="device_count"><a class="viewcode-back" href="../../index.html#torch_xla.device_count">[docs]</a><span class="k">def</span> <span class="nf">device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns number of addressable devices in the current process.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">real_devices</span><span class="p">())</span></div>
-
-
-<div class="viewcode-block" id="sync"><a class="viewcode-back" href="../../index.html#torch_xla.sync">[docs]</a><span class="k">def</span> <span class="nf">sync</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Launches all pending graph operations.&quot;&quot;&quot;</span>
-  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span></div>
-
-
-<div class="viewcode-block" id="step"><a class="viewcode-back" href="../../index.html#torch_xla.step">[docs]</a><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
-<span class="k">def</span> <span class="nf">step</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps code that should be dispatched to the runtime.</span>
-
-<span class="sd">  Experimental: `xla.step` is still a work in progress. Some code that currently</span>
-<span class="sd">  works with `xla.step` but does not follow best practices will become errors in</span>
-<span class="sd">  future releases. See https://github.com/pytorch/xla/issues/6751 for context.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="c1"># Clear pending operations</span>
-  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
-
-  <span class="k">try</span><span class="p">:</span>
-    <span class="k">yield</span>
-  <span class="k">finally</span><span class="p">:</span>
-    <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span></div>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="n">enable</span><span class="p">)</span></div>
 </pre></div>
 
              </article>
@@ -486,21 +424,21 @@
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-         <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-         <script src="../../_static/jquery.js"></script>
-         <script src="../../_static/underscore.js"></script>
-         <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="../../_static/doctools.js"></script>
-         <script src="../../_static/sphinx_highlight.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+         <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+         <script src="../../../_static/jquery.js"></script>
+         <script src="../../../_static/underscore.js"></script>
+         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../../../_static/doctools.js"></script>
+         <script src="../../../_static/sphinx_highlight.js"></script>
      
 
   
 
-  <script type="text/javascript" src="../../_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="../../_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -605,7 +543,7 @@
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="../../_static/images/pytorch-x.svg">
+    <img class="close-button" src="../../../_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -738,7 +676,7 @@
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="../../_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {

@@ -73,6 +73,10 @@ spmd
 .. autoclass:: HybridMesh
 .. autoclass:: ShardingSpec
 
+experimental
+----------------------------------
+.. automodule:: torch_xla.experimental
+.. autofunction:: eager_mode
 
 debug
 ----------------------------------
