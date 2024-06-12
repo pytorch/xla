@@ -97,7 +97,7 @@ def _xla_while_loop(cond_fn,
     body_fn_inputs = carried_inputs
     cond_fn_inputs = carried_inputs
 
-  # due to `xla::While` requirement, body xlacomputation inputs/outputs, cond xlacomputation and init need to be the same shape and type; 
+  # due to `xla::While` requirement, body xlacomputation inputs/outputs, cond xlacomputation and init need to be the same shape and type;
   # and carried_inputs contain (iter, values), additional_inputs contain (weights/bias)
   # based on generated body xlacomputation outputs: (iter, weights/bias, values)
   # we create expected order for cond/body xlacomputation generation to compare and match: (iter, weights/bias, values)
