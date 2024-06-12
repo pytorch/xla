@@ -119,6 +119,15 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     b = torch.sin(y)
     return a + b
 
+  def _choose_proper_device(self, initialize_on_cuda):
+    if initialize_on_cuda:
+      os.environ.update({
+          xenv.ZERO_COPY_ENABLED: "1",
+      })
+      return "cuda:0"
+    else:
+      return xm.xla_device()
+
   def test_simple_model(self):
     device = xm.xla_device()
     x = torch.tensor(100.0)
@@ -192,7 +201,11 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     self.assertTrue(res_xla_dynamo_different.device == original_device)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_different))
 
-  def test_fn_without_input(self):
+  @parameterized.parameters(
+      True,
+      False,
+  )
+  def test_fn_without_input(self, initialize_on_cuda):
 
     def fn_without_input(device):
       constant = 0.835
@@ -200,13 +213,18 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
       arange = torch.arange(16, device=device).reshape(4, 4)
       return expanded + arange
 
-    device = xm.xla_device()
+    device = self._choose_proper_device(initialize_on_cuda)
+
     compiled_fn = torch.compile(fn_without_input, backend='openxla')
     res_cpu = fn_without_input('cpu')
     res_xla_dynamo = compiled_fn(device)
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
 
-  def test_simple_model_with_in_place_ops(self):
+  @parameterized.parameters(
+      True,
+      False,
+  )
+  def test_simple_model_with_in_place_ops(self, initialize_on_cuda):
 
     class TestModel(nn.Module):
 
@@ -228,72 +246,92 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
         output = input_tensor + self.self_tensor
         return output
 
+    device = self._choose_proper_device(initialize_on_cuda)
+
     torch._dynamo.reset()
     met.clear_all()
-    device = xm.xla_device()
 
     cpu_model = TestModel()
-    xla_model = TestModel(device).to(device)
-    compiled_model = torch.compile(xla_model, backend='openxla')
+    device_model = TestModel(device).to(device)
+    compiled_model = torch.compile(device_model, backend='openxla')
 
     input_tensor = torch.ones(3)
     copy_tensor = torch.rand(5, 3)
     index = torch.tensor([0, 4, 2, 1, 3])
-    xla_input_tensor = input_tensor.to(device)
-    xla_copy_tensor = copy_tensor.to(device)
-    xla_index = index.to(device)
+    device_input_tensor = input_tensor.to(device)
+    device_copy_tensor = copy_tensor.to(device)
+    device_index = index.to(device)
 
     in_place_ops = ['copy_', 'add_', 'abs_']
     for in_place_op in in_place_ops:
       res_cpu = cpu_model.forward(
           index, copy_tensor, input_tensor, op_name=in_place_op)
-      res_xla_dynamo = compiled_model.forward(
-          xla_index, xla_copy_tensor, xla_input_tensor, op_name=in_place_op)
-      self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
+      res_device_dynamo = compiled_model.forward(
+          device_index,
+          device_copy_tensor,
+          device_input_tensor,
+          op_name=in_place_op)
+      self.assertTrue(torch.allclose(res_cpu, res_device_dynamo.cpu()))
 
-  def test_einsum(self):
+  @parameterized.parameters(
+      True,
+      False,
+  )
+  def test_einsum(self, initialize_on_cuda):
     # einsum currently does not have meta function to compute the shape hence
     # will fallback to XLA with FakeTensor as input to infer the output shape.
     def einsum_mm(a, b):
       return torch.einsum('ijkl,ijlm->ijkm', a, b)
 
-    device = xm.xla_device()
-    a = torch.randn(4, 4, 4, 4).to(xm.xla_device())
-    b = torch.randn(4, 4, 4, 4).to(xm.xla_device())
+    device = self._choose_proper_device(initialize_on_cuda)
+    a = torch.randn(4, 4, 4, 4).to(device)
+    b = torch.randn(4, 4, 4, 4).to(device)
     xm.mark_step()
 
     dynamo_einsum_mm = torch.compile(einsum_mm, backend="openxla")
-    res_xla_dynamo = dynamo_einsum_mm(a, b)
-    res_xla_non_dynamo = einsum_mm(a, b)
+    res_device_dynamo = dynamo_einsum_mm(a, b)
+    res_device_non_dynamo = einsum_mm(a, b)
     self.assertTrue(
-        torch.allclose(res_xla_non_dynamo.cpu(), res_xla_dynamo.cpu()))
+        torch.allclose(res_device_non_dynamo.cpu(), res_device_dynamo.cpu()))
 
-  def test_simple_model_with_different_input_shape(self):
-    met.clear_counters()
-    device = xm.xla_device()
-    xla_x = torch.randn(5, 5).to(device)
-    xla_y = torch.randn(5, 5).to(device)
-    xla_z = torch.randn(10, 10).to(device)
+  @parameterized.parameters(
+      True,
+      False,
+  )
+  def test_simple_model_with_different_input_shape(self, initialize_on_cuda):
+    met.clear_all()
+    device = self._choose_proper_device(initialize_on_cuda)
+    # We need to make `dim` depend on `initialize_on_cuda` because the compilation cache
+    # does not clean itself between the parameterized tests.
+    dim = 5 + int(initialize_on_cuda)
+    device_x = torch.randn(dim, dim).to(device)
+    device_y = torch.randn(dim, dim).to(device)
+    new_dim = 2 * dim
+    device_z = torch.randn(new_dim, new_dim).to(device)
     fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
-    fn_simple_dynamo(xla_x, xla_x)
+    fn_simple_dynamo(device_x, device_x)
     compile_count = met.metric_data('CompileTime')[0]
     # Execute with input with same shape should not trigger additional compilation
-    fn_simple_dynamo(xla_y, xla_y)
+    fn_simple_dynamo(device_y, device_y)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
     # Give `fn_simple_dynamo` an input with different shappe, we expect
     # dynamo to recognize this is a different graph and let XLA to retrace/recompile
-    res_xla_dynamo_3 = fn_simple_dynamo(xla_z, xla_z)
+    res_xla_dynamo_3 = fn_simple_dynamo(device_z, device_z)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count + 1)
     self.assertTrue(
         torch.allclose(
             res_xla_dynamo_3.cpu(),
-            self.fn_simple(xla_z.cpu(), xla_z.cpu()),
+            self.fn_simple(device_z.cpu(), device_z.cpu()),
             rtol=1e-05,
             atol=1e-05))
 
   @skipOnTpu
-  def test_resnet18(self):
-    device = xm.xla_device()
+  @parameterized.parameters(
+      True,
+      False,
+  )
+  def test_resnet18(self, initialize_on_cuda):
+    device = self._choose_proper_device(initialize_on_cuda)
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
@@ -302,16 +340,16 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
         sample_count=sample_count)
     resnet18 = torchvision.models.resnet18()
     resnet18.eval()
-    xla_resnet18 = torchvision.models.resnet18()
-    xla_resnet18.load_state_dict(resnet18.state_dict())
-    xla_resnet18.to(device)
-    xla_resnet18.eval()
+    device_resnet18 = torchvision.models.resnet18()
+    device_resnet18.load_state_dict(resnet18.state_dict())
+    device_resnet18.to(device)
+    device_resnet18.eval()
     # materalize the fake data for test purpose
     xm.mark_step()
     xm.wait_device_ops()
     met.clear_all()
     for data, _ in loader:
-      dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
+      dynamo_resnet18 = torch.compile(device_resnet18, backend='openxla')
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
