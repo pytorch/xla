@@ -4,11 +4,12 @@
 #include <ATen/ATen.h>
 #include <ATen/FunctionalTensorWrapper.h>
 #include <c10/core/ScalarType.h>
-#include <c10/util/Optional.h>
 #include <torch/csrc/lazy/core/dynamic_ir.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/tensor.h>
 #include <torch/csrc/lazy/core/util.h>
+
+#include <optional>
 
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "xla/shape.h"

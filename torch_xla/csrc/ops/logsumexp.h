@@ -1,8 +1,6 @@
 #ifndef XLA_TORCH_XLA_CSRC_OPS_LOGSUMEXP_H_
 #define XLA_TORCH_XLA_CSRC_OPS_LOGSUMEXP_H_
 
-#include <c10/util/Optional.h>
-
 #include <vector>
 
 #include "torch_xla/csrc/ir.h"

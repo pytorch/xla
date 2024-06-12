@@ -2,11 +2,11 @@
 #define XLA_TORCH_XLA_CSRC_HELPERS_H_
 
 #include <c10/core/Scalar.h>
-#include <c10/util/Optional.h>
 #include <torch/csrc/lazy/core/shape.h>
 #include <torch/csrc/lazy/core/util.h>
 
 #include <functional>
+#include <optional>
 #include <tuple>
 #include <vector>
 
