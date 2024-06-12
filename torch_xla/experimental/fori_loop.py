@@ -76,10 +76,6 @@ def _xla_while_loop(cond_fn,
         torch.randint(10, carried_input.size(),
                       dtype=carried_input.dtype).to(device))
 
-  fake_input_output = fake_carried_inputs[1:]
-  fake_iter_input = fake_carried_inputs[:-1]
-  fake_output = fake_carried_inputs[-1]
-
   #  ====== additional_inputs_list_cond ======
   fake_additiona_args = []
   for additional_input in additional_inputs:
@@ -89,19 +85,25 @@ def _xla_while_loop(cond_fn,
             10, additional_input.size(),
             dtype=additional_input.dtype).to(device))
 
-  #  ====== additional_inputs_list_cond ======
-  dummy_inputs_list = [
-      fake_carried_inputs[0],
-  ] + fake_additiona_args + fake_carried_inputs[1:]
-
+  #  ====== inputs_list ======
+  #  specify body_fn_inputs/cond_fn_inputs, and add caught additional_inputs into fn_inputs
   if additional_inputs or fake_tensor:
+    # replace inputs(carried_inputs[1:]) with fake tensors to fix missed arguments problem
     body_fn_inputs = [
         carried_inputs[0],
     ] + fake_carried_inputs[1:] + list(additional_inputs)
     cond_fn_inputs = carried_inputs + additional_inputs
   else:
-    body_fn_inputs = carried_inputs + additional_inputs
-    cond_fn_inputs = carried_inputs + additional_inputs
+    body_fn_inputs = carried_inputs
+    cond_fn_inputs = carried_inputs
+
+  # due to `xla::While` requirement, body xlacomputation inputs/outputs, cond xlacomputation and init need to be the same shape and type; 
+  # and carried_inputs contain (iter, values), additional_inputs contain (weights/bias)
+  # based on generated body xlacomputation outputs: (iter, weights/bias, values)
+  # we create expected order for cond/body xlacomputation generation to compare and match: (iter, weights/bias, values)
+  dummy_inputs_list = [
+      fake_carried_inputs[0],
+  ] + fake_additiona_args + fake_carried_inputs[1:]
 
   #  ====== body_fn ======
   body_result = body_fn(*body_fn_inputs)
