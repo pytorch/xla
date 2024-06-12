@@ -1216,6 +1216,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "Only runs on TPUv4")
   def test_spmd_reduce_scatter(self):
+    print(tpu.version())
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
     x = torch.ones(8, 8).to(xm.xla_device())
 
