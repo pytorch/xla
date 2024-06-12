@@ -1,20 +1,16 @@
 """Tensor constructor overrides"""
 import functools
 from typing import Optional, Sequence
+import numpy as np
 
 import jax
-import torch
 import jax.numpy as jnp
-import numpy as np
-from torch_xla2 import tensor
-from torch_xla2.ops.ops_registry import register_torch_function_op
-from torch_xla2.ops import op_base
-from torch_xla2 import interop
-
 from jax.experimental.pallas.ops.tpu import flash_attention
 from jax.experimental.shard_map import shard_map
 
-
+import torch
+from torch_xla2.ops.ops_registry import register_torch_function_op
+from torch_xla2.ops import op_base, mappings
 
 
 def register_function(torch_func, **kwargs):
@@ -36,7 +32,7 @@ def _tensor(data, *, dtype=None, **kwargs):
       dtype = python_types_to_torch_types.get(type(leaves[0]))
 
   return jnp.array(
-      data, dtype=dtype or tensor.t2j_dtype(torch.get_default_dtype()))
+      data, dtype=dtype or mappings.t2j_dtype(torch.get_default_dtype()))
 
 
 @register_function(torch.ones)

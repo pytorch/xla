@@ -1,14 +1,18 @@
 import jax
-from jax._src import config
 import os
 import torch
-from torch._functorch import make_functional
 from torch.utils import _pytree as pytree
-from torch_xla2 import export, tensor, tf_integration
+from torch_xla2 import tensor
+
+
+__all__ = [
+  'default_env',
+  'extract_jax',
+]
+
 
 jax.config.update('jax_enable_x64', True)
-
-config.update(
+jax.config.update(
   'jax_pjrt_client_create_options',
   f'ml_framework_name:PyTorch/XLA2;ml_framework_version:{"v0.0.1"}'
 )
@@ -29,7 +33,6 @@ def extract_jax(mod: torch.nn.Module, env=None):
   """Returns a pytree of jax.ndarray and a jax callable."""
   if env is None:
     env = default_env()
-  func, weights, buffer = make_functional.make_functional_with_buffers(mod)
   states = mod.state_dict()
 
   states = pytree.tree_map_only(torch.Tensor, tensor.t2j, states)

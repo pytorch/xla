@@ -2,8 +2,10 @@ import unittest
 import torch
 import torch.nn.functional as F
 import jax
+import jax.experimental.export
 import torch_xla2
 from torch_xla2 import tensor
+from torch_xla2.ops import mappings
 
 
 class Interpolate(torch.nn.Module):
@@ -125,7 +127,7 @@ class ExportTest(unittest.TestCase):
     }
 
     model = TensorConstant()
-    for torch_dtype in torch_xla2.tensor.TORCH_DTYPE_TO_JAX.keys():
+    for torch_dtype in mappings.TORCH_DTYPE_TO_JAX.keys():
       if torch_dtype == None:
         ## TODO: Figure out what the None mapping should be, seems like:
         ##   torch.tensor(dtype=None) maps to f32

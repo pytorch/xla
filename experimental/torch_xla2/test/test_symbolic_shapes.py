@@ -1,6 +1,5 @@
 import unittest
 import torch
-import jax
 import torch_xla2
 
 class AddOne(torch.nn.Module):
