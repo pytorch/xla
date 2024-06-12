@@ -75,7 +75,7 @@ class WhileLoopTest(unittest.TestCase):
 
         return while_loop(cond_fn, body_fn, (iteri, x))
 
-      def forward_compare(self, iteri, x):
+      def forward_without_while_loop_op(self, iteri, x):
         y = self.linear(x)
         return iteri - 1, y
 
@@ -87,7 +87,7 @@ class WhileLoopTest(unittest.TestCase):
 
     # === expected result after 2 iteration to be compared ===
     for i in range(iteri):
-      _, l_in_0 = linear_model.forward_compare(iteri, l_in_0)
+      _, l_in_0 = linear_model.forward_without_while_loop_op(iteri, l_in_0)
     res_without_loop = l_in_0
 
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
