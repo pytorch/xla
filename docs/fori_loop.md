@@ -129,4 +129,4 @@ tensor([11], device='xla:0', dtype=torch.int32))
 tensor([51], device='xla:0', dtype=torch.int32)
 ```
 
-PyTorch/XLA would include `while_loop` support in 2.4 with test case, support for `fori_loop` and `scan` would be added after 2.4.
+PyTorch/XLA would include `while_loop` support in 2.4 with test case, support for `fori_loop` and `scan` would be added after 2.4. For `fori_loop` and `while_loop`, currently we only should force define `body_fn` with same `input` and `output(return args)` shape
