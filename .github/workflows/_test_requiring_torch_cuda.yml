@@ -30,10 +30,17 @@ on:
 
 jobs:
   test:
-    runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
       options: "--gpus all --shm-size 16g"
+    strategy:
+      matrix:
+        include:
+          - run_python_tests: 'python_tests'
+            runner: ${{ inputs.runner }}
+          - run_triton_tests: 'triton_tests'
+            runner: 'linux.g5.4xlarge.nvidia.gpu'
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
@@ -98,9 +105,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: pytorch/xla
-      - name: Test
+      - name: Extra CI deps
+        shell: bash
+        run: |
+          set -x
+          pip install -U --pre jaxlib -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+          pip install -U --pre jax-cuda12-pjrt jax-cuda12-plugin -f https://storage.googleapis.com/jax-releases/jax_cuda_plugin_nightly_releases.html
+          pip install -U --pre jax -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
+          pip install --no-deps triton==2.3.0
+        if: ${{ matrix.run_triton_tests }}
+      - name: Python Tests
         shell: bash
         run: |
           set -xue
           PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
           PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
+        if: ${{ matrix.run_python_tests }}
+      - name: Triton Tests
+        shell: bash
+        run: |
+          PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.1/bin/ptxas python pytorch/xla/test/test_triton.py
+        if: ${{ matrix.run_triton_tests }}
