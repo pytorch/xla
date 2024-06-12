@@ -314,6 +314,34 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
 
+  def test_resnet18_lazy_vs_dynamo(self):
+    device = xm.xla_device()
+    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
+    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
+    loader = xu.SampleGenerator(
+        data=(torch.randn(batch_size, 3, 224, 224, device=device),
+              torch.zeros(batch_size, dtype=torch.int64, device=device)),
+        sample_count=sample_count)
+    resnet18_base = torchvision.models.resnet18()
+    resnet18_base.eval()
+    xla_resnet18 = torchvision.models.resnet18()
+    xla_resnet18.load_state_dict(resnet18_base.state_dict())
+    xla_resnet18.to(device)
+    xla_resnet18.eval()
+    resnet18_base.to(device)
+    # materalize the fake data for test purpose
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+    dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
+    for data, _ in loader:
+      output_lazy = resnet18_base(data)
+      torch_xla.sync()
+      output_dynamo = dynamo_resnet18(data)
+      self.assertTrue(
+          torch.allclose(
+              output_lazy.cpu(), output_dynamo.cpu(), rtol=1e-05, atol=1e-05))
+
 
 class DynamoCpuFallbackTest(unittest.TestCase):
 
