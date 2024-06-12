@@ -401,6 +401,7 @@ class ZeroRedundancyOptimizer(Optimizer):
             index += 1
 
   def _update_parameters(self, **kwargs):
+    sharding_scheme = self._get_sharding_scheme(**kwargs)
     kwargs.pop("sharding_scheme", None)
 
     # Step the wrapped optimizer
@@ -409,7 +410,7 @@ class ZeroRedundancyOptimizer(Optimizer):
     # Remove shards' grads
     self.base_optimizer.zero_grad(set_to_none=True)
 
-    self.allgather_weights_and_update_full_parameter(**kwargs)
+    self.allgather_weights_and_update_full_parameter(sharding_scheme)
 
     # sync back
     self._sync_param_groups(self.base_optimizer.param_groups, self.param_groups)
@@ -436,8 +437,7 @@ class ZeroRedundancyOptimizer(Optimizer):
 
     return loss
 
-  def allgather_weights_and_update_full_parameter(self, **kwargs):
-    sharding_scheme = self._get_sharding_scheme(**kwargs)
+  def allgather_weights_and_update_full_parameter(self, sharding_scheme):
 
     # All gather the new weights across the ranks and assign them to the full parameters
     sharded_data = []
