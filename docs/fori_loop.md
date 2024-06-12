@@ -60,18 +60,22 @@ like [`jax.lax.scan`](https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.
 ## Simple user guide
 User could try these three simple test case to better compare difference between `pure python for loop` and `fori_loop` and `while_loop`, these three test case have similar logic: cumulative plus 1 for ten times:
 
-### simple example with pure python for loop
+### simple example with pure python `for` loop
 ```bash
-# python
+# PJRT_DEVICE=TPU python
 >>> import torch
->>> init = torch.tensor([0], dtype=torch.int32)
->>> one_value = torch.ones(1, dtype=torch.int32)
+>>> import torch_xla
+>>> import torch_xla.core.xla_model as xm
 >>> 
->>> for i in range(10):
-...   init = init + one_value
+>>> device = xm.xla_device()
+>>> 
+>>> init_val = torch.tensor(1, device=device)
+>>> 
+>>> for i in range(50):
+...   init_val = init_val + 1
 ... 
->>> init
-tensor([10], dtype=torch.int32)
+>>> init_val
+tensor(51, device='xla:0')
 ```
 
 ### simple example with `while_loop`:
@@ -80,26 +84,23 @@ tensor([10], dtype=torch.int32)
 >>> import torch
 >>> import torch_xla
 >>> import torch_xla.experimental.fori_loop
->>> from torch_xla.experimental.fori_loop import fori_loop
 >>> from torch._higher_order_ops.while_loop import while_loop
 >>> import torch_xla.core.xla_model as xm
->>> import torch_xla.core.xla_builder as xb
 >>> 
 >>> device = xm.xla_device()
 >>> 
->>> def cond_fn(init, limit_value):
-...   return limit_value[0] >= init[0]
+>>> def cond_fn(iteri, x):
+...   return iteri > 0
 ... 
->>> def body_fn(init, limit_value):
-...   one_value = torch.ones(1, dtype=torch.int32, device=device)
-...   return (torch.add(init, one_value), limit_value.clone())
+>>> def body_fn(iteri, x):
+...   return iteri - 1, torch.add(x, 1)
 ... 
->>> init = torch.tensor([0], dtype=torch.int32, device=device)
->>> limit_value = torch.tensor([10], dtype=torch.int32, device=device)
->>> res_, limit_value_ = while_loop(cond_fn, body_fn, (init, limit_value))
->>> res_
+>>> init_val = torch.tensor(3, device=device)
+>>> iteri = torch.tensor(10, device=device)
+>>> _, res = while_loop(cond_fn, body_fn, (iteri, init_val))
+>>> res
 FunctionalTensor(lvl=0, value=\
-tensor([11], device='xla:0', dtype=torch.int32))
+tensor(13, device='xla:0'))
 ```
 
 ### simple example with `fori_loop`:
@@ -109,24 +110,20 @@ tensor([11], device='xla:0', dtype=torch.int32))
 >>> import torch_xla
 >>> import torch_xla.experimental.fori_loop
 >>> from torch_xla.experimental.fori_loop import fori_loop
->>> from torch._higher_order_ops.while_loop import while_loop
 >>> import torch_xla.core.xla_model as xm
->>> import torch_xla.core.xla_builder as xb
 >>> 
 >>> device = xm.xla_device()
 >>> 
->>> lower = torch.tensor([2], dtype=torch.int32, device=device)
->>> upper = torch.tensor([52], dtype=torch.int32, device=device)
->>> plus_value = torch.tensor([1], dtype=torch.int32, device=device)
->>> init_val = torch.tensor([1], dtype=torch.int32, device=device)
+>>> lower = torch.tensor(0, device=device)
+>>> upper = torch.tensor(50, device=device)
+>>> init_val = torch.tensor(1, device=device)
 >>> 
->>> def body_fun(*argus):
-...   plus_value, init_val = argus
-...   return plus_value, torch.add(plus_value, init_val)
+>>> def body_fun(x):
+...   return torch.add(x, 1)
 ... 
->>> _, _, _, res_ = fori_loop(upper, lower, body_fun, plus_value, init_val)
->>> res_
-tensor([51], device='xla:0', dtype=torch.int32)
+>>> _, res = fori_loop(lower, upper, body_fun, (init_val))
+>>> res
+tensor(51, device='xla:0')
 ```
 
 PyTorch/XLA would include `while_loop` support in 2.4 with test case, support for `fori_loop` and `scan` would be added after 2.4. For `fori_loop` and `while_loop`, currently we only should force define `body_fn` with same `input` and `output(return args)` shape
