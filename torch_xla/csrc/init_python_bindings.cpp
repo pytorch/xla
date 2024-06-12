@@ -968,8 +968,8 @@ class PyLoweringContext {
 
     // add dummy parameter to cond/body xlacomputation's input for xla::while
     // requriement
-    if ((GetNameString() == "condctx")
-        or (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0)) {
+    if ((GetNameString() == "condctx") or
+        (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0)) {
       xla::XlaBuilder* local_builder = lowering_ctx.builder();
       int64_t parameter_idx =
           local_builder->GetProgramShape()->parameters_size();
