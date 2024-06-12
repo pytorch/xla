@@ -200,6 +200,9 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     self.assertTrue(res_xla_dynamo_different.device == original_device)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_different))
+    
+    # There should not be any fallbacks.
+    self.assertEqual(torch_xla._XLAC._get_executed_fallback_ops(), [])
 
   @parameterized.parameters(
       True,
