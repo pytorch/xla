@@ -12,6 +12,12 @@ def eager_mode(enable: bool):
   torch_xla._XLAC._set_use_eager_mode(enable)
 
 
+def is_eager_mode() -> bool:
+  """Return True if torch_xla is currently under eager mode
+  """
+  return torch_xla._XLAC._get_use_eager_mode()
+
+
 def compile(func):
   """Compile the func with Lazy Tensor.
 
