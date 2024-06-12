@@ -41,17 +41,21 @@ class TrainDecoderOnlyBase():
   def run_optimizer(self):
     self.optimizer.step()
 
+  def step_fn(self, data, target):
+    self.optimizer.zero_grad()
+    logits = self.model(data)
+    loss = self.loss_fn(
+        logits.view(-1, self.config.vocab_size), target.view(-1))
+    loss.backward()
+    self.run_optimizer()
+    return loss
+
   def train_loop_fn(self, loader, epoch):
     tracker = xm.RateTracker()
     self.model.train()
     loader = itertools.islice(loader, self.num_steps)
     for step, (data, target) in enumerate(loader):
-      self.optimizer.zero_grad()
-      logits = self.model(data)
-      loss = self.loss_fn(
-          logits.view(-1, self.config.vocab_size), target.view(-1))
-      loss.backward()
-      self.run_optimizer()
+      loss = self.step_fn(data, target)
       tracker.add(self.batch_size)
       if step % 10 == 0:
         xm.add_step_closure(
