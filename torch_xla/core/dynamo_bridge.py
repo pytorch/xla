@@ -598,6 +598,12 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+  # graph extraction must happens under tracing mode
+  with torch_xla.experimental.eager_mode_context(False):
+    return extract_compiled_graph_helper(xla_model, xla_args)
+
+
+def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
   if _args_on_cuda(xla_args):
     xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
 

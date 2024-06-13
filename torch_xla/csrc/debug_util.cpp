@@ -317,7 +317,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
                endsWith(frames[1].file, "profiler.py")) {
       ss << debug_output_prefix
          << "  mark_step when exiting a profiler StepTrace region\n";
-    } else if ((frames[1].function == "extract_compiled_graph" ||
+    } else if ((frames[1].function == "extract_compiled_graph_helper" ||
                 frames[1].function == "extract_internal") &&
                endsWith(frames[1].file, "dynamo_bridge.py")) {
       ss << debug_output_prefix
