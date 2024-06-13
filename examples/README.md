@@ -11,7 +11,7 @@ pip install --no-deps --pre torchvision -i https://download.pytorch.org/whl/nigh
 ```
 
 ## Run the example
-You can run all models directly. The only environment you want to set is `PJRT_DEVICE`.
+You can run all models directly. The only environment variable you want to set is `PJRT_DEVICE`.
 ```
 PJRT_DEVICE=TPU python fsdp/train_decoder_only_fsdp_v2.py
 ```
