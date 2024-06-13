@@ -31,12 +31,14 @@ jobs:
       BAZEL_JOBS: 16
       BUILD_CPP_TESTS: 1
     steps:
-      - name: Checkout PyTorch/XLA Repo
+      - name: Checkout actions
         uses: actions/checkout@v4
         with:
-          path: pytorch/xla
+          sparse-checkout: |
+            .github/actions
+          path: actions
       - name: Setup
-        uses: ./pytorch/xla/.github/workflows/_setup.yml
+        uses: ./actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
           setup-remote-cache: ${{ env.BAZEL_REMOTE_CACHE }}
