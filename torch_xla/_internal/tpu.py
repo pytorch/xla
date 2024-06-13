@@ -343,7 +343,9 @@ class TpuPlugin(plugins.DevicePlugin):
     return configure_topology(local_rank, local_world_size)
 
   def physical_chip_count(self):
-    return num_available_chips()
+    # HACK: We may reduce the number of processes we spawn depending on TPU
+    # topology settings
+    return num_local_processes()
 
   def client_create_options(self):
     return {
