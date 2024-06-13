@@ -47,6 +47,8 @@ _TPU_PCI_DEVICE_IDS = [
     '0x005e',
     # TPU v5e
     '0x0063',
+    # TPU v6e
+    '0x006f',
     # Testing only
     '0x0056',
     '0x0062',
