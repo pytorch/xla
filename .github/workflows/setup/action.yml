@@ -16,6 +16,9 @@ runs:
         rm -rvf ${GITHUB_WORKSPACE}/*
     - name: Setup gcloud
       shell: bash
+      # GCLOUD_SERVICE_KEY needs to be set from the outside because for some
+      # reason composite actions don't support secrets.
+      # https://docs.github.com/en/actions/using-workflows/avoiding-duplication
       run: |
         echo "${GCLOUD_SERVICE_KEY}" > /tmp/default_credentials.json
         echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/default_credentials.json" >> $GITHUB_ENV
