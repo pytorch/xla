@@ -88,7 +88,7 @@ class WhileLoopTest(unittest.TestCase):
     # === expected result after 2 iteration to be compared ===
     while (iteri > 0):
       _, l_in_0 = linear_model.forward_without_while_loop_op(iteri, l_in_0)
-      iter -= 1
+      iteri -= 1
     res_without_loop = l_in_0
 
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
