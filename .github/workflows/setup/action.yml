@@ -28,3 +28,7 @@ runs:
         ref: ${{ inputs.torch-commit }}
         submodules: recursive
       if: ${{ inputs.torch-commit }}
+    - name: Checkout PyTorch/XLA Repo
+      uses: actions/checkout@v4
+      with:
+        path: pytorch/xla
