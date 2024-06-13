@@ -25,7 +25,7 @@ def _fake_while_loop(cond_fn, body_fn, operands):
 
 class WhileLoopTest(unittest.TestCase):
 
-  def test_while_loop_tpu_addition(self):
+  def test_while_loop_addition(self):
     device = xm.xla_device()
 
     def cond_fn(iteri, x):
@@ -40,7 +40,7 @@ class WhileLoopTest(unittest.TestCase):
     _, res_without_loop = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
-  def test_while_loop_tpu_addition_nested(self):
+  def test_while_loop_addition_nested(self):
     device = xm.xla_device()
 
     def cond_fn(iteri, x):
@@ -55,7 +55,7 @@ class WhileLoopTest(unittest.TestCase):
     _, res_without_loop = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
-  def test_while_loop_tpu_simple_linear_inside_loop(self):
+  def test_while_loop_simple_linear_inside_loop(self):
     device = xm.xla_device()
     torch.set_grad_enabled(False)
 
@@ -94,7 +94,7 @@ class WhileLoopTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
   # ====== fori_loop ======
-  def test_fori_loop_addition_tpu(self):
+  def test_fori_loop_addition(self):
     device = xm.xla_device()
 
     lower = torch.tensor(0, device=device)
