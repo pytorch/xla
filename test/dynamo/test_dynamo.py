@@ -281,10 +281,9 @@ class DynamoInferenceBasicTest(unittest.TestCase):
             rtol=1e-05,
             atol=1e-05))
 
-  def get_loader(self):
+  def get_loader(self, sample_count):
     device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
-    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
         data=(torch.randn(batch_size, 3, 224, 224, device=device),
               torch.zeros(batch_size, dtype=torch.int64, device=device)),
@@ -293,7 +292,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
 
   @skipOnTpu
   def test_resnet18(self):
-    loader = self.get_loader()
+    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
+    loader = self.get_loader(sample_count)
     device = torch_xla.device()
     resnet18 = torchvision.models.resnet18()
     resnet18.eval()
@@ -320,7 +320,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
 
   def test_resnet18_lazy_vs_dynamo(self):
-    loader = self.get_loader()
+    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
+    loader = self.get_loader(sample_count)
     device = torch_xla.device()
     resnet18_base = torchvision.models.resnet18()
     resnet18_base.eval()
