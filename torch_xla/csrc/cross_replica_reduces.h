@@ -96,6 +96,11 @@ ReduceScatterResult BuildReduceScatter(
     int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
+xla::XlaOp BuildReduceScatter(AllReduceType reduce_type, xla::XlaOp input,
+                              double scale, int64_t scatter_dim,
+                              int64_t shard_count,
+                              const std::vector<std::vector<int64_t>>& groups);
+
 ReduceScatterResultCoalesced BuildReduceScatterCoalesced(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> inputs,
     xla::XlaOp token, double scale, int64_t scatter_dim, int64_t shard_count,

@@ -17,6 +17,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental import plugins
+from torch_xla.version import __version__
 
 _GCE_METADATA_ROOT_URL = 'http://metadata.google.internal/computeMetadata/v1'
 _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
@@ -347,5 +348,9 @@ class TpuPlugin(plugins.DevicePlugin):
   def client_create_options(self):
     return {
         'max_inflight_computations':
-            xu.getenv_as('XLA_TPU_MAX_INFLIGHT_COMPUTATIONS', int, 4)
+            xu.getenv_as('XLA_TPU_MAX_INFLIGHT_COMPUTATIONS', int, 4),
+        'ml_framework_name':
+            'PyTorch/XLA',
+        'ml_framework_version':
+            __version__
     }

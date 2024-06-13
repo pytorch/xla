@@ -26,6 +26,11 @@ std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
     int64_t shard_count, std::vector<std::vector<int64_t>> groups,
     bool pin_layout);
 
+XLATensorPtr reduce_scatter(const XLATensorPtr& input,
+                            AllReduceType reduce_type, double scale,
+                            int64_t scatter_dim, int64_t shard_count,
+                            std::vector<std::vector<int64_t>> groups);
+
 torch::lazy::Value reduce_scatter_out(XLATensorPtr& output,
                                       const XLATensorPtr& input,
                                       const torch::lazy::Value& token,
@@ -143,6 +148,9 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
                                const std::vector<int>& zero_point_list,
                                int quant_min, int quant_max,
                                const std::string& dtype, int axis);
+
+XLATensorPtr cast_int4(const XLATensorPtr& weight,
+                       const std::vector<int>& int4_vals);
 
 //////////////////////////////////////////////////////////////////////////////
 // Dynamic Reshape ops here.

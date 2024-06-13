@@ -7,8 +7,7 @@ from jax import numpy as jnp
 import numpy as np
 import torch
 from torch_xla2.ops import ops_registry
-from torch_xla2 import tensor
-from torch_xla2.ops import op_base
+from torch_xla2.ops import op_base, mappings
 
 # Keys are OpOverload, value is a callable that takes
 # XLATensor2
@@ -75,10 +74,7 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
-  if isinstance(x, tensor.XLATensor2):
-    x._elem = y._elem
-  elif isinstance(x, tensor.SliceView):
-    x.mutate(y)
+  x._elem = y._elem
   return x
 
 
@@ -293,7 +289,7 @@ def _aten_dot(x, y):
 
 @op(torch.ops.aten._to_copy)
 def _aten__to_copy(self, **kwargs):
-  dtype = tensor.t2j_dtype(kwargs["dtype"])
+  dtype = mappings.t2j_dtype(kwargs["dtype"])
   if dtype != self.dtype:
     return self.astype(dtype)
   return jnp.copy(self)
@@ -379,7 +375,7 @@ def _aten_ne(x, y):
 @op(torch.ops.aten.cumsum)
 def _aten_cumsum(x, y, dtype=None):
   if dtype:
-    dtype = tensor.t2j_dtype(dtype)
+    dtype = mappings.t2j_dtype(dtype)
   res = jnp.cumsum(x, y, dtype)
   return res
 
@@ -1325,7 +1321,7 @@ def _aten_arange(
   pin_memory=False,
 ):
   if dtype:
-    dtype = tensor.t2j_dtype(dtype)
+    dtype = mappings.t2j_dtype(dtype)
   return jnp.arange(
     start,
     end,
@@ -1477,7 +1473,7 @@ def _aten_fill(x, value, dtype=None, pin_memory=None, memory_format=None):
   if dtype is None:
     dtype = x.dtype
   else:
-    dtype = tensor.t2j_dtype(dtype)
+    dtype = mappings.t2j_dtype(dtype)
   return jnp.full(x.shape, value, dtype)
 
 
@@ -1772,7 +1768,7 @@ def _aten_to_dtype(
   a, dtype, non_blocking=False, copy=False, memory_format=None
 ):
   if dtype:
-    jaxdtype = tensor.t2j_dtype(dtype)
+    jaxdtype = mappings.t2j_dtype(dtype)
   return a.astype(jaxdtype)
 
 
@@ -1793,7 +1789,7 @@ def _aten_scalar_tensor(
   s, dtype=None, layout=None, device=None, pin_memory=None
 ):
   if dtype is not None:
-    dtype = tensor.t2j_dtype(dtype)
+    dtype = mappings.t2j_dtype(dtype)
     return jnp.array(s, dtype=dtype)
   return jnp.array(s)
 
@@ -1908,7 +1904,7 @@ def _rand(
 @op(torch.ops.aten.scalar_tensor.default)
 def _aten_scalar_tensor(val, **kwargs):
   p = torch.ops.aten.scalar_tensor(val)
-  return tensor.t2j(p)
+  return mappings.t2j(p)
 
 
 @op(torch.ops.aten.to.device)

@@ -83,10 +83,11 @@ XLATensorPtr XLATensor::Create(
     std::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
-  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
-  if (UseEagerDebugMode()) {
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  graph_executor->RegisterTensor(xtensor->data());
+  if (UseEagerDebugMode() || graph_executor->UseEagerMode()) {
     std::vector<XLATensorPtr> xtensors({xtensor});
-    XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
+    graph_executor->ApplyEagerSync(xtensors);
   }
   return xtensor;
 }

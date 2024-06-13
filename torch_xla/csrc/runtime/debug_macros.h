@@ -21,10 +21,4 @@ T ConsumeValue(xla::StatusOr<T>&& status) {
   return std::move(status).value();
 }
 
-template <typename T>
-T ConsumeValueNoStackDump(xla::StatusOr<T>&& status) {
-  TF_CHECK_OK(status.status());
-  return std::move(status).value();
-}
-
 #endif  // XLA_CLIENT_DEBUG_MACROS_H_

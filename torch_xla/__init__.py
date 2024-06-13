@@ -77,6 +77,7 @@ def _setup_default_env():
     os.environ.setdefault('TPU_ML_PLATFORM', 'PyTorch/XLA')
     # This is used for ML Framework Telemetry.
     os.environ.setdefault('TPU_ML_PLATFORM_VERSION', __version__)
+    os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
 
     if tpu.version() == 4:
       os.environ.setdefault('TPU_MEGACORE', 'megacore_dense')

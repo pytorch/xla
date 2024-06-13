@@ -1,20 +1,16 @@
 """Tensor constructor overrides"""
 import functools
 from typing import Optional, Sequence
+import numpy as np
 
 import jax
-import torch
 import jax.numpy as jnp
-import numpy as np
-from torch_xla2 import tensor
-from torch_xla2.ops.ops_registry import register_torch_function_op
-from torch_xla2.ops import op_base
-from torch_xla2 import interop
-
 from jax.experimental.pallas.ops.tpu import flash_attention
 from jax.experimental.shard_map import shard_map
 
-
+import torch
+from torch_xla2.ops.ops_registry import register_torch_function_op
+from torch_xla2.ops import op_base, mappings
 
 
 def register_function(torch_func, **kwargs):
@@ -36,7 +32,7 @@ def _tensor(data, *, dtype=None, **kwargs):
       dtype = python_types_to_torch_types.get(type(leaves[0]))
 
   return jnp.array(
-      data, dtype=dtype or tensor.t2j_dtype(torch.get_default_dtype()))
+      data, dtype=dtype or mappings.t2j_dtype(torch.get_default_dtype()))
 
 
 @register_function(torch.ones)
@@ -164,3 +160,12 @@ def scaled_dot_product_attention(
     return env.j2t_iso(res)
 
    return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal, scale)
+
+@register_function(torch.Tensor.__getitem__)
+def getitem(self, indexes):
+  if isinstance(indexes, list) and isinstance(indexes[0], int):
+    # list of int, i.e. x[[1, 2]] NOT x[1, 2] (the second would be tuple of int)
+    indexes = (indexes, )
+  elif isinstance(indexes, list):
+    indexes = tuple(indexes)
+  return self[indexes]

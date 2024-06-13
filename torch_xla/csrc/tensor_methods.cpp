@@ -31,6 +31,7 @@
 #include "torch_xla/csrc/ops/avg_pool_nd_backward.h"
 #include "torch_xla/csrc/ops/bernoulli.h"
 #include "torch_xla/csrc/ops/cast.h"
+#include "torch_xla/csrc/ops/cast_int4.h"
 #include "torch_xla/csrc/ops/cat.h"
 #include "torch_xla/csrc/ops/cdist.h"
 #include "torch_xla/csrc/ops/collective_permute.h"
@@ -385,6 +386,17 @@ std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
       std::move(groups), pin_layout);
   return {input->CreateFrom(torch::lazy::Value(node, 0)),
           torch::lazy::Value(node, 1)};
+}
+
+XLATensorPtr reduce_scatter(const XLATensorPtr& input,
+                            AllReduceType reduce_type, double scale,
+                            int64_t scatter_dim, int64_t shard_count,
+                            std::vector<std::vector<int64_t>> groups) {
+  auto canonical_scatter_dim = torch::lazy::GetCanonicalDimensionIndex(
+      scatter_dim, input->shape().get().rank());
+  return input->CreateFrom(torch::lazy::MakeNode<ReduceScatter>(
+      reduce_type, input->GetIrValue(), scale, canonical_scatter_dim,
+      shard_count, std::move(groups)));
 }
 
 torch::lazy::Value reduce_scatter_out(XLATensorPtr& output,
@@ -2397,6 +2409,13 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
       input->GetIrValue(), scale_list, zero_point_list, quant_min, quant_max,
       dtype, axis);
   return input->CreateFrom(torch::lazy::Value(node));
+}
+
+XLATensorPtr cast_int4(const XLATensorPtr& weight,
+                       const std::vector<int>& int4_weight_values) {
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<CastInt4>(weight->GetIrValue(), int4_weight_values);
+  return weight->CreateFrom(torch::lazy::Value(node));
 }
 
 //////////////////////////////////////////////////////////////////////////////
