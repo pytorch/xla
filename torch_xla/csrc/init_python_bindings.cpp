@@ -2423,6 +2423,13 @@ void InitXlaModuleBindings(py::module m) {
           return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
                                /*is_tpu=*/true);
         });
+  m.def("_has_cuda_support", []() {
+#ifdef GOOGLE_CUDA
+    return true;
+#else
+    return false;
+#endif
+  });
   m.def("_xla_gpu_custom_call",
         [](const std::vector<at::Tensor>& inputs, const std::string& payload,
            const std::vector<std::vector<int64_t>>& output_shapes,
