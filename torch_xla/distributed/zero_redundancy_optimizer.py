@@ -324,7 +324,7 @@ class ZeroRedundancyOptimizer(Optimizer):
         if p.grad is not None:
           p.grad.detach().mul_(clip_value)
 
-  def _get_sharding_scheme(self, **kwargs):
+  def _get_sharding_scheme(self, kwargs):
     if "sharding_scheme" in kwargs:
       return kwargs["sharding_scheme"]
     else:
@@ -337,7 +337,7 @@ class ZeroRedundancyOptimizer(Optimizer):
       ]
 
   def _reduce_gradients(self, **kwargs):
-    sharding_scheme = self._get_sharding_scheme(**kwargs)
+    sharding_scheme = self._get_sharding_scheme(kwargs)
 
     # sync to base optimizer
     self._sync_param_groups(self.param_groups, self.base_optimizer.param_groups)
@@ -401,7 +401,7 @@ class ZeroRedundancyOptimizer(Optimizer):
             index += 1
 
   def _update_parameters(self, **kwargs):
-    sharding_scheme = self._get_sharding_scheme(**kwargs)
+    sharding_scheme = self._get_sharding_scheme(kwargs)
     kwargs.pop("sharding_scheme", None)
 
     # Step the wrapped optimizer
