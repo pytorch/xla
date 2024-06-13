@@ -281,8 +281,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
             rtol=1e-05,
             atol=1e-05))
 
-  @skipOnTpu
-  def test_resnet18(self):
+  def get_loader(self):
     device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
@@ -290,6 +289,12 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         data=(torch.randn(batch_size, 3, 224, 224, device=device),
               torch.zeros(batch_size, dtype=torch.int64, device=device)),
         sample_count=sample_count)
+    return loader
+
+  @skipOnTpu
+  def test_resnet18(self):
+    loader = self.get_loader()
+    device = torch_xla.device()
     resnet18 = torchvision.models.resnet18()
     resnet18.eval()
     xla_resnet18 = torchvision.models.resnet18()
@@ -315,13 +320,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
 
   def test_resnet18_lazy_vs_dynamo(self):
-    device = xm.xla_device()
-    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
-    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
-    loader = xu.SampleGenerator(
-        data=(torch.randn(batch_size, 3, 224, 224, device=device),
-              torch.zeros(batch_size, dtype=torch.int64, device=device)),
-        sample_count=sample_count)
+    loader = self.get_loader()
+    device = torch_xla.device()
     resnet18_base = torchvision.models.resnet18()
     resnet18_base.eval()
     xla_resnet18 = torchvision.models.resnet18()
@@ -341,6 +341,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
       self.assertTrue(
           torch.allclose(
               output_lazy.cpu(), output_dynamo.cpu(), rtol=1e-05, atol=1e-05))
+      # skip the counter/metrics check since LTC also runs on device and will
+      # mess up the counter check.
 
 
 class DynamoCpuFallbackTest(unittest.TestCase):
