@@ -35,6 +35,8 @@ def from_xla_cuda_to_cuda(tensor):
 
   # Similar logic as torch.utils.dlpack.from_dlpack
   # https://github.com/pytorch/pytorch/blob/b0ef363972203b163cddc95e4c6054b8221c2300/torch/utils/dlpack.py#L114-L115
+  # The array API specify that the default legacy stream must be passed
+  # with a value of 1 for CUDA
   device_id = tensor.device.index
   stream = torch_xla._XLAC._get_stream_for_cuda_device(device_id)
   stream = 1 if stream == 0 else stream

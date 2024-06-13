@@ -120,13 +120,18 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     return a + b
 
   def _choose_proper_device(self, initialize_on_cuda):
-    if initialize_on_cuda:
-      os.environ.update({
-          xenv.ZERO_COPY_ENABLED: "1",
-      })
-      return "cuda:0"
-    else:
+    if not initialize_on_cuda:
       return xm.xla_device()
+
+    assert initialize_on_cuda
+    if xr.device_type() != "CUDA" or not torch.cuda.is_available():
+      self.skipTest(
+          "Skip this test because it requires xr.device_type()=='CUDA' and torch.cuda.is_available()."
+      )
+    os.environ.update({
+        xenv.ZERO_COPY_ENABLED: "1",
+    })
+    return "cuda:0"
 
   def test_simple_model(self):
     device = xm.xla_device()
@@ -200,7 +205,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     self.assertTrue(res_xla_dynamo_different.device == original_device)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_different))
-    
+
     # There should not be any fallbacks.
     self.assertEqual(torch_xla._XLAC._get_executed_fallback_ops(), [])
 
@@ -304,7 +309,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
   def test_simple_model_with_different_input_shape(self, initialize_on_cuda):
     met.clear_all()
     device = self._choose_proper_device(initialize_on_cuda)
-    # We need to make `dim` depend on `initialize_on_cuda` because the compilation cache
+    # We need to make `dim` depend on `initialize_on_cuda` because the XLA compilation cache
     # does not clean itself between the parameterized tests.
     dim = 5 + int(initialize_on_cuda)
     device_x = torch.randn(dim, dim).to(device)
