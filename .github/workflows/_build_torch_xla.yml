@@ -31,11 +31,13 @@ jobs:
       BAZEL_JOBS: 16
       BUILD_CPP_TESTS: 1
     steps:
+      # Need to check out local composite actions before using them
+      # https://github.com/orgs/community/discussions/11771
       - name: Checkout actions
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            .github/actions
+            .github/workflows/setup
           path: actions
       - name: Setup
         uses: ./actions/.github/workflows/setup
