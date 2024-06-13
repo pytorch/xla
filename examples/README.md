@@ -35,8 +35,8 @@ PJRT_DEVICE=TPU python fsdp/train_decoder_only_fsdp_v2.py
 - flash_attention: A trainer implementation to run a decoder-only model using Flash Attention.
 
   - `train_decoder_only_flash_attention.py`: Incorporates flash attention, an efficient attention mechanism, utilizing custom kernels for accelerated training.
-  - `train_resnet_flash_attention_fsdp_v2.py`: Combines flash attention with FSDP, showcasing the integration of custom kernels with FSDP for scalable and efficient model training.
+  - `train_resnet_flash_attention_fsdp_v2.py`: Combines flash attention with FSDPv2, showcasing the integration of custom kernels with FSDP for scalable and efficient model training.
 
 - fsdp: A trainer implementation to run a decoder-only model using FSDP (Fully Sharded Data Parallelism).
-  - `train_decoder_only_fsdp_v2.py`: Employs FSDP for training the decoder-only model, demonstrating parallel training of large transformer models on TPUs.
+  - `train_decoder_only_fsdp_v2.py`: Employs FSDPv2(FSDP algorithm implemented with PyTorch/XLA GSPMD) for training the decoder-only model, demonstrating parallel training of large transformer models on TPUs.
   - `train_resnet_fsdp_auto_wrap.py`: Demonstrates FSDP (Fully Sharded Data Parallel) for model training, automatically wrapping model parts based on size or type criteria.
