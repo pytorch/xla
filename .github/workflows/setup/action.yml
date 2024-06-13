@@ -11,6 +11,7 @@ runs:
   steps:
     # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
     - name: Clean up workspace
+      shell: bash
       run: |
         ls -la
         rm -rvf ${GITHUB_WORKSPACE}/*
