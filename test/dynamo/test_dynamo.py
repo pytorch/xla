@@ -345,12 +345,11 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
   @parameterized.parameters(
       True,
       False,
-  )  
-  def test_resnet18(self):
+  )
+  def test_resnet18(self, initialize_on_cuda):
     device = self._choose_proper_device(initialize_on_cuda)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = self.get_loader(device, sample_count)
-    device = torch_xla.device()
     resnet18 = torchvision.models.resnet18()
     resnet18.eval()
     device_resnet18 = torchvision.models.resnet18()
@@ -377,8 +376,8 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
 
   def test_resnet18_lazy_vs_dynamo(self):
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
-    loader = self.get_loader(torch_xla.device(), sample_count)
     device = torch_xla.device()
+    loader = self.get_loader(device, sample_count)
     resnet18_base = torchvision.models.resnet18()
     resnet18_base.eval()
     xla_resnet18 = torchvision.models.resnet18()
