@@ -77,9 +77,9 @@ class WhileLoopTest(unittest.TestCase):
 
       def forward_without_while_loop_op(self, iteri, x):
         while (iteri > 0):
-          _, l_in_0 = self.linear(l_in_0)
+          _, x = self.linear(x)
           iteri -= 1
-        return iteri, l_in_0
+        return iteri, x
 
     linear_model = SimpleLinear()
     linear_model.to(device)
