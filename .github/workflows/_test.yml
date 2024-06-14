@@ -87,6 +87,7 @@ jobs:
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
+          cuda: ${{ inputs.install-cuda-plugin && true || false }}
           wheels-artifact: torch-xla-wheels
           cuda-plugin-artifact: ${{ inputs.install-cuda-plugin && 'cuda-plugin' || null }}
       - name: Fetch CPP test binaries

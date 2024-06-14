@@ -57,6 +57,7 @@ jobs:
         uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
+          cuda: true
           wheels-artifact: torch-xla-wheels
           cuda-plugin-artifact: cuda-plugin
           cuda-torch-artifact: torch-with-cuda
