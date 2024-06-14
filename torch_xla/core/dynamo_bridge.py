@@ -598,6 +598,8 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+  print(f'[WONJOO] {xla_model=}')
+  print(f'[WONJOO] {xla_args=}')
   if _args_on_cuda(xla_args):
     xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
 
@@ -624,6 +626,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     if "self" in name:
       self_args.append(buffer)
   all_xla_args = list(xla_args) + self_args
+  print(f'[WONJOO] {all_xla_args=}')
 
   for xla_arg in xla_args:
     if xla_arg.device.type != 'xla':
@@ -681,10 +684,27 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   partitioned_graph = partitioner.fuse_partitions(partitions)
   InputCollector(partitioned_graph).run(*xla_args)
 
+  print(f'[WONJOO] {cloned_args=}')
+  print(f'[WONJOO] {all_xla_args=}')
+  print(f'[WONJOO] {xla_args=}')
+  print(f'[WONJOO] {type(xla_args)=}')
+  tmp = tuple(all_xla_args)
+  print(f'[WONJOO] {tmp=}')
+  print(f'[WONJOO] {type(tmp)=}')
+
   # compile each submodule and replace it with a call
   for node in partitioned_graph.graph.nodes:
+    print(f'[WONJOO] {node.name=}')
+    print(f'[WONJOO] {node.args=}')
     if node.op == "call_module" and "fused_" in node.name:
       fused_module = getattr(partitioned_graph, node.name)
+      print(f'[WONJOO] {node.name=}')
+      print(f'[WONJOO] {node.args=}')
+      print(f'[WONJOO] {fused_module=}')
+      if not hasattr(fused_module, 'xla_args'):
+        print(f'[WONJOO] attribute NOT found!')
+        fused_module.xla_args = tmp
+      print(f'[WONJOO] {fused_module.__dict__=}')
       partitioned_graph.delete_submodule(node.target)
       with partitioned_graph.graph.inserting_after(node):
         new_node = partitioned_graph.graph.call_function(
