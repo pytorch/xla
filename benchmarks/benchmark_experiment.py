@@ -3,7 +3,7 @@ import logging
 import os
 import torch
 import torch._dynamo as dynamo
-import torch_xla.core.xla_model as xm
+#import torch_xla.core.xla_model as xm
 from util import parse_none_str, is_xla_device_available, get_accelerator_model
 
 logger = logging.getLogger(__name__)

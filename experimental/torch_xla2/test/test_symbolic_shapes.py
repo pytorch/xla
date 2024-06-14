@@ -89,3 +89,6 @@ class SymbolicShapeTest(unittest.TestCase):
     self.assertRegex(module_str, r"shape_assertion.*s[0-9]+ <= 10")
     self.assertRegex(module_str, r"shape_assertion.*2\*s[0-9]+")
 
+
+if __name__ == "__main__":
+  unittest.main()

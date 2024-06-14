@@ -664,6 +664,11 @@ class TestOpInfo(TestCase):
       run_export_and_compare(self, op, sample_input, check_output)
 
 
+  def test_all_ops_not_empty(self):
+    import torch_xla2.ops
+    self.assertGreater(len(torch_xla2.ops.all_aten_jax_ops()), 0)
+
+
 instantiate_device_type_tests(TestOpInfo, globals())
 
 if __name__ == '__main__':

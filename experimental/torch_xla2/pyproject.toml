@@ -22,9 +22,6 @@ cpu = ["jax[cpu]>=0.4.24", "jax[cpu]"]
 tpu = ["jax[cpu]>=0.4.24", "jax[tpu]"]
 cuda = ["jax[cpu]>=0.4.24", "jax[cuda12]"]
 
-[tool.pytest.ini_options]
-addopts="-n auto"
-
 [tool.ruff]
 line-length = 80
 indent-width = 2

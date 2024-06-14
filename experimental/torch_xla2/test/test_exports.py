@@ -2,7 +2,6 @@ import unittest
 import torch
 import torch.nn.functional as F
 import jax
-import jax.experimental.export
 import torch_xla2
 from torch_xla2 import tensor
 from torch_xla2.ops import mappings

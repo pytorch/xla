@@ -12,7 +12,7 @@ import torch
 import torch._dynamo.utils as dynamo_utils
 import tiers
 from typing import Optional
-import torch_xla.debug.metrics as met
+#import torch_xla.debug.metrics as met
 from tqdm import tqdm
 from enum import Enum
 from torch.profiler import profile, ProfilerActivity
@@ -25,8 +25,8 @@ from torchbench_model import TorchBenchModelLoader
 from benchmark_experiment import ExperimentLoader
 from util import reset_rng_state, move_to_device, randomize_input, us_to_s, ns_to_s
 
-import torch_xla.core.xla_model as xm
-import torch_xla.debug.profiler as xp
+#import torch_xla.core.xla_model as xm
+#import torch_xla.debug.profiler as xp
 
 logger = logging.getLogger(__name__)
 
@@ -290,7 +290,7 @@ class ExperimentRunner:
     else:
       self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
-    met.clear_all()
+    # met.clear_all()
     dynamo_utils.counters.clear()
     metrics = OrderedDict()
 
@@ -391,7 +391,8 @@ class ExperimentRunner:
         self._dump_pytorch_xla_metrics(experiment_config, model_config,
                                        repeat_iteration)
       for m in ("CompileTime", "ExecuteTime"):
-        data = met.metric_data(m)
+        #data = met.metric_data(m)
+        data = None
         data = data if data is not None else (0, 0, [])
         number, total_time, _ = data
         # Time is measured in nano-seconds
@@ -635,10 +636,11 @@ class ExperimentRunner:
 
   def _dump_pytorch_xla_metrics(self, experiment_config, model_config,
                                 repeat_iteration):
-    text = met.metrics_report()
-    assert isinstance(text, str)
+    #text = met.metrics_report()
+    #assert isinstance(text, str)
     self._save_results_file(
-        text,
+        #text, 
+        '',
         experiment_config,
         model_config,
         "pytorch-xla-metrics",

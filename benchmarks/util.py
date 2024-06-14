@@ -9,8 +9,8 @@ import subprocess
 import torch
 import torch.utils._pytree as pytree
 import sys
-import torch_xla.core.xla_model as xm
-from torch_xla._internal import tpu
+#import torch_xla.core.xla_model as xm
+#from torch_xla._internal import tpu
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +144,7 @@ def get_accelerator_model(accelerator):
 
 
 def get_cpu_name():
+  return 'cpu:0'
   return subprocess.check_output(
       ["lscpu"],
       encoding='utf-8').split("Model name:")[1].split("\n")[0].strip()

@@ -10,8 +10,8 @@ import torch.amp
 import torch.nn as nn
 from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
 from torch._dynamo.utils import clone_inputs
-import torch_xla
-import torch_xla.core.xla_model as xm
+#import torch_xla
+#import torch_xla.core.xla_model as xm
 import types
 import yaml
 from util import move_to_device, set_cwd, get_torchbench_test_name, find_near_file
@@ -109,7 +109,9 @@ def config_data():
       ("pytorch/benchmarks/dynamo", "benchmarks/dynamo"))
   assert benchmarks_dynamo_dir is not None, "PyTorch benchmarks folder not found."
 
-  skip_file = os.path.join(benchmarks_dynamo_dir, "torchbench.yaml")
+
+  #skip_file = os.path.join(benchmarks_dynamo_dir, "torchbench.yaml")
+  skip_file = "torchbench.yaml"
   with open(skip_file) as f:
     data = yaml.safe_load(f)
 
