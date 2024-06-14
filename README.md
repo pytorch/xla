@@ -23,10 +23,17 @@ started:
 
 **PyTorch/XLA is now on PyPI!**
 
-To install PyTorch/XLA a new TPU VM:
+To install PyTorch/XLA stable build in a new TPU VM:
 
 ```
 pip install torch~=2.3.0 torch_xla[tpu]~=2.3.0 -f https://storage.googleapis.com/libtpu-releases/index.html
+```
+
+To install PyTorch/XLA nightly build in a new TPU VM:
+
+```
+pip3 install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl
 ```
 
 To update your existing training loop, make the following changes:
@@ -149,7 +156,14 @@ GPU and nightly builds are available in our public GCS bucket.
 | nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl` |
 | nightly (CUDA 12.1 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
-You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. To get the companion pytorch nightly wheel, replace the `torch_xla` with `torch` on above wheel links.
+You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. Here is an example:
+
+```
+pip3 install torch==2.5.0.dev20240613+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly%2B20240613-cp310-cp310-linux_x86_64.whl
+```
+
+The torch wheel version `2.5.0.dev20240613+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
 
 <details>
 
