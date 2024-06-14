@@ -2099,6 +2099,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for xshape, i0shape, i1shape in cases[f2]:
       test(f2, xshape, (i0shape, i1shape))
 
+  @unittest.skipIf(
+      True, "skip since https://github.com/pytorch/xla/pull/7130 is reverted")
   def test_inplace_mul_scalar_different_dtype(self):
     # This tests whether the returned output data-type agrees on PyTorch
     # and XLA sides.
