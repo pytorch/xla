@@ -86,7 +86,8 @@ class WhileLoopTest(unittest.TestCase):
     l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
     iteri = torch.tensor(2, dtype=torch.int32, device=device)
     _, res_with_loop = linear_model(iteri, l_in_0)
-    _, res_without_loop = linear_model.forward_without_while_loop_op(iteri, l_in_0)
+    _, res_without_loop = linear_model.forward_without_while_loop_op(
+        iteri, l_in_0)
 
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
