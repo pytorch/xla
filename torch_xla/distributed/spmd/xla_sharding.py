@@ -521,10 +521,9 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
 
 
 @xr.requires_pjrt
-def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
-                  mesh: Mesh,
-                  partition_spec: Tuple[Union[Tuple, int, str, None]],
-                  use_dynamo_custom_op: bool = False) -> XLAShardedTensor:
+def mark_sharding(
+    t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
+    partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
@@ -573,15 +572,9 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  if use_dynamo_custom_op:
-    # Allows Dynamo to capture mark_sharding op
-    annotate_func = torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op
-    annotate_func(
-        unwrap_sharded_tensor(t), *mesh._get_op_sharding_args(partition_spec))
-  else:
-    op_sharding = mesh.get_op_sharding(partition_spec)
-    annotate_func = torch_xla._XLAC._xla_mark_sharding
-    annotate_func(unwrap_sharded_tensor(t), op_sharding)
+  op_sharding = mesh.get_op_sharding(partition_spec)
+  annotate_func = torch_xla._XLAC._xla_mark_sharding
+  annotate_func(unwrap_sharded_tensor(t), op_sharding)
   return wrap_as_sharded_tensor(t)
 
 

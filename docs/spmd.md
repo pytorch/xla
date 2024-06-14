@@ -414,6 +414,19 @@ pytorch/xla/test/spmd/test_train_spmd_imagenet.py --fake_data --batch_size 128
 
 For more information, please refer to the [SPMD support on GPU RFC](https://github.com/pytorch/xla/issues/6256).
 
+### 
+
+In the 2.3 release, PyTorch/XLA added the custom op `dynamo_mark_sharding` which can be used to perform the activation sharding in a `torch.compile` region. This is the first step to make `torch.compile` + `GSPMD` to be the recommended way of doing the model inference using PyTorch/XLA. Example:
+```
+# Activation output sharding
+import torch_xla.experimental.dynamo_mark_sharding
+device_ids = [i for i in range(self.num_devices)] # List[int]
+mesh_shape = [self.num_devices//2, 1, 2] # List[int]
+axis_names = 'None' # string version of axis_names
+partition_spec = '(0, 1, 2)' # string version of partition spec
+torch.ops.xla.dynamo_mark_sharding(output, device_ids, mesh_shape, axis_names, partition_spec)
+```
+
 
 ## Reference Examples
 
