@@ -22,8 +22,10 @@ from torch.utils import _pytree as pytree
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
+import torch_xla.core.xla_env_vars as xenv
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
+import torch_xla.utils.dlpack as torch_xla_dlpack
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
@@ -132,12 +134,9 @@ def _args_on_cuda(input_args: tuple) -> bool:
 # be in the list.
 def _maybe_move_tensors_to_device(tensors: tuple,
                                   target_device: torch.device) -> tuple:
-  if not torch.cuda.is_available():
-    return tensors
+  assert target_device, "Moving tensors to None device not supported"
 
   moved_tensors = []
-  cpu_device: torch.device = torch.device("cpu")
-
   for tensor in tensors:
     if not isinstance(tensor, torch.Tensor):
       moved_tensors.append(tensor)
@@ -147,14 +146,22 @@ def _maybe_move_tensors_to_device(tensors: tuple,
       moved_tensors.append(tensor)
       continue
 
-    assert target_device is not None, "Moving tensors to None device not supported"
-
     if dynamo_debug:
       print("Moving Tensor {} to device {}".format(tensor, target_device))
 
-    # Have to move to CPU before moving it to target device.
-    moved_tensor = tensor.to(cpu_device)
-    moved_tensor = moved_tensor.to(target_device)
+    zero_copy_enabled = xu.getenv_as(xenv.ZERO_COPY_ENABLED, bool, defval=False)
+    if zero_copy_enabled and tensor.device.type == 'cuda' and target_device.type == 'xla':
+      # If the input cuda tensor requires gradient, we need to call detach. Otherwise, we'd get the error "RuntimeError: Can't export tensors that require gradient, use tensor.detach()"
+      moved_tensor = torch_xla_dlpack.from_dlpack(tensor.detach())
+    elif zero_copy_enabled and tensor.device.type == 'xla' and target_device.type == 'cuda':
+      # mark_step is need to make sure the pjrt buffer is valid.
+      xm.mark_step()
+      moved_tensor = torch_xla_dlpack.from_xla_cuda_to_cuda(tensor)
+    else:
+      # Have to move to CPU before moving it to target device.
+      cpu_device: torch.device = torch.device("cpu")
+      moved_tensor = tensor.to(cpu_device)
+      moved_tensor = moved_tensor.to(target_device)
 
     # Explicitly have to copy requires_grad attribute because it's dropped
     # with torch.to(..)

@@ -718,7 +718,8 @@ PjRtComputationClient::ExecuteComputation(
     const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
 
     XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
-        << pjrt_device->DebugString() << " vs "
+        << "The device currently being used : " << pjrt_device->DebugString()
+        << " is different from the device where the buffer resides: "
         << pjrt_data->buffer->device()->DebugString();
     buffers.push_back(pjrt_data->buffer.get());
   }
