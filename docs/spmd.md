@@ -31,7 +31,7 @@ Also, this version of the SPMD is currently only tested.optimized on Google Clou
 ## PyTorch/XLA SPMD Design Overview
 
 
-### Simple Example & Sharding Aannotation API
+### Simple Example & Sharding Annotation API
 
 Users can annotate native PyTorch tensors using the `mark_sharding` API ([src](https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharding.py#L452)). This takes `torch.Tensor` as input and returns a `XLAShardedTensor` as output.
 
@@ -39,7 +39,7 @@ Users can annotate native PyTorch tensors using the `mark_sharding` API ([src](h
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh, partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor
 ```
 
-Invoking `mark_sharding` API takes a user defined logical [mesh](#mesh) and [partition\_spec](#partition-spec) and generates a sharding annotation for the XLA compiler. The sharding spec is attached to the XLATensor. Here is a simple usage example from the [[RFC](https://github.com/pytorch/xla/issues/3871), to illustrate how the sharding annotation API works:
+Invoking `mark_sharding` API takes a user defined logical [mesh](#mesh) and [partition\_spec](#partition-spec) and generates a sharding annotation for the XLA compiler. The sharding spec is attached to the XLATensor. Here is a simple usage example from the [RFC](https://github.com/pytorch/xla/issues/3871), to illustrate how the sharding annotation API works:
 
 ```python
 import numpy as np
@@ -469,7 +469,7 @@ for name, param in model.named_parameters():
 PyTorch/XLA also provided a convenient wrapper for the FSDP with SPMD, please take a look at this [user guide](https://github.com/pytorch/xla/blob/master/docs/fsdpv2.md).
 
 
-### Running Resnet50 example with SPMD
+### Running ResNet50 example with SPMD
 
 We provided a quick example of [resnet50](https://github.com/pytorch/xla/blob/master/test/spmd/test_train_spmd_imagenet.py) with a couple different SPMD sharding strategies for you to play around with. You can first run it without SPMD using
 
