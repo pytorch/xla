@@ -1,31 +1,33 @@
 # Custom Hardware Plugins
 
 PyTorch/XLA supports custom hardware through OpenXLA's PJRT C API. The
-PyTorch/XLA team direclty supports plugins for Cloud TPU (`libtpu`) and
-GPU ([OpenXLA](https://github.com/openxla/xla/tree/main/xla/pjrt/gpu)).
-The same plugins may also be used by JAX and TF.
+PyTorch/XLA team direclty supports plugins for Cloud TPU (`libtpu`) and GPU
+([OpenXLA](https://github.com/openxla/xla/tree/main/xla/pjrt/gpu)). The same
+plugins may also be used by JAX and TF.
 
 ## Implementing a PJRT Plugin
 
 PJRT C API plugins may be closed-source or open-source. They contain two parts:
 
-1. Binary exposing a PJRT C API implementation. This part can be shared with
-JAX and TensorFlow.
+1. Binary exposing a PJRT C API implementation. This part can be shared with JAX
+and TensorFlow.
 2. Python package containing the above binary, as well as an implementation of
 our `DevicePlugin` Python interface, which handles additional setup.
 
 ### PJRT C API Implementation
 
-In short, you must implement a [`PjRtClient`](https://github.com/openxla/xla/blob/main/xla/pjrt/pjrt_client.h)
+In short, you must implement a
+[`PjRtClient`](https://github.com/openxla/xla/blob/main/xla/pjrt/pjrt_client.h)
 containing an XLA compiler and runtime for your device. The PJRT C++ interface
-is mirrored in C in the `PJRT_Api`. The most straightforward option is to implement your
-plugin in C++ and
-[wrap it](https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_wrapper_impl.h)
-as a C API implementation. This process is explained in detail in
-[OpenXLA's documentation](https://openxla.org/xla/pjrt_integration#how_to_integrate_with_pjrt).
+is mirrored in C in the
+[`PJRT_Api`](https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api.h).
+The most straightforward option is to implement your plugin in C++ and [wrap
+it](https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_wrapper_impl.h)
+as a C API implementation. This process is explained in detail in [OpenXLA's
+documentation](https://openxla.org/xla/pjrt_integration#how_to_integrate_with_pjrt).
 
-For a concrete example, see the example [CPU plugin](../plugins/cpu).
-([OpenXLA implementation](https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_cpu_internal.cc)).
+For a concrete example, see the example [CPU plugin](../plugins/cpu). ([OpenXLA
+implementation](https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_cpu_internal.cc)).
 
 ### PyTorch/XLA Plugin Package
 
@@ -55,9 +57,10 @@ class CpuPlugin(plugins.DevicePlugin):
         os.path.dirname(__file__), 'lib', 'pjrt_c_api_cpu_plugin.so')
 ```
 
-2. A `torch_xla.plugins` [entry point](https://setuptools.pypa.io/en/latest/userguide/entry_point.html)
-that identifies your `DevicePlugin`. For exmaple, to register the `EXAMPLE`
-device type in a `pyproject.toml`:
+2. A `torch_xla.plugins` [entry
+point](https://setuptools.pypa.io/en/latest/userguide/entry_point.html) that
+identifies your `DevicePlugin`. For exmaple, to register the `EXAMPLE` device
+type in a `pyproject.toml`:
 
 ```
 [project.entry-points."torch_xla.plugins"]
