@@ -47,38 +47,20 @@ jobs:
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
     steps:
-      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
-      # TODO: need to find a way to reuse these steps.
-      - name: Clean up workspace
-        run: |
-          ls -la
-          rm -rvf ${GITHUB_WORKSPACE}/*
-      - name: Fetch torch/torch_xla/torchvision wheels
-        uses: actions/download-artifact@v4
+      - name: Checkout actions
+        uses: actions/checkout@v4
         with:
-          name: torch-xla-wheels
-          path: /tmp/wheels/
-      - name: Remove torch wheel built with CUDA disabled
-        shell: bash
-        run: |
-          rm -rf /tmp/wheels/torch-*
-      - name: Fetch the torch wheel built with CUDA enabled
-        uses: actions/download-artifact@v4
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+      - name: Setup
+        uses: ./.actions/.github/workflows/setup
         with:
-          name: torch-with-cuda
-          path: /tmp/wheels/
-      - name: Fetch CUDA plugin
-        uses: actions/download-artifact@v4
-        with:
-          name: cuda-plugin
-          path: /tmp/wheels/
-      - name: Setup CUDA environment
-        shell: bash
-        run: |
-          echo "XLA_REGISTER_INSTALLED_PLUGINS=1" >> $GITHUB_ENV
-
-          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
+          torch-commit: ${{ inputs.torch-commit }}
+          cuda: true
+          wheels-artifact: torch-xla-wheels
+          cuda-plugin-artifact: cuda-plugin
+          cuda-torch-artifact: torch-with-cuda
       - name: Check GPU
         run: nvidia-smi
       - name: Install wheels
