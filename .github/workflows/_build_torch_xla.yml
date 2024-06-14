@@ -38,9 +38,9 @@ jobs:
         with:
           sparse-checkout: |
             .github/workflows/setup
-          path: actions
+          path: .actions
       - name: Setup
-        uses: ./actions/.github/workflows/setup
+        uses: ./.actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
       - name: Build
