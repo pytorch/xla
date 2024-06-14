@@ -35,14 +35,14 @@ t = torch.randn(8, 4).to(xm.xla_device())
 
 
 # Mesh partitioning, each device holds 1/8-th of the input
-partition_spec = (‘data’, ‘model’)
+partition_spec = ('data', 'model')
 xs.mark_sharding(t, mesh, partition_spec)
 ```
 
 Let’s explain these concepts one by one
 
 ### SPMD Mode
-In order to use SPMD, you need to enable it via `xr.use_spmd()`. In SPMD mode there is only one logical device. Distributed computation and collective is handled by the `mark_sharding`. Note that user can not mix SPMD with the multi process distributed training like DDP and FSDP.
+In order to use SPMD, you need to enable it via `xr.use_spmd()`. In SPMD mode there is only one logical device. Distributed computation and collective is handled by the `mark_sharding`. Note that user can not mix SPMD with other distributed libraries.
 
 ### Mesh
 For a given cluster of devices, a physical mesh is a representation of the interconnect topology. 
@@ -60,16 +60,19 @@ OrderedDict([('data', 4), ('model', 1)])
 ### Partition Spec
 partition_spec has the same rank as the input tensor. Each dimension describes how the corresponding input tensor dimension is sharded across the device mesh. In the above example tensor `t`’s fist dimension is being sharded at `data` dimension and the second dimension is being sharded at `model` dimension. 
 
-User can also shard tensor that has different dimensions from the mesh shape
-```
-t1 = torch,.randn(8, 8, 16).to(device)
+User can also shard tensor that has different dimensions from the mesh shape.
+```python
+t1 = torch.randn(8, 8, 16).to(device)
 t2 = torch.randn(8).to(device)
 
 # First dimension is being replicated.
-xs.mark_sharding(t1, mesh, (None, ‘data’, ‘model’))
+xs.mark_sharding(t1, mesh, (None, 'data', 'model'))
 
 # First dimension is being sharded at data dimension.
-xs.mark_sharding(t2, mesh, (‘data’))
+xs.mark_sharding(t2, mesh, ('data',))
+
+# First dimension is sharded across both mesh axes.
+xs.mark_sharding( t2, mesh, (('data', 'model'),))
 ```
 
 ## Further Reading
