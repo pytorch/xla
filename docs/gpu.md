@@ -72,9 +72,9 @@ source ~/.bashrc
 ### Wheel
 
 > **_NOTE:_**  The wheel file is compatible only with x86_64 linux based architecutre. To check the architecture of your linux system, execute the following command:
-```
-uname -a
-```
+> ```
+>uname -a
+> ```
 
 ```
 pip3 install torch==2.3.0
