@@ -30,6 +30,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.ne_: torch.ops.aten.ne,
   torch.ops.aten.uniform_: torch.ops.aten.uniform,
   torch.ops.aten.relu_: torch.ops.aten.relu,
+  torch.ops.aten.normal_: torch.ops.aten.normal,
 }
 
 
@@ -1989,3 +1990,48 @@ def _aten_native_batch_norm(input, weight, bias, running_mean, running_var, trai
     return torch.ops.aten._native_batch_norm_legit(input, weight, bias, running_mean, running_var, training, momentum, eps)
   else:
     return torch.ops.aten._native_batch_norm_legit_no_training(input, weight, bias, running_mean, running_var, momentum, eps)
+
+
+@op(torch.ops.aten.normal, needs_env=True)
+def _aten_normal(self, mean=0, std=1, generator=None, env=None):
+  shape = self.shape
+  res = _randn(*shape, generator=generator, env=env)
+  return res * std + mean
+
+@op(torch.ops.aten.uniform, needs_env=True)
+def _aten_uniform(self, from_=0, to=1, generator=None, env=None):
+  assert from_ <= to, f'Uniform from(passed in {from_}) must be less than to(passed in {to})'
+  shape = self.shape
+  res = _rand(*shape, generator=generator, env=env)
+  return res * (to - from_) + from_
+
+#func: randint.low_generator(SymInt low, SymInt high, SymInt[] size, *, Generator? generator, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
+
+@op(torch.ops.aten.randint, needs_env=True)
+@op_base.convert_dtype()
+def _aten_randint(
+  *args,
+  generator=None,
+  dtype=None,
+  env=None,
+  **kwargs,
+):
+  if len(args) == 3:
+    # low, high, size
+    low, high, size = args
+  elif len(args) == 2:
+    high, size = args
+    low = 0
+  else:
+    raise AssertionError(f'Expected at 2 or 3 args for Aten::randint, got {len(args)}')
+
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.randint(key, size, low, high)
+  if dtype is not None:
+    res = res.astype(dtype)
+  return res
+
+
+@op(torch.ops.aten.dim, is_jax_function=False)
+def _aten_dim(self):
+  return len(self.shape)
