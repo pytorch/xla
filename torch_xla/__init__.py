@@ -77,6 +77,7 @@ def _setup_default_env():
     os.environ.setdefault('TPU_ML_PLATFORM', 'PyTorch/XLA')
     # This is used for ML Framework Telemetry.
     os.environ.setdefault('TPU_ML_PLATFORM_VERSION', __version__)
+    os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
 
     if tpu.version() == 4:
       os.environ.setdefault('TPU_MEGACORE', 'megacore_dense')
@@ -212,7 +213,8 @@ from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
 from .experimental import plugins
 from ._internal import neuron, xpu  # Additional built-in plugins
 
-if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS') == '1':
+if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS',
+             '0' if _XLAC._has_cuda_support() else '1') == '1':
   plugins.use_dynamic_plugins()
   plugins.register_installed_plugins()
 
