@@ -22,10 +22,17 @@ def _mp_fn(index):
     ]
     for j, t in enumerate(tensor_list):
       t.fill_(float(j))
-    dist.all_reduce_bucketized_gradients(tensor_list, 1.0, None, True)
+    scale = 10
+    xm.all_reduce_bucketized_gradients(
+        gradients=tensor_list,
+        scale=scale,
+        groups=None,
+        pin_layout=True,
+        bucket_cap_mb=2)
     for j, t in enumerate(tensor_list):
       assert torch.all(torch.eq(t.cpu(),
-                                float(j) * world_size)) == torch.tensor(True)
+                                float(j) * world_size *
+                                scale)) == torch.tensor(True)
   else:
     print(
         'Default device {} is not a TPU or GPU device'.format(device),

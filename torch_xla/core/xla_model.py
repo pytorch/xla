@@ -1124,9 +1124,14 @@ def wait_device_ops(devices=[]):
   torch_xla._XLAC._xla_wait_device_ops(devices=devices)
 
 
-def all_reduce_bucketized_gradients(gradients, scale, groups, pin_layout):
+def all_reduce_bucketized_gradients(gradients,
+                                    scale,
+                                    groups,
+                                    pin_layout,
+                                    bucket_cap_mb=0):
   total = 0
   tensor_bucket = []
+  bucket_cap = bucket_cap_mb * 1024 * 1024
 
   for grad in gradients:
     grad_bytes = grad.numel() * grad.element_size()
@@ -1171,15 +1176,18 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
   count = xrt_world_size()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    bucket_cap = int(os.getenv('ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB',
-                               0)) * 1024 * 1024
+    bucket_cap_mb = int(os.getenv('ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB', 0))
     # Reverse the gradients list so that we start allreduce from the last layer
     # onwards. This allows allreduce to trigger as soon as the bucket fills up and
     # overlap with backward pass.
-    if bucket_cap > 0:
+    if bucket_cap_mb > 0:
       gradients = reversed(gradients)
       all_reduce_bucketized_gradients(
-          gradients, scale=1.0 / count, groups=groups, pin_layout=pin_layout)
+          gradients,
+          scale=1.0 / count,
+          groups=groups,
+          pin_layout=pin_layout,
+          bucket_cap_mb=bucket_cap_mb)
     else:
       all_reduce(
           REDUCE_SUM,
