@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "torch_xla_cpu_plugin"
 version = "0.0.1"
 authors = [
-    {name = "Will Cromar", email = "wcromar@google.com"},
+    {name = "PyTorch/XLA Dev Team'", email = "pytorch-xla@googlegroups.com"},
 ]
 description = "CPU PJRT Plugin for testing only"
 requires-python = ">=3.8"
@@ -15,4 +15,4 @@ requires-python = ">=3.8"
 torch_xla_cpu_plugin = ["lib/*.so"]
 
 [project.entry-points."torch_xla.plugins"]
-cpu = "torch_xla_cpu_plugin:CpuPlugin"
+example = "torch_xla_cpu_plugin:CpuPlugin"
