@@ -1,6 +1,7 @@
 name: Set up PyTorch/XLA
 inputs:
   torch-commit:
+    required: true
     type: string
   remote-cache:
     required: true
