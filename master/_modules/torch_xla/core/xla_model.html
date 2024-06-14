@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+gitf075baf )
+                  master (2.4.0+git28f9887 )
                 </div>
               
             
@@ -388,6 +388,7 @@
 <span class="kn">import</span> <span class="nn">torch_xla.debug.metrics_saver</span> <span class="k">as</span> <span class="nn">ms</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.closures</span> <span class="k">as</span> <span class="nn">xc</span>
+<span class="kn">import</span> <span class="nn">os</span>
 
 <span class="n">_DEVICES</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">LazyProperty</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_devices</span><span class="p">())</span>
 
@@ -1493,6 +1494,41 @@
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="n">devices</span><span class="p">)</span></div>
 
 
+<span class="k">def</span> <span class="nf">all_reduce_bucketized_gradients</span><span class="p">(</span><span class="n">gradients</span><span class="p">,</span>
+                                    <span class="n">scale</span><span class="p">,</span>
+                                    <span class="n">groups</span><span class="p">,</span>
+                                    <span class="n">pin_layout</span><span class="p">,</span>
+                                    <span class="n">bucket_cap_mb</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+  <span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">tensor_bucket</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">bucket_cap</span> <span class="o">=</span> <span class="n">bucket_cap_mb</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>
+
+  <span class="k">for</span> <span class="n">grad</span> <span class="ow">in</span> <span class="n">gradients</span><span class="p">:</span>
+    <span class="n">grad_bytes</span> <span class="o">=</span> <span class="n">grad</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">*</span> <span class="n">grad</span><span class="o">.</span><span class="n">element_size</span><span class="p">()</span>
+
+    <span class="c1"># Bucketize till the total spills over</span>
+    <span class="n">total</span> <span class="o">+=</span> <span class="n">grad_bytes</span>
+    <span class="k">if</span> <span class="n">total</span> <span class="o">&gt;</span> <span class="n">bucket_cap</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensor_bucket</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">all_reduce</span><span class="p">(</span>
+          <span class="n">REDUCE_SUM</span><span class="p">,</span>
+          <span class="n">tensor_bucket</span><span class="p">,</span>
+          <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+          <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span>
+          <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
+      <span class="n">total</span> <span class="o">=</span> <span class="n">grad_bytes</span>
+      <span class="n">tensor_bucket</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">tensor_bucket</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+
+  <span class="c1"># Flush the last remaining bucket</span>
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensor_bucket</span><span class="p">):</span>
+    <span class="n">all_reduce</span><span class="p">(</span>
+        <span class="n">REDUCE_SUM</span><span class="p">,</span>
+        <span class="n">tensor_bucket</span><span class="p">,</span>
+        <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+        <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span>
+        <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
+
+
 <span class="k">def</span> <span class="nf">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Reduces all the gradients handled by an optimizer.</span>
 
@@ -1510,12 +1546,25 @@
   <span class="n">count</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
     <span class="n">gradients</span> <span class="o">=</span> <span class="n">_fetch_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
-    <span class="n">all_reduce</span><span class="p">(</span>
-        <span class="n">REDUCE_SUM</span><span class="p">,</span>
-        <span class="n">gradients</span><span class="p">,</span>
-        <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">count</span><span class="p">,</span>
-        <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span>
-        <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
+    <span class="n">bucket_cap_mb</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="c1"># Reverse the gradients list so that we start allreduce from the last layer</span>
+    <span class="c1"># onwards. This allows allreduce to trigger as soon as the bucket fills up and</span>
+    <span class="c1"># overlap with backward pass.</span>
+    <span class="k">if</span> <span class="n">bucket_cap_mb</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">gradients</span> <span class="o">=</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">gradients</span><span class="p">)</span>
+      <span class="n">all_reduce_bucketized_gradients</span><span class="p">(</span>
+          <span class="n">gradients</span><span class="p">,</span>
+          <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">count</span><span class="p">,</span>
+          <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span>
+          <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">,</span>
+          <span class="n">bucket_cap_mb</span><span class="o">=</span><span class="n">bucket_cap_mb</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">all_reduce</span><span class="p">(</span>
+          <span class="n">REDUCE_SUM</span><span class="p">,</span>
+          <span class="n">gradients</span><span class="p">,</span>
+          <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">count</span><span class="p">,</span>
+          <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span>
+          <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="optimizer_step"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.optimizer_step">[docs]</a><span class="k">def</span> <span class="nf">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span>
