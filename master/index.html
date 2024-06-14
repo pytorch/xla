@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git62015ee )
+                  master (2.4.0+git61e0389 )
                 </div>
               
             
@@ -541,6 +541,7 @@
 <li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
 <li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
 <li><a class="reference internal" href="#auto-sharding">Auto-Sharding</a></li>
+<li><a class="reference internal" href="#activation-sharding">Activation Sharding</a></li>
 </ul>
 </li>
 </ul>
@@ -1588,7 +1589,7 @@ return None.</p>
 <span id="spmd"></span><h2>spmd<a class="headerlink" href="#module-torch_xla.distributed.spmd" title="Permalink to this heading">¶</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.distributed.spmd.mark_sharding">
-<span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">mark_sharding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">XLAShardedTensor</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.xla_sharding.Mesh"><span class="pre">Mesh</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition_spec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_dynamo_custom_op</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">XLAShardedTensor</span></span></span><a class="reference internal" href="_modules/torch_xla/distributed/spmd/xla_sharding.html#mark_sharding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.mark_sharding" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">mark_sharding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">XLAShardedTensor</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.xla_sharding.Mesh"><span class="pre">Mesh</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition_spec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">XLAShardedTensor</span></span></span><a class="reference internal" href="_modules/torch_xla/distributed/spmd/xla_sharding.html#mark_sharding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.mark_sharding" title="Permalink to this definition">¶</a></dt>
 <dd><p>Annotates the tensor provided with XLA partition spec. Internally,
 it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
 :param t: input tensor to be annotated with partition_spec.
@@ -3960,6 +3961,19 @@ the XLA-based auto-sharding pass:</p>
 a default device mesh shape of <code class="docutils literal notranslate"><span class="pre">num_devices,1</span></code> will be used.</p></li>
 </ul>
 </div>
+<div class="section" id="activation-sharding">
+<h3>Activation Sharding<a class="headerlink" href="#activation-sharding" title="Permalink to this heading">¶</a></h3>
+<p>In the 2.3 release, PyTorch/XLA added the custom op <code class="docutils literal notranslate"><span class="pre">dynamo_mark_sharding</span></code> which can be used to perform the activation sharding in a <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> region. This is part of our ongoing effort to make <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> + <code class="docutils literal notranslate"><span class="pre">GSPMD</span></code> to be the recommended way of doing the model inference using PyTorch/XLA. Example of using this custom op:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Activation output sharding</span>
+<span class="kn">import</span> <span class="nn">torch_xla.experimental.dynamo_mark_sharding</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_devices</span><span class="p">)]</span> <span class="c1"># List[int]</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">num_devices</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="c1"># List[int]</span>
+<span class="n">axis_names</span> <span class="o">=</span> <span class="s2">&quot;(&#39;data&#39;, &#39;model&#39;)&quot;</span> <span class="c1"># string version of axis_names</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="s2">&quot;(&#39;data&#39;, &#39;model&#39;)&quot;</span> <span class="c1"># string version of partition spec</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">dynamo_mark_sharding</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="n">axis_names</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
 </div>
 </div>
 <div class="section" id="fully-sharded-data-parallel-via-spmd">
@@ -4318,6 +4332,7 @@ the table. The design doc is <a class="reference external" href="https://github.
 <li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
 <li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
 <li><a class="reference internal" href="#auto-sharding">Auto-Sharding</a></li>
+<li><a class="reference internal" href="#activation-sharding">Activation Sharding</a></li>
 </ul>
 </li>
 </ul>
