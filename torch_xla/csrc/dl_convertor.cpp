@@ -115,6 +115,7 @@ std::vector<int64_t> StridesForShape(xla::PrimitiveType element_type,
 
 // Convert an XLA tensor to a dlPack tensor.
 DLManagedTensor* toDLPack(const at::Tensor& input) {
+  XLA_CHECK(bridge::IsXlaTensor(input)) << "The input should be an XLA tensor";
   std::shared_ptr<runtime::ComputationClient::Data> handle =
       get_data_handle(input);
   XLA_CHECK(handle != nullptr)
