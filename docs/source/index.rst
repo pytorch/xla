@@ -97,5 +97,5 @@ debug
 .. mdinclude:: ../fsdp.md
 .. mdinclude:: ../ddp.md
 .. mdinclude:: ../gpu.md
-.. mdinclude:: ../spmd.md
+.. mdinclude:: ../spmd_basic.md
 .. mdinclude:: ../fsdpv2.md
