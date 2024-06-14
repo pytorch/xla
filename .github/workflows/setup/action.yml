@@ -7,6 +7,13 @@ inputs:
     type: boolean
     description: Whether to set up CUDA library paths
     default: false
+  wheels-artifact:
+    type: string
+    description: |
+      Artifact containing `torch` (cpu) and `torch-xla` wheels to install
+  cuda-plugin-artifact:
+    type: string
+    description: Artifact containing `torch-xla-cuda-plugin` to install
 runs:
   using: "composite"
   steps:
@@ -43,3 +50,22 @@ runs:
       uses: actions/checkout@v4
       with:
         path: pytorch/xla
+    - name: Fetch PyTorch/XLA packages
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.wheels-artifact }}
+        path: /tmp/wheels/
+      if: ${{ inputs.wheels-artifact }}
+    - name: Fetch CUDA plugin
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.cuda-plugin-artifact }}
+        path: /tmp/wheels/
+      if: ${{ inputs.cuda-plugin-artifact }}
+    - name: Install wheels
+      shell: bash
+      run: |
+        pip install /tmp/wheels/*.whl
+
+        echo "Import check..."
+        python -c "import torch_xla"
