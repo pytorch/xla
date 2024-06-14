@@ -561,7 +561,7 @@ In the 2.3 release, PyTorch/XLA added the custom op `dynamo_mark_sharding` which
 import torch_xla.experimental.dynamo_mark_sharding
 device_ids = [i for i in range(self.num_devices)] # List[int]
 mesh_shape = [self.num_devices//2, 1, 2] # List[int]
-axis_names = '(data, model)' # string version of axis_names
-partition_spec = '(model, data)' # string version of partition spec
+axis_names = "('data', 'model')" # string version of axis_names
+partition_spec = "('data', 'model')" # string version of partition spec
 torch.ops.xla.dynamo_mark_sharding(output, device_ids, mesh_shape, axis_names, partition_spec)
 ```
