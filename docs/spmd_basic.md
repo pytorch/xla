@@ -68,7 +68,8 @@ t2 = torch.randn(8).to(device)
 # First dimension is being replicated.
 xs.mark_sharding(t1, mesh, (None, 'data', 'model'))
 
-# First dimension is being sharded at data dimension.
+# First dimension is being sharded at data dimension. 
+# model dimension is used for replication when omitted.
 xs.mark_sharding(t2, mesh, ('data',))
 
 # First dimension is sharded across both mesh axes.
