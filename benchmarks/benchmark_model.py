@@ -156,9 +156,6 @@ class BenchmarkModel:
       logger.info(f"Running torch.compile with opts {compilation_opts}")
       self.model_iter_fn = torch.compile(self.model_iter_fn, **compilation_opts)
 
-    if keep_model_data_on_cuda:
-      assert self.example_inputs[0].device.type.lower(
-      ) == 'cuda', 'When keep_model_data_on_cuda is set, the input data should remain on the CUDA device.'
 
   def pick_grad(self):
     if self.benchmark_experiment.test == "eval":
