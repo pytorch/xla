@@ -2,10 +2,6 @@ name: Set up PyTorch/XLA
 inputs:
   torch-commit:
     type: string
-  remote-cache:
-    required: true
-    type: boolean
-    description: Whether to set up Google Cloud credentials for Bazel cache.
 runs:
   using: "composite"
   steps:
@@ -17,13 +13,13 @@ runs:
         rm -rvf ${GITHUB_WORKSPACE}/*
     - name: Setup gcloud
       shell: bash
-      # GCLOUD_SERVICE_KEY needs to be set from the outside because for some
-      # reason composite actions don't support secrets.
-      # https://docs.github.com/en/actions/using-workflows/avoiding-duplication
       run: |
         echo "${GCLOUD_SERVICE_KEY}" > /tmp/default_credentials.json
         echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/default_credentials.json" >> $GITHUB_ENV
-      if: ${{ inputs.remote-cache }}
+      # GCLOUD_SERVICE_KEY needs to be set from the outside because for some
+      # reason composite actions don't support secrets.
+      # https://docs.github.com/en/actions/using-workflows/avoiding-duplication
+      if: ${{ env.GCLOUD_SERVICE_KEY }}
     - name: Checkout PyTorch Repo
       uses: actions/checkout@v4
       with:

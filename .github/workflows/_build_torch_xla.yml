@@ -43,7 +43,6 @@ jobs:
         uses: ./actions/.github/workflows/setup
         with:
           torch-commit: ${{ inputs.torch-commit }}
-          remote-cache: ${{ env.BAZEL_REMOTE_CACHE }}
       - name: Build
         shell: bash
         run: |
