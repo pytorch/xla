@@ -69,3 +69,4 @@ runs:
 
         echo "Import check..."
         python -c "import torch_xla"
+      if: ${{ inputs.wheels-artifact }}
