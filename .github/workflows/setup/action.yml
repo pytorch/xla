@@ -14,6 +14,9 @@ inputs:
   cuda-plugin-artifact:
     type: string
     description: Artifact containing `torch-xla-cuda-plugin` to install
+  cuda-torch-artifact:
+    type: string
+    description: Artifact containing CUDA build of `torch`
 runs:
   using: "composite"
   steps:
@@ -62,6 +65,17 @@ runs:
         name: ${{ inputs.cuda-plugin-artifact }}
         path: /tmp/wheels/
       if: ${{ inputs.cuda-plugin-artifact }}
+    - name: Remove CPU `torch` build
+      shell: bash
+      run: |
+        rm -rf /tmp/wheels/torch-*
+      if: ${{ inputs.cuda-torch-artifact }}
+    - name: Fetch CUDA `torch` build
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.cuda-torch-artifact }}
+        path: /tmp/wheels/
+      if: ${{ inputs.cuda-torch-artifact }}
     - name: Install wheels
       shell: bash
       run: |
