@@ -77,14 +77,14 @@ class WhileLoopTest(unittest.TestCase):
 
       def forward_without_while_loop_op(self, iteri, x):
         while (iteri > 0):
-          _, x = self.linear(x)
+          x = self.linear(x)
           iteri -= 1
         return iteri, x
 
     linear_model = SimpleLinear()
     linear_model.to(device)
     l_in_0 = torch.randn(2, 2, dtype=torch.float32, device=device)
-    iteri = torch.tensor(2, dtype=torch.int32, device=device)
+    iteri = torch.tensor(10, dtype=torch.int32, device=device)
     _, res_with_loop = linear_model(iteri, l_in_0)
     _, res_without_loop = linear_model.forward_without_while_loop_op(
         iteri, l_in_0)
