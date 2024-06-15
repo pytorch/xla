@@ -291,7 +291,7 @@ skiplist = {
     "scatter",
     "scatter_reduce",
     "searchsorted",
-    "select",
+    # "select",
     "select_scatter",
     "signbit",
     "softmax",
@@ -600,6 +600,9 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
     output2_cpu = output2.detach().cpu()
     if output2_cpu.dtype != output1.dtype:
       output2_cpu = output2_cpu.to(output1.dtype)
+    # print("milad", output1, output1.shape)
+    # print("milad", output2_cpu, output2_cpu.shape)
+    # print("milad")
     torch.testing.assert_close(
         output2_cpu, output1, rtol=rtol, atol=atol, equal_nan=equal_nan)
   elif isinstance(output1, (tuple, list)):
@@ -610,7 +613,7 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
   else:
     testcase.assertEqual(output1, output2)
 
-
+from pdb import set_trace as bp
 def run_export_and_compare(testcase,
                            func,
                            sample_input,
