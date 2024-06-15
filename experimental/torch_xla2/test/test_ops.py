@@ -14,7 +14,6 @@ skiplist = {
     "__rpow__",
     "_segment_reduce",
     "_upsample_bilinear2d_aa",
-    "argsort",
     "as_strided",
     "as_strided_scatter",
     "baddbmm",
