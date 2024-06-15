@@ -4,6 +4,7 @@ from collections import OrderedDict
 import copy
 import json
 import logging
+import numpy as np
 import os
 import subprocess
 import sys
@@ -11,10 +12,11 @@ import time
 import torch
 import torch._dynamo.utils as dynamo_utils
 import tiers
-from typing import Optional
+from typing import Optional, Any, List, Dict
 import torch_xla.debug.metrics as met
 from tqdm import tqdm
 from enum import Enum
+import random
 from torch.profiler import profile, ProfilerActivity
 import copy
 from torch.autograd import DeviceType
@@ -22,8 +24,9 @@ from benchmark_model import ModelLoader
 from verifier import VerificationCode, VerificationResult, verify
 from enum import Enum
 from torchbench_model import TorchBenchModelLoader
-from benchmark_experiment import ExperimentLoader
-from util import reset_rng_state, move_to_device, randomize_input, us_to_s, ns_to_s
+from benchmark_model import BenchmarkModel
+from benchmark_experiment import ExperimentLoader, BenchmarkExperiment
+from util import move_to_device, randomize_input, us_to_s, ns_to_s
 
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
@@ -49,6 +52,17 @@ class ExperimentRunner:
     self.output_dir = os.path.abspath(self._args.output_dirname)
     os.makedirs(self.output_dir, exist_ok=True)
     self.output_file = os.path.join(self.output_dir, self._args.output_basename)
+
+  def reset_rng_state(self,
+                      benchmark_experiment: Optional[BenchmarkExperiment] = None
+                     ):
+    torch.manual_seed(1337)
+    random.seed(1337)
+    np.random.seed(1337)
+    # TODO(piz): setup the rng state on jax for torch_xla2.
+    if benchmark_experiment is not None and benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is None:
+      device = benchmark_experiment.get_device()
+      xm.set_rng_state(1337, str(device))
 
   def run(self):
     is_main_process = self._args.experiment_config is None and \
@@ -208,8 +222,8 @@ class ExperimentRunner:
     print(stdout_text, file=sys.stdout, end='', flush=True)
     print(stderr_text, file=sys.stderr, end='', flush=True)
 
-  def _default_iter_fn(self, benchmark_experiment, benchmark_model,
-                       input_tensor):
+  def _default_iter_fn(self, benchmark_experiment: BenchmarkExperiment,
+                       benchmark_model: BenchmarkModel, input_tensor):
     tracing_time = None
     total_time_start = time.perf_counter()
     # Invoke iteration function and measure tracing time w/o waiting on the
@@ -226,8 +240,8 @@ class ExperimentRunner:
     total_time = time.perf_counter() - total_time_start
     return output, total_time, tracing_time
 
-  def _pure_wall_time_iter_fn(self, benchmark_experiment, benchmark_model,
-                              input_tensor):
+  def _pure_wall_time_iter_fn(self, benchmark_experiment: BenchmarkExperiment,
+                              benchmark_model: BenchmarkModel, input_tensor):
     device = xm.xla_device() if benchmark_experiment.xla else 'cuda'
     sync_fn = xm.wait_device_ops if benchmark_experiment.xla else torch.cuda.synchronize
     timing, output = bench.do_bench(
@@ -245,7 +259,7 @@ class ExperimentRunner:
     model_config = json.loads(self._args.model_config)
     benchmark_experiment = self.experiment_loader.load_experiment(
         experiment_config)
-    reset_rng_state(benchmark_experiment)
+    self.reset_rng_state(benchmark_experiment)
     benchmark_model = self.model_loader.load_model(model_config,
                                                    benchmark_experiment)
 
@@ -274,17 +288,20 @@ class ExperimentRunner:
                        benchmark_model.to_dict(), accumulated_metrics,
                        verify_res)
 
-  def run_once_and_gather_metrics(self, benchmark_experiment, benchmark_model,
-                                  experiment_config, model_config,
+  def run_once_and_gather_metrics(self,
+                                  benchmark_experiment: BenchmarkExperiment,
+                                  benchmark_model: BenchmarkModel,
+                                  experiment_config: OrderedDict,
+                                  model_config: OrderedDict,
                                   repeat_iteration: int):
 
     # Prepare inputs.
-    reset_rng_state(benchmark_experiment)
+    self.reset_rng_state(benchmark_experiment)
     inputs_list = self._prepare_inputs(benchmark_model.example_inputs,
                                        self._args.randomize_input)
 
     # Reset state and sync.
-    reset_rng_state(benchmark_experiment)
+    self.reset_rng_state(benchmark_experiment)
     if benchmark_experiment.torch_xla2:
       self._mark_step(benchmark_experiment, inputs_list)
     else:
@@ -299,7 +316,8 @@ class ExperimentRunner:
     if benchmark_experiment.xla:
       t_trace = 0
 
-    def loop(pytorch_profile=None, iter_fn=None):
+    def loop(pytorch_profile: Optional[profile] = None,
+             iter_fn: Optional[callable] = None):
       nonlocal t_trace
       total_timing = 0
       for i in range(self._args.iterations_per_run):
@@ -409,7 +427,8 @@ class ExperimentRunner:
 
     return metrics, output
 
-  def _prepare_inputs(self, example_inputs, should_randomize_input):
+  def _prepare_inputs(self, example_inputs: List[Any],
+                      should_randomize_input: bool):
     inputs_list = []
     for i in range(self._args.iterations_per_run):
       inputs = copy.deepcopy(example_inputs)
@@ -418,7 +437,9 @@ class ExperimentRunner:
       inputs_list.append(inputs)
     return inputs_list
 
-  def _mark_step(self, benchmark_experiment, tensors_to_check=None):
+  def _mark_step(self,
+                 benchmark_experiment: BenchmarkExperiment,
+                 tensors_to_check=None):
     if benchmark_experiment.xla:
       if benchmark_experiment.torch_xla2:
         assert tensors_to_check is not None, "torch_xla2 requires input tensor to block_until_ready"
@@ -427,7 +448,7 @@ class ExperimentRunner:
       else:
         xm.mark_step()
 
-  def _synchronize(self, benchmark_experiment):
+  def _synchronize(self, benchmark_experiment: BenchmarkExperiment):
     if benchmark_experiment.torch_xla2:
       # torch_xla2 synchronization happens in _mark_step
       return
@@ -533,7 +554,8 @@ class ExperimentRunner:
   # Helpers to dump and analyze the PyTorch profile, PyTorch/XLA metrics, etc. #
   ##############################################################################
 
-  def _dump_pytorch_profile(self, profile, experiment_config: OrderedDict,
+  def _dump_pytorch_profile(self, profile: Optional[torch.profiler.profile],
+                            experiment_config: OrderedDict,
                             model_config: OrderedDict, repeat_iteration: int):
     assert profile is not None, "Expect PyTorch profile"
 
@@ -558,7 +580,8 @@ class ExperimentRunner:
     self._save_results_file(
         text, experiment_config, model_config, "pytorch-profile", mode="a")
 
-  def _collect_cuda_cpu_metrics(self, pytorch_profile, metrics):
+  def _collect_cuda_cpu_metrics(self, pytorch_profile: Optional[profile],
+                                metrics: Dict[str, Any]):
     assert pytorch_profile is not None, "Expect profile"
 
     kernel_dump = pytorch_profile.profiler.total_average()
@@ -586,8 +609,9 @@ class ExperimentRunner:
     metrics["per_iter_cuda_time_s"] = us_to_s(total_cuda_time /
                                               self._args.iterations_per_run)
 
-  def _collect_cuda_cpu_metrics_individual_ops(self, benchmark_experiment,
-                                               metrics, pytorch_profile):
+  def _collect_cuda_cpu_metrics_individual_ops(
+      self, benchmark_experiment: BenchmarkExperiment, metrics,
+      pytorch_profile: Optional[profile]):
     assert pytorch_profile is not None, "Expect profile"
     logger.debug("Collect CUDA and CPU metrics for individual ops")
 
@@ -623,8 +647,8 @@ class ExperimentRunner:
           metrics["inductor_ops"] = dict()
         metrics["inductor_ops"][op_name] = extract_prof_info(event)
 
-  def _dump_dynamo_counters(self, experiment_config, model_config,
-                            repeat_iteration: int):
+  def _dump_dynamo_counters(self, experiment_config: OrderedDict,
+                            model_config: OrderedDict, repeat_iteration: int):
     text = f"{json.dumps(dynamo_utils.counters)}\n"
     self._save_results_file(
         text,
@@ -633,8 +657,9 @@ class ExperimentRunner:
         "dynamo-counters",
         sub_dirname=str(repeat_iteration))
 
-  def _dump_pytorch_xla_metrics(self, experiment_config, model_config,
-                                repeat_iteration):
+  def _dump_pytorch_xla_metrics(self, experiment_config: OrderedDict,
+                                model_config: OrderedDict,
+                                repeat_iteration: int):
     text = met.metrics_report()
     assert isinstance(text, str)
     self._save_results_file(

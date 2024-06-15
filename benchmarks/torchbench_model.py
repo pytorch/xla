@@ -16,6 +16,8 @@ import types
 import yaml
 from util import move_to_device, set_cwd, get_torchbench_test_name, find_near_file
 from benchmark_model import ModelLoader, BenchmarkModel
+from benchmark_experiment import BenchmarkExperiment
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +188,8 @@ class TorchBenchModelLoader(ModelLoader):
   def skip(self):
     return config_data()["skip"]
 
-  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
+  def is_compatible(self, dummy_benchmark_model: BenchmarkModel,
+                    benchmark_experiment: BenchmarkExperiment):
     name = dummy_benchmark_model.model_name
     test = get_torchbench_test_name(benchmark_experiment.test)
 
@@ -323,7 +326,7 @@ class TorchBenchModel(BenchmarkModel):
         batch_size=batch_size,
     )
 
-  def update_process_env(self, process_env):
+  def update_process_env(self, process_env: Dict[str, str]):
     if self.model_name in NEED_LARGER_CACHE:
       process_env["XLA_COMPILATION_CACHE_SIZE"] = "2048"
 
@@ -418,7 +421,7 @@ class TorchBenchModel(BenchmarkModel):
                  ]) / len(pred.keys())
     raise NotImplementedError("Don't know how to reduce", type(pred))
 
-  def train(self, inputs, collect_full_output=False):
+  def train(self, inputs, collect_full_output: bool = False):
     if self.model_name in DETECTRON2_MODELS:
       from detectron2.utils.events import EventStorage
       with EventStorage():

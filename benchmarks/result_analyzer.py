@@ -5,6 +5,7 @@ import numpy as np
 import os
 import pandas as pd
 import time
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +106,7 @@ class ResultAnalyzer:
 
   # TODO: handle error message properly (database length restriction)
   # Do not use bool. This will mess up with the bigquery parsing.
-  def extract_metrics_jsonl(self, file):
+  def extract_metrics_jsonl(self, file: str):
     with open(file, mode="r", encoding="utf-8") as f:
       jsonlines = f.read().splitlines()
     runs = []
@@ -169,7 +170,7 @@ class ResultAnalyzer:
 
     return runs
 
-  def extract_metrics_csv(self, file, metric_df):
+  def extract_metrics_csv(self, file: str, metric_df: Optional[pd.DataFrame]):
     with open(file, mode="r", encoding="utf-8") as f:
       jsonlines = f.read().splitlines()
 
@@ -225,7 +226,7 @@ class ResultAnalyzer:
 
     return metric_df
 
-  def export_metric_report(self, metric_df):
+  def export_metric_report(self, metric_df: pd.DataFrame):
     metric_df.to_csv(
         self.output_file, mode="w", encoding="utf-8", header=True, index=False)
 
