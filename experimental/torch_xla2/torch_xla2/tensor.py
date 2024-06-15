@@ -1,3 +1,4 @@
+import logging
 import contextlib
 from typing import Optional
 import jax
@@ -140,6 +141,9 @@ class XLATensor2(torch.Tensor):
   def dtype(self):
     return j2t_dtype(self._elem.dtype)
 
+  def dim(self):
+    return self.ndim
+
 
 
 # TODO: slice of slice should also be another slice
@@ -216,6 +220,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
     self.env = env
 
   def __torch_dispatch__(self, func, types, args=(), kwargs=None):
+    self.env.maybe_log(f'__torch_dispatch__: {_name_of_func(func)}')
     if isinstance(func, torch._ops.OpOverloadPacket):
       with self:
         return func(*args, **kwargs)
@@ -352,3 +357,7 @@ class Environment(contextlib.ContextDecorator):
 
     def j2t_copy(self, args):
       pass
+
+    def maybe_log(self, log):
+      if self.config.debug_print_each_op:
+        logging.info(log)
