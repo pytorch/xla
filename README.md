@@ -156,11 +156,18 @@ GPU and nightly builds are available in our public GCS bucket.
 | nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl` |
 | nightly (CUDA 12.1 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
-You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. Here is an example:
+To install the release candidate, you can replace `torch_xla-nightly` with `torch_xla-2.4.0rc1`. Similarly, to install the corresponding Torch version, simply replace `torch_xla` with `torch`.
+
+For installing a nightly wheel of a specified date, you can append `+yyyymmdd` after `torch_xla-nightly` or `torch-nightly`. To obtain the corresponding `libtpu` version, you can use the following link to install the desired wheels:
+
+`https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-0.1.devyyyymmdd-py3-none-any.whl`.
+
+Here is an example:
 
 ```
 pip3 install torch==2.5.0.dev20240613+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
 pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly%2B20240613-cp310-cp310-linux_x86_64.whl
+pip3 install https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-0.1.dev20240613-py3-none-any.whl
 ```
 
 The torch wheel version `2.5.0.dev20240613+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
