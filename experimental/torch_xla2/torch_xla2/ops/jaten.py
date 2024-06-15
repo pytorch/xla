@@ -1673,8 +1673,6 @@ def _aten_slice_scatter(input, src, dim=0, start=None, end=None, step=1):
 # torch.sort(input, dim=-1, descending=False, stable=False, *, out=None)
 @op(torch.ops.aten.sort)
 def _aten_sort(a, dim=-1, descending=False, stable=False):
-  print("milad: ", a)
-  print("milad: ", dim)
   return (
     jnp.sort(a, axis=dim, stable=stable, descending=descending),
     jnp.argsort(a, axis=dim, stable=stable, descending=descending),
