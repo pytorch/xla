@@ -220,7 +220,8 @@ class CheckpointManager:
     with self._save_mutex:
       path = self._get_path(step)
       # Delete any existing checkpoint at the current step.
-      self._delete_chkpt_at_step(step)
+      if dist.get_rank(self.pg) == 0:
+        self._delete_chkpt_at_step(step)
       dist_cp.save(
           state_dict=state_dict,
           storage_writer=FsspecWriter(
