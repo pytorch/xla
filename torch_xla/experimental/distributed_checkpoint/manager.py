@@ -251,7 +251,7 @@ class CheckpointManager:
           f"Preemption sync point reached at step {step}. Triggering a checkpoint."
       )
       preemption_detected = True
-    return step % self.save_interval == 0 or preemption_detected
+    return step % self.save_interval == self.save_interval - 1 or preemption_detected
 
   def save(self,
            step,
