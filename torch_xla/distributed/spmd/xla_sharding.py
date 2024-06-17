@@ -268,7 +268,7 @@ class HybridMesh(Mesh):
         indices = itertools.combinations(
             range(len(assignable_physical_mesh)), num_axes)
         for c_axes, c_indices in zip(axes, indices):
-          if np.product(c_axes) == logical_axis_size:
+          if np.prod(c_axes) == logical_axis_size:
             assignment[logical_axis_index] = c_indices
             # Zero the assigned physical axes.
             assignable_physical_mesh = [
