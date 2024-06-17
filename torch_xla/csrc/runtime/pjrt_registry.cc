@@ -82,6 +82,9 @@ InitializePjRt(const std::string& device_type) {
     if (plugin) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
 
+      // Init the absl logging to avoid the log spam.
+      absl::InitializeLog();
+
       std::shared_ptr<xla::KeyValueStoreInterface> kv_store = nullptr;
       if (plugin->requires_xla_coordinator()) {
         int local_process_rank = sys_util::GetEnvInt(
