@@ -36,6 +36,7 @@ apt:
       - libgomp1
       - libopenblas-base
       - patch
+      - vim
 
     release_cuda:
       - "cuda-libraries-{{ cuda_version | replace('.', '-') }}"
