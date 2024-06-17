@@ -41,15 +41,33 @@ std::vector<std::string> GetFallbackOperations() {
   return fallback;
 }
 
+// Most of the functions for the CUDA fallback are a modified version of
+// PyTorch's at::native::cpu_fallback function.
+//
+// Source: aten/src/ATen/native/CPUFallback.cpp
+//
+// While a better solution would be to adapt PyTorch's function to be device
+// agnostic, the changes are not small enough that would make sense for adding
+// just one more device. Therefore, we copied the needed functions in this file.
+//
+// Before each modified function below, we shall specify what has changed,
+// if there was any.
+
 bool UseCUDAFallback() {
   return runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false);
 }
 
+// Change: use of std::any_of instead of iterating with a for-loop.
 static bool validate_tensor_list(const c10::List<at::Tensor>& tensorlist) {
   return std::any_of(tensorlist.begin(), tensorlist.end(),
                      [](const at::Tensor& tensor) { return tensor.defined(); });
 }
 
+// Former 'to_cpu'.
+// In order to move tensors from XLA to CUDA, we make use of the DLPack API.
+//
+//   1. Synchronize the XLA tensors, so that we can access their data pointer
+//   2. Use DLPack in order to create a CUDA tensor
 static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
                                        at::DeviceIndex* index) {
   // Synchronize tensors, so that we are able to grab their data pointer.
@@ -83,17 +101,29 @@ static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
   return cuda_tensors;
 }
 
+// Copy back the results from CUDA to XLA.
+// Assumes that we have already synchronized CUDA.
 static at::Tensor to_xla(const at::Tensor& tensor) {
   return torch_xla::fromDLPack(at::toDLPack(tensor));
 }
 
+// Synchronizes the CUDA device being used by PyTorch.
 static void torch_cuda_synchronize(at::DeviceIndex index) {
+  // Save the current PyTorch device, in case it's not the same as the
+  // recorded tensor device.
   at::DeviceIndex current = c10::cuda::current_device();
   c10::cuda::set_device(index);
   c10::cuda::device_synchronize();
   c10::cuda::set_device(current);
 }
 
+// Former 'cpu_fallback'.
+// Changes:
+//
+//   1. Don't track modified input tensors
+//      Rationale: since we are not really copying tensors, but sharing the
+//                 storage between XLA and CUDA, any change to the CUDA
+//                 tensor will reflect in the XLA
 void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
                    bool error_on_views) {
   auto& schema_args = op.schema().arguments();
