@@ -17,6 +17,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 root.addHandler(handler)
 
+# NOTE: replace this patch below with your installation
 TORCH_BENCH_PATH = os.path.expanduser('~/git/qihqi/benchmark')
 # If your directory looks like this_file.py, benchmark/
 sys.path.append(TORCH_BENCH_PATH)
