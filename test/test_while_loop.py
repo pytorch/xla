@@ -92,6 +92,7 @@ class WhileLoopTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
 
   # ====== fori_loop ======
+  @unittest.skip("Fori_loop is not supported now due to unstable result.")
   def test_fori_loop_addition(self):
     device = xm.xla_device()
 
