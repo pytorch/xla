@@ -2221,14 +2221,11 @@ at::Tensor XLANativeFunctions::mse_loss_backward(const at::Tensor& grad_output,
 at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
                                    const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  using FnType = XLATensorPtr(const XLATensorPtr&, const XLATensorPtr&,
-                              std::optional<at::ScalarType>);
-  return OpConfig::From(static_cast<FnType*>(tensor_methods::mul))
-      .add_input(self)
-      .add_input(other)
-      .cast_inputs_to_common_dtype()
-      .use_opmathtype_for_compute()
-      .run();
+  return DoBinaryOp(self, other,
+                    [&](const XLATensorPtr& xself, const XLATensorPtr& xother,
+                        at::ScalarType dtype) {
+                      return tensor_methods::mul(xself, xother, dtype);
+                    });
 }
 
 at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
