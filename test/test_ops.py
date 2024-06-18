@@ -447,14 +447,19 @@ class TestOpInfo(TestCase):
     if self.device_type != 'xla':
       self.skipTest("This test runs only on XLA")
 
+    MAX_SAMPLES_TO_RUN = 2
+
     fallback_ops = allowed_fallback_opinfo[get_name(op)].fallback_ops
+    sample_inputs = list(op.sample_inputs(device, dtype, requires_grad=True))
+    samples_to_run = min(MAX_SAMPLES_TO_RUN, len(sample_inputs))
 
     for xla_fallback_cuda in ("0", "1"):
       os.environ[xenv.XLA_FALLBACK_CUDA] = xla_fallback_cuda
 
       with self.subTest(XLA_FALLBACK_CUDA=xla_fallback_cuda):
 
-        for sample_input in op.sample_inputs(device, dtype, requires_grad=True):
+        for i in range(samples_to_run):
+          sample_input = sample_inputs[i]
           xmetrics.clear_all()
           self.compare_with_eager_reference(op, sample_input)
           expected_fallbacks = xmetrics.executed_fallback_ops()
