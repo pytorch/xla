@@ -2009,6 +2009,27 @@ def _rand(
   return res
 
 
+@op(torch.ops.aten.randint, torch.ops.aten.randint.generator, needs_env=True)
+@op_base.convert_dtype(use_default_dtype=False)
+def _randint(
+  high,
+  size,
+  *,
+  generator=None,
+  dtype=None,
+  layout=torch.strided,
+  device=None,
+  pin_memory=False,
+  env=None,
+):
+  shape = size
+  if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+    shape = shape[0]
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.randint(key, shape, minval=0, maxval=high, dtype=dtype or np.int64)
+  return res
+
+
 @op(torch.ops.aten.rand_like, needs_env=True)
 @op_base.convert_dtype()
 def _aten_rand_like(
