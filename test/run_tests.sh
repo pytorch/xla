@@ -202,10 +202,10 @@ function run_xla_op_tests1 {
 function run_xla_op_tests2 {
   run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/pjrt/test_dtypes.py"
-  run_test "$CDIR/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py"
+  run_test "$CDIR/test_while_loop.py"
   run_test "$CDIR/test_autocast.py"
   run_test "$CDIR/eager/test_eager_with_xla_compile.py"
-  run_test "$CDIR/eager/test_eager_with_torch_compile.py"  
+  run_test "$CDIR/eager/test_eager_with_torch_compile.py"
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
