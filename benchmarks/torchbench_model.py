@@ -423,7 +423,7 @@ class TorchBenchModel(BenchmarkModel):
                  ]) / len(pred.keys())
     raise NotImplementedError("Don't know how to reduce", type(pred))
 
-  def train(self, inputs: Sqeuence[Any], collect_full_output: bool = False):
+  def train(self, inputs: Sequence[Any], collect_full_output: bool = False):
     if self.model_name in DETECTRON2_MODELS:
       from detectron2.utils.events import EventStorage
       with EventStorage():

@@ -150,7 +150,7 @@ class BenchmarkModel:
     # TODO: dynamo inductor would fail if .detach() is used
     return None
 
-  def eval(self, inputs, collect_full_output: bool = False):
+  def eval(self, inputs: Sequence[Any], collect_full_output: bool = False):
     with self.autocast(**self.autocast_kwargs):
       pred = self.module(*inputs)
     return pred
@@ -196,7 +196,7 @@ class ModelLoader:
                     benchmark_experiment: BenchmarkExperiment):
     return True
 
-  def get_benchmark_indices(self, length):
+  def get_benchmark_indices(self, length: int):
     start = self._args.partition_id * (length // self._args.total_partitions)
     end = ((self._args.partition_id + 1) *
            (length // self._args.total_partitions)

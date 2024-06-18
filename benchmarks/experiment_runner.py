@@ -425,7 +425,7 @@ class ExperimentRunner:
 
     return metrics, output
 
-  def _prepare_inputs(self, example_inputs: List[Any],
+  def _prepare_inputs(self, example_inputs: Sequence[Any],
                       should_randomize_input: bool):
     inputs_list = []
     for i in range(self._args.iterations_per_run):
