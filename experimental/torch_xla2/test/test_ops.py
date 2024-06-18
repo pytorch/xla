@@ -16,7 +16,6 @@ skiplist = {
     "_upsample_bilinear2d_aa",
     "as_strided",
     "as_strided_scatter",
-    "baddbmm",
     "bernoulli",
     "bincount",
     "bitwise_left_shift",
