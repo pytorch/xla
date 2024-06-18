@@ -1,3 +1,13 @@
+"""`torch.distributed` backend implemented with JAX collective ops.
+
+EXPERIMENTAL: This module is still highly experimental, and it may be removed
+before any stable release.
+
+Note: JAX collective ops require that axis names be defined in `pmap` or
+`shmap`. The distributed backend only supports one axis, named `torch_dist`.
+This name is defined by our mirror implementation of `spawn`.
+"""
+
 import datetime
 import os
 from typing import List, Optional
@@ -11,6 +21,8 @@ import numpy as np
 
 
 class ProcessGroupJax(ProcessGroup):
+  """Distributed backend implemented with JAX."""
+
   def __init__(self, prefix_store, rank, size, timeout):
     super().__init__(rank, size)
     self.prefix_store = prefix_store  # reserved for future use.
@@ -51,6 +63,10 @@ dist.Backend.register_backend("jax", ProcessGroupJax)
 def jax_rendezvous_handler(
   url: str, timeout: datetime.timedelta = ..., **kwargs
 ):
+  """Initialize distributed store with JAX process IDs.
+
+  Requires `$MASTER_ADDR` and `$MASTER_PORT`.
+  """
   # TODO(wcromar): jax.distributed.initialize(...) for multiprocess on GPU
   # TODO(wcromar): Can we use the XLA coordinator as a Store? This isn't part
   # of their public Python API
@@ -72,6 +88,13 @@ dist.register_rendezvous_handler("jax", jax_rendezvous_handler)
 
 # TODO(wcromar): types
 def spawn(f, args=(), env: Optional[torch_xla2.tensor.Environment] = None):
+  """Wrap `f` in a JAX `pmap` with the axis name `torch_dist` defined.
+
+  `f` is expected to take the replica index as a positional argument, similar
+  to `torch.multiprocessing.spawn`.
+
+  Note: `spawn` does not actually create parallel processes.
+  """
   env = env or torch_xla2.default_env()
 
   def jax_wrapper(index, jax_args):
