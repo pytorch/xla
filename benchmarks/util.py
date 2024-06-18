@@ -1,3 +1,4 @@
+import argparse
 from contextlib import contextmanager
 import functools
 import logging
@@ -6,6 +7,7 @@ from os.path import abspath, exists
 import subprocess
 import torch
 import torch.utils._pytree as pytree
+from typing import Any
 import sys
 import torch_xla.core.xla_model as xm
 from torch_xla._internal import tpu
@@ -13,7 +15,7 @@ from torch_xla._internal import tpu
 logger = logging.getLogger(__name__)
 
 
-def parse_none_str(a):
+def parse_none_str(a: Any):
   if isinstance(a, str) and a.upper() == "None".upper():
     return None
   return a
@@ -85,7 +87,7 @@ def cast_to_dtype(item, dtype):
   )
 
 
-def randomize_input(inputs):
+def randomize_input(inputs: Any):
   if isinstance(inputs, torch.Tensor):
     if inputs.dtype in (torch.float32, torch.float64):
       torch._dynamo.utils.counters["randomize_input"]["times"] += 1

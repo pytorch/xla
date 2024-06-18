@@ -1,3 +1,4 @@
+import argparse
 import functools
 import gc
 import contextlib
@@ -17,7 +18,7 @@ import yaml
 from util import move_to_device, set_cwd, get_torchbench_test_name, find_near_file
 from benchmark_model import ModelLoader, BenchmarkModel
 from benchmark_experiment import BenchmarkExperiment
-from typing import Dict
+from typing import Any, Dict, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +220,7 @@ class TorchBenchModelLoader(ModelLoader):
 
 class TorchBenchModel(BenchmarkModel):
 
-  def __init__(self, suite_name, model_name, benchmark_experiment):
+  def __init__(self, suite_name: str, model_name: str, benchmark_experiment: BenchmarkExperiment):
     super().__init__(suite_name, model_name, benchmark_experiment)
 
   def _cleanup(self):
@@ -401,7 +402,7 @@ class TorchBenchModel(BenchmarkModel):
       autocast = contextlib.nullcontext
     return (autocast, kwargs)
 
-  def compute_loss(self, pred):
+  def compute_loss(self, pred: Any):
     """Reduce the output of a model to get scalar loss"""
     if isinstance(pred, torch.Tensor):
       # Mean does not work on integer tensors
@@ -421,7 +422,7 @@ class TorchBenchModel(BenchmarkModel):
                  ]) / len(pred.keys())
     raise NotImplementedError("Don't know how to reduce", type(pred))
 
-  def train(self, inputs, collect_full_output: bool = False):
+  def train(self, inputs: Sqeuence[Any], collect_full_output: bool = False):
     if self.model_name in DETECTRON2_MODELS:
       from detectron2.utils.events import EventStorage
       with EventStorage():

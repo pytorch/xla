@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class ResultAnalyzer:
 
-  def __init__(self, args):
+  def __init__(self, args: argparse.Namespace):
     self._args = args
     self.timestamp = self._args.timestamp or time.time()
     self.output_dir = os.path.abspath(self._args.output_dirname)

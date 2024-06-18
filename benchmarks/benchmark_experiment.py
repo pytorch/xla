@@ -1,3 +1,4 @@
+import argparse
 from collections import OrderedDict
 import logging
 import os
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class ExperimentLoader:
 
-  def __init__(self, args):
+  def __init__(self, args: argparse.Namespace):
     self._args = args
 
   def list_experiment_configs(self):
@@ -59,7 +60,7 @@ class ExperimentLoader:
       experiment_configs.append(cfg)
     return experiment_configs
 
-  def _expand_config_choices(self, config_choices):
+  def _expand_config_choices(self, config_choices: Dict[str, List[Any]]):
     configs = [{}]
     for k, choices in config_choices.items():
       new_configs = []
@@ -159,7 +160,7 @@ class BenchmarkExperiment:
     self.batch_size = batch_size
     self.accelerator_model = get_accelerator_model(self.accelerator)
 
-  def update_process_env(self, process_env):
+  def update_process_env(self, process_env: Dict[str, str]):
 
     # Remove env vars that would interfere with the subprocess.
     if self.xla is not None:
