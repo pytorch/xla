@@ -53,9 +53,7 @@ class ExperimentRunner:
     os.makedirs(self.output_dir, exist_ok=True)
     self.output_file = os.path.join(self.output_dir, self._args.output_basename)
 
-  def reset_rng_state(self,
-                      benchmark_experiment: BenchmarkExperiment
-                     ):
+  def reset_rng_state(self, benchmark_experiment: BenchmarkExperiment):
     torch.manual_seed(1337)
     random.seed(1337)
     np.random.seed(1337)
@@ -556,7 +554,8 @@ class ExperimentRunner:
 
   def _dump_pytorch_profile(self, profile: Optional[torch.profiler.profile],
                             experiment_config: OrderedDict[str, Any],
-                            model_config: OrderedDict[str, Any], repeat_iteration: int):
+                            model_config: OrderedDict[str, Any],
+                            repeat_iteration: int):
     assert profile is not None, "Expect PyTorch profile"
 
     # Dump PyTorch trace.
@@ -648,7 +647,8 @@ class ExperimentRunner:
         metrics["inductor_ops"][op_name] = extract_prof_info(event)
 
   def _dump_dynamo_counters(self, experiment_config: OrderedDict[str, Any],
-                            model_config: OrderedDict[str, Any], repeat_iteration: int):
+                            model_config: OrderedDict[str, Any],
+                            repeat_iteration: int):
     text = f"{json.dumps(dynamo_utils.counters)}\n"
     self._save_results_file(
         text,

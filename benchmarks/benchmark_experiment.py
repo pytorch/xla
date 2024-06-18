@@ -146,9 +146,9 @@ class ExperimentLoader:
 
 class BenchmarkExperiment:
 
-  def __init__(self, accelerator: str, xla: Optional[str], xla_flags: Optional[str], dynamo: str,
-               torch_xla2: bool, keep_model_data_on_cuda: bool, test: str,
-               batch_size: str):
+  def __init__(self, accelerator: str, xla: Optional[str],
+               xla_flags: Optional[str], dynamo: str, torch_xla2: bool,
+               keep_model_data_on_cuda: bool, test: str, batch_size: str):
     self.accelerator = accelerator
     self.xla = xla
     self.xla_flags = xla_flags
