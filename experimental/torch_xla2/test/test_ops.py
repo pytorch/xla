@@ -551,7 +551,6 @@ skiplist = {
     "std_mean",
     "sum_to_size",
     "t",
-    "tanh",
     "tensordot",
     "tile",
     "to",
