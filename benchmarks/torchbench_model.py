@@ -220,7 +220,8 @@ class TorchBenchModelLoader(ModelLoader):
 
 class TorchBenchModel(BenchmarkModel):
 
-  def __init__(self, suite_name: str, model_name: str, benchmark_experiment: BenchmarkExperiment):
+  def __init__(self, suite_name: str, model_name: str,
+               benchmark_experiment: BenchmarkExperiment):
     super().__init__(suite_name, model_name, benchmark_experiment)
 
   def _cleanup(self):
