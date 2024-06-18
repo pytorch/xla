@@ -51,7 +51,6 @@ skiplist = {
     "diff",
     "digamma",
     "dist",
-    "div",
     "empty_like",
     "empty_permuted",
     "empty_strided",
