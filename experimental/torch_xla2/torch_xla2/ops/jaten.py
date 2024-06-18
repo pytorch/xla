@@ -2009,27 +2009,6 @@ def _rand(
   return res
 
 
-@op(torch.ops.aten.randint, torch.ops.aten.randint.generator, needs_env=True)
-@op_base.convert_dtype(use_default_dtype=False)
-def _randint(
-  high,
-  size,
-  *,
-  generator=None,
-  dtype=None,
-  layout=torch.strided,
-  device=None,
-  pin_memory=False,
-  env=None,
-):
-  shape = size
-  if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
-    shape = shape[0]
-  key = env.get_and_rotate_prng_key(generator)
-  res = jax.random.randint(key, shape, minval=0, maxval=high, dtype=dtype or np.int64)
-  return res
-
-
 @op(torch.ops.aten.rand_like, needs_env=True)
 @op_base.convert_dtype()
 def _aten_rand_like(
@@ -2044,20 +2023,6 @@ def _aten_rand_like(
 ):
   key = env.get_and_rotate_prng_key()
   return jax.random.uniform(key, dtype=dtype or x.dtype, shape=x.shape)
-
-
-@op(torch.ops.aten.uniform, needs_env=True)
-def _aten_uniform(
-  x,
-  low = 0.0,
-  high = 1.0,
-  *,
-  generator = None,
-  env=None,
-):
-  key = env.get_and_rotate_prng_key(generator)
-  return jax.random.uniform(
-      key, shape=x.shape, dtype=x.dtype, minval=low, maxval=high)
 
 
 @op(torch.ops.aten.scalar_tensor.default)
@@ -2157,7 +2122,7 @@ def _aten_normal(self, mean=0, std=1, generator=None, env=None):
   return res * std + mean
 
 @op(torch.ops.aten.uniform, needs_env=True)
-def _aten_uniform(self, from_=0, to=1, generator=None, env=None):
+def _aten_uniform(self, from_=0, to=1, *, generator=None, env=None):
   assert from_ <= to, f'Uniform from(passed in {from_}) must be less than to(passed in {to})'
   shape = self.shape
   res = _rand(*shape, generator=generator, env=env)
@@ -2165,8 +2130,8 @@ def _aten_uniform(self, from_=0, to=1, generator=None, env=None):
 
 #func: randint.low_generator(SymInt low, SymInt high, SymInt[] size, *, Generator? generator, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
 
-@op(torch.ops.aten.randint, needs_env=True)
-@op_base.convert_dtype()
+@op(torch.ops.aten.randint, torch.ops.aten.randint.generator, needs_env=True)
+@op_base.convert_dtype(use_default_dtype=False)
 def _aten_randint(
   *args,
   generator=None,
