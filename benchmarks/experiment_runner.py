@@ -54,13 +54,13 @@ class ExperimentRunner:
     self.output_file = os.path.join(self.output_dir, self._args.output_basename)
 
   def reset_rng_state(self,
-                      benchmark_experiment: Optional[BenchmarkExperiment] = None
+                      benchmark_experiment: BenchmarkExperiment
                      ):
     torch.manual_seed(1337)
     random.seed(1337)
     np.random.seed(1337)
     # TODO(piz): setup the rng state on jax for torch_xla2.
-    if benchmark_experiment is not None and benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is None:
+    if benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is None:
       device = benchmark_experiment.get_device()
       xm.set_rng_state(1337, str(device))
 
@@ -207,8 +207,8 @@ class ExperimentRunner:
                              benchmark_model.to_dict(), {"error": str(e)})
 
   # TODO: Use `_unique_basename` instead.
-  def _get_config_fingerprint(self, experiment_config: OrderedDict,
-                              model_config: OrderedDict) -> str:
+  def _get_config_fingerprint(self, experiment_config: OrderedDict[str, Any],
+                              model_config: OrderedDict[str, Any]) -> str:
     # Experiment `batch_size` may be altered by model in `set_up`, so we will
     # ignore that.
     return "-".join(
@@ -291,8 +291,8 @@ class ExperimentRunner:
   def run_once_and_gather_metrics(self,
                                   benchmark_experiment: BenchmarkExperiment,
                                   benchmark_model: BenchmarkModel,
-                                  experiment_config: OrderedDict,
-                                  model_config: OrderedDict,
+                                  experiment_config: OrderedDict[str, Any],
+                                  model_config: OrderedDict[str, Any],
                                   repeat_iteration: int):
 
     # Prepare inputs.
@@ -463,8 +463,8 @@ class ExperimentRunner:
   # Helpers to save results and result files.                                  #
   ##############################################################################
 
-  def _unique_basename(self, experiment_config: OrderedDict,
-                       model_config: OrderedDict) -> str:
+  def _unique_basename(self, experiment_config: OrderedDict[str, Any],
+                       model_config: OrderedDict[str, Any]) -> str:
 
     def unique_basename_segment(x, max_len=32):
       s = str(x).replace(" ", "")
@@ -484,8 +484,8 @@ class ExperimentRunner:
     return "-".join(segments)
 
   def _get_results_file_path(self,
-                             experiment_config: OrderedDict,
-                             model_config: OrderedDict,
+                             experiment_config: OrderedDict[str, Any],
+                             model_config: OrderedDict[str, Any],
                              partial_name: str,
                              ext: Optional[str] = "txt",
                              sub_dirname: Optional[str] = None) -> str:
@@ -506,8 +506,8 @@ class ExperimentRunner:
     return path
 
   def _get_results_dir_path(self,
-                            experiment_config: OrderedDict,
-                            model_config: OrderedDict,
+                            experiment_config: OrderedDict[str, Any],
+                            model_config: OrderedDict[str, Any],
                             partial_name: str,
                             sub_dirname: Optional[str] = None) -> str:
     return self._get_results_file_path(
@@ -519,8 +519,8 @@ class ExperimentRunner:
 
   def _save_results_file(self,
                          text: str,
-                         experiment_config: OrderedDict,
-                         model_config: OrderedDict,
+                         experiment_config: OrderedDict[str, Any],
+                         model_config: OrderedDict[str, Any],
                          partial_name: str,
                          ext: str = "txt",
                          sub_dirname: Optional[str] = None,
@@ -532,9 +532,9 @@ class ExperimentRunner:
 
   def _save_results(
       self,
-      experiment_config: OrderedDict,
-      model_config: OrderedDict,
-      metrics,
+      experiment_config: OrderedDict[str, Any],
+      model_config: OrderedDict[str, Any],
+      metrics: OrderedDict[str, Any],
       verification_result: Optional[VerificationResult] = VerificationResult(
           VerificationCode.CANNOT_PROCEED_WITH_VERIFICATION)):
     results = OrderedDict()
@@ -555,8 +555,8 @@ class ExperimentRunner:
   ##############################################################################
 
   def _dump_pytorch_profile(self, profile: Optional[torch.profiler.profile],
-                            experiment_config: OrderedDict,
-                            model_config: OrderedDict, repeat_iteration: int):
+                            experiment_config: OrderedDict[str, Any],
+                            model_config: OrderedDict[str, Any], repeat_iteration: int):
     assert profile is not None, "Expect PyTorch profile"
 
     # Dump PyTorch trace.
@@ -647,8 +647,8 @@ class ExperimentRunner:
           metrics["inductor_ops"] = dict()
         metrics["inductor_ops"][op_name] = extract_prof_info(event)
 
-  def _dump_dynamo_counters(self, experiment_config: OrderedDict,
-                            model_config: OrderedDict, repeat_iteration: int):
+  def _dump_dynamo_counters(self, experiment_config: OrderedDict[str, Any],
+                            model_config: OrderedDict[str, Any], repeat_iteration: int):
     text = f"{json.dumps(dynamo_utils.counters)}\n"
     self._save_results_file(
         text,
@@ -657,8 +657,8 @@ class ExperimentRunner:
         "dynamo-counters",
         sub_dirname=str(repeat_iteration))
 
-  def _dump_pytorch_xla_metrics(self, experiment_config: OrderedDict,
-                                model_config: OrderedDict,
+  def _dump_pytorch_xla_metrics(self, experiment_config: OrderedDict[str, Any],
+                                model_config: OrderedDict[str, Any],
                                 repeat_iteration: int):
     text = met.metrics_report()
     assert isinstance(text, str)

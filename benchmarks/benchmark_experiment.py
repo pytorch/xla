@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import logging
 import os
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 import torch
 import torch._dynamo as dynamo
 import torch_xla.core.xla_model as xm
@@ -71,7 +71,7 @@ class ExperimentLoader:
       configs = new_configs
     return configs
 
-  def _is_available(self, experiment_config: List[Dict[str, List]]):
+  def _is_available(self, experiment_config: List[Dict[str, List[Any]]]):
     cfg_dynamo = experiment_config["dynamo"]
     cfg_accelerator = experiment_config["accelerator"]
     cfg_xla = experiment_config["xla"]
@@ -124,7 +124,7 @@ class ExperimentLoader:
 
     return True
 
-  def load_experiment(self, experiment_config: List[Dict[str, List]]):
+  def load_experiment(self, experiment_config: List[Dict[str, List[Any]]]):
     accelerator = experiment_config["accelerator"].lower()
     xla = experiment_config["xla"]
     xla_flags = experiment_config["xla_flags"]
@@ -146,7 +146,7 @@ class ExperimentLoader:
 
 class BenchmarkExperiment:
 
-  def __init__(self, accelerator: str, xla, xla_flags, dynamo: str,
+  def __init__(self, accelerator: str, xla: Optional[str], xla_flags: Optional[str], dynamo: str,
                torch_xla2: bool, keep_model_data_on_cuda: bool, test: str,
                batch_size: str):
     self.accelerator = accelerator

@@ -8,7 +8,7 @@ from torch._dynamo.testing import collect_results
 from torch.utils import _pytree as pytree
 from util import cast_to_dtype, move_to_device
 from benchmark_experiment import BenchmarkExperiment
-from typing import Dict, Any
+from typing import Dict, Any, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ class BenchmarkModel:
   def compute_loss(self, pred):
     raise NotImplementedError
 
-  def train(self, inputs, collect_full_output: bool = False):
+  def train(self, inputs: Sequence[Any], collect_full_output: bool = False):
     self._optimizer_zero_grad()
     with self.autocast(**self.autocast_kwargs):
       pred = self.module(*inputs)
@@ -174,7 +174,7 @@ class BenchmarkModel:
 
 class ModelLoader:
 
-  def __init__(self, args):
+  def __init__(self, args: argparse.Namespace):
     self._args = args
     self.suite_name = self._args.suite_name
     self.benchmark_model_class = BenchmarkModel
