@@ -203,7 +203,7 @@ function run_xla_op_tests1 {
 function run_xla_op_tests2 {
   run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/pjrt/test_dtypes.py"
-  run_test "$CDIR/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py"
+  run_test "$CDIR/test_while_loop.py"
   run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
 }
 
