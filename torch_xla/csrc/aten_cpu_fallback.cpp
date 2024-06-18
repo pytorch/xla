@@ -1,12 +1,12 @@
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 
-#include <c10/cuda/CUDAFunctions.h>
 #include <ATen/DLConvertor.h>
 #include <ATen/core/dispatch/Dispatcher.h>
 #include <ATen/core/ivalue.h>
 #include <ATen/core/stack.h>
 #include <ATen/ops/_copy_from_and_resize.h>
 #include <ATen/ops/_to_cpu.h>
+#include <c10/cuda/CUDAFunctions.h>
 
 #include <sstream>
 #include <unordered_map>
@@ -71,19 +71,27 @@ static bool validate_tensor_list(const c10::List<at::Tensor>& tensorlist) {
 static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
                                        at::DeviceIndex* index) {
   // Synchronize tensors, so that we are able to grab their data pointer.
-  std::vector<XLATensorPtr> xla_tensors(tensors.size());
-  std::transform(
-      tensors.begin(), tensors.end(), xla_tensors.begin(),
-      [](const at::Tensor& tensor) { return bridge::GetXlaTensor(tensor); });
-  XLAGraphExecutor::Get()->SyncTensorsGraph(&xla_tensors, {}, true, true,
-                                            false);
+  std::vector<XLATensorPtr> xla_tensors;
+  for (auto& tensor : tensors) {
+    if (tensor.defined()) {
+      xla_tensors.push_back(bridge::GetXlaTensor(tensor));
+    }
+  }
+  XLAGraphExecutor::Get()->SyncTensorsGraph(
+      &xla_tensors, /*devices=*/{}, /*wait=*/true, /*sync_ltc_data=*/true,
+      /*warm_up_cache_only=*/false);
 
   // Use DLPack for sharing the XLA storage with a newly created CUDA tensor.
   std::vector<at::Tensor> cuda_tensors(tensors.size());
   std::transform(tensors.begin(), tensors.end(), cuda_tensors.begin(),
                  [=](const at::Tensor& tensor) {
+                   // Skip undefined tensors.
+                   if (!tensor.defined()) {
+                     return tensor;
+                   }
+
                    // Grab the DLManagedTensor.
-                     DLManagedTensor* managed = torch_xla::toDLPack(tensor);
+                   DLManagedTensor* managed = torch_xla::toDLPack(tensor);
                    // Remember the device index, so that we can synchronize it
                    // later. Also ensure that there's only one.
                    at::DeviceIndex this_index =
@@ -120,10 +128,9 @@ static void torch_cuda_synchronize(at::DeviceIndex index) {
 // Former 'cpu_fallback'.
 // Changes:
 //
-//   1. Don't track modified input tensors
-//      Rationale: since we are not really copying tensors, but sharing the
-//                 storage between XLA and CUDA, any change to the CUDA
-//                 tensor will reflect in the XLA
+//   1. Track the device index being used. Rationale: we synchronize the device
+//      before crossing device borders for correctness.
+//
 void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
                    bool error_on_views) {
   auto& schema_args = op.schema().arguments();
@@ -136,6 +143,8 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
 
   std::vector<c10::List<at::Tensor>> tensorlist_args;
   std::vector<int> tensorlist_args_indices;
+
+  std::vector<c10::IValue> tensorlist_cuda_args;
 
   at::DeviceIndex device_index = -1;
 
@@ -155,6 +164,7 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
       tensorlist_args_indices.push_back(idx);
       auto cuda_ivalue = c10::IValue(c10::List<at::Tensor>(
           to_cuda(ivalue.toTensorList().vec(), &device_index)));
+      tensorlist_cuda_args.push_back(cuda_ivalue);
       (*stack)[arguments_begin + idx] = std::move(cuda_ivalue);
       tensorlist_args.push_back(ivalue.toTensorList());
     } else if (ivalue.isOptionalTensorList()) {
@@ -186,12 +196,37 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
   // Step 2: Call the underlying CUDA implementation of the operator
   op.redispatchBoxed(c10::DispatchKeySet(c10::DispatchKey::CUDA), stack);
 
+  // Step 3: We need to take special care to handle mutable aliases properly:
+  // If any input tensors are mutable aliases, we need to
+  // directly copy the updated data on the CUDA tensors back to the original
+  // inputs.
+  for (const auto i : c10::irange(tensor_args_indices.size())) {
+    auto tensor_idx = tensor_args_indices[i];
+    const c10::AliasInfo* alias_info = schema_args[tensor_idx].alias_info();
+    if (alias_info != nullptr && alias_info->isWrite()) {
+      at::_copy_from_and_resize(cuda_tensors[i], tensor_args[i]);
+    }
+  }
+
+  // We also need to explicit reapply input mutations to inputs that are lists
+  // of tensors
+  for (const auto i : c10::irange(tensorlist_args_indices.size())) {
+    auto tensorlist_idx = tensorlist_args_indices[i];
+    const c10::AliasInfo* alias_info = schema_args[tensorlist_idx].alias_info();
+    if (alias_info != nullptr && alias_info->isWrite()) {
+      const auto& cuda_tensors = tensorlist_cuda_args[i].toTensorList().vec();
+      for (const auto idx : c10::irange(tensorlist_args[i].size())) {
+        at::_copy_from_and_resize(cuda_tensors[idx], tensorlist_args[i][idx]);
+      }
+    }
+  }
+
   // Step 4: Convert any CUDA output tensors back to the original input device.
   // For mutable alias'd outputs, we also need to take special care
   // to move the ORIGINAL input tensor back onto the stack, in place of
   // the temporary CUDA output tensor that we created.
   //
-  // See [CUDA Fallback Does Not Handle View Operators]
+  // See [CPU Fallback Does Not Handle View Operators]
   const auto& schema_returns = op.schema().returns();
   const auto& num_returns = schema_returns.size();
   auto returns = torch::jit::last(stack, num_returns);
@@ -297,8 +332,7 @@ void xla_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
   // and the macro stamps out a static Counter object with a fixed name
   // at the code location that it was called.
   if (_fallback_counters.find(name) == _fallback_counters.end()) {
-    _fallback_counters[name] =
-        new ::torch_xla::runtime::metrics::Counter(name);
+    _fallback_counters[name] = new ::torch_xla::runtime::metrics::Counter(name);
   }
   _fallback_counters[name]->AddValue(1);
 
