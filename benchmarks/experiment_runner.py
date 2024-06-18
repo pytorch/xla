@@ -12,7 +12,7 @@ import time
 import torch
 import torch._dynamo.utils as dynamo_utils
 import tiers
-from typing import Optional, Any, List, Dict
+from typing import Optional, Any, List, Dict, Sequence
 import torch_xla.debug.metrics as met
 from tqdm import tqdm
 from enum import Enum
