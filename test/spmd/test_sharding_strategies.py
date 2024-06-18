@@ -67,9 +67,9 @@ ici_parallelism = [
 
 num_devices = xr.global_runtime_device_count()
 
-assert np.product(dcn_parallelism) * np.product(
+assert np.prod(dcn_parallelism) * np.prod(
     ici_parallelism) == num_devices, f"Number of devices {num_devices} \
-    does not match the product of the parallelism {np.product(dcn_parallelism) * np.product(ici_parallelism)}"
+    does not match the product of the parallelism {np.prod(dcn_parallelism) * np.prod(ici_parallelism)}"
 
 # Use HybridMesh to optimize multislice topology
 mesh = xs.HybridMesh(
