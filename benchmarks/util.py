@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 StrOrBool = Union[str, bool]
 
+
 def parse_none_str(a: Any):
   if isinstance(a, str) and a.upper() == "None".upper():
     return None
