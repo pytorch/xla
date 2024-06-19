@@ -103,6 +103,9 @@ def _aten_index_copy(x, dim, indexes, source):
 
 
 @op(torch.ops.aten.select)
+def _aten_select(x, dim, indexes):
+  return jax.lax.index_in_dim(x, index=indexes, axis=dim, keepdims=False)
+
 @op(torch.ops.aten.index_select)
 @op(torch.ops.aten.select_copy)
 def _aten_index_select(x, dim, indexes):

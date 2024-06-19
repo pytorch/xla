@@ -851,7 +851,7 @@ def send(value, channel_id):
 
 
 def recv(output, channel_id):
-  """Performs a XLA `Send()` operation on the input tensor.
+  """Performs a XLA `Recv()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#recv
 

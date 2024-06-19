@@ -72,7 +72,7 @@ def _torch_angle(input):
 @register_function(torch.argsort)
 def _torch_argsort(input, dim=-1, descending=False, stable=False):
   expanded = False
-  if input == 0:
+  if input.ndim == 0:
     # for self of rank 0:
     # torch.any(x, 0), torch.any(x, -1) works;
     # torch.any(x, 1) throws out of bounds, so it's

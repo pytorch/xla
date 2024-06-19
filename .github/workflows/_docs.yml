@@ -47,7 +47,7 @@ jobs:
       with:
         path: gh-pages
         ref: gh-pages
-        token: ${{ secrets.torchxla-bot-token }}
+        token: ${{ github.event_name == 'push' && secrets.torchxla-bot-token || github.token }}
     - name: Merge changes
       shell: bash
       run: |

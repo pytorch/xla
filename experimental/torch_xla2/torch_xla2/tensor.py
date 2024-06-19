@@ -2,7 +2,6 @@ import logging
 import contextlib
 from typing import Optional
 import jax
-from jax import dlpack as jaxdl
 import jax.numpy as jnp
 import numpy
 import torch
@@ -10,7 +9,6 @@ import torch.func
 import torch.utils._mode_utils as mode_utils
 import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
-import torch.utils.dlpack as torchdl
 
 from torch_xla2 import config
 from torch_xla2.ops import mappings
@@ -44,6 +42,16 @@ def t2j_dtype(dtype):
 
 def j2t_dtype(dtype):
   return mappings.j2t_dtype(dtype)
+
+
+@contextlib.contextmanager
+def log_nested(message):
+  logging.debug((' ' * log_nested.level) + message)
+  log_nested.level += 1
+  yield
+  log_nested.level -= 1
+
+log_nested.level = 0
 
 
 class XLATensor2(torch.Tensor):
@@ -208,10 +216,11 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
                          types,
                          args=(),
                          kwargs=None) -> torch.Tensor:
-    try:
-      return self.env.dispatch(func, types, args, kwargs)
-    except OperatorNotFound:
-      return func(*args, **(kwargs or {}))
+    with log_nested(f'FUNCTION: {_name_of_func(func)}'):
+      try:
+        return self.env.dispatch(func, types, args, kwargs)
+      except OperatorNotFound:
+        return func(*args, **(kwargs or {}))
 
 
 class XLADispatchMode(torch_dispatch.TorchDispatchMode):
@@ -220,13 +229,13 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
     self.env = env
 
   def __torch_dispatch__(self, func, types, args=(), kwargs=None):
-    self.env.maybe_log(f'__torch_dispatch__: {_name_of_func(func)}')
-    if isinstance(func, torch._ops.OpOverloadPacket):
-      with self:
+    with log_nested(f'DISPATCH: {_name_of_func(func)}'):
+      if isinstance(func, torch._ops.OpOverloadPacket):
+        with self:
+          return func(*args, **kwargs)
+      if func.namespace != 'aten':
         return func(*args, **kwargs)
-    if func.namespace != 'aten':
-      return func(*args, **kwargs)
-    return self.env.dispatch(func, types, args, kwargs)
+      return self.env.dispatch(func, types, args, kwargs)
 
 def _name_of_func(func):
   if hasattr(func, 'name'):
@@ -357,7 +366,3 @@ class Environment(contextlib.ContextDecorator):
 
     def j2t_copy(self, args):
       pass
-
-    def maybe_log(self, log):
-      if self.config.debug_print_each_op:
-        logging.info(log)
