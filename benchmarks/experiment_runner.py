@@ -26,7 +26,7 @@ from enum import Enum
 from torchbench_model import TorchBenchModelLoader
 from benchmark_model import BenchmarkModel
 from benchmark_experiment import ExperimentLoader, BenchmarkExperiment
-from util import move_to_device, randomize_input, us_to_s, ns_to_s
+from util import move_to_device, randomize_input, us_to_s, ns_to_s, StrOrBool
 
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
@@ -205,8 +205,8 @@ class ExperimentRunner:
                              benchmark_model.to_dict(), {"error": str(e)})
 
   # TODO: Use `_unique_basename` instead.
-  def _get_config_fingerprint(self, experiment_config: OrderedDict[str, Any],
-                              model_config: OrderedDict[str, Any]) -> str:
+  def _get_config_fingerprint(self, experiment_config: OrderedDict[str, Optional[StrOrBool]],
+                              model_config: OrderedDict[str, Optional[StrOrBool]]) -> str:
     # Experiment `batch_size` may be altered by model in `set_up`, so we will
     # ignore that.
     return "-".join(
@@ -289,8 +289,8 @@ class ExperimentRunner:
   def run_once_and_gather_metrics(self,
                                   benchmark_experiment: BenchmarkExperiment,
                                   benchmark_model: BenchmarkModel,
-                                  experiment_config: OrderedDict[str, Any],
-                                  model_config: OrderedDict[str, Any],
+                                  experiment_config: OrderedDict[str, Optional[StrOrBool]],
+                                  model_config: OrderedDict[str, Optional[StrOrBool]],
                                   repeat_iteration: int):
 
     # Prepare inputs.
@@ -461,8 +461,8 @@ class ExperimentRunner:
   # Helpers to save results and result files.                                  #
   ##############################################################################
 
-  def _unique_basename(self, experiment_config: OrderedDict[str, Any],
-                       model_config: OrderedDict[str, Any]) -> str:
+  def _unique_basename(self, experiment_config: OrderedDict[str, Optional[StrOrBool]],
+                       model_config: OrderedDict[str, Optional[StrOrBool]]) -> str:
 
     def unique_basename_segment(x, max_len=32):
       s = str(x).replace(" ", "")
@@ -482,8 +482,8 @@ class ExperimentRunner:
     return "-".join(segments)
 
   def _get_results_file_path(self,
-                             experiment_config: OrderedDict[str, Any],
-                             model_config: OrderedDict[str, Any],
+                             experiment_config: OrderedDict[str, Optional[StrOrBool]],
+                             model_config: OrderedDict[str, Optional[StrOrBool]],
                              partial_name: str,
                              ext: Optional[str] = "txt",
                              sub_dirname: Optional[str] = None) -> str:
@@ -504,8 +504,8 @@ class ExperimentRunner:
     return path
 
   def _get_results_dir_path(self,
-                            experiment_config: OrderedDict[str, Any],
-                            model_config: OrderedDict[str, Any],
+                            experiment_config: OrderedDict[str, Optional[StrOrBool]],
+                            model_config: OrderedDict[str, Optional[StrOrBool]],
                             partial_name: str,
                             sub_dirname: Optional[str] = None) -> str:
     return self._get_results_file_path(
@@ -517,8 +517,8 @@ class ExperimentRunner:
 
   def _save_results_file(self,
                          text: str,
-                         experiment_config: OrderedDict[str, Any],
-                         model_config: OrderedDict[str, Any],
+                         experiment_config: OrderedDict[str, Optional[StrOrBool]],
+                         model_config: OrderedDict[str, Optional[StrOrBool]],
                          partial_name: str,
                          ext: str = "txt",
                          sub_dirname: Optional[str] = None,
@@ -530,8 +530,8 @@ class ExperimentRunner:
 
   def _save_results(
       self,
-      experiment_config: OrderedDict[str, Any],
-      model_config: OrderedDict[str, Any],
+      experiment_config: OrderedDict[str, Optional[StrOrBool]],
+      model_config: OrderedDict[str, Optional[StrOrBool]],
       metrics: OrderedDict[str, Any],
       verification_result: Optional[VerificationResult] = VerificationResult(
           VerificationCode.CANNOT_PROCEED_WITH_VERIFICATION)):
@@ -553,8 +553,8 @@ class ExperimentRunner:
   ##############################################################################
 
   def _dump_pytorch_profile(self, profile: Optional[torch.profiler.profile],
-                            experiment_config: OrderedDict[str, Any],
-                            model_config: OrderedDict[str, Any],
+                            experiment_config: OrderedDict[str, Optional[StrOrBool]],
+                            model_config: OrderedDict[str, Optional[StrOrBool]],
                             repeat_iteration: int):
     assert profile is not None, "Expect PyTorch profile"
 
@@ -646,8 +646,8 @@ class ExperimentRunner:
           metrics["inductor_ops"] = dict()
         metrics["inductor_ops"][op_name] = extract_prof_info(event)
 
-  def _dump_dynamo_counters(self, experiment_config: OrderedDict[str, Any],
-                            model_config: OrderedDict[str, Any],
+  def _dump_dynamo_counters(self, experiment_config: OrderedDict[str, Optional[StrOrBool]],
+                            model_config: OrderedDict[str, Optional[StrOrBool]],
                             repeat_iteration: int):
     text = f"{json.dumps(dynamo_utils.counters)}\n"
     self._save_results_file(
@@ -657,8 +657,8 @@ class ExperimentRunner:
         "dynamo-counters",
         sub_dirname=str(repeat_iteration))
 
-  def _dump_pytorch_xla_metrics(self, experiment_config: OrderedDict[str, Any],
-                                model_config: OrderedDict[str, Any],
+  def _dump_pytorch_xla_metrics(self, experiment_config: OrderedDict[str, Optional[StrOrBool]],
+                                model_config: OrderedDict[str, Optional[StrOrBool]],
                                 repeat_iteration: int):
     text = met.metrics_report()
     assert isinstance(text, str)

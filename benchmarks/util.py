@@ -7,13 +7,14 @@ from os.path import abspath, exists
 import subprocess
 import torch
 import torch.utils._pytree as pytree
-from typing import Any
+from typing import Any, Union
 import sys
 import torch_xla.core.xla_model as xm
 from torch_xla._internal import tpu
 
 logger = logging.getLogger(__name__)
 
+StrOrBool = Union[str, bool]
 
 def parse_none_str(a: Any):
   if isinstance(a, str) and a.upper() == "None".upper():

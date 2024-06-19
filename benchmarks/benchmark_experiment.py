@@ -6,7 +6,7 @@ from typing import Any, List, Dict, Optional
 import torch
 import torch._dynamo as dynamo
 import torch_xla.core.xla_model as xm
-from util import parse_none_str, is_xla_device_available, get_accelerator_model
+from util import parse_none_str, is_xla_device_available, get_accelerator_model, StrOrBool
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class ExperimentLoader:
       configs = new_configs
     return configs
 
-  def _is_available(self, experiment_config: List[Dict[str, List[Any]]]):
+  def _is_available(self, experiment_config: List[Dict[str, List[Optional[StrOrBool]]]]):
     cfg_dynamo = experiment_config["dynamo"]
     cfg_accelerator = experiment_config["accelerator"]
     cfg_xla = experiment_config["xla"]
@@ -125,7 +125,7 @@ class ExperimentLoader:
 
     return True
 
-  def load_experiment(self, experiment_config: List[Dict[str, List[Any]]]):
+  def load_experiment(self, experiment_config: List[Dict[str, List[Optional[StrOrBool]]]]):
     accelerator = experiment_config["accelerator"].lower()
     xla = experiment_config["xla"]
     xla_flags = experiment_config["xla_flags"]
