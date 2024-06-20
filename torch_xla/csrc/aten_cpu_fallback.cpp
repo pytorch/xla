@@ -3,7 +3,6 @@
 #include <ATen/DLConvertor.h>
 #include <ATen/ops/_copy_from_and_resize.h>
 #include <ATen/ops/_to_cpu.h>
-
 #include <torch/csrc/utils/device_lazy_init.h>
 
 #include <sstream>
