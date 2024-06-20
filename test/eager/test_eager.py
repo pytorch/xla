@@ -18,15 +18,17 @@ class Eager(unittest.TestCase):
     self.assertTrue(torch_xla.experimental.is_eager_mode())
     device = torch_xla.device()
 
+    # For some reason randn will also trigger an execution of
+    # size [5, 5] full of 0.
     t1 = torch.randn(5, 5, device=device)
-    xm.wait_device_ops()
-    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 1)
-    self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 1)
-
-    t1 *= 5
     xm.wait_device_ops()
     self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 2)
     self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 2)
+
+    t1 *= 5
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 3)
+    self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 3)
 
   def test_eager_recompile(self):
     self.assertTrue(torch_xla.experimental.is_eager_mode())
