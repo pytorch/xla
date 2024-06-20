@@ -78,11 +78,10 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
   if (IsNonTrivialDilation(dilation)) {
     auto results = at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(max_pool2d_with_indices)>::call(self,
-                                                                   kernel_size,
-                                                                   stride,
-                                                                   padding,
-                                                                   dilation,
-                                                                   ceil_mode);
+                                                               kernel_size,
+                                                               stride, padding,
+                                                               dilation,
+                                                               ceil_mode);
     ctx->save_for_backward({self, std::get<1>(results)});
     return std::get<0>(results);
   }
@@ -182,11 +181,10 @@ torch::Tensor MaxPool3dAutogradFunction::forward(
   if (IsNonTrivialDilation(dilation)) {
     auto results = at::native::call_fallback_fn<
         &xla_fallback, ATEN_OP(max_pool3d_with_indices)>::call(self,
-                                                                   kernel_size,
-                                                                   stride,
-                                                                   padding,
-                                                                   dilation,
-                                                                   ceil_mode);
+                                                               kernel_size,
+                                                               stride, padding,
+                                                               dilation,
+                                                               ceil_mode);
     ctx->save_for_backward({self, std::get<1>(results)});
     return std::get<0>(results);
   }
