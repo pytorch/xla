@@ -80,7 +80,7 @@ static bool validate_tensor_list(const c10::List<at::Tensor>& tensorlist) {
 // Retrieve the inner XLATensorPtr, and check it lives inside CUDA.
 static XLATensorPtr get_xla_tensor(const at::Tensor& tensor) {
   XLATensorPtr xla_tensor = bridge::GetXlaTensor(tensor);
-  torch::lazy::BackendDevice& device = xla_tensor->GetDevice();
+  const torch::lazy::BackendDevice& device = xla_tensor->GetDevice();
   TORCH_CHECK(device.type() == static_cast<int8_t>(XlaDeviceType::CUDA),
               "OpenXLA CUDA fallback only supports XLA:CUDA tensors. Found a "
               "tensor of another device: ",
