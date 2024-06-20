@@ -27,6 +27,7 @@ import torch_xla.utils.utils as xu
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
+disable_partitioner = int(os.environ.get('DYNAMO_DISABLE_PARTITIONER', '0')) == 1
 
 
 @contextmanager
@@ -331,6 +332,10 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
   if not isinstance(xla_out, (tuple, list)):
     xla_out = (xla_out,)
 
+  # TODO @wonjoo clean-up
+  # xla_model(*xla_args) replaces/creates a new tensor, clean it?
+  xm.mark_step(reset_scope=False)
+
   none_remover = NoneRemover()
   none_remover.remove_nones(xla_out)
 
@@ -598,8 +603,6 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
-  print(f'[WONJOO] {xla_model=}')
-  print(f'[WONJOO] {xla_args=}')
   if _args_on_cuda(xla_args):
     xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
 
@@ -618,6 +621,11 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   # device=CPU keyword-argument of tensor constructor nodes by XLA.
   XLAConstructorMoverPass()(xla_model.graph)
 
+  # For debugging only. TODO @wonjoo clean up.
+  if disable_partitioner:
+    xla_model.xla_args = xla_args
+    return extract_internal(xla_model)
+
   # If a model's `forward` function has an in-place op that acts on its `self.tensor`, the
   # `self.tensor` is not included as a part of the `xla_args` and does not get materialized.
   # This explicitly fetches the `self.tensor`s if they exist.
@@ -626,7 +634,6 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     if "self" in name:
       self_args.append(buffer)
   all_xla_args = list(xla_args) + self_args
-  print(f'[WONJOO] {all_xla_args=}')
 
   for xla_arg in xla_args:
     if xla_arg.device.type != 'xla':
@@ -684,27 +691,10 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   partitioned_graph = partitioner.fuse_partitions(partitions)
   InputCollector(partitioned_graph).run(*xla_args)
 
-  print(f'[WONJOO] {cloned_args=}')
-  print(f'[WONJOO] {all_xla_args=}')
-  print(f'[WONJOO] {xla_args=}')
-  print(f'[WONJOO] {type(xla_args)=}')
-  tmp = tuple(all_xla_args)
-  print(f'[WONJOO] {tmp=}')
-  print(f'[WONJOO] {type(tmp)=}')
-
   # compile each submodule and replace it with a call
   for node in partitioned_graph.graph.nodes:
-    print(f'[WONJOO] {node.name=}')
-    print(f'[WONJOO] {node.args=}')
     if node.op == "call_module" and "fused_" in node.name:
       fused_module = getattr(partitioned_graph, node.name)
-      print(f'[WONJOO] {node.name=}')
-      print(f'[WONJOO] {node.args=}')
-      print(f'[WONJOO] {fused_module=}')
-      if not hasattr(fused_module, 'xla_args'):
-        print(f'[WONJOO] attribute NOT found!')
-        fused_module.xla_args = tmp
-      print(f'[WONJOO] {fused_module.__dict__=}')
       partitioned_graph.delete_submodule(node.target)
       with partitioned_graph.graph.inserting_after(node):
         new_node = partitioned_graph.graph.call_function(
