@@ -1,17 +1,19 @@
+import argparse
 from collections import OrderedDict
 import logging
 import os
+from typing import Any, List, Dict, Optional
 import torch
 import torch._dynamo as dynamo
 import torch_xla.core.xla_model as xm
-from util import parse_none_str, is_xla_device_available, get_accelerator_model
+from util import parse_none_str, is_xla_device_available, get_accelerator_model, StrOrBool
 
 logger = logging.getLogger(__name__)
 
 
 class ExperimentLoader:
 
-  def __init__(self, args):
+  def __init__(self, args: argparse.Namespace):
     self._args = args
 
   def list_experiment_configs(self):
@@ -58,7 +60,7 @@ class ExperimentLoader:
       experiment_configs.append(cfg)
     return experiment_configs
 
-  def _expand_config_choices(self, config_choices):
+  def _expand_config_choices(self, config_choices: Dict[str, List[Any]]):
     configs = [{}]
     for k, choices in config_choices.items():
       new_configs = []
@@ -70,7 +72,9 @@ class ExperimentLoader:
       configs = new_configs
     return configs
 
-  def _is_available(self, experiment_config):
+  def _is_available(self,
+                    experiment_config: List[Dict[str,
+                                                 List[Optional[StrOrBool]]]]):
     cfg_dynamo = experiment_config["dynamo"]
     cfg_accelerator = experiment_config["accelerator"]
     cfg_xla = experiment_config["xla"]
@@ -123,7 +127,9 @@ class ExperimentLoader:
 
     return True
 
-  def load_experiment(self, experiment_config):
+  def load_experiment(self,
+                      experiment_config: List[Dict[str,
+                                                   List[Optional[StrOrBool]]]]):
     accelerator = experiment_config["accelerator"].lower()
     xla = experiment_config["xla"]
     xla_flags = experiment_config["xla_flags"]
@@ -145,8 +151,9 @@ class ExperimentLoader:
 
 class BenchmarkExperiment:
 
-  def __init__(self, accelerator, xla, xla_flags, dynamo, torch_xla2,
-               keep_model_data_on_cuda: bool, test, batch_size):
+  def __init__(self, accelerator: str, xla: Optional[str],
+               xla_flags: Optional[str], dynamo: str, torch_xla2: bool,
+               keep_model_data_on_cuda: bool, test: str, batch_size: str):
     self.accelerator = accelerator
     self.xla = xla
     self.xla_flags = xla_flags
@@ -157,7 +164,7 @@ class BenchmarkExperiment:
     self.batch_size = batch_size
     self.accelerator_model = get_accelerator_model(self.accelerator)
 
-  def update_process_env(self, process_env):
+  def update_process_env(self, process_env: Dict[str, str]):
 
     # Remove env vars that would interfere with the subprocess.
     if self.xla is not None:
