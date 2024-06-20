@@ -1,12 +1,8 @@
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 
 #include <ATen/DLConvertor.h>
-#include <ATen/core/dispatch/Dispatcher.h>
-#include <ATen/core/ivalue.h>
-#include <ATen/core/stack.h>
 #include <ATen/ops/_copy_from_and_resize.h>
 #include <ATen/ops/_to_cpu.h>
-#include <c10/cuda/CUDAFunctions.h>
 
 #include <sstream>
 #include <unordered_map>
@@ -19,6 +15,23 @@
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
+
+// Forward declaration of PyTorch CUDA functions.
+// Source: c10/cuda/CUDAFunctions.h
+//
+// These are needed in order to synchronize the CUDA device after running
+// the operation in PyTorch eager mode.
+//
+// It would be better to include the actual header. However, if we build
+// PyTorch/XLA in an environment where PyTorch wasn't compiled with CUDA
+// (i.e. our CI), the build would fail.
+namespace c10::cuda {
+
+at::DeviceIndex current_device() noexcept;
+void set_device(at::DeviceIndex);
+void device_synchronize();
+
+}  // namespace c10::cuda
 
 namespace torch_xla {
 
@@ -63,6 +76,21 @@ static bool validate_tensor_list(const c10::List<at::Tensor>& tensorlist) {
                      [](const at::Tensor& tensor) { return tensor.defined(); });
 }
 
+// Retrieve the inner XLATensorPtr, and check it lives inside CUDA.
+static XLATensorPtr get_xla_tensor(const at::Tensor& tensor) {
+  XLATensorPtr xla_tensor = bridge::GetXlaTensor(tensor);
+  torch::lazy::BackendDevice& device = xla_tensor->GetDevice();
+  TORCH_CHECK(device.type() == static_cast<int8_t>(XlaDeviceType::CUDA),
+              "OpenXLA CUDA fallback only supports XLA:CUDA tensors. Found a "
+              "tensor of another device: ",
+              device.toString());
+  return xla_tensor;
+}
+
+static bool is_valid_xla_tensor(const at::Tensor& tensor) {
+  return tensor.defined() && tensor.is_xla();
+}
+
 // Former 'to_cpu'.
 // In order to move tensors from XLA to CUDA, we make use of the DLPack API.
 //
@@ -73,8 +101,8 @@ static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
   // Synchronize tensors, so that we are able to grab their data pointer.
   std::vector<XLATensorPtr> xla_tensors;
   for (auto& tensor : tensors) {
-    if (tensor.defined()) {
-      xla_tensors.push_back(bridge::GetXlaTensor(tensor));
+    if (is_valid_xla_tensor(tensor)) {
+      xla_tensors.push_back(get_xla_tensor(tensor));
     }
   }
   XLAGraphExecutor::Get()->SyncTensorsGraph(
@@ -85,8 +113,8 @@ static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
   std::vector<at::Tensor> cuda_tensors(tensors.size());
   std::transform(tensors.begin(), tensors.end(), cuda_tensors.begin(),
                  [=](const at::Tensor& tensor) {
-                   // Skip undefined tensors.
-                   if (!tensor.defined()) {
+                   // Skip undefined or non-XLA tensors.
+                   if (!is_valid_xla_tensor(tensor)) {
                      return tensor;
                    }
 
