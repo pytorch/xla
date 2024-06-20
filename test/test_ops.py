@@ -25,6 +25,7 @@ class AllowedOpInfoEntry:
 @dataclass
 class AllowedFallbackOpInfoEntry(AllowedOpInfoEntry):
   fallback_ops: List[str] = field(default_factory=list)
+  allow_sample: Optional[Callable[[SampleInput], bool]] = None
 
 
 def get_name(op: Union[OpInfo, AllowedOpInfoEntry]) -> str:
@@ -375,8 +376,29 @@ allowed_opinfo = get_allowed_ops_map(
 allowed_fallback_opinfo = get_allowed_ops_map(
     AllowedFallbackOpInfoEntry(
         'nn.functional.embedding_bag',
-        fallback_ops=["aten::_embedding_bag"],
-    ))
+        fallback_ops={"aten::_embedding_bag"},
+    ),
+    AllowedFallbackOpInfoEntry(
+        'unique',
+        fallback_ops={"aten::_unique2"},
+        allow_sample=lambda sample: sample.kwargs["dim"] is None,
+    ),
+    AllowedFallbackOpInfoEntry(
+        'repeat_interleave',
+        fallback_ops={"aten::repeat_interleave.Tensor"},
+        allow_sample=lambda sample: isinstance(sample.kwargs["repeats"], torch.
+                                               Tensor),
+    ),
+    AllowedFallbackOpInfoEntry(
+        'grid_sampler_2d',
+        fallback_ops={"aten::grid_sampler_2d"},
+    ),
+    AllowedFallbackOpInfoEntry(
+        'scatter_reduce',
+        variant_test_name="mean",
+        fallback_ops={"aten::scatter_reduce.two"},
+    ),
+)
 
 
 def is_in_allowed(op: Union[OpInfo, AllowedOpInfoEntry],
@@ -447,24 +469,43 @@ class TestOpInfo(TestCase):
     if self.device_type != 'xla':
       self.skipTest("This test runs only on XLA")
 
+    fallback_info = allowed_fallback_opinfo[get_name(op)]
+
+    # Maximum number of samples to run.
+    # Running all of them might take too much time.
     MAX_SAMPLES_TO_RUN = 2
 
-    fallback_ops = allowed_fallback_opinfo[get_name(op)].fallback_ops
-    sample_inputs = list(op.sample_inputs(device, dtype, requires_grad=True))
+    # Expected fallback operation names.
+    expected_fallbacks = fallback_info.fallback_ops
+
+    # Filter so that only allowed samples are run.
+    sample_inputs = [
+        sample for sample in op.sample_inputs(
+            device, dtype, requires_grad=dtype.is_floating_point) if
+        fallback_info.allow_sample is None or fallback_info.allow_sample(sample)
+    ]
     samples_to_run = min(MAX_SAMPLES_TO_RUN, len(sample_inputs))
 
+    # Test CPU and CUDA fallbacks.
     for xla_fallback_cuda in ("0", "1"):
       os.environ[xenv.XLA_FALLBACK_CUDA] = xla_fallback_cuda
 
       with self.subTest(XLA_FALLBACK_CUDA=xla_fallback_cuda):
-
         for i in range(samples_to_run):
           sample_input = sample_inputs[i]
+
+          # Clear all metrics.
+          # This should also clear the fallbacks.
           xmetrics.clear_all()
+
+          # Run and check the results.
           self.compare_with_eager_reference(op, sample_input)
-          expected_fallbacks = xmetrics.executed_fallback_ops()
-          for fallback in fallback_ops:
-            self.assertIn(fallback, expected_fallbacks)
+
+          # Check whether the fallback operations run correspond to
+          # the expected set of fallbacks.
+          actual_fallbacks = set(xmetrics.executed_fallback_ops())
+
+          self.assertEqual(actual_fallbacks, expected_fallbacks)
 
 
 instantiate_device_type_tests(TestOpInfo, globals())
