@@ -6,6 +6,7 @@ import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.core.xla_model as xm
 
+
 class Eager(unittest.TestCase):
 
   @classmethod
@@ -19,12 +20,12 @@ class Eager(unittest.TestCase):
 
     t1 = torch.randn(5, 5, device=device)
     xm.wait_device_ops()
-    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 1) 
-    self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 1) 
+    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 1)
+    self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 1)
 
     t1 *= 5
     xm.wait_device_ops()
-    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 2) 
+    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 2)
     self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 2)
 
   def test_eager_recompile(self):
@@ -32,18 +33,31 @@ class Eager(unittest.TestCase):
     device = torch_xla.device()
 
     t1 = torch.randn(5, 5, device=device)
+    xm.wait_device_ops()
     met.clear_all()
 
     t2 = torch.logsumexp(t1, 0)
     xm.wait_device_ops()
-    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 1) 
-    self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 1)     
+    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 1)
+    self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 1)
 
     t3 = torch.logsumexp(t1, 0)
     xm.wait_device_ops()
     # make sure no recompilation
-    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 1) 
-    self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 2) 
+    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 1)
+    self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 2)
+
+  def test_eager_in_place(self):
+    self.assertTrue(torch_xla.experimental.is_eager_mode())
+    device = torch_xla.device()
+
+    t1 = torch.randn(5, 5, device=device)
+    xm.wait_device_ops()
+    met.clear_all()
+    xm.optimization_barrier_([t1])
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 1)
+    self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 1)
 
 
 if __name__ == '__main__':
