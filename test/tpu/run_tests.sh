@@ -36,5 +36,11 @@ python3 examples/data_parallel/train_resnet_xla_ddp.py
 python3 examples/fsdp/train_decoder_only_fsdp_v2.py
 python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py
 python3 examples/train_resnet_amp.py
-python3 examples/eager/train_decoder_only_eager.py
-python3 examples/eager/train_decoder_only_eager_with_compile.py
+
+# HACK: don't confuse local `torch_xla` folder with installed package
+# Python 3.11 has the permanent fix: https://stackoverflow.com/a/73636559
+TPU_VERSION=$(python -c "import sys; sys.path.remove(''); import torch_xla; print(torch_xla._internal.tpu.version())")
+if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
+    python3 examples/eager/train_decoder_only_eager.py
+    python3 examples/eager/train_decoder_only_eager_with_compile.py
+fi
