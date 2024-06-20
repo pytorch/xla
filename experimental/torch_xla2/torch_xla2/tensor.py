@@ -220,7 +220,8 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
       try:
         return self.env.dispatch(func, types, args, kwargs)
       except OperatorNotFound:
-        return func(*args, **(kwargs or {}))
+        pass
+      return func(*args, **(kwargs or {}))
 
 
 class XLADispatchMode(torch_dispatch.TorchDispatchMode):
@@ -297,8 +298,15 @@ class Environment(contextlib.ContextDecorator):
       return jax.random.key(next_key)
 
     def dispatch(self, func, types, args, kwargs):
+      kwargs = kwargs or {}
+
+      # If the func don't act on XLATensor2, and is not a tensor constructor,
+      # We should skip and let torch handle it.
+      tensor_args = [t for t in args if isinstance(t, torch.Tensor)]
+      if tensor_args and all(not isinstance(t, XLATensor2) for t in tensor_args):
+        return func(*args, **kwargs)
+
       with jax.named_scope(_name_of_func(func)):
-        kwargs = kwargs or {}
         op = self._ops.get(func)
 
         if op is None and isinstance(func, torch._ops.OpOverloadPacket):
