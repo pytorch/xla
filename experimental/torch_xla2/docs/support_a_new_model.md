@@ -14,144 +14,124 @@ torch_xla2, because:
 2. Some op it needs is implemented incorrectly
 3. There are some non-torch-op code that interacts with torch_xla2 in a non-friendly matter.
 
-Here we present few steps to attempt to fix the related issues.
+Here we present few steps to attempt to fix the related issues. Using dlrm model as 
+example.
 
-# Step 1. Attempt to run the model
+This assumes that you already installed torch_xla2 with `pip install -e .` locally.
+Following the instructions in [README](../README.md)
 
-To run a model under torch_xla2, the first step is to 
-instantiate the model and run it under normal torch.
-This usually means eager mode torch CPU. (NOTE: for large
- models, it's recommended to make a model of equal architecture but smaller, by setting fewer layers / dim sizes; OR, use GPU
-so that it can run reasonably fast).
 
-In this example, we will use `BERT_pytorch` model from 
-torchbench.
+### Get torchbench scripts
 
-## Install torchbench and instantiate a the model
+Following the instructions in https://github.com/pytorch-tpu/run_torchbench
+
+
+### Run script from run_torchbench:
 
 ```bash
-git clone https://github.com/pytorch/benchmark.git torchbench
-cd torchbench
-pip install torchvision torchaudio
-pip install -e .
-```
-Now, torchbench is installed, now we need to download 
-the model.
-
-```
-python install.py BERT_pytorch
-```
-
-NOTE: if you run `python install.py` without positional args 
-it will download ALL the 100+ models which can take sometime.
-
-Now, let's verify that the model is there by importing it in python.
-
-```python
-import torchbenchmark.models.BERT_pytorch
-
-model, sample_inputs = torchbenchmark.models.BERT_pytorch.Model(
-  test='eval', device='cpu'
-)
-
-print(model(*sample_inputs))
-```
-
-If the above succeeds, then the model is ready.
-
-# Attempt to run the model in torchxla2
-
-To run the model in torch_xla2, we need to do 2 things:
-1. Move the model's weight to XLA device (i.e. XLA tensors)
-2. Move the sample_inputs to XLA device (i.e. XLA tensors)
-
-The API for the above is the `to_xla` method on `Environment` class.
-To get the current environment, one can use `torch_xla2.default_env()`.
-
-i.e.
-
-```python
-xla_env = torch_xla2.default_env()
-model2 = xla_env.to_xla(model)
-sample_inputs = xla_env.to_xla(sample_inputs)
-with xla_env:
-  print(model2(*sample_inputs))
-```
-
-You might get something like this:
-```bash
+(xla2) hanq-macbookpro:run_torchbench hanq$ python models/dlrm.py
 Traceback (most recent call last):
-  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/examples/torchbench_models/BERT_pytorch.py", line 13, in <module>
-    benchmark = benchmark_cls(test="eval", device = "cpu") # test = train or eval device = cuda or cpu
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torchbench-0.1-py3.10.egg/torchbenchmark/util/model.py", line 39, in __call__
-    obj = type.__call__(cls, *args, **kwargs)
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torchbench-0.1-py3.10.egg/torchbenchmark/models/BERT_pytorch/__init__.py", line 174, in __init__
-    bert = BERT(
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torchbench-0.1-py3.10.egg/torchbenchmark/models/BERT_pytorch/bert_pytorch/model/bert.py", line 30, in __init__
-    self.embedding = BERTEmbedding(vocab_size=vocab_size, embed_size=hidden)
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torchbench-0.1-py3.10.egg/torchbenchmark/models/BERT_pytorch/bert_pytorch/model/embedding/bert.py", line 24, in __init__
-    self.token = TokenEmbedding(vocab_size=vocab_size, embed_size=embed_size)
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torchbench-0.1-py3.10.egg/torchbenchmark/models/BERT_pytorch/bert_pytorch/model/embedding/token.py", line 6, in __init__
-    super().__init__(vocab_size, embed_size, padding_idx=0)
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/modules/sparse.py", line 145, in __init__
-    self.reset_parameters()
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/modules/sparse.py", line 154, in reset_parameters
-    init.normal_(self.weight)
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/init.py", line 172, in normal_
-    return torch.overrides.handle_torch_function(
+  File "/Users/hanq/git/qihqi/run_torchbench/models/dlrm.py", line 16, in <module>
+    module = importlib.import_module(model_name)
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torchbench-0.1-py3.10.egg/torchbenchmark/models/dlrm/__init__.py", line 15, in <module>
+    from .tricks.qr_embedding_bag import QREmbeddingBag
+ModuleNotFoundError: No module named 'torchbenchmark.models.dlrm.tricks'
+```
+
+Turns out I forgot to run `python install.py dlrm` in the benchmarks folder (cloned from pytorch/benchmark)
+
+
+### Fixing missing ops:
+
+Rerunning:
+```bash
+(xla2) hanq-macbookpro:run_torchbench hanq$ python models/dlrm.py
+Traceback (most recent call last):
+  File "/Users/hanq/git/qihqi/run_torchbench/models/dlrm.py", line 28, in <module>
+    print(model(*example))
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1532, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1541, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/hanq/git/qihqi/run_torchbench/benchmark/torchbenchmark/models/dlrm/dlrm_s_pytorch.py", line 355, in forward
+    return self.sequential_forward(dense_x, lS_o, lS_i)
+  File "/Users/hanq/git/qihqi/run_torchbench/benchmark/torchbenchmark/models/dlrm/dlrm_s_pytorch.py", line 367, in sequential_forward
+    ly = self.apply_emb(lS_o, lS_i, self.emb_l)
+  File "/Users/hanq/git/qihqi/run_torchbench/benchmark/torchbenchmark/models/dlrm/dlrm_s_pytorch.py", line 308, in apply_emb
+    V = E(sparse_index_group_batch, sparse_offset_group_batch)
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1532, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1541, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/modules/sparse.py", line 390, in forward
+    return F.embedding_bag(input, self.weight, offsets,
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/functional.py", line 2360, in embedding_bag
+    return handle_torch_function(
   File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/overrides.py", line 1619, in handle_torch_function
     result = mode.__torch_function__(public_api, types, args, kwargs)
-  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 210, in __torch_function__
+  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 215, in __torch_function__
     return func(*args, **(kwargs or {}))
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/init.py", line 175, in normal_
-    return _no_grad_normal_(tensor, mean, std, generator)
-  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/init.py", line 20, in _no_grad_normal_
-    return tensor.normal_(mean, std, generator=generator)
-  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 224, in __torch_dispatch__
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/functional.py", line 2451, in embedding_bag
+    ret, _, _, _ = torch.embedding_bag(
+  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 230, in __torch_dispatch__
     return self.env.dispatch(func, types, args, kwargs)
-  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 297, in dispatch
+  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 310, in dispatch
     raise OperatorNotFound(
-torch_xla2.tensor.OperatorNotFound: Operator with name aten::normal_ has no lowering
+torch_xla2.tensor.OperatorNotFound: Operator with name aten::_embedding_bag has no lowering
 ```
-if the issue is with operators.
 
-Sometimes it's helpful to see how did this operator is called.
-Note that, many times, an operator being called can also be
-unnexpected. 
+Now let's implement this op.
 
-We can turn on logging with 
-`xla_env.config.debug_print_each_op` and it will print each operator that is being run.
+Few tricks while implementing the ops:
 
-The logs looks like this:
+1. Feel free to edit the script `models/dlrm.py` while debugging.
+2. Useful options to set `env.config.debug_print_each_op = True` will print out each 
+   op that goes through the dispatcher.
+3. Set `env.config.debug_accuracy_for_each_op = True` will in addition of running Jax
+   op, it also runs it again in Torch CPU. Then it diffs the result. If the diff is too
+   large, then it drops you into pdb for inspection.
+4. After inspecting input / output / shapes of the op, maybe it's enough hint for
+   you to fix this op. Or, if it's not, then it's adviced to save the inputs / outputs
+   and write a unit test for it and iterate on that. Usually a unit test is faster 
+   to iterate than running a whole model.
 
+After finishing `embedding_bag` badly, I reached the next op
+
+```bash
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/modules/sparse.py", line 390, in forward
+    return F.embedding_bag(input, self.weight, offsets,
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/nn/functional.py", line 2451, in embedding_bag
+    ret, _, _, _ = torch.embedding_bag(
+  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 124, in __torch_dispatch__
+    return func(*args, **(kwargs or {}))
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/_ops.py", line 594, in __call__
+    return self_._op(*args, **kwargs)
+  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 212, in __torch_function__
+    return func(*args, **(kwargs or {}))
+  File "/Users/hanq/homebrew/Caskroom/miniconda/base/envs/xla2/lib/python3.10/site-packages/torch/_ops.py", line 594, in __call__
+    return self_._op(*args, **kwargs)
+  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 227, in __torch_dispatch__
+    return self.env.dispatch(func, types, args, kwargs)
+  File "/Users/hanq/git/qihqi/torch_xla/experimental/torch_xla2/torch_xla2/tensor.py", line 308, in dispatch
+    raise OperatorNotFound(
+torch_xla2.tensor.OperatorNotFound: Operator with name aten::_embedding_bag_forward_only has no lowering
 ```
-2024-06-16 15:03:13,726 - root - DEBUG - FUNCTION: aten::view
-2024-06-16 15:03:13,726 - root - DEBUG - FUNCTION: aten::gelu
-2024-06-16 15:03:13,729 - root - DEBUG - FUNCTION: aten::view
-2024-06-16 15:03:13,729 - root - DEBUG - FUNCTION: aten::t
-2024-06-16 15:03:13,729 - root - DEBUG -  FUNCTION: transpose
-2024-06-16 15:03:13,729 - root - DEBUG -   DISPATCH: aten::transpose.int
-2024-06-16 15:03:13,730 - root - DEBUG -    FUNCTION: permute
-2024-06-16 15:03:13,730 - root - DEBUG -     DISPATCH: aten::permute
-2024-06-16 15:03:13,731 - root - DEBUG - FUNCTION: aten::addmm
-2024-06-16 15:03:13,737 - root - DEBUG - FUNCTION: aten::view
-2024-06-16 15:03:13,739 - root - DEBUG - FUNCTION: aten::add.Tensor
-2024-06-16 15:03:13,740 - root - DEBUG - FUNCTION: aten::slice.Tensor
-2024-06-16 15:03:13,740 - root - DEBUG - FUNCTION: aten::select.int
-2024-06-16 15:03:13,740 - root - DEBUG - FUNCTION: aten::t
-2024-06-16 15:03:13,740 - root - DEBUG -  FUNCTION: transpose
-2024-06-16 15:03:13,740 - root - DEBUG -   DISPATCH: aten::transpose.int
-2024-06-16 15:03:13,740 - root - DEBUG -    FUNCTION: permute
-2024-06-16 15:03:13,740 - root - DEBUG -     DISPATCH: aten::permute
-2024-06-16 15:03:13,740 - root - DEBUG - FUNCTION: aten::addmm
-2024-06-16 15:03:13,741 - root - DEBUG - FUNCTION: aten::_log_softmax
-2024-06-16 15:03:13,741 - root - DEBUG - FUNCTION: aten::view
-2024-06-16 15:03:13,741 - root - DEBUG - FUNCTION: aten::t
-2024-06-16 15:03:13,741 - root - DEBUG -  FUNCTION: transpose
-2024-06-16 15:03:13,741 - root - DEBUG -   DISPATCH: aten::transpose.int
-2024-06-16 15:03:13,741 - root - DEBUG -    FUNCTION: permute
-2024-06-16 15:03:13,741 - root - DEBUG -     DISPATCH: aten::permute
-2024-06-16 15:03:13,764 - root - DEBUG - FUNCTION: aten::addmm
-2024-06-16 15:03:13,788 - root - DEBUG - FUNCTION: aten::view
-2024-06-16 15:03:13,790 - root - DEBUG - FUNCTION: aten::_log_softmax
-```
+
+Turns out, that is the same operator. so adding the @op(torch.ops.aten._embedding_bag_forward_only)
+on top of the same op works.
+
+Now the resulting PR is: https://github.com/pytorch/xla/pull/7583
+
+After this `python models/dlrm.py` runs. 
+
+NOTE:
+The _embedding_bag implementation is actually very crude, just sufficient to make
+the model pass.
