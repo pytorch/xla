@@ -4,6 +4,8 @@
 #include <ATen/ops/_copy_from_and_resize.h>
 #include <ATen/ops/_to_cpu.h>
 
+#include <torch/csrc/utils/device_lazy_init.h>
+
 #include <sstream>
 #include <unordered_map>
 #include <vector>
@@ -174,6 +176,9 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
   std::vector<c10::IValue> tensorlist_cuda_args;
 
   at::DeviceIndex common_device = -1;
+
+  // Initialize CUDA device.
+  torch::utils::device_lazy_init(at::kCUDA);
 
   // Step 1: Convert all non-CUDA tensor inputs into CUDA tensors
   // and put them on the stack at the correct indices.
