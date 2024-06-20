@@ -66,6 +66,8 @@ def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
 
 @register_function(torch.angle)
 def _torch_angle(input):
+  if input.dtype.name == 'int64':
+    input = input.astype(jnp.dtype('float32'))
   return jnp.angle(input)
 
 

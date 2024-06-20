@@ -10,13 +10,17 @@ from torch_xla2 import tensor
 
 
 skiplist = {
-    "__rmatmul__",
-    "__rpow__",
+    "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior 
+                 # such as 0 to negative power.
     "_segment_reduce",
     "_upsample_bilinear2d_aa",
+<<<<<<< HEAD
     "as_strided",
     "as_strided_scatter",
     "bernoulli",
+=======
+    "bincount",
+>>>>>>> 0fb4f16d6 (Modify op info test to check dtypes. Fix up few dtypes.)
     "bitwise_left_shift",
     "bitwise_right_shift",
     "block_diag",
@@ -509,19 +513,30 @@ skiplist = {
     "zeros",
 }
 
+# These inputs are themselves views
+# We cannot know how are the views created so cannot replicate the behavior.
+variant_test_name_to_skip = {
+  "partial_views",
+}
+
 random_ops = {
   'randn',
   'empty',
+  'bernoulli',
 }
 
-def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
+def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
-    if output2_cpu.dtype != output1.dtype:
-      output2_cpu = output2_cpu.to(output1.dtype)
-    torch.testing.assert_close(
-        output2_cpu, output1, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    if check_output:
+      torch.testing.assert_close(
+          output2_cpu, output1, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    else:
+      testcase.assertEqual(
+        (output1.shape, output1.dtype),
+        (output2.shape, output2.dtype)
+      )
   elif isinstance(output1, (tuple, list)):
     testcase.assertIsInstance(output2, (tuple, list))
     testcase.assertEqual(len(output1), len(output2))
@@ -537,8 +552,8 @@ def run_export_and_compare(testcase,
                            check_output=True,
                            equal_nan=True,
                            ignore_indices=False):
-  atol=1e-3 if check_output else float('inf')
-  rtol=1e-5 if check_output else float('inf')
+  atol = 1e-3
+  rtol = 1e-5
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):
@@ -547,6 +562,7 @@ def run_export_and_compare(testcase,
       with testcase.env:
         res2 = func(input2, *args2, **kwargs2)
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
+      # import pdb; pdb.set_trace()
       with testcase.subTest("torch_xla2_diff:" + str(atol)):
         if ignore_indices and isinstance(res, tuple) and len(res) == 2:
           diff_output(
@@ -555,13 +571,18 @@ def run_export_and_compare(testcase,
               res2[0],
               atol=atol,
               rtol=rtol,
-              equal_nan=equal_nan)
+              equal_nan=equal_nan, check_output=check_output)
         else:
           diff_output(
-              testcase, res, res2, atol=atol, rtol=rtol, equal_nan=equal_nan)
+              testcase, res, res2, atol=atol, rtol=rtol, equal_nan=equal_nan, check_output=check_output)
 
 
-ops_to_test = list(filter(lambda x: x.name not in skiplist, op_db))
+ops_to_test = [
+    test for test in op_db
+    if (test.name not in skiplist and 
+        test.variant_test_name not in variant_test_name_to_skip)
+]
+       
 
 
 class TestOpInfo(TestCase):
