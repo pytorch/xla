@@ -228,7 +228,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
   torch::lazy::Value GetIrValue() const;
   void SetIrValue(torch::lazy::Value ir_value, bool inplace = true);
-  void SetInPlaceIrValue(torch::lazy::Value ir_value);
+  void SetInPlaceIrValue(torch::lazy::Value ir_value,
+                         bool delay_eager_executation = false);
 
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::optional<at::Tensor> CurrentTensorData() const;
