@@ -13,9 +13,10 @@ import os
 from typing import List, Optional
 
 import jax
+import jax.numpy as jnp
 import torch
 import torch.distributed as dist
-from torch._C._distributed_c10d import ProcessGroup
+from torch._C._distributed_c10d import ProcessGroup  # type: ignore
 import torch_xla2
 import numpy as np
 
@@ -25,17 +26,41 @@ class ProcessGroupJax(ProcessGroup):
 
   def __init__(self, prefix_store, rank, size, timeout):
     super().__init__(rank, size)
-    self.prefix_store = prefix_store  # reserved for future use.
-    self.timeout = timeout
 
   def getBackendName(self):
     return "jax"
+
+  def allgather(
+    self,
+    output_tensors: List[List[torch.Tensor]],
+    input_tensors: List[torch.Tensor],
+    opts = ...
+  ) -> dist.Work:
+    assert len(input_tensors) == 1, "Only one input tensor supported"
+    input_tensor = input_tensors[0]
+    assert len(output_tensors) == 1, "Only one input tensor supported"
+    output_tensors = output_tensors[0]
+
+    assert isinstance(input_tensor, torch_xla2.tensor.XLATensor2)
+    output = jax.lax.all_gather(input_tensor._elem, axis_name="torch_dist")
+    output_size = jax.numpy.shape(output)[0]
+    # output_arrays = jnp.unstack(output)
+
+    # assert len(output_tensors) == len(output_arrays)
+    assert len(output_tensors) == output_size
+    for i, t in enumerate(output_tensors):
+      assert isinstance(t, torch_xla2.tensor.XLATensor2)
+      t._elem = output[i]
+
+    fut = torch.futures.Future()
+    fut.set_result(output_tensors)
+    return torch._C._distributed_c10d._create_work_from_future(fut)
 
   def allreduce(
     self,
     tensors: List[torch.Tensor],
     opts: dist.AllreduceOptions = ...,
-  ):
+  ) -> dist.Work:
     for t in tensors:
       assert isinstance(t, torch_xla2.tensor.XLATensor2)
       match opts.reduceOp:
@@ -51,6 +76,24 @@ class ProcessGroupJax(ProcessGroup):
           raise RuntimeError(f"Reduce op {opts.reduceOp} not implemented")
 
       t._elem = res
+
+    fut = torch.futures.Future()
+    fut.set_result(tensors)
+    return torch._C._distributed_c10d._create_work_from_future(fut)
+
+  def broadcast(
+    self,
+    tensors: List[torch.Tensor],
+    opts: dist.BroadcastOptions = ...,
+  ) -> dist.Work:
+    for t in tensors:
+      assert isinstance(t, torch_xla2.tensor.XLATensor2)
+      masked = jnp.where(
+        jax.lax.axis_index("torch_dist") == opts.rootRank,
+        t._elem,
+        jnp.zeros_like(t._elem),
+      )
+      t._elem = jax.lax.psum(masked, "torch_dist")
 
     fut = torch.futures.Future()
     fut.set_result(tensors)
