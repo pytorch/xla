@@ -358,6 +358,13 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
         torch::lazy::MakeNode<Cast>(ir_value, xla_shape.get().element_type());
   }
   SetIrValue(std::move(ir_value), /*inplace=*/true);
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+
+  // in place update should also be triggered eagerly if configured
+  if (graph_executor->UseEagerMode()) {
+    std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
+    graph_executor->ApplyEagerSync(xtensors);
+  }
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
