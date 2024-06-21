@@ -76,6 +76,19 @@ class Eager(unittest.TestCase):
     # t1 and t2 should not be the same
     self.assertFalse(torch.allclose(t1.cpu(), t2.cpu()))
 
+  def test_eager_set_random_seed(self):
+    self.assertTrue(torch_xla.experimental.is_eager_mode())
+    device = torch_xla.device()
+
+    old_seed = 1234
+    xm.set_rng_state(old_seed)
+    t1 = torch.randn(12, 13, device=device)
+    new_seed = xm.get_rng_state()
+    self.assertNotEqual(new_seed, old_seed)
+    xm.set_rng_state(old_seed)
+    t2 = torch.randn(12, 13, device=device)
+    self.assertTrue(torch.allclose(t1.cpu(), t2.cpu()))
+
 
 if __name__ == '__main__':
   test = unittest.main()
