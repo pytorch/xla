@@ -97,10 +97,12 @@ class WhileLoopTest(unittest.TestCase):
 
     # TODO(@manfei): enable weights[0] != weights[1] and bias[0] != bias[1], now test pass with weights[0] == weights[1] and bias[0]==bias[1]
     weights = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
-                            [[5.1, 6.2], [7.3, 8.4]]], device=device)
+                            [[5.1, 6.2], [7.3, 8.4]]],
+                           device=device)
 
     bias = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
-                         [[16.1, 17.2], [18.3, 19.4]]], device=device)
+                         [[16.1, 17.2], [18.3, 19.4]]],
+                        device=device)
 
     def cond_fn(iteri, weights, bias, x):
       return iteri >= 0
@@ -120,7 +122,7 @@ class WhileLoopTest(unittest.TestCase):
       return next_iteri, weights, bias, next_x
 
     inputs = torch.stack((weights[2], bias[2],
-                          torch.tensor([[ 1.0, 1.0], [ 1.0, 1.0]],
+                          torch.tensor([[1.0, 1.0], [1.0, 1.0]],
                                        dtype=torch.float32,
                                        device=device)))
     print("inputs: ", inputs)  # needed to enable func catch stacked inputs
