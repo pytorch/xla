@@ -1453,7 +1453,7 @@ def _aten_eq(input1, input2):
 
 # aten.equal
 @op(torch.ops.aten.equal)
-def _aten_eq(input1, input2):
+def _aten_equal(input1, input2):
   return input1 == input2
 
 # aten.erf
