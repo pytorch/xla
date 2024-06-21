@@ -370,10 +370,26 @@ void all_reduce(const std::vector<XLATensorPtr>& inputs,
       reduce_type, input_values, GetAllReduceToken(inputs.front()->GetDevice()),
       scale, std::move(groups), pin_layout);
   for (size_t i = 0; i < inputs.size(); ++i) {
-    inputs[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
+    // In eager mode we don't want to execute the IR for each tensor because
+    // that will execute the `all_reduce` x times.
+    inputs[i]->SetInPlaceIrValue(torch::lazy::Value(node, i),
+                                 /*delay_eager_executation=*/true);
   }
-  SetAllReduceToken(inputs.front()->GetDevice(),
-                    std::make_shared<torch::lazy::Value>(node, inputs.size()));
+
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  if (graph_executor->UseEagerMode()) {
+    // Execute the HLO that will run the `all_reduce` and in place update all
+    // tensors in one graph.
+    graph_executor->ApplyEagerSync(
+        const_cast<std::vector<XLATensorPtr>&>(inputs));
+  } else {
+    // all_reduce_token is to enforce the order of the cc ops. There is no point
+    // of setting it for eager mode since each cc op will be executed
+    // independently.
+    SetAllReduceToken(
+        inputs.front()->GetDevice(),
+        std::make_shared<torch::lazy::Value>(node, inputs.size()));
+  }
 }
 
 std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
