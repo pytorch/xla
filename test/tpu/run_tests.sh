@@ -43,4 +43,5 @@ TPU_VERSION=$(python -c "import sys; sys.path.remove(''); import torch_xla; prin
 if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
     python3 examples/eager/train_decoder_only_eager.py
     python3 examples/eager/train_decoder_only_eager_with_compile.py
+    python3 examples/eager/train_decoder_only_eager_multi_process.py
 fi

@@ -20,7 +20,7 @@ class TrainDecoderOnlyBase():
     self.config = DecoderOnlyConfig()
     self.batch_size = 16
     self.seq_len = 512
-    self.num_steps = 300
+    self.num_steps = 200
     self.num_epochs = 1
     self.train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     # For the purpose of this example, we are going to use fake data.
