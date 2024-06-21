@@ -911,6 +911,8 @@ def _aten_bitwise_not(self):
 def _aten_sum(self, dim=None, keepdim=False, dtype=None):
   if not dim:
     dim = None
+  if self.ndim == 0:
+    return self
   return jnp.sum(self, axis=dim, keepdims=keepdim, dtype=dtype)
 
 
@@ -1447,8 +1449,12 @@ def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
 # aten.eq
 @op(torch.ops.aten.eq)
 def _aten_eq(input1, input2):
-  return input1 == input2
+  return jnp.equal(input1, input2)
 
+# aten.equal
+@op(torch.ops.aten.equal)
+def _aten_eq(input1, input2):
+  return input1 == input2
 
 # aten.erf
 @op(torch.ops.aten.erf)
