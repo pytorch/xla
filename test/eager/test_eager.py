@@ -61,6 +61,21 @@ class Eager(unittest.TestCase):
     self.assertEqual(met.metric_data("EagerOpCompileTime")[0], 1)
     self.assertEqual(met.metric_data("EagerOpExecuteTime")[0], 1)
 
+  def test_eager_random_seed(self):
+    self.assertTrue(torch_xla.experimental.is_eager_mode())
+    device = torch_xla.device()
+
+    met.clear_all()
+    t1 = torch.randn(12, 13, device=device)
+    xm.wait_device_ops()
+    compile_count = met.metric_data("EagerOpCompileTime")[0]
+    t2 = torch.randn(12, 13, device=device)
+    xm.wait_device_ops()
+    new_compile_count = met.metric_data("EagerOpCompileTime")[0]
+    self.assertEqual(compile_count, new_compile_count)
+    # t1 and t2 should not be the same
+    self.assertFalse(torch.allclose(t1.cpu(), t2.cpu()))
+
 
 if __name__ == '__main__':
   test = unittest.main()
