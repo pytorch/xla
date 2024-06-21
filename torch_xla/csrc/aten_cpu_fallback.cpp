@@ -78,7 +78,7 @@ static bool validate_tensor_list(const c10::List<at::Tensor>& tensorlist) {
 }
 
 // Retrieve the inner XLATensorPtr, and check it lives inside CUDA.
-static XLATensorPtr get_xla_tensor(const at::Tensor& tensor) {
+static XLATensorPtr get_xla_cuda_tensor(const at::Tensor& tensor) {
   XLATensorPtr xla_tensor = bridge::GetXlaTensor(tensor);
   const torch::lazy::BackendDevice& device = xla_tensor->GetDevice();
   TORCH_CHECK(device.type() == static_cast<int8_t>(XlaDeviceType::CUDA),
@@ -103,7 +103,7 @@ static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
   std::vector<XLATensorPtr> xla_tensors;
   for (auto& tensor : tensors) {
     if (is_valid_xla_tensor(tensor)) {
-      xla_tensors.push_back(get_xla_tensor(tensor));
+      xla_tensors.push_back(get_xla_cuda_tensor(tensor));
     }
   }
   XLAGraphExecutor::Get()->SyncTensorsGraph(
@@ -174,6 +174,14 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
 
   std::vector<c10::IValue> tensorlist_cuda_args;
 
+  // This fallback only works if all XLA:CUDA tensor arguments are
+  // on the same CUDA device.
+  //
+  // We keep track of said device, so that after actually running
+  // the operation on PyTorch CUDA eager-mode, we synchronize the
+  // device.
+  //
+  // This variable is updated over the course of 'to_cuda' calls.
   at::DeviceIndex common_device = -1;
 
   // Initialize CUDA device.

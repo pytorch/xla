@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 import numbers
-from typing import Callable, Dict, List, NamedTuple, Optional, Union
-from torch_xla.core import xla_model as xm
-from torch_xla.core import xla_env_vars as xenv
-from torch_xla.debug import metrics as xmetrics
+from typing import Callable, Dict, List, NamedTuple, Optional, Set, Union
+import torch_xla.core.xla_model as xm
+import torch_xla.core.xla_env_vars as xenv
+import torch_xla.debug.metrics as met
 import os
 
 import torch
@@ -24,8 +24,16 @@ class AllowedOpInfoEntry:
 
 @dataclass
 class AllowedFallbackOpInfoEntry(AllowedOpInfoEntry):
-  fallback_ops: List[str] = field(default_factory=list)
-  allow_sample: Optional[Callable[[SampleInput], bool]] = None
+  # Set of ATen operations that fallback for the specified OpInfo.
+  fallback_ops: Set[str] = field(default_factory=list)
+
+  # Function for filtering through the SampleInput list.
+  #
+  # There are cases where only a specific operation overload fallbacks.
+  # Since we are checking whether the fallback was really called, we need
+  # the to run the operation only with the inputs that will actually call
+  # the fallback operation.
+  allow_sample: Callable[[SampleInput], bool] = lambda _: True
 
 
 def get_name(op: Union[OpInfo, AllowedOpInfoEntry]) -> str:
@@ -398,6 +406,10 @@ allowed_fallback_opinfo = get_allowed_ops_map(
         variant_test_name="mean",
         fallback_ops={"aten::scatter_reduce.two"},
     ),
+    AllowedFallbackOpInfoEntry(
+        'nonzero',
+        fallback_ops={"aten::nonzero"},
+    ),
 )
 
 
@@ -481,8 +493,8 @@ class TestOpInfo(TestCase):
     # Filter so that only allowed samples are run.
     sample_inputs = [
         sample for sample in op.sample_inputs(
-            device, dtype, requires_grad=dtype.is_floating_point) if
-        fallback_info.allow_sample is None or fallback_info.allow_sample(sample)
+            device, dtype, requires_grad=dtype.is_floating_point)
+        if fallback_info.allow_sample(sample)
     ]
     samples_to_run = min(MAX_SAMPLES_TO_RUN, len(sample_inputs))
 
@@ -496,14 +508,14 @@ class TestOpInfo(TestCase):
 
           # Clear all metrics.
           # This should also clear the fallbacks.
-          xmetrics.clear_all()
+          met.clear_all()
 
           # Run and check the results.
           self.compare_with_eager_reference(op, sample_input)
 
           # Check whether the fallback operations run correspond to
           # the expected set of fallbacks.
-          actual_fallbacks = set(xmetrics.executed_fallback_ops())
+          actual_fallbacks = set(met.executed_fallback_ops())
 
           self.assertEqual(actual_fallbacks, expected_fallbacks)
 
