@@ -96,11 +96,11 @@ class WhileLoopTest(unittest.TestCase):
     torch.set_grad_enabled(False)
 
     # TODO(@manfei): enable weights[0] != weights[1] and bias[0] != bias[1], now test pass with weights[0] == weights[1] and bias[0]==bias[1]
-    weights = torch.tensor([[[ 1.0, 2.0], [ 3.0, 4.0]], [[ 1.0, 2.0], [ 3.0, 4.0]],
-                            [[ 5.1, 6.2], [ 7.3, 8.4]]], device=device)
+    weights = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
+                            [[5.1, 6.2], [7.3, 8.4]]], device=device)
 
-    bias = torch.tensor([[[ 1.0, 2.0], [ 3.0, 4.0]], [[ 1.0, 2.0], [ 3.0, 4.0]],
-                         [[ 16.1, 17.2], [ 18.3, 19.4]]], device=device)
+    bias = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
+                         [[16.1, 17.2], [18.3, 19.4]]], device=device)
 
     def cond_fn(iteri, weights, bias, x):
       return iteri >= 0
@@ -123,11 +123,11 @@ class WhileLoopTest(unittest.TestCase):
                           torch.tensor([[ 1.0, 1.0], [ 1.0, 1.0]],
                                        dtype=torch.float32,
                                        device=device)))
-    print("inputs: ", inputs) # needed to enable func catch stacked inputs
+    print("inputs: ", inputs)  # needed to enable func catch stacked inputs
     iteri = torch.tensor(2, dtype=torch.int32, device=device)
     _, _, _, res = _xla_while_loop_wrapper(
         cond_fn, body_fn, (iteri, weights, bias, inputs), (),
-        fake_tensor=False) # need point out weight/bias in cond/body
+        fake_tensor=False)  # need point out weight/bias in cond/body
     print("res: ", res)
 
     expected = inputs
@@ -156,13 +156,15 @@ class WhileLoopTest(unittest.TestCase):
         super().__init__()
         self.linear = torch.nn.Linear(2, 2)
 
-        self.weights = torch.tensor([[[ 1.0, 2.0], [ 3.0, 4.0]], [[ 1.0, 2.0], [ 3.0, 4.0]],
-                                     [[ 5.1, 6.2], [ 7.3, 8.4]]],
-                                    device=device)
+        self.weights = torch.tensor(
+            [[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
+             [[5.1, 6.2], [7.3, 8.4]]],
+            device=device)
 
-        self.bias = torch.tensor([[[ 1.0, 2.0], [ 3.0, 4.0]], [[ 1.0, 2.0], [ 3.0, 4.0]],
-                                  [[ 16.1, 17.2], [ 18.3, 19.4]]],
-                                 device=device)
+        self.bias = torch.tensor(
+            [[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
+             [[16.1, 17.2], [18.3, 19.4]]],
+            device=device)
 
       def forward(self, iteri, x):
 
@@ -206,7 +208,7 @@ class WhileLoopTest(unittest.TestCase):
     linear_model = SimpleLinear()
     linear_model.to(device)
     inputs = torch.stack((linear_model.weights[2], linear_model.bias[2],
-                          torch.tensor([[ 1.0, 1.0], [ 1.0, 1.0]],
+                          torch.tensor([[1.0, 1.0], [1.0, 1.0]],
                                        dtype=torch.float32,
                                        device=device)))
     print("inputs: ", inputs)
