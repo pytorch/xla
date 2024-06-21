@@ -313,7 +313,7 @@ class TorchBenchModel(BenchmarkModel):
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
     if self.should_initialize_on_xla():
-      device = str(self.benchmark_experiment.get_device())
+      device = "xla"
     else:
       # Initialize the model in the given accelerator first. If we are supposed
       # to run on XLA device, move it later. We do this for a couple of reasons:
