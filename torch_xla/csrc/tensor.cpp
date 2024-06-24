@@ -351,7 +351,8 @@ void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
   data()->is_cloned = false;
 }
 
-void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
+void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value,
+                                  bool delay_eager_executation) {
   auto xla_shape = shape();
   if (xla_shape.get().element_type() != GetXlaShape(ir_value).element_type()) {
     ir_value =
@@ -361,7 +362,7 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
 
   // in place update should also be triggered eagerly if configured
-  if (graph_executor->UseEagerMode()) {
+  if (graph_executor->UseEagerMode() && !delay_eager_executation) {
     std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
     graph_executor->ApplyEagerSync(xtensors);
   }
