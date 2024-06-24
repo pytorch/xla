@@ -12,10 +12,13 @@ We recommend you to use our prebuilt Docker image to start your development work
 
 ### Visual Studio Code Dev Container
 
-* Create an empty directory (optionally on a remote host via SSH) and open it in VSCode. Then, clone PyTorch and PyTorch/XLA:
+* Create an empty directory (optionally on a remote host via SSH) and open it in VSCode. Then, clone
+  PyTorch, TorchVision, and PyTorch/XLA:
 
   ```bash
   git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
+  # Optional: install TorchVision if you need to run tests that involve vision modules
+  git clone --recursive --depth=1 https://github.com/pytorch/vision.git
   git clone https://github.com/pytorch/xla.git pytorch/xla
   # Optional: use git@github.com:pytorch/xla.git instead if you prefer to use SSH with key forwarding
   ```
@@ -29,22 +32,35 @@ We recommend you to use our prebuilt Docker image to start your development work
   ln -s pytorch/xla/.clang-format .clang-format
   ```
 
-* From VSCode's command menu, run `Reopen in Container` to open your workspace in one of our pre-built Docker containers. Select the correct container config based on your local accelerator (default to `tpu-contributor` if you are not sure).
+* From VSCode's command menu, run `Reopen in Container` from the command palette
+  (F1 key) to open your workspace in one of our pre-built Docker containers.
+  Select the correct container config based on your local accelerator (default to
+  `tpu-contributor` if you are not sure).
 
-* Since you are running as root in this container, change ownership of all files:
+  * If you cannot find `Reopen in Container`, make sure the `Dev Containers`
+    VSCode extension is installed, then open the `pytorch/xla` folder in VSCode.
+
+* Since you are running as root in this container, teach `git` to recognize the
+  repositories you just cloned (outside of docker) as safe:
 
   ```bash
-  chown -R root:root .
+  git config --global --add safe.directory /workspaces/torch/pytorch
+  git config --global --add safe.directory /workspaces/torch/pytorch/xla
+  git config --global --add safe.directory /workspaces/torch/vision
   ```
 
-* Build PyTorch and PyTorch/XLA:
+* Build PyTorch, TorchVision, and PyTorch/XLA:
 
   ```bash
-  cd pytorch/
+  cd pytorch
   # pytorch/xla requires pytorch wheel to be presented under pytorch/dist
   python setup.py bdist_wheel
   python setup.py install
-  cd xla/
+  cd ..
+  cd vision
+  python setup.py develop
+  cd ..
+  cd pytorch/xla
   python setup.py develop
   # Optional: if you're using TPU, install libtpu
   pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
