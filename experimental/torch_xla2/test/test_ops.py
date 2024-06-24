@@ -38,7 +38,6 @@ skiplist = {
     "cross",
     "cummax",
     "cummin",
-    "cumprod",
     "cumsum",
     "diag",
     "diag_embed",
@@ -158,7 +157,6 @@ skiplist = {
     "masked.amin",
     "masked.argmax",
     "masked.argmin",
-    "masked.cumprod",
     "masked.cumsum",
     "masked.log_softmax",
     "masked.logaddexp",
@@ -575,7 +573,6 @@ ops_to_test = [
     if (test.name not in skiplist and 
         test.variant_test_name not in variant_test_name_to_skip)
 ]
-       
 
 
 class TestOpInfo(TestCase):
