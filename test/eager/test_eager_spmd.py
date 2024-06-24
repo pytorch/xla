@@ -17,7 +17,7 @@ class Eager(unittest.TestCase):
     torch_xla.experimental.eager_mode(True)
     xr.use_spmd()
     cls.n_devices = xr.global_runtime_device_count()
-    cls.device_ids = np.array(range(cls.n_devices))    
+    cls.device_ids = np.array(range(cls.n_devices))
 
   def _get_mesh(self, mesh_shape, device_ids=None, axis_names=None):
     assert type(mesh_shape) is tuple, 'mesh_shape must be Tuple[int]'
@@ -37,7 +37,7 @@ class Eager(unittest.TestCase):
     res_xla = linear(input_xla)
     self.assertTrue(torch.allclose(res, res_xla.cpu()))
 
+
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
-
