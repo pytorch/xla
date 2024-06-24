@@ -41,3 +41,4 @@ jobs:
         shell: bash
         run: |
           pytest test/
+          pytest -n 0 test_dist/

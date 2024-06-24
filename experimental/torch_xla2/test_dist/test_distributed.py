@@ -9,12 +9,13 @@ import torch_xla2
 import torch_xla2.distributed
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def multi_cpu():
   # TODO(wcromar): support other devices
-  jax.config.update('jax_platforms', 'cpu')
+  jax.config.update("jax_platforms", "cpu")
   replicas = 4
   os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={replicas}"
+  assert jax.device_count() == 4
 
   os.environ["MASTER_ADDR"] = "localhost"
   os.environ["MASTER_PORT"] = "12355"
@@ -41,12 +42,15 @@ def test_all_gather(multi_cpu):
   np.testing.assert_equal([r.numpy() for r in res], expected_tensors)
 
 
-@pytest.mark.parametrize(('op', 'expected'), [
-  (dist.ReduceOp.SUM, sum(range(4))),
-  (dist.ReduceOp.AVG, sum(range(4)) / 4),
-  (dist.ReduceOp.MIN, 0),
-  (dist.ReduceOp.MAX, 3),
-])
+@pytest.mark.parametrize(
+  ("op", "expected"),
+  [
+    (dist.ReduceOp.SUM, sum(range(4))),
+    (dist.ReduceOp.AVG, sum(range(4)) / 4),
+    (dist.ReduceOp.MIN, 0),
+    (dist.ReduceOp.MAX, 3),
+  ],
+)
 def test_all_reduce(op, expected, multi_cpu):
   device_count = multi_cpu
 
@@ -60,10 +64,13 @@ def test_all_reduce(op, expected, multi_cpu):
   np.testing.assert_equal(res.numpy(), expected_tensors)
 
 
-@pytest.mark.parametrize(('rank', 'expected'), [
-  (0, 0),
-  (2, 2),
-])
+@pytest.mark.parametrize(
+  ("rank", "expected"),
+  [
+    (0, 0),
+    (2, 2),
+  ],
+)
 def test_broadcast(rank, expected, multi_cpu):
   device_count = multi_cpu
 
@@ -75,4 +82,3 @@ def test_broadcast(rank, expected, multi_cpu):
 
   expected_tensors = [expected for _ in range(device_count)]
   np.testing.assert_equal(res.numpy(), expected_tensors)
-
