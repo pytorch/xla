@@ -69,3 +69,14 @@ def step():
     yield
   finally:
     xm.mark_step()
+
+
+def manul_seed(seed, device=None):
+  """Set the seed for generating random numbers for the current XLA device.
+
+  Args:
+    seed (integer): The state to be set.
+    device (torch.device, optional): The device where the RNG state needs to be set.
+      If missing the default device seed will be set.
+  """
+  xm.set_rng_state(seed, device)
