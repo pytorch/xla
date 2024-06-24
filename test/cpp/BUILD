@@ -53,6 +53,7 @@ ptxla_cc_test(
         ":cpp_test_util",
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
+        "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -63,6 +64,7 @@ ptxla_cc_test(
     deps = [
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
+        "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
         "@xla//xla:shape_util",
     ],
@@ -77,6 +79,7 @@ ptxla_cc_test(
         "//torch_xla/csrc/runtime:runtime",
         "//torch_xla/csrc/runtime:debug_macros",
         "//torch_xla/csrc:tensor",
+        "//torch_xla/csrc:aten_cuda_functions",
         "//torch_xla/csrc:thread_pool",
         "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest_main",
@@ -95,6 +98,7 @@ ptxla_cc_test(
         ":cpp_test_util",
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
+        "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -119,6 +123,7 @@ ptxla_cc_test(
         "//torch_xla/csrc/runtime:env_vars",
         "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc:tensor",
+        "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
         "@xla//xla:xla_data_proto_cc",
         "@tsl//tsl/profiler/utils:session_manager",
