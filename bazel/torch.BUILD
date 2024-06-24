@@ -56,3 +56,8 @@ cc_import(
     name = "libc10",
     shared_library = "build/lib/libc10.so",
 )
+
+cc_import(
+    name = "libc10_cuda",
+    shared_library = "build/lib/libc10_cuda.so",
+)
