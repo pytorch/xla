@@ -42,7 +42,7 @@ jobs:
       # note that to build a torch wheel with CUDA enabled, we do not need a GPU runner.
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
       torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-      runner: linux.8xlarge.nvidia.gpu
+      runner: linux.24xlarge
 
   build-cuda-plugin:
     name: "Build XLA CUDA plugin"

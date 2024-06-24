@@ -20,7 +20,6 @@ jobs:
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.dev-image }}
-      options: "--gpus all --shm-size 16g"
     env:
       _GLIBCXX_USE_CXX11_ABI: 0
     steps:
@@ -34,8 +33,6 @@ jobs:
         run: |
           echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
-      - name: Check GPU
-        run: nvidia-smi
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
@@ -47,7 +44,7 @@ jobs:
         shell: bash
         run: |
           cd pytorch
-          USE_CUDA=1 python setup.py bdist_wheel
+          TORCH_CUDA_ARCH_LIST="5.2;8.6" USE_CUDA=1 python setup.py bdist_wheel
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:

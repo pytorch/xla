@@ -16,6 +16,7 @@
 #include "tsl/platform/threadpool.h"
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
+#include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
 #include "xla/shape.h"
@@ -151,6 +152,8 @@ class PjRtComputationClient : public ComputationClient {
   std::string PjRtDeviceToString(xla::PjRtDevice* const device) const override;
   std::vector<std::string> PjRtDevicesToString(
       absl::Span<xla::PjRtDevice* const> devices) const;
+
+  const PJRT_Api* GetPjRtCApiIfAvailable() const;
 
  private:
   std::unique_ptr<xla::PjRtClient> client_;

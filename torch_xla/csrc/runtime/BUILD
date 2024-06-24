@@ -127,6 +127,7 @@ cc_library(
         "@xla//xla/client:xla_computation",
         "@xla//xla/pjrt:pjrt_client",
         "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
+        "@xla//xla/pjrt:pjrt_c_api_client",
         "@xla//xla/pjrt/distributed",
     ],
 )

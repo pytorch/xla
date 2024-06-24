@@ -45,9 +45,11 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/metrics_analysis.h"
 #include "torch_xla/csrc/runtime/metrics_reader.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/runtime.h"
@@ -67,7 +69,10 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 #include "tsl/platform/env.h"
 #include "tsl/profiler/lib/traceme.h"
+#include "xla/pjrt/c/pjrt_c_api_gpu_extension.h"
+#include "xla/pjrt/c/pjrt_c_api_wrapper_impl.h"
 #include "xla/pjrt/distributed/distributed.h"
+#include "xla/pjrt/pjrt_api.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
 #include "xla/service/custom_call_target_registry.h"
 #include "xla/service/hlo_parser.h"
@@ -2443,12 +2448,59 @@ void InitXlaModuleBindings(py::module m) {
           return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
                                /*is_tpu=*/false);
         });
-  m.def("_xla_register_custom_call_target",
-        [](const std::string& fn_name, const py::capsule& function_ptr,
-           const std::string& platform) {
-          XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(
-              fn_name, function_ptr.get_pointer(), platform);
-        });
+  m.def("_xla_register_custom_call_target", [](const std::string& fn_name,
+                                               const py::capsule& function_ptr,
+                                               const std::string& platform) {
+    if (runtime::sys_util::GetEnvBool("XLA_USE_IFRT", false) ||
+        platform != "CUDA") {
+      XLA_ERROR() << "Custom call targets can only be registered for "
+                     "PJRT CUDA runtime."
+                  << std::endl;
+      return;
+    }
+    if (runtime::sys_util::GetEnvBool(runtime::env::kEnvPjrtDynamicPlugins,
+                                      false)) {
+      runtime::PjRtComputationClient* client =
+          dynamic_cast<runtime::PjRtComputationClient*>(
+              runtime::GetComputationClient());
+      if (!client) {
+        return;
+      }
+      const PJRT_Api* pjrt_api = client->GetPjRtCApiIfAvailable();
+      if (!pjrt_api) {
+        return;
+      }
+      // See openxla reference:
+      // https://github.com/openxla/xla/blob/b604c8d87df842002a7a8de79a434026329fbcb2/xla/pjrt/c/pjrt_c_api_gpu_test.cc#L414
+      const PJRT_Extension_Base* next =
+          reinterpret_cast<const PJRT_Extension_Base*>(
+              pjrt_api->extension_start);
+      while (next != nullptr &&
+             next->type !=
+                 PJRT_Extension_Type::PJRT_Extension_Type_Gpu_Custom_Call) {
+        next = next->next;
+      }
+      if (next == nullptr) {
+        return;
+      }
+      PJRT_Gpu_Register_Custom_Call_Args args;
+      args.struct_size = PJRT_Gpu_Register_Custom_Call_Args_STRUCT_SIZE;
+      args.function_name = fn_name.c_str();
+      args.function_name_size = fn_name.size();
+      args.api_version = 0;
+      args.custom_call_function =
+          reinterpret_cast<void*>(function_ptr.get_pointer());
+      PJRT_Error* error =
+          reinterpret_cast<const PJRT_Gpu_Custom_Call*>(next)->custom_call(
+              &args);
+      if (error) {
+        XLA_ERROR() << error->status << std::endl;
+      }
+    } else {
+      XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(
+          fn_name, function_ptr.get_pointer(), platform);
+    }
+  });
   m.def("_set_xla_custom_op_name_prefix",
         [](const at::Tensor& input, const std::string& op_name_prefix,
            size_t max_call_stack_depth) -> bool {

@@ -269,6 +269,7 @@ ptxla_cc_library(
         ":tensor",
         ":version",
         "//torch_xla/csrc/runtime",
+        "//torch_xla/csrc/runtime:pjrt_computation_client",
         "//torch_xla/csrc/runtime:metrics",
         "//torch_xla/csrc/runtime:metrics_analysis",
         "//torch_xla/csrc/runtime:metrics_reader",
@@ -290,6 +291,9 @@ ptxla_cc_library(
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
         "@xla//xla/service:custom_call_target_registry",
+        "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
+        "@xla//xla/pjrt/c:pjrt_c_api_wrapper_impl",
+        "@xla//xla/pjrt/c:pjrt_c_api_gpu_extension_hdrs",
     ],
 )
 
