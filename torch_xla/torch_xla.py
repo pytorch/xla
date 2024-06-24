@@ -71,7 +71,7 @@ def step():
     xm.mark_step()
 
 
-def manul_seed(seed, device=None):
+def manual_seed(seed, device=None):
   """Set the seed for generating random numbers for the current XLA device.
 
   Args:

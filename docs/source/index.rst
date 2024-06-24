@@ -11,7 +11,7 @@ torch_xla
 .. autofunction:: device_count
 .. autofunction:: sync
 .. autofunction:: step
-.. autofunction:: manul_seed
+.. autofunction:: manual_seed
 
 runtime
 ----------------------------------

@@ -1751,9 +1751,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_manual_seed(self):
     device = torch_xla.device()
-    torch_xla.manul_seed(12345)
+    torch_xla.manual_seed(12345)
     t1 = torch.randn(5, 5, device=device)
-    torch_xla.manul_seed(12345)
+    torch_xla.manual_seed(12345)
     t2 = torch.randn(5, 5, device=device)
     self.assertTrue(torch.allclose(t1.cpu(), t2.cpu()))
 
