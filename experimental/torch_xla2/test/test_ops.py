@@ -14,13 +14,7 @@ skiplist = {
                  # such as 0 to negative power.
     "_segment_reduce",
     "_upsample_bilinear2d_aa",
-<<<<<<< HEAD
-    "as_strided",
-    "as_strided_scatter",
-    "bernoulli",
-=======
-    "bincount",
->>>>>>> 0fb4f16d6 (Modify op info test to check dtypes. Fix up few dtypes.)
+    "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "bitwise_left_shift",
     "bitwise_right_shift",
     "block_diag",
@@ -562,7 +556,6 @@ def run_export_and_compare(testcase,
       with testcase.env:
         res2 = func(input2, *args2, **kwargs2)
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
-      # import pdb; pdb.set_trace()
       with testcase.subTest("torch_xla2_diff:" + str(atol)):
         if ignore_indices and isinstance(res, tuple) and len(res) == 2:
           diff_output(

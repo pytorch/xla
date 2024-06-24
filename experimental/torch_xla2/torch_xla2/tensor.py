@@ -136,15 +136,6 @@ class XLATensor2(torch.Tensor):
   def torch(self) -> torch.Tensor:
     return j2t(self.jax())
 
-  def to(self, *args, **kwargs):
-    if len(args) == 1:
-      if isinstance(args[0], torch.dtype):
-        return XLATensor2(self._elem.astype(t2j_dtype(args[0])), self._env)
-    if 'dtype' in kwargs:
-      dtype = kwargs['dtype']
-      return XLATensor2(self._elem.astype(t2j_dtype(dtype)), self._env)
-    return self
-
   @property
   def dtype(self):
     return j2t_dtype(self._elem.dtype)
@@ -298,7 +289,6 @@ class Environment(contextlib.ContextDecorator):
       return jax.random.key(next_key)
 
     def dispatch(self, func, types, args, kwargs):
-<<<<<<< HEAD
       kwargs = kwargs or {}
 
       # If the func don't act on XLATensor2, and is not a tensor constructor,
@@ -307,9 +297,6 @@ class Environment(contextlib.ContextDecorator):
       if tensor_args and all(not isinstance(t, XLATensor2) for t in tensor_args):
         return func(*args, **kwargs)
 
-=======
-      # print('here', _name_of_func(func))
->>>>>>> 0fb4f16d6 (Modify op info test to check dtypes. Fix up few dtypes.)
       with jax.named_scope(_name_of_func(func)):
         op = self._ops.get(func)
 

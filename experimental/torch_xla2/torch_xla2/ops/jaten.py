@@ -259,9 +259,14 @@ def _aten_view_as_complex(input):
 
 @op(torch.ops.aten.div)
 def _aten_div(x, y, rounding_mode=""):
+  res_dtype = None
+  if _is_int(x) and _is_int(y):
+    res_dtype = jnp.dtype('float32')
   res = x / y
   if rounding_mode == "trunc":
     res = jnp.trunc(res)
+  if res_dtype:
+    res = res.astype(res_dtype)
   return res
 
 
@@ -742,7 +747,7 @@ def _aten_argmin(self, dim=None, keepdim=False):
 
 @op(torch.ops.aten.sin)
 def _aten_sin(x):
-  return jnp.sin(x)
+  return _handle_int64_trig(x, jnp.sin)
 
 
 @op(torch.ops.aten.sym_size)
@@ -891,7 +896,7 @@ def _aten_alias(self, *args):
 # aten.sinh
 @op(torch.ops.aten.sinh)
 def _aten_sinh(self):
-  return jnp.sinh(self)
+  return _handle_int64_trig(self, jnp.sinh)
 
 
 # aten.native_layer_norm_backward
@@ -927,6 +932,12 @@ def _aten_atanh(self):
   res = _handle_int64_trig(self, jnp.arctanh)
   return res
 
+ 
+# aten.bincount
+@op(torch.ops.aten.bincount)
+def _aten_bincount(input, weights=None, minlength=0):
+  return jnp.bincount(input, weights, minlength)
+
 
 # aten.bitwise_not
 @op(torch.ops.aten.bitwise_not)
@@ -942,26 +953,26 @@ def _aten_bitwise_not(self):
 def _aten_sum(self, dim=None, keepdim=False, dtype=None):
   if not dim:
     dim = None
-  if self.ndim == 0:
-    return self
-  return jnp.sum(self, axis=dim, keepdims=keepdim, dtype=dtype)
+  return _with_reduction_scalar(jnp.sum, self, dim, keepdim)
 
 
 # aten.sqrt
 @op(torch.ops.aten.sqrt)
 def _aten_sqrt(self):
-  return jnp.sqrt(self)
+  return _handle_int64_trig(self, jnp.sqrt)
 
 
 @op(torch.ops.aten.tan)
 def _aten_tanh(self):
-  return jnp.tan(self)
+  res = _handle_int64_trig(self, jnp.tan)
+  return res
 
 
 # aten.tanh
 @op(torch.ops.aten.tanh)
 def _aten_tanh(self):
-  return jnp.tanh(self)
+  res = _handle_int64_trig(self, jnp.tanh)
+  return res
 
 
 # aten.ceil
@@ -1256,6 +1267,8 @@ def _aten_avg_pool(
 # aten.reciprocal
 @op(torch.ops.aten.reciprocal)
 def _aten_reciprocal(a):
+  if _is_int(a):
+    return (1 / a).astype(jnp.dtype('float32'))
   return 1 / a
 
 
@@ -1410,12 +1423,6 @@ def _aten_atan2(self, other):
   return jnp.arctan2(self, other)
 
 
-# aten.bincount
-@op(torch.ops.aten.bincount)
-def _aten_bincount(input, weights=None, minlength=0):
-  return jnp.bincount(input, weights, minlength)
-
-
 # aten.bitwise_and
 @op(torch.ops.aten.bitwise_and)
 def _aten_bitwise_and(self, other):
@@ -1484,13 +1491,13 @@ def _aten__pdist_forward(x, p):
 # aten.cos
 @op(torch.ops.aten.cos)
 def _aten_cos(input):
-  return jnp.cos(input)
+  return _handle_int64_trig(input, jnp.cos)
 
 
 # aten.cosh
 @op(torch.ops.aten.cosh)
 def _aten_cosh(input):
-  return jnp.cosh(input)
+  return _handle_int64_trig(input, jnp.cosh)
 
 
 # aten.diagonal
@@ -1503,12 +1510,8 @@ def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
 # aten.eq
 @op(torch.ops.aten.eq)
 def _aten_eq(input1, input2):
-  return jnp.equal(input1, input2)
-
-# aten.equal
-@op(torch.ops.aten.equal)
-def _aten_equal(input1, input2):
   return input1 == input2
+
 
 # aten.erf
 @op(torch.ops.aten.erf)
@@ -1553,7 +1556,7 @@ def _aten_flip(input, dims):
 # aten.floor
 @op(torch.ops.aten.floor)
 def _aten_floor(input):
-  return jnp.floor(input)
+  return jnp.floor(input).astype(input.dtype)
 
 
 # aten.fmod
@@ -1613,25 +1616,25 @@ def _aten_leaky_relu(x, negative_slope):
 # aten.log
 @op(torch.ops.aten.log)
 def _aten_log(x):
-  return jnp.log(x)
+  return _handle_int64_trig(x, jnp.log)
 
 
 # aten.log10
 @op(torch.ops.aten.log10)
 def _aten_log10(x):
-  return jnp.log10(x)
+  return _handle_int64_trig(x, jnp.log10)
 
 
 # aten.log1p
 @op(torch.ops.aten.log1p)
 def _aten_log1p(x):
-  return jnp.log1p(x)
+  return _handle_int64_trig(x, jnp.log1p)
 
 
 # aten.log2
 @op(torch.ops.aten.log2)
 def _aten_log2(x):
-  return jnp.log2(x)
+  return _handle_int64_trig(x, jnp.log2)
 
 
 # aten.logical_and
