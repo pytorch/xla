@@ -1345,14 +1345,12 @@ def _aten_argmax(self, dim=None, keepdim=False):
 # aten.as_strided
 @op(torch.ops.aten.as_strided)
 @op(torch.ops.aten.as_strided_copy)
-def _aten_as_strided(x, sizes, strides, storage_offset=None):
-  ind = jnp.zeros(sizes, dtype=jnp.int32)
-
+def _aten_as_strided(x, sizes, strides, storage_offset=0):
+  ind = jnp.full(shape = sizes, fill_value = jax.lax.rem(storage_offset, jnp.size(x)), dtype=jnp.int32)
   for i, (size, stride) in enumerate(zip(sizes, strides)):
     result_shape = (1,) * i + (size,) + (1,) * (len(sizes) - i - 1)
     indexes = (jnp.arange(size) * stride).reshape(result_shape)
     ind += indexes
-
   return jnp.ravel(x)[ind]
 
 
