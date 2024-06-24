@@ -1362,6 +1362,12 @@ def _aten_atan2(self, other):
   return jnp.arctan2(self, other)
 
 
+# aten.bincount
+@op(torch.ops.aten.bincount)
+def _aten_bincount(input, weights=None, minlength=0):
+  return jnp.bincount(input, weights, minlength)
+
+
 # aten.bitwise_and
 @op(torch.ops.aten.bitwise_and)
 def _aten_bitwise_and(self, other):
