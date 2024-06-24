@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "torch_xla/csrc/aten_cuda_functions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/dl_convertor.h"
 #include "torch_xla/csrc/function_call_tracker.h"
@@ -16,23 +17,6 @@
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
-
-// Forward declaration of PyTorch CUDA functions.
-// Source: c10/cuda/CUDAFunctions.h
-//
-// These are needed in order to synchronize the CUDA device after running
-// the operation in PyTorch eager mode.
-//
-// It would be better to include the actual header. However, if we build
-// PyTorch/XLA in an environment where PyTorch wasn't compiled with CUDA
-// (i.e. our CI), the build would fail.
-namespace c10::cuda {
-
-at::DeviceIndex current_device() noexcept;
-void set_device(at::DeviceIndex);
-void device_synchronize();
-
-}  // namespace c10::cuda
 
 namespace torch_xla {
 
@@ -98,7 +82,7 @@ static bool is_valid_xla_tensor(const at::Tensor& tensor) {
 //   1. Synchronize the XLA tensors, so that we can access their data pointer
 //   2. Use DLPack in order to create a CUDA tensor
 static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
-                                       at::DeviceIndex* common_device) {
+                                       c10::DeviceIndex* common_device) {
   // Synchronize tensors, so that we are able to grab their data pointer.
   std::vector<XLATensorPtr> xla_tensors;
   for (auto& tensor : tensors) {
@@ -123,7 +107,7 @@ static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
                    DLManagedTensor* managed = torch_xla::toDLPack(tensor);
                    // Remember the device index, so that we can synchronize it
                    // later. Also ensure that there's only one.
-                   at::DeviceIndex device = managed->dl_tensor.device.device_id;
+                   c10::DeviceIndex device = managed->dl_tensor.device.device_id;
                    if (*common_device == -1) {
                      *common_device = device;
                    } else {
@@ -144,10 +128,10 @@ static at::Tensor to_xla(const at::Tensor& tensor) {
 }
 
 // Synchronizes the CUDA device being used by PyTorch.
-static void torch_cuda_synchronize(at::DeviceIndex common_device) {
+static void torch_cuda_synchronize(c10::DeviceIndex common_device) {
   // Save the current PyTorch device, in case it's not the same as the
   // recorded tensor device.
-  at::DeviceIndex current = c10::cuda::current_device();
+  c10::DeviceIndex current = c10::cuda::current_device();
   c10::cuda::set_device(common_device);
   c10::cuda::device_synchronize();
   c10::cuda::set_device(current);
@@ -182,7 +166,7 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
   // device.
   //
   // This variable is updated over the course of 'to_cuda' calls.
-  at::DeviceIndex common_device = -1;
+  c10::DeviceIndex common_device = -1;
 
   // Initialize CUDA device.
   torch::utils::device_lazy_init(at::kCUDA);
