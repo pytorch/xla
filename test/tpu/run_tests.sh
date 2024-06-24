@@ -45,3 +45,10 @@ if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
     python3 examples/eager/train_decoder_only_eager_with_compile.py
     python3 examples/eager/train_decoder_only_eager_multi_process.py
 fi
+
+# Test `tpu-info` CLI compatibility
+# https://github.com/google/cloud-accelerator-diagnostics/tree/main/tpu_info
+pip install -U -r test/tpu/tpu_info/requirements.txt 'grpcio>=1.64.1'
+# TODO: remove `cd` when we switch to Python 3.11 and use `-P`
+cd ..
+python -m pytest -v xla/test/tpu/tpu_info/test_cli.py
