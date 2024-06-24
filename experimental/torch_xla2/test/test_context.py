@@ -79,8 +79,29 @@ class TestContext(unittest.TestCase):
 
     # Values will be different, but still check device, layout, dtype, etc
     torch.testing.assert_close(
-        torch_xla2.tensor.j2t(x._elem),
-        torch_xla2.tensor.j2t(y._elem))
+        torch_xla2.tensor.j2t(x._elem), torch_xla2.tensor.j2t(y._elem))
+
+  def test_buffer(self):
+
+    class M(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        c = torch.rand(2)
+        self.register_buffer('c', c)
+        self.register_buffer('c2', c, persistent=False)
+
+    # Test context manager.
+    with xla_env:
+      m = M()
+      self.assertIsInstance(m.c, tensor.XLATensor2)
+      self.assertIsInstance(m.c2, tensor.XLATensor2)
+    # Test `to_xla`.
+    m = M()
+    m = xla_env.to_xla(m)
+    self.assertIsInstance(m.c, tensor.XLATensor2)
+    self.assertIsInstance(m.c2, tensor.XLATensor2)
+
 
 if __name__ == "__main__":
   unittest.main()
