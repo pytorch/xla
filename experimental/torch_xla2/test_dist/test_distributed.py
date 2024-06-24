@@ -11,11 +11,10 @@ import torch_xla2.distributed
 
 @pytest.fixture(scope="module")
 def multi_cpu():
-  # TODO(wcromar): support other devices
-  jax.config.update("jax_platforms", "cpu")
-  replicas = 4
-  os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={replicas}"
-  assert jax.device_count() == 4
+  # TODO(wcromar): support other device counts
+  assert (
+    jax.device_count() == 4
+  ), "Set XLA_FLAGS=--xla_force_host_platform_device_count=4 if on CPU"
 
   os.environ["MASTER_ADDR"] = "localhost"
   os.environ["MASTER_PORT"] = "12355"

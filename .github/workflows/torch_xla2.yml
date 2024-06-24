@@ -41,4 +41,4 @@ jobs:
         shell: bash
         run: |
           pytest test/
-          pytest -n 0 test_dist/
+          XLA_FLAGS=--xla_force_host_platform_device_count=4 pytest -n 0 test_dist/
