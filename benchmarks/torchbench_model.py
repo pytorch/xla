@@ -1,3 +1,4 @@
+import argparse
 import functools
 import gc
 import contextlib
@@ -16,6 +17,8 @@ import types
 import yaml
 from util import move_to_device, set_cwd, get_torchbench_test_name, find_near_file
 from benchmark_model import ModelLoader, BenchmarkModel
+from benchmark_experiment import BenchmarkExperiment
+from typing import Any, Dict, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +189,8 @@ class TorchBenchModelLoader(ModelLoader):
   def skip(self):
     return config_data()["skip"]
 
-  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
+  def is_compatible(self, dummy_benchmark_model: BenchmarkModel,
+                    benchmark_experiment: BenchmarkExperiment):
     name = dummy_benchmark_model.model_name
     test = get_torchbench_test_name(benchmark_experiment.test)
 
@@ -216,7 +220,8 @@ class TorchBenchModelLoader(ModelLoader):
 
 class TorchBenchModel(BenchmarkModel):
 
-  def __init__(self, suite_name, model_name, benchmark_experiment):
+  def __init__(self, suite_name: str, model_name: str,
+               benchmark_experiment: BenchmarkExperiment):
     super().__init__(suite_name, model_name, benchmark_experiment)
 
   def _cleanup(self):
@@ -308,7 +313,7 @@ class TorchBenchModel(BenchmarkModel):
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
     if self.should_initialize_on_xla():
-      device = str(self.benchmark_experiment.get_device())
+      device = "xla"
     else:
       # Initialize the model in the given accelerator first. If we are supposed
       # to run on XLA device, move it later. We do this for a couple of reasons:
@@ -323,7 +328,7 @@ class TorchBenchModel(BenchmarkModel):
         batch_size=batch_size,
     )
 
-  def update_process_env(self, process_env):
+  def update_process_env(self, process_env: Dict[str, str]):
     if self.model_name in NEED_LARGER_CACHE:
       process_env["XLA_COMPILATION_CACHE_SIZE"] = "2048"
 
@@ -398,7 +403,7 @@ class TorchBenchModel(BenchmarkModel):
       autocast = contextlib.nullcontext
     return (autocast, kwargs)
 
-  def compute_loss(self, pred):
+  def compute_loss(self, pred: Any):
     """Reduce the output of a model to get scalar loss"""
     if isinstance(pred, torch.Tensor):
       # Mean does not work on integer tensors
@@ -418,7 +423,7 @@ class TorchBenchModel(BenchmarkModel):
                  ]) / len(pred.keys())
     raise NotImplementedError("Don't know how to reduce", type(pred))
 
-  def train(self, inputs, collect_full_output=False):
+  def train(self, inputs: Sequence[Any], collect_full_output: bool = False):
     if self.model_name in DETECTRON2_MODELS:
       from detectron2.utils.events import EventStorage
       with EventStorage():

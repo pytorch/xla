@@ -40,6 +40,12 @@ class TestTorchFunctions(parameterized.TestCase):
 
     torch.testing.assert_close(torch_xla2.tensor.j2t(actual._elem), expected)
 
+  def test_dont_capture_conversion(self):
+    t = torch.tensor([1,2,3])
+    with self.env:
+      t2 = self.env.to_xla(t)
+      # assert no exceptions
+
 
 if __name__ == '__main__':
   absltest.main()
