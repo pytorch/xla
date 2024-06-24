@@ -88,7 +88,6 @@ class TestContext(unittest.TestCase):
       def __init__(self):
         super().__init__()
         c = torch.rand(2)
-        self.register_parameter('p')
         self.register_buffer('c', c)
         self.register_buffer('c2', c, persistent=False)
 
