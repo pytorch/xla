@@ -419,6 +419,19 @@ def _aten_cumsum(x, y, dtype=None):
   return res
 
 
+@op(torch.ops.aten.cumprod)
+def _aten_cumprod(input, dim, dtype=None, out=None):
+  if dtype:
+    dtype = mappings.t2j_dtype(dtype)
+  if len(input.shape) > 0:
+    res = jnp.cumprod(input, axis=dim, dtype=dtype)
+  elif dtype:
+    res = input.astype(dtype)
+  else:
+    res = input
+  return res
+
+
 @op(torch.ops.aten.native_layer_norm)
 def _aten_native_layer_norm(
   input, normalized_shape, weight=None, bias=None, eps=1e-5
