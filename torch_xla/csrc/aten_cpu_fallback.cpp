@@ -107,7 +107,8 @@ static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
                    DLManagedTensor* managed = torch_xla::toDLPack(tensor);
                    // Remember the device index, so that we can synchronize it
                    // later. Also ensure that there's only one.
-                   c10::DeviceIndex device = managed->dl_tensor.device.device_id;
+                   c10::DeviceIndex device =
+                       managed->dl_tensor.device.device_id;
                    if (*common_device == -1) {
                      *common_device = device;
                    } else {
