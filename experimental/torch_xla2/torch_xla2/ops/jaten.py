@@ -31,6 +31,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.uniform_: torch.ops.aten.uniform,
   torch.ops.aten.relu_: torch.ops.aten.relu,
   torch.ops.aten.normal_: torch.ops.aten.normal,
+  torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
 }
 
 
@@ -51,6 +52,17 @@ def op(*aten, **kwargs):
     return func
 
   return inner
+
+def _handle_int64_trig(self, func):
+  target_type = None
+  # Torch's atanh returns f32 for int64 input
+  if self.dtype.name == 'int64':
+    target_type = jnp.dtype('float32')
+  res = func(self)
+  if target_type is not None:
+    res = res.astype(target_type)
+  return res
+
 
 
 @op(
@@ -216,12 +228,24 @@ def _aten_stack(tensors, dim=0):
 @op(torch.ops.aten._softmax)
 def _aten_softmax(x, dim, halftofloat):
   return jax.nn.softmax(x, dim)
+   
+
+def _is_int(x):
+  if isinstance(x, int):
+    return True
+  if isinstance(x, jax.Array) and x.dtype.name.startswith('int'):
+    return True
+  return False
 
 
 @op(torch.ops.aten.pow)
 def _aten_pow(x, y):
   if isinstance(y, int):
     y = float(y)
+  if _is_int(x) and _is_int(y):
+    # Do the math in float then cast
+    return jnp.astype(
+      jnp.power(jnp.astype(x, jnp.dtype('float')), y), x.dtype)
   return jnp.power(x, y)
 
 
@@ -235,9 +259,14 @@ def _aten_view_as_complex(input):
 
 @op(torch.ops.aten.div)
 def _aten_div(x, y, rounding_mode=""):
+  res_dtype = None
+  if _is_int(x) and _is_int(y):
+    res_dtype = jnp.dtype('float32')
   res = x / y
   if rounding_mode == "trunc":
     res = jnp.trunc(res)
+  if res_dtype:
+    res = res.astype(res_dtype)
   return res
 
 
@@ -282,7 +311,13 @@ def _aten_expand(x, dims):
       return xs
     return d
 
-  dims = [fix_dims(p, s) for p, s in zip(dims, x.shape)]
+  shape = list(x.shape)
+  if len(shape) < len(dims):
+    shape = [1, ] * (len(dims) - len(shape)) + shape
+    # make sure that dims and shape is the same by 
+    # left pad with 1s. Otherwise the zip below will
+    # truncate
+  dims = [fix_dims(p, s) for p, s in zip(dims, shape)]
   return jnp.broadcast_to(x, dims)
 
 
@@ -581,8 +616,8 @@ def _aten__native_batch_norm_legit(
     saved_rstd = jnp.squeeze(rstd, reduction_dims)
   else:
     rstd = jax.lax.rsqrt(running_var.reshape(reshape_dims) + eps)
-    saved_mean = jnp.array([])  # No need to calculate batch statistics in inference mode
-    saved_rstd = jnp.array([])
+    saved_mean = jnp.array([], dtype=input.dtype)  # No need to calculate batch statistics in inference mode
+    saved_rstd = jnp.array([], dtype=input.dtype)
 
   # Normalize
   if training:
@@ -606,7 +641,7 @@ def _aten__native_batch_norm_legit(
 def _aten__native_batch_norm_legit_no_training(
   input, weight, bias, running_mean, running_var, momentum, eps
 ):
-    return _aten__native_batch_norm_legit(
+  return _aten__native_batch_norm_legit(
     input, weight, bias, running_mean, running_var, False, momentum, eps
   )
 
@@ -712,7 +747,7 @@ def _aten_argmin(self, dim=None, keepdim=False):
 
 @op(torch.ops.aten.sin)
 def _aten_sin(x):
-  return jnp.sin(x)
+  return _handle_int64_trig(x, jnp.sin)
 
 
 @op(torch.ops.aten.sym_size)
@@ -861,7 +896,7 @@ def _aten_alias(self, *args):
 # aten.sinh
 @op(torch.ops.aten.sinh)
 def _aten_sinh(self):
-  return jnp.sinh(self)
+  return _handle_int64_trig(self, jnp.sinh)
 
 
 # aten.native_layer_norm_backward
@@ -894,7 +929,14 @@ def _aten_native_layer_norm_backward(
 # aten.atanh
 @op(torch.ops.aten.atanh)
 def _aten_atanh(self):
-  return jnp.arctanh(self)
+  res = _handle_int64_trig(self, jnp.arctanh)
+  return res
+
+ 
+# aten.bincount
+@op(torch.ops.aten.bincount)
+def _aten_bincount(input, weights=None, minlength=0):
+  return jnp.bincount(input, weights, minlength)
 
 
 # aten.bitwise_not
@@ -911,26 +953,26 @@ def _aten_bitwise_not(self):
 def _aten_sum(self, dim=None, keepdim=False, dtype=None):
   if not dim:
     dim = None
-  if self.ndim == 0:
-    return self
-  return jnp.sum(self, axis=dim, keepdims=keepdim, dtype=dtype)
+  return _with_reduction_scalar(jnp.sum, self, dim, keepdim)
 
 
 # aten.sqrt
 @op(torch.ops.aten.sqrt)
 def _aten_sqrt(self):
-  return jnp.sqrt(self)
+  return _handle_int64_trig(self, jnp.sqrt)
 
 
 @op(torch.ops.aten.tan)
 def _aten_tanh(self):
-  return jnp.tan(self)
+  res = _handle_int64_trig(self, jnp.tan)
+  return res
 
 
 # aten.tanh
 @op(torch.ops.aten.tanh)
 def _aten_tanh(self):
-  return jnp.tanh(self)
+  res = _handle_int64_trig(self, jnp.tanh)
+  return res
 
 
 # aten.ceil
@@ -942,7 +984,8 @@ def _aten_ceil(self):
 # aten.asin
 @op(torch.ops.aten.asin)
 def _aten_asin(self):
-  return jnp.arcsin(self)
+  res = _handle_int64_trig(self, jnp.arcsin)
+  return res
 
 
 # aten.minimum
@@ -1007,13 +1050,15 @@ def _aten_sigmoid(x):
 # implement aten.asinh in jax
 @op(torch.ops.aten.asinh)
 def _aten_asinh(self):
-  return jnp.arcsinh(self)
+  res = _handle_int64_trig(self, jnp.arcsinh)
+  return res
 
 
 # aten.atan
 @op(torch.ops.aten.atan)
 def _aten_atan(self):
-  return jnp.arctan(self)
+  res = _handle_int64_trig(self, jnp.arctan)
+  return res
 
 
 # aten.scatter_reduce
@@ -1037,7 +1082,7 @@ def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
 # aten.acos
 @op(torch.ops.aten.acos)
 def _aten_acos(self):
-  return jnp.arccos(self)
+  return _handle_int64_trig(self, jnp.arccos)
 
 
 # aten.sym_storage_offset
@@ -1222,6 +1267,8 @@ def _aten_avg_pool(
 # aten.reciprocal
 @op(torch.ops.aten.reciprocal)
 def _aten_reciprocal(a):
+  if _is_int(a):
+    return (1 / a).astype(jnp.dtype('float32'))
   return 1 / a
 
 
@@ -1252,7 +1299,7 @@ def _aten_scatter(input, dim, index, src, reduce=None):
 # aten.acosh
 @op(torch.ops.aten.acosh)
 def _aten_acosh(self):
-  return jnp.arccosh(self)
+  return _handle_int64_trig(self, jnp.arccosh)
 
 
 # aten.avg_pool2d_backward
@@ -1341,11 +1388,7 @@ def _aten_arange(
 def _aten_argmax(self, dim=None, keepdim=False):
   return _with_reduction_scalar(jnp.argmax, self, dim, keepdim)
 
-
-# aten.as_strided
-@op(torch.ops.aten.as_strided)
-@op(torch.ops.aten.as_strided_copy)
-def _aten_as_strided(x, sizes, strides, storage_offset=None):
+def _strided_index(sizes, strides, storage_offset=None):
   ind = jnp.zeros(sizes, dtype=jnp.int32)
 
   for i, (size, stride) in enumerate(zip(sizes, strides)):
@@ -1353,19 +1396,31 @@ def _aten_as_strided(x, sizes, strides, storage_offset=None):
     indexes = (jnp.arange(size) * stride).reshape(result_shape)
     ind += indexes
 
-  return jnp.ravel(x)[ind]
+  if storage_offset is not None:
+    ind += storage_offset
+  return ind 
+
+# aten.as_strided
+@op(torch.ops.aten.as_strided)
+@op(torch.ops.aten.as_strided_copy)
+def _aten_as_strided(x, sizes, strides, storage_offset=None):
+  ind = _strided_index(sizes, strides, storage_offset)
+  flattened = jnp.ravel(x)
+  return flattened[ind]
+
+
+@op(torch.ops.aten.as_strided_scatter)
+def _aten_as_strided_scatter(x, src, sizes, strides, storage_offset):
+  ind = _strided_index(sizes, strides, storage_offset)
+  flattened = jnp.ravel(x)
+  modified = flattened.at[ind].set(src)
+  return modified.reshape(x.shape)
 
 
 # aten.atan2
 @op(torch.ops.aten.atan2)
 def _aten_atan2(self, other):
   return jnp.arctan2(self, other)
-
-
-# aten.bincount
-@op(torch.ops.aten.bincount)
-def _aten_bincount(input, weights=None, minlength=0):
-  return jnp.bincount(input, weights, minlength)
 
 
 # aten.bitwise_and
@@ -1436,13 +1491,13 @@ def _aten__pdist_forward(x, p):
 # aten.cos
 @op(torch.ops.aten.cos)
 def _aten_cos(input):
-  return jnp.cos(input)
+  return _handle_int64_trig(input, jnp.cos)
 
 
 # aten.cosh
 @op(torch.ops.aten.cosh)
 def _aten_cosh(input):
-  return jnp.cosh(input)
+  return _handle_int64_trig(input, jnp.cosh)
 
 
 # aten.diagonal
@@ -1455,12 +1510,8 @@ def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
 # aten.eq
 @op(torch.ops.aten.eq)
 def _aten_eq(input1, input2):
-  return jnp.equal(input1, input2)
-
-# aten.equal
-@op(torch.ops.aten.equal)
-def _aten_equal(input1, input2):
   return input1 == input2
+
 
 # aten.erf
 @op(torch.ops.aten.erf)
@@ -1505,7 +1556,7 @@ def _aten_flip(input, dims):
 # aten.floor
 @op(torch.ops.aten.floor)
 def _aten_floor(input):
-  return jnp.floor(input)
+  return jnp.floor(input).astype(input.dtype)
 
 
 # aten.fmod
@@ -1565,25 +1616,25 @@ def _aten_leaky_relu(x, negative_slope):
 # aten.log
 @op(torch.ops.aten.log)
 def _aten_log(x):
-  return jnp.log(x)
+  return _handle_int64_trig(x, jnp.log)
 
 
 # aten.log10
 @op(torch.ops.aten.log10)
 def _aten_log10(x):
-  return jnp.log10(x)
+  return _handle_int64_trig(x, jnp.log10)
 
 
 # aten.log1p
 @op(torch.ops.aten.log1p)
 def _aten_log1p(x):
-  return jnp.log1p(x)
+  return _handle_int64_trig(x, jnp.log1p)
 
 
 # aten.log2
 @op(torch.ops.aten.log2)
 def _aten_log2(x):
-  return jnp.log2(x)
+  return _handle_int64_trig(x, jnp.log2)
 
 
 # aten.logical_and
@@ -1997,9 +2048,9 @@ def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
 def _aten_native_batch_norm(input, weight, bias, running_mean, running_var, training=False, momentum=0.1, eps=1e-5):
 
   if running_mean is None:
-    running_mean = jnp.zeros(input.shape[1])  # Initialize running mean if None
+    running_mean = jnp.zeros(input.shape[1], dtype=input.dtype)  # Initialize running mean if None
   if running_var is None:
-    running_var = jnp.ones(input.shape[1])   # Initialize running variance if None
+    running_var = jnp.ones(input.shape[1], dtype=input.dtype)   # Initialize running variance if None
 
   if training:
     return torch.ops.aten._native_batch_norm_legit(input, weight, bias, running_mean, running_var, training, momentum, eps)

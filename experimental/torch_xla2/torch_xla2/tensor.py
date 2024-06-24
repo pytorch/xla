@@ -136,15 +136,6 @@ class XLATensor2(torch.Tensor):
   def torch(self) -> torch.Tensor:
     return j2t(self.jax())
 
-  def to(self, *args, **kwargs):
-    if len(args) == 1:
-      if isinstance(args[0], torch.dtype):
-        return XLATensor2(self._elem.astype(t2j_dtype(args[0])), self._env)
-    if 'dtype' in kwargs:
-      dtype = kwargs['dtype']
-      return XLATensor2(self._elem.astype(t2j_dtype(dtype)), self._env)
-    return self
-
   @property
   def dtype(self):
     return j2t_dtype(self._elem.dtype)

@@ -12,6 +12,7 @@ from typing import Any, Callable, List,  Tuple
 import torch
 from torch import Tensor
 import torch._decomp as decomp
+from torch._decomp import decompositions_for_rng
 from torch._decomp import register_decomposition
 import torch._prims_common as utils
 from torch._prims_common.wrappers import out_wrapper
@@ -92,6 +93,19 @@ def _reflection_or_replication_pad(
 _try_register(aten.replication_pad1d, _replication_pad)
 _try_register(aten.replication_pad3d, _replication_pad)
 
+def bernoulli(self, *, generator=None):
+    return (torch.rand_like(self, dtype=torch.float32) < self).to(self.dtype)
+
+_try_register(aten.bernoulli.default, bernoulli)
+
+
+def rand_like(self, **kwargs):
+    dtype = kwargs.get('dtype')
+    return torch.rand(self.shape, dtype=dtype)
+
+_try_register(aten.bernoulli, bernoulli)
+_try_register(aten.rand_like, rand_like)
+
 EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten.upsample_nearest2d,
     torch.ops.aten._native_batch_norm_legit.no_stats,
@@ -105,6 +119,10 @@ EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten.replication_pad1d,
     torch.ops.aten.replication_pad2d,
     torch.ops.aten.replication_pad3d,
+    torch.ops.aten.bernoulli,
+    torch.ops.aten.rand_like,
 ])
 
-EXTRA_DECOMP[torch.ops.aten.uniform] = torch.ops.aten.rand
+
+
+
