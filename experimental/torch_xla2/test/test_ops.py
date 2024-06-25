@@ -15,8 +15,6 @@ skiplist = {
     "_segment_reduce",
     "_upsample_bilinear2d_aa",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
-    "bitwise_left_shift",
-    "bitwise_right_shift",
     "block_diag",
     "broadcast_tensors",
     "broadcast_to",
