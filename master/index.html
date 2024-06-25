@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git222bbd8 )
+                  master (2.4.0+gite294bb2 )
                 </div>
               
             
@@ -323,6 +323,7 @@
 <li><a class="reference internal" href="#torch_xla.device_count"><code class="docutils literal notranslate"><span class="pre">device_count()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.sync"><code class="docutils literal notranslate"><span class="pre">sync()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.step"><code class="docutils literal notranslate"><span class="pre">step()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.manual_seed"><code class="docutils literal notranslate"><span class="pre">manual_seed()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-torch_xla.runtime">runtime</a><ul>
@@ -976,6 +977,21 @@ to this process.</p>
 <p>Experimental: <cite>xla.step</cite> is still a work in progress. Some code that currently
 works with <cite>xla.step</cite> but does not follow best practices will become errors in
 future releases. See <a class="reference external" href="https://github.com/pytorch/xla/issues/6751">https://github.com/pytorch/xla/issues/6751</a> for context.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.manual_seed">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">manual_seed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/torch_xla.html#manual_seed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.manual_seed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the seed for generating random numbers for the current XLA device.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seed</strong> (<em>python:integer</em>) – The state to be set.</p></li>
+<li><p><strong>device</strong> (<em>torch.device</em><em>, </em><em>optional</em>) – The device where the RNG state needs to be set.
+If missing the default device seed will be set.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </div>
@@ -3664,6 +3680,7 @@ the table. The design doc is <a class="reference external" href="https://github.
 <li><a class="reference internal" href="#torch_xla.device_count"><code class="docutils literal notranslate"><span class="pre">device_count()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.sync"><code class="docutils literal notranslate"><span class="pre">sync()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.step"><code class="docutils literal notranslate"><span class="pre">step()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.manual_seed"><code class="docutils literal notranslate"><span class="pre">manual_seed()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-torch_xla.runtime">runtime</a><ul>

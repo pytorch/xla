@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git222bbd8 )
+                  master (2.4.0+gite294bb2 )
                 </div>
               
             
@@ -439,6 +439,17 @@
     <span class="k">yield</span>
   <span class="k">finally</span><span class="p">:</span>
     <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="manual_seed"><a class="viewcode-back" href="../../index.html#torch_xla.manual_seed">[docs]</a><span class="k">def</span> <span class="nf">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Set the seed for generating random numbers for the current XLA device.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    seed (integer): The state to be set.</span>
+<span class="sd">    device (torch.device, optional): The device where the RNG state needs to be set.</span>
+<span class="sd">      If missing the default device seed will be set.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">xm</span><span class="o">.</span><span class="n">set_rng_state</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span></div>
 </pre></div>
 
              </article>
