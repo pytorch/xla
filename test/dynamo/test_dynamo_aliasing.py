@@ -4,7 +4,6 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
-import torch_xla.experimental.dynamo_set_buffer_donor
 from torch_xla.core.dynamo_bridge import alias_with_buffer_donor_config
 
 
