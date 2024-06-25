@@ -42,9 +42,30 @@ cc_binary(
         "@torch//:libtorch_cpu",
         "@torch//:libtorch_python",
     ] + if_cuda_is_configured([
-        "@torch//:libc10_cuda",
         "@xla//xla/stream_executor:cuda_platform",
     ]),
+)
+
+cc_binary(
+    name = "_XLAC_cuda_functions.so",
+    copts = [
+        "-DTORCH_API_INCLUDE_EXTENSION_H",
+        "-DTORCH_EXTENSION_NAME=_XLAC_cuda_functions",
+        "-fopenmp",
+        "-fPIC",
+        "-fwrapv",
+    ],
+    linkopts = [
+        "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
+        "-Wl,-soname,_XLAC_cuda_functions.so",
+    ],
+    linkshared = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//torch_xla/csrc:aten_cuda_functions",
+        "@torch//:headers",
+        "@torch//:libc10",
+    ],
 )
 
 test_suite(

@@ -5,6 +5,10 @@ import tempfile
 import warnings
 
 import torch
+
+if not torch.cuda.is_available():
+  import _XLAC_cuda_functions
+
 import _XLAC
 from ._internal import tpu
 from .version import __version__
