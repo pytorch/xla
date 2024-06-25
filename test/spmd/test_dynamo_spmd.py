@@ -8,7 +8,6 @@ import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
 import torch_xla.debug.metrics as met
-import torch_xla.experimental.dynamo_mark_sharding
 import unittest
 
 import test_xla_sharding_base
