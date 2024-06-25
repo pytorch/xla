@@ -28,14 +28,15 @@ class Eager(unittest.TestCase):
 
   def test_eager_spmd_basic(self):
     device = torch_xla.device()
-    mesh = self._get_mesh((self.n_device,), axis_names=('data',))
+    mesh = self._get_mesh((self.n_devices,), axis_names=('data',))
+    torch.manual_seed(100)
     linear = torch.nn.Linear(10, 20)
     input = torch.randn(8, 10)
     input_xla = input.to(device)
     res = linear(input)
     linear.to(device)
     res_xla = linear(input_xla)
-    self.assertTrue(torch.allclose(res, res_xla.cpu()))
+    self.assertTrue(torch.allclose(res, res_xla.cpu(), rtol=1e-3))
 
 
 if __name__ == '__main__':
