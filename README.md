@@ -46,6 +46,17 @@ pip install torch~=2.3.0 torch_xla~=2.3.0 https://storage.googleapis.com/pytorch
 
 To use the plugin, set `XLA_REGISTER_INSTALLED_PLUGINS=1` or call `torch_xla.experimental.plugins.use_dynamic_plugins()` in your script.
 
+## Build from source
+```
+git clone https://github.com/pytorch/pytorch.git
+cd pytorch
+python setup.py bdist_wheel
+python setup.py develop
+git clone https://github.com/pytorch/xla.git
+cd xla
+python setup.py develop
+```
+
 ## Getting Started
 
 To update your existing training loop, make the following changes:
