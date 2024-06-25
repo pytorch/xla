@@ -344,4 +344,8 @@ ptxla_cc_library(
     name = "aten_cuda_functions",
     srcs = ["aten_cuda_functions.cpp"],
     hdrs = ["aten_cuda_functions.h"],
+    deps = [
+        "@local_config_python//:python_headers",
+        "@pybind11//:pybind11_embed",
+    ],
 )
