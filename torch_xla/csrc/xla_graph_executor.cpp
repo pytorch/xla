@@ -149,17 +149,29 @@ torch::lazy::Value XLAGraphExecutor::DeviceContextArena::GetRngSeed(
     devctx->seed_ir_value =
         IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device);
   }
-  // Keep the running seed as scalar as well, so we can return it directly
-  // without executing graphs.
-  devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
   // Compose new seeds from the root seed, to avoid creating too many XLA
   // computation parameters which might overflow the TPU capacity.
   torch::lazy::Value k = ScalarOp(MakeIntScalar(kSeedMul),
                                   MakeXlaPrimitiveType(kSeedType, &device));
   torch::lazy::Value b = ScalarOp(MakeIntScalar(kSeedAdd),
                                   MakeXlaPrimitiveType(kSeedType, &device));
-  devctx->seed_ir_value = b + k * devctx->seed_ir_value;
-  return devctx->seed_ir_value;
+  if (XLAGraphExecutor::Get()->UseEagerMode()) {
+    // In eager mode we want to make sure that `seed_ir_value` is always just
+    // a device data instead a long sequence of pending IR.
+    torch::lazy::Value seed_to_return = devctx->seed_ir_value;
+    devctx->seed = kSeedAdd + kSeedMul * devctx->seed;
+    devctx->running_seed = devctx->seed;
+    // reset the `seed_ir_value`. Next time `seed_ir_value` will be generated
+    // based on devctx->seed.
+    devctx->seed_ir_value = torch::lazy::Value();
+    return seed_to_return;
+  } else {
+    // Keep the running seed as scalar as well, so we can return it directly
+    // without executing graphs.
+    devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
+    devctx->seed_ir_value = b + k * devctx->seed_ir_value;
+    return devctx->seed_ir_value;
+  }
 }
 
 torch::lazy::BackendDataPtr
