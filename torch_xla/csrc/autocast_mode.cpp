@@ -48,6 +48,7 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   KERNEL_XLA(prelu, lower_precision_fp)
   KERNEL_XLA(relu, lower_precision_fp)
   KERNEL_XLA(max_pool2d, lower_precision_fp)
+  KERNEL_XLA(scaled_dot_product_attention, lower_precision_fp)
 
   // fp32 cast policy
   // Commented out ops are included in the AutoCastCPU Policy,
