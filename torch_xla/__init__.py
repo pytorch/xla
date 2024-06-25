@@ -219,3 +219,6 @@ if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS',
   plugins.register_installed_plugins()
 
 from .torch_xla import *
+
+# register all custom kenels by default
+from .core import custom_kernel
