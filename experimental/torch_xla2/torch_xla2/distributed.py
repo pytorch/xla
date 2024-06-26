@@ -44,9 +44,7 @@ class ProcessGroupJax(ProcessGroup):
     assert isinstance(input_tensor, torch_xla2.tensor.XLATensor2)
     output = jax.lax.all_gather(input_tensor._elem, axis_name="torch_dist")
     output_size = jax.numpy.shape(output)[0]
-    # output_arrays = jnp.unstack(output)
 
-    # assert len(output_tensors) == len(output_arrays)
     assert len(output_tensors) == output_size
     for i, t in enumerate(output_tensors):
       assert isinstance(t, torch_xla2.tensor.XLATensor2)
