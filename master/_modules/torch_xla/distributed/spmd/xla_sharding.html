@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git8182994 )
+                  master (2.5.0+gitab41f78 )
                 </div>
               
             
@@ -497,13 +497,62 @@
 
 
 <div class="viewcode-block" id="set_global_mesh"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.set_global_mesh">[docs]</a><span class="k">def</span> <span class="nf">set_global_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Set the global mesh that can be used for the current process.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    mesh: (Mesh) Mesh object that will be the global mesh.</span>
+
+<span class="sd">  Example:</span>
+<span class="sd">    import torch_xla.distributed.spmd as xs</span>
+<span class="sd">    mesh = xs.get_1d_mesh(&quot;data&quot;)</span>
+<span class="sd">    xs.set_global_mesh(mesh)</span>
+<span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">global</span> <span class="n">_GLOBAL_MESH</span>
   <span class="n">_GLOBAL_MESH</span> <span class="o">=</span> <span class="n">mesh</span></div>
 
 
-<div class="viewcode-block" id="get_global_mesh"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.get_global_mesh">[docs]</a><span class="k">def</span> <span class="nf">get_global_mesh</span><span class="p">():</span>
+<div class="viewcode-block" id="get_global_mesh"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.get_global_mesh">[docs]</a><span class="k">def</span> <span class="nf">get_global_mesh</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mesh</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Get the global mesh for the current process.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    mesh: (Optional[Mesh]) Mesh object if global mesh is set, otherwise return None.</span>
+
+<span class="sd">  Example:</span>
+<span class="sd">    import torch_xla.distributed.spmd as xs</span>
+<span class="sd">    xs.get_global_mesh()</span>
+<span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">global</span> <span class="n">_GLOBAL_MESH</span>
   <span class="k">return</span> <span class="n">_GLOBAL_MESH</span></div>
+
+
+<div class="viewcode-block" id="get_1d_mesh"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.get_1d_mesh">[docs]</a><span class="k">def</span> <span class="nf">get_1d_mesh</span><span class="p">(</span><span class="n">axis_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Helper function to return the mesh with all devices in one dimension.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    axis_name: (Optional[str]) optional string to represent the axis name of the mesh</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Mesh: Mesh object</span>
+
+<span class="sd">  Example:</span>
+<span class="sd">    # This example is assuming 1 TPU v4-8</span>
+<span class="sd">    import torch_xla.distributed.spmd as xs</span>
+<span class="sd">    mesh = xs.get_1d_mesh(&quot;data&quot;)</span>
+<span class="sd">    print(mesh.mesh_shape)</span>
+<span class="sd">    &gt;&gt; (4,)</span>
+<span class="sd">    print(mesh.axis_names)</span>
+<span class="sd">    &gt;&gt; (&#39;data&#39;,)</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+  <span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,)</span>
+  <span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
+  <span class="k">if</span> <span class="n">axis_name</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="n">axis_name</span><span class="p">,))</span></div>
 
 
 <span class="c1"># HybridDevice class has been inspired from jax&#39;s mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ</span>
@@ -918,6 +967,9 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    —------------------------------</span>
+<span class="sd">    import torch_xla.runtime as xr</span>
+<span class="sd">    import torch_xla.distributed.spmd as xs</span>
+
 <span class="sd">    mesh_shape = (4, 2)</span>
 <span class="sd">    num_devices = xr.global_runtime_device_count()</span>
 <span class="sd">    device_ids = np.array(range(num_devices))</span>
@@ -949,7 +1001,25 @@
 
 
 <div class="viewcode-block" id="clear_sharding"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.clear_sharding">[docs]</a><span class="k">def</span> <span class="nf">clear_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear sharding annotation from the input tensor and return a `cpu` casted tensor.&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Clear sharding annotation from the input tensor and return a `cpu` casted tensor. This</span>
+<span class="sd">  is a in place operation but will also return the same torch.Tensor back.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    t (Union[torch.Tensor, XLAShardedTensor]): Tensor that we want to clear the sharding</span>
+
+<span class="sd">  Return:</span>
+<span class="sd">    t (torch.Tensor): tensor that without sharding.</span>
+
+<span class="sd">  Examples:</span>
+<span class="sd">  import torch_xla.distributed.spmd as xs</span>
+<span class="sd">  torch_xla.runtime.use_spmd()</span>
+
+<span class="sd">  t1 = torch.randn(8,8).to(torch_xla.device())</span>
+<span class="sd">  mesh = xs.get_1d_mesh()</span>
+<span class="sd">  xs.mark_sharding(t1, mesh, (0, None))</span>
+<span class="sd">  xs.clear_sharding(t1)</span>
+<span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_clear_sharding</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
   <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">global_tensor</span>
@@ -982,7 +1052,7 @@
   <span class="k">return</span> <span class="n">x</span>
 
 
-<div class="viewcode-block" id="ShardingSpec"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.ShardingSpec">[docs]</a><span class="nd">@dataclass</span>
+<span class="nd">@dataclass</span>
 <span class="k">class</span> <span class="nc">ShardingSpec</span><span class="p">:</span>
   <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span>
   <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]]</span>
@@ -1029,7 +1099,7 @@
   <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="c1"># TODO(yeounoh) use virtual device interface when available.</span>
     <span class="k">assert</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">device</span> <span class="o">==</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
-    <span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_spec</span><span class="p">)</span></div>
+    <span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_spec</span><span class="p">)</span>
 
 
 <span class="k">class</span> <span class="nc">XLAPatchedLinear</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>

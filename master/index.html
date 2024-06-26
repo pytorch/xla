@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git8182994 )
+                  master (2.5.0+gitab41f78 )
                 </div>
               
             
@@ -375,9 +375,9 @@
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.clear_sharding"><code class="docutils literal notranslate"><span class="pre">clear_sharding()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.set_global_mesh"><code class="docutils literal notranslate"><span class="pre">set_global_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.get_global_mesh"><code class="docutils literal notranslate"><span class="pre">get_global_mesh()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.distributed.spmd.get_1d_mesh"><code class="docutils literal notranslate"><span class="pre">get_1d_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh"><code class="docutils literal notranslate"><span class="pre">Mesh</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.HybridMesh"><code class="docutils literal notranslate"><span class="pre">HybridMesh</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.distributed.spmd.ShardingSpec"><code class="docutils literal notranslate"><span class="pre">ShardingSpec</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-torch_xla.experimental">experimental</a><ul>
@@ -1518,7 +1518,7 @@ Default: 4</p></li>
 <li><p><strong>host_to_device_transfer_threads</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The number of threads that
 work in parallel to transfer data from loader queue to device queue.
 Default: 1</p></li>
-<li><p><strong>input_sharding</strong> (<a class="reference internal" href="#torch_xla.distributed.spmd.ShardingSpec" title="torch_xla.distributed.spmd.ShardingSpec"><em>ShardingSpec</em></a><em>, </em><em>optional</em>) – Sharding spec to apply to
+<li><p><strong>input_sharding</strong> (<em>ShardingSpec</em><em>, </em><em>optional</em>) – Sharding spec to apply to
 compatible input tensors after loading.
 Default: None</p></li>
 </ul>
@@ -1612,7 +1612,9 @@ to make itself recognizeable and traceable by dynamo.</p></li>
 </dl>
 <p>Examples
 ———————————
-mesh_shape = (4, 2)
+import torch_xla.runtime as xr
+import torch_xla.distributed.spmd as xs</p>
+<p>mesh_shape = (4, 2)
 num_devices = xr.global_runtime_device_count()
 device_ids = np.array(range(num_devices))
 mesh = Mesh(device_ids, mesh_shape, (‘x’, ‘y’))</p>
@@ -1627,18 +1629,84 @@ xs.mark_sharding(linear.weight, mesh, (None, 1))</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.distributed.spmd.clear_sharding">
 <span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">clear_sharding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">XLAShardedTensor</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="_modules/torch_xla/distributed/spmd/xla_sharding.html#clear_sharding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.clear_sharding" title="Permalink to this definition">¶</a></dt>
-<dd><p>Clear sharding annotation from the input tensor and return a <cite>cpu</cite> casted tensor.</p>
+<dd><p>Clear sharding annotation from the input tensor and return a <cite>cpu</cite> casted tensor. This
+is a in place operation but will also return the same torch.Tensor back.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>Union</em><em>[</em><em>torch.Tensor</em><em>, </em><em>XLAShardedTensor</em><em>]</em>) – Tensor that we want to clear the sharding</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>tensor that without sharding.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>t (torch.Tensor)</p>
+</dd>
+</dl>
+<p>Examples:
+import torch_xla.distributed.spmd as xs
+torch_xla.runtime.use_spmd()</p>
+<p>t1 = torch.randn(8,8).to(torch_xla.device())
+mesh = xs.get_1d_mesh()
+xs.mark_sharding(t1, mesh, (0, None))
+xs.clear_sharding(t1)</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.distributed.spmd.set_global_mesh">
 <span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">set_global_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.xla_sharding.Mesh"><span class="pre">Mesh</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/spmd/xla_sharding.html#set_global_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.set_global_mesh" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Set the global mesh that can be used for the current process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>mesh</strong> – (Mesh) Mesh object that will be the global mesh.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>import torch_xla.distributed.spmd as xs
+mesh = xs.get_1d_mesh(“data”)
+xs.set_global_mesh(mesh)</p>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.distributed.spmd.get_global_mesh">
-<span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">get_global_mesh</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/spmd/xla_sharding.html#get_global_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.get_global_mesh" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">get_global_mesh</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.xla_sharding.Mesh"><span class="pre">Mesh</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/torch_xla/distributed/spmd/xla_sharding.html#get_global_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.get_global_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the global mesh for the current process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(Optional[Mesh]) Mesh object if global mesh is set, otherwise return None.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>mesh</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>import torch_xla.distributed.spmd as xs
+xs.get_global_mesh()</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.distributed.spmd.get_1d_mesh">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">get_1d_mesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">axis_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.xla_sharding.Mesh"><span class="pre">Mesh</span></a></span></span><a class="reference internal" href="_modules/torch_xla/distributed/spmd/xla_sharding.html#get_1d_mesh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.get_1d_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to return the mesh with all devices in one dimension.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>axis_name</strong> – (Optional[str]) optional string to represent the axis name of the mesh</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Mesh object</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.Mesh">Mesh</a></p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p># This example is assuming 1 TPU v4-8
+import torch_xla.distributed.spmd as xs
+mesh = xs.get_1d_mesh(“data”)
+print(mesh.mesh_shape)
+&gt;&gt; (4,)
+print(mesh.axis_names)
+&gt;&gt; (‘data’,)</p>
+</dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="torch_xla.distributed.spmd.Mesh">
@@ -1699,11 +1767,6 @@ dcn_mesh_shape = (2, 1, 1)</p>
 print(mesh.shape())
 &gt;&gt; OrderedDict([(‘data’, 2), (‘fsdp’, 4), (‘tensor’, 1)])</p>
 </dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="torch_xla.distributed.spmd.ShardingSpec">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">torch_xla.distributed.spmd.</span></span><span class="sig-name descname"><span class="pre">ShardingSpec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mesh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh" title="torch_xla.distributed.spmd.xla_sharding.Mesh"><span class="pre">torch_xla.distributed.spmd.xla_sharding.Mesh</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">partition_spec</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minibatch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/spmd/xla_sharding.html#ShardingSpec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.distributed.spmd.ShardingSpec" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 </div>
 <div class="section" id="module-torch_xla.experimental">
@@ -3732,9 +3795,9 @@ the table. The design doc is <a class="reference external" href="https://github.
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.clear_sharding"><code class="docutils literal notranslate"><span class="pre">clear_sharding()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.set_global_mesh"><code class="docutils literal notranslate"><span class="pre">set_global_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.get_global_mesh"><code class="docutils literal notranslate"><span class="pre">get_global_mesh()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.distributed.spmd.get_1d_mesh"><code class="docutils literal notranslate"><span class="pre">get_1d_mesh()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.Mesh"><code class="docutils literal notranslate"><span class="pre">Mesh</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.HybridMesh"><code class="docutils literal notranslate"><span class="pre">HybridMesh</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.distributed.spmd.ShardingSpec"><code class="docutils literal notranslate"><span class="pre">ShardingSpec</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-torch_xla.experimental">experimental</a><ul>
