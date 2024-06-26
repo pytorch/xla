@@ -70,9 +70,9 @@ spmd
 .. autofunction:: clear_sharding
 .. autofunction:: set_global_mesh
 .. autofunction:: get_global_mesh
+.. autofunction:: get_1d_mesh
 .. autoclass:: Mesh
 .. autoclass:: HybridMesh
-.. autoclass:: ShardingSpec
 
 experimental
 ----------------------------------

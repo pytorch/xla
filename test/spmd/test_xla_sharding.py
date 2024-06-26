@@ -1295,6 +1295,20 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     expected_x = torch.ones(8, 8)
     self.assertTrue(torch.allclose(x.cpu(), expected_x))
 
+  def test_get_1d_mesh(self):
+    device = torch_xla.device()
+    mesh = xs.get_1d_mesh("data")
+    t1 = torch.randn(8, 8).to(device)
+    xt = xs.mark_sharding(t1, mesh, ("data", None))
+    shards = xt.local_shards
+    self.assertEqual(len(shards), self.n_devices)
+    self.assertEqual(mesh.mesh_shape, (xr.global_runtime_device_count(),))
+    self.assertEqual(mesh.axis_names, ("data",))
+
+    mesh_without_name = xs.get_1d_mesh()
+    self.assertEqual(mesh_without_name.mesh_shape,
+                     (xr.global_runtime_device_count(),))
+
 
 if __name__ == '__main__':
   test = unittest.main()
