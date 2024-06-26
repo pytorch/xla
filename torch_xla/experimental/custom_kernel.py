@@ -12,8 +12,6 @@ from typing import Any, List, Callable, Optional
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
-_XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
-
 
 def _extract_backend_config(
     module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> Optional[str]:
@@ -63,12 +61,8 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
   import jax.numpy as jnp
 
   if dtype == torch.float32:
-    if _XLA_USE_BF16:
-      return jnp.bfloat16
     return jnp.float32
   elif dtype == torch.float64:
-    if _XLA_USE_BF16:
-      return jnp.bfloat16
     return jnp.float64
   elif dtype == torch.float16:
     return jnp.float16
