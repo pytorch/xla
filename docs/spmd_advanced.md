@@ -72,7 +72,6 @@ This feature is experimental and stay tuned for more updates, examples and tutor
 In the 2.3 release, PyTorch/XLA added the custom op `dynamo_mark_sharding` which can be used to perform the activation sharding in a `torch.compile` region. This is part of our ongoing effort to make `torch.compile` + `GSPMD` to be the recommended way of doing the model inference using PyTorch/XLA. Example of using this custom op:
 ```
 # Activation output sharding
-import torch_xla.experimental.dynamo_mark_sharding
 device_ids = [i for i in range(self.num_devices)] # List[int]
 mesh_shape = [self.num_devices//2, 1, 2] # List[int]
 axis_names = "('data', 'model')" # string version of axis_names
