@@ -68,10 +68,14 @@ def _handle_int64_trig(self, func):
   return res
 
 
+@op(torch.ops._c10d_functional.all_gather_into_tensor)
+def _c10d_all_gather(input, group_size: int, group_name: str):
+  return jax.lax.all_gather(input, "torch_dist")
+
 
 # TODO(wcromar): move c10d ops since they're not actually aten
 @op(torch.ops._c10d_functional.all_reduce)
-def _all_reduce(self, reduceOp: str, group: str):
+def _c10d_all_reduce(self, reduceOp: str, group_name: str):
   match reduceOp:
     case 'sum':
       res = jax.lax.psum(self, axis_name="torch_dist")
@@ -84,6 +88,16 @@ def _all_reduce(self, reduceOp: str, group: str):
     case _:
       raise RuntimeError(f"Reduce op {reduceOp} not implemented")
   return res
+
+
+@op(torch.ops._c10d_functional.broadcast)
+def _c10d_broadcast(self, src: int, group_name: str):
+  masked = jnp.where(
+      jax.lax.axis_index("torch_dist") == src,
+      self,
+      jnp.zeros_like(self),
+  )
+  return jax.lax.psum(masked, "torch_dist")
 
 
 @op(torch.ops._c10d_functional.wait_tensor)

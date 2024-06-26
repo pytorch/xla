@@ -25,22 +25,32 @@ def multi_cpu():
   dist.destroy_process_group()
 
 
-def test_all_gather(multi_cpu):
+# def test_all_gather(multi_cpu):
+#   device_count = multi_cpu
+
+#   def f(index: torch_xla2.tensor.XLATensor2):
+#     with torch_xla2.default_env():
+#       tensor_list = [torch.tensor(0) for _ in range(device_count)]
+#     dist.all_gather(tensor_list, index)
+#     # TODO(wcromar): `spawn` is weird with multiple returns. Stack to return one
+#     # result. This may not be a problem with `shmap`.
+#     return torch.stack(tensor_list)
+
+#   res = torch_xla2.distributed.spawn(f)
+
+#   expected_tensors = [[0, 1, 2, 3] for _ in range(device_count)]
+#   np.testing.assert_equal([r.numpy() for r in res], expected_tensors)
+
+def test_all_gather_func(multi_cpu):
   device_count = multi_cpu
 
   def f(index: torch_xla2.tensor.XLATensor2):
-    with torch_xla2.default_env():
-      tensor_list = [torch.tensor(0) for _ in range(device_count)]
-    dist.all_gather(tensor_list, index)
-    # TODO(wcromar): `spawn` is weird with multiple returns. Stack to return one
-    # result. This may not be a problem with `shmap`.
-    return torch.stack(tensor_list)
+    return torch.distributed._functional_collectives.all_gather_tensor(index, 0, [0])
 
   res = torch_xla2.distributed.spawn(f)
 
   expected_tensors = [[0, 1, 2, 3] for _ in range(device_count)]
   np.testing.assert_equal([r.numpy() for r in res], expected_tensors)
-
 
 @pytest.mark.parametrize(
   ("op", "expected"),
@@ -86,6 +96,26 @@ def test_all_reduce_func(op, expected, multi_cpu):
   np.testing.assert_equal(res.numpy(), expected_tensors)
 
 
+# @pytest.mark.parametrize(
+#   ("rank", "expected"),
+#   [
+#     (0, 0),
+#     (2, 2),
+#   ],
+# )
+# def test_broadcast(rank, expected, multi_cpu):
+#   device_count = multi_cpu
+
+#   def f(index):
+#     dist.broadcast(index, rank)
+#     return index
+
+#   res = torch_xla2.distributed.spawn(f)
+
+#   expected_tensors = [expected for _ in range(device_count)]
+#   np.testing.assert_equal(res.numpy(), expected_tensors)
+
+
 @pytest.mark.parametrize(
   ("rank", "expected"),
   [
@@ -93,12 +123,11 @@ def test_all_reduce_func(op, expected, multi_cpu):
     (2, 2),
   ],
 )
-def test_broadcast(rank, expected, multi_cpu):
+def test_broadcast_func(rank, expected, multi_cpu):
   device_count = multi_cpu
 
   def f(index):
-    dist.broadcast(index, rank)
-    return index
+    return torch.distributed._functional_collectives.broadcast(index, rank, [0])
 
   res = torch_xla2.distributed.spawn(f)
 

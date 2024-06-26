@@ -28,13 +28,20 @@ class ProcessGroupJax(ProcessGroup):
 
   def __init__(self, prefix_store, rank, size, timeout):
     super().__init__(rank, size)
+    self._group_name = None
 
   def getBackendName(self):
     return "jax"
 
+  # TODO(wcromar): why doesn't default group name setter work?
+  # https://github.com/pytorch/pytorch/blob/7b1988f9222f3dec5cc2012afce84218199748ae/torch/csrc/distributed/c10d/ProcessGroup.cpp#L148-L152
+  def _set_group_name(self, name: str) -> None:
+    self._group_name = name
+
   @property
   def group_name(self):
-    return "torch_dist"
+    assert self._group_name
+    return self._group_name
 
   # def allgather(
   #   self,
