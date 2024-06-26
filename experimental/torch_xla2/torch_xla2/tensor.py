@@ -5,6 +5,7 @@ import jax
 import jax.numpy as jnp
 import numpy
 import torch
+import torch.distributed._functional_collectives
 import torch.func
 import torch.utils._mode_utils as mode_utils
 import torch.utils._python_dispatch as torch_dispatch
@@ -222,7 +223,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
       if isinstance(func, torch._ops.OpOverloadPacket):
         with self:
           return func(*args, **kwargs)
-      if func.namespace != 'aten':
+      if func.namespace not in ('aten', 'c10d', '_c10d_functional'):
         return func(*args, **kwargs)
       return self.env.dispatch(func, types, args, kwargs)
 
@@ -362,6 +363,8 @@ class Environment(contextlib.ContextDecorator):
 
     def t2j_iso(self, torchtensors):
       def to_jax(x):
+        if isinstance(x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
+          x = x.wait()
         assert isinstance(x, XLATensor2), f'Expect a XLATensor2 but got {type(x)}; usually this means there is a mixed math between XLATensor and torch.Tensor'
         return x.jax()
       return torch_pytree.tree_map_only(torch.Tensor, to_jax, torchtensors)

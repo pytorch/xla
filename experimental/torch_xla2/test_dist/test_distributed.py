@@ -4,6 +4,7 @@ import numpy as np
 
 import pytest
 import torch
+import torch.distributed._functional_collectives
 import torch.distributed as dist
 import torch_xla2
 import torch_xla2.distributed
@@ -56,6 +57,28 @@ def test_all_reduce(op, expected, multi_cpu):
   def f(index):
     dist.all_reduce(index, op)
     return index
+
+  res = torch_xla2.distributed.spawn(f)
+
+  expected_tensors = [expected for _ in range(device_count)]
+  np.testing.assert_equal(res.numpy(), expected_tensors)
+
+
+@pytest.mark.parametrize(
+  ("op", "expected"),
+  [
+    ('sum', sum(range(4))),
+    ('avg', sum(range(4)) / 4),
+    ('min', 0),
+    ('max', 3),
+  ],
+)
+def test_all_reduce_func(op, expected, multi_cpu):
+  device_count = multi_cpu
+
+  def f(index):
+    # TODO(wcromar): why do I need PG for this?
+    return torch.distributed._functional_collectives.all_reduce(index, op, [0])
 
   res = torch_xla2.distributed.spawn(f)
 

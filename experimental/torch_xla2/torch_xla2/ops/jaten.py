@@ -9,6 +9,7 @@ from jax.experimental.sparse import BCOO
 
 import numpy as np
 import torch
+import torch.distributed._functional_collectives
 from torch_xla2.ops import ops_registry
 from torch_xla2.ops import op_base, mappings
 
@@ -68,6 +69,35 @@ def _handle_int64_trig(self, func):
 
 
 
+# TODO(wcromar): move c10d ops since they're not actually aten
+@op(torch.ops._c10d_functional.all_reduce)
+def _all_reduce(self, reduceOp: str, group: str):
+  match reduceOp:
+    case 'sum':
+      res = jax.lax.psum(self, axis_name="torch_dist")
+    case 'avg':
+      res = jax.lax.pmean(self, axis_name="torch_dist")
+    case 'min':
+      res = jax.lax.pmin(self, axis_name="torch_dist")
+    case 'max':
+      res = jax.lax.pmax(self, axis_name="torch_dist")
+    case _:
+      raise RuntimeError(f"Reduce op {reduceOp} not implemented")
+  return res
+
+
+@op(torch.ops._c10d_functional.wait_tensor)
+def _wait_tensor(tensor):
+  return tensor
+
+
+# TODO(wcromar): dispatch legacy collectives instead of using PG?
+# @functools.partial(ops_registry.register_torch_dispatch_op, torch.ops.c10d.allreduce_, is_jax_function=False)
+# def _legacy_all_reduce_inplace(tensors: List[torch.Tensor], group: dist.ProcessGroup, reduce_op: dist.ReduceOp, sparse_indices, timeout):
+#   print(reduce_op, dir(reduce_op), reduce_op._properties(), dist.ReduceOp(reduce_op))
+#   for t in tensors:
+#     t.copy_(_all_reduce(t, reduce_op.name, group.group_name))
+
 @op(
   torch.ops.aten.view_copy,
   torch.ops.aten.view,
@@ -90,6 +120,12 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
+  # TODO(wcromar): does this make more sense in the dispatcher?
+  if isinstance(x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
+    x = x.wait()
+  if isinstance(y, torch.distributed._functional_collectives.AsyncCollectiveTensor):
+    y = y.wait()
+
   x._elem = y._elem
   return x
 
@@ -231,7 +267,7 @@ def _aten_stack(tensors, dim=0):
 @op(torch.ops.aten._softmax)
 def _aten_softmax(x, dim, halftofloat):
   return jax.nn.softmax(x, dim)
-   
+
 
 def _is_int(x):
   if isinstance(x, int):
@@ -386,7 +422,7 @@ def _aten_expand(x, dims):
   shape = list(x.shape)
   if len(shape) < len(dims):
     shape = [1, ] * (len(dims) - len(shape)) + shape
-    # make sure that dims and shape is the same by 
+    # make sure that dims and shape is the same by
     # left pad with 1s. Otherwise the zip below will
     # truncate
   dims = [fix_dims(p, s) for p, s in zip(dims, shape)]
@@ -410,6 +446,12 @@ def _aten__to_copy(self, **kwargs):
 @op_base.convert_dtype()
 def _aten_empty(sizes, *, dtype=None, **kwargs):
   return jnp.empty(sizes, dtype=dtype)
+
+
+@op(torch.ops.aten.empty_like)
+@op_base.convert_dtype()
+def _aten_empty_like(input, *, dtype=None, **kwargs):
+  return jnp.empty(input.size, dtype=dtype)
 
 
 @op(torch.ops.aten.index_put_)
@@ -1017,7 +1059,7 @@ def _aten_atanh(self):
   res = _handle_int64_trig(self, jnp.arctanh)
   return res
 
- 
+
 # aten.bincount
 @op(torch.ops.aten.bincount)
 def _aten_bincount(input, weights=None, minlength=0):
@@ -1495,7 +1537,7 @@ def _strided_index(sizes, strides, storage_offset=None):
 
   if storage_offset is not None:
     ind += storage_offset
-  return ind 
+  return ind
 
 # aten.as_strided
 @op(torch.ops.aten.as_strided)
@@ -2198,3 +2240,7 @@ def _aten_randint(
 @op(torch.ops.aten.dim, is_jax_function=False)
 def _aten_dim(self):
   return len(self.shape)
+
+@op(torch.ops.aten.equal)
+def _aten_equal(input, other):
+  return jnp.equal(input, other)
