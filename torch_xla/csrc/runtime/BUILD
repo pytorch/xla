@@ -24,6 +24,7 @@ cc_library(
         ":env_vars",
         ":ifrt_computation_client",
         ":pjrt_computation_client",
+        ":pjrt_compilation_client",
         "@tsl//tsl/platform:stacktrace",
     ],
 )
@@ -135,6 +136,43 @@ cc_library(
 )
 
 cc_library(
+    name = "pjrt_compilation_client",
+    srcs = [
+        "pjrt_compilation_client.cc",
+    ],
+    hdrs = [
+        "pjrt_compilation_client.h",
+    ],
+    deps = [
+        ":computation_client",
+        ":debug_macros",
+        ":env_hash",
+        ":env_vars",
+        ":operation_manager",
+        ":pjrt_compile_only",
+        ":pjrt_registry",
+        ":profiler",
+        ":stablehlo_helper",
+        ":tensor_source",
+        ":tf_logging",
+        ":xla_coordinator",
+        "//torch_xla/csrc:thread_pool",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/types:span",
+        "@tsl//tsl/platform:env",
+        "@tsl//tsl/platform/cloud:gcs_file_system",
+        "@tsl//tsl/profiler/lib:traceme",
+        "@xla//xla:literal",
+        "@xla//xla:shape_util",
+        "@xla//xla/client:xla_computation",
+        "@xla//xla/pjrt:pjrt_client",
+        "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
+        "@xla//xla/pjrt/distributed",
+    ],
+)
+
+cc_library(
     name = "cache",
     hdrs = ["cache.h"],
     deps = [
@@ -187,6 +225,16 @@ cc_test(
         ":env_hash",
         "@com_google_googletest//:gtest_main",
         "@torch//:libtorch_cpu",  # For torch::lazy::hash
+    ],
+)
+
+cc_library(
+    name = "pjrt_compile_only",
+    srcs = ["pjrt_compile_only.cc"],
+    hdrs = ["pjrt_compile_only.h"],
+    deps = [
+        "@xla//xla/pjrt:pjrt_client",
+        "@xla//xla/pjrt:pjrt_future",
     ],
 )
 

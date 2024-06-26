@@ -22,7 +22,7 @@ void RegisterPjRtPlugin(std::string name,
                         std::shared_ptr<const PjRtPlugin> plugin);
 
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
-InitializePjRt(const std::string& device_type);
+InitializePjRt(const std::string& device_type, bool use_aot = false);
 
 }  // namespace runtime
 }  // namespace torch_xla
