@@ -127,16 +127,55 @@ _GLOBAL_MESH: Mesh = None
 
 
 def set_global_mesh(mesh: Mesh):
+  """
+  Set the global mesh that can be used for the current process.
+
+  Args:
+    mesh: (Mesh) Mesh object that will be the global mesh.
+
+  Example:
+    import torch_xla.distributed.spmd as xs
+    mesh = xs.get_1d_mesh("data")
+    xs.set_global_mesh(mesh)
+  """
   global _GLOBAL_MESH
   _GLOBAL_MESH = mesh
 
 
-def get_global_mesh():
+def get_global_mesh() -> Optional[Mesh]:
+  """
+  Get the global mesh for the current process.
+
+  Returns:
+    mesh: (Optional[Mesh]) Mesh object if global mesh is set, otherwise return None.
+
+  Example:
+    import torch_xla.distributed.spmd as xs
+    xs.get_global_mesh()
+  """
   global _GLOBAL_MESH
   return _GLOBAL_MESH
 
 
-def get_1d_mesh(axis_name: Optional[str] = None):
+def get_1d_mesh(axis_name: Optional[str] = None) -> Mesh:
+  """
+  Helper function to return the mesh with all devices in one dimension.
+
+  Args:
+    axis_name: (Optional[str]) optional string to represent the axis name of the mesh
+
+  Returns:
+    Mesh: Mesh object
+
+  Example:
+    # This example is assuming 1 TPU v4-8
+    import torch_xla.distributed.spmd as xs
+    mesh = xs.get_1d_mesh("data")
+    print(mesh.mesh_shape)
+    >> (4,)
+    print(mesh.axis_names)
+    >> ('data',)
+  """
   num_devices = xr.global_runtime_device_count()
   mesh_shape = (num_devices,)
   device_ids = np.array(range(num_devices))
@@ -558,6 +597,9 @@ def mark_sharding(
 
     Examples
     —------------------------------
+    import torch_xla.runtime as xr
+    import torch_xla.distributed.spmd as xs
+
     mesh_shape = (4, 2)
     num_devices = xr.global_runtime_device_count()
     device_ids = np.array(range(num_devices))
@@ -589,7 +631,25 @@ def mark_sharding(
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
-  """Clear sharding annotation from the input tensor and return a `cpu` casted tensor."""
+  """
+  Clear sharding annotation from the input tensor and return a `cpu` casted tensor. This
+  is a in place operation but will also return the same torch.Tensor back.
+
+  Args:
+    t (Union[torch.Tensor, XLAShardedTensor]): Tensor that we want to clear the sharding
+
+  Return:
+    t (torch.Tensor): tensor that without sharding.
+
+  Examples:
+  import torch_xla.distributed.spmd as xs
+  torch_xla.runtime.use_spmd()
+
+  t1 = torch.randn(8,8).to(torch_xla.device())
+  mesh = xs.get_1d_mesh()
+  xs.mark_sharding(t1, mesh, (0, None))
+  xs.clear_sharding(t1)
+  """
   torch_xla._XLAC._xla_clear_sharding(unwrap_sharded_tensor(t))
   if isinstance(t, XLAShardedTensor):
     return t.global_tensor
