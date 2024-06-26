@@ -1505,7 +1505,7 @@ def _aten_cdist_forward(x1, x2, p, compute_mode=""):
 
 
 @op(torch.ops.aten._pdist_forward)
-def _aten__pdist_forward(x, p):
+def _aten__pdist_forward(x, p=2):
   pairwise_dists = _aten_cdist_forward(x, x, p)
   condensed_dists = pairwise_dists[
     jnp.triu_indices(pairwise_dists.shape[0], k=1)
