@@ -245,7 +245,6 @@ skiplist = {
     "nn.functional.one_hot",
     "nn.functional.pad",
     "nn.functional.pairwise_distance",
-    "nn.functional.pdist",
     "nn.functional.pixel_shuffle",
     "nn.functional.pixel_unshuffle",
     "nn.functional.poisson_nll_loss",
