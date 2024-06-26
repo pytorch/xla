@@ -136,6 +136,16 @@ def get_global_mesh():
   return _GLOBAL_MESH
 
 
+def get_1d_mesh(axis_name: Optional[str] = None):
+  num_devices = xr.global_runtime_device_count()
+  mesh_shape = (num_devices,)
+  device_ids = np.array(range(num_devices))
+  if axis_name == None:
+    return Mesh(device_ids, mesh_shape)
+  else:
+    return Mesh(device_ids, mesh_shape, (axis_name,))
+
+
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
 class HybridMesh(Mesh):
   """Creates a hybrid device mesh of devices connected with ICI and DCN networks.
