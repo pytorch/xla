@@ -2742,7 +2742,9 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
 
   // 2) Aid SPMD.
   XLATensor::ShardingSpecPtr sharding = input_tensor->sharding_spec();
-  if (sharding && sharding->sharding.type() != xla::OpSharding::UNKNOWN) {
+  // don't propagate sharding in eager mode.
+  if (!XLAGraphExecutor::Get()->UseEagerMode() && sharding &&
+      sharding->sharding.type() != xla::OpSharding::UNKNOWN) {
     tensor_methods::custom_sharding_(output_tensor,
                                      input_tensor->sharding_spec());
   }
