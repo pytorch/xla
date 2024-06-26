@@ -1263,7 +1263,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     # all reduce
     x = xs.enable_manual_sharding(x, (None, None)).global_tensor
-    x = torch_xla._XLAC._xla_spmd_all_reduce(xm.REDUCE_SUM, x, 1.0, [self.device_ids])
+    x = torch_xla._XLAC._xla_spmd_all_reduce(xm.REDUCE_SUM, x, 1.0,
+                                             [self.device_ids])
     x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
@@ -1282,7 +1283,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     # all reduce
     x = xs.enable_manual_sharding(x, (None, None)).global_tensor
-    x = torch_xla._XLAC._xla_spmd_all_reduce(xm.REDUCE_SUM, x, 0.25, [self.device_ids])
+    x = torch_xla._XLAC._xla_spmd_all_reduce(xm.REDUCE_SUM, x, 0.25,
+                                             [self.device_ids])
     x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])

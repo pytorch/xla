@@ -180,10 +180,9 @@ std::vector<xla::XlaOp> BuildAllReduce(
   return result;
 }
 
-xla::XlaOp BuildAllReduce(
-    AllReduceType reduce_type,
-    xla::XlaOp input, double scale,
-    const std::vector<std::vector<int64_t>>& groups) {
+xla::XlaOp BuildAllReduce(AllReduceType reduce_type, xla::XlaOp input,
+                          double scale,
+                          const std::vector<std::vector<int64_t>>& groups) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   // Just a dummy channel handle, and it's required to set the
@@ -192,8 +191,8 @@ xla::XlaOp BuildAllReduce(
   channel_handle.set_handle(1);
   channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
   auto reduce_result = xla::AllReduce(
-      input,
-      GetReduceComutation(reduce_type, input_shape.element_type()), std::move(reduce_groups), std::move(channel_handle), std::nullopt, true);
+      input, GetReduceComutation(reduce_type, input_shape.element_type()),
+      std::move(reduce_groups), std::move(channel_handle), std::nullopt, true);
   if (scale != 1.0) {
     xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
         scale, input_shape.element_type(), input.builder());

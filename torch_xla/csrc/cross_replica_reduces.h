@@ -65,9 +65,9 @@ std::vector<xla::XlaOp> BuildAllReduce(
     xla::XlaOp token, double scale,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
-xla::XlaOp BuildAllReduce(
-    AllReduceType reduce_type, xla::XlaOp operand, double scale,
-    const std::vector<std::vector<int64_t>>& groups);
+xla::XlaOp BuildAllReduce(AllReduceType reduce_type, xla::XlaOp operand,
+                          double scale,
+                          const std::vector<std::vector<int64_t>>& groups);
 
 AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
                              int64_t split_dimension, int64_t concat_dimension,

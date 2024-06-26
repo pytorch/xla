@@ -393,8 +393,9 @@ void all_reduce(const std::vector<XLATensorPtr>& inputs,
 }
 
 XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
-                        double scale, std::vector<std::vector<int64_t>> groups) {
-    return input->CreateFrom(torch::lazy::MakeNode<AllReduce>(
+                        double scale,
+                        std::vector<std::vector<int64_t>> groups) {
+  return input->CreateFrom(torch::lazy::MakeNode<AllReduce>(
       reduce_type, input->GetIrValue(), scale, std::move(groups)));
 }
 

@@ -1435,11 +1435,13 @@ void InitXlaModuleBindings(py::module m) {
         result, /*requires_grad=*/input.requires_grad());
   });
   m.def("_xla_spmd_all_reduce", [](const std::string& reduce_type,
-                              const at::Tensor& input, double scale,
-                              const py::list& groups) {
+                                   const at::Tensor& input, double scale,
+                                   const py::list& groups) {
     std::vector<std::vector<int64_t>> replica_groups =
         CreateReduceGroups(groups);
-    auto result = tensor_methods::all_reduce(bridge::GetXlaTensor(input), GetReduceType(reduce_type), scale, std::move(replica_groups));
+    auto result = tensor_methods::all_reduce(bridge::GetXlaTensor(input),
+                                             GetReduceType(reduce_type), scale,
+                                             std::move(replica_groups));
     return bridge::AtenFromXlaTensor(std::move(result));
   });
   m.def("_xla_cast_int4",
