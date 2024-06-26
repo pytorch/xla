@@ -20,6 +20,9 @@ void all_reduce(const std::vector<XLATensorPtr>& inputs,
                 AllReduceType reduce_type, double scale,
                 std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
+XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
+                        double scale, std::vector<std::vector<int64_t>> groups);
+
 std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     AllReduceType reduce_type, double scale, int64_t scatter_dim,
