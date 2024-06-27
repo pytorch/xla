@@ -1,13 +1,21 @@
 import logging
 import os
 import re
+import sys
 import tempfile
 import warnings
 
 import torch
 
 if not torch.cuda.is_available():
+  # Load _XLAC_cuda_functions to RTLD_GLOBAL, so that it can be used by _XLAC.
+  flags = sys.getdlopenflags()
+  sys.setdlopenflags(flags | os.RTLD_NOW | os.RTLD_GLOBAL)
+
   import _XLAC_cuda_functions
+
+  # Then, restore the original flags.
+  sys.setdlopenflags(flags)
 
 import _XLAC
 from ._internal import tpu

@@ -20,7 +20,7 @@ using DeviceIndex = int8_t;
 
 namespace cuda {
 
-c10::DeviceIndex current_device() noexcept;
+c10::DeviceIndex current_device();
 void set_device(c10::DeviceIndex);
 void device_synchronize();
 
