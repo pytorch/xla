@@ -108,7 +108,7 @@ DEFAULT_KWARGS = dict(
 )
 
 #  Best config to achieve peak performance based on TPU version
-#    1. It is recommended to use this config in conjuntion with XLA_USE_BF16=1 Flag.
+#    1. It is recommended to move the model to bf16 before training.
 #    2. Hyperparameters can be tuned to further improve the accuracy.
 #  usage: python3 /usr/share/pytorch/xla/test/test_train_mp_imagenet.py --model=resnet50 \
 #         --fake_data --num_epochs=10 --log_steps=300 \
