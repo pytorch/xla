@@ -228,7 +228,7 @@ def _aten_stack(tensors, dim=0):
 @op(torch.ops.aten._softmax)
 def _aten_softmax(x, dim, halftofloat):
   return jax.nn.softmax(x, dim)
-   
+
 
 def _is_int(x):
   if isinstance(x, int):
@@ -314,7 +314,7 @@ def _aten_expand(x, dims):
   shape = list(x.shape)
   if len(shape) < len(dims):
     shape = [1, ] * (len(dims) - len(shape)) + shape
-    # make sure that dims and shape is the same by 
+    # make sure that dims and shape is the same by
     # left pad with 1s. Otherwise the zip below will
     # truncate
   dims = [fix_dims(p, s) for p, s in zip(dims, shape)]
@@ -945,7 +945,7 @@ def _aten_atanh(self):
   res = _handle_int64_trig(self, jnp.arctanh)
   return res
 
- 
+
 # aten.bincount
 @op(torch.ops.aten.bincount)
 def _aten_bincount(input, weights=None, minlength=0):
@@ -1423,7 +1423,7 @@ def _strided_index(sizes, strides, storage_offset=None):
 
   if storage_offset is not None:
     ind += storage_offset
-  return ind 
+  return ind
 
 # aten.as_strided
 @op(torch.ops.aten.as_strided)
@@ -2007,22 +2007,6 @@ def _rand(
   if dtype is not None:
     res = res.astype(dtype)
   return res
-
-
-@op(torch.ops.aten.rand_like, needs_env=True)
-@op_base.convert_dtype()
-def _aten_rand_like(
-  x,
-  *,
-  dtype=None,
-  layout=None,
-  device=None,
-  pin_memory=False,
-  memory_format=torch.preserve_format,
-  env=None,
-):
-  key = env.get_and_rotate_prng_key()
-  return jax.random.uniform(key, dtype=dtype or x.dtype, shape=x.shape)
 
 
 @op(torch.ops.aten.scalar_tensor.default)
