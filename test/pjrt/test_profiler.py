@@ -8,7 +8,6 @@ import threading
 from absl.testing import absltest
 import torch
 import torch_xla.core.xla_model as xm
-import torch_xla.experimental.pjrt as pjrt
 import torch_xla.debug.profiler as xp
 
 
