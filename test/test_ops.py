@@ -506,7 +506,6 @@ class TestOpInfo(TestCase):
 
       os.environ[xenv.XLA_FALLBACK_CUDA] = xla_fallback_cuda
 
-
       with self.subTest(XLA_FALLBACK_CUDA=xla_fallback_cuda):
         for i in range(samples_to_run):
           sample_input = sample_inputs[i]
