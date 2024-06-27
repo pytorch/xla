@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import tempfile
+import warnings
 
 import torch
 import _XLAC
@@ -140,9 +141,21 @@ def _setup_tpu_vm_library_path() -> bool:
     return False
 
 
+def _check_deprecated_env_var():
+  deprecated_env_vars = [
+      'XLA_USE_BF16', 'XLA_USE_FP16', 'XLA_DOWNCAST_BF16', 'XLA_DOWNCAST_FP16',
+      'XLA_USE_32BIT_LONG'
+  ]
+  for env_var in deprecated_env_vars:
+    if os.environ.get(env_var):
+      warnings.warn(f"The environment variable '{env_var}' is deprecated "
+                    "Please update your code to avoid using it.")
+
+
 # These needs to be called before the _XLAC module is loaded.
 _setup_default_env()
 _setup_xla_flags()
+_check_deprecated_env_var()
 if int(os.environ.get('PT_XLA_DEBUG', '0')):
   _fd, _tmp_fname = _setup_debug_env()
 
