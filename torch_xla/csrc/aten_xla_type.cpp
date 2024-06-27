@@ -1489,6 +1489,24 @@ XLANativeFunctions::_embedding_bag_forward_only(
                          bridge::AtenFromXlaTensor(std::get<3>(result)));
 }
 
+at::Tensor XLANativeFunctions::_embedding_bag_backward(
+    const at::Tensor& grad, const at::Tensor& indices_,
+    const at::Tensor& offsets_, const at::Tensor& offset2bag,
+    const at::Tensor& bag_size_, const at::Tensor& max_indices_,
+    int64_t num_weights, bool scale_grad_by_freq, int64_t mode, bool sparse,
+    const std::optional<at::Tensor>& per_sample_weights_opt,
+    int64_t padding_idx) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  TORCH_WARN(
+      "XLA does not support EmbeddingBag sparse backward function. "
+      "Falling back to the dense function.");
+  return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                      ATEN_OP(_embedding_bag_backward)>::
+      call(grad, indices_, offsets_, offset2bag, bag_size_, max_indices_,
+           num_weights, scale_grad_by_freq, mode, /*sparse=*/false,
+           per_sample_weights_opt, padding_idx);
+}
+
 at::Tensor XLANativeFunctions::empty_symint(
     at::SymIntArrayRef sym_size, std::optional<at::ScalarType> dtype,
     std::optional<at::Layout> layout, std::optional<at::Device> device,
