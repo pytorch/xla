@@ -1,8 +1,9 @@
 #include "torch_xla/csrc/aten_cuda_functions.h"
 
 #include <pybind11/pybind11.h>
-#include <stdexcept>
+
 #include <cassert>
+#include <stdexcept>
 
 static void fail(const char* name) {
   throw std::runtime_error("PyTorch was compiled without CUDA support.");
