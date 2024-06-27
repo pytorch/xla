@@ -267,19 +267,6 @@ class PallasTest(unittest.TestCase):
     self.assertFalse(torch.allclose(o.cpu(), expected_o.cpu()))
     jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
 
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
-                   "This test only works on TPUv3+.")
-  @unittest.mock.patch.dict(os.environ, {"XLA_USE_BF16": "1"})
-  def test_flash_attention_wrapper_bf16(self):
-    from torch_xla.experimental.custom_kernel import flash_attention
-
-    q = torch.randn(3, 2, 128, 4).to("xla")
-    k = torch.randn(3, 2, 128, 4).to("xla")
-    v = torch.randn(3, 2, 128, 4).to("xla")
-
-    # No exception being raised.
-    o = flash_attention(q, k, v)
-
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_multiple_returns(self):
     import jax._src.pallas.mosaic.pallas_call_registration

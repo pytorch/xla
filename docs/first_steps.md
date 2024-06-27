@@ -149,19 +149,6 @@ Now, consider using [Stable Diffusion Inference](https://github.com/huggingface/
 (vm)$ python3 inference_tpu_single_device.py
 ```
 
-Since there is no bf16 version of the SD-XL model available, you can use the `XLA_USE_BF16=1` flag to convert all values to bf16 and speed up training.
-```
-(vm)$ XLA_USE_BF16=1 python3 inference_tpu_single_device.py # uses sd-xl version
-```
-or
-```
-(vm)$ python3 inference_tpu_multidevice.py # uses 2.1 version
-```
-(already includes `torch.bfloat16` in the 2.1 version of the model).
-
-Warning: watch out for caveats highlighted [here](https://github.com/huggingface/diffusers/pull/4254#issuecomment-1712289803).
-
-
 # Running on a Single TPU device
 
 This section describes the changes that need to be made to the [text_to_image inference example](https://github.com/huggingface/diffusers/tree/main/examples/text_to_image#inference) code to run it on TPUs.
