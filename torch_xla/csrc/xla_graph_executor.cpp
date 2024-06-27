@@ -1038,15 +1038,6 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
         runtime::GetComputationClient()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape));
 
-    // If current IR is a device data, executing the graph will generate a new
-    // Data with the same value. In this case we want to inherit the buffer
-    // donation option from the old Data.
-    auto device_data = torch_xla::DeviceData::Cast(ir_value.node.get());
-    if (device_data && device_data->get_buffer_donation()) {
-      std::dynamic_pointer_cast<runtime::ComputationClient::Data>(handle)
-          ->set_should_donate_buffer(true);
-    }
-
     tensor_data_vec.push_back(handle);
     if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());
