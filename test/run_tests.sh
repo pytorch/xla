@@ -82,11 +82,6 @@ function run_test_without_functionalization {
   XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
 }
 
-function run_downcast_bf16 {
-  echo "Running with XLA_DOWNCAST_BF16: $@"
-  XLA_DOWNCAST_BF16=1 run_test "$@"
-}
-
 function run_xla_ir_debug {
   echo "Running with XLA_IR_DEBUG: $@"
   XLA_IR_DEBUG=1 run_test "$@"
@@ -195,7 +190,6 @@ function run_xla_op_tests1 {
 }
 
 function run_xla_op_tests2 {
-  run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/pjrt/test_dtypes.py"
   run_test "$CDIR/test_while_loop.py"
   run_test "$CDIR/test_autocast.py"
