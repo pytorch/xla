@@ -500,7 +500,12 @@ class TestOpInfo(TestCase):
 
     # Test CPU and CUDA fallbacks.
     for xla_fallback_cuda in ("0", "1"):
+      # Skip testing fallback on CUDA if PyTorch wasn't compiled with CUDA support.
+      if not torch.cuda.is_available() and xla_fallback_cuda == "1":
+        continue
+
       os.environ[xenv.XLA_FALLBACK_CUDA] = xla_fallback_cuda
+
 
       with self.subTest(XLA_FALLBACK_CUDA=xla_fallback_cuda):
         for i in range(samples_to_run):
