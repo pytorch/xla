@@ -88,8 +88,8 @@ PjRtCompilationClient::PjRtCompilationClient(
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
 
   auto tpu_library_path = sys_util::GetEnvString(
-    env::kEnvTpuLibraryPath,
-    sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
+      env::kEnvTpuLibraryPath,
+      sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
   XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
   xla::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
   XLA_CHECK_OK(tpu_status);
