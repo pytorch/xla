@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
@@ -17,14 +18,13 @@
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/literal_util.h"
-#include "xla/status.h"
 #include "xla/statusor.h"
 #include "xla/tests/literal_test_util.h"
 
 namespace torch_xla {
 namespace runtime {
 
-xla::StatusOr<xla::XlaComputation> MakeComputation() {
+absl::StatusOr<xla::XlaComputation> MakeComputation() {
   xla::Shape input_shape =
       xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {2, 2});
   xla::XlaBuilder builder("AddComputation");
