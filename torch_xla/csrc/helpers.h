@@ -386,7 +386,7 @@ class XlaHelpers {
     s_mat_mul_precision = precision;
   }
 
-  static xla::StatusOr<xla::XlaComputation> WrapXlaComputation(
+  static absl::StatusOr<xla::XlaComputation> WrapXlaComputation(
       const xla::XlaComputation& computation,
       const std::vector<xla::Shape>& parameter_shapes,
       const std::vector<size_t>& buffer_donor_indices);

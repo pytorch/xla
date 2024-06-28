@@ -16,7 +16,7 @@
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_future.h"
 #include "xla/pjrt/pjrt_layout.h"
-#include "xla/status.h"
+#include "absl/status/status.h"
 
 namespace torch_xla {
 
@@ -325,7 +325,7 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
   if (dlmt->deleter) {
     on_delete_callback = [dlmt]() { dlmt->deleter(dlmt); };
   }
-  xla::StatusOr<std::unique_ptr<xla::PjRtBuffer>> pjrt_buffer =
+  absl::StatusOr<std::unique_ptr<xla::PjRtBuffer>> pjrt_buffer =
       device->client()->CreateViewOfDeviceBuffer(
           static_cast<char*>(dlmt->dl_tensor.data) +
               dlmt->dl_tensor.byte_offset,

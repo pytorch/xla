@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
+#include "absl/status/status.h"
 #include "tsl/lib/core/status_test_util.h"
 #include "tsl/platform/errors.h"
 #include "tsl/platform/protobuf.h"
@@ -33,7 +34,7 @@ TEST(XlaUtilTest, ShapeHash) {
 }
 
 template <typename MessageType>
-xla::StatusOr<MessageType> ParseTextProto(const std::string& text_proto) {
+absl::StatusOr<MessageType> ParseTextProto(const std::string& text_proto) {
   tsl::protobuf::TextFormat::Parser parser;
   MessageType parsed_proto;
   tsl::protobuf::io::ArrayInputStream input_stream(text_proto.data(),

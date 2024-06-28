@@ -24,7 +24,6 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
 #include "xla/client/xla_builder.h"
-#include "xla/status.h"
 #include "xla/types.h"
 
 namespace torch_xla {

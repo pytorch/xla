@@ -7,6 +7,7 @@
 
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
+#include "absl/status/status.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -316,7 +317,7 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
   XLA_CHECK(dst_device->IsAddressable()) << dst << "is not addressable.";
 
   // Returns error if the buffer is already on `dst_device`.
-  xla::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
+  absl::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
       pjrt_data->buffer->CopyToDevice(dst_device);
   if (!status_or.ok()) {
     return data;
@@ -472,7 +473,7 @@ std::uintptr_t PjRtComputationClient::UnsafeBufferPointer(
   XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
   XLA_CHECK(pjrt_data->buffer != nullptr)
       << "PjRt buffer is null in " << __FUNCTION__;
-  xla::StatusOr<std::uintptr_t> ptr =
+  absl::StatusOr<std::uintptr_t> ptr =
       client_->UnsafeBufferPointer(pjrt_data->buffer.get());
   XLA_CHECK(ptr.ok());
   return ptr.value();
@@ -744,7 +745,7 @@ PjRtComputationClient::ExecuteComputation(
           .value();
 
   returned_future->OnReady(std::move(
-      [timed, op_tracker = std::move(op_tracker)](xla::Status unused) mutable {
+      [timed, op_tracker = std::move(op_tracker)](absl::Status unused) mutable {
         timed.reset();
         TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
       }));
@@ -850,7 +851,7 @@ PjRtComputationClient::ExecuteReplicated(
 
     (*returned_futures)[0].OnReady(
         std::move([timed, op_tracker = std::move(op_tracker)](
-                      xla::Status unused) mutable {
+                      absl::Status unused) mutable {
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
         }));

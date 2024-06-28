@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
+#include "absl/status/status.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -73,13 +74,13 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
-  xla::StatusOr<xla::XlaComputation> BuildXla();
+  absl::StatusOr<xla::XlaComputation> BuildXla();
 
   // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
   // Uses root as return value for the computation. It is an error to use this
   // API after having called the AddResult() API.
-  xla::StatusOr<xla::XlaComputation> BuildXla(xla::XlaOp root);
+  absl::StatusOr<xla::XlaComputation> BuildXla(xla::XlaOp root);
 
   // Lowers a single IR node. All the inputs to the node must have a lowering
   // before calling this API. Returns the generated XLA operations.

@@ -4,6 +4,7 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "tsl/platform/stacktrace.h"
 #include "xla/statusor.h"
+#include "absl/status/status.h"
 
 #define XLA_ERROR() TF_ERROR_STREAM()
 #define XLA_CHECK(c) TF_CHECK(c) << "\n" << tsl::CurrentStackTrace()
@@ -16,7 +17,7 @@
 #define XLA_CHECK_GT(a, b) TF_CHECK_GT(a, b) << "\n" << tsl::CurrentStackTrace()
 
 template <typename T>
-T ConsumeValue(xla::StatusOr<T>&& status) {
+T ConsumeValue(absl::StatusOr<T>&& status) {
   XLA_CHECK_OK(status.status());
   return std::move(status).value();
 }

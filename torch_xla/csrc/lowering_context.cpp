@@ -11,6 +11,7 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
+#include "absl/status/status.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -152,8 +153,8 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
   root_tuple_.at(index) = std::move(op);
 }
 
-xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
-  xla::StatusOr<xla::XlaComputation> xla;
+absl::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
+  absl::StatusOr<xla::XlaComputation> xla;
 
   // check whether build for cond/body computation or not, and skip Tuple step
   // if yes
@@ -175,7 +176,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   return xla;
 }
 
-xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla(xla::XlaOp root) {
+absl::StatusOr<xla::XlaComputation> LoweringContext::BuildXla(xla::XlaOp root) {
   XLA_CHECK(root_tuple_.empty());
   auto xla = builder()->Build(root);
 

@@ -8,7 +8,7 @@
 #include "xla/backends/profiler/plugin/plugin_tracer.h"
 #include "xla/backends/profiler/plugin/profiler_c_api.h"
 #include "xla/pjrt/c/pjrt_c_api_profiler_extension.h"
-#include "xla/status.h"
+#include "absl/status/status.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -45,7 +45,7 @@ void ProfilerServer::Start(int port) {
 
 ProfilerServer::~ProfilerServer() {}
 
-xla::Status Trace(
+absl::Status Trace(
     const char* service_addr, const char* logdir, int duration_ms,
     int num_tracing_attempts,
     const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
