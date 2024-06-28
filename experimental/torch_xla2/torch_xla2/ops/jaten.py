@@ -1,9 +1,12 @@
 """Torch ops implemented using jax."""
 
+import functools
 import sys
 
 import jax
 from jax import numpy as jnp
+from jax.experimental.sparse import BCOO
+
 import numpy as np
 import torch
 from torch_xla2.ops import ops_registry
@@ -292,6 +295,75 @@ def _aten_bmm(x, y):
 # embedding(Tensor weight, Tensor indices, SymInt padding_idx=-1, bool scale_grad_by_freq=False, bool sparse=False)
 def _aten_embedding(a, w, padding_idx=-1):
   return jnp.take(a, w, axis=0)
+
+
+#- func: _embedding_bag_forward_only(
+# Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False, 
+# int mode=0, bool sparse=False, Tensor? per_sample_weights=None, bool include_last_offset=False, int padding_idx=-1) -> (Tensor, Tensor, Tensor, Tensor)
+@op(torch.ops.aten._embedding_bag)
+@op(torch.ops.aten._embedding_bag_forward_only)
+def _aten__embedding_bag(
+  weight, 
+  indices, 
+  offsets=None, 
+  scale_grad_by_freq=False, 
+  mode=0, 
+  sparse=False, 
+  per_sample_weights=None, 
+  include_last_offset=False, 
+  padding_idx=-1):
+    """Jax implementation of the PyTorch _embedding_bag function.
+
+    Args:
+        weight: The learnable weights of the module of shape (num_embeddings, embedding_dim).
+        indices: A LongTensor containing the indices to extract.
+        offsets: A LongTensor containing the starting offset of each bag.
+        scale_grad_by_freq: Whether to scale gradients by the inverse of frequency of the words in the mini-batch.
+        mode: 0 = "sum", 1 = "mean" or 2 = "max"
+        sparse: Whether the gradients with respect to weight should be a sparse tensor.
+        per_sample_weights: If given, each embedding vector is weighted by per_sample_weights
+        include_last_offset: Whether to include the last offset as a valid bag.
+        padding_idx: If specified, the entries at padding_idx do not contribute to the gradient.
+
+    Returns:
+        A tuple of (output, offset2bag, bag_size, max_indices).
+    """
+    embedded = _aten_embedding(weight, indices, padding_idx)
+
+    def static_dynamic_slice(x, start, size):
+      return jax.lax.dynamic_slice_in_dim(x, start, size)
+
+
+    # TODO not jittable
+    def reduce_by_segment(start, size, x, reducer):
+      res = []
+      for starti, sizei in zip(start, size):
+        res.append(reducer(static_dynamic_slice(x, starti, sizei), axis=0))
+      return jnp.stack(res)
+
+    def segsum(x, offsets, reducer):
+      start, end = offsets, jnp.concat([offsets[1:], jnp.array([x.shape[0]])])
+      return reduce_by_segment(start, end - start, x, reducer)
+
+    if mode not in (0, 1, 2):
+      raise ValueError("Invalid mode. Please choose 0 (sum) or 1 (mean).")
+    if mode == 0:  # sum
+      reducer = jnp.sum
+    elif mode == 1:  # mean
+      reducer = jnp.mean
+    elif mode == 2:  # max
+      reducer = jnp.max
+
+    if indices.ndim == 1 and offsets is not None:
+      output = segsum(embedded, offsets, reducer)
+    else:
+      output = reducer(embedded, axis=1)
+      
+    # TODO: return output, offset2bag, bag_size, max_indices
+    return output, None, None, None
+
+
+
 
 
 @op(torch.ops.aten.rsqrt)

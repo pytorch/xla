@@ -1,4 +1,4 @@
-import logging
+import sys
 import contextlib
 from typing import Optional
 import jax
@@ -45,8 +45,9 @@ def j2t_dtype(dtype):
 
 
 @contextlib.contextmanager
-def log_nested(message):
-  logging.debug((' ' * log_nested.level) + message)
+def log_nested(env, message):
+  if env.config.debug_print_each_op:
+    print((' ' * log_nested.level) + message, file=sys.stderr)
   log_nested.level += 1
   yield
   log_nested.level -= 1
@@ -165,15 +166,11 @@ class SliceView(XLATensor2):
     self._orig_tensor._elem = self._orig_tensor.at[slice].set(new_content)
 
 
-_DEBUG_ACCURACY = False
-
 
 def debug_accuracy(func, args, kwargs, current_output):
-  if not _DEBUG_ACCURACY:
-    return True
-
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
       torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output))
+
   expected_out = func(*args_torch, **kwargs_torch)
 
   flattened_current_out, _ = torch_pytree.tree_flatten(out_torch)
@@ -183,7 +180,7 @@ def debug_accuracy(func, args, kwargs, current_output):
     if ex.dtype != real.dtype:
       ex = ex.to(real.dtype)
     try:
-      if (_DEBUG_ACCURACY and isinstance(ex, torch.Tensor) and
+      if (isinstance(ex, torch.Tensor) and
           not torch.allclose(ex, real, atol=1e-3, equal_nan=True)):
         import pdb
 
@@ -207,7 +204,7 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
                          types,
                          args=(),
                          kwargs=None) -> torch.Tensor:
-    with log_nested(f'FUNCTION: {_name_of_func(func)}'):
+    with log_nested(self.env, f'FUNCTION: {_name_of_func(func)}'):
       try:
         return self.env.dispatch(func, types, args, kwargs)
       except OperatorNotFound:
@@ -221,7 +218,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
     self.env = env
 
   def __torch_dispatch__(self, func, types, args=(), kwargs=None):
-    with log_nested(f'DISPATCH: {_name_of_func(func)}'):
+    with log_nested(self.env, f'DISPATCH: {_name_of_func(func)}'):
       if isinstance(func, torch._ops.OpOverloadPacket):
         with self:
           return func(*args, **kwargs)
@@ -289,6 +286,7 @@ class Environment(contextlib.ContextDecorator):
       return jax.random.key(next_key)
 
     def dispatch(self, func, types, args, kwargs):
+
       kwargs = kwargs or {}
 
       # If the func don't act on XLATensor2, and is not a tensor constructor,
@@ -310,8 +308,14 @@ class Environment(contextlib.ContextDecorator):
           raise OperatorNotFound(
             f'Operator with name {_name_of_func(func)} has no lowering')
 
-        if op.is_jax_function:
-          args, kwargs = self.t2j_iso((args, kwargs))
+        old_args, old_kwargs = args, kwargs
+        try:
+          if op.is_jax_function:
+            args, kwargs = self.t2j_iso((args, kwargs))
+        except AssertionError:
+          if self.config.debug_mixed_tensor:
+            import pdb; pdb.set_trace()
+
 
         if op.needs_env:
           kwargs['env'] = self
@@ -322,8 +326,8 @@ class Environment(contextlib.ContextDecorator):
         if op.is_jax_function:
           res = self.j2t_iso(res)
 
-        #if self.config.debug_accuracy_for_each_op:
-        #  debug_accuracy(func, args, kwargs, res)
+        if self.config.debug_accuracy_for_each_op:
+          debug_accuracy(func, old_args, old_kwargs, res)
         return res
 
     def __enter__(self):
@@ -358,7 +362,7 @@ class Environment(contextlib.ContextDecorator):
 
     def t2j_iso(self, torchtensors):
       def to_jax(x):
-        assert isinstance(x, XLATensor2)
+        assert isinstance(x, XLATensor2), f'Expect a XLATensor2 but got {type(x)}; usually this means there is a mixed math between XLATensor and torch.Tensor'
         return x.jax()
       return torch_pytree.tree_map_only(torch.Tensor, to_jax, torchtensors)
 
