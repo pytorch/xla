@@ -15,7 +15,6 @@
 #include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
-#include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 
 namespace torch_xla {
@@ -74,7 +73,7 @@ void RegisterPjRtPlugin(std::string name,
 }
 
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
-InitializePjRt(const std::string& device_type, bool use_aot) {
+InitializePjRt(const std::string& device_type) {
   std::unique_ptr<xla::PjRtClient> client;
   std::unique_ptr<XlaCoordinator> coordinator;
 
@@ -142,12 +141,10 @@ InitializePjRt(const std::string& device_type, bool use_aot) {
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
     absl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
     XLA_CHECK_OK(tpu_status);
-    if (!use_aot) {
-      client = std::move(xla::GetCApiClient("TPU").value());
-      const PJRT_Api* c_api =
-          static_cast<xla::PjRtCApiClient*>(client.get())->pjrt_c_api();
-      profiler::RegisterProfilerForPlugin(c_api);
-    }
+    client = std::move(xla::GetCApiClient("TPU").value());
+    const PJRT_Api* c_api =
+        static_cast<xla::PjRtCApiClient*>(client.get())->pjrt_c_api();
+    profiler::RegisterProfilerForPlugin(c_api);
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
   } else if (device_type == "CUDA") {
@@ -214,11 +211,8 @@ InitializePjRt(const std::string& device_type, bool use_aot) {
     client = std::move(xla::GetCApiClient("NEURON").value());
   }
 
-  // don't check for aot client because it is null
-  if (!use_aot) {
-    XLA_CHECK(client) << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
-                                         device_type);
-  }
+  XLA_CHECK(client) << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
+                                       device_type);
 
   return {std::move(client), std::move(coordinator)};
 }

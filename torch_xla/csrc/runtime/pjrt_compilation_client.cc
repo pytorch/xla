@@ -13,7 +13,6 @@
 #include "torch_xla/csrc/runtime/env_hash.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
-#include "torch_xla/csrc/runtime/pjrt_registry.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
@@ -25,6 +24,7 @@
 #include "xla/client/xla_computation.h"
 #include "xla/layout_util.h"
 #include "xla/literal.h"
+#include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
@@ -87,10 +87,12 @@ PjRtCompilationClient::PjRtCompilationClient(
     std::string& virtual_topology_str) {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
 
-  // With compilation only, client_ and coordinator_ are nullptr. The point we
-  // still call InitializePjRt is that we want to load libtpu.so with TPU
-  // backend.
-  std::tie(client_, coordinator_) = InitializePjRt(device_type, true);
+  auto tpu_library_path = sys_util::GetEnvString(
+    env::kEnvTpuLibraryPath,
+    sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
+  XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
+  xla::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
+  XLA_CHECK_OK(tpu_status);
 
   absl::flat_hash_map<std::string, xla::PjRtValueType> create_options = {};
 
