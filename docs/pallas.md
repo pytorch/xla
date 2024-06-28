@@ -45,19 +45,19 @@ Besides manually wrapping external Pallas kernels, there are built-in kernels wh
 #### Example usage
 ```python3
 # Use built-in kernels
-from torch_xla.experimental.custom_kernel import flash_attention
+import torch_xla.experimental.custom_kernel
 output = flash_attention(q, k, v)
 ```
 
 #### Integration Example
-We have a fork of HuggingFace Llama 3 to demonstrate [a potential integration for FlashAttention here](https://github.com/pytorch-tpu/transformers/tree/alanwaketan/flash_attention).
+We have an example of [FlashAttention integration here](https://github.com/pytorch/xla/blob/master/examples/flash_attention/train_decoder_only_flash_attention.py) in our training test script.
 
 ### PagedAttention
 
 #### Example usage
 ```python3
 # Use built-in kernels
-from torch_xla.experimental.custom_kernel import paged_attention
+import torch_xla.experimental.custom_kernel
 output = torch.ops.xla.paged_attention(
     query.squeeze(dim=1),
     key_cache,
