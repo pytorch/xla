@@ -255,7 +255,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @staticmethod
   def _memory_usage():
-    return xm.get_memory_info(torch_xla.device())
+    return xm.get_memory_info()
 
   def test_memory_usage(self):
     results = pjrt.run_multiprocess(self._memory_usage)
