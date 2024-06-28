@@ -16,7 +16,7 @@ to the comments for a larger or smaller cluster.
 
 Create a new file `gpu_test.yaml` with the following:
 
-```
+```yaml
 # Headless service used for service discovery.
 # See https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
 apiVersion: v1
