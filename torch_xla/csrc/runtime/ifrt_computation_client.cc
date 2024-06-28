@@ -569,7 +569,7 @@ IfrtComputationClient::ExecuteReplicated(
           .value();
 
   result.status.OnReady(std::move([timed, op_tracker = std::move(op_tracker)](
-                                      xla::Status status) mutable {
+                                      absl::Status status) mutable {
     timed.reset();
     TF_VLOG(3)
         << "ExecuteReplicated returned_future->OnReady finished with status "
