@@ -10,6 +10,7 @@
 #include <tuple>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
