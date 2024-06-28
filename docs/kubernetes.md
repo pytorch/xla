@@ -11,8 +11,8 @@ respectively.
 ## GPU Example
 
 GKE is the recommended platform for distributed training with GPUs. This example
-uses two hosts, each with two NVidia v100 GPUs. Adjust the values in according
-to the comments for a larger or smaller cluster.
+uses two hosts, each with two NVidia v100 GPUs. Adjust the values according
+to the comments in the example for a larger or smaller cluster.
 
 Create a new file `gpu_test.yaml` with the following:
 
