@@ -7,8 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "absl/types/span.h"
 #include "absl/status/status.h"
+#include "absl/types/span.h"
 #include "tsl/lib/core/status_test_util.h"
 #include "tsl/platform/errors.h"
 #include "tsl/platform/protobuf.h"

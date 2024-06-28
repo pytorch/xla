@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "tsl/lib/core/status_test_util.h"
@@ -16,7 +17,6 @@
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/literal_util.h"
-#include "absl/status/status.h"
 #include "xla/statusor.h"
 #include "xla/tests/literal_test_util.h"
 
