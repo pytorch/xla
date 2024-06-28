@@ -149,7 +149,6 @@ cc_library(
         ":env_hash",
         ":env_vars",
         ":operation_manager",
-        ":pjrt_compile_only",
         ":pjrt_registry",
         ":profiler",
         ":stablehlo_helper",
@@ -225,16 +224,6 @@ cc_test(
         ":env_hash",
         "@com_google_googletest//:gtest_main",
         "@torch//:libtorch_cpu",  # For torch::lazy::hash
-    ],
-)
-
-cc_library(
-    name = "pjrt_compile_only",
-    srcs = ["pjrt_compile_only.cc"],
-    hdrs = ["pjrt_compile_only.h"],
-    deps = [
-        "@xla//xla/pjrt:pjrt_client",
-        "@xla//xla/pjrt:pjrt_future",
     ],
 )
 

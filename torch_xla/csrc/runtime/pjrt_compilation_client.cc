@@ -53,15 +53,6 @@ std::unordered_map<int, int> build_index_map(
   return device_index;
 }
 
-// Builds the xla::Shape of the output xla::Literal on the host.
-xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
-  xla::Shape shape = xla::ShapeUtil::MakeShape(
-      buffer->element_type(), buffer->logical_dimensions().value());
-  *shape.mutable_layout() = xla::GetXlaLayoutUnsafe(buffer->layout());
-
-  return xla::ShapeUtil::DeviceShapeToHostShape(shape);
-}
-
 torch::lazy::hash_t hash_comp_env() {
   // TODO(piz): since the client is nullptr, we can't retrive all information
   // like PjRtComputationClient. Think about a way to construct the hashing.
@@ -196,10 +187,9 @@ ComputationClient::DataPtr PjRtCompilationClient::CreateDataPlaceholder(
 }
 
 ComputationClient::DataPtr PjRtCompilationClient::CreateData(
-    std::string device, xla::Shape shape,
-    std::shared_ptr<xla::PjRtBuffer> pjrt_buffer) {
+    std::string device, xla::Shape shape, std::shared_ptr<Buffer> buffer) {
   return std::make_shared<PjRtData>(std::move(device), std::move(shape),
-                                    pjrt_buffer);
+                                    buffer);
 }
 
 std::vector<ComputationClient::DataPtr> PjRtCompilationClient::GetDataShards(
@@ -271,8 +261,7 @@ std::vector<ComputationClient::DataPtr> PjRtCompilationClient::TransferToDevice(
     absl::Span<const bool> dynamic_dimensions;
     xla::Shape shape(tensor->primitive_type(), tensor->dimensions(),
                      dynamic_dimensions, tuple_shape);
-    std::shared_ptr<xla::PjRtBuffer> buffer =
-        std::make_shared<xla::CompileOnlyPjRtBuffer>(shape);
+    std::shared_ptr<Buffer> buffer = std::make_shared<Buffer>(shape);
     ComputationClient::DataPtr data =
         std::make_shared<PjRtData>(tensor->device(), tensor->shape(), buffer);
     datas.push_back(data);
@@ -314,15 +303,7 @@ ComputationClient::DataPtr PjRtCompilationClient::CopyToDevice(
 
   xla::PjRtDevice* dst_device = StringToPjRtDevice(dst);
   XLA_CHECK(dst_device->IsAddressable()) << dst << "is not addressable.";
-
-  // Returns error if the buffer is already on `dst_device`.
-  xla::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
-      pjrt_data->buffer->CopyToDevice(dst_device);
-  if (!status_or.ok()) {
-    return data;
-  }
-  return std::make_shared<PjRtData>(dst, pjrt_data->shape(),
-                                    std::move(status_or.value()));
+  return std::make_shared<PjRtData>(dst, pjrt_data->shape(), pjrt_data->buffer);
 }
 
 std::shared_ptr<PjRtCompilationClient::PjRtData>
@@ -473,19 +454,8 @@ std::uintptr_t PjRtCompilationClient::UnsafeBufferPointer(
 
 std::shared_ptr<xla::PjRtBuffer> PjRtCompilationClient::GetPjRtBuffer(
     const DataPtr handle) {
-  std::shared_ptr<PjRtData> pjrt_data =
-      std::dynamic_pointer_cast<PjRtData>(handle);
-
-  XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
-  std::shared_ptr<xla::PjRtBuffer> pjrt_buffer = pjrt_data->buffer;
-  if (pjrt_buffer != nullptr) {
-    return pjrt_buffer;
-  } else {
-    TF_VLOG(3) << "The pjrt buffer is null so we need to wait for device ops "
-                  "to finish.";
-    WaitDeviceOps({});
-    return std::dynamic_pointer_cast<PjRtData>(handle)->buffer;
-  }
+  TF_LOG(ERROR) << "AOT compilation is unable to get buffer data from device";
+  return std::shared_ptr<xla::PjRtBuffer>(nullptr);
 }
 
 std::vector<xla::Literal> PjRtCompilationClient::TransferFromDevice(

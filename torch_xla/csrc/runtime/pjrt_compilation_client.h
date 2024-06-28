@@ -11,7 +11,6 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
-#include "torch_xla/csrc/runtime/pjrt_compile_only.h"  // PEI: leave only pjrtbuffer inside
 #include "torch_xla/csrc/runtime/util.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/threadpool.h"
@@ -24,6 +23,11 @@
 namespace torch_xla {
 namespace runtime {
 
+struct Buffer {
+  xla::Shape shape;
+  Buffer(xla::Shape shape) : shape(shape) {}
+};
+
 class PjRtCompilationClient : public ComputationClient {
  public:
   PjRtCompilationClient(std::string& virtual_topology_str);
@@ -34,7 +38,7 @@ class PjRtCompilationClient : public ComputationClient {
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
   static DataPtr CreateData(std::string device, xla::Shape shape,
-                            std::shared_ptr<xla::PjRtBuffer> pjrt_buffer);
+                            std::shared_ptr<Buffer> buffer);
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
@@ -175,14 +179,8 @@ class PjRtCompilationClient : public ComputationClient {
         : Data(std::move(device), std::move(device_shape)) {}
 
     PjRtData(std::string device, xla::Shape device_shape,
-             std::shared_ptr<xla::PjRtBuffer> buffer)
+             std::shared_ptr<Buffer> buffer)
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
-
-    PjRtData(std::string device, std::shared_ptr<xla::PjRtBuffer> buffer)
-        : Data(std::move(device),
-               xla::Shape(buffer->element_type(), buffer->dimensions(),
-                          buffer->is_dynamic_dimension(), {})),
-          buffer(buffer) {}
 
     Handle GetHandle() override {
       XLA_CHECK(HasValue())
@@ -191,9 +189,7 @@ class PjRtCompilationClient : public ComputationClient {
       return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
     void Assign(const torch::lazy::BackendData& data) override;
-    bool HasValue() const override {
-      return buffer != nullptr && !buffer->IsDeleted();
-    };
+    bool HasValue() const override { return buffer != nullptr; };
 
     bool HasSharding() const override { return false; }
 
@@ -217,7 +213,7 @@ class PjRtCompilationClient : public ComputationClient {
       return ss.str();
     }
 
-    std::shared_ptr<xla::PjRtBuffer> buffer;
+    std::shared_ptr<Buffer> buffer;
   };
 
   struct PjRtShardedData : public Data {
