@@ -90,12 +90,3 @@ debug
 .. autofunction:: counter_value
 .. autofunction:: metric_names
 .. autofunction:: metric_data
-
-.. mdinclude:: ../../TROUBLESHOOTING.md
-.. mdinclude:: ../pjrt.md
-.. mdinclude:: ../dynamo.md
-.. mdinclude:: ../fsdp.md
-.. mdinclude:: ../ddp.md
-.. mdinclude:: ../gpu.md
-.. mdinclude:: ../spmd_basic.md
-.. mdinclude:: ../fsdpv2.md
