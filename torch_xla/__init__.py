@@ -233,5 +233,5 @@ if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS',
 
 from .torch_xla import *
 
-# register all custom kenels by default
-from .core import custom_kernel
+# register all custom kenels and decomp by default
+from .core import custom_kernel, decomp_registration

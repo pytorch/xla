@@ -2010,6 +2010,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for dtype in test_dtypes:
       test(dtype)
 
+  def test_trilinear_interpolate(self):
+
+    def func(input_volume):
+      output_size = (32, 64, 64)
+      return F.interpolate(
+          input_volume, size=output_size, mode='trilinear', align_corners=False)
+
+    device = torch_xla.device()
+    input_volume = torch.randn(1, 3, 16, 32, 32).to(device)
+    met.clear_all()
+    self.runAtenTest((input_volume), func)
+    assert len(torch_xla._XLAC._get_executed_fallback_ops()) == 0
+
   def test_gelu_backward_different_types(self):
 
     def foo(grad, inp):
