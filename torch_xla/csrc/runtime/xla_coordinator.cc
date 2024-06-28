@@ -25,7 +25,7 @@ XlaCoordinator::XlaCoordinator(int global_rank, int world_size,
         sys_util::GetEnvInt(env::kEnvDistSvcShutdownTimeoutInMin, 5);
     service_options.shutdown_timeout = absl::Minutes(shutdown_timeout);
 
-    xla::StatusOr<std::unique_ptr<xla::DistributedRuntimeService>>
+    absl::StatusOr<std::unique_ptr<xla::DistributedRuntimeService>>
         dist_runtime_service = xla::GetDistributedRuntimeService(
             dist_service_addr, service_options);
     XLA_CHECK(dist_runtime_service.ok())
