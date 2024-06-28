@@ -36,19 +36,42 @@ For simple kernels, the adoption is just as simple as one liner. For more compli
 
 ## Use built-in kernels
 
-Besides manually wrapping external Pallas kernels, there are built-in kernels where the adoptions are done by PyTorch/XLA already.
+Besides manually wrapping external Pallas kernels, there are built-in kernels where the adoptions are done by PyTorch/XLA already. These built-in kernels can be used like any other torch.ops. The current built-in kernels that are suppored are:
+- FlashAttention
+- PagedAttention
 
-Example usage:
+### FlashAttention
+
+#### Example usage
 ```python3
 # Use built-in kernels
-from torch_xla.experimental.custom_kernel import flash_attention
+import torch_xla.experimental.custom_kernel
 output = flash_attention(q, k, v)
 ```
 
-You can just use it like any other torch.ops.
+#### Integration Example
+We have an example of [FlashAttention integration here](https://github.com/pytorch/xla/blob/master/examples/flash_attention/train_decoder_only_flash_attention.py) in our training test script.
 
-## HuggingFace Llama 3 Example
-We have a fork of HF Llama 3 to demonstrate a potential integration [here](https://github.com/pytorch-tpu/transformers/tree/alanwaketan/flash_attention).
+### PagedAttention
+
+#### Example usage
+```python3
+# Use built-in kernels
+import torch_xla.experimental.custom_kernel
+output = torch.ops.xla.paged_attention(
+    query.squeeze(dim=1),
+    key_cache,
+    value_cache,
+    context_lens,
+    block_tables,
+    pages_per_compute_block,
+    megacore_mode=None,
+)
+```
+
+#### Integration Example
+The vLLM TPU integration utilizes [PagedAttention here](https://github.com/vllm-project/vllm/blob/f5e1bf5d44877149eaabf9c04379a4e14a023145/vllm/attention/backends/pallas.py#L194) for effective memory management with KV cache.
+
 
 ## Dependencies
 The Pallas integration depends on JAX to function. However, not every JAX version is compatible with your installed PyTorch/XLA. To install the proper JAX:
