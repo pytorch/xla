@@ -42,12 +42,23 @@ def add_kernel(
 
 
 @triton.jit
-def _attn_fwd_inner(acc, l_i, m_i, q,  #
-                    K_block_ptr, V_block_ptr,  #
-                    start_m, qk_scale,  #
-                    BLOCK_M: tl.constexpr, HEAD_DIM: tl.constexpr, BLOCK_N: tl.constexpr,  #
-                    STAGE: tl.constexpr, offs_m: tl.constexpr, offs_n: tl.constexpr,  #
-                    N_CTX: tl.constexpr, fp8_v: tl.constexpr):
+def _attn_fwd_inner(
+    acc,
+    l_i,
+    m_i,
+    q,  #
+    K_block_ptr,
+    V_block_ptr,  #
+    start_m,
+    qk_scale,  #
+    BLOCK_M: tl.constexpr,
+    HEAD_DIM: tl.constexpr,
+    BLOCK_N: tl.constexpr,  #
+    STAGE: tl.constexpr,
+    offs_m: tl.constexpr,
+    offs_n: tl.constexpr,  #
+    N_CTX: tl.constexpr,
+    fp8_v: tl.constexpr):
   # range of values handled by this stage
   if STAGE == 1:
     lo, hi = 0, start_m * BLOCK_M
@@ -93,18 +104,39 @@ def _attn_fwd_inner(acc, l_i, m_i, q,  #
     K_block_ptr = tl.advance(K_block_ptr, (0, BLOCK_N))
   return acc, l_i, m_i
 
+
 @triton.jit
-def _attn_fwd(Q, K, V, sm_scale, M, Out,  #
-              stride_qz, stride_qh, stride_qm, stride_qk,  #
-              stride_kz, stride_kh, stride_kn, stride_kk,  #
-              stride_vz, stride_vh, stride_vk, stride_vn,  #
-              stride_oz, stride_oh, stride_om, stride_on,  #
-              Z, H, N_CTX,  #
-              BLOCK_M: tl.constexpr,  #
-              BLOCK_N: tl.constexpr,  #
-              HEAD_DIM: tl.constexpr,  #
-              STAGE: tl.constexpr  #
-              ):
+def _attn_fwd(
+    Q,
+    K,
+    V,
+    sm_scale,
+    M,
+    Out,  #
+    stride_qz,
+    stride_qh,
+    stride_qm,
+    stride_qk,  #
+    stride_kz,
+    stride_kh,
+    stride_kn,
+    stride_kk,  #
+    stride_vz,
+    stride_vh,
+    stride_vk,
+    stride_vn,  #
+    stride_oz,
+    stride_oh,
+    stride_om,
+    stride_on,  #
+    Z,
+    H,
+    N_CTX,  #
+    BLOCK_M: tl.constexpr,  #
+    BLOCK_N: tl.constexpr,  #
+    HEAD_DIM: tl.constexpr,  #
+    STAGE: tl.constexpr  #
+):
   tl.static_assert(BLOCK_N <= HEAD_DIM)
   start_m = tl.program_id(0)
   off_hz = tl.program_id(1)
@@ -114,36 +146,36 @@ def _attn_fwd(Q, K, V, sm_scale, M, Out,  #
 
   # block pointers
   Q_block_ptr = tl.make_block_ptr(
-    base=Q + qvk_offset,
-    shape=(N_CTX, HEAD_DIM),
-    strides=(stride_qm, stride_qk),
-    offsets=(start_m * BLOCK_M, 0),
-    block_shape=(BLOCK_M, HEAD_DIM),
-    order=(1, 0),
+      base=Q + qvk_offset,
+      shape=(N_CTX, HEAD_DIM),
+      strides=(stride_qm, stride_qk),
+      offsets=(start_m * BLOCK_M, 0),
+      block_shape=(BLOCK_M, HEAD_DIM),
+      order=(1, 0),
   )
   V_block_ptr = tl.make_block_ptr(
-    base=V + qvk_offset,
-    shape=(N_CTX, HEAD_DIM),
-    strides=(stride_vk, stride_vn),
-    offsets=(0, 0),
-    block_shape=(BLOCK_N, HEAD_DIM),
-    order=(1, 0),
+      base=V + qvk_offset,
+      shape=(N_CTX, HEAD_DIM),
+      strides=(stride_vk, stride_vn),
+      offsets=(0, 0),
+      block_shape=(BLOCK_N, HEAD_DIM),
+      order=(1, 0),
   )
   K_block_ptr = tl.make_block_ptr(
-    base=K + qvk_offset,
-    shape=(HEAD_DIM, N_CTX),
-    strides=(stride_kk, stride_kn),
-    offsets=(0, 0),
-    block_shape=(HEAD_DIM, BLOCK_N),
-    order=(0, 1),
+      base=K + qvk_offset,
+      shape=(HEAD_DIM, N_CTX),
+      strides=(stride_kk, stride_kn),
+      offsets=(0, 0),
+      block_shape=(HEAD_DIM, BLOCK_N),
+      order=(0, 1),
   )
   O_block_ptr = tl.make_block_ptr(
-    base=Out + qvk_offset,
-    shape=(N_CTX, HEAD_DIM),
-    strides=(stride_om, stride_on),
-    offsets=(start_m * BLOCK_M, 0),
-    block_shape=(BLOCK_M, HEAD_DIM),
-    order=(1, 0),
+      base=Out + qvk_offset,
+      shape=(N_CTX, HEAD_DIM),
+      strides=(stride_om, stride_on),
+      offsets=(start_m * BLOCK_M, 0),
+      block_shape=(BLOCK_M, HEAD_DIM),
+      order=(1, 0),
   )
   # initialize offsets
   offs_m = start_m * BLOCK_M + tl.arange(0, BLOCK_M)
@@ -161,26 +193,53 @@ def _attn_fwd(Q, K, V, sm_scale, M, Out,  #
   # For causal = True, STAGE = 3 and _attn_fwd_inner gets 1 as its STAGE
   # For causal = False, STAGE = 1, and _attn_fwd_inner gets 3 as its STAGE
   if STAGE & 1:
-    acc, l_i, m_i = _attn_fwd_inner(acc, l_i, m_i, q, K_block_ptr, V_block_ptr,  #
-                                    start_m, qk_scale,  #
-                                    BLOCK_M, HEAD_DIM, BLOCK_N,  #
-                                    4 - STAGE, offs_m, offs_n, N_CTX, V.dtype.element_ty == tl.float8e5  #
-                                    )
+    acc, l_i, m_i = _attn_fwd_inner(
+        acc,
+        l_i,
+        m_i,
+        q,
+        K_block_ptr,
+        V_block_ptr,  #
+        start_m,
+        qk_scale,  #
+        BLOCK_M,
+        HEAD_DIM,
+        BLOCK_N,  #
+        4 - STAGE,
+        offs_m,
+        offs_n,
+        N_CTX,
+        V.dtype.element_ty == tl.float8e5  #
+    )
   # stage 2: on-band
   if STAGE & 2:
     # barrier makes it easier for compielr to schedule the
     # two loops independently
-    acc, l_i, m_i = _attn_fwd_inner(acc, l_i, m_i, q, K_block_ptr, V_block_ptr,  #
-                                    start_m, qk_scale,  #
-                                    BLOCK_M, HEAD_DIM, BLOCK_N,  #
-                                    2, offs_m, offs_n, N_CTX, V.dtype.element_ty == tl.float8e5  #
-                                    )
+    acc, l_i, m_i = _attn_fwd_inner(
+        acc,
+        l_i,
+        m_i,
+        q,
+        K_block_ptr,
+        V_block_ptr,  #
+        start_m,
+        qk_scale,  #
+        BLOCK_M,
+        HEAD_DIM,
+        BLOCK_N,  #
+        2,
+        offs_m,
+        offs_n,
+        N_CTX,
+        V.dtype.element_ty == tl.float8e5  #
+    )
   # epilogue
   m_i += tl.math.log2(l_i)
   acc = acc / l_i[:, None]
   m_ptrs = M + off_hz * N_CTX + offs_m
   tl.store(m_ptrs, m_i)
   tl.store(O_block_ptr, acc.to(Out.type.element_ty))
+
 
 class TritonTest(unittest.TestCase):
 
@@ -215,24 +274,46 @@ class TritonTest(unittest.TestCase):
     triangle = torch.tril(torch.ones((N_CTX, N_CTX), device="cuda"))
     p = torch.matmul(q, k.transpose(2, 3)) * sm_scale
     if causal:
-        p[:, :, triangle == 0] = float("-inf")
+      p[:, :, triangle == 0] = float("-inf")
     p = torch.softmax(p.float(), dim=-1).half()
 
     ref_out = torch.matmul(p, v)
     # triton implementation
 
     o = torch.empty_like(q)
-    M = torch.empty((q.shape[0], q.shape[1], q.shape[2]), device=q.device, dtype=torch.float32)
+    M = torch.empty((q.shape[0], q.shape[1], q.shape[2]),
+                    device=q.device,
+                    dtype=torch.float32)
     BLOCK_N = 32
     BLOCK_M = 64
-    grid = lambda args: (triton.cdiv(q.shape[2], args["BLOCK_M"]), q.shape[0] * q.shape[1], 1)
+    grid = lambda args: (triton.cdiv(q.shape[2], args["BLOCK_M"]), q.shape[0] *
+                         q.shape[1], 1)
     payload = xla_triton.triton_call(
-        q, k, v, sm_scale, M, o,
-        q.stride(0), q.stride(1), q.stride(2), q.stride(3),  #
-        k.stride(0), k.stride(1), k.stride(2), k.stride(3),  #
-        v.stride(0), v.stride(1), v.stride(2), v.stride(3),  #
-        o.stride(0), o.stride(1), o.stride(2), o.stride(3),  #
-        q.shape[0], q.shape[1],  q.shape[2],
+        q,
+        k,
+        v,
+        sm_scale,
+        M,
+        o,
+        q.stride(0),
+        q.stride(1),
+        q.stride(2),
+        q.stride(3),  #
+        k.stride(0),
+        k.stride(1),
+        k.stride(2),
+        k.stride(3),  #
+        v.stride(0),
+        v.stride(1),
+        v.stride(2),
+        v.stride(3),  #
+        o.stride(0),
+        o.stride(1),
+        o.stride(2),
+        o.stride(3),  #
+        q.shape[0],
+        q.shape[1],
+        q.shape[2],
         kernel=_attn_fwd,
         grid=grid,
         BLOCK_M=BLOCK_M,
@@ -244,6 +325,7 @@ class TritonTest(unittest.TestCase):
                                                   [o.shape], [torch.float16])
     # compare
     assert torch.allclose(ref_out, output[0], atol=1e-2, rtol=0)
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
