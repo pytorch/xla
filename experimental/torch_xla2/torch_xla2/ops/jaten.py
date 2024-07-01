@@ -1656,6 +1656,12 @@ def _aten_floor(input):
   return jnp.floor(input).astype(input.dtype)
 
 
+# aten.fmax
+@op(torch.ops.aten.fmax)
+def _aten_fmod(input, other):
+  return jnp.fmax(input, other)
+
+
 # aten.fmod
 @op(torch.ops.aten.fmod)
 def _aten_fmod(input, other):
