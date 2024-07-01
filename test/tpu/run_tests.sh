@@ -18,6 +18,7 @@ python3 test/test_autocast.py
 python3 test/test_grad_checkpoint.py
 python3 test/dynamo/test_dynamo.py
 python3 test/spmd/test_spmd_debugging.py
+XLA_PARAMETER_WRAPPING_THREADSHOLD=1 python test/spmd/test_spmd_parameter_wrapping.py
 python3 test/pjrt/test_dtypes.py
 python3 test/pjrt/test_dynamic_plugin_tpu.py
 python3 test/test_while_loop.py
