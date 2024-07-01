@@ -1658,8 +1658,14 @@ def _aten_floor(input):
 
 # aten.fmax
 @op(torch.ops.aten.fmax)
-def _aten_fmod(input, other):
+def _aten_fmax(input, other):
   return jnp.fmax(input, other)
+
+
+# aten.fmin
+@op(torch.ops.aten.fmin)
+def _aten_fmin(input, other):
+  return jnp.fmin(input, other)
 
 
 # aten.fmod
