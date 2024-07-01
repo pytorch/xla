@@ -1488,15 +1488,18 @@ class MemoryInfo(TypedDict):
   bytes_limit: int
 
 
-def get_memory_info(device: torch.device) -> MemoryInfo:
+def get_memory_info(device: Optional[torch.device] = None) -> MemoryInfo:
   """Retrieves the device memory usage.
 
   Args:
-    device: The device whose memory information are requested.
+    device: Optional[torch.device] The device whose memory information are requested.
+    If not passed will use the default device.
 
   Returns:
     MemoryInfo dict with memory usage for the given device.
   """
+  if device == None:
+    device = xla_device()
   return torch_xla._XLAC._xla_memory_info(str(device))
 
 
