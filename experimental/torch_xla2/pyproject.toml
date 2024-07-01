@@ -17,10 +17,10 @@ requires-python = ">=3.10"
 license = {file = "LICENSE"}
 
 [project.optional-dependencies]
-cpu = ["jax[cpu]>=0.4.24", "jax[cpu]"]
+cpu = ["jax[cpu]>=0.4.30", "jax[cpu]"]
 # Add libtpu index `-f https://storage.googleapis.com/libtpu-releases/index.html`
-tpu = ["jax[cpu]>=0.4.24", "jax[tpu]"]
-cuda = ["jax[cpu]>=0.4.24", "jax[cuda12]"]
+tpu = ["jax[cpu]>=0.4.30", "jax[tpu]"]
+cuda = ["jax[cpu]>=0.4.30", "jax[cuda12]"]
 
 [tool.pytest.ini_options]
 addopts="-n auto"
