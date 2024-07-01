@@ -36,6 +36,7 @@ resource "google_container_node_pool" "arc_v4_cpu_nodes" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/devstorage.read_only",
     ]
   }
 
@@ -60,6 +61,7 @@ resource "google_container_node_pool" "arc_v4_tpu_nodes" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/devstorage.read_only",
     ]
     machine_type = "ct4p-hightpu-4t"
   }
