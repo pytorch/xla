@@ -390,7 +390,11 @@ class XlaHelpers {
   static absl::StatusOr<xla::XlaComputation> WrapXlaComputation(
       const xla::XlaComputation& computation,
       const std::vector<xla::Shape>& parameter_shapes,
+      const std::vector<xla::HloSharding>& parameter_shardings,
       const std::vector<size_t>& buffer_donor_indices);
+
+  static std::vector<xla::HloSharding> ExtractInputShardings(
+      const xla::XlaComputation& computation);
 
   static torch::lazy::Shape ConvertXlaShapeToLazy(const xla::Shape& shape);
 

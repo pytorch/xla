@@ -1369,8 +1369,16 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     TF_VLOG(3) << "Wrapping graph with " << program_shape.parameters_size()
                << " parameters. Threadshold = "
                << parameter_wrapping_threadshold;
-    computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-        computation, program_shape.parameters(), buffer_donor_indices));
+
+    // trying to get all op shardings
+    std::vector<xla::HloSharding> param_shardings;
+    if (is_sharded) {
+      param_shardings = XlaHelpers::ExtractInputShardings(computation);
+    }
+
+    computation = ConsumeValue(
+        XlaHelpers::WrapXlaComputation(computation, program_shape.parameters(),
+                                       param_shardings, buffer_donor_indices));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
   xla::Shape shape = MakeShapeWithDeviceLayout(
