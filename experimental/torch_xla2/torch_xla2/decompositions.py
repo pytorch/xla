@@ -1,6 +1,6 @@
 """This file contains some decompositons that are not available in torch stable.
 
-Most likely from Content of 
+Most likely from Content of
 https://github.com/pytorch/pytorch/blob/main/torch/_decomp/decompositions.py
 at main branch HEAD that we find useful here.
 
@@ -29,7 +29,7 @@ aten = torch._ops.ops.aten
 def _try_register(op, impl):
     try:
         register_decomposition(op)(impl)
-    except: 
+    except:
         pass
 
 @out_wrapper()
@@ -122,7 +122,3 @@ EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten.bernoulli,
     torch.ops.aten.rand_like,
 ])
-
-
-
-
