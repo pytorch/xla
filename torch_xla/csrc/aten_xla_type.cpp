@@ -1497,9 +1497,11 @@ at::Tensor XLANativeFunctions::_embedding_bag_backward(
     const std::optional<at::Tensor>& per_sample_weights_opt,
     int64_t padding_idx) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  TORCH_WARN(
-      "XLA does not support EmbeddingBag sparse backward function. "
-      "Falling back to the dense function.");
+  if (sparse) {
+    TORCH_WARN(
+        "XLA does not support EmbeddingBag sparse backward function. "
+        "Falling back to the dense function.");
+  }
   return at::native::call_fallback_fn<&xla_cpu_fallback,
                                       ATEN_OP(_embedding_bag_backward)>::
       call(grad, indices_, offsets_, offset2bag, bag_size_, max_indices_,
