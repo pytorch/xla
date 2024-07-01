@@ -1674,6 +1674,12 @@ def _aten_fmod(input, other):
   return input - other * _aten_div(input, other, "trunc")
 
 
+# aten.frexp
+@op(torch.ops.aten.frexp)
+def _aten_frexp(input, other):
+  return jnp.frexp(input, other)
+
+
 # aten.gather
 @op(torch.ops.aten.gather)
 def _aten_gather(input, dim, index):
