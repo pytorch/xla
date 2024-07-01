@@ -995,8 +995,9 @@ class PyLoweringContext {
       // default value true
       bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
       if (should_wrap_parameter) {
+        // For now we assume that we for i loop input is not sharded.
         computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-            computation, program_shape.parameters(), buffer_donor_indices));
+            computation, program_shape.parameters(), {}, buffer_donor_indices));
       }
     }
   }
