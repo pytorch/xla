@@ -380,7 +380,7 @@ XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
 
 XLATensorPtr div(
     const XLATensorPtr& input, const XLATensorPtr& other,
-    const std::optional<c10::string_view>& rounding_mode = std::nullopt,
+    const std::optional<std::string_view>& rounding_mode = std::nullopt,
     std::optional<at::ScalarType> logical_element_type = std::nullopt);
 XLATensorPtr div(const XLATensorPtr& input, const at::Scalar& other);
 
@@ -462,10 +462,10 @@ XLATensorPtr ge(const XLATensorPtr& input, const at::Scalar& other);
 XLATensorPtr ge(const XLATensorPtr& input, const XLATensorPtr& other);
 
 XLATensorPtr gelu(const XLATensorPtr& input,
-                  const c10::string_view approximate);
+                  const std::string_view approximate);
 
 XLATensorPtr gelu_backward(const XLATensorPtr& grad, const XLATensorPtr& input,
-                           const c10::string_view approximate);
+                           const std::string_view approximate);
 
 XLATensorPtr gt(const XLATensorPtr& input, const at::Scalar& other);
 
@@ -845,7 +845,7 @@ XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
 
 XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
                             const XLATensorPtr& index, const XLATensorPtr& src,
-                            c10::string_view reduce, bool include_self);
+                            std::string_view reduce, bool include_self);
 
 XLATensorPtr select(const XLATensorPtr& input, int64_t dim, int64_t index);
 
