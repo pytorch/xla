@@ -158,7 +158,7 @@ class OpConfig {
         inputs.begin(), inputs.end(), [](const at::Tensor& tensor) {
           return bridge::TryGetXlaTensor(tensor);
         });
-    XLA_CHECK(it != inputs_.end());
+    XLA_CHECK(it != inputs.end());
     // Transform the inputs into a list of XLATensorPtr.
     // For that, either get their corresponding XLATensorPtr, or use the found
     // XLA tensor's BackendDevice for creating a new one.
