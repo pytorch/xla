@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
 
 #include "absl/log/initialize.h"
+#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/profiler.h"
@@ -138,7 +139,7 @@ InitializePjRt(const std::string& device_type) {
         env::kEnvTpuLibraryPath,
         sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
-    xla::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
+    absl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
     XLA_CHECK_OK(tpu_status);
     client = std::move(xla::GetCApiClient("TPU").value());
     const PJRT_Api* c_api =

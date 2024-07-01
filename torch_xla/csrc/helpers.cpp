@@ -6,6 +6,7 @@
 #include <iterator>
 #include <limits>
 
+#include "absl/status/status.h"
 #include "absl/strings/str_join.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/dtype.h"
@@ -971,7 +972,7 @@ xla::XlaOp XlaHelpers::PromotedLogicalUnaryOp(
   return unary_op(op);
 }
 
-xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
+absl::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
     const xla::XlaComputation& computation,
     const std::vector<xla::Shape>& parameter_shapes,
     const std::vector<size_t>& buffer_donor_indices) {

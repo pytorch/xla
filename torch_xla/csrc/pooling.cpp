@@ -3,6 +3,7 @@
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
 
+#include "absl/status/status.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -314,12 +315,12 @@ xla::XlaOp ComputeMaxPoolIndices(
                  xla::ShapeUtil::MakeShape(kIndicesType, {pool_elements})));
 
   auto cond_fn = [&](absl::Span<const xla::XlaOp> init,
-                     xla::XlaBuilder* builder) -> xla::StatusOr<xla::XlaOp> {
+                     xla::XlaBuilder* builder) -> absl::StatusOr<xla::XlaOp> {
     return xla::Lt(init[counter_id], init[limit_id]);
   };
   auto body_fn =
       [&](absl::Span<const xla::XlaOp> init,
-          xla::XlaBuilder* builder) -> xla::StatusOr<std::vector<xla::XlaOp>> {
+          xla::XlaBuilder* builder) -> absl::StatusOr<std::vector<xla::XlaOp>> {
     PoolSliceIndices slice_indices =
         ComputeSliceIndices(init[counter_id], pool_result_shape.dimensions(),
                             pooling_op_attributes.stride);

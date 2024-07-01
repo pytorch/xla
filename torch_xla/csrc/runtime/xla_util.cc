@@ -66,7 +66,7 @@ std::string MaybeDumpHloGraph(
 
 }  // namespace
 
-xla::StatusOr<std::unique_ptr<xla::HloModule>> CreateModuleFromProto(
+absl::StatusOr<std::unique_ptr<xla::HloModule>> CreateModuleFromProto(
     const xla::HloModuleProto& proto, const xla::DebugOptions& debug_options) {
   TF_ASSIGN_OR_RETURN(
       auto hlo_module_config,
@@ -74,7 +74,7 @@ xla::StatusOr<std::unique_ptr<xla::HloModule>> CreateModuleFromProto(
   return xla::HloModule::CreateFromProto(proto, hlo_module_config);
 }
 
-xla::StatusOr<std::string> GetComputationHloText(
+absl::StatusOr<std::string> GetComputationHloText(
     const xla::XlaComputation& computation) {
   TF_ASSIGN_OR_RETURN(auto hlo_module,
                       CreateModuleFromProto(computation.proto()));
@@ -82,7 +82,7 @@ xla::StatusOr<std::string> GetComputationHloText(
 }
 
 void ReportComputationError(
-    const xla::Status& status,
+    const absl::Status& status,
     absl::Span<const xla::XlaComputation* const> computations,
     absl::Span<const xla::Shape* const> output_shapes) {
   std::stringstream ss;
@@ -98,7 +98,7 @@ void ReportComputationError(
 }
 
 void CheckComputationStatus(
-    const xla::Status& status,
+    const absl::Status& status,
     absl::Span<const xla::XlaComputation* const> computations,
     absl::Span<const xla::Shape* const> output_shapes) {
   if (!status.ok()) {
