@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git6873d33 )
+                  master (2.5.0+git020f3f5 )
                 </div>
               
             
@@ -1402,11 +1402,14 @@ If missing the default device seed will be set.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.core.xla_model.get_memory_info">
-<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_memory_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">MemoryInfo</span></span></span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_memory_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_memory_info" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">get_memory_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">device</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">MemoryInfo</span></span></span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_memory_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_memory_info" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieves the device memory usage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>device</strong> – The device whose memory information are requested.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>device</strong> – Optional[torch.device] The device whose memory information are requested.</p></li>
+<li><p><strong>device.</strong> (<em>If not passed will use the default</em>) – </p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>MemoryInfo dict with memory usage for the given device.</p>
