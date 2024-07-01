@@ -1676,8 +1676,8 @@ def _aten_fmod(input, other):
 
 # aten.frexp
 @op(torch.ops.aten.frexp)
-def _aten_frexp(input, other):
-  return jnp.frexp(input, other)
+def _aten_frexp(input):
+  return jnp.frexp(input)
 
 
 # aten.gather
