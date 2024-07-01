@@ -351,6 +351,8 @@ supported:
   - upsample_bilinear2d_backward
   - upsample_nearest2d
   - upsample_nearest2d_backward
+  - upsample_nearest3d
+  - upsample_nearest3d_backward
   - var.correction
   - var_mean.correction
   - view_as_complex_copy
