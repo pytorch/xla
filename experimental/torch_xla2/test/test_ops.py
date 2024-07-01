@@ -74,8 +74,6 @@ skiplist = {
     "fft.rfft",
     "fft.rfftn",
     "floor_divide",
-    "fmin",
-    "frexp",
     "full_like",
     "gather",
     "gcd",
