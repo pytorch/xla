@@ -9,9 +9,11 @@ import torchvision
 import torchvision.transforms as transforms
 import torch_xla2
 import torch_xla2.interop
+import torch_xla2.aqt as aqt
 import jax 
 import optax
 import numpy as np
+import aqt.jax.v2.config as aqt_config
 
 # PyTorch TensorBoard support
 from torch.utils.tensorboard import SummaryWriter
@@ -83,6 +85,10 @@ class GarmentClassifier(nn.Module):
 model = GarmentClassifier()
 loss_fn = torch.nn.CrossEntropyLoss()
 
+from functools import partial
+config = aqt_config.fully_quantized(fwd_bits=8, bwd_bits=8, use_stochastic_rounding=False)
+model = aqt.apply_xla_patch_to_nn_linear(model, partial(aqt.quantize_linear_forward, config))
+
 jax_weights, jax_func = torch_xla2.extract_jax(model)
 jax_func = jax.jit(jax_func, inline=True)
 jax_optimizer = optax.adam(0.01)
@@ -109,6 +115,9 @@ print(dummy_labels)
 loss = loss_fn(dummy_outputs, dummy_labels)
 print('Total loss for this batch: {}'.format(loss.item()))
 
+print('starting profiler')
+jax.profiler.start_server(9012)
+
 
 def train_one_epoch(jax_weights, opt_state, epoch_index, tb_writer):
 
@@ -119,6 +128,11 @@ def train_one_epoch(jax_weights, opt_state, epoch_index, tb_writer):
     # iter(training_loader) so that we can track the batch
     # index and do some intra-epoch reporting
     for i, data in enumerate(training_loader):
+        if i == 1:
+            jax.profiler.start_trace('gs://jonbolin-test/torch_xla2/profiles')
+        if i == 11:
+            print('stopping profile with loss', running_loss)
+            jax.profiler.stop_trace()
         # Every data instance is an input + label pair
         # NEW: Move model to XLA device
         data = pytree.tree_map_only(torch.Tensor, 
