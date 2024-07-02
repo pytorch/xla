@@ -62,7 +62,10 @@ def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
 
 @register_function(torch.empty)
 @op_base.convert_dtype()
-def _empty(*size: int, dtype=None, **kwargs):
+def _empty(*size, dtype=None, **kwargs):
+  if not isinstance(size[0], int):
+    # Size is a tuple.
+    size = size[0]
   return jnp.empty(size, dtype=dtype)
 
 
