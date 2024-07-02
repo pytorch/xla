@@ -30,15 +30,23 @@ class TestTorchFunctions(parameterized.TestCase):
       ('full_2d', lambda: torch.full((2, 3), 3.141592)),
       ('full_2d_dtype', lambda: torch.full(
           (2, 3), 3.141592, dtype=torch.float16)),
+      ('empty', lambda: torch.empty(2, 3), False),
+      ('empty_dtype', lambda: torch.empty(2, 3, dtype=torch.float16), False),
+      ('empty_like', lambda: torch.empty_like(torch.rand(2, 3)), False),
+      ('empty_like_dtype', lambda: torch.empty_like(torch.tensor([[1, 2], [3, 4]]), dtype=torch.float16), False),
   )
-  def test_tensor_constructor(self, func: Callable[[], torch.Tensor]):
+  def test_tensor_constructor(self, func: Callable[[], torch.Tensor], expect_same_value=True):
     expected = func()
 
     with self.env:
       actual = func()
       self.assertIsInstance(actual, torch_xla2.tensor.XLATensor2)
 
-    torch.testing.assert_close(torch_xla2.tensor.j2t(actual._elem), expected)
+    if expect_same_value:
+      torch.testing.assert_close(torch_xla2.tensor.j2t(actual._elem), expected)
+    else:
+      self.assertEqual(expected.shape, actual.shape)
+      self.assertEqual(expected.dtype, actual.dtype)
 
   def test_dont_capture_conversion(self):
     t = torch.tensor([1,2,3])
