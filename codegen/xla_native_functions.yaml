@@ -182,6 +182,7 @@ supported:
   - dot
   - elu_backward
   - embedding_dense_backward
+  - _embedding_bag_backward
   - empty.memory_format
   - empty_strided
   - expand_copy
