@@ -25,17 +25,6 @@ metadata:
   name: headless-svc
 spec:
   selector:
-    headless-svc: 'true'
-  clusterIP: None
----
-# Headless service used for service discovery.
-# See https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
-apiVersion: v1
-kind: Service
-metadata:
-  name: headless-svc
-spec:
-  selector:
     headless-svc: "true"
   clusterIP: None
 ---
