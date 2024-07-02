@@ -55,6 +55,38 @@ bool UseCUDAFallback() {
   return runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false);
 }
 
+struct DeviceInfo {
+  DeviceInfo(c10::Device device, c10::DeviceIndex i = -1)
+      : common_device(device), index(i) {}
+
+  // Synchronizes the CUDA device being used by PyTorch.
+  void synchronize() {
+    TORCH_CHECK(index != -1, "No defined XLA tensors found for CUDA fallback: ",
+                op.operator_name());
+
+    // Save the current PyTorch device, in case it's not the same as the
+    // recorded tensor device.
+    c10::DeviceIndex current = c10::cuda::current_device();
+    c10::cuda::set_device(index);
+    c10::cuda::device_synchronize();
+    c10::cuda::set_device(current);
+  }
+
+  // Common device for all XLA tensors.
+  //
+  // CUDA OpenXLA fallback is supported only when all XLA tensors live in
+  // the same XLA device. This field should be updated and checked every
+  // time we convert an XLA tensor argument into a CUDA tensor.
+  c10::Device common_device;
+
+  // CUDA device index where the tensors live in.
+  //
+  // This is used for synchronizing the device where the fallback operation
+  // was called. This should ensure completion of the CUDA computation, in
+  // order to be used by another XLA computation.
+  c10::DeviceIndex index;
+};
+
 // Change: use of std::any_of instead of iterating with a for-loop.
 static bool validate_tensor_list(const c10::List<at::Tensor>& tensorlist) {
   return std::any_of(tensorlist.begin(), tensorlist.end(),
@@ -76,13 +108,35 @@ static bool is_valid_xla_tensor(const at::Tensor& tensor) {
   return tensor.defined() && tensor.is_xla();
 }
 
+static at::Tensor to_cuda_tensor(const at::Tensor& tensor,
+                                 c10::optional<DeviceInfo>& info) {
+  // Skip undefined or non-XLA tensors.
+  if (!is_valid_xla_tensor(tensor)) {
+    return tensor;
+  }
+
+  // Grab the DLManagedTensor.
+  DLManagedTensor* managed = torch_xla::toDLPack(tensor);
+  c10::DeviceIndex index = managed->dl_tensor.device.device_id;
+
+  if (info.has_value()) {
+    TORCH_CHECK(info->common_device == tensor.device() && info->index == index,
+                "fallback supports only single XLA device.");
+  } else {
+    info = c10::make_optional(DeviceInfo(tensor.device(), index));
+  }
+
+  // Create the CUDA tensor.
+  return at::fromDLPack(managed, [=](void*) { managed->deleter(managed); });
+}
+
 // Former 'to_cpu'.
 // In order to move tensors from XLA to CUDA, we make use of the DLPack API.
 //
 //   1. Synchronize the XLA tensors, so that we can access their data pointer
 //   2. Use DLPack in order to create a CUDA tensor
 static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
-                                       c10::DeviceIndex* common_device) {
+                                       c10::optional<DeviceInfo>& info) {
   // Synchronize tensors, so that we are able to grab their data pointer.
   std::vector<XLATensorPtr> xla_tensors;
   for (auto& tensor : tensors) {
@@ -96,29 +150,9 @@ static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
 
   // Use DLPack for sharing the XLA storage with a newly created CUDA tensor.
   std::vector<at::Tensor> cuda_tensors(tensors.size());
-  std::transform(tensors.begin(), tensors.end(), cuda_tensors.begin(),
-                 [=](const at::Tensor& tensor) {
-                   // Skip undefined or non-XLA tensors.
-                   if (!is_valid_xla_tensor(tensor)) {
-                     return tensor;
-                   }
-
-                   // Grab the DLManagedTensor.
-                   DLManagedTensor* managed = torch_xla::toDLPack(tensor);
-                   // Remember the device index, so that we can synchronize it
-                   // later. Also ensure that there's only one.
-                   c10::DeviceIndex device =
-                       managed->dl_tensor.device.device_id;
-                   if (*common_device == -1) {
-                     *common_device = device;
-                   } else {
-                     TORCH_CHECK(*common_device == device,
-                                 "fallback using Multi-GPUs not supported");
-                   }
-                   // Create the CUDA tensor.
-                   return at::fromDLPack(
-                       managed, [=](void*) { managed->deleter(managed); });
-                 });
+  std::transform(
+      tensors.begin(), tensors.end(), cuda_tensors.begin(),
+      [=](const at::Tensor& tensor) { return to_cuda_tensor(tensor, info); });
   return cuda_tensors;
 }
 
@@ -126,16 +160,6 @@ static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
 // Assumes that we have already synchronized CUDA.
 static at::Tensor to_xla(const at::Tensor& tensor) {
   return torch_xla::fromDLPack(at::toDLPack(tensor));
-}
-
-// Synchronizes the CUDA device being used by PyTorch.
-static void torch_cuda_synchronize(c10::DeviceIndex common_device) {
-  // Save the current PyTorch device, in case it's not the same as the
-  // recorded tensor device.
-  c10::DeviceIndex current = c10::cuda::current_device();
-  c10::cuda::set_device(common_device);
-  c10::cuda::device_synchronize();
-  c10::cuda::set_device(current);
 }
 
 // Former 'cpu_fallback'.
@@ -167,7 +191,7 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
   // device.
   //
   // This variable is updated over the course of 'to_cuda' calls.
-  c10::DeviceIndex common_device = -1;
+  c10::optional<DeviceInfo> info;
 
   // Initialize CUDA device.
   torch::utils::device_lazy_init(at::kCUDA);
@@ -186,8 +210,8 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
       // we need better perf for XLA's CUDA fallbacks.
       tensorlist_args.push_back(ivalue.toTensorList());
       tensorlist_args_indices.push_back(idx);
-      auto cuda_ivalue = c10::IValue(c10::List<at::Tensor>(
-          to_cuda(ivalue.toTensorList().vec(), &common_device)));
+      auto cuda_ivalue = c10::IValue(
+          c10::List<at::Tensor>(to_cuda(ivalue.toTensorList().vec(), info)));
       tensorlist_cuda_args.push_back(cuda_ivalue);
       (*stack)[arguments_begin + idx] = std::move(cuda_ivalue);
       tensorlist_args.push_back(ivalue.toTensorList());
@@ -200,17 +224,26 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
         need_convert_tensors.push_back(opt_tensors[i].value());
         need_convert_tensors_index.push_back(i);
       }
-      auto cuda_tensors = to_cuda(need_convert_tensors, &common_device);
+      auto cuda_tensors = to_cuda(need_convert_tensors, info);
       for (const auto i : c10::irange(need_convert_tensors_index.size())) {
         auto idx = need_convert_tensors_index[i];
         opt_tensors[idx] = cuda_tensors[i];
       }
       (*stack)[arguments_begin + idx] = c10::IValue(opt_tensors);
+    } else if (ivalue.isDevice()) {
+      c10::Device device = ivalue.toDevice();
+      if (info.has_value()) {
+        TORCH_CHECK(info->common_device == device, "XLA tensors live in ",
+                    info->common_device, " but found target device: ", device);
+      } else {
+        info->common_device = device;
+      }
+      (*stack)[arguments_begin + idx] = c10::IValue(c10::Device(kCUDA));
     }
   }
   // XLA requires all of the tensor arguments to be gathered up and converted to
   // CUDA together.
-  auto cuda_tensors = to_cuda(tensor_args, &common_device);
+  auto cuda_tensors = to_cuda(tensor_args, info);
 
   for (const auto i : c10::irange(tensor_args_indices.size())) {
     auto idx = tensor_args_indices[i];
@@ -221,10 +254,8 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
   op.redispatchBoxed(c10::DispatchKeySet(c10::DispatchKey::CUDA), stack);
 
   // Synchronize the device before actually converting back to XLA.
-  TORCH_CHECK(
-      common_device != -1,
-      "No defined tensors found for CUDA fallback: ", op.operator_name());
-  torch_cuda_synchronize(common_device);
+  TORCH_CHECK(info.has_value());
+  info->synchronize();
 
   // Step 3: We need to take special care to handle mutable aliases properly:
   // If any input tensors are mutable aliases, we need to
