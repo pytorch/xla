@@ -184,9 +184,8 @@ class QuantizedTest(unittest.TestCase):
     batch_size = 3
     for n_bit in [4]:
       with self.subTest(n_bit=n_bit):
-        weight = torch.randint(
-            -8, 7,
-            (input_features // block_size, block_size, out_features)).to(torch.int8)
+        weight = torch.randint(-8, 7, (input_features // block_size, block_size,
+                                       out_features)).to(torch.int8)
         weight_scaler = torch.ones(input_features // block_size, out_features)
         x = torch.rand(batch_size, input_features)
 
@@ -198,7 +197,7 @@ class QuantizedTest(unittest.TestCase):
         torch_out = torch.ops.xla.quantized_matmul(
             x, weight, weight_scaler, block_size=block_size)
         self.assertGreater(
-              self._calc_cosine_dist(fake_quant_out, torch_out), 0.99999)
+            self._calc_cosine_dist(fake_quant_out, torch_out), 0.99999)
         # XLA Output.
         if not (n_bit == 4 and xr.device_type() != 'TPU'):
           x = x.to(device)
