@@ -1,5 +1,9 @@
 import sys
+import os
 import functools
+
+# this has to be set before the import of torch_XLA
+os.environ['XLA_PARAMETER_WRAPPING_THREADSHOLD'] = '1'
 
 import unittest
 from unittest.mock import patch
@@ -48,7 +52,20 @@ class ParameterWrappingTest(test_xla_sharding_base.XlaShardingTest):
     output = linears(input)
     torch_xla.sync()
     xm.wait_device_ops()
+    # make sure output shape is correct and program does not crash
     self.assertEqual(output.shape, torch.Size([100, 40]))
+
+  def basic_spmd_test(self):
+    device = torch_xla.device()
+    one_d_mesh = xs.get_1d_mesh("data")
+    input = torch.randn(8, 128)
+    input2 = torch.randn(8, 128)
+    xla_input = input.to(device)
+    xla_input2 = input2.to(device)
+    xs.mark_sharding(xla_input, xla_input, ('data', None))
+    expected = torch.cos(input) + torch.sin(input2)
+    res = torch.cos(xla_input) + torch.sin(xla_input2)
+    self.assertTrue(torch.allclose(expected, res.cpu()))
 
 
 if __name__ == '__main__':
