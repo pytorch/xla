@@ -117,6 +117,11 @@ function run_pt_xla_debug {
   PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
+function run_parameter_warpping {
+  echo "Running in parameter wrapping mode: $@"
+  XLA_PARAMETER_WRAPPING_THREADSHOLD=1 run_test "$@"
+}
+
 function run_pt_xla_debug_level1 {
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG_LEVEL=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
@@ -224,6 +229,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_dtensor_integration.py"
   run_test "$CDIR/spmd/test_dtensor_integration2.py"
   run_test "$CDIR/spmd/test_xla_auto_sharding.py"
+  run_parameter_warpping "$CDIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
