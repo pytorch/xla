@@ -10,10 +10,9 @@ This name is defined by our mirror implementation of `spawn`.
 
 import datetime
 import os
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import jax
-import jax.numpy as jnp
 import torch
 import torch.distributed as dist
 import torch.distributed._functional_collectives
@@ -43,66 +42,58 @@ class ProcessGroupJax(ProcessGroup):
     assert self._group_name
     return self._group_name
 
-  # def allgather(
-  #   self,
-  #   output_tensors: List[List[torch.Tensor]],
-  #   input_tensors: List[torch.Tensor],
-  #   opts=...,
-  # ) -> dist.Work:
-  #   assert len(input_tensors) == 1, "Only one input tensor supported"
-  #   input_tensor = input_tensors[0]
-  #   assert len(output_tensors) == 1, "Only one input tensor supported"
-  #   output_tensors = output_tensors[0]
+  @staticmethod
+  def _work(
+    tensors: Union[torch.Tensor, List[torch.Tensor], List[List[torch.Tensor]]],
+  ) -> dist.Work:
+    fut = torch.futures.Future()
+    fut.set_result(tensors)
+    return torch._C._distributed_c10d._create_work_from_future(fut)
 
-  #   assert isinstance(input_tensor, torch_xla2.tensor.XLATensor2)
-  #   output = jax.lax.all_gather(input_tensor._elem, axis_name="torch_dist")
-  #   output_size = jax.numpy.shape(output)[0]
-  #   # output_arrays = jnp.unstack(output)
-
-  #   # assert len(output_tensors) == len(output_arrays)
-  #   assert len(output_tensors) == output_size
-  #   for i, t in enumerate(output_tensors):
-  #     assert isinstance(t, torch_xla2.tensor.XLATensor2)
-  #     t._elem = output[i]
-
-  #   fut = torch.futures.Future()
-  #   fut.set_result(output_tensors)
-  #   return torch._C._distributed_c10d._create_work_from_future(fut)
+  def _allgather_base(
+    self,
+    output: torch.Tensor,
+    input: torch.Tensor,
+    opts=...,
+  ) -> dist.Work:
+    assert isinstance(input, torch_xla2.tensor.XLATensor2)
+    assert isinstance(output, torch_xla2.tensor.XLATensor2)
+    torch.distributed._functional_collectives.all_gather_tensor_inplace(
+      output, input, group=self
+    )
+    return self._work(output)
 
   def allreduce(
     self,
     tensors: List[torch.Tensor],
     opts: dist.AllreduceOptions = ...,
   ) -> dist.Work:
-    for t in tensors:
-      assert isinstance(t, torch_xla2.tensor.XLATensor2)
-      torch.distributed._functional_collectives.all_reduce_inplace(
-        t,
-        torch.distributed._functional_collectives.REDUCE_OP_TO_STR[
-            opts.reduceOp.op],
-        self)
+    assert len(tensors) == 1
+    assert isinstance(tensors[0], torch_xla2.tensor.XLATensor2)
+    torch.distributed._functional_collectives.all_reduce_inplace(
+      tensors[0],
+      torch.distributed._functional_collectives.REDUCE_OP_TO_STR[
+        opts.reduceOp.op
+      ],
+      self,
+    )
 
-    fut = torch.futures.Future()
-    fut.set_result(tensors)
-    return torch._C._distributed_c10d._create_work_from_future(fut)
+    return self._work(tensors)
 
-  # def broadcast(
-  #   self,
-  #   tensors: List[torch.Tensor],
-  #   opts: dist.BroadcastOptions = ...,
-  # ) -> dist.Work:
-  #   for t in tensors:
-  #     assert isinstance(t, torch_xla2.tensor.XLATensor2)
-  #     masked = jnp.where(
-  #       jax.lax.axis_index("torch_dist") == opts.rootRank,
-  #       t._elem,
-  #       jnp.zeros_like(t._elem),
-  #     )
-  #     t._elem = jax.lax.psum(masked, "torch_dist")
+  def broadcast(
+    self,
+    tensors: List[torch.Tensor],
+    opts: dist.BroadcastOptions = ...,
+  ) -> dist.Work:
+    assert len(tensors) == 1
+    assert isinstance(tensors[0], torch_xla2.tensor.XLATensor2)
+    tensors[0].copy_(
+      torch.distributed._functional_collectives.broadcast(
+        tensors[0], opts.rootRank, group=self
+      )
+    )
 
-  #   fut = torch.futures.Future()
-  #   fut.set_result(tensors)
-  #   return torch._C._distributed_c10d._create_work_from_future(fut)
+    return self._work(tensors)
 
 
 dist.Backend.register_backend("jax", ProcessGroupJax)

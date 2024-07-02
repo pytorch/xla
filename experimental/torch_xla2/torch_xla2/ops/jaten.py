@@ -105,13 +105,6 @@ def _wait_tensor(tensor):
   return tensor
 
 
-# TODO(wcromar): dispatch legacy collectives instead of using PG?
-# @functools.partial(ops_registry.register_torch_dispatch_op, torch.ops.c10d.allreduce_, is_jax_function=False)
-# def _legacy_all_reduce_inplace(tensors: List[torch.Tensor], group: dist.ProcessGroup, reduce_op: dist.ReduceOp, sparse_indices, timeout):
-#   print(reduce_op, dir(reduce_op), reduce_op._properties(), dist.ReduceOp(reduce_op))
-#   for t in tensors:
-#     t.copy_(_all_reduce(t, reduce_op.name, group.group_name))
-
 @op(
   torch.ops.aten.view_copy,
   torch.ops.aten.view,
@@ -348,19 +341,19 @@ def _aten_embedding(a, w, padding_idx=-1):
 
 
 #- func: _embedding_bag_forward_only(
-# Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False, 
+# Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False,
 # int mode=0, bool sparse=False, Tensor? per_sample_weights=None, bool include_last_offset=False, int padding_idx=-1) -> (Tensor, Tensor, Tensor, Tensor)
 @op(torch.ops.aten._embedding_bag)
 @op(torch.ops.aten._embedding_bag_forward_only)
 def _aten__embedding_bag(
-  weight, 
-  indices, 
-  offsets=None, 
-  scale_grad_by_freq=False, 
-  mode=0, 
-  sparse=False, 
-  per_sample_weights=None, 
-  include_last_offset=False, 
+  weight,
+  indices,
+  offsets=None,
+  scale_grad_by_freq=False,
+  mode=0,
+  sparse=False,
+  per_sample_weights=None,
+  include_last_offset=False,
   padding_idx=-1):
     """Jax implementation of the PyTorch _embedding_bag function.
 
@@ -408,7 +401,7 @@ def _aten__embedding_bag(
       output = segsum(embedded, offsets, reducer)
     else:
       output = reducer(embedded, axis=1)
-      
+
     # TODO: return output, offset2bag, bag_size, max_indices
     return output, None, None, None
 
