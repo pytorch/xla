@@ -28,10 +28,21 @@ spec:
     headless-svc: 'true'
   clusterIP: None
 ---
+# Headless service used for service discovery.
+# See https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+apiVersion: v1
+kind: Service
+metadata:
+  name: headless-svc
+spec:
+  selector:
+    headless-svc: "true"
+  clusterIP: None
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  generateName: torch-xla-resnet50-v100-x2x2-
+  name: torch-xla-resnet50-v100-x2x2
 spec:
   # Don't retry upon failure
   backoffLimit: 0
@@ -46,6 +57,7 @@ spec:
       labels:
         headless-svc: "true"
     spec:
+      subdomain: headless-svc
       containers:
       - name: main
         image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.3.0_3.10_cuda_12.1
@@ -61,24 +73,26 @@ spec:
           mkdir -p pytorch/xla
           git clone -b r2.3 https://github.com/pytorch/xla.git pytorch/xla
 
-
-          torchrun \
-            # Set this to the number of hosts
-            --nnodes=2 \
-            # Index provided by Job
-            --node_rank=$(JOB_COMPLETION_INDEX) \
-            # Set this to the number of GPUs per host
-            --nproc_per_node=2 \
-            # Coordinator always runs on 0th instance of job
-            --rdzv_endpoint=$(JOB_NAME)-0.headless-svc:12355 \
-            # Replace this with your script and flags
-            pytorch/xla/test/test_train_mp_imagenet.py \
-            --model=resnet50 \
-            --log_steps=200 \
-            --fake_data \
-            --pjrt_distributed \
-            --nometrics_debug \
-            --num_epochs=1
+          # Run `args` here
+          "${@:0}"
+        args:
+        - torchrun
+        # Set this to the number of hosts
+        - --nnodes=2
+        # Index provided by Job
+        - --node_rank=$(JOB_COMPLETION_INDEX)
+        # Create one process per local GPU
+        - --nproc_per_node=2
+        # Coordinator always runs on 0th instance of job
+        - --rdzv_endpoint=$(JOB_NAME)-0.headless-svc:12355
+        # Replace this with your script and flags
+        - pytorch/xla/test/test_train_mp_imagenet.py
+        - --model=resnet50
+        - --log_steps=200
+        - --fake_data
+        - --pjrt_distributed
+        - --nometrics_debug
+        - --num_epochs=1
         env:
         - name: JOB_NAME
           valueFrom:
@@ -89,11 +103,13 @@ spec:
           value: CUDA
         resources:
           limits:
+          # Change this to the number of GPUs per host
             nvidia.com/gpu: "2"
         # PyTorch requires a large `shm`
         volumeMounts:
         - mountPath: /dev/shm
           name: dshm
+      restartPolicy: Never
       # Change the node selector if you're using a different GPU type
       nodeSelector:
         cloud.google.com/gke-accelerator: nvidia-tesla-v100
