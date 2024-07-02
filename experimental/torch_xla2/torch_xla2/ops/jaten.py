@@ -1,11 +1,10 @@
 """Torch ops implemented using jax."""
 
-import functools
 import sys
+from typing import Optional, Sequence
 
 import jax
 from jax import numpy as jnp
-from jax.experimental.sparse import BCOO
 
 import numpy as np
 import torch
@@ -298,19 +297,19 @@ def _aten_embedding(a, w, padding_idx=-1):
 
 
 #- func: _embedding_bag_forward_only(
-# Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False, 
+# Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False,
 # int mode=0, bool sparse=False, Tensor? per_sample_weights=None, bool include_last_offset=False, int padding_idx=-1) -> (Tensor, Tensor, Tensor, Tensor)
 @op(torch.ops.aten._embedding_bag)
 @op(torch.ops.aten._embedding_bag_forward_only)
 def _aten__embedding_bag(
-  weight, 
-  indices, 
-  offsets=None, 
-  scale_grad_by_freq=False, 
-  mode=0, 
-  sparse=False, 
-  per_sample_weights=None, 
-  include_last_offset=False, 
+  weight,
+  indices,
+  offsets=None,
+  scale_grad_by_freq=False,
+  mode=0,
+  sparse=False,
+  per_sample_weights=None,
+  include_last_offset=False,
   padding_idx=-1):
     """Jax implementation of the PyTorch _embedding_bag function.
 
@@ -358,7 +357,7 @@ def _aten__embedding_bag(
       output = segsum(embedded, offsets, reducer)
     else:
       output = reducer(embedded, axis=1)
-      
+
     # TODO: return output, offset2bag, bag_size, max_indices
     return output, None, None, None
 
@@ -408,8 +407,33 @@ def _aten__to_copy(self, **kwargs):
 
 @op(torch.ops.aten.empty)
 @op_base.convert_dtype()
-def _aten_empty(sizes, *, dtype=None, **kwargs):
-  return jnp.empty(sizes, dtype=dtype)
+def _aten_empty(size: Sequence[int], *, dtype=None, **kwargs):
+  return jnp.empty(size, dtype=dtype)
+
+
+@op(torch.ops.aten.ones)
+@op_base.convert_dtype()
+def _ones(size: Sequence[int], dtype=None, **kwargs):
+  return jnp.ones(size, dtype)
+
+
+@op(torch.ops.aten.zeros)
+@op_base.convert_dtype()
+def _zeros(size: Sequence[int], dtype=None, **kwargs):
+  return jnp.zeros(size, dtype)
+
+
+@op(torch.ops.aten.eye)
+@op_base.convert_dtype()
+def _eye(n: int, m: Optional[int] = None, *, dtype=None, **kwargs):
+  return jnp.eye(n, m, dtype=dtype)
+
+
+@op(torch.full)
+@op_base.convert_dtype()
+def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
+  # TODO: handle torch.Size
+  return jnp.full(size, fill_value, dtype=dtype)
 
 
 @op(torch.ops.aten.index_put_)

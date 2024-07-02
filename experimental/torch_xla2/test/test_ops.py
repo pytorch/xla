@@ -373,7 +373,6 @@ skiplist = {
     "erf",
     "exp",
     "expm1",
-    "eye",
     "fft.fftshift",
     "fft.ifftshift",
     "fill",
@@ -383,7 +382,6 @@ skiplist = {
     "flipud",
     "fmod",
     "frac",
-    "full",
     "gradient",
     "hsplit",
     "hstack",
@@ -437,7 +435,6 @@ skiplist = {
     "nn.functional.triplet_margin_loss",
     "nn.functional.triplet_margin_with_distance_loss",
     "nn.functional.upsample_bilinear",
-    "ones",
     "outer",
     "permute",
     "positive",
@@ -496,7 +493,6 @@ skiplist = {
     "view",
     "vsplit",
     "vstack",
-    "zeros",
 }
 
 # These inputs are themselves views
