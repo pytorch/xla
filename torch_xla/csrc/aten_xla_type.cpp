@@ -158,7 +158,7 @@ class OpConfig {
         inputs.begin(), inputs.end(), [](const at::Tensor& tensor) {
           return bridge::TryGetXlaTensor(tensor);
         });
-    XLA_CHECK(it != inputs_.end());
+    XLA_CHECK(it != inputs.end());
     // Transform the inputs into a list of XLATensorPtr.
     // For that, either get their corresponding XLATensorPtr, or use the found
     // XLA tensor's BackendDevice for creating a new one.
@@ -2221,11 +2221,14 @@ at::Tensor XLANativeFunctions::mse_loss_backward(const at::Tensor& grad_output,
 at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
                                    const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return DoBinaryOp(self, other,
-                    [&](const XLATensorPtr& xself, const XLATensorPtr& xother,
-                        at::ScalarType dtype) {
-                      return tensor_methods::mul(xself, xother, dtype);
-                    });
+  using FnType = XLATensorPtr(const XLATensorPtr&, const XLATensorPtr&,
+                              c10::optional<at::ScalarType>);
+  return OpConfig::From(static_cast<FnType*>(tensor_methods::mul))
+      .add_input(self)
+      .add_input(other)
+      .cast_inputs_to_common_dtype()
+      .use_opmathtype_for_compute()
+      .run();
 }
 
 at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
