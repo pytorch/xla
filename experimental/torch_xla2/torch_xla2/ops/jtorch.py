@@ -60,21 +60,6 @@ def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
   return jnp.full(size, fill_value, dtype=dtype)
 
 
-@register_function(torch.empty)
-@op_base.convert_dtype()
-def _empty(*size, dtype=None, **kwargs):
-  if not isinstance(size[0], int):
-    # Size is a tuple.
-    size = size[0]
-  return jnp.empty(size, dtype=dtype)
-
-
-@register_function(torch.empty_like)
-@op_base.convert_dtype()
-def _empty_like(input: torch.Tensor, *, dtype=None, **kwargs):
-  return jnp.empty(tuple(input.shape), dtype=dtype)
-
-
 @register_function(torch.allclose)
 def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
   return jnp.allclose(input, other, rtol, atol, equal_nan)
