@@ -261,7 +261,7 @@ class Environment(contextlib.ContextDecorator):
         self.config = configuration or config.Configuration()
 
     def load_ops(self):
-      from torch_xla2.ops import jaten, jtorch, ops_registry
+      from torch_xla2.ops import jaten, jtorch, jc10d, ops_registry
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
 
