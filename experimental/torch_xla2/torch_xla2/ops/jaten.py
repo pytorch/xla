@@ -127,12 +127,6 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
-  # TODO(wcromar): does this make more sense in the dispatcher?
-  if isinstance(x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
-    x = x.wait()
-  if isinstance(y, torch.distributed._functional_collectives.AsyncCollectiveTensor):
-    y = y.wait()
-
   x._elem = y._elem
   return x
 

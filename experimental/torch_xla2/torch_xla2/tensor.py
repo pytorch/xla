@@ -310,6 +310,10 @@ class Environment(contextlib.ContextDecorator):
             f'Operator with name {_name_of_func(func)} has no lowering')
 
         old_args, old_kwargs = args, kwargs
+        args, kwargs = torch_pytree.tree_map_only(
+            torch.distributed._functional_collectives.AsyncCollectiveTensor,
+            torch.distributed._functional_collectives.wait_tensor,
+            (args, kwargs))
         try:
           if op.is_jax_function:
             args, kwargs = self.t2j_iso((args, kwargs))
