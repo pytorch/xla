@@ -344,7 +344,8 @@ class TorchBenchModel(BenchmarkModel):
     #   1. Models don't expect 'tpu' as their device.
     #   2. 'moco' initializes a ProcessGroup, i.e. the backend depends on
     #      the given device
-    return self.is_accelerator_tpu() or self.model_name == "moco"
+    return self.is_accelerator_tpu() or (self.model_name == "moco" and
+                                         self.benchmark_experiment.xla)
 
   def is_inference(self):
     return self.benchmark_experiment.test == "eval"
