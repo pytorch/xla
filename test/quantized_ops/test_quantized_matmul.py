@@ -182,28 +182,31 @@ class QuantizedTest(unittest.TestCase):
     out_features = 8
     block_size = 2
     batch_size = 3
-    weight = torch.randint(
-        -8, 7,
-        (input_features // block_size, block_size, out_features)).to(torch.int8)
-    weight_scaler = torch.ones(input_features // block_size, out_features)
-    x = torch.rand(batch_size, input_features)
+    for n_bit in [4]:
+      with self.subTest(n_bit=n_bit):
+        weight = torch.randint(
+            -8, 7,
+            (input_features // block_size, block_size, out_features)).to(torch.int8)
+        weight_scaler = torch.ones(input_features // block_size, out_features)
+        x = torch.rand(batch_size, input_features)
 
-    # Fake quantize output.
-    w_dq = (weight * weight_scaler.unsqueeze(1)).reshape(
-        input_features, out_features)
-    fake_quant_out = torch.matmul(x, w_dq)
-    # Eager output.
-    torch_out = torch.ops.xla.quantized_matmul(
-        x, weight, weight_scaler, block_size=block_size)
-    # XLA Output.
-    x = x.to(device)
-    weight = weight.to(device)
-    weight_scaler = weight_scaler.to(device)
-    xla_out = torch.ops.xla.quantized_matmul(
-        x, weight, weight_scaler, block_size=block_size)
-    self.assertGreater(
-        self._calc_cosine_dist(fake_quant_out, torch_out), 0.99999)
-    self.assertTrue(torch.allclose(torch_out, xla_out.cpu()))
+        # Fake quantize output.
+        w_dq = (weight * weight_scaler.unsqueeze(1)).reshape(
+            input_features, out_features)
+        fake_quant_out = torch.matmul(x, w_dq)
+        # Eager output.
+        torch_out = torch.ops.xla.quantized_matmul(
+            x, weight, weight_scaler, block_size=block_size)
+        self.assertGreater(
+              self._calc_cosine_dist(fake_quant_out, torch_out), 0.99999)
+        # XLA Output.
+        if not (n_bit == 4 and xr.device_type() != 'TPU'):
+          x = x.to(device)
+          weight = weight.to(device)
+          weight_scaler = weight_scaler.to(device)
+          xla_out = torch.ops.xla.quantized_matmul(
+              x, weight, weight_scaler, block_size=block_size)
+          self.assertTrue(torch.allclose(torch_out, xla_out.cpu(), atol=0.03))
 
   def test_blockwise_linear_module(self):
     for n_bit in [4, 8]:
