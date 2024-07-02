@@ -9,6 +9,11 @@ import torch.distributed as dist
 import torch_xla2
 import torch_xla2.distributed
 
+# Dummy group name to use with functional collectives. Ignored by
+# implementations.
+# TODO(wcromar): do something useful with group name
+GROUP_NAME = "process_group"
+
 
 @pytest.fixture(scope="module")
 def multi_cpu():
@@ -17,15 +22,24 @@ def multi_cpu():
     jax.device_count() == 4
   ), "Set XLA_FLAGS=--xla_force_host_platform_device_count=4 if on CPU"
 
+  yield jax.device_count()
+
+
+@pytest.fixture()
+def process_group():
   os.environ["MASTER_ADDR"] = "localhost"
   os.environ["MASTER_PORT"] = "12355"
   dist.init_process_group(backend="jax", init_method="jax://")
-
-  yield jax.device_count()
+  # HACK: our default process group has world size 1, regardless of actual
+  # device count. Only put rank 0 so PyTorch doesn't complain about non-existent
+  # ranks. Our lowerings ignore this list, so this ends up being fine.
+  # TODO(wcromar): Figure out if there's a cleaner way
+  group_ranks = [0]
+  yield group_ranks
   dist.destroy_process_group()
 
 
-def test_all_gather_tensor(multi_cpu):
+def test_all_gather_tensor(multi_cpu, process_group):
   device_count = multi_cpu
 
   def f(index: torch_xla2.tensor.XLATensor2):
@@ -40,12 +54,13 @@ def test_all_gather_tensor(multi_cpu):
   np.testing.assert_equal([r.numpy() for r in res], expected_tensors)
 
 
-def test_all_gather_tensor_func(multi_cpu):
+def test_all_gather_tensor_func(multi_cpu, process_group):
   device_count = multi_cpu
+  group_ranks = process_group
 
   def f(index: torch_xla2.tensor.XLATensor2):
     return torch.distributed._functional_collectives.all_gather_tensor(
-      index, 0, [0]
+      index, 0, group_ranks
     )
 
   res = torch_xla2.distributed.spawn(f)
@@ -63,7 +78,7 @@ def test_all_gather_tensor_func(multi_cpu):
     (dist.ReduceOp.MAX, 3),
   ],
 )
-def test_all_reduce(op, expected, multi_cpu):
+def test_all_reduce(op, expected, multi_cpu, process_group):
   device_count = multi_cpu
 
   def f(index):
@@ -90,7 +105,9 @@ def test_all_reduce_func(op, expected, multi_cpu):
 
   def f(index):
     # TODO(wcromar): why do I need PG for this?
-    return torch.distributed._functional_collectives.all_reduce(index, op, [0])
+    return torch.distributed._functional_collectives.all_reduce(
+      index, op, GROUP_NAME
+    )
 
   res = torch_xla2.distributed.spawn(f)
 
@@ -105,7 +122,7 @@ def test_all_reduce_func(op, expected, multi_cpu):
     (2, 2),
   ],
 )
-def test_broadcast(rank, expected, multi_cpu):
+def test_broadcast(rank, expected, multi_cpu, process_group):
   device_count = multi_cpu
 
   def f(index):
@@ -129,7 +146,9 @@ def test_broadcast_func(rank, expected, multi_cpu):
   device_count = multi_cpu
 
   def f(index):
-    return torch.distributed._functional_collectives.broadcast(index, rank, [0])
+    return torch.distributed._functional_collectives.broadcast(
+      index, rank, GROUP_NAME
+    )
 
   res = torch_xla2.distributed.spawn(f)
 

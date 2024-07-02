@@ -223,7 +223,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
       if isinstance(func, torch._ops.OpOverloadPacket):
         with self:
           return func(*args, **kwargs)
-      if func.namespace not in ('aten', 'c10d', '_c10d_functional'):
+      if func.namespace not in ('aten', '_c10d_functional'):
         return func(*args, **kwargs)
       return self.env.dispatch(func, types, args, kwargs)
 
