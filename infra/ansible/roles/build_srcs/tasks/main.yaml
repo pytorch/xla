@@ -14,9 +14,10 @@
         PRNUM="${PIN//[!0-9]/}"
         git fetch origin "pull/$PRNUM/head"
       else
-        git fetch origin {{ torch_pin.stdout }}
+        git fetch --no-recurse-submodules origin {{ torch_pin.stdout }}
       fi
-      git checkout --recurse-submodules FETCH_HEAD
+      git checkout --no-recurse-submodules FETCH_HEAD
+      git submodule update --init --recursive
     chdir: "{{ (src_root, 'pytorch') | path_join }}"
   args:
     executable: /bin/bash
