@@ -101,7 +101,8 @@ def _c10d_broadcast(self, src: int, group_name: str):
 
 
 @op(torch.ops._c10d_functional.wait_tensor)
-def _wait_tensor(tensor):
+def _c10d_wait_tensor(tensor):
+  # Async tensor is aleady `wait`ed by dispatcher
   return tensor
 
 
