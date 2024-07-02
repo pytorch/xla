@@ -412,6 +412,23 @@ def _aten_empty(sizes, *, dtype=None, **kwargs):
   return jnp.empty(sizes, dtype=dtype)
 
 
+@op(torch.ops.aten.empty_permuted)
+@op(torch.ops.aten.empty_permuted.default)
+@op_base.convert_dtype()
+def _aten_empty_permuted(sizes, physical_layout, dtype=None, **kwargs):
+  # Ignore the physical layout,
+  # since JAX and torch tensor doesn't share the same memory. 
+  return jnp.empty(sizes, dtype=dtype)
+
+
+@op(torch.ops.aten.empty_strided)
+@op(torch.ops.aten.empty_strided.default)
+@op_base.convert_dtype()
+def _aten_empty_strided(sizes, stride, dtype=None, **kwargs):
+  # Ignore stride, since JAX and torch tensor doesn't share the same memory. 
+  return jnp.empty(sizes, dtype=dtype)
+
+
 @op(torch.ops.aten.index_put_)
 @op(torch.ops.aten.index_put)
 def _aten_index_put(self, indexes, values, accumulate=False):
@@ -1603,7 +1620,6 @@ def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
   return jnp.diagonal(input, offset, dim1, dim2)
 
 
-# aten.empty_strided
 # aten.eq
 @op(torch.ops.aten.eq)
 def _aten_eq(input1, input2):
