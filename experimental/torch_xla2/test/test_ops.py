@@ -46,9 +46,6 @@ skiplist = {
     "digamma",
     "dist",
     "div",
-    "empty_like",
-    "empty_permuted",
-    "empty_strided",
     "equal",
     "erfc",
     "erfinv",
@@ -511,6 +508,9 @@ variant_test_name_to_skip = {
 random_ops = {
   'randn',
   'empty',
+  'empty_like',
+  'empty_permuted',
+  'empty_strided',
   'bernoulli',
 }
 
