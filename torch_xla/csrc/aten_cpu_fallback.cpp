@@ -61,9 +61,7 @@ struct DeviceInfo {
 
   // Synchronizes the CUDA device being used by PyTorch.
   void synchronize() {
-    TORCH_CHECK(index != -1, "No defined XLA tensors found for CUDA fallback: ",
-                op.operator_name());
-
+    TORCH_CHECK(index != -1, "No defined XLA tensors found for CUDA fallback.");
     // Save the current PyTorch device, in case it's not the same as the
     // recorded tensor device.
     c10::DeviceIndex current = c10::cuda::current_device();
@@ -152,7 +150,7 @@ static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
   std::vector<at::Tensor> cuda_tensors(tensors.size());
   std::transform(
       tensors.begin(), tensors.end(), cuda_tensors.begin(),
-      [=](const at::Tensor& tensor) { return to_cuda_tensor(tensor, info); });
+      [&](const at::Tensor& tensor) { return to_cuda_tensor(tensor, info); });
   return cuda_tensors;
 }
 
@@ -238,7 +236,7 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
       } else {
         info->common_device = device;
       }
-      (*stack)[arguments_begin + idx] = c10::IValue(c10::Device(kCUDA));
+      (*stack)[arguments_begin + idx] = c10::IValue(c10::Device(at::kCUDA));
     }
   }
   // XLA requires all of the tensor arguments to be gathered up and converted to
