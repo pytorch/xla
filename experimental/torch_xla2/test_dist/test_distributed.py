@@ -104,7 +104,6 @@ def test_all_reduce_func(op, expected, multi_cpu):
   device_count = multi_cpu
 
   def f(index):
-    # TODO(wcromar): why do I need PG for this?
     return torch.distributed._functional_collectives.all_reduce(
       index, op, GROUP_NAME
     )

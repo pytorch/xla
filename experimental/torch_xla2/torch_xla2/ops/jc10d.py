@@ -19,7 +19,6 @@ def _c10d_all_gather(input, group_size: int, group_name: str):
   return jax.lax.all_gather(input, "torch_dist")
 
 
-# TODO(wcromar): move c10d ops since they're not actually aten
 @op(torch.ops._c10d_functional.all_reduce)
 def _c10d_all_reduce(self, reduceOp: str, group_name: str):
   match reduceOp:

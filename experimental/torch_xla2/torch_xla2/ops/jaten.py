@@ -412,12 +412,6 @@ def _aten_empty(sizes, *, dtype=None, **kwargs):
   return jnp.empty(sizes, dtype=dtype)
 
 
-@op(torch.ops.aten.empty_like)
-@op_base.convert_dtype()
-def _aten_empty_like(input, *, dtype=None, **kwargs):
-  return jnp.empty(input.size, dtype=dtype)
-
-
 @op(torch.ops.aten.index_put_)
 @op(torch.ops.aten.index_put)
 def _aten_index_put(self, indexes, values, accumulate=False):
@@ -2204,7 +2198,3 @@ def _aten_randint(
 @op(torch.ops.aten.dim, is_jax_function=False)
 def _aten_dim(self):
   return len(self.shape)
-
-@op(torch.ops.aten.equal)
-def _aten_equal(input, other):
-  return jnp.equal(input, other)
