@@ -31,23 +31,10 @@ class M(torch.nn.Module):
     '''
     assert isinstance(self.linear, torch.nn.Linear)
     w_fp = linear.weight.data
+    is_symmetric = quant_method == torch.per_channel_symmetric or quant_method == torch.per_tensor_symmetric
     if block_size == -1:
       min_val, max_val = torch.aminmax(
           w_fp, dim=1)  # min_val, max_val [out_dim]
-      int_min = -2**(n_bits - 1)
-      int_max = 2**(n_bits - 1) - 1
-      scaler, zero_point = determine_qparams(
-          min_val,
-          max_val,
-          int_min,
-          int_max,
-          dtype=torch.int8,
-          eps=torch.Tensor([1e-5]),
-          has_customized_qrange=False,
-          qscheme=quant_method)
-      w_int = torch.ops.quantized_decomposed.quantize_per_channel(
-          w_fp, scaler, zero_point, 0, int_min, int_max, torch.int8)
-      return w_int, scaler.to(w_fp.dtype), zero_point
     else:
       assert w_fp.shape[1] % block_size == 0
       output_dim = w_fp.shape[0]
@@ -55,37 +42,55 @@ class M(torch.nn.Module):
       w_fp = w_fp.reshape(output_dim * input_dim // block_size, block_size)
       min_val, max_val = torch.aminmax(
           w_fp, dim=1)  # min_val, max_val [out_dim]
-      int_min = -2**(n_bits - 1)
-      int_max = 2**(n_bits - 1) - 1
-      scaler, zero_point = determine_qparams(
-          min_val,
-          max_val,
-          int_min,
-          int_max,
-          dtype=torch.int8,
-          eps=torch.Tensor([1e-5]),
-          has_customized_qrange=False,
-          qscheme=quant_method)
-      w_int = torch.ops.quantized_decomposed.quantize_per_channel(
-          w_fp, scaler, zero_point, 0, int_min, int_max, torch.int8)
+    int_min = -2**(n_bits - 1)
+    int_max = 2**(n_bits - 1) - 1
+    scaler, zero_point = determine_qparams(
+        min_val,
+        max_val,
+        int_min,
+        int_max,
+        dtype=torch.int8,
+        eps=torch.Tensor([1e-5]),
+        has_customized_qrange=False,
+        qscheme=quant_method)
+    w_int = torch.ops.quantized_decomposed.quantize_per_channel(
+        w_fp, scaler, zero_point, 0, int_min, int_max, torch.int8)
+    scaler = scaler.to(w_fp.dtype)
+    dq_w = torch.ops.quantized_decomposed.dequantize_per_channel(
+        w_int, scaler, zero_point, 0, int_min, int_max, dtype=torch.int8)
+    if not is_symmetric:
+      zero_point = zero_point.to(w_fp.dtype)
+      zero_point *= scaler
+    else:
+      zero_point = None
+    if block_size != -1:
       w_int = w_int.reshape(output_dim, input_dim // block_size,
                             block_size).permute(1, 2, 0)
-      scaler = scaler.to(w_fp.dtype).reshape(output_dim,
-                                             input_dim // block_size).permute(
-                                                 1, 0)
-      return w_int, scaler, zero_point
+      scaler = scaler.reshape(output_dim, input_dim // block_size).permute(1, 0)
+      if not is_symmetric:
+        zero_point = zero_point.reshape(output_dim,
+                                        input_dim // block_size).permute(1, 0)
+    return w_int, scaler, zero_point
 
-  def replace_with_xla_quantized_matmul(self, n_bit=8, block_size=-1):
+  def replace_with_xla_quantized_matmul(self,
+                                        n_bit=8,
+                                        block_size=-1,
+                                        is_symmetric=True):
     assert isinstance(self.linear, torch.nn.Linear)
-    w_int, scaler, _ = self.weight_quantization_rtn(
-        self.linear, n_bits=n_bit, block_size=block_size)
+    w_int, scaler, zero_point = self.weight_quantization_rtn(
+        self.linear,
+        n_bits=n_bit,
+        block_size=block_size,
+        quant_method=torch.per_channel_symmetric
+        if is_symmetric else torch.per_channel_affine)
     use_int4_weight = n_bit == 4
     q_linear = XlaQuantizedLinear(
         self.linear.in_features,
         self.linear.out_features,
         block_size=block_size,
-        int4_weight=use_int4_weight)
-    q_linear.load_quantized_weight(w_int, scaler)
+        int4_weight=use_int4_weight,
+        is_symmetric=is_symmetric)
+    q_linear.load_quantized_weight(w_int, scaler, zero_point=zero_point)
     self.linear = q_linear
 
   def forward(self, x):
@@ -214,6 +219,44 @@ class QuantizedTest(unittest.TestCase):
         x = torch.randn(3, 6)
         out_fp = m(x)
         m.replace_with_xla_quantized_matmul(n_bit=8, block_size=2)
+        out_quant = m(x)
+        self.assertGreater(self._calc_cosine_dist(out_fp, out_quant), 0.99)
+
+        # Dot with int4 weight is only supported on TPU
+        if not (n_bit == 4 and xr.device_type() != 'TPU'):
+          m = m.to(device)
+          x = x.to(device)
+          out_quant_xla = m(x)
+          self.assertGreater(
+              self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.999999)
+
+  def test_asymmetric_per_channel(self):
+    for n_bit in [4, 8]:
+      with self.subTest(n_bit=n_bit):
+        m = M(6, 8)
+        x = torch.randn(3, 6)
+        out_fp = m(x)
+        m.replace_with_xla_quantized_matmul(
+            n_bit=n_bit, block_size=-1, is_symmetric=False)
+        out_quant = m(x)
+        self.assertGreater(self._calc_cosine_dist(out_fp, out_quant), 0.99)
+
+        # Dot with int4 weight is only supported on TPU
+        if not (n_bit == 4 and xr.device_type() != 'TPU'):
+          m = m.to(device)
+          x = x.to(device)
+          out_quant_xla = m(x)
+          self.assertGreater(
+              self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.999999)
+
+  def test_asymmetric_blockwise(self):
+    for n_bit in [8]:
+      with self.subTest(n_bit=n_bit):
+        m = M(6, 8)
+        x = torch.randn(2, 6)
+        out_fp = m(x)
+        m.replace_with_xla_quantized_matmul(
+            n_bit=n_bit, block_size=2, is_symmetric=False)
         out_quant = m(x)
         self.assertGreater(self._calc_cosine_dist(out_fp, out_quant), 0.99)
 
