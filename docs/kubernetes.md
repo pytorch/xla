@@ -229,7 +229,7 @@ spec:
           medium: Memory
       containers:
       - name: training
-        image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm
+        image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.3.0_libtpu_3.10_tpuvm
         command:
         - bash
         - -cxue
