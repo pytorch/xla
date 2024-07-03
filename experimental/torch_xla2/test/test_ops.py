@@ -27,7 +27,6 @@ skiplist = {
     "cholesky_solve",
     "combinations",
     "complex",
-    "copysign",
     "corrcoef",
     "count_nonzero",
     "cov",
@@ -496,6 +495,8 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_ou
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
+    print("expected output = ", output1)
+    print("actual output = ", output2)
     if check_output:
       torch.testing.assert_close(
           output2_cpu, output1, rtol=rtol, atol=atol, equal_nan=equal_nan)

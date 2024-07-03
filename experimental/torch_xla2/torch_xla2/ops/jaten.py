@@ -2256,3 +2256,16 @@ def _aten_randint(
 @op(torch.ops.aten.dim, is_jax_function=False)
 def _aten_dim(self):
   return len(self.shape)
+
+
+@op(torch.ops.aten.copysign)
+def _aten_copysign(input, other, *, out=None):
+  result = jnp.copysign(input, other)
+  # torch.copysign(input, other) returns float32 for integer input and other,
+  # regardless of their exact integer dtype, whereas jax.copysign returns
+  # float64 when one or both of them is int64.
+  if jnp.issubdtype(input.dtype, jnp.integer) and jnp.issubdtype(
+    other.dtype, jnp.integer
+  ):
+    result = result.astype(jnp.float32)
+  return result
