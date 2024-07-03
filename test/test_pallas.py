@@ -212,7 +212,7 @@ class PallasTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_wrapper(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
     q = torch.randn(3, 2, 128, 4).to("xla")
@@ -222,12 +222,12 @@ class PallasTest(unittest.TestCase):
     o = flash_attention(q, k, v)
     expected_o = self._attention(q, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update("jax_default_matmul_precision", "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_wrapper_with_dynamo(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
     def flash_attention_wrapper(q, k, v, causal=False):
@@ -248,12 +248,12 @@ class PallasTest(unittest.TestCase):
     # therefore it speeds up the compute but also changes the output.
     self.assertFalse(
         torch.allclose(o_with_causal.cpu(), expected_o.cpu(), atol=1e-05))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update("jax_default_matmul_precision", "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_wrapper_causal(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
     q = torch.randn(3, 2, 128, 4).to("xla")
@@ -265,7 +265,7 @@ class PallasTest(unittest.TestCase):
     o = flash_attention(q, k, v, causal=True)
     expected_o = self._attention(q, k, v)
     self.assertFalse(torch.allclose(o.cpu(), expected_o.cpu()))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update("jax_default_matmul_precision", "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_multiple_returns(self):
@@ -446,7 +446,7 @@ class PallasTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_backward(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
@@ -481,7 +481,7 @@ class PallasTest(unittest.TestCase):
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update("jax_default_matmul_precision", "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
@@ -724,7 +724,7 @@ class PallasTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_wrapper_segment_ids_2(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
     q = torch.randn(3, 2, 128, 4).to("xla")
@@ -741,12 +741,12 @@ class PallasTest(unittest.TestCase):
         attn_mask=self._make_attention_mask_from_segment_ids(
             segment_ids, segment_ids))
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update("jax_default_matmul_precision", "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_backward_segment_ids(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
@@ -790,12 +790,12 @@ class PallasTest(unittest.TestCase):
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update("jax_default_matmul_precision", "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_wrapper_sm_scale(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
     q = torch.randn(3, 2, 128, 4).to("xla")
@@ -806,12 +806,12 @@ class PallasTest(unittest.TestCase):
 
     expected_o = self._attention(q * sm_scale, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update("jax_default_matmul_precision", "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_sm_scale_backward(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
     torch.manual_seed(42)
@@ -848,7 +848,7 @@ class PallasTest(unittest.TestCase):
     # Hmm, the gradients are the same even the autograd graph seems different.
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update("jax_default_matmul_precision", "default")
 
 
 if __name__ == '__main__':
