@@ -558,8 +558,8 @@ class PallasTest(unittest.TestCase):
             atol=1e-5,
             rtol=1e-5))
 
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
-                   "This test only works on TPUv4+.")
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
+                   "This test only works on TPUv4 and TPU v5p.")
   def test_paged_attention_wrapper_with_megacore_modes(self):
     from torch_xla.experimental.custom_kernel import paged_attention
     from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
