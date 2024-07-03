@@ -4,6 +4,9 @@ With the rise of OpenAI [triton](https://openai.com/research/triton), custom ker
 
 Let's assume you have a Pallas kernel defined as follow:
 ```python3
+from torch_xla.experimental.custom_kernel import jax_import_guard
+jax_import_guard()
+
 import jax
 from jax.experimental import pallas as pl
 import jax.numpy as jnp
@@ -18,6 +21,8 @@ def add_vectors(x: jax.Array, y: jax.Array) -> jax.Array:
                         out_shape=jax.ShapeDtypeStruct(x.shape, x.dtype)
                         )(x, y)
 ```
+
+To be noted, it's very important to run `jax_import_guard()` before importing any jax modules. Otherwise, the program will hang on TPU as jax will lock the TPU and torch-xla cannot access it.
 
 ## Adopt the above kernel to be compatible with PyTorch/XLA
 
