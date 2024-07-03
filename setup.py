@@ -286,6 +286,7 @@ setup(
     packages=find_packages(include=['torch_xla*']),
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
+        BazelExtension('//:_XLAC_cuda_functions.so'),
     ],
     install_requires=[
         'absl-py>=1.0.0',
