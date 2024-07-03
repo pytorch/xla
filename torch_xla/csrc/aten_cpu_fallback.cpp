@@ -15,6 +15,7 @@
 #include "torch_xla/csrc/function_call_tracker.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
@@ -51,8 +52,28 @@ std::vector<std::string> GetFallbackOperations() {
 // Before each modified function below, we shall specify what has changed,
 // if there was any.
 
+// Decide whether to run OpenXLA fallback operations on CUDA.
 bool UseCUDAFallback() {
-  return runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false);
+  // In order to run OpenXLA fallback operations on CUDA, the 3 conditions below
+  // must be true:
+
+  //   1. XLA_FALLBACK_CPU environment variable is NOT set
+  bool dont_fallback_cpu =
+      !runtime::sys_util::GetEnvBool("XLA_FALLBACK_CPU", false);
+
+  //   2. The current ComputationClient DeviceType is CUDA. Basically, we don't
+  //      support running OpenXLA fallback operations on CUDA if the current
+  //      PyTorch/XLA DeviceType is not CUDA.
+  bool device_is_cuda =
+      runtime::GetComputationClient()->GetDeviceType().getType() ==
+      XlaDeviceType::CUDA;
+
+  //   3. PyTorch must have been compiled with CUDA support. Otherwise, our
+  //      phony implementation in aten_cuda_functions.cpp will return 0 for the
+  //      call below.
+  bool pytorch_device_is_not_zero = c10::cuda::device_count() > 0;
+
+  return dont_fallback_cpu && device_is_cuda && pytorch_device_is_not_zero;
 }
 
 struct DeviceInfo {
