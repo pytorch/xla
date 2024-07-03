@@ -31,10 +31,10 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
   parameters = list(filter(lambda p: p.grad is not None, parameters))
   max_norm = float(max_norm)
   norm_type = float(norm_type)
+  if len(parameters) == 0:
+    return torch.tensor(0.).to("xla")
   dtype = parameters[0].grad.dtype
   device = parameters[0].grad.device
-  if len(parameters) == 0:
-    return torch.tensor(0., dtype=dtype, device=device)
   if norm_type == inf:
     total_norm = max(p.grad.detach().abs().max() for p in parameters)
   else:

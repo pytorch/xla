@@ -2056,6 +2056,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(xt.grad.dtype, torch.bfloat16)
     self.assertEqual(t.grad, xt.grad.cpu())
 
+  def test_clip_grad_norm_zero(self):
+    t = torch.rand(10, 10, dtype=torch.bfloat16)
+    xt = t.to(xm.xla_device())
+    result = torch.nn.utils.clip_grad_norm_(xt, 1.0)
+    self.assertEqual(result.device.type, 'xla')
+    self.assertTrue(torch.allclose(result.cpu(), torch.tensor(0.)))
+
   def test_stack_different_types(self):
 
     def foo(t0, t1):
