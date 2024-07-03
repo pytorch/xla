@@ -1502,7 +1502,7 @@ at::Tensor XLANativeFunctions::_embedding_bag_backward(
         "XLA does not support EmbeddingBag sparse backward function. "
         "Falling back to the dense function.");
   }
-  return at::native::call_fallback_fn<&xla_cpu_fallback,
+  return at::native::call_fallback_fn<&xla_fallback,
                                       ATEN_OP(_embedding_bag_backward)>::
       call(grad, indices_, offsets_, offset2bag, bag_size_, max_indices_,
            num_weights, scale_grad_by_freq, mode, /*sparse=*/false,
