@@ -22,7 +22,7 @@ def add_vectors(x: jax.Array, y: jax.Array) -> jax.Array:
                         )(x, y)
 ```
 
-To be noted, it's very important to run `jax_import_guard()` before importing any jax modules. Otherwise, the program will hang on TPU as  jax will lock the TPU and torch-xla cannot access it.
+To be noted, it's very important to run `jax_import_guard()` before importing any jax modules. Otherwise, the program will hang on TPU as jax will lock the TPU and torch-xla cannot access it.
 
 ## Adopt the above kernel to be compatible with PyTorch/XLA
 
