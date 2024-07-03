@@ -11,6 +11,8 @@ static void fail(const char* name) {
 
 namespace c10::cuda {
 
+DeviceIndex device_count() noexcept { return 0; }
+
 c10::DeviceIndex current_device() { fail("c10::cuda::current_device()"); }
 
 void set_device(c10::DeviceIndex) { fail("c10::cuda::set_device()"); }
