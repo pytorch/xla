@@ -185,19 +185,21 @@ metadata:
 spec:
   clusterIP: None
   selector:
-    job-name: torch-xla-tpu-2x4
+    headless-svc: "true"
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: torch-xla-tpu-2x4
-  labels:
 spec:
   parallelism: 2 # num of nodes
   completions: 2 # num of nodes
   backoffLimit: 0 # default, no retries
   completionMode: Indexed
   template:
+    metadata:
+      labels:
+        headless-svc: "true"
     spec:  # pod-spec:
       serviceAccountName: default
       affinity:
@@ -232,11 +234,6 @@ spec:
         - bash
         - -cxue
         - |
-          apt-get update -y
-          apt-get install libomp5 numactl libopenblas-dev -y
-          pip3 install mkl mkl-include tf-nightly tb-nightly tbp-nightly numpy
-          
-          ln -s /usr/local/lib/libmkl_intel_ilp64.so.2 /usr/local/lib/libmkl_intel_ilp64.so.1
 
           mkdir -p pytorch/xla
           git clone -b r2.3 https://github.com/pytorch/xla.git pytorch/xla
@@ -275,12 +272,11 @@ spec:
         env:
         - name: PJRT_DEVICE
           value: 'TPU'
-        - name: XLA_USE_BF16
-          value: '1'
-        - name: USE_TORCH
-          value: 'ON'
         - name: JOB_NAME
-          value: 'torch-xla-tpu-2x4'
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.labels['job-name']
         resources:
           requests:
             google.com/tpu: 4
