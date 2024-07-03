@@ -32,7 +32,7 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
   max_norm = float(max_norm)
   norm_type = float(norm_type)
   if len(parameters) == 0:
-    return torch.tensor(0.)
+    return torch.tensor(0.).to("xla")
   dtype = parameters[0].grad.dtype
   device = parameters[0].grad.device
   if norm_type == inf:
