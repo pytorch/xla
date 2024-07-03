@@ -1036,7 +1036,7 @@ std::vector<xla::HloSharding> XlaHelpers::ExtractInputShardings(
                  << xla::HloSharding::FromProto(instr.sharding())->ToString();
     }
   }
-  return std::move(param_shardings);
+  return param_shardings;
 }
 
 torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
