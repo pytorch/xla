@@ -53,8 +53,8 @@ std::vector<std::string> GetFallbackOperations() {
 // if there was any.
 
 // Decide whether to run OpenXLA fallback operations on CUDA.
-bool UseCUDAFallback() {
-  // In order to run OpenXLA fallback operations on CUDA, the 3 conditions below
+bool UseCUDAFallback(const c10::OperatorHandle& op) {
+  // In order to run OpenXLA fallback operations on CUDA, the 4 conditions below
   // must be true:
 
   //   1. XLA_FALLBACK_CPU environment variable is NOT set
@@ -73,7 +73,12 @@ bool UseCUDAFallback() {
   //      call below.
   bool pytorch_device_is_not_zero = c10::cuda::device_count() > 0;
 
-  return dont_fallback_cpu && device_is_cuda && pytorch_device_is_not_zero;
+  //   4. There is a kernel registered for the CUDA dispatch key, for this
+  //      operation.
+  bool has_cuda_kernel = op.hasKernelForDispatchKey(c10::DispatchKey::CUDA);
+
+  return dont_fallback_cpu && device_is_cuda && pytorch_device_is_not_zero &&
+         has_cuda_kernel;
 }
 
 struct DeviceInfo {
@@ -424,7 +429,7 @@ void xla_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
     }
   }
 
-  if (UseCUDAFallback()) {
+  if (UseCUDAFallback(op)) {
     cuda_fallback(op, stack, true);
   } else {
     // Call the actual boxed CPU fallback.
