@@ -7,6 +7,7 @@
 #include <ATen/native/BinaryOps.h>
 #include <ATen/native/CPUFallback.h>
 #include <ATen/native/TypeProperties.h>
+#include <ATen/ops/_embedding_bag_backward_native.h>
 #include <ATen/ops/expand_copy.h>
 #include <c10/core/Contiguity.h>
 #include <torch/csrc/lazy/core/shape_inference.h>
@@ -1502,11 +1503,17 @@ at::Tensor XLANativeFunctions::_embedding_bag_backward(
         "XLA does not support EmbeddingBag sparse backward function. "
         "Falling back to the dense function.");
   }
-  return at::native::
-      call_fallback_fn<&xla_fallback, ATEN_OP(_embedding_bag_backward)>::call(
-          grad, indices_, offsets_, offset2bag, bag_size_, max_indices_,
-          num_weights, scale_grad_by_freq, mode, /*sparse=*/false,
-          per_sample_weights_opt, padding_idx);
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return at::native::_embedding_bag_backward_symint(
+        grad, indices_, offsets_, offset2bag, bag_size_, max_indices_,
+        num_weights, scale_grad_by_freq, mode, /*sparse=*/false,
+        per_sample_weights_opt, padding_idx);
+  }
+  return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                      ATEN_OP(_embedding_bag_backward)>::
+      call(grad, indices_, offsets_, offset2bag, bag_size_, max_indices_,
+           num_weights, scale_grad_by_freq, mode, /*sparse=*/false,
+           per_sample_weights_opt, padding_idx);
 }
 
 at::Tensor XLANativeFunctions::empty_symint(
