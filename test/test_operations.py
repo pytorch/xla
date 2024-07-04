@@ -2222,7 +2222,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       if device is not None:
         fresh = fresh.to(device)
       # Clone if not cloned already by the previous device move.
-      if fresh.device == tensor.device and fresh.data_ptr() == tensor.data_ptr():
+      if fresh.device == tensor.device and fresh.data_ptr() == tensor.data_ptr(
+      ):
         fresh = tensor.clone()
       # Make this tensor a leaf tensor by detaching and reseting its
       # requires_grad property.
