@@ -2216,6 +2216,83 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.assertEqual(out, Xout.cpu())
 
+  def test_embedding_bag_backward_fallback(self):
+    # Tests whether EmbeddingBag backward function works and computes the expected results.
+    #
+    # EmbeddingBag has a 'sparse' flag which dictates what will be the layout of the grad
+    # returned by its backward function. Unfortunately, PyTorch/XLA doesn't support sparse
+    # tensors, yet. Therefore, as a work-around, we fallback to the dense backward function.
+    #
+    # This test tests whether we correctly compute the backward for sparse=True and
+    # sparse=False, making sure that we did not introduce any regressions.
+
+    # Run EmbeddingBag forward and backwards.
+    # Return the forward result + the computed weight grad.
+    def fn(indices, weight, **kwargs):
+      out = F.embedding_bag(indices, weight, **kwargs)
+      out.sum().backward()
+      return out, weight.grad
+
+    # Clone a tensor, and maybe move it to a different device.
+    def clone_and_maybe_move(tensor, device=None):
+      fresh = tensor
+      # Maybe move to the specified device.
+      if device is not None:
+        fresh = fresh.to(device)
+      # Clone if not cloned already by the previous device move.
+      if fresh.device == tensor.device and fresh.data_ptr() == tensor.data_ptr(
+      ):
+        fresh = tensor.clone()
+      # Make this tensor a leaf tensor by detaching and reseting its
+      # requires_grad property.
+      fresh = fresh.detach()
+      fresh.requires_grad_(tensor.requires_grad)
+      return fresh
+
+    EMBEDDINGS = 10
+    VECTOR_DIM = 5
+    N = 5
+
+    kwargs = {
+        "indices": torch.randint(0, EMBEDDINGS, (N,)),
+        "weight": torch.randn((EMBEDDINGS, VECTOR_DIM), requires_grad=True),
+        "offsets": torch.tensor([0, 3], dtype=torch.long),
+    }
+
+    # Test all combinations of sparse + mode.
+    for sparse, mode in itertools.product((False, True),
+                                          ("sum", "mean", "max")):
+      # According to nn.functional.embedding_bag PyTorch documentation, not supported.
+      if sparse and mode == "max":
+        continue
+
+      extra_kwargs = {
+          "mode": mode,
+          "sparse": sparse,
+      }
+
+      with self.subTest(sparse=sparse, mode=mode):
+        kwargs_ = {k: clone_and_maybe_move(v) for k, v in kwargs.items()}
+        xla_kwargs = {
+            k: clone_and_maybe_move(v, device=xm.xla_device())
+            for k, v in kwargs.items()
+        }
+
+        expected_out, expected_grad = fn(**kwargs_, **extra_kwargs)
+        actual_out, actual_grad = fn(**xla_kwargs, **extra_kwargs)
+
+        # PyTorch/XLA doesn't support sparse tensors.
+        # We explicitly fallback to the dense backward function whenever sparse=True.
+        # Therefore, we have to convert the expected grad to dense, so that we can
+        # compare the actual numbers.
+        if sparse:
+          self.assertTrue(expected_grad.is_sparse)
+          self.assertFalse(actual_grad.is_sparse)
+          expected_grad = expected_grad.to_dense()
+
+        self.assertEqual(actual_out, expected_out)
+        self.assertEqual(actual_grad, expected_grad)
+
 
 class MNISTComparator(nn.Module):
 
