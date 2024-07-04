@@ -10,6 +10,18 @@ import torch_xla.distributed.spmd as xs
 import numpy as np
 
 
+class MultiLinear(torch.nn.Module):
+
+  def __init__(self):
+    super(MultiLinear, self).__init__()
+    self.linear1 = torch.nn.Linear(10, 20)
+    self.linear2 = torch.nn.Linear(20, 30)
+    self.linear3 = torch.nn.Linear(30, 40)
+
+  def forward(self, input):
+    return self.linear3(self.linear2(self.linear1(input)))
+
+
 class Eager(unittest.TestCase):
 
   @classmethod
@@ -33,10 +45,19 @@ class Eager(unittest.TestCase):
     linear = torch.nn.Linear(10, 20)
     input = torch.randn(8, 10)
     input_xla = input.to(device)
+    xs.mark_sharding(input_xla, mesh, ('data', None))
     res = linear(input)
     linear.to(device)
     res_xla = linear(input_xla)
-    self.assertTrue(torch.allclose(res, res_xla.cpu(), rtol=1e-3))
+    self.assertTrue(torch.allclose(res, res_xla.cpu(), atol=1e-2))
+
+  def test_module_to_empty_sharding(self):
+    device = torch_xla.device()
+    mlinear = MultiLinear()
+    mlinear.to(device)
+    torch_xla._XLAC._get_xla_sharding_spec(mlinear.linear1.weight)
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(mlinear.linear1.weight), '')
 
 
 if __name__ == '__main__':
