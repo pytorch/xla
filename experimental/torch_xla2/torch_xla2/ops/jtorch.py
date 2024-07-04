@@ -147,3 +147,9 @@ def getitem(self, indexes):
   elif isinstance(indexes, list):
     indexes = tuple(indexes)
   return self[indexes]
+
+@register_function(torch.corrcoef)
+def _corrcoef(x):
+  if x.dtype.name == "int64":
+    return jnp.corrcoef(x).astype(jnp.float32)
+  return jnp.corrcoef(x)
