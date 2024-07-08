@@ -1727,7 +1727,7 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_get_device_attributes", [](const std::string& device_str) {
     const absl::flat_hash_map<
-        std::string, runtime::ComputationClient::DeviceAttribute>& attributes =
+        std::string, runtime::ComputationClient::DeviceAttribute> attributes =
         runtime::GetComputationClient()->GetDeviceAttributes(
             bridge::AtenDeviceToXlaDevice(device_str).toString());
 

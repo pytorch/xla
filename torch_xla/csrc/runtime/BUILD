@@ -92,6 +92,8 @@ cc_library(
         "@xla//xla/pjrt/distributed",
         "@xla//xla/python/ifrt",
         "@xla//xla/python/pjrt_ifrt",
+        "@xla//xla/python/pjrt_ifrt:pjrt_attribute_map_util",
+        "@xla//xla/python/ifrt:attribute_map",
     ],
 )
 

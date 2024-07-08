@@ -378,7 +378,7 @@ class ComputationClient {
       std::variant<std::string, bool, int64_t, std::vector<int64_t>, float>;
 
   virtual const absl::flat_hash_map<
-      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
   GetDeviceAttributes(const std::string& device) = 0;
 
   virtual void SetReplicationDevices(

@@ -31,6 +31,8 @@
 #include "xla/python/pjrt_ifrt/pjrt_client.h"
 #include "xla/python/pjrt_ifrt/xla_sharding.h"
 #include "xla/shape.h"
+#include "xla/python/pjrt_ifrt/pjrt_attribute_map_util.h"
+#include "xla/python/ifrt/attribute_map.h"
 
 using xla::internal::XlaBuilderFriend;
 
@@ -633,9 +635,9 @@ int IfrtComputationClient::GetNumProcesses() const {
 };
 
 const absl::flat_hash_map<
-    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 IfrtComputationClient::GetDeviceAttributes(const std::string& device) {
-  return IfrtComputationClient::StringToIfrtDevice(device)->Attributes();
+  return xla::ifrt::ToPjRtDeviceAttributeMap(IfrtComputationClient::StringToIfrtDevice(device)->Attributes());
 }
 
 void IfrtComputationClient::SetReplicationDevices(

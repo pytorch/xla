@@ -109,7 +109,7 @@ class IfrtComputationClient : public ComputationClient {
   int GetNumProcesses() const override;
 
   const absl::flat_hash_map<
-      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
   GetDeviceAttributes(const std::string& device) override;
 
   void SetReplicationDevices(
