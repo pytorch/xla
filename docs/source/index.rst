@@ -5,6 +5,11 @@ PyTorch/XLA documentation
 PyTorch/XLA is a Python package that uses the XLA deep learning compiler to connect the PyTorch deep learning framework and Cloud TPUs.
 
 .. toctree::
+   :hidden:
+
+   self
+
+.. toctree::
    :glob:
    :maxdepth: 1
    :caption: Docs
