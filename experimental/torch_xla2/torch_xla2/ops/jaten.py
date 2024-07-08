@@ -1708,6 +1708,12 @@ def _aten_hardtanh(input, min_val=-1.0, max_val=1.0, inplace=False):
   return jnp.clip(input, min_val, max_val)
 
 
+# aten.lcm
+@op(torch.ops.aten.lcm)
+def _aten_lcm(input, other):
+  return jnp.lcm(input, other)
+
+
 # aten.isinf
 @op(torch.ops.aten.isinf)
 def _aten_isinf(input):
