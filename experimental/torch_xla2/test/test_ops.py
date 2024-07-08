@@ -94,7 +94,6 @@ skiplist = {
     "index_reduce",
     "index_select",
     "isclose",
-    "item",
     "kthvalue",
     "lcm",
     "lerp",
