@@ -95,7 +95,6 @@ skiplist = {
     "index_select",
     "isclose",
     "kthvalue",
-    "lcm",
     "lerp",
     "lgamma",
     "linalg.cholesky",
