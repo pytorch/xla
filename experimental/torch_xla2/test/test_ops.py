@@ -273,6 +273,7 @@ skiplist = {
     "scatter_add",
     "scatter",
     "scatter_reduce",
+    "searchsorted",
     "select_scatter",
     "signbit",
     "softmax",
