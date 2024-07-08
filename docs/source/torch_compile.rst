@@ -1,1 +1,1 @@
-.. mdinclude:: ../dynamo.md
+.. mdinclude:: dynamo.md

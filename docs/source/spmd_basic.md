@@ -5,7 +5,7 @@ In this user guide, we discuss how [GSPMD](https://arxiv.org/abs/2105.04663) is 
 ## What is PyTorch/XLA SPMD?
 [GSPMD](https://arxiv.org/abs/2105.04663) is an automatic parallelization system for common ML workloads. The XLA compiler will transform the single device program into a partitioned one with proper collectives, based on the user provided sharding hints. This feature allows developers to write PyTorch programs as if they are on a single large device without any custom sharded computation ops and/or collective communications to scale.
 
-![alt_text](assets/spmd_mode.png "image_tooltip")
+![alt_text](_static/img/spmd_mode.png "image_tooltip")
 _<span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span>_
 
 

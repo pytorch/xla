@@ -1,1 +1,1 @@
-.. mdinclude:: ../pjrt.md
+.. mdinclude:: pjrt.md
