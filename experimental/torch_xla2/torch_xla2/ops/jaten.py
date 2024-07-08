@@ -149,6 +149,11 @@ def _torch_binary_scalar_type(scalar, tensor):
   return jnp.float32
 
 
+@op(torch.ops.aten.searchsorted.Tensor)
+def _aten_searchsorted(sorted_sequence, values):
+  return jnp.searchsorted(sorted_sequence, values)
+
+
 @op(torch.ops.aten.sub.Tensor)
 @op(torch.ops.aten.sub.Scalar)
 def _aten_sub(x, y):
