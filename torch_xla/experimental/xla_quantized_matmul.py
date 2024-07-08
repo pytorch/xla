@@ -121,11 +121,11 @@ class XlaQuantizedLinear(torch.nn.Module):
 
   def load_quantized_weight(self, weight, weight_scaler):
     '''
-    Weight shape:
+    weight (Tensor):
       per-channel quant: [out_channel, in_channel].
       block_wise quant: [in_channel / block_size, block_size, out_channel].
 
-    Weight scaler shape:
+    weight_scaler (Tensor):
       per-channel quant: [out_channel,].
       blockwise quant: [in_channel / block_size, out_channel].
     '''
