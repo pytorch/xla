@@ -1,3 +1,21 @@
+:github_url: https://github.com/pytorch/xla
+
+PyTorch/XLA documentation
+===================================
+PyTorch/XLA is a Python package that uses the XLA deep learning compiler to connect the PyTorch deep learning framework and Cloud TPUs.
+
+.. toctree::
+   :hidden:
+
+   self
+
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Docs
+
+   *
+
 .. mdinclude:: ../../API_GUIDE.md
 
 PyTorch/XLA API
@@ -90,12 +108,3 @@ debug
 .. autofunction:: counter_value
 .. autofunction:: metric_names
 .. autofunction:: metric_data
-
-.. mdinclude:: ../../TROUBLESHOOTING.md
-.. mdinclude:: ../pjrt.md
-.. mdinclude:: ../dynamo.md
-.. mdinclude:: ../fsdp.md
-.. mdinclude:: ../ddp.md
-.. mdinclude:: ../gpu.md
-.. mdinclude:: ../spmd_basic.md
-.. mdinclude:: ../fsdpv2.md
