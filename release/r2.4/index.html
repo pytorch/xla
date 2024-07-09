@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git7714e78 )
+                  master (2.4.0+git18b351f )
                 </div>
               
             
@@ -381,6 +381,7 @@
 </li>
 <li><a class="reference internal" href="#module-torch_xla.experimental">experimental</a><ul>
 <li><a class="reference internal" href="#torch_xla.experimental.eager_mode"><code class="docutils literal notranslate"><span class="pre">eager_mode()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.experimental.compile"><code class="docutils literal notranslate"><span class="pre">compile()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-torch_xla.debug.metrics">debug</a><ul>
@@ -1713,9 +1714,17 @@ print(mesh.shape())
 <dl class="py function">
 <dt class="sig sig-object py" id="torch_xla.experimental.eager_mode">
 <span class="sig-prename descclassname"><span class="pre">torch_xla.experimental.</span></span><span class="sig-name descname"><span class="pre">eager_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/experimental/eager.html#eager_mode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.experimental.eager_mode" title="Permalink to this definition">¶</a></dt>
-<dd><p>Configure torch_xla’s default executation mode.
-Under eager mode only functions that was <a href="#id5"><span class="problematic" id="id6">`</span></a>torch_xla.compile`d will be
+<dd><p>Configure torch_xla’s default executation mode.</p>
+<p>Under eager mode only functions that was <a href="#id5"><span class="problematic" id="id6">`</span></a>torch_xla.compile`d will be
 traced and compiled. Other torch ops will be executed eagerly.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.experimental.compile">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.experimental.</span></span><span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/experimental/eager.html#compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.experimental.compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compile the func with Lazy Tensor.</p>
+<p>Return the optimized function that takes exact same input. Compile will
+run the target func under the tracing mode using Lazy tensor.</p>
 </dd></dl>
 
 </div>
@@ -4115,6 +4124,7 @@ the table. The design doc is <a class="reference external" href="https://github.
 </li>
 <li><a class="reference internal" href="#module-torch_xla.experimental">experimental</a><ul>
 <li><a class="reference internal" href="#torch_xla.experimental.eager_mode"><code class="docutils literal notranslate"><span class="pre">eager_mode()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.experimental.compile"><code class="docutils literal notranslate"><span class="pre">compile()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-torch_xla.debug.metrics">debug</a><ul>
