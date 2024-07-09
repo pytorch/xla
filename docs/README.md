@@ -1,0 +1,2 @@
+# Docs
+This directory is used to generate docs for PyTorch/XLA. You can check the most recent nightly docs in https://pytorch.org/xla/master/index.html. The source of the documents can be founder under `source/` and `source/md_sources/`

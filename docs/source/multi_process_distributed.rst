@@ -1,2 +1,2 @@
-.. mdinclude:: ddp.md
-.. mdinclude:: fsdp.md
+.. mdinclude:: md_sources/ddp.md
+.. mdinclude:: md_sources/fsdp.md

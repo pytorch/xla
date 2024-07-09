@@ -1,1 +1,1 @@
-.. mdinclude:: gpu.md
+.. mdinclude:: md_sources/gpu.md
