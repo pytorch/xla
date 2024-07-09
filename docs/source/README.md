@@ -23,3 +23,9 @@ git add .
 git commit -m "Publish 2.3 documentation."
 git push origin gh-pages
 ```
+
+## Adding docs
+To add a docs please create a `.md` file under `md_sources/`. To make this docs show up in [doc pages](https://pytorch.org/xla/master/index.html), please add a `.rst` file in this directory.
+
+## Adding images in the doc
+Please add your imges to both `_static/img/` and `md_sources/_static/img/` for images to properlly show up in the markdown files as well as our [doc pages](https://pytorch.org/xla/master/index.html).
