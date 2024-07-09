@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.4.0+git12e0d81 )
+                  master (2.4.0+git7714e78 )
                 </div>
               
             
@@ -379,6 +379,10 @@
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.ShardingSpec"><code class="docutils literal notranslate"><span class="pre">ShardingSpec</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#module-torch_xla.experimental">experimental</a><ul>
+<li><a class="reference internal" href="#torch_xla.experimental.eager_mode"><code class="docutils literal notranslate"><span class="pre">eager_mode()</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#module-torch_xla.debug.metrics">debug</a><ul>
 <li><a class="reference internal" href="#torch_xla.debug.metrics.metrics_report"><code class="docutils literal notranslate"><span class="pre">metrics_report()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.debug.metrics.short_metrics_report"><code class="docutils literal notranslate"><span class="pre">short_metrics_report()</span></code></a></li>
@@ -447,7 +451,7 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#differences-from-xrt">Differences from XRT</a><ul>
-<li><a class="reference internal" href="#id18">Multithreading on TPU v2/v3</a></li>
+<li><a class="reference internal" href="#id20">Multithreading on TPU v2/v3</a></li>
 <li><a class="reference internal" href="#changes-to-xm-rendezvous">Changes to xm.rendezvous</a></li>
 <li><a class="reference internal" href="#pjrt-and-torch-distributed">PJRT and torch.distributed</a></li>
 </ul>
@@ -492,7 +496,7 @@
 <li><a class="reference internal" href="#how-to-run-with-pytorch-xla-gpu">How to run with PyTorch/XLA:GPU</a><ul>
 <li><a class="reference internal" href="#create-a-gpu-instance">Create a GPU instance</a></li>
 <li><a class="reference internal" href="#environment-setup">Environment Setup</a><ul>
-<li><a class="reference internal" href="#id21">Docker</a></li>
+<li><a class="reference internal" href="#id23">Docker</a></li>
 <li><a class="reference internal" href="#check-environment-variable">Check environment variable</a></li>
 <li><a class="reference internal" href="#wheel">Wheel</a></li>
 </ul>
@@ -506,9 +510,9 @@
 <li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
 <li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
 <li><a class="reference internal" href="#simple-example-sharding-aannotation-api">Simple Example &amp; Sharding Aannotation API</a></li>
-<li><a class="reference internal" href="#id28">Mesh</a></li>
+<li><a class="reference internal" href="#id30">Mesh</a></li>
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
-<li><a class="reference internal" href="#id29">Partition Spec</a></li>
+<li><a class="reference internal" href="#id31">Partition Spec</a></li>
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
 <li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
@@ -538,7 +542,7 @@
 </li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-via-spmd">Fully Sharded Data Parallel via SPMD</a><ul>
 <li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
-<li><a class="reference internal" href="#id39">Gradient checkpointing</a></li>
+<li><a class="reference internal" href="#id41">Gradient checkpointing</a></li>
 <li><a class="reference internal" href="#huggingface-llama-2-example">HuggingFace Llama 2 Example</a></li>
 </ul>
 </li>
@@ -1704,6 +1708,17 @@ print(mesh.shape())
 <dd></dd></dl>
 
 </div>
+<div class="section" id="module-torch_xla.experimental">
+<span id="experimental"></span><h2>experimental<a class="headerlink" href="#module-torch_xla.experimental" title="Permalink to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.experimental.eager_mode">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.experimental.</span></span><span class="sig-name descname"><span class="pre">eager_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/experimental/eager.html#eager_mode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.experimental.eager_mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure torch_xla’s default executation mode.
+Under eager mode only functions that was <a href="#id5"><span class="problematic" id="id6">`</span></a>torch_xla.compile`d will be
+traced and compiled. Other torch ops will be executed eagerly.</p>
+</dd></dl>
+
+</div>
 <div class="section" id="module-torch_xla.debug.metrics">
 <span id="debug"></span><h2>debug<a class="headerlink" href="#module-torch_xla.debug.metrics" title="Permalink to this heading">¶</a></h2>
 <dl class="py function">
@@ -1929,7 +1944,7 @@ As in the general guideline above, start with changes related to <code class="do
 <span class="n">pipe</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Additionally, it is important to note that the first time you run inference with XLA, it will take a long time to compile. For example, compilation time for stable diffusion XL model inference from HuggingFace can take about an hour to compile, whereas the actual inference may take only 5 seconds, depending on the batch size. Likewise, a GPT-2 model can take about 10-15 mins to compile, after which the training epoch time becomes much faster. This is because XLA builds a graph of the computation that will be performed, and then optimizes this graph for the specific hardware that it is running on. However, once the graph has been compiled, it can be reused for subsequent inferences, which will be much faster. Therefore, if you are only running inference once, you may not benefit from using XLA. However, if you are running inference multiple times, or if you are running inference on a list of prompts, you will start to see the advantages of XLA after the first few inferences. For example, if you run inference on a list of 10 prompts, the first inference (maybe two<a class="footnote-reference brackets" href="#fn-1" id="id10">1</a>) may take a long time to compile, but the remaining inference steps will be much faster. This is because XLA will reuse the graph that it compiled for the first inference.</p>
+<p>Additionally, it is important to note that the first time you run inference with XLA, it will take a long time to compile. For example, compilation time for stable diffusion XL model inference from HuggingFace can take about an hour to compile, whereas the actual inference may take only 5 seconds, depending on the batch size. Likewise, a GPT-2 model can take about 10-15 mins to compile, after which the training epoch time becomes much faster. This is because XLA builds a graph of the computation that will be performed, and then optimizes this graph for the specific hardware that it is running on. However, once the graph has been compiled, it can be reused for subsequent inferences, which will be much faster. Therefore, if you are only running inference once, you may not benefit from using XLA. However, if you are running inference multiple times, or if you are running inference on a list of prompts, you will start to see the advantages of XLA after the first few inferences. For example, if you run inference on a list of 10 prompts, the first inference (maybe two<a class="footnote-reference brackets" href="#fn-1" id="id12">1</a>) may take a long time to compile, but the remaining inference steps will be much faster. This is because XLA will reuse the graph that it compiled for the first inference.</p>
 <p>If you try to run the code without making any additional changes, you will notice that the compilation time is very long (&gt;6 hours). This is because the XLA compiler tries to build a single graph for all of the scheduler steps at once similar to what we have discussed in the previous example. To make the code run faster, we need to break the graph up into smaller pieces with <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> and reuse them in the next steps. This happens inside the <code class="docutils literal notranslate"><span class="pre">pipe.__call__</span></code> <a class="reference external" href="https://github.com/huggingface/diffusers/blob/2b1786735e27bc97f4d4699712292d5c463a7380/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L559">function</a> in <a class="reference external" href="https://github.com/huggingface/diffusers/blob/2b1786735e27bc97f4d4699712292d5c463a7380/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L805-L839">these lines</a>. Disabling the progress bar, removing callbacks and adding <code class="docutils literal notranslate"><span class="pre">xm.mark_step()</span></code> at the end of the for loop speeds up the code significantly. Changes are provided in this <a class="reference external" href="https://github.com/huggingface/diffusers/compare/main...pytorch-tpu:diffusers:main">commit</a>.</p>
 <p>Additionally, the <code class="docutils literal notranslate"><span class="pre">self.scheduler.step()</span></code> function, which by default uses the DPMSolverMultistepScheduler scheduler, has a few issues that are described in the
 <a class="reference external" href="https://pytorch.org/xla/release/2.0/index.html#known-performance-caveats">PyTorch XLA caveats</a>. The <code class="docutils literal notranslate"><span class="pre">.nonzero()</span></code> and <code class="docutils literal notranslate"><span class="pre">.item()</span></code> calls in this function send requests to the CPU for tensor evaluation, which trigger device-host communication. This is not desirable, as it can slow down the code. In this particular case, we can avoid these calls by passing the index to the function directly. This will prevent the function from sending requests to the CPU, and will improve the performance of the code. Changes are available in <a class="reference external" href="https://github.com/pytorch-tpu/diffusers/commit/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d">this</a> commit. The code now is ready to be run on TPUs.</p>
@@ -1980,7 +1995,7 @@ As in the general guideline above, start with changes related to <code class="do
 </pre></div>
 </div>
 <dl class="footnote brackets">
-<dt class="label" id="fn-1"><span class="brackets"><a class="fn-backref" href="#id10">1</a></span></dt>
+<dt class="label" id="fn-1"><span class="brackets"><a class="fn-backref" href="#id12">1</a></span></dt>
 <dd><p>0 and 1 are magic numbers in XLA and treated as constants in the HLO. So if there is a random number generator in the code that can generate these values, the code will compile for each value separately. This can be disabled with <code class="docutils literal notranslate"><span class="pre">XLA_NO_SPECIAL_SCALARS=1</span></code> environment variable.</p>
 </dd>
 </dl>
@@ -2636,8 +2651,8 @@ and run the code on each host in parallel (e.g. <code class="docutils literal no
 communication to enhance stability on large TPU pods. See below for more
 details.</p></li>
 </ul>
-<div class="section" id="id18">
-<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#id18" title="Permalink to this heading">¶</a></h3>
+<div class="section" id="id20">
+<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#id20" title="Permalink to this heading">¶</a></h3>
 <p>On TPU v2 and v3, <strong>distributed workloads always run multithreaded</strong>, since each
 TPU core exposes two TPU cores as devices and only one process may open a TPU
 chip at a time. In its default configuration, <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code> automatically spawns
@@ -3270,8 +3285,8 @@ native xla data parallel approach, here is the
 <div class="section" id="environment-setup">
 <h2>Environment Setup<a class="headerlink" href="#environment-setup" title="Permalink to this heading">¶</a></h2>
 <p>Make sure you have cuda driver installed on the host.</p>
-<div class="section" id="id21">
-<h3>Docker<a class="headerlink" href="#id21" title="Permalink to this heading">¶</a></h3>
+<div class="section" id="id23">
+<h3>Docker<a class="headerlink" href="#id23" title="Permalink to this heading">¶</a></h3>
 <p>Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.8/12.1 and python 3.8. We recommend users to create a docker container with corresponding config. For a full list of docker images and wheels, please refer to <a class="reference external" href="https://github.com/pytorch/xla#available-docker-images-and-wheels">this doc</a>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1
 
@@ -3410,7 +3425,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
 <p><a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is an automatic parallelization system for common ML workloads. The XLA compiler will transform the single device program into a partitioned one with proper collectives, based on the user provided sharding hints. This feature allows developers to write PyTorch programs as if they are on a single large device without any custom sharded computation ops and/or collective communications to scale.</p>
 <a class="reference external image-reference" href="assets/spmd_mode.png"><img alt="alt_text" src="assets/spmd_mode.png" /></a>
-<p><a href="#id25"><span class="problematic" id="id26">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
+<p><a href="#id27"><span class="problematic" id="id28">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
 <p>To support GSPMD in PyTorch/XLA, we are introducing a new execution mode. Before GSPMD, the execution mode in PyTorch/XLA assumed multiple model replicas, each with a single core (Figure 1.a). This mode of execution, as illustrated in the above  suits data parallelism frameworks, like the popular PyTorch <a class="reference external" href="https://pytorch.org/tutorials/intermediate/ddp_tutorial.html">Distributed Data Parallel (DDP)</a> or Fully Sharded Data Parallel (FSDP), but is also limited in that a replica can only reside on one device core for execution. PyTorch/XLA SPMD introduces a new execution mode that assumes a single replica with multiple cores (Figure 1.b), allowing a replica to run across multiple device cores. This shift unlocks more advanced parallelism strategies for better large model training performance.</p>
 <p>PyTorch/XLA SPMD is available on the new <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md">PJRT</a> runtime. To enable PyTorch/XLA SPMD execution mode, the user must call <span class="raw-html-m2r"><code>[use_spmd() API](https://github.com/pytorch/xla/blob/b8b484515a97f74e013dcf38125c44d53a41f011/torch_xla/runtime.py#L214)</code></span>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
@@ -3479,8 +3494,8 @@ PyTorch/XLA should have been installed successfully.</p>
 </div>
 <p>More complete unit test cases and integration test examples are available in the PyTorch/XLA <a class="reference external" href="https://github.com/pytorch/xla/tree/r2.0/test/spmd">repo</a>.</p>
 </div>
-<div class="section" id="id28">
-<h3>Mesh<a class="headerlink" href="#id28" title="Permalink to this heading">¶</a></h3>
+<div class="section" id="id30">
+<h3>Mesh<a class="headerlink" href="#id30" title="Permalink to this heading">¶</a></h3>
 <p>For a given cluster of devices, a physical mesh is a representation of the interconnect topology.</p>
 <p>We derive a logical mesh based on this topology to create sub-groups of devices which can be used for partitioning different axes of tensors in a model.</p>
 <a class="reference external image-reference" href="assets/mesh_spmd2.png"><img alt="alt_text" src="assets/mesh_spmd2.png" /></a>
@@ -3524,8 +3539,8 @@ PyTorch/XLA should have been installed successfully.</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id29">
-<h3>Partition Spec<a class="headerlink" href="#id29" title="Permalink to this heading">¶</a></h3>
+<div class="section" id="id31">
+<h3>Partition Spec<a class="headerlink" href="#id31" title="Permalink to this heading">¶</a></h3>
 <p>partition_spec has the same rank as the input tensor. Each dimension describes how the corresponding input tensor dimension is sharded across the device mesh (logically defined by mesh_shape). <code class="docutils literal notranslate"><span class="pre">partition_spec</span></code> is a tuple of <code class="docutils literal notranslate"><span class="pre">device_mesh</span></code> dimension <code class="docutils literal notranslate"><span class="pre">index</span></code> or None. The index can be an <code class="docutils literal notranslate"><span class="pre">int</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>, if the corresponding mesh dimension is named. This specifies how each input rank is sharded (<code class="docutils literal notranslate"><span class="pre">index</span></code> to <code class="docutils literal notranslate"><span class="pre">mesh_shape</span></code>) or replicated (<code class="docutils literal notranslate"><span class="pre">None</span></code>).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Provide optional mesh axis names and use them in the partition spec</span>
 <span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
@@ -3964,8 +3979,8 @@ the table. The design doc is <a class="reference external" href="https://github.
 </pre></div>
 </div>
 </div>
-<div class="section" id="id39">
-<h2>Gradient checkpointing<a class="headerlink" href="#id39" title="Permalink to this heading">¶</a></h2>
+<div class="section" id="id41">
+<h2>Gradient checkpointing<a class="headerlink" href="#id41" title="Permalink to this heading">¶</a></h2>
 <p>Currently, gradient checkpointing needs to be applied to the module before the FSDP wrapper. Otherwise, recursively loop into children modules will end up with infinite loop. We will fix this issue in the future releases.</p>
 <p>Example usage:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">checkpoint_module</span>
@@ -4098,6 +4113,10 @@ the table. The design doc is <a class="reference external" href="https://github.
 <li><a class="reference internal" href="#torch_xla.distributed.spmd.ShardingSpec"><code class="docutils literal notranslate"><span class="pre">ShardingSpec</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#module-torch_xla.experimental">experimental</a><ul>
+<li><a class="reference internal" href="#torch_xla.experimental.eager_mode"><code class="docutils literal notranslate"><span class="pre">eager_mode()</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#module-torch_xla.debug.metrics">debug</a><ul>
 <li><a class="reference internal" href="#torch_xla.debug.metrics.metrics_report"><code class="docutils literal notranslate"><span class="pre">metrics_report()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.debug.metrics.short_metrics_report"><code class="docutils literal notranslate"><span class="pre">short_metrics_report()</span></code></a></li>
@@ -4166,7 +4185,7 @@ the table. The design doc is <a class="reference external" href="https://github.
 </ul>
 </li>
 <li><a class="reference internal" href="#differences-from-xrt">Differences from XRT</a><ul>
-<li><a class="reference internal" href="#id18">Multithreading on TPU v2/v3</a></li>
+<li><a class="reference internal" href="#id20">Multithreading on TPU v2/v3</a></li>
 <li><a class="reference internal" href="#changes-to-xm-rendezvous">Changes to xm.rendezvous</a></li>
 <li><a class="reference internal" href="#pjrt-and-torch-distributed">PJRT and torch.distributed</a></li>
 </ul>
@@ -4211,7 +4230,7 @@ the table. The design doc is <a class="reference external" href="https://github.
 <li><a class="reference internal" href="#how-to-run-with-pytorch-xla-gpu">How to run with PyTorch/XLA:GPU</a><ul>
 <li><a class="reference internal" href="#create-a-gpu-instance">Create a GPU instance</a></li>
 <li><a class="reference internal" href="#environment-setup">Environment Setup</a><ul>
-<li><a class="reference internal" href="#id21">Docker</a></li>
+<li><a class="reference internal" href="#id23">Docker</a></li>
 <li><a class="reference internal" href="#check-environment-variable">Check environment variable</a></li>
 <li><a class="reference internal" href="#wheel">Wheel</a></li>
 </ul>
@@ -4225,9 +4244,9 @@ the table. The design doc is <a class="reference external" href="https://github.
 <li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
 <li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
 <li><a class="reference internal" href="#simple-example-sharding-aannotation-api">Simple Example &amp; Sharding Aannotation API</a></li>
-<li><a class="reference internal" href="#id28">Mesh</a></li>
+<li><a class="reference internal" href="#id30">Mesh</a></li>
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
-<li><a class="reference internal" href="#id29">Partition Spec</a></li>
+<li><a class="reference internal" href="#id31">Partition Spec</a></li>
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
 <li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
@@ -4257,7 +4276,7 @@ the table. The design doc is <a class="reference external" href="https://github.
 </li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-via-spmd">Fully Sharded Data Parallel via SPMD</a><ul>
 <li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
-<li><a class="reference internal" href="#id39">Gradient checkpointing</a></li>
+<li><a class="reference internal" href="#id41">Gradient checkpointing</a></li>
 <li><a class="reference internal" href="#huggingface-llama-2-example">HuggingFace Llama 2 Example</a></li>
 </ul>
 </li>
