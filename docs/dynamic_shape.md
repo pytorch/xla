@@ -36,7 +36,7 @@ Here are some numbers we get when we run the MLP model for 100 iterations:
 | Number of compilations   | 102               | 49      |
 | Compilation cache hit    | 198               | 1953      |
 
-![Performance comparison (a) without dynamic shape  (b) with dynamic shape](assets/dynamic_shape_mlp_perf.png)
+![Performance comparison (a) without dynamic shape  (b) with dynamic shape](_static/img/dynamic_shape_mlp_perf.png)
 
 One of the motivations of the dynamic shape is to reduce the number of excessive recompilation when the shape keeps changing between iterations. From the figure above, you can see the number of compilations reduced by half which results in the drop of the training time.
 
