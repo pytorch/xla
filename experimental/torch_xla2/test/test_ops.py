@@ -17,7 +17,6 @@ skiplist = {
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "block_diag",
     "broadcast_tensors",
-    "broadcast_to",
     "bucketize",
     "byte",
     "cat",
