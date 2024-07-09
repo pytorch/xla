@@ -28,4 +28,4 @@ git push origin gh-pages
 To add a new doc please create a `.md` file under this directory. To make this doc show up in our [doc pages](https://pytorch.org/xla/master/index.html), please add a `.rst` file under `source/`.
 
 ## Adding images in the doc
-Please add your imges to both `asserts` and `source/assets/` for images to properlly show up in the markdown files as well as our [doc pages](https://pytorch.org/xla/master/index.html).
+Please add your imges to both `_static/img/` and `source/_static/img/` for images to properlly show up in the markdown files as well as our [doc pages](https://pytorch.org/xla/master/index.html).
