@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git88bcb45 )
+                  master (2.5.0+git7206975 )
                 </div>
               
             
@@ -391,7 +391,7 @@
 <div class="section" id="what-is-pytorch-xla-spmd">
 <h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
 <p><a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is an automatic parallelization system for common ML workloads. The XLA compiler will transform the single device program into a partitioned one with proper collectives, based on the user provided sharding hints. This feature allows developers to write PyTorch programs as if they are on a single large device without any custom sharded computation ops and/or collective communications to scale.</p>
-<a class="reference external image-reference" href="assets/spmd_mode.png"><img alt="alt_text" src="assets/spmd_mode.png" /></a>
+<a class="reference external image-reference" href="_static/img/spmd_mode.png"><img alt="alt_text" src="_images/spmd_mode.png" /></a>
 <p><a href="#id2"><span class="problematic" id="id3">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
 </div>
 <div class="section" id="how-to-use-pytorch-xla-spmd">
@@ -638,8 +638,8 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 </pre></div>
 </div>
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/spmd_debug_1.png">
-  <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="assets/spmd_debug_1_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="_static/img/spmd_debug_1.png">
+  <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="_static/img/spmd_debug_1_light.png">
 </picture><ul class="simple">
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> and visualization result:</p></li>
 </ul>
@@ -649,8 +649,8 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 </pre></div>
 </div>
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/spmd_debug_2.png">
-  <img alt="visualize_sharding example on TPU v4-8(single-host)" src="assets/spmd_debug_2_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="_static/img/spmd_debug_2.png">
+  <img alt="visualize_sharding example on TPU v4-8(single-host)" src="_static/img/spmd_debug_2_light.png">
 </picture><p>You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style <code class="docutils literal notranslate"><span class="pre">tiled</span></code>, <code class="docutils literal notranslate"><span class="pre">partial_replication</span></code> and <code class="docutils literal notranslate"><span class="pre">replicated</span></code>.</p>
 </div>
 <div class="section" id="auto-sharding">
