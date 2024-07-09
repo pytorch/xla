@@ -1560,6 +1560,12 @@ def _aten_bitwise_xor(self, other):
   return self ^ other
 
 
+# aten.broadcast_to
+@op(torch.ops.aten.broadcast_to)
+def _aten_broadcast_to(input, shape):
+  return jnp.broadcast_to(input, shape)
+
+
 # aten.clamp
 @op(torch.ops.aten.clamp.default)
 @op(torch.ops.aten.clamp.Tensor)
