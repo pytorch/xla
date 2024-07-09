@@ -149,8 +149,7 @@ def _torch_binary_scalar_type(scalar, tensor):
   return jnp.float32
 
 
-@op(torch.ops.aten.sub.Tensor)
-@op(torch.ops.aten.sub.Scalar)
+@op(torch.ops.aten.sub.Tensor, torch.ops.aten.sub.Scalar)
 def _aten_sub(x, y):
   if isinstance(x, float):
     dtype = _torch_binary_scalar_type(x, y)
@@ -1560,11 +1559,14 @@ def _aten_constant_pad_nd(input, padding, value=0):
 
 
 # aten.convolution_backward
-@op(torch.ops.aten.copy)
+# @op(torch.ops.aten.copy)
 @op(torch.ops.aten.lift_fresh_copy)
 def _aten_copy(x):
   return jnp.copy(x)
 
+@op(torch.ops.aten.copy, is_jax_function=False)
+def _aten_copy(self, src):
+  return self.copy_(src)
 
 @op(torch.ops.aten._cdist_forward)
 def _aten_cdist_forward(x1, x2, p, compute_mode=""):
@@ -1926,10 +1928,9 @@ def _aten_where(condition, x, y):
 
 
 # aten.to.dtype
-# Tensor(a) self, ScalarType dtype, bool non_blocking=False, bool copy=False, MemoryFormat? memory_format=None
-@op(torch.ops.aten.to.dtype)
+@op(torch.ops.aten.to.dtype, torch.ops.aten.to.dtype_layout)
 def _aten_to_dtype(
-  a, dtype, non_blocking=False, copy=False, memory_format=None
+  a, *, dtype=None, layout=None, device=None, pin_memory=None, non_blocking=False, copy=False, memory_format=None
 ):
   if dtype:
     jaxdtype = mappings.t2j_dtype(dtype)
@@ -2065,10 +2066,11 @@ def _rand(
   return res
 
 
-@op(torch.ops.aten.scalar_tensor.default)
-def _aten_scalar_tensor(val, **kwargs):
-  p = torch.ops.aten.scalar_tensor(val)
-  return mappings.t2j(p)
+# TODO: there's already another implementation of this?
+# @op(torch.ops.aten.scalar_tensor.default)
+# def _aten_scalar_tensor(val, **kwargs):
+#   p = torch.ops.aten.scalar_tensor(val)
+#   return mappings.t2j(p)
 
 
 @op(torch.ops.aten.to.device)
