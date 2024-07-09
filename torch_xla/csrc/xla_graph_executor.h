@@ -187,6 +187,12 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
                        const torch::lazy::BackendDevice& device);
 
+  void SetUseEagerMode(bool use_eager_mode) {
+    use_eager_mode_ = use_eager_mode;
+  }
+
+  bool UseEagerMode() { return use_eager_mode_; }
+
  private:
   // This is just to group results from compile(). Since our computation is
   // different, we don't reuse the upstream CompilationResult.
@@ -361,6 +367,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const SyncTensorsConfig& config, bool warm_up_cache_only = false);
 
   ComputationCache* computation_cache_;
+  bool use_eager_mode_ = false;
 };
 
 }  // namespace torch_xla

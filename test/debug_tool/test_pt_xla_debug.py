@@ -29,6 +29,18 @@ class PtXLADebugTest(unittest.TestCase):
       assert False, "This test should be run with PT_XLA_DEBUG_FILE"
     open(cls.debug_file_name, 'w').close()
 
+  def test_eager_mark_step(self):
+    torch_xla.experimental.eager_mode(True)
+    device = xm.xla_device()
+    t1 = torch.randn(5, 9, device=device)
+    xm.mark_step()
+    with open(self.debug_file_name, 'rb') as f:
+      lines = f.readlines()
+    # We expect PT_XLA_BUDEG not to output anything under the eager mode
+    self.assertEqual(len(lines), 0)
+    torch_xla.experimental.eager_mode(False)
+    open(self.debug_file_name, 'w').close()
+
   def test_user_mark_step(self):
     device = xm.xla_device()
     t1 = torch.randn(2, 2, device=device)
