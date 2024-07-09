@@ -34,6 +34,8 @@ class TrainDecoderOnlyBase():
     self.model = DecoderOnlyModel(self.config).to(self.device)
     self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0001)
     self.loss_fn = nn.CrossEntropyLoss()
+    # Compile the step fn
+    self.compiled_step_fn = torch_xla.experimental.compile(self.step_fn)
 
   def _train_update(self, step, loss, tracker, epoch):
     print(f'epoch: {epoch}, step: {step}, loss: {loss}, rate: {tracker.rate()}')
@@ -55,7 +57,7 @@ class TrainDecoderOnlyBase():
     self.model.train()
     loader = itertools.islice(loader, self.num_steps)
     for step, (data, target) in enumerate(loader):
-      loss = self.step_fn(data, target)
+      loss = self.compiled_step_fn(data, target)
       tracker.add(self.batch_size)
       if step % 10 == 0:
         xm.add_step_closure(

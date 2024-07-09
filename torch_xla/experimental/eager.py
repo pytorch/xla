@@ -40,8 +40,7 @@ def compile(func):
 
   @functools.wraps(func)  # Keep function's name, docstring, etc.
   def wrapper(*args, **kwargs):
-    # compile should only be called with
-    assert torch_xla._XLAC._get_use_eager_mode() == True
+    saved_eager_mode_status = torch_xla._XLAC._get_use_eager_mode()
     torch_xla._XLAC._set_use_eager_mode(False)
     # clear the pending graph if any
     torch_xla.sync()
@@ -54,7 +53,7 @@ def compile(func):
       # Handle exceptions (if needed)
       print(f"Error in target function: {e}")
       raise  # Re-raise the exception
-    torch_xla._XLAC._set_use_eager_mode(True)
+    torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
 
     return result
 

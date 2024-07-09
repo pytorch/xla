@@ -10,6 +10,11 @@ import torch_xla.core.xla_model as xm
 
 class TrainDecoderXLADDP(TrainDecoderOnlyBase):
 
+  def __init__(self):
+    super().__init__()
+    # We want to run the step fn eagerly.
+    self.compiled_step_fn = self.step_fn
+
   def run_optimizer(self):
     # optimizer_step will call `optimizer.step()` and all_reduce the gradident
     xm.optimizer_step(self.optimizer)
