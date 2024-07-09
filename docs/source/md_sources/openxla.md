@@ -7,7 +7,7 @@ Previous to OpenXLA, PyTorch/XLA pulled XLA directly from [TensorFlow](https://g
 
 # How to use OpenXLA
 
-For [PJRT runtime](https://github.com/pytorch/xla/blob/master/docs/pjrt.md) users, there is no change with this migration. For XRT runtime users, there is a separate [XRT branch of PyTorch/XLA](https://github.com/pytorch/xla/tree/xrt) since OpenXLA doesn't support XRT.
+For [PJRT runtime](https://github.com/pytorch/xla/blob/master/docs/source/md_sources/pjrt.md) users, there is no change with this migration. For XRT runtime users, there is a separate [XRT branch of PyTorch/XLA](https://github.com/pytorch/xla/tree/xrt) since OpenXLA doesn't support XRT.
 
 
 # Performance

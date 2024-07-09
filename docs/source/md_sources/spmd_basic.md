@@ -79,5 +79,5 @@ xs.mark_sharding( t2, mesh, (('data', 'model'),))
 ## Further Reading
 1. [Example](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_spmd_data_parallel.py) to use SPMD to express data parallism.
 2. [Example](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py) to use SPMD to express FSDP(Fully Sharded Data Parallel).
-3. [SPMD advanced topics](https://github.com/pytorch/xla/blob/master/docs/spmd_advanced.md)
-4. [Spmd Distributed Checkpoint](https://github.com/pytorch/xla/blob/master/docs/spmd_distributed_checkpoint.md)
+3. [SPMD advanced topics](https://github.com/pytorch/xla/blob/master/docs/source/md_sources/spmd_advanced.md)
+4. [Spmd Distributed Checkpoint](https://github.com/pytorch/xla/blob/master/docs/source/md_sources/spmd_distributed_checkpoint.md)

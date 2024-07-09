@@ -350,7 +350,7 @@ from the PyTorch documentation. Keep in mind these constraints:
 _New in PyTorch/XLA r2.0_
 
 When using PJRT with `torch.distributed` and
-`[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)`
+`[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/source/md_sources/ddp.md)`
 we strongly recommend using the new `xla://` `init_method`, which automatically
 finds the replica IDs, world size, and master IP by querying the runtime. For
 example:

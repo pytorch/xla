@@ -1,5 +1,5 @@
 # PyTorch/XLA SPMD advanced topics
-In this doc we will cover some advance topic on GSPMD. Please read [SPMD user guide](https://github.com/pytorch/xla/blob/master/docs/spmd_basic.md) before procedding to this doc.
+In this doc we will cover some advance topic on GSPMD. Please read [SPMD user guide](https://github.com/pytorch/xla/blob/master/docs/source/md_sources/spmd_basic.md) before procedding to this doc.
 
 ### Sharding-Aware Host-to-Device Data Loading
 
@@ -38,7 +38,7 @@ print(mesh.shape())
 ```
 ### Running SPMD on TPU Pod
 
-There is no code change required to go from single TPU host to TPU Pod if you construct your mesh and partition spec based on the number of devices instead of some hardcode constant. To run the PyTorch/XLA workload on TPU Pod, please refer to the [Pods section](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#pods) of our PJRT guide.
+There is no code change required to go from single TPU host to TPU Pod if you construct your mesh and partition spec based on the number of devices instead of some hardcode constant. To run the PyTorch/XLA workload on TPU Pod, please refer to the [Pods section](https://github.com/pytorch/xla/blob/master/docs/source/md_sources/pjrt.md#pods) of our PJRT guide.
 
 ### XLAShardedTensor
 
