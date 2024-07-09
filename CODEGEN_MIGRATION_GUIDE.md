@@ -52,7 +52,7 @@ When you work on your first few codegens, we generally recommend you to start wi
 ```
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()),
                                output_size_list, /*pool_dim=*/3)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self, output_size);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self, output_size);
   }
 ```
 2. Results in dynamic shape as these ops are WIP and may evolve over time. At some future point, we may bring the ops into codegen.

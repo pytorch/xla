@@ -645,9 +645,6 @@ class ExperimentRunner:
     def is_aten_op(op_name):
       return 'aten::' in op_name
 
-    def get_xla_cpu_fallback_ops(met):
-      return set(name for name in met.counter_names() if is_aten_op(name))
-
     extract_prof_info = lambda event: {
         "self_cpu_time_s": us_to_s(event.self_cpu_time_total),
         "self_cuda_time_s": us_to_s(event.self_cuda_time_total),
@@ -657,7 +654,7 @@ class ExperimentRunner:
     }
 
     if benchmark_experiment.xla:
-      unlowered_ops = get_xla_cpu_fallback_ops(met)
+      unlowered_ops = met.executed_fallback_ops()
       if not unlowered_ops:
         return
       if "xla_unlowered_ops" not in metrics:

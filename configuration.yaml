@@ -394,3 +394,8 @@ variables:
           your code.
       type: bool
       default_value: false
+    XLA_FALLBACK_CPU:
+      description:
+        - Forces CPU OpenXLA fallback. By default, PyTorch/XLA will run any operation
+          that doesn't have a lowering using PyTorch CUDA as fallback. Setting this
+          flag will force PyTorch/XLA to use PyTorch CPU as fallback.
