@@ -9,6 +9,7 @@ This name is defined by our mirror implementation of `spawn`.
 """
 
 import datetime
+import functools
 import os
 from typing import List, Optional, Union
 
@@ -20,6 +21,10 @@ from torch._C._distributed_c10d import ProcessGroup  # type: ignore
 import torch.distributed
 import torch_xla2
 import numpy as np
+
+from jax.sharding import Mesh, PartitionSpec as P
+from jax.experimental import mesh_utils
+from jax.experimental.shard_map import shard_map
 
 
 class ProcessGroupJax(ProcessGroup):
@@ -136,12 +141,20 @@ def spawn(f, args=(), env: Optional[torch_xla2.tensor.Environment] = None):
   """
   env = env or torch_xla2.default_env()
 
-  def jax_wrapper(index, jax_args):
+  devices = mesh_utils.create_device_mesh((jax.device_count(),))
+  mesh = Mesh(devices, ("torch_dist"))
+
+  jax_args = env.t2j_iso(args)
+
+  @functools.partial(
+    shard_map, mesh=mesh, in_specs=P("torch_dist"), out_specs=P()
+  )
+  def jax_wrapper(index):
     index, args = env.j2t_iso([index, jax_args])
     torch_outputs = f(index, *args)
     return env.t2j_iso(torch_outputs)
 
-  jax_outputs = jax.pmap(jax_wrapper, axis_name="torch_dist")(
-    np.arange(jax.device_count()), env.t2j_iso(args)
+  jax_outputs = jax_wrapper(
+    np.arange(jax.device_count()),
   )
   return env.j2t_iso(jax_outputs)
