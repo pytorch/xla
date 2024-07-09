@@ -5,6 +5,7 @@ import jax
 import jax.numpy as jnp
 import numpy
 import torch
+import torch.distributed._functional_collectives
 import torch.func
 import torch.utils._mode_utils as mode_utils
 import torch.utils._python_dispatch as torch_dispatch
@@ -222,7 +223,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
       if isinstance(func, torch._ops.OpOverloadPacket):
         with self:
           return func(*args, **kwargs)
-      if func.namespace != 'aten':
+      if func.namespace not in ('aten', '_c10d_functional'):
         return func(*args, **kwargs)
       return self.env.dispatch(func, types, args, kwargs)
 
@@ -260,7 +261,7 @@ class Environment(contextlib.ContextDecorator):
         self.config = configuration or config.Configuration()
 
     def load_ops(self):
-      from torch_xla2.ops import jaten, jtorch, ops_registry
+      from torch_xla2.ops import jaten, jtorch, jc10d, ops_registry
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
 
@@ -309,6 +310,10 @@ class Environment(contextlib.ContextDecorator):
             f'Operator with name {_name_of_func(func)} has no lowering')
 
         old_args, old_kwargs = args, kwargs
+        args, kwargs = torch_pytree.tree_map_only(
+            torch.distributed._functional_collectives.AsyncCollectiveTensor,
+            torch.distributed._functional_collectives.wait_tensor,
+            (args, kwargs))
         try:
           if op.is_jax_function:
             args, kwargs = self.t2j_iso((args, kwargs))
@@ -362,6 +367,8 @@ class Environment(contextlib.ContextDecorator):
 
     def t2j_iso(self, torchtensors):
       def to_jax(x):
+        if isinstance(x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
+          x = x.wait()
         assert isinstance(x, XLATensor2), f'Expect a XLATensor2 but got {type(x)}; usually this means there is a mixed math between XLATensor and torch.Tensor'
         return x.jax()
       return torch_pytree.tree_map_only(torch.Tensor, to_jax, torchtensors)

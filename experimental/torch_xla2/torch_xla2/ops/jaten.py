@@ -8,6 +8,7 @@ from jax import numpy as jnp
 
 import numpy as np
 import torch
+import torch.distributed._functional_collectives
 from torch_xla2.ops import ops_registry
 from torch_xla2.ops import op_base, mappings
 
@@ -64,7 +65,6 @@ def _handle_int64_trig(self, func):
   if target_type is not None:
     res = res.astype(target_type)
   return res
-
 
 
 @op(
