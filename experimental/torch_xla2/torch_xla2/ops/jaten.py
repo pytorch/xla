@@ -149,6 +149,11 @@ def _torch_binary_scalar_type(scalar, tensor):
   return jnp.float32
 
 
+@op(torch.ops.aten.searchsorted.Tensor)
+def _aten_searchsorted(sorted_sequence, values):
+  return jnp.searchsorted(sorted_sequence, values)
+
+
 @op(torch.ops.aten.sub.Tensor)
 @op(torch.ops.aten.sub.Scalar)
 def _aten_sub(x, y):
@@ -1555,6 +1560,12 @@ def _aten_bitwise_xor(self, other):
   return self ^ other
 
 
+# aten.broadcast_to
+@op(torch.ops.aten.broadcast_to)
+def _aten_broadcast_to(input, shape):
+  return jnp.broadcast_to(input, shape)
+
+
 # aten.clamp
 @op(torch.ops.aten.clamp.default)
 @op(torch.ops.aten.clamp.Tensor)
@@ -1719,6 +1730,12 @@ def _aten_glu(x, dim=-1):
 @op(torch.ops.aten.hardtanh)
 def _aten_hardtanh(input, min_val=-1.0, max_val=1.0, inplace=False):
   return jnp.clip(input, min_val, max_val)
+
+
+# aten.lcm
+@op(torch.ops.aten.lcm)
+def _aten_lcm(input, other):
+  return jnp.lcm(input, other)
 
 
 # aten.isinf
