@@ -199,12 +199,13 @@ function run_xla_op_tests1 {
   run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
 }
 
-# DO NOT MODIFY
 function run_xla_op_tests2 {
   run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/pjrt/test_dtypes.py"
   run_test "$CDIR/test_while_loop.py"
   run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
+  run_test "$CDIR/eager/test_eager_with_xla_compile.py"
+  run_test "$CDIR/eager/test_eager_with_torch_compile.py"  
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
