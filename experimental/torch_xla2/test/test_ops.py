@@ -475,13 +475,10 @@ skiplist = {
     "unsafe_chunk",
     "unsafe_split",
     "unsqueeze",
-    "vdot",
     "view_as_complex",
     "view_as",
     "view_copy",
     "view",
-    "vsplit",
-    "vstack",
 }
 
 # These inputs are themselves views
