@@ -73,17 +73,15 @@ def _xla_while_loop(cond_fn,
   for carried_input in carried_inputs:
     device = carried_input.device
     fake_carried_inputs.append(
-        torch.randint(10, carried_input.size(),
-                      dtype=carried_input.dtype).to(device))
+        torch.empty(carried_input.size(), dtype=carried_input.dtype).to(device))
 
   #  ====== additional_inputs_list_cond ======
   fake_additiona_args = []
   for additional_input in additional_inputs:
     device = additional_input.device
     fake_additiona_args.append(
-        torch.randint(
-            10, additional_input.size(),
-            dtype=additional_input.dtype).to(device))
+        torch.empty(additional_input.size(),
+                    dtype=additional_input.dtype).to(device))
 
   #  ====== inputs_list ======
   #  specify body_fn_inputs/cond_fn_inputs, and add caught additional_inputs into fn_inputs
