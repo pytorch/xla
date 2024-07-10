@@ -1603,12 +1603,14 @@ def _aten_constant_pad_nd(input, padding, value=0):
   # NOTE: Torch padding is flat and reversed: (1, 1, 2, 2)
   #  means last dim get padded 1 in front and 1 in back;
   #  and second last dim get padded 2 in front and 2 in back.
-  # Jax padding tuple of 2-tuple: the same padding is
-  # [(0, 0), ..., (2,2), (1,1)]
+  # Jax padding tuple of 3-tuple: the same padding is
+  # [(0, 0, 0), ..., (2,2,0), (1,1,0)], where the last dimension 
+  # is the amount of padding added between any two elements in each dimension 
   m = len(padding)
-  rev_padding = [(padding[i - 1], padding[i]) for i in range(m - 1, 0, -2)]
-  pad_dim = tuple(([(0, 0)] * (len(input.shape) - m // 2)) + rev_padding)
-  return jnp.pad(input, pad_dim, mode="constant", constant_values=value)
+  rev_padding = [(padding[i - 1], padding[i], 0) for i in range(m - 1, 0, -2)]
+  pad_dim = tuple(([(0, 0, 0)] * (len(input.shape) - m // 2)) + rev_padding)
+  value_casted = jax.numpy.array(value, dtype=input.dtype)
+  return jax.lax.pad(input, padding_value=value_casted, padding_config = pad_dim)
 
 
 # aten.convolution_backward
