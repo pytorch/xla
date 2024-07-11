@@ -379,6 +379,7 @@ cc_library(
     deps = [
         "@xla//xla:statusor",
         "@xla//xla/service:platform_util",
+        "@com_google_absl//absl/base:log_severity",
     ],
 )
 

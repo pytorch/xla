@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "tsl/platform/logging.h"
+#include "absl/base/log_severity.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -26,7 +27,7 @@ namespace internal {
   TF_PREDICT_TRUE(!TF_VLOG_IS_ON(level)) \
   ? (void)0                              \
   : ::tsl::internal::Voidifier() &       \
-          ::tsl::internal::LogMessage(__FILE__, __LINE__, ::tsl::INFO)
+          ::tsl::internal::LogMessage(__FILE__, __LINE__, absl::LogSeverity::kInfo)
 
 struct ErrorSink : public std::basic_ostringstream<char> {};
 

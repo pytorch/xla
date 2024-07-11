@@ -904,7 +904,7 @@ void BuildProfilerSubmodule(py::module* m) {
              return py::none();
            })
       .def("set_metadata", &xla::profiler::TraceMeWrapper::SetMetadata)
-      .def_static("is_enabled", &xla::profiler::TraceMeWrapper::IsEnabled);
+      .def_static("is_enabled", &tsl::profiler::TraceMe::Active);
 
   py::class_<torch::lazy::ScopePusher,
              std::unique_ptr<torch::lazy::ScopePusher>>
