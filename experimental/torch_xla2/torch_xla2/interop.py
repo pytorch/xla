@@ -5,6 +5,7 @@ from torch.nn.utils import stateless as torch_stateless
 import jax
 import jax.numpy as jnp
 from jax import tree_util as pytree
+from jax.experimental.shard_map import shard_map
 from torch_xla2 import tensor
 import torch_xla2
 
@@ -118,9 +119,19 @@ def call_torch(torch_func: TorchCallable, *args: JaxValue, **kwargs: JaxValue) -
 
 fori_loop = torch_view(jax.lax.fori_loop)
 
-def jax_jit(torch_function, kwargs_for_jax_jit=None):
-    kwargs_for_jax_jit = kwargs_for_jax_jit or {}
+
+def wrap_jax_jit(torch_function, jax_jit_func=jax.jit, kwargs_for_jax=None):
+    kwargs_for_jax = kwargs_for_jax or {}
     jax_func = jax_view(torch_function)
-    jitted = jax.jit(jax_func, **kwargs_for_jax_jit)
+    jitted = jax_jit_func(jax_func, **kwargs_for_jax)
     return torch_view(jitted)
 
+
+def jax_jit(torch_function, kwargs_for_jax_jit=None):
+    return wrap_jax_jit(torch_function, jax_jit_func=jax.jit,
+                        kwargs_for_jax=kwargs_for_jax_jit)
+
+
+def jax_shard_map(torch_function, kwargs_for_jax_shard_map=None):
+    return wrap_jax_jit(torch_function, jax_jit_func=shard_map,
+                        kwargs_for_jax=kwargs_for_jax_shard_map)
