@@ -93,7 +93,7 @@ class MegabloxTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm(self):
     met.clear_all()
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update('jax_default_matmul_precision', 'highest')
 
     self._init_test_cases()
     for test_case in self.tests_cases:
@@ -113,7 +113,7 @@ class MegabloxTest(unittest.TestCase):
 
     # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update('jax_default_matmul_precision', 'default')
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm_bf16(self):
@@ -300,7 +300,7 @@ class MegabloxTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tgmm(self):
     met.clear_all()
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update('jax_default_matmul_precision', 'highest')
 
     self._init_test_cases()
     for test_case in self.tests_cases:
@@ -320,7 +320,7 @@ class MegabloxTest(unittest.TestCase):
 
     # Make sure tgmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update('jax_default_matmul_precision', 'default')
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tgmm_bf16(self):
