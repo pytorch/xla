@@ -617,6 +617,15 @@ def _make_group_metadata(
   # group_tiles.sum() < tiles_m + num_groups - 1. The kernel grid will be sized
   # such that we only execute the necessary number of tiles.
   tiles_m = _calculate_num_tiles(m, tm)
+  if 'debug' in os.environ:
+    print("num_group")
+    print(num_groups)
+    print("group_tiles")
+    print(group_tiles)
+    print("tiles_m")
+    print(tiles_m)
+    breakpoint()
+
   group_ids = repeat_with_fixed_output_size(
       torch.arange(num_groups, dtype=torch.int32).to(device), group_tiles,
       tiles_m + num_groups - 1)
@@ -755,10 +764,34 @@ def gmm(
   )
   group_offset_torch = torch.tensor([0], dtype=torch.int32).to(lhs.device)
 
-  return torch_xla._XLAC._xla_tpu_custom_call([
+  if 'debug' in os.environ:
+    # print('num_tiles')
+    # print(num_tiles)
+    # print("group_offsets")
+    # print(group_offsets)
+    print("group_ids")
+    print(group_ids)
+    # print("m_tile_ids")
+    # print(m_tile_ids)
+    # print("group_offset_torch")
+    # print(group_offset_torch)
+    # print("lhs")
+    # print(lhs)
+    # print("rhs")
+    # print(rhs)
+    # print("payload")
+    # print(payload)
+    # print("preferred_element_type")
+    # print(preferred_element_type)
+    breakpoint()
+  else:
+    print('no debug')
+
+  res = torch_xla._XLAC._xla_tpu_custom_call([
       num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs,
       rhs
   ], payload, [torch.Size([m, n])], [preferred_element_type])[0]
+  return res
 
 
 def tgmm(
@@ -894,3 +927,44 @@ def paged_attention_non_xla(q: torch.Tensor,
                             pages_per_compute_block: int,
                             megacore_mode: str = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
+
+
+XLA_LIB.define(
+    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None) -> Tensor",
+)
+
+
+@impl(XLA_LIB, "gmm", "XLA")
+def gmm_xla(
+    lhs: torch.Tensor,
+    rhs: torch.Tensor,
+    group_sizes: torch.Tensor,
+    # pytorch custom op does not allow tuple type, use list instead
+    tiling: Optional[list[int]] = [512, 512, 512]):
+  if 'debug' in os.environ:
+    breakpoint()
+  assert len(tiling) == 3, "tiling must be a list with 3 integers"
+  assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
+  assert rhs.dim(
+  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
+  tiling = tuple(tiling)
+  return gmm(lhs, rhs, group_sizes, tiling)
+
+
+@impl(XLA_LIB, "gmm", "CompositeExplicitAutograd")
+def gmm_non_xla(lhs: torch.Tensor,
+                rhs: torch.Tensor,
+                group_sizes: torch.Tensor,
+                tiling: Optional[list[int]] = [512, 512, 512]):
+  print('called')
+  # This will be called when dynamo use fake tensor to construct the fake output.
+  # We need to make sure output tensor's shape is correct.
+  if lhs.device != torch.device("meta"):
+    warnings.warn(f'XLA gmm should only be applied to tensors on XLA device')
+  assert len(tiling) == 3, "tiling must be a list with 3 integers"
+  assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
+  assert rhs.dim(
+  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
+
+  # we only need to return the tensor with correct shape for meta tensor.
+  return torch.empty(lhs.size()[0], rhs.size()[2], device=lhs.device)
