@@ -374,4 +374,4 @@ def _mp_fn(index, flags):
 
 if __name__ == '__main__':
   # if running with torchrun, nprocs argument will be omitted.
-  torch_xla.launch(_mp_fn, args=(FLAGS, ))
+  torch_xla.launch(_mp_fn, args=(FLAGS,))
