@@ -121,47 +121,26 @@ class MegabloxTest(unittest.TestCase):
     jax.config.update('jax_default_matmul_precision', "highest")
 
     self._init_test_cases()
-    for _ in range(10):
-      for test_case in self.tests_cases:
-        num_groups = test_case['num_groups']
-        k = test_case['k']
-        m = test_case['m']
-        n = test_case['n']
-        lhs_dtype = rhs_dtype = test_case['dtype']
+    for test_case in self.tests_cases:
+      num_groups = test_case['num_groups']
+      k = test_case['k']
+      m = test_case['m']
+      n = test_case['n']
+      lhs_dtype = rhs_dtype = test_case['dtype']
 
-        lhs = torch.rand(m, k, dtype=lhs_dtype)
-        rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-        ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+      lhs = torch.rand(m, k, dtype=lhs_dtype)
+      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
-        lhs_xla = lhs.to("xla")
-        rhs_xla = rhs.to("xla")
-        group_size_xla = group_sizes.to("xla")
-        out = torch.ops.xla.gmm(lhs_xla, rhs_xla, group_size_xla)
-        #self.assertTrue(torch.allclose(ref_out, out.cpu()))
+      lhs_xla = lhs.to("xla")
+      rhs_xla = rhs.to("xla")
+      group_size_xla = group_sizes.to("xla")
+      out = torch.ops.xla.gmm(lhs_xla, rhs_xla, group_size_xla)
+      #self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
-        if not torch.allclose(ref_out, out.cpu()):
-          import os
-          os.environ['debug'] = '1'
-
-          print(id(lhs_xla))
-          print(id(rhs_xla))
-          print(id(group_size_xla))
-
-          breakpoint()
-          print("ref_out")
-          print(ref_out)
-          print("out")
-          print(out.cpu())
-          print("if call again")
-          print(torch.ops.xla.gmm(lhs_xla, rhs_xla, group_size_xla).cpu())
-          print("if call without custom op")
-          print(gmm(lhs_xla, rhs_xla, group_size_xla).cpu())
-          print("if call again again")
-          print(torch.ops.xla.gmm(lhs_xla, rhs_xla, group_size_xla).cpu())
-          print("if call without custom op again again")
-          print(gmm(lhs_xla, rhs_xla, group_size_xla).cpu())
-          breakpoint()
+      if not torch.allclose(ref_out, out.cpu()):
+        breakpoint()
 
     # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
@@ -215,25 +194,6 @@ class MegabloxTest(unittest.TestCase):
       out = torch.ops.xla.gmm(lhs_xla, rhs_xla, group_size_xla)
 
       if not torch.allclose(ref_out, out.cpu()):
-        print(id(lhs_xla))
-        print(id(rhs_xla))
-        print(id(group_size_xla))
-
-        import os
-        os.environ['debug'] = '1'
-        breakpoint()
-        print("ref_out")
-        print(ref_out)
-        print("out")
-        print(out.cpu())
-        print("if call again")
-        print(torch.ops.xla.gmm(lhs_xla, rhs_xla, group_size_xla).cpu())
-        print("if call without custom op")
-        print(gmm(lhs_xla, rhs_xla, group_size_xla).cpu())
-        print("if call again again")
-        print(torch.ops.xla.gmm(lhs_xla, rhs_xla, group_size_xla).cpu())
-        print("if call without custom op again again")
-        print(gmm(lhs_xla, rhs_xla, group_size_xla).cpu())
         breakpoint()
       #self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
