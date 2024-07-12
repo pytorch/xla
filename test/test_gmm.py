@@ -120,7 +120,6 @@ class MegabloxTest(unittest.TestCase):
     self.assertNotIn("aten::", met.short_metrics_report())
     jax.config.update('jax_default_matmul_precision', "default")
 
-
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm_bf16(self):
     met.clear_all()
