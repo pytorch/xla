@@ -73,7 +73,7 @@ resource "google_container_node_pool" "arc_v4_tpu_nodes" {
 
 resource "helm_release" "arc" {
   name             = "actions-runner-controller"
-  chart            = "oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controlle:0.9.3"
+  chart            = "oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller:0.9.3"
   namespace        = var.arc_namespace
   create_namespace = true
 }
