@@ -7,8 +7,9 @@ from torch_xla.experimental import plugins
 def num_local_processes() -> int:
   if 'MASTER_ADDR' not in os.environ:
     logging.warning("MASTER_ADDR not setting, defaulting to localhost")
-  os.environ['NEURON_RT_ROOT_COMM_ID'] = '{}:{}'.format(
-      os.environ.get('MASTER_ADDR', 'localhost'), '62182')
+  if os.environ.get("NEURON_RT_ROOT_COMM_ID", None) is None:
+    os.environ['NEURON_RT_ROOT_COMM_ID'] = '{}:{}'.format(
+        os.environ.get('MASTER_ADDR', 'localhost'), '62182')
   if "NEURONCORE_NUM_DEVICES" not in os.environ:
     logging.warning("NEURONCORE_NUM_DEVICES not set, defaulting to 1")
   num_processes = int(os.environ.get("NEURONCORE_NUM_DEVICES", "1"))
