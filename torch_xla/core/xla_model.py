@@ -19,6 +19,7 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 import os
+from torch_xla.experimental.deprecation import deprecated
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -76,9 +77,9 @@ def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
 
 
+# TODO(zpcore): remove this function for release 2.5.
+@deprecated
 def parse_xla_device(device):
-  #TODO(zpcore): remove this function for release 2.5.
-  logging.warning("function parse_xla_device will be deprecated in release 2.5")
   return torch_xla._internal.util.parse_xla_device(device)
 
 
