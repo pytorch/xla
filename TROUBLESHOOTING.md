@@ -56,11 +56,7 @@ report sent to us if you have it.
 
 ## PyTorch/XLA Debugging Tool
 
-You can enable the PyTorch/XLA debugging tool by setting `PT_XLA_DEBUG=1`, which provides a couple useful debugging features.
-
-## PyTorch/XLA + Dynamo Debugging Tool
-
-You can enable the PyTorch/XLA + Dynamo debugging tool by setting `XLA_DYNAMO_DEBUG=1`.
+You can enable the PyTorch/XLA debugging tool by setting `PT_XLA_DEBUG_LEVEL=2`, which provides a couple useful debugging features. You can also lower the debug level to `1` to slip the execution analysis.
 
 ### Perform A Auto-Metrics Analysis
 
@@ -79,41 +75,44 @@ The debugging tool will analyze every compilation and execution for your model. 
 ```
 Compilation Analysis: ================================================================================
 Compilation Analysis: Compilation Cause
-Compilation Analysis:   user mark_step
-Compilation Analysis: Graph Info:
-Compilation Analysis:   Graph Hash: 537d4b0264b029688281412214d252e9
-Compilation Analysis:   Number of Graph Inputs: 588
-Compilation Analysis:   Number of Graph Outputs: 320
-Compilation Analysis: Python Frame Triggered Execution:
-Compilation Analysis:   mark_step (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:840)
-Compilation Analysis:   broadcast_master_param (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:1230)
-Compilation Analysis:   train_imagenet (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:261)
-Compilation Analysis:   _mp_fn (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:365)
-Compilation Analysis:   __call__ (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:176)
-Compilation Analysis:   _thread_fn (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:70)
-Compilation Analysis:   run (/usr/local/lib/python3.8/concurrent/futures/thread.py:57)
-Compilation Analysis:   _worker (/usr/local/lib/python3.8/concurrent/futures/thread.py:80)
-Compilation Analysis:   ..........
+Compilation Analysis:   mark_step in parallel loader at step end
+Compilation Analysis: Graph Info: 
+Compilation Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
+Compilation Analysis:   Number of Graph Inputs: 35
+Compilation Analysis:   Number of Graph Outputs: 107
+Compilation Analysis: Python Frame Triggered Execution: 
+Compilation Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
+Compilation Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
+Compilation Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
+Compilation Analysis:   train_loop_fn (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48)
+Compilation Analysis:   start_training (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:65)
+Compilation Analysis:   <module> (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:73)
 Compilation Analysis: --------------------------------------------------------------------------------
 Compilation Analysis: ================================================================================
 
+Post Compilation Analysis: ================================================================================
+Post Compilation Analysis: Graph input size: 1.548000 GB
+Post Compilation Analysis: Graph output size: 7.922460 GB
+Post Compilation Analysis: Aliased Input size: 1.547871 GB
+Post Compilation Analysis: Intermediate tensor size: 12.124478 GB
+Post Compilation Analysis: Compiled program size: 0.028210 GB
+Post Compilation Analysis: --------------------------------------------------------------------------------
+Post Compilation Analysis: ================================================================================
+
 Execution Analysis: ================================================================================
 Execution Analysis: Execution Cause
-Execution Analysis:   user mark_step
-Execution Analysis: Graph Info:
-Execution Analysis:   Graph Hash: 537d4b0264b029688281412214d252e9
-Execution Analysis:   Number of Graph Inputs: 588
-Execution Analysis:   Number of Graph Outputs: 320
-Execution Analysis: Python Frame Triggered Execution:
-Execution Analysis:   mark_step (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:840)
-Execution Analysis:   broadcast_master_param (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:1230)
-Execution Analysis:   train_imagenet (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:261)
-Execution Analysis:   _mp_fn (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:365)
-Execution Analysis:   __call__ (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:176)
-Execution Analysis:   _thread_fn (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:70)
-Execution Analysis:   run (/usr/local/lib/python3.8/concurrent/futures/thread.py:57)
-Execution Analysis:   _worker (/usr/local/lib/python3.8/concurrent/futures/thread.py:80)
-Execution Analysis:   ..........
+Execution Analysis:   mark_step in parallel loader at step end
+Execution Analysis: Graph Info: 
+Execution Analysis:   Graph Hash: c74c3b91b855b2b123f833b0d5f86943
+Execution Analysis:   Number of Graph Inputs: 35
+Execution Analysis:   Number of Graph Outputs: 107
+Execution Analysis: Python Frame Triggered Execution: 
+Execution Analysis:   mark_step (/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055)
+Execution Analysis:   next (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44)
+Execution Analysis:   __next__ (/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32)
+Execution Analysis:   train_loop_fn (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48)
+Execution Analysis:   start_training (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:65)
+Execution Analysis:   <module> (/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:73)
 Execution Analysis: --------------------------------------------------------------------------------
 Execution Analysis: ================================================================================
 ```
@@ -127,7 +126,7 @@ Some common causes of Compilation/Executation are
 
 The executation caused by 1-4 are expected, and we want to avoid 5 by either reduce the frequency of accessing tensor values or manually add a `mark_step` before accessing.
 
-Users should expect to see this `Compilation Cause` + `Executation Cause` pairs for first couple steps. After the model stabilize users should expect to only see `Execution Cause`. To use PyTorch/XLA efficiently, we expect the same models code to be run for every step and compilation only happen once for every graph. If you keep seeing `Compilation Cause`, you should try to dump the IR/HLO following [this section](#common-debugging-environment-variables-combinations) and compare the graphs for each step and understand the source of the differences.
+Users should expect to see this `Compilation Cause` + `Executation Cause` pairs for first couple steps. After the model stabilize users should expect to only see `Execution Cause`(you can disable execution analysis by `PT_XLA_DEBUG_LEVEL=1`). To use PyTorch/XLA efficiently, we expect the same models code to be run for every step and compilation only happen once for every graph. If you keep seeing `Compilation Cause`, you should try to dump the IR/HLO following [this section](#common-debugging-environment-variables-combinations) and compare the graphs for each step and understand the source of the differences.
 
 Following section will explain how to get and understand a more detail metrics report.
 
@@ -191,6 +190,10 @@ import torch_xla.debug.metrics as met
 
 met.clear_all()
 ```
+
+## PyTorch/XLA + Dynamo Debugging Tool
+
+You can enable the PyTorch/XLA + Dynamo debugging tool by setting `XLA_DYNAMO_DEBUG=1`.
 
 ## Performance Profiling
 To profile your workload in depth to understand bottlenecks please check the following resources:
@@ -333,25 +336,6 @@ only be enabled for debugging.
 * ```XLA_USE_EAGER_DEBUG_MODE```: Forces the XLA tensor to execute eagerly, meaning compile and execute the torch operations one
   by one. This is useful to bypass the long compilation time but overall step time will be a lot slower and memory usage will be higher
   since all compiler optimizaiton will be skipped.
-
-* ```XLA_USE_BF16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _BiFloat16_
-  when sending to the _TPU_ device. Note that when using `XLA_USE_BF16=1` tensor arithmetic will
-  be done in reduced precision and so tensors will not be accurate if accumulated over time.
-  For example:
-
-  ```
-  # In reduced bfloat16 precision
-  >>> torch.tensor(4096, dtype=torch.bfloat16) + torch.tensor(1, dtype=torch.bfloat16)
-  tensor(4096., dtype=torch.bfloat16)
-  # Whereas in full float32 precision
-  >>> torch.tensor(4096) + torch.tensor(1)
-  tensor(4097)
-  ```
-  So to get accurate metrics such as average loss value over many steps, use manual mixed
-  precision where metrics stay in FP32.
-
-* ```XLA_USE_F16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _Float16_
-  (_PyTorch_ _Half_ type) when sending to devices which supports them.
 
 * ```TF_CPP_LOG_THREAD_ID```: If set to 1, the TF logs will show the thread ID
   helping with debugging multithreaded processes.

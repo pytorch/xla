@@ -46,7 +46,7 @@ xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed);
 
 std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, xla::XlaOp seed,
                                            float probability,
-                                           c10::optional<bool> train);
+                                           std::optional<bool> train);
 
 xla::XlaOp BuildSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp output,
                                 xla::XlaOp scalar_1);
@@ -161,6 +161,10 @@ std::vector<xla::XlaOp> BuildTpuCustomCall(
 
 xla::XlaOp BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
                     xla::XlaOp iou_threshold);
+
+std::vector<xla::XlaOp> BuildGpuCustomCall(
+    const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
+    const std::string& payload);
 
 }  // namespace torch_xla
 

@@ -207,28 +207,6 @@ copying data between an XLA device and the CPU. Inserting a barrier when
 taking an optimizer step explicitly synchronizes the CPU and the XLA device. For
 more information about our lazy tensor design, you can read [this paper](https://arxiv.org/pdf/2102.13267.pdf).
 
-### XLA Tensors and bFloat16
-
-PyTorch/XLA can use the
-[bfloat16](https://en.wikipedia.org/wiki/Bfloat16_floating-point_format)
-datatype when running on TPUs. In fact, PyTorch/XLA handles float types
-(`torch.float` and `torch.double`) differently on TPUs. This behavior is
-controlled by the `XLA_USE_BF16` and `XLA_DOWNCAST_BF16` environment variable:
-
-- By default both `torch.float` and `torch.double` are
-`torch.float` on TPUs.
-- If `XLA_USE_BF16` is set, then `torch.float` and `torch.double` are both
-`bfloat16` on TPUs.
-- If `XLA_DOWNCAST_BF16` is set, then `torch.float` is `bfloat16` on TPUs and `torch.double` is `float32` on TPUs.
-- If a PyTorch tensor has `torch.bfloat16` data type, this will be directly
-mapped to the TPU `bfloat16` (XLA `BF16` primitive type).
-
-Developers should note that *XLA tensors on TPUs will always report their PyTorch datatype* regardless of
-the actual datatype they're using. This conversion is automatic and opaque.
-If an XLA tensor on a TPU is moved back to the CPU it will be converted
-from its actual datatype to its PyTorch datatype. Depending on how your code operates, this conversion triggered by
-the type of processing unit can be important.
-
 ### Memory Layout
 
 The internal data representation of XLA tensors is opaque to the user. They

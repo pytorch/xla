@@ -127,13 +127,62 @@ _GLOBAL_MESH: Mesh = None
 
 
 def set_global_mesh(mesh: Mesh):
+  """
+  Set the global mesh that can be used for the current process.
+
+  Args:
+    mesh: (Mesh) Mesh object that will be the global mesh.
+
+  Example:
+    import torch_xla.distributed.spmd as xs
+    mesh = xs.get_1d_mesh("data")
+    xs.set_global_mesh(mesh)
+  """
   global _GLOBAL_MESH
   _GLOBAL_MESH = mesh
 
 
-def get_global_mesh():
+def get_global_mesh() -> Optional[Mesh]:
+  """
+  Get the global mesh for the current process.
+
+  Returns:
+    mesh: (Optional[Mesh]) Mesh object if global mesh is set, otherwise return None.
+
+  Example:
+    import torch_xla.distributed.spmd as xs
+    xs.get_global_mesh()
+  """
   global _GLOBAL_MESH
   return _GLOBAL_MESH
+
+
+def get_1d_mesh(axis_name: Optional[str] = None) -> Mesh:
+  """
+  Helper function to return the mesh with all devices in one dimension.
+
+  Args:
+    axis_name: (Optional[str]) optional string to represent the axis name of the mesh
+
+  Returns:
+    Mesh: Mesh object
+
+  Example:
+    # This example is assuming 1 TPU v4-8
+    import torch_xla.distributed.spmd as xs
+    mesh = xs.get_1d_mesh("data")
+    print(mesh.mesh_shape)
+    >> (4,)
+    print(mesh.axis_names)
+    >> ('data',)
+  """
+  num_devices = xr.global_runtime_device_count()
+  mesh_shape = (num_devices,)
+  device_ids = np.array(range(num_devices))
+  if axis_name == None:
+    return Mesh(device_ids, mesh_shape)
+  else:
+    return Mesh(device_ids, mesh_shape, (axis_name,))
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
@@ -268,7 +317,7 @@ class HybridMesh(Mesh):
         indices = itertools.combinations(
             range(len(assignable_physical_mesh)), num_axes)
         for c_axes, c_indices in zip(axes, indices):
-          if np.product(c_axes) == logical_axis_size:
+          if np.prod(c_axes) == logical_axis_size:
             assignment[logical_axis_index] = c_indices
             # Zero the assigned physical axes.
             assignable_physical_mesh = [
@@ -521,10 +570,9 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
 
 
 @xr.requires_pjrt
-def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
-                  mesh: Mesh,
-                  partition_spec: Tuple[Union[Tuple, int, str, None]],
-                  use_dynamo_custom_op: bool = False) -> XLAShardedTensor:
+def mark_sharding(
+    t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
+    partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
@@ -549,6 +597,9 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
 
     Examples
     —------------------------------
+    import torch_xla.runtime as xr
+    import torch_xla.distributed.spmd as xs
+
     mesh_shape = (4, 2)
     num_devices = xr.global_runtime_device_count()
     device_ids = np.array(range(num_devices))
@@ -573,20 +624,32 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  if use_dynamo_custom_op:
-    # Allows Dynamo to capture mark_sharding op
-    annotate_func = torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op
-    annotate_func(
-        unwrap_sharded_tensor(t), *mesh._get_op_sharding_args(partition_spec))
-  else:
-    op_sharding = mesh.get_op_sharding(partition_spec)
-    annotate_func = torch_xla._XLAC._xla_mark_sharding
-    annotate_func(unwrap_sharded_tensor(t), op_sharding)
+  op_sharding = mesh.get_op_sharding(partition_spec)
+  annotate_func = torch_xla._XLAC._xla_mark_sharding
+  annotate_func(unwrap_sharded_tensor(t), op_sharding)
   return wrap_as_sharded_tensor(t)
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
-  """Clear sharding annotation from the input tensor and return a `cpu` casted tensor."""
+  """
+  Clear sharding annotation from the input tensor and return a `cpu` casted tensor. This
+  is a in place operation but will also return the same torch.Tensor back.
+
+  Args:
+    t (Union[torch.Tensor, XLAShardedTensor]): Tensor that we want to clear the sharding
+
+  Return:
+    t (torch.Tensor): tensor that without sharding.
+
+  Examples:
+  import torch_xla.distributed.spmd as xs
+  torch_xla.runtime.use_spmd()
+
+  t1 = torch.randn(8,8).to(torch_xla.device())
+  mesh = xs.get_1d_mesh()
+  xs.mark_sharding(t1, mesh, (0, None))
+  xs.clear_sharding(t1)
+  """
   torch_xla._XLAC._xla_clear_sharding(unwrap_sharded_tensor(t))
   if isinstance(t, XLAShardedTensor):
     return t.global_tensor

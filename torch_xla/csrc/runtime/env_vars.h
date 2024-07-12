@@ -34,6 +34,9 @@ extern const char* const kEnvPjrtAllocatorCudaAsync;
 extern const char* const kEnvPjrtAllocatorPreallocate;
 extern const char* const kEnvPjrtAllocatorFraction;
 extern const char* const kEnvPjrtDynamicPlugins;
+extern const char* const kEnvDistSvcHeartbeatIntervalInSec;
+extern const char* const kEnvDistSvcMaxMissingHeartbeats;
+extern const char* const kEnvDistSvcShutdownTimeoutInMin;
 
 }  // namespace env
 }  // namespace runtime

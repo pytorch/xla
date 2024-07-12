@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
@@ -205,7 +206,7 @@ xla::XlaOp XlaDenseScatter(xla::XlaOp input, xla::XlaOp index, xla::XlaOp src,
   // Contribute back this code to xla::TorchScatterDense() once this has reached
   // a stable implementation.
   xla::XlaBuilder* builder = input.builder();
-  return builder->ReportErrorOrReturn([&]() -> xla::StatusOr<xla::XlaOp> {
+  return builder->ReportErrorOrReturn([&]() -> absl::StatusOr<xla::XlaOp> {
     const xla::Shape& index_shape = ShapeHelper::ShapeOfXlaOp(index);
     const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
     std::vector<int64_t> index_broacast_dims;
@@ -515,7 +516,7 @@ xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed) {
 
 std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, xla::XlaOp seed,
                                            float probability,
-                                           c10::optional<bool> train) {
+                                           std::optional<bool> train) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   if (!train.has_value() || *train) {
     xla::XlaOp prob = XlaHelpers::ScalarBroadcast<float>(1 - probability, shape,
@@ -1272,11 +1273,35 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input, const std::string& type,
                          output_shape);
 }
 
+std::vector<xla::XlaOp> BuildGpuCustomCall(
+    const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
+    const std::string& payload) {
+  std::vector<xla::Shape> input_shapes;
+  input_shapes.reserve(inputs.size());
+  for (const auto& input : inputs) {
+    input_shapes.push_back(ShapeHelper::ShapeOfXlaOp(input));
+  }
+
+  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+  xla::XlaOp outputs = xla::CustomCallWithLayout(
+      inputs[0].builder(),
+      /*call_target_name=*/"triton_kernel_call", inputs, output_shape,
+      input_shapes, payload, false, {}, nullptr,
+      xla::CustomCallSchedule::SCHEDULE_NONE,
+      xla::CustomCallApiVersion::API_VERSION_STATUS_RETURNING);
+  std::vector<xla::XlaOp> result;
+  int num_outputs = output_shape.tuple_shapes_size();
+  result.reserve(num_outputs);
+  for (int i = 0; i < num_outputs; ++i) {
+    result.push_back(xla::GetTupleElement(outputs, i));
+  }
+  return result;
+}
+
 std::vector<xla::XlaOp> BuildTpuCustomCall(
     const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
     const std::string& payload) {
   XLA_CHECK(output_shape.IsTuple()) << "output_shape is not a tuple";
-
   // We need to enforce the default C-order (major-to-minor) layouts for inputs
   // to Mosaic and outputs from Mosaic.
   std::vector<xla::Shape> input_shapes;

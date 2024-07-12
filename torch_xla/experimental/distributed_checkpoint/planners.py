@@ -282,11 +282,6 @@ class SPMDLoadPlanner(LoadPlanner):
     lengths and offsets into the global tensor.
     """
     offsets = read_item.dest_offsets
-    index = read_item.dest_index
-    if index.fqn in self.sharded_state_dict:
-      # Update offsets to index into the shard rather than the global tensor
-      shard = self._local_shards[index.fqn][index.index]
-      offsets = torch.Size(d - i.start for d, i in zip(offsets, shard.indices))
     return narrow_tensor_by_index(tensor, offsets, read_item.lengths)
 
   def commit_tensor(self, read_item: ReadItem, tensor: torch.Tensor) -> None:

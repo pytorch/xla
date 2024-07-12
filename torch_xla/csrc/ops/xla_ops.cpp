@@ -26,6 +26,7 @@ const OpKindWrapper xla_optimization_barrier("xla::optimization_barrier");
 const OpKindWrapper xla_quantize_tensor("xla::quantize_tensor");
 const OpKindWrapper xla_recv("xla::recv");
 const OpKindWrapper xla_reduce_scatter("xla::reduce_scatter");
+const OpKindWrapper xla_cast_int4("xla::cast_int4");
 const OpKindWrapper xla_replication_pad("xla::replication_pad");
 const OpKindWrapper xla_replication_pad_backward(
     "xla::replication_pad_backward");
@@ -37,5 +38,6 @@ const OpKindWrapper xla_unselect("xla::unselect");
 const OpKindWrapper xla_update_slice("xla::update_slice");
 const OpKindWrapper xla_custom_sharding("xla::custom_sharding");
 const OpKindWrapper xla_tpu_custom_call("xla::tpu_custom_call");
+const OpKindWrapper xla_gpu_custom_call("xla::gpu_custom_call");
 
 }  // namespace torch_xla

@@ -391,8 +391,8 @@ TEST_F(AtenXlaTensorTest, TestDiv) {
 }
 
 TEST_F(AtenXlaTensorTest, TestDivWithRoundingMode) {
-  c10::optional<c10::string_view> rounding_modes[] = {"trunc", "floor",
-                                                      c10::nullopt};
+  std::optional<c10::string_view> rounding_modes[] = {"trunc", "floor",
+                                                      std::nullopt};
   for (const auto& rounding_mode : rounding_modes) {
     for (torch::ScalarType scalar_type1 :
          {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
@@ -453,8 +453,8 @@ TEST_F(AtenXlaTensorTest, TestDivInPlace) {
 }
 
 TEST_F(AtenXlaTensorTest, TestDivInPlaceWithRoundingMode) {
-  c10::optional<c10::string_view> rounding_modes[] = {"trunc", "floor",
-                                                      c10::nullopt};
+  std::optional<c10::string_view> rounding_modes[] = {"trunc", "floor",
+                                                      std::nullopt};
   for (const auto& rounding_mode : rounding_modes) {
     for (torch::ScalarType scalar_type1 : {torch::kFloat}) {
       torch::Tensor a =

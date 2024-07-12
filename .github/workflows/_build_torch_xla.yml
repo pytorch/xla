@@ -6,6 +6,10 @@ on:
         required: true
         type: string
         description: Base image for builds
+      torch-commit:
+          required: true
+          type: string
+          description: torch-commit
       runner:
         required: false
         type: string
@@ -23,25 +27,22 @@ jobs:
       image: ${{ inputs.dev-image }}
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
-      GOOGLE_APPLICATION_CREDENTIALS: /tmp/default_credentials.json
-      BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+      BAZEL_JOBS: 16
       BUILD_CPP_TESTS: 1
     steps:
-      - name: Setup gcloud
-        shell: bash
-        run: |
-          echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
-      - name: Checkout PyTorch Repo
+      # Need to check out local composite actions before using them
+      # https://github.com/orgs/community/discussions/11771
+      - name: Checkout actions
         uses: actions/checkout@v4
         with:
-          repository: pytorch/pytorch
-          path: pytorch
-          submodules: recursive
-      - name: Checkout PyTorch/XLA Repo
-        uses: actions/checkout@v4
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+      - name: Setup
+        uses: ./.actions/.github/workflows/setup
         with:
-          path: pytorch/xla
+          torch-commit: ${{ inputs.torch-commit }}
       - name: Build
         shell: bash
         run: |

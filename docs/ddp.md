@@ -259,7 +259,7 @@ The following results are collected with the command: `python
 test/test_train_mp_mnist.py --logdir mnist/` on a TPU VM V3-8 environment with
 ToT PyTorch and PyTorch/XLA.
 
-![learning_curves](assets/ddp_md_mnist_with_real_data.png)
+![learning_curves](_static/img/ddp_md_mnist_with_real_data.png)
 
 And we can observe that the DDP wrapper converges slower than the native XLA
 approach even though it still achieves a high accuracy rate at 97.48% at the

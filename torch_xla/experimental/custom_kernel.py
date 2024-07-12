@@ -7,16 +7,15 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
+import torch_xla.debug.metrics as met
 
-from typing import Any, List, Callable
+from typing import Any, List, Callable, Optional
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
-_XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
-
 
 def _extract_backend_config(
-    module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> str | None:
+    module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> Optional[str]:
   """
   This algorithm intends to extract the backend config from the compiler IR like the following,
   and it is not designed to traverse any generic MLIR module.
@@ -63,12 +62,8 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
   import jax.numpy as jnp
 
   if dtype == torch.float32:
-    if _XLA_USE_BF16:
-      return jnp.bfloat16
     return jnp.float32
   elif dtype == torch.float64:
-    if _XLA_USE_BF16:
-      return jnp.bfloat16
     return jnp.float64
   elif dtype == torch.float16:
     return jnp.float16
@@ -514,7 +509,7 @@ def _histogram(input: torch.Tensor, min: int, max: int) -> torch.Tensor:
 
   bin_edges = torch.linspace(
       min, max, max - min + 1, dtype=input.dtype).to(input.device)
-  return searchsorted(bin_edges, input)
+  return searchsorted(bin_edges, input).to(torch.int32)
 
 
 # Refence: https://github.com/google/jax/blob/main/jax/experimental/pallas/ops/tpu/megablox/gmm.py#L78
@@ -549,6 +544,8 @@ def _make_group_metadata(
     num_tiles: The number of m-dimension tiles to execute including overlapping
       executions. And don't confuse this with m_tiles which is m // tm.
   """
+  assert group_sizes.dtype == torch.int32, "group_sizes must be of torch.int32 dtype."
+
   device = group_sizes.device
   num_groups = group_sizes.shape[0]
 
@@ -621,6 +618,7 @@ def _make_group_metadata(
   # group_tiles.sum() < tiles_m + num_groups - 1. The kernel grid will be sized
   # such that we only execute the necessary number of tiles.
   tiles_m = _calculate_num_tiles(m, tm)
+
   group_ids = repeat_with_fixed_output_size(
       torch.arange(num_groups, dtype=torch.int32).to(device), group_tiles,
       tiles_m + num_groups - 1)
@@ -687,7 +685,8 @@ def repeat_with_fixed_output_size(input: torch.Tensor, repeats: torch.Tensor,
   # shift the repeats by one
   # tensor([0, 0, 1, 2, 0, 4, 0, 6, 7, 8])
   exclusive_repeats = torch.roll(repeats, shifts=1)
-  exclusive_repeats[0] = 0
+  exclusive_repeats = exclusive_repeats.index_copy(
+      0, torch.tensor([0], device=device), torch.tensor([0], device=device))
 
   # tensor([ 0,  0,  1,  3,  3,  7,  7, 13, 20, 28])
   scatter_indices = torch.cumsum(exclusive_repeats, dim=0)
@@ -701,11 +700,13 @@ def repeat_with_fixed_output_size(input: torch.Tensor, repeats: torch.Tensor,
 
   # tensor([2, 1, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0])
   block_split_indicators = torch.zeros(
-      total_repeat_length, dtype=torch.int64, device=device)
-  block_split_indicators.scatter_add_(0, valid_indices.to(torch.int64),
-                                      torch.ones_like(block_split_indicators))
+      total_repeat_length, dtype=torch.int32, device=device)
+  block_split_indicators = block_split_indicators.scatter_add(
+      0, valid_indices.to(torch.int64), torch.ones_like(block_split_indicators))
   # out_of_bound indices also scatter to index 0, need to offset them
-  block_split_indicators[0] -= out_of_bound_count
+  block_split_indicators = block_split_indicators.index_copy(
+      0, torch.tensor([0], device=device),
+      (block_split_indicators[0] - out_of_bound_count).unsqueeze(0))
 
   # value in gather_indices represents the index in the input.
   # tensor([1, 2, 2, 4, 4, 4, 4, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7])
@@ -769,7 +770,7 @@ def tgmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: tuple[int, int, int] = (128, 128, 128)
+    tiling: tuple[int, int, int] = (512, 512, 512)
 ) -> torch.Tensor:
   """Compute lhs[:, sizes[i-1]:sizes[i]] @ rhs[sizes[i-1]:sizes[i], :].
 
@@ -811,11 +812,32 @@ def tgmm(
   )
   group_offset_torch = torch.tensor([0], dtype=torch.int32).to(lhs.device)
 
-  lhs = lhs.swapaxes(0, 1)
   return torch_xla._XLAC._xla_tpu_custom_call([
-      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch, lhs,
-      rhs
+      num_tiles, group_offsets, group_ids, m_tile_ids, group_offset_torch,
+      lhs.t(), rhs
   ], payload, [torch.Size([num_groups, k, n])], [preferred_element_type])[0]
+
+
+def gmm_backward(grad, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
+  grad_lhs = gmm(grad, rhs.transpose(-1, -2), group_sizes, tiling)
+  grad_rhs = tgmm(lhs.t(), grad, group_sizes, tiling)
+  return grad_lhs, grad_rhs
+
+
+class GMM(torch.autograd.Function):
+
+  @staticmethod
+  def forward(ctx, lhs, rhs, group_sizes, tiling=(512, 512, 512)):
+    ctx.save_for_backward(lhs, rhs, group_sizes)
+    ctx.tiling = tiling
+    return gmm(lhs, rhs, group_sizes, tiling)
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    lhs, rhs, group_sizes = ctx.saved_tensors
+    grad_lhs, grad_rhs = gmm_backward(grad_output, lhs, rhs, group_sizes,
+                                      ctx.tiling)
+    return grad_lhs, grad_rhs, None, None
 
 
 def non_xla_attetion(q, k, v, attention_type):
@@ -877,3 +899,41 @@ def paged_attention_non_xla(q: torch.Tensor,
                             pages_per_compute_block: int,
                             megacore_mode: str = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
+
+
+XLA_LIB.define(
+    "gmm(Tensor lhs, Tensor rhs, Tensor group_sizes, int[]? tiling=None) -> Tensor",
+)
+
+
+@impl(XLA_LIB, "gmm", "XLA")
+def gmm_xla(
+    lhs: torch.Tensor,
+    rhs: torch.Tensor,
+    group_sizes: torch.Tensor,
+    # pytorch custom op does not allow tuple type, use list instead
+    tiling: Optional[list[int]] = [512, 512, 512]):
+  assert len(tiling) == 3, "tiling must be a list with 3 integers"
+  assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
+  assert rhs.dim(
+  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
+  tiling = tuple(tiling)
+  return gmm(lhs, rhs, group_sizes, tiling)
+
+
+@impl(XLA_LIB, "gmm", "CompositeExplicitAutograd")
+def gmm_non_xla(lhs: torch.Tensor,
+                rhs: torch.Tensor,
+                group_sizes: torch.Tensor,
+                tiling: Optional[list[int]] = [512, 512, 512]):
+  # This will be called when dynamo use fake tensor to construct the fake output.
+  # We need to make sure output tensor's shape is correct.
+  if lhs.device != torch.device("meta"):
+    warnings.warn(f'XLA gmm should only be applied to tensors on XLA device')
+  assert len(tiling) == 3, "tiling must be a list with 3 integers"
+  assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
+  assert rhs.dim(
+  ) == 3, "rhs must be a A 3d torch.Tensor with shape [num_groups, k, n]"
+
+  # we only need to return the tensor with correct shape for meta tensor.
+  return torch.empty(lhs.size()[0], rhs.size()[2], device=lhs.device)

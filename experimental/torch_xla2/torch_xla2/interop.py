@@ -1,13 +1,71 @@
+import copy
 import functools
 import torch
+from torch.nn.utils import stateless as torch_stateless
 import jax
 import jax.numpy as jnp
 from jax import tree_util as pytree
+from jax.experimental.shard_map import shard_map
 from torch_xla2 import tensor
 import torch_xla2
 
 from torch_xla2.types import JaxValue, TorchValue, JaxCallable, TorchCallable
 
+
+def extract_all_buffers(m: torch.nn.Module):
+    buffers = {}
+    params = {}
+    def extract_one(module, prefix):
+        for k in dir(module):
+            try:
+                v = getattr(module, k)
+            except:
+                continue
+            qual_name = prefix + k
+            if isinstance(v, torch.nn.parameter.Parameter) and v.requires_grad:
+                params[qual_name] = v
+            elif isinstance(v, torch.Tensor):
+                buffers[qual_name] = v
+        for name, child in module.named_children():
+            extract_one(child, prefix + name + '.')
+    extract_one(m, '')
+    return params, buffers
+
+
+def set_all_buffers(m, params, buffers):
+    def set_one(module, prefix):
+        for k in dir(module):
+            qual_name = prefix + k
+            if (potential_v := buffers.get(qual_name)) is not None:
+                setattr(module, k, potential_v)
+            elif (potential_v := params.get(qual_name)) is not None:
+                print(k, potential_v)
+                setattr(module, k, torch.nn.Parameter(potential_v))
+        for name, child in module.named_children():
+            set_one(child, prefix + name + '.')
+
+    set_one(m, '')
+
+
+class JittableModule:
+
+    def __init__(self, m: torch.nn.Module):
+        self.params, self.buffers = extract_all_buffers(m)
+        self._model = m
+
+
+    def __call__(self, *args, **kwargs):
+        res = self._model(*args, **kwargs)
+        return res
+
+    def functional_call(
+            self, method_name, params, buffers, args, kwargs=None):
+        kwargs = kwargs or {}
+        params_copy = copy.copy(params)
+        params_copy.update(buffers)
+        with torch_stateless._reparametrize_module(self._model, params_copy):
+            res = getattr(self._model, method_name)(*args, **kwargs)
+        return res
 
 
 def _torch_view(t: JaxValue) -> TorchValue:
@@ -61,9 +119,19 @@ def call_torch(torch_func: TorchCallable, *args: JaxValue, **kwargs: JaxValue) -
 
 fori_loop = torch_view(jax.lax.fori_loop)
 
-def jax_jit(torch_function, kwargs_for_jax_jit=None):
-    kwargs_for_jax_jit = kwargs_for_jax_jit or {}
+
+def wrap_jax_jit(torch_function, jax_jit_func=jax.jit, kwargs_for_jax=None):
+    kwargs_for_jax = kwargs_for_jax or {}
     jax_func = jax_view(torch_function)
-    jitted = jax.jit(jax_func, **kwargs_for_jax_jit)
+    jitted = jax_jit_func(jax_func, **kwargs_for_jax)
     return torch_view(jitted)
 
+
+def jax_jit(torch_function, kwargs_for_jax_jit=None):
+    return wrap_jax_jit(torch_function, jax_jit_func=jax.jit,
+                        kwargs_for_jax=kwargs_for_jax_jit)
+
+
+def jax_shard_map(torch_function, kwargs_for_jax_shard_map=None):
+    return wrap_jax_jit(torch_function, jax_jit_func=shard_map,
+                        kwargs_for_jax=kwargs_for_jax_shard_map)

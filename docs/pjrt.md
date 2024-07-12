@@ -404,7 +404,7 @@ compared to XRT, with an average improvement of over 35% on TPU v4-8. The
 benefits vary significantly by task and model type, ranging from 0% to 175%.
 The following chart shows the breakdown by task:
 
-![PJRT vs XRT](assets/torchbench_pjrt_vs_xrt.svg)
+![PJRT vs XRT](_static/img/torchbench_pjrt_vs_xrt.svg)
 
 ### New TPU runtime
 
@@ -423,7 +423,7 @@ In most cases, we expect performance to be similar between the two runtimes, but
 in some cases, the new runtime may be up to 30% faster. The following chart
 shows the breakdown by task:
 
-![TFRT vs StreamExecutor](assets/torchbench_tfrt_vs_se.svg)
+![TFRT vs StreamExecutor](_static/img/torchbench_tfrt_vs_se.svg)
 
 Note: the improvements shown in this chart are also included in the PJRT vs XRT
 comparison.

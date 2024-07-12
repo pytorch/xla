@@ -18,6 +18,7 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
+import os
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -858,7 +859,7 @@ def send(value, channel_id):
 
 
 def recv(output, channel_id):
-  """Performs a XLA `Send()` operation on the input tensor.
+  """Performs a XLA `Recv()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#recv
 
@@ -975,7 +976,7 @@ def reduce_scatter_bucketized(reduce_type,
     see reduce_scatter for reduce_type, scale, scatter_dim, shard_count, groups, pin_layout
     input_list: List of input tensors
     output: Optional list of output torch.Tensor
-    bucket_cap_mb: Number of MegaBytes of the tensor bucket to fill before doing all-gather.
+    bucket_cap_mb: Number of MegaBytes of the tensor bucket to fill before doing reduce-scatter.
 
   Returns:
     A list of `torch.Tensors` with all the values reduced across replicas. Each process
@@ -1131,6 +1132,41 @@ def wait_device_ops(devices=[]):
   torch_xla._XLAC._xla_wait_device_ops(devices=devices)
 
 
+def all_reduce_bucketized_gradients(gradients,
+                                    scale,
+                                    groups,
+                                    pin_layout,
+                                    bucket_cap_mb=0):
+  total = 0
+  tensor_bucket = []
+  bucket_cap = bucket_cap_mb * 1024 * 1024
+
+  for grad in gradients:
+    grad_bytes = grad.numel() * grad.element_size()
+
+    # Bucketize till the total spills over
+    total += grad_bytes
+    if total > bucket_cap and len(tensor_bucket) > 0:
+      all_reduce(
+          REDUCE_SUM,
+          tensor_bucket,
+          scale=scale,
+          groups=groups,
+          pin_layout=pin_layout)
+      total = grad_bytes
+      tensor_bucket = []
+    tensor_bucket.append(grad)
+
+  # Flush the last remaining bucket
+  if len(tensor_bucket):
+    all_reduce(
+        REDUCE_SUM,
+        tensor_bucket,
+        scale=scale,
+        groups=groups,
+        pin_layout=pin_layout)
+
+
 def reduce_gradients(optimizer, groups=None, pin_layout=True):
   """Reduces all the gradients handled by an optimizer.
 
@@ -1148,12 +1184,25 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
   count = pjrt_world_size()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    all_reduce(
-        REDUCE_SUM,
-        gradients,
-        scale=1.0 / count,
-        groups=groups,
-        pin_layout=pin_layout)
+    bucket_cap_mb = int(os.getenv('ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB', 0))
+    # Reverse the gradients list so that we start allreduce from the last layer
+    # onwards. This allows allreduce to trigger as soon as the bucket fills up and
+    # overlap with backward pass.
+    if bucket_cap_mb > 0:
+      gradients = reversed(gradients)
+      all_reduce_bucketized_gradients(
+          gradients,
+          scale=1.0 / count,
+          groups=groups,
+          pin_layout=pin_layout,
+          bucket_cap_mb=bucket_cap_mb)
+    else:
+      all_reduce(
+          REDUCE_SUM,
+          gradients,
+          scale=1.0 / count,
+          groups=groups,
+          pin_layout=pin_layout)
 
 
 def optimizer_step(optimizer,
@@ -1447,15 +1496,18 @@ class MemoryInfo(TypedDict):
   bytes_limit: int
 
 
-def get_memory_info(device: torch.device) -> MemoryInfo:
+def get_memory_info(device: Optional[torch.device] = None) -> MemoryInfo:
   """Retrieves the device memory usage.
 
   Args:
-    device: The device whose memory information are requested.
+    device: Optional[torch.device] The device whose memory information are requested.
+    If not passed will use the default device.
 
   Returns:
     MemoryInfo dict with memory usage for the given device.
   """
+  if device == None:
+    device = xla_device()
   return torch_xla._XLAC._xla_memory_info(str(device))
 
 

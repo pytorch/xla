@@ -79,7 +79,7 @@ bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
 
 XLAGraphExecutor::ComputationCache* CreateComputationCache() {
   static const size_t kMaxCacheSize =
-      runtime::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
+      runtime::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 2048);
   static const bool readonlyPersistentCache =
       runtime::sys_util::GetEnvBool("XLA_PERSISTENT_CACHE_READ_ONLY", false);
   static std::string persistentCacheDir =
@@ -100,6 +100,13 @@ XLAGraphExecutor::ComputationCache* CreateComputationCache() {
       return std::make_shared<XLAGraphExecutor::CachedComputation>(
           computation, /*is_sharded=*/UseVirtualDevice());
     };
+    if (runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false) ||
+        runtime::sys_util::GetEnvBool("XLA_IR_DEBUG", false)) {
+      TF_LOG(WARNING)
+          << "Using persistent compilation cache with XLA_HLO_DEBUG=1 "
+             "or XLA_IR_DEBUG=1 is not recommended. Changes to the HLO "
+             "metadata will not be reflected in loaded executables.";
+    }
     return new XLAGraphExecutor::PersistentCache(
         kMaxCacheSize, persistentCacheDir, readonlyPersistentCache,
         serialize_fn, deserialize_fn);
@@ -142,17 +149,29 @@ torch::lazy::Value XLAGraphExecutor::DeviceContextArena::GetRngSeed(
     devctx->seed_ir_value =
         IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device);
   }
-  // Keep the running seed as scalar as well, so we can return it directly
-  // without executing graphs.
-  devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
   // Compose new seeds from the root seed, to avoid creating too many XLA
   // computation parameters which might overflow the TPU capacity.
   torch::lazy::Value k = ScalarOp(MakeIntScalar(kSeedMul),
                                   MakeXlaPrimitiveType(kSeedType, &device));
   torch::lazy::Value b = ScalarOp(MakeIntScalar(kSeedAdd),
                                   MakeXlaPrimitiveType(kSeedType, &device));
-  devctx->seed_ir_value = b + k * devctx->seed_ir_value;
-  return devctx->seed_ir_value;
+  if (XLAGraphExecutor::Get()->UseEagerMode()) {
+    // In eager mode we want to make sure that `seed_ir_value` is always just
+    // a device data instead a long sequence of pending IR.
+    torch::lazy::Value seed_to_return = devctx->seed_ir_value;
+    devctx->seed = kSeedAdd + kSeedMul * devctx->seed;
+    devctx->running_seed = devctx->seed;
+    // reset the `seed_ir_value`. Next time `seed_ir_value` will be generated
+    // based on devctx->seed.
+    devctx->seed_ir_value = torch::lazy::Value();
+    return seed_to_return;
+  } else {
+    // Keep the running seed as scalar as well, so we can return it directly
+    // without executing graphs.
+    devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
+    devctx->seed_ir_value = b + k * devctx->seed_ir_value;
+    return devctx->seed_ir_value;
+  }
 }
 
 torch::lazy::BackendDataPtr
@@ -304,7 +323,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const at::Scalar& value, const xla::Shape& shape,
-    c10::optional<at::ScalarType> logical_element_type,
+    std::optional<at::ScalarType> logical_element_type,
     const torch::lazy::BackendDevice& device) {
   xla::PrimitiveType type =
       logical_element_type
@@ -316,7 +335,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const at::Scalar& value, const xla::Shape& shape,
     SymIntElements size_elements,
-    c10::optional<at::ScalarType> logical_element_type,
+    std::optional<at::ScalarType> logical_element_type,
     const torch::lazy::BackendDevice& device) {
   xla::PrimitiveType primitive_type =
       logical_element_type
@@ -590,7 +609,7 @@ void XLAGraphExecutor::ClearPendingIrs(
         }
         tensors[i]->AssignIrValue(torch::lazy::Value());
         tensors[i]->data()->view = nullptr;
-        tensors[i]->data()->tensor_data = c10::nullopt;
+        tensors[i]->data()->tensor_data = std::nullopt;
       }
     }
   }
@@ -666,7 +685,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
       } else if (config.force_ltc_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
         // device upload.
-        c10::optional<at::Tensor> tensor_data = tensors[i]->CurrentTensorData();
+        std::optional<at::Tensor> tensor_data = tensors[i]->CurrentTensorData();
         XLA_CHECK(tensor_data);
         at_tensors.push_back(*tensor_data);
         shardings.push_back(tensors[i]->sharding_spec());
@@ -807,6 +826,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
 
       std::vector<torch::lazy::BackendDataPtr> results;
       if (async->cached_computation->is_sharded) {
+        // TODO(JackCaoG): handle eager mode
         std::vector<std::string> devices =
             runtime::GetComputationClient()->GetLocalDevices();
         runtime::ComputationClient::ExecuteReplicatedOptions execute_options;
@@ -990,7 +1010,7 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
       // of ExtractIRAndPrepareXlaData_ to overlap with previous execution.
       tensor->data()->handle = handle;
       tensor->data()->view = nullptr;
-      tensor->data()->tensor_data = c10::nullopt;
+      tensor->data()->tensor_data = std::nullopt;
       tensor->data()->is_cloned = false;
     }
     tensors_data.emplace_back(std::move(handle));
@@ -1018,15 +1038,6 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
         runtime::GetComputationClient()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape));
 
-    // If current IR is a device data, executing the graph will generate a new
-    // Data with the same value. In this case we want to inherit the buffer
-    // donation option from the old Data.
-    auto device_data = torch_xla::DeviceData::Cast(ir_value.node.get());
-    if (device_data && device_data->get_buffer_donation()) {
-      std::dynamic_pointer_cast<runtime::ComputationClient::Data>(handle)
-          ->set_should_donate_buffer(true);
-    }
-
     tensor_data_vec.push_back(handle);
     if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());
@@ -1049,7 +1060,7 @@ std::vector<at::Tensor> XLAGraphExecutor::FetchTensors(
       ++literals_index;
       ++sync_index;
     } else {
-      c10::optional<at::Tensor> tensor_data =
+      std::optional<at::Tensor> tensor_data =
           (*tensors)[i]->CurrentTensorData();
       if (tensor_data) {
         results.push_back(*tensor_data);
@@ -1081,7 +1092,8 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(cached_computation));
-  auto syncfn = [async, hash = coll->hash, sharding_specs = sharding_specs]() {
+  auto syncfn = [async, hash = coll->hash, sharding_specs = sharding_specs,
+                 use_eager_mode = UseEagerMode()]() {
     try {
       std::vector<torch::lazy::BackendDataPtr> results;
       // Execute replicated if the compiled computation is partitioned.
@@ -1110,9 +1122,13 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
                    << async->device << " ...";
-        results = torch::lazy::getBackend()->ExecuteComputation(
-            async->cached_computation->computation, async->parameters_data,
-            async->device);
+        std::vector<runtime::ComputationClient::DataPtr> outputs =
+            runtime::GetComputationClient()->ExecuteComputation(
+                *async->cached_computation->computation,
+                UnwrapXlaData(async->parameters_data), async->device.toString(),
+                {/*explode_tuple=*/true,
+                 /*eager_mode=*/use_eager_mode});
+        results = WrapXlaData(outputs);
         TORCH_LAZY_COUNTER("ExecuteComputation", 1);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash) << " on device "
@@ -1353,8 +1369,16 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     TF_VLOG(3) << "Wrapping graph with " << program_shape.parameters_size()
                << " parameters. Threadshold = "
                << parameter_wrapping_threadshold;
-    computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-        computation, program_shape.parameters(), buffer_donor_indices));
+
+    // trying to get all op shardings
+    std::vector<xla::HloSharding> param_shardings;
+    if (is_sharded) {
+      param_shardings = XlaHelpers::ExtractInputShardings(computation);
+    }
+
+    computation = ConsumeValue(
+        XlaHelpers::WrapXlaComputation(computation, program_shape.parameters(),
+                                       param_shardings, buffer_donor_indices));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
   xla::Shape shape = MakeShapeWithDeviceLayout(
@@ -1365,7 +1389,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                        runtime::GetComputationClient()->GetCompilationDevices(
                            coll.device.toString(), devices),
                        &shape, should_wrap_parameter, is_sharded});
-
+  instances.front().eager_mode = UseEagerMode();
   if (use_autosharding) {
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
     TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";

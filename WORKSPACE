@@ -50,7 +50,7 @@ new_local_repository(
 #    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
 
-xla_hash = '98db3e8c8f64dede911fd97605f76aaf6ede1153'
+xla_hash = 'db472b8c3d83bc27b3c67067802b9a37ef7542e3'
 
 http_archive(
     name = "xla",
@@ -69,6 +69,19 @@ http_archive(
         "https://github.com/openxla/xla/archive/" + xla_hash + ".tar.gz",
     ],
 )
+
+# For development, one often wants to make changes to the OpenXLA repository as well
+# as the PyTorch/XLA repository. You can override the pinned repository above with a
+# local checkout by either:
+# a) overriding the OpenXLA repository on the build.py command line by passing a flag
+#    like:
+#    bazel --override_repository=xla=/path/to/openxla
+#    or
+# b) by commenting out the http_archive above and uncommenting the following:
+# local_repository(
+#    name = "xla",
+#    path = "/path/to/openxla",
+# )
 
 # Initialize hermetic Python
 load("@xla//third_party/py:python_init_rules.bzl", "python_init_rules")
@@ -100,18 +113,6 @@ load("@pypi//:requirements.bzl", "install_deps")
 
 install_deps()
 
-# For development, one often wants to make changes to the OpenXLA repository as well
-# as the PyTorch/XLA repository. You can override the pinned repository above with a
-# local checkout by either:
-# a) overriding the OpenXLA repository on the build.py command line by passing a flag
-#    like:
-#    bazel --override_repository=xla=/path/to/openxla
-#    or
-# b) by commenting out the http_archive above and uncommenting the following:
-# local_repository(
-#    name = "xla",
-#    path = "/path/to/openxla",
-# )
 
 # Initialize OpenXLA's external dependencies.
 load("@xla//:workspace4.bzl", "xla_workspace4")

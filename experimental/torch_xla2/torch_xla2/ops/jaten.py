@@ -1,14 +1,16 @@
 """Torch ops implemented using jax."""
 
 import sys
+from typing import Optional, Sequence
 
 import jax
 from jax import numpy as jnp
+
 import numpy as np
 import torch
+import torch.distributed._functional_collectives
 from torch_xla2.ops import ops_registry
-from torch_xla2 import tensor
-from torch_xla2.ops import op_base
+from torch_xla2.ops import op_base, mappings
 
 # Keys are OpOverload, value is a callable that takes
 # XLATensor2
@@ -31,6 +33,8 @@ mutation_ops_to_functional = {
   torch.ops.aten.ne_: torch.ops.aten.ne,
   torch.ops.aten.uniform_: torch.ops.aten.uniform,
   torch.ops.aten.relu_: torch.ops.aten.relu,
+  torch.ops.aten.normal_: torch.ops.aten.normal,
+  torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
 }
 
 
@@ -51,6 +55,16 @@ def op(*aten, **kwargs):
     return func
 
   return inner
+
+def _handle_int64_trig(self, func):
+  target_type = None
+  # Torch's atanh returns f32 for int64 input
+  if self.dtype.name == 'int64':
+    target_type = jnp.dtype('float32')
+  res = func(self)
+  if target_type is not None:
+    res = res.astype(target_type)
+  return res
 
 
 @op(
@@ -75,17 +89,14 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
-  if isinstance(x, tensor.XLATensor2):
-    x._elem = y._elem
-  elif isinstance(x, tensor.SliceView):
-    x.mutate(y)
+  x._elem = y._elem
   return x
 
 
 @op(torch.ops.aten.clone)
 @op(torch.ops.aten.clone.default)
 def _aten_clone(x, memory_format=None):
-  return jnp.copy(x)
+  return x
 
 
 @op(torch.ops.aten.full)
@@ -106,6 +117,9 @@ def _aten_index_copy(x, dim, indexes, source):
 
 
 @op(torch.ops.aten.select)
+def _aten_select(x, dim, indexes):
+  return jax.lax.index_in_dim(x, index=indexes, axis=dim, keepdims=False)
+
 @op(torch.ops.aten.index_select)
 @op(torch.ops.aten.select_copy)
 def _aten_index_select(x, dim, indexes):
@@ -132,6 +146,11 @@ def _torch_binary_scalar_type(scalar, tensor):
       return tensor.dtype
 
   return jnp.float32
+
+
+@op(torch.ops.aten.searchsorted.Tensor)
+def _aten_searchsorted(sorted_sequence, values):
+  return jnp.searchsorted(sorted_sequence, values)
 
 
 @op(torch.ops.aten.sub.Tensor)
@@ -218,10 +237,22 @@ def _aten_softmax(x, dim, halftofloat):
   return jax.nn.softmax(x, dim)
 
 
+def _is_int(x):
+  if isinstance(x, int):
+    return True
+  if isinstance(x, jax.Array) and x.dtype.name.startswith('int'):
+    return True
+  return False
+
+
 @op(torch.ops.aten.pow)
 def _aten_pow(x, y):
   if isinstance(y, int):
     y = float(y)
+  if _is_int(x) and _is_int(y):
+    # Do the math in float then cast
+    return jnp.astype(
+      jnp.power(jnp.astype(x, jnp.dtype('float')), y), x.dtype)
   return jnp.power(x, y)
 
 
@@ -235,9 +266,14 @@ def _aten_view_as_complex(input):
 
 @op(torch.ops.aten.div)
 def _aten_div(x, y, rounding_mode=""):
+  res_dtype = None
+  if _is_int(x) and _is_int(y):
+    res_dtype = jnp.dtype('float32')
   res = x / y
   if rounding_mode == "trunc":
     res = jnp.trunc(res)
+  if res_dtype:
+    res = res.astype(res_dtype)
   return res
 
 
@@ -265,6 +301,75 @@ def _aten_embedding(a, w, padding_idx=-1):
   return jnp.take(a, w, axis=0)
 
 
+#- func: _embedding_bag_forward_only(
+# Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False,
+# int mode=0, bool sparse=False, Tensor? per_sample_weights=None, bool include_last_offset=False, int padding_idx=-1) -> (Tensor, Tensor, Tensor, Tensor)
+@op(torch.ops.aten._embedding_bag)
+@op(torch.ops.aten._embedding_bag_forward_only)
+def _aten__embedding_bag(
+  weight,
+  indices,
+  offsets=None,
+  scale_grad_by_freq=False,
+  mode=0,
+  sparse=False,
+  per_sample_weights=None,
+  include_last_offset=False,
+  padding_idx=-1):
+    """Jax implementation of the PyTorch _embedding_bag function.
+
+    Args:
+        weight: The learnable weights of the module of shape (num_embeddings, embedding_dim).
+        indices: A LongTensor containing the indices to extract.
+        offsets: A LongTensor containing the starting offset of each bag.
+        scale_grad_by_freq: Whether to scale gradients by the inverse of frequency of the words in the mini-batch.
+        mode: 0 = "sum", 1 = "mean" or 2 = "max"
+        sparse: Whether the gradients with respect to weight should be a sparse tensor.
+        per_sample_weights: If given, each embedding vector is weighted by per_sample_weights
+        include_last_offset: Whether to include the last offset as a valid bag.
+        padding_idx: If specified, the entries at padding_idx do not contribute to the gradient.
+
+    Returns:
+        A tuple of (output, offset2bag, bag_size, max_indices).
+    """
+    embedded = _aten_embedding(weight, indices, padding_idx)
+
+    def static_dynamic_slice(x, start, size):
+      return jax.lax.dynamic_slice_in_dim(x, start, size)
+
+
+    # TODO not jittable
+    def reduce_by_segment(start, size, x, reducer):
+      res = []
+      for starti, sizei in zip(start, size):
+        res.append(reducer(static_dynamic_slice(x, starti, sizei), axis=0))
+      return jnp.stack(res)
+
+    def segsum(x, offsets, reducer):
+      start, end = offsets, jnp.concat([offsets[1:], jnp.array([x.shape[0]])])
+      return reduce_by_segment(start, end - start, x, reducer)
+
+    if mode not in (0, 1, 2):
+      raise ValueError("Invalid mode. Please choose 0 (sum) or 1 (mean).")
+    if mode == 0:  # sum
+      reducer = jnp.sum
+    elif mode == 1:  # mean
+      reducer = jnp.mean
+    elif mode == 2:  # max
+      reducer = jnp.max
+
+    if indices.ndim == 1 and offsets is not None:
+      output = segsum(embedded, offsets, reducer)
+    else:
+      output = reducer(embedded, axis=1)
+
+    # TODO: return output, offset2bag, bag_size, max_indices
+    return output, None, None, None
+
+
+
+
+
 @op(torch.ops.aten.rsqrt)
 def _aten_rsqrt(x):
   if isinstance(x, int):
@@ -282,7 +387,13 @@ def _aten_expand(x, dims):
       return xs
     return d
 
-  dims = [fix_dims(p, s) for p, s in zip(dims, x.shape)]
+  shape = list(x.shape)
+  if len(shape) < len(dims):
+    shape = [1, ] * (len(dims) - len(shape)) + shape
+    # make sure that dims and shape is the same by
+    # left pad with 1s. Otherwise the zip below will
+    # truncate
+  dims = [fix_dims(p, s) for p, s in zip(dims, shape)]
   return jnp.broadcast_to(x, dims)
 
 
@@ -293,15 +404,58 @@ def _aten_dot(x, y):
 
 @op(torch.ops.aten._to_copy)
 def _aten__to_copy(self, **kwargs):
-  dtype = tensor.t2j_dtype(kwargs["dtype"])
+  dtype = mappings.t2j_dtype(kwargs["dtype"])
   if dtype != self.dtype:
     return self.astype(dtype)
   return jnp.copy(self)
 
 
 @op(torch.ops.aten.empty)
-def _aten_empty(sizes, **kwargs):
-  return jnp.zeros(sizes)
+@op_base.convert_dtype()
+def _aten_empty(size: Sequence[int], *, dtype=None, **kwargs):
+  return jnp.empty(size, dtype=dtype)
+
+
+@op(torch.ops.aten.ones)
+@op_base.convert_dtype()
+def _ones(size: Sequence[int], dtype=None, **kwargs):
+  return jnp.ones(size, dtype)
+
+
+@op(torch.ops.aten.zeros)
+@op_base.convert_dtype()
+def _zeros(size: Sequence[int], dtype=None, **kwargs):
+  return jnp.zeros(size, dtype)
+
+
+@op(torch.ops.aten.eye)
+@op_base.convert_dtype()
+def _eye(n: int, m: Optional[int] = None, *, dtype=None, **kwargs):
+  return jnp.eye(n, m, dtype=dtype)
+
+
+@op(torch.full)
+@op_base.convert_dtype()
+def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
+  # TODO: handle torch.Size
+  return jnp.full(size, fill_value, dtype=dtype)
+
+
+@op(torch.ops.aten.empty_permuted)
+@op(torch.ops.aten.empty_permuted.default)
+@op_base.convert_dtype()
+def _aten_empty_permuted(sizes, physical_layout, dtype=None, **kwargs):
+  # Ignore the physical layout,
+  # since JAX and torch tensor doesn't share the same memory. 
+  return jnp.empty(sizes, dtype=dtype)
+
+
+@op(torch.ops.aten.empty_strided)
+@op(torch.ops.aten.empty_strided.default)
+@op_base.convert_dtype()
+def _aten_empty_strided(sizes, stride, dtype=None, **kwargs):
+  # Ignore stride, since JAX and torch tensor doesn't share the same memory. 
+  return jnp.empty(sizes, dtype=dtype)
 
 
 @op(torch.ops.aten.index_put_)
@@ -378,8 +532,21 @@ def _aten_ne(x, y):
 @op(torch.ops.aten.cumsum)
 def _aten_cumsum(x, y, dtype=None):
   if dtype:
-    dtype = tensor.t2j_dtype(dtype)
+    dtype = mappings.t2j_dtype(dtype)
   res = jnp.cumsum(x, y, dtype)
+  return res
+
+
+@op(torch.ops.aten.cumprod)
+def _aten_cumprod(input, dim, dtype=None, out=None):
+  if dtype:
+    dtype = mappings.t2j_dtype(dtype)
+  if len(input.shape) > 0:
+    res = jnp.cumprod(input, axis=dim, dtype=dtype)
+  elif dtype:
+    res = input.astype(dtype)
+  else:
+    res = input
   return res
 
 
@@ -555,7 +722,7 @@ def _aten__native_batch_norm_legit(
     running_var ([DeviceArray]): Running variance of input (C,).
     weight (Optional[DeviceArray]): Scaling factor (gamma) (C,). Can be None.
     bias (Optional[DeviceArray]): Shift factor (beta) (C,). Can be None.
-    training (bool): If True, use batch statistics for normalization. 
+    training (bool): If True, use batch statistics for normalization.
                      If False, use running statistics.
     momentum (float): Momentum factor for updating running statistics.
     eps (float): Small constant for numerical stability.
@@ -572,21 +739,21 @@ def _aten__native_batch_norm_legit(
     # Calculate batch mean and variance
     mean = jnp.mean(input, axis=reduction_dims, keepdims=True)
     saved_mean = jnp.squeeze(mean, reduction_dims)
-    var = jnp.var(input, axis=reduction_dims) 
+    var = jnp.var(input, axis=reduction_dims)
     rstd = jax.lax.rsqrt(var.reshape(reshape_dims) + eps)
     # Update running statistics using momentum
     running_mean = (1 - momentum) * running_mean + momentum * saved_mean
     running_var = (1 - momentum) * running_var + momentum * var
     saved_rstd = jnp.squeeze(rstd, reduction_dims)
   else:
-    rstd = jax.lax.rsqrt(running_var.reshape(reshape_dims) + eps) 
-    saved_mean = jnp.array([])  # No need to calculate batch statistics in inference mode
-    saved_rstd = jnp.array([])
+    rstd = jax.lax.rsqrt(running_var.reshape(reshape_dims) + eps)
+    saved_mean = jnp.array([], dtype=input.dtype)  # No need to calculate batch statistics in inference mode
+    saved_rstd = jnp.array([], dtype=input.dtype)
 
   # Normalize
   if training:
     # use batch statistics if training
-    x_hat = (input - mean) * rstd 
+    x_hat = (input - mean) * rstd
   else:
     # Use running statistics in inference mode
     x_hat = (input - running_mean.reshape(reshape_dims)) * rstd
@@ -597,7 +764,7 @@ def _aten__native_batch_norm_legit(
   if bias is not None:
     x_hat += bias.reshape(reshape_dims)    # Reshape bias for broadcasting
 
-  return x_hat, saved_mean, saved_rstd 
+  return x_hat, saved_mean, saved_rstd
 
 
 
@@ -605,7 +772,7 @@ def _aten__native_batch_norm_legit(
 def _aten__native_batch_norm_legit_no_training(
   input, weight, bias, running_mean, running_var, momentum, eps
 ):
-    return _aten__native_batch_norm_legit(
+  return _aten__native_batch_norm_legit(
     input, weight, bias, running_mean, running_var, False, momentum, eps
   )
 
@@ -711,7 +878,7 @@ def _aten_argmin(self, dim=None, keepdim=False):
 
 @op(torch.ops.aten.sin)
 def _aten_sin(x):
-  return jnp.sin(x)
+  return _handle_int64_trig(x, jnp.sin)
 
 
 @op(torch.ops.aten.sym_size)
@@ -860,7 +1027,7 @@ def _aten_alias(self, *args):
 # aten.sinh
 @op(torch.ops.aten.sinh)
 def _aten_sinh(self):
-  return jnp.sinh(self)
+  return _handle_int64_trig(self, jnp.sinh)
 
 
 # aten.native_layer_norm_backward
@@ -893,13 +1060,32 @@ def _aten_native_layer_norm_backward(
 # aten.atanh
 @op(torch.ops.aten.atanh)
 def _aten_atanh(self):
-  return jnp.arctanh(self)
+  res = _handle_int64_trig(self, jnp.arctanh)
+  return res
+
+
+# aten.bincount
+@op(torch.ops.aten.bincount)
+def _aten_bincount(input, weights=None, minlength=0):
+  return jnp.bincount(input, weights, minlength)
 
 
 # aten.bitwise_not
 @op(torch.ops.aten.bitwise_not)
 def _aten_bitwise_not(self):
   return ~self
+
+
+# aten.bitwise_left_shift
+@op(torch.ops.aten.bitwise_left_shift)
+def _aten_bitwise_left_shift(input, other):
+  return jnp.left_shift(input, other)
+
+
+# aten.bitwise_right_shift
+@op(torch.ops.aten.bitwise_right_shift)
+def _aten_bitwise_right_shift(input, other):
+  return jnp.right_shift(input, other)
 
 
 # aten.embedding_dense_backward
@@ -910,24 +1096,26 @@ def _aten_bitwise_not(self):
 def _aten_sum(self, dim=None, keepdim=False, dtype=None):
   if not dim:
     dim = None
-  return jnp.sum(self, axis=dim, keepdims=keepdim, dtype=dtype)
+  return _with_reduction_scalar(jnp.sum, self, dim, keepdim)
 
 
 # aten.sqrt
 @op(torch.ops.aten.sqrt)
 def _aten_sqrt(self):
-  return jnp.sqrt(self)
+  return _handle_int64_trig(self, jnp.sqrt)
 
 
 @op(torch.ops.aten.tan)
 def _aten_tanh(self):
-  return jnp.tan(self)
+  res = _handle_int64_trig(self, jnp.tan)
+  return res
 
 
 # aten.tanh
 @op(torch.ops.aten.tanh)
 def _aten_tanh(self):
-  return jnp.tanh(self)
+  res = _handle_int64_trig(self, jnp.tanh)
+  return res
 
 
 # aten.ceil
@@ -939,7 +1127,8 @@ def _aten_ceil(self):
 # aten.asin
 @op(torch.ops.aten.asin)
 def _aten_asin(self):
-  return jnp.arcsin(self)
+  res = _handle_int64_trig(self, jnp.arcsin)
+  return res
 
 
 # aten.minimum
@@ -1004,13 +1193,15 @@ def _aten_sigmoid(x):
 # implement aten.asinh in jax
 @op(torch.ops.aten.asinh)
 def _aten_asinh(self):
-  return jnp.arcsinh(self)
+  res = _handle_int64_trig(self, jnp.arcsinh)
+  return res
 
 
 # aten.atan
 @op(torch.ops.aten.atan)
 def _aten_atan(self):
-  return jnp.arctan(self)
+  res = _handle_int64_trig(self, jnp.arctan)
+  return res
 
 
 # aten.scatter_reduce
@@ -1034,7 +1225,7 @@ def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
 # aten.acos
 @op(torch.ops.aten.acos)
 def _aten_acos(self):
-  return jnp.arccos(self)
+  return _handle_int64_trig(self, jnp.arccos)
 
 
 # aten.sym_storage_offset
@@ -1219,6 +1410,8 @@ def _aten_avg_pool(
 # aten.reciprocal
 @op(torch.ops.aten.reciprocal)
 def _aten_reciprocal(a):
+  if _is_int(a):
+    return (1 / a).astype(jnp.dtype('float32'))
   return 1 / a
 
 
@@ -1249,7 +1442,7 @@ def _aten_scatter(input, dim, index, src, reduce=None):
 # aten.acosh
 @op(torch.ops.aten.acosh)
 def _aten_acosh(self):
-  return jnp.arccosh(self)
+  return _handle_int64_trig(self, jnp.arccosh)
 
 
 # aten.avg_pool2d_backward
@@ -1315,7 +1508,7 @@ def _aten_any(self, dim=None, keepdim=False):
 def _aten_arange(
   start,
   end=None,
-  step=1,
+  step=None,
   *,
   dtype=None,
   layout=None,
@@ -1323,11 +1516,8 @@ def _aten_arange(
   device=None,
   pin_memory=False,
 ):
-  if end is None:
-    end = start
-    start = 0
   if dtype:
-    dtype = tensor.t2j_dtype(dtype)
+    dtype = mappings.t2j_dtype(dtype)
   return jnp.arange(
     start,
     end,
@@ -1341,11 +1531,7 @@ def _aten_arange(
 def _aten_argmax(self, dim=None, keepdim=False):
   return _with_reduction_scalar(jnp.argmax, self, dim, keepdim)
 
-
-# aten.as_strided
-@op(torch.ops.aten.as_strided)
-@op(torch.ops.aten.as_strided_copy)
-def _aten_as_strided(x, sizes, strides, storage_offset=None):
+def _strided_index(sizes, strides, storage_offset=None):
   ind = jnp.zeros(sizes, dtype=jnp.int32)
 
   for i, (size, stride) in enumerate(zip(sizes, strides)):
@@ -1353,7 +1539,25 @@ def _aten_as_strided(x, sizes, strides, storage_offset=None):
     indexes = (jnp.arange(size) * stride).reshape(result_shape)
     ind += indexes
 
-  return jnp.ravel(x)[ind]
+  if storage_offset is not None:
+    ind += storage_offset
+  return ind
+
+# aten.as_strided
+@op(torch.ops.aten.as_strided)
+@op(torch.ops.aten.as_strided_copy)
+def _aten_as_strided(x, sizes, strides, storage_offset=None):
+  ind = _strided_index(sizes, strides, storage_offset)
+  flattened = jnp.ravel(x)
+  return flattened[ind]
+
+
+@op(torch.ops.aten.as_strided_scatter)
+def _aten_as_strided_scatter(x, src, sizes, strides, storage_offset):
+  ind = _strided_index(sizes, strides, storage_offset)
+  flattened = jnp.ravel(x)
+  modified = flattened.at[ind].set(src)
+  return modified.reshape(x.shape)
 
 
 # aten.atan2
@@ -1380,6 +1584,12 @@ def _aten_bitwise_xor(self, other):
   return self ^ other
 
 
+# aten.broadcast_to
+@op(torch.ops.aten.broadcast_to)
+def _aten_broadcast_to(input, shape):
+  return jnp.broadcast_to(input, shape)
+
+
 # aten.clamp
 @op(torch.ops.aten.clamp.default)
 @op(torch.ops.aten.clamp.Tensor)
@@ -1393,12 +1603,14 @@ def _aten_constant_pad_nd(input, padding, value=0):
   # NOTE: Torch padding is flat and reversed: (1, 1, 2, 2)
   #  means last dim get padded 1 in front and 1 in back;
   #  and second last dim get padded 2 in front and 2 in back.
-  # Jax padding tuple of 2-tuple: the same padding is
-  # [(0, 0), ..., (2,2), (1,1)]
+  # Jax padding tuple of 3-tuple: the same padding is
+  # [(0, 0, 0), ..., (2,2,0), (1,1,0)], where the last dimension 
+  # is the amount of padding added between any two elements in each dimension 
   m = len(padding)
-  rev_padding = [(padding[i - 1], padding[i]) for i in range(m - 1, 0, -2)]
-  pad_dim = tuple(([(0, 0)] * (len(input.shape) - m // 2)) + rev_padding)
-  return jnp.pad(input, pad_dim, mode="constant", constant_values=value)
+  rev_padding = [(padding[i - 1], padding[i], 0) for i in range(m - 1, 0, -2)]
+  pad_dim = tuple(([(0, 0, 0)] * (len(input.shape) - m // 2)) + rev_padding)
+  value_casted = jax.numpy.array(value, dtype=input.dtype)
+  return jax.lax.pad(input, padding_value=value_casted, padding_config = pad_dim)
 
 
 # aten.convolution_backward
@@ -1419,7 +1631,7 @@ def _aten_cdist_forward(x1, x2, p, compute_mode=""):
 
 
 @op(torch.ops.aten._pdist_forward)
-def _aten__pdist_forward(x, p):
+def _aten__pdist_forward(x, p=2):
   pairwise_dists = _aten_cdist_forward(x, x, p)
   condensed_dists = pairwise_dists[
     jnp.triu_indices(pairwise_dists.shape[0], k=1)
@@ -1430,13 +1642,13 @@ def _aten__pdist_forward(x, p):
 # aten.cos
 @op(torch.ops.aten.cos)
 def _aten_cos(input):
-  return jnp.cos(input)
+  return _handle_int64_trig(input, jnp.cos)
 
 
 # aten.cosh
 @op(torch.ops.aten.cosh)
 def _aten_cosh(input):
-  return jnp.cosh(input)
+  return _handle_int64_trig(input, jnp.cosh)
 
 
 # aten.diagonal
@@ -1445,7 +1657,6 @@ def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
   return jnp.diagonal(input, offset, dim1, dim2)
 
 
-# aten.empty_strided
 # aten.eq
 @op(torch.ops.aten.eq)
 def _aten_eq(input1, input2):
@@ -1479,7 +1690,7 @@ def _aten_fill(x, value, dtype=None, pin_memory=None, memory_format=None):
   if dtype is None:
     dtype = x.dtype
   else:
-    dtype = tensor.t2j_dtype(dtype)
+    dtype = mappings.t2j_dtype(dtype)
   return jnp.full(x.shape, value, dtype)
 
 
@@ -1495,13 +1706,31 @@ def _aten_flip(input, dims):
 # aten.floor
 @op(torch.ops.aten.floor)
 def _aten_floor(input):
-  return jnp.floor(input)
+  return jnp.floor(input).astype(input.dtype)
+
+
+# aten.fmax
+@op(torch.ops.aten.fmax)
+def _aten_fmax(input, other):
+  return jnp.fmax(input, other)
+
+
+# aten.fmin
+@op(torch.ops.aten.fmin)
+def _aten_fmin(input, other):
+  return jnp.fmin(input, other)
 
 
 # aten.fmod
 @op(torch.ops.aten.fmod)
 def _aten_fmod(input, other):
   return input - other * _aten_div(input, other, "trunc")
+
+
+# aten.frexp
+@op(torch.ops.aten.frexp)
+def _aten_frexp(input):
+  return jnp.frexp(input)
 
 
 # aten.gather
@@ -1527,6 +1756,12 @@ def _aten_glu(x, dim=-1):
 @op(torch.ops.aten.hardtanh)
 def _aten_hardtanh(input, min_val=-1.0, max_val=1.0, inplace=False):
   return jnp.clip(input, min_val, max_val)
+
+
+# aten.lcm
+@op(torch.ops.aten.lcm)
+def _aten_lcm(input, other):
+  return jnp.lcm(input, other)
 
 
 # aten.isinf
@@ -1555,25 +1790,25 @@ def _aten_leaky_relu(x, negative_slope):
 # aten.log
 @op(torch.ops.aten.log)
 def _aten_log(x):
-  return jnp.log(x)
+  return _handle_int64_trig(x, jnp.log)
 
 
 # aten.log10
 @op(torch.ops.aten.log10)
 def _aten_log10(x):
-  return jnp.log10(x)
+  return _handle_int64_trig(x, jnp.log10)
 
 
 # aten.log1p
 @op(torch.ops.aten.log1p)
 def _aten_log1p(x):
-  return jnp.log1p(x)
+  return _handle_int64_trig(x, jnp.log1p)
 
 
 # aten.log2
 @op(torch.ops.aten.log2)
 def _aten_log2(x):
-  return jnp.log2(x)
+  return _handle_int64_trig(x, jnp.log2)
 
 
 # aten.logical_and
@@ -1774,7 +2009,7 @@ def _aten_to_dtype(
   a, dtype, non_blocking=False, copy=False, memory_format=None
 ):
   if dtype:
-    jaxdtype = tensor.t2j_dtype(dtype)
+    jaxdtype = mappings.t2j_dtype(dtype)
   return a.astype(jaxdtype)
 
 
@@ -1795,7 +2030,7 @@ def _aten_scalar_tensor(
   s, dtype=None, layout=None, device=None, pin_memory=None
 ):
   if dtype is not None:
-    dtype = tensor.t2j_dtype(dtype)
+    dtype = mappings.t2j_dtype(dtype)
     return jnp.array(s, dtype=dtype)
   return jnp.array(s)
 
@@ -1877,11 +2112,27 @@ def _randn(
   shape = size
   if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
     shape = shape[0]
-  key = env.get_and_rotate_prng_key()
+  key = env.get_and_rotate_prng_key(generator)
   res = jax.random.normal(key, shape)
   if dtype is not None:
     res = res.astype(dtype)
   return res
+
+
+@op(torch.ops.aten.randn_like, needs_env=True)
+@op_base.convert_dtype()
+def _aten_randn_like(
+  x,
+  *,
+  dtype=None,
+  layout=None,
+  device=None,
+  pin_memory=False,
+  memory_format=torch.preserve_format,
+  env=None,
+):
+  key = env.get_and_rotate_prng_key()
+  return jax.random.normal(key, dtype=dtype or x.dtype, shape=x.shape)
 
 
 @op(torch.ops.aten.rand, needs_env=True)
@@ -1900,7 +2151,7 @@ def _rand(
   shape = size
   if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
     shape = shape[0]
-  key = env.get_and_rotate_prng_key()
+  key = env.get_and_rotate_prng_key(generator)
   res = jax.random.uniform(key, shape)
   if dtype is not None:
     res = res.astype(dtype)
@@ -1910,7 +2161,7 @@ def _rand(
 @op(torch.ops.aten.scalar_tensor.default)
 def _aten_scalar_tensor(val, **kwargs):
   p = torch.ops.aten.scalar_tensor(val)
-  return tensor.t2j(p)
+  return mappings.t2j(p)
 
 
 @op(torch.ops.aten.to.device)
@@ -1985,13 +2236,58 @@ def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
 
 @op(torch.ops.aten.native_batch_norm)
 def _aten_native_batch_norm(input, weight, bias, running_mean, running_var, training=False, momentum=0.1, eps=1e-5):
-  
+
   if running_mean is None:
-    running_mean = jnp.zeros(input.shape[1])  # Initialize running mean if None
+    running_mean = jnp.zeros(input.shape[1], dtype=input.dtype)  # Initialize running mean if None
   if running_var is None:
-    running_var = jnp.ones(input.shape[1])   # Initialize running variance if None
-  
+    running_var = jnp.ones(input.shape[1], dtype=input.dtype)   # Initialize running variance if None
+
   if training:
     return torch.ops.aten._native_batch_norm_legit(input, weight, bias, running_mean, running_var, training, momentum, eps)
   else:
-    return torch.ops.aten._native_batch_norm_legit_no_training(input, weight, bias, running_mean, running_var, momentum, eps) 
+    return torch.ops.aten._native_batch_norm_legit_no_training(input, weight, bias, running_mean, running_var, momentum, eps)
+
+
+@op(torch.ops.aten.normal, needs_env=True)
+def _aten_normal(self, mean=0, std=1, generator=None, env=None):
+  shape = self.shape
+  res = _randn(*shape, generator=generator, env=env)
+  return res * std + mean
+
+@op(torch.ops.aten.uniform, needs_env=True)
+def _aten_uniform(self, from_=0, to=1, *, generator=None, env=None):
+  assert from_ <= to, f'Uniform from(passed in {from_}) must be less than to(passed in {to})'
+  shape = self.shape
+  res = _rand(*shape, generator=generator, env=env)
+  return res * (to - from_) + from_
+
+#func: randint.low_generator(SymInt low, SymInt high, SymInt[] size, *, Generator? generator, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
+
+@op(torch.ops.aten.randint, torch.ops.aten.randint.generator, needs_env=True)
+@op_base.convert_dtype(use_default_dtype=False)
+def _aten_randint(
+  *args,
+  generator=None,
+  dtype=None,
+  env=None,
+  **kwargs,
+):
+  if len(args) == 3:
+    # low, high, size
+    low, high, size = args
+  elif len(args) == 2:
+    high, size = args
+    low = 0
+  else:
+    raise AssertionError(f'Expected at 2 or 3 args for Aten::randint, got {len(args)}')
+
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.randint(key, size, low, high)
+  if dtype is not None:
+    res = res.astype(dtype)
+  return res
+
+
+@op(torch.ops.aten.dim, is_jax_function=False)
+def _aten_dim(self):
+  return len(self.shape)

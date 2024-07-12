@@ -9,6 +9,9 @@ repository (see `bazel build` command below).
 
 ## Building
 
+See our [contributing guide](../../CONTRIBUTING.md) for build environment setup
+steps.
+
 ```bash
 # Build wheel
 pip wheel plugins/cpu -v

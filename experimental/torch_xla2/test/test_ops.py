@@ -10,22 +10,13 @@ from torch_xla2 import tensor
 
 
 skiplist = {
-    "__getitem__",
-    "__rmatmul__",
-    "__rpow__",
+    "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
+                 # such as 0 to negative power.
     "_segment_reduce",
     "_upsample_bilinear2d_aa",
-    "argsort",
-    "as_strided",
-    "as_strided_scatter",
-    "baddbmm",
-    "bernoulli",
-    "bincount",
-    "bitwise_left_shift",
-    "bitwise_right_shift",
+    "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "block_diag",
     "broadcast_tensors",
-    "broadcast_to",
     "bucketize",
     "byte",
     "cat",
@@ -36,7 +27,6 @@ skiplist = {
     "cholesky_solve",
     "combinations",
     "complex",
-    "constant_pad_nd",
     "copysign",
     "corrcoef",
     "count_nonzero",
@@ -44,7 +34,6 @@ skiplist = {
     "cross",
     "cummax",
     "cummin",
-    "cumprod",
     "cumsum",
     "diag",
     "diag_embed",
@@ -55,10 +44,6 @@ skiplist = {
     "digamma",
     "dist",
     "div",
-    "empty",
-    "empty_like",
-    "empty_permuted",
-    "empty_strided",
     "equal",
     "erfc",
     "erfinv",
@@ -84,9 +69,6 @@ skiplist = {
     "fft.rfft",
     "fft.rfftn",
     "floor_divide",
-    "fmax",
-    "fmin",
-    "frexp",
     "full_like",
     "gather",
     "gcd",
@@ -107,11 +89,7 @@ skiplist = {
     "index_reduce",
     "index_select",
     "isclose",
-    "isin",
-    "item",
     "kthvalue",
-    "lcm",
-    "lerp",
     "lgamma",
     "linalg.cholesky",
     "linalg.cholesky_ex",
@@ -158,7 +136,6 @@ skiplist = {
     "logcumsumexp",
     "logdet",
     "logspace",
-    "logsumexp",
     "lu",
     "lu_solve",
     "lu_unpack",
@@ -166,7 +143,6 @@ skiplist = {
     "masked.amin",
     "masked.argmax",
     "masked.argmin",
-    "masked.cumprod",
     "masked.cumsum",
     "masked.log_softmax",
     "masked.logaddexp",
@@ -257,7 +233,6 @@ skiplist = {
     "nn.functional.one_hot",
     "nn.functional.pad",
     "nn.functional.pairwise_distance",
-    "nn.functional.pdist",
     "nn.functional.pixel_shuffle",
     "nn.functional.pixel_unshuffle",
     "nn.functional.poisson_nll_loss",
@@ -280,9 +255,7 @@ skiplist = {
     "put",
     "qr",
     "quantile",
-    "rand_like",
     "randint_like",
-    "randn_like",
     "renorm",
     "repeat_interleave",
     "resize_",
@@ -293,7 +266,6 @@ skiplist = {
     "scatter",
     "scatter_reduce",
     "searchsorted",
-    "select",
     "select_scatter",
     "signbit",
     "softmax",
@@ -326,7 +298,6 @@ skiplist = {
     "squeeze",
     "stft",
     "sub",
-    "sum",
     "svd",
     "svd_lowrank",
     "take_along_dim",
@@ -340,7 +311,6 @@ skiplist = {
     "unbind",
     "unfold_copy",
     "unfold",
-    "uniform",
     "unique_consecutive",
     "unique",
     "unravel_index",
@@ -356,36 +326,16 @@ skiplist = {
     "trapz",
     "H",
     "T",
-    "__radd__",
-    "__rand__",
-    "__rdiv__",
-    "__rmod__",
-    "__rmul__",
-    "__ror__",
-    "__rsub__",
-    "__rxor__",
     "_softmax_backward_data",
-    "abs",
-    "acos",
-    "acosh",
     "addcdiv",
     "addcmul",
     "arange",
-    "asin",
-    "asinh",
     "atan2",
-    "atan",
-    "atanh",
     "atleast_1d",
     "atleast_2d",
     "atleast_3d",
     "bfloat16",
-    "bitwise_and",
-    "bitwise_not",
-    "bitwise_or",
-    "bitwise_xor",
     "bmm",
-    "bool",
     "broadcast_shapes",
     "cartesian_prod",
     "cdouble",
@@ -402,20 +352,15 @@ skiplist = {
     "conj",
     "conj_physical",
     "contiguous",
-    "cos",
-    "cosh",
     "deg2rad",
     "diagonal",
     "dot",
-    "double",
     "dsplit",
     "dstack",
     "einsum",
-    "eq",
     "erf",
     "exp",
     "expm1",
-    "eye",
     "fft.fftshift",
     "fft.ifftshift",
     "fill",
@@ -423,57 +368,27 @@ skiplist = {
     "flip",
     "fliplr",
     "flipud",
-    "float",
-    "float_power",
-    "floor",
     "fmod",
     "frac",
-    "full",
-    "ge",
     "gradient",
-    "gt",
-    "half",
     "hsplit",
     "hstack",
     "index_add",
     "inner",
-    "int",
-    "isfinite",
-    "isinf",
-    "isnan",
-    "isneginf",
-    "isposinf",
-    "isreal",
     "kron",
     "ldexp",
-    "le",
     "linalg.diagonal",
     "linalg.vecdot",
-    "log10",
-    "log1p",
-    "log2",
-    "log",
-    "logical_and",
-    "logical_not",
-    "logical_or",
-    "logical_xor",
-    "logit",
-    "long",
-    "lt",
     "mH",
     "mT",
     "masked_fill",
-    "maximum",
     "meshgrid",
-    "minimum",
     "movedim",
     "msort",
     "mul",
     "mv",
     "nan_to_num",
     "native_dropout_backward",
-    "ne",
-    "neg",
     "new_full",
     "new_ones",
     "new_zeros",
@@ -508,16 +423,12 @@ skiplist = {
     "nn.functional.triplet_margin_loss",
     "nn.functional.triplet_margin_with_distance_loss",
     "nn.functional.upsample_bilinear",
-    "ones",
     "outer",
     "permute",
     "positive",
-    "pow",
     "rad2deg",
     "randint",
-    "randn",
     "ravel",
-    "real",
     "reciprocal",
     "remainder",
     "repeat",
@@ -526,13 +437,8 @@ skiplist = {
     "resolve_conj",
     "resolve_neg",
     "roll",
-    "round",
     "rsqrt",
     "scalar_tensor",
-    "sgn",
-    "short",
-    "sigmoid",
-    "sign",
     "signal.windows.bartlett",
     "signal.windows.blackman",
     "signal.windows.cosine",
@@ -544,9 +450,6 @@ skiplist = {
     "signal.windows.hann",
     "signal.windows.kaiser",
     "signal.windows.nuttall",
-    "sin",
-    "sinc",
-    "sinh",
     "slice",
     "slice_scatter",
     "sparse.mm",
@@ -557,19 +460,11 @@ skiplist = {
     "split",
     "split_with_sizes",
     "split_with_sizes_copy",
-    "sqrt",
     "square",
     "stack",
-    "std",
-    "std_mean",
     "sum_to_size",
-    "t",
-    "tan",
-    "tanh",
     "tensordot",
     "tile",
-    "to",
-    "transpose",
     "tril",
     "tril_indices",
     "triu_indices",
@@ -579,31 +474,43 @@ skiplist = {
     "unsafe_chunk",
     "unsafe_split",
     "unsqueeze",
-    "var",
-    "vdot",
     "view_as_complex",
     "view_as",
     "view_copy",
     "view",
-    "vsplit",
-    "vstack",
-    "where",
-    "xlogy",
-    "zeros",
 }
 
+# These inputs are themselves views
+# We cannot know how are the views created so cannot replicate the behavior.
+variant_test_name_to_skip = {
+  "partial_views",
+}
 
-def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
+random_ops = {
+  'empty',
+  'empty_like',
+  'empty_permuted',
+  'empty_strided',
+  'bernoulli',
+  'randn',
+  'randn_like',
+  'rand',
+  'rand_like',
+  'uniform',
+}
+
+def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
-    if output2_cpu.dtype != output1.dtype:
-      output2_cpu = output2_cpu.to(output1.dtype)
-    testcase.assertEqual(output1.shape, output2_cpu.shape)
-    testcase.assertEqual(output1.dtype, output2_cpu.dtype)
-    testcase.assertTrue(
-        torch.allclose(
-            output1, output2_cpu, atol=atol, rtol=rtol, equal_nan=equal_nan))
+    if check_output:
+      torch.testing.assert_close(
+          output2_cpu, output1, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    else:
+      testcase.assertEqual(
+        (output1.shape, output1.dtype),
+        (output2.shape, output2.dtype)
+      )
   elif isinstance(output1, (tuple, list)):
     testcase.assertIsInstance(output2, (tuple, list))
     testcase.assertEqual(len(output1), len(output2))
@@ -616,10 +523,11 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
 def run_export_and_compare(testcase,
                            func,
                            sample_input,
-                           atol=1e-3,
-                           rtol=1e-5,
+                           check_output=True,
                            equal_nan=True,
                            ignore_indices=False):
+  atol = 1e-3
+  rtol = 1e-5
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):
@@ -636,13 +544,17 @@ def run_export_and_compare(testcase,
               res2[0],
               atol=atol,
               rtol=rtol,
-              equal_nan=equal_nan)
+              equal_nan=equal_nan, check_output=check_output)
         else:
           diff_output(
-              testcase, res, res2, atol=atol, rtol=rtol, equal_nan=equal_nan)
+              testcase, res, res2, atol=atol, rtol=rtol, equal_nan=equal_nan, check_output=check_output)
 
 
-ops_to_test = list(filter(lambda x: x.name not in skiplist, op_db))
+ops_to_test = [
+    test for test in op_db
+    if (test.name not in skiplist and
+        test.variant_test_name not in variant_test_name_to_skip)
+]
 
 
 class TestOpInfo(TestCase):
@@ -652,7 +564,7 @@ class TestOpInfo(TestCase):
     print('op_db size: ', len(op_db), 'testing: ', len(ops_to_test))
 
   def setUp(self):
-    self.env = tensor.Environment(0)
+    self.env = tensor.Environment()
 
   @ops(ops_to_test, allowed_dtypes=(torch.float32, torch.long))
   def test_reference_eager(self, device, dtype, op):
@@ -661,7 +573,8 @@ class TestOpInfo(TestCase):
       t = sample_input.input
       if isinstance(t, torch.Tensor) and t.is_sparse:
         continue
-      run_export_and_compare(self, op, sample_input)
+      check_output = op.name not in random_ops
+      run_export_and_compare(self, op, sample_input, check_output)
 
 
 instantiate_device_type_tests(TestOpInfo, globals())

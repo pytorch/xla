@@ -1374,6 +1374,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         ), dtype=torch.int64)
     self.runAtenTest([token_type_ids, cat_ids], test_fn)
 
+  def test_one_hot_no_fallback(self):
+
+    def test_fn(t):
+      met.clear_all()
+      res = F.one_hot(t, num_classes=5)
+      # make sure there is no graph break
+      assert 'aten::' not in met.short_metrics_report()
+      return res
+
+    t1 = torch.arange(0, 5) % 3
+
+    self.runAtenTest([t1], test_fn)
+
   @skipIfFunctionalizationEnabled("views do not exist")
   def test_save_view_alias_check(self):
 
@@ -1736,6 +1749,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       assert torch.all(lower_bound >= 0.0)
       assert torch.all(upper_bound <= 1.0)
 
+  def test_manual_seed(self):
+    device = torch_xla.device()
+    torch_xla.manual_seed(12345)
+    t1 = torch.randn(5, 5, device=device)
+    torch_xla.manual_seed(12345)
+    t2 = torch.randn(5, 5, device=device)
+    self.assertTrue(torch.allclose(t1.cpu(), t2.cpu()))
+
   def test_cached_addcdiv(self):
     xla_device = xm.xla_device()
     met.clear_all()
@@ -1989,6 +2010,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for dtype in test_dtypes:
       test(dtype)
 
+  def test_trilinear_interpolate(self):
+
+    def func(input_volume):
+      output_size = (32, 64, 64)
+      return F.interpolate(
+          input_volume, size=output_size, mode='trilinear', align_corners=False)
+
+    device = torch_xla.device()
+    input_volume = torch.randn(1, 3, 16, 32, 32).to(device)
+    met.clear_all()
+    self.runAtenTest((input_volume), func)
+    assert len(torch_xla._XLAC._get_executed_fallback_ops()) == 0
+
   def test_gelu_backward_different_types(self):
 
     def foo(grad, inp):
@@ -2004,6 +2038,30 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     Xr = foo(Xgrad, Xinp)
 
     self.assertEqual(r, Xr.cpu())
+
+  def test_clip_grad_norm_(self):
+
+    def foo(t):
+      torch.nn.utils.clip_grad_norm_(t, 1.0)
+
+    t = torch.rand(10, 10, requires_grad=True, dtype=torch.bfloat16)
+    t.retain_grad()
+    t.grad = torch.rand(10, 10, dtype=torch.bfloat16)
+    xt = t.to(xm.xla_device())
+    xt.grad = t.grad.to(xm.xla_device(), dtype=torch.bfloat16)
+
+    foo(t)
+    foo(xt)
+
+    self.assertEqual(xt.grad.dtype, torch.bfloat16)
+    self.assertEqual(t.grad, xt.grad.cpu())
+
+  def test_clip_grad_norm_zero(self):
+    t = torch.rand(10, 10, dtype=torch.bfloat16)
+    xt = t.to(xm.xla_device())
+    result = torch.nn.utils.clip_grad_norm_(xt, 1.0)
+    self.assertEqual(result.device.type, 'xla')
+    self.assertTrue(torch.allclose(result.cpu(), torch.tensor(0.)))
 
   def test_stack_different_types(self):
 
@@ -2068,6 +2126,172 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     for xshape, i0shape, i1shape in cases[f2]:
       test(f2, xshape, (i0shape, i1shape))
+
+  def test_inplace_mul_scalar_different_dtype(self):
+    # This tests whether the returned output data-type agrees on PyTorch
+    # and XLA sides.
+    #
+    # Technical details: even though we were computing the common data-type
+    # inside PyTorch/XLA XLANativeFunctions::mul function, we were using it
+    # just for telling PyTorch what the output data-type would be, i.e. creating
+    # an IR node of that data-type). Meanwhile, in the XLA side of things,
+    # it would just promote the tensors using other data-type promotion rules.
+    #
+    # In summary, given the expressions below, the problem this test covers is:
+    #
+    #   >>> t = torch.rand(10, dtype=torch.half)
+    #   >>> s = torch.tensor(5, dtype=torch.double)
+    #   >>> out = t.mul_(s)
+    #
+    #   out.dtype is torch.float16, but its underlying XLA type (xla::Shape's
+    #   element_type) is F64
+    #
+    # See: https://github.com/pytorch/xla/issues/7084
+
+    def fn(inp, s):
+      return inp.mul_(s)
+
+    inp = torch.rand(10, dtype=torch.half)
+    s = torch.tensor(7, dtype=torch.double)
+
+    Xinp = inp.to(xm.xla_device())
+    Xs = s.to(xm.xla_device())
+
+    out = fn(inp, s)
+    Xout = fn(Xinp, Xs)
+
+    self.assertEqual(out, Xout.cpu())
+    self.assertEqual("f16", torch_xla._XLAC._get_xla_tensor_shape_type(Xout))
+
+  # We skip TPU for 2 reasons:
+  #   1. upsample_bilinear on f64 tensors doesn't work on TPUs
+  #   2. This issue only affects non-TPU and non-Neuron devices (i.e. there's
+  #      a short-circuit for both devices that don't go through the bug path)
+  @skipOnTpu
+  def test_upsample_bilinear_double(self):
+    # Originally, the upsample_bilinear implementation (in resize_ops.cpp)
+    # was copied from TF. The computation was done intentionally on F32 and
+    # not cast back[1]. However, that didn't reflect in the returned tensor.
+    # Basically, what would happen is:
+    #
+    # 1. A tensor of data-type other than F32 is created:
+    #    > a = torch.rand(..., dtype=torch.double)
+    #
+    # 2. Call upsample_bilinear on it
+    #    > r = torch.nn.functional.upsample_bilinear(a, scale_factor=2)
+    #
+    # 3. The result's data-type would show as torch.float64, but its inner
+    #    HLO representation would be actually F32.
+    #
+    #     - It would rarely surface as an error, since we do data-type
+    #       promotion at the HLO level.
+    #
+    #     - When this result is the argument of a new HLO function, XLA
+    #       would actually expect a F16 tensor, since its torch.Tensor
+    #       data-type "is" torch.float16. However, since the actual HLO
+    #       data-type is F32, XLA raises an error.
+    #
+    # See more details at [2].
+    #
+    # [1]: https://github.com/tensorflow/tensorflow/commit/f8b35e00afe09c8606bcb0441a51be8bd38168d2
+    # [2]: https://github.com/pytorch/xla/issues/7095
+
+    def foo(x, is_xla=False):
+      # Compute upsample_bilinear.
+      r = torch.nn.functional.upsample_bilinear(x, scale_factor=2)
+
+      if is_xla:
+        # Mark the end of the HLO graph.
+        xm.mark_step()
+
+      # Start a new HLO graph using the upsample_bilinear result as
+      # one of its arguments.
+      return r + 5
+
+    inp = torch.rand(1, 3, 10, 10, dtype=torch.double)
+    Xinp = inp.to(xm.xla_device())
+
+    out = foo(inp)
+    Xout = foo(Xinp, is_xla=True)
+
+    self.assertEqual(out, Xout.cpu())
+
+  def test_embedding_bag_backward_fallback(self):
+    # Tests whether EmbeddingBag backward function works and computes the expected results.
+    #
+    # EmbeddingBag has a 'sparse' flag which dictates what will be the layout of the grad
+    # returned by its backward function. Unfortunately, PyTorch/XLA doesn't support sparse
+    # tensors, yet. Therefore, as a work-around, we fallback to the dense backward function.
+    #
+    # This test tests whether we correctly compute the backward for sparse=True and
+    # sparse=False, making sure that we did not introduce any regressions.
+
+    # Run EmbeddingBag forward and backwards.
+    # Return the forward result + the computed weight grad.
+    def fn(indices, weight, **kwargs):
+      out = F.embedding_bag(indices, weight, **kwargs)
+      out.sum().backward()
+      return out, weight.grad
+
+    # Clone a tensor, and maybe move it to a different device.
+    def clone_and_maybe_move(tensor, device=None):
+      fresh = tensor
+      # Maybe move to the specified device.
+      if device is not None:
+        fresh = fresh.to(device)
+      # Clone if not cloned already by the previous device move.
+      if fresh.device == tensor.device and fresh.data_ptr() == tensor.data_ptr(
+      ):
+        fresh = tensor.clone()
+      # Make this tensor a leaf tensor by detaching and reseting its
+      # requires_grad property.
+      fresh = fresh.detach()
+      fresh.requires_grad_(tensor.requires_grad)
+      return fresh
+
+    EMBEDDINGS = 10
+    VECTOR_DIM = 5
+    N = 5
+
+    kwargs = {
+        "indices": torch.randint(0, EMBEDDINGS, (N,)),
+        "weight": torch.randn((EMBEDDINGS, VECTOR_DIM), requires_grad=True),
+        "offsets": torch.tensor([0, 3], dtype=torch.long),
+    }
+
+    # Test all combinations of sparse + mode.
+    for sparse, mode in itertools.product((False, True),
+                                          ("sum", "mean", "max")):
+      # According to nn.functional.embedding_bag PyTorch documentation, not supported.
+      if sparse and mode == "max":
+        continue
+
+      extra_kwargs = {
+          "mode": mode,
+          "sparse": sparse,
+      }
+
+      with self.subTest(sparse=sparse, mode=mode):
+        kwargs_ = {k: clone_and_maybe_move(v) for k, v in kwargs.items()}
+        xla_kwargs = {
+            k: clone_and_maybe_move(v, device=xm.xla_device())
+            for k, v in kwargs.items()
+        }
+
+        expected_out, expected_grad = fn(**kwargs_, **extra_kwargs)
+        actual_out, actual_grad = fn(**xla_kwargs, **extra_kwargs)
+
+        # PyTorch/XLA doesn't support sparse tensors.
+        # We explicitly fallback to the dense backward function whenever sparse=True.
+        # Therefore, we have to convert the expected grad to dense, so that we can
+        # compare the actual numbers.
+        if sparse:
+          self.assertTrue(expected_grad.is_sparse)
+          self.assertFalse(actual_grad.is_sparse)
+          expected_grad = expected_grad.to_dense()
+
+        self.assertEqual(actual_out, expected_out)
+        self.assertEqual(actual_grad, expected_grad)
 
 
 class MNISTComparator(nn.Module):
@@ -2623,6 +2847,37 @@ class TestDLPack(parameterized.TestCase):
 
   @onlyIfTorchSupportsCUDA
   @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_pytorch_cuda_to_xla_protocol_conversion(self):
+    # Unlike the test_dlpack_pytorch_cuda_to_xla,
+    # torch_cuda_tensor has attribute __dlpack__ and __dlpack_device__.
+    # From cuda tensors to xla tensors, the synchronization is handdled implicitly.
+    t1_cuda = torch.arange(5).cuda()
+    xla_t1 = xdlpack.from_dlpack(t1_cuda)
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
+    t1_cuda[0] = t1_cuda[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
+
+    t2_cuda = torch.tensor(5).cuda()
+    xla_t2 = xdlpack.from_dlpack(t2_cuda)
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
+    t2_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
+
+    cuda1 = torch.device('cuda:1')
+    t3_cuda = torch.tensor(5, device=cuda1)
+    xla_t3 = xdlpack.from_dlpack(t3_cuda)
+    self.assertEqual(xla_t3.device.type, 'xla')
+    self.assertEqual(
+        xla_t3.device.index,
+        t3_cuda.device.index,
+        msg='both value should 1. xla_t3.device should be xla:1.')
+    t3_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_xla_to_pytorch_cuda(self):
     xla_t1 = torch.arange(5).to(xm.xla_device())
     dlt1 = xdlpack.to_dlpack(xla_t1)
@@ -2640,13 +2895,13 @@ class TestDLPack(parameterized.TestCase):
     t1 = cuda_t.t()
     xla_t1 = xdlpack.from_dlpack(t1.__dlpack__())
     self.assertEqual(xla_t1.device.type, 'xla')
-    self.assertEqual(xla_t1.device.index, 0)
+    self.assertEqual(xla_t1.device.index, t1.device.index)
     self.assertTrue(torch.allclose(t1.cpu(), xla_t1.cpu()))
 
     t2 = cuda_t[0]
     xla_t2 = xdlpack.from_dlpack(t2.__dlpack__())
     self.assertEqual(xla_t2.device.type, 'xla')
-    self.assertEqual(xla_t2.device.index, 0)
+    self.assertEqual(xla_t2.device.index, t2.device.index)
     self.assertTrue(torch.allclose(t2.cpu(), xla_t2.cpu()))
 
     t3 = cuda_t[:, 0]
@@ -2658,13 +2913,13 @@ class TestDLPack(parameterized.TestCase):
     t4 = cuda_t[1, :]
     xla_t4 = xdlpack.from_dlpack(t4.__dlpack__())
     self.assertEqual(xla_t4.device.type, 'xla')
-    self.assertEqual(xla_t4.device.index, 0)
+    self.assertEqual(xla_t4.device.index, t4.device.index)
     self.assertTrue(torch.allclose(t4.cpu(), xla_t4.cpu()))
 
     t5 = cuda_t[1]
     xla_t5 = xdlpack.from_dlpack(t5.__dlpack__())
     self.assertEqual(xla_t5.device.type, 'xla')
-    self.assertEqual(xla_t5.device.index, 0)
+    self.assertEqual(xla_t5.device.index, t5.device.index)
     self.assertTrue(torch.allclose(t5.cpu(), xla_t5.cpu()))
 
 
@@ -2673,6 +2928,7 @@ class SimpleModelWithDropout(torch.nn.Module):
   def __init__(self):
     super().__init__()
     self.x = torch.nn.Linear(128, 128)
+    self.register_buffer("buffer", torch.zeros(64, 64))
     self.dropout = torch.nn.Dropout(p=0.1)
     self.to_save = []
 
@@ -2701,6 +2957,30 @@ class TestActivationCheckpoint(test_utils.XlaTestCase):
     same_output = torch.allclose(model.to_save[0], model.to_save[1])
     self.assertTrue(same_output,
                     f"in fwd {model.to_save[0]}, in bwd {model.to_save[1]}")
+
+  def test_opt_barrier(self):
+    device = xm.xla_device()
+    model = SimpleModelWithDropout().to(device)
+    model = checkpoint_module(model)
+    _input = torch.randn(128, 128, requires_grad=True)
+    _input = _input.to(device)
+    output = model(_input)
+    output = torch.sum(output)
+    output.backward()
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([model.x.weight.grad])
+    lines = hlo.splitlines()
+    opt_barrier = ""
+    for line in lines:
+      if "opt-barrier" in line:
+        opt_barrier = line
+        break
+
+    # Somehow the CPU/GPU CI will not have the opt-barrier.
+    if opt_barrier != "":
+      self.assertEqual(opt_barrier.count("f32[128,128]"), 6)
+      self.assertEqual(opt_barrier.count("f32[128]"), 2)
+      self.assertEqual(opt_barrier.count("f32[64,64]"), 2)
 
 
 # These tests were extracted and adapted from torchvision.
@@ -2813,6 +3093,20 @@ class TestHelperFunction(test_utils.XlaTestCase):
         (base,
          torch.repeat_interleave(input[-1],
                                  total_repeat_length - base.size()[0])))
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
+  def test_repeat_special(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 135
+    num_groups = 8
+    input = torch.arange(num_groups, dtype=torch.int32).to(device)
+    repeats = torch.tensor([3, 6, 2, 14, 27, 47, 8, 28]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    expected = torch.repeat_interleave(input, repeats)[:total_repeat_length]
     self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
 
 

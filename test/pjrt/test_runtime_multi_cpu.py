@@ -135,6 +135,8 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
 
     return torch_xla._XLAC._get_xla_tensors_hlo([reduced])
 
+  @absltest.skipIf(1 == 1,
+                   "temporarily skipping this test until CI issue is resolved")
   def test_all_reduce_no_op_with_one_replica(self):
     # Check that this normally produces an all-reduce
     results = pjrt.run_multiprocess(self._all_reduce_hlo)

@@ -55,7 +55,7 @@ bool IsSparseGather(xla::XlaOp input, xla::XlaOp index, int64_t dim) {
 
 std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
                                       absl::Span<const int64_t> input_sizes) {
-  c10::optional<size_t> incomplete_dim;
+  std::optional<size_t> incomplete_dim;
   int64_t incomplete_element_count = 1;
   for (size_t dim = 0; dim < output_sizes.size(); ++dim) {
     int64_t dim_size = output_sizes[dim];

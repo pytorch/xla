@@ -100,7 +100,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   struct Data : public torch::lazy::LazyTensor::Data {
     Data(torch::lazy::BackendDataPtr handle,
          const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type,
+         std::optional<at::ScalarType> logical_element_type,
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(handle, device),
           logical_element_type(logical_element_type),
@@ -108,7 +108,7 @@ class XLATensor : public torch::lazy::LazyTensor {
       alias_id = unique_id;
     }
     Data(torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type,
+         std::optional<at::ScalarType> logical_element_type,
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(ir_value, device),
           logical_element_type(logical_element_type),
@@ -123,7 +123,7 @@ class XLATensor : public torch::lazy::LazyTensor {
       alias_id = unique_id;
     }
     Data(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
-         c10::optional<at::ScalarType> logical_element_type,
+         std::optional<at::ScalarType> logical_element_type,
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(device),
           view(std::move(view)),
@@ -136,7 +136,7 @@ class XLATensor : public torch::lazy::LazyTensor {
 
     std::shared_ptr<View> view;
     // TODO: remove this in favor of torch::lazy::Shape within ir_value.
-    c10::optional<at::ScalarType> logical_element_type;
+    std::optional<at::ScalarType> logical_element_type;
     // The user provided sharding spec is attached to `XLATensor::Data`
     // and all sharding look-up should refer to it as source of truth.
     // A copy of the sharding spec is attached to the IR node via
@@ -153,10 +153,10 @@ class XLATensor : public torch::lazy::LazyTensor {
                              const torch::lazy::BackendDevice& device);
   static XLATensorPtr Create(
       torch::lazy::BackendDataPtr handle,
-      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+      std::optional<at::ScalarType> logical_element_type = std::nullopt);
   static XLATensorPtr Create(
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+      std::optional<at::ScalarType> logical_element_type = std::nullopt);
   static XLATensorPtr Create(std::shared_ptr<Data> data);
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
@@ -164,7 +164,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   XLATensorPtr CreateFrom(torch::lazy::Value ir_value) const;
   XLATensorPtr CreateFrom(
       torch::lazy::Value ir_value,
-      c10::optional<at::ScalarType> logical_element_type_opt) const;
+      std::optional<at::ScalarType> logical_element_type_opt) const;
   // TODO: We should remove this one once MaybeCastIrValue is no longer needed.
   XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
                           const torch::lazy::BackendDevice& device,
@@ -198,10 +198,10 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   // Override to use logical_element_type.
   at::ScalarType dtype() const final;
-  c10::optional<at::ScalarType> dtype_optional() const;
+  std::optional<at::ScalarType> dtype_optional() const;
 
   // Set logical_element_type which is visible to upstream PyTorch.
-  void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
+  void SetScalarType(std::optional<at::ScalarType> logical_element_type);
 
   void MarkDynamicDimension(uint32_t dim);
   // We don't use the upstream shape to provide xla::shape.
@@ -228,10 +228,11 @@ class XLATensor : public torch::lazy::LazyTensor {
   // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
   torch::lazy::Value GetIrValue() const;
   void SetIrValue(torch::lazy::Value ir_value, bool inplace = true);
-  void SetInPlaceIrValue(torch::lazy::Value ir_value);
+  void SetInPlaceIrValue(torch::lazy::Value ir_value,
+                         bool delay_eager_executation = false);
 
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
-  c10::optional<at::Tensor> CurrentTensorData() const;
+  std::optional<at::Tensor> CurrentTensorData() const;
 
   // We don't use the upstream MakeOutputTensors to return XLATensorPtr instead.
   std::vector<XLATensorPtr> MakeOutputTensors(
@@ -297,18 +298,18 @@ class XLATensor : public torch::lazy::LazyTensor {
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
   XLATensor(torch::lazy::BackendDataPtr handle,
-            c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+            std::optional<at::ScalarType> logical_element_type = std::nullopt);
   XLATensor(torch::lazy::Value ir_value,
             const torch::lazy::BackendDevice& device,
-            c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+            std::optional<at::ScalarType> logical_element_type = std::nullopt);
   XLATensor(std::shared_ptr<View> view,
             const torch::lazy::BackendDevice& device,
-            c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+            std::optional<at::ScalarType> logical_element_type = std::nullopt);
   XLATensor(std::shared_ptr<Data> data);
 
   static XLATensorPtr Create(
       std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
-      c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+      std::optional<at::ScalarType> logical_element_type = std::nullopt);
 
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   void SetXlaData(torch::lazy::BackendDataPtr handle, bool sync);
@@ -322,7 +323,7 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   torch::lazy::Value MaybeCastIrValue(
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-      c10::optional<at::ScalarType> logical_element_type) const;
+      std::optional<at::ScalarType> logical_element_type) const;
 
   // Override to instantiate our own xla data.
   torch::lazy::Value GetIrValueForTensor(

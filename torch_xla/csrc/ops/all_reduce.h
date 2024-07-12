@@ -12,6 +12,8 @@ class AllReduce : public XlaNode {
             c10::ArrayRef<torch::lazy::Value> operands,
             const torch::lazy::Value& token, double scale,
             std::vector<std::vector<int64_t>> groups, bool pin_layout);
+  AllReduce(AllReduceType reduce_type, torch::lazy::Value operand, double scale,
+            std::vector<std::vector<int64_t>> groups);
 
   std::string ToString() const override;
 
@@ -31,7 +33,8 @@ class AllReduce : public XlaNode {
   AllReduceType reduce_type_;
   double scale_;
   std::vector<std::vector<int64_t>> groups_;
-  bool pin_layout_;
+  bool pin_layout_{false};
+  bool has_token_{true};
 };
 
 }  // namespace torch_xla

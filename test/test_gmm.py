@@ -7,7 +7,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
-from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram, tgmm
+from torch_xla.experimental.custom_kernel import gmm, _make_group_metadata, _histogram, tgmm, gmm_backward, GMM
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
@@ -93,48 +93,58 @@ class MegabloxTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm(self):
     met.clear_all()
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update('jax_default_matmul_precision', "highest")
+    gmm_funcs = [
+        gmm, torch.ops.xla.gmm,
+        torch.compile(torch.ops.xla.gmm, backend="openxla")
+    ]
 
     self._init_test_cases()
-    for test_case in self.tests_cases:
-      num_groups = test_case['num_groups']
-      k = test_case['k']
-      m = test_case['m']
-      n = test_case['n']
-      lhs_dtype = rhs_dtype = test_case['dtype']
+    for gmm_func in gmm_funcs:
+      for test_case in self.tests_cases:
+        num_groups = test_case['num_groups']
+        k = test_case['k']
+        m = test_case['m']
+        n = test_case['n']
+        lhs_dtype = rhs_dtype = test_case['dtype']
 
-      lhs = torch.rand(m, k, dtype=lhs_dtype)
-      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+        lhs = torch.rand(m, k, dtype=lhs_dtype)
+        rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+        ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
-      out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
-      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+        out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+        self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update('jax_default_matmul_precision', "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm_bf16(self):
     met.clear_all()
 
+    gmm_funcs = [
+        gmm, torch.ops.xla.gmm,
+        torch.compile(torch.ops.xla.gmm, backend="openxla")
+    ]
     self._init_test_cases()
-    for test_case in self.tests_cases:
-      num_groups = test_case['num_groups']
-      k = test_case['k']
-      m = test_case['m']
-      n = test_case['n']
-      lhs_dtype = rhs_dtype = torch.bfloat16
+    for gmm_func in gmm_funcs:
+      for test_case in self.tests_cases:
+        num_groups = test_case['num_groups']
+        k = test_case['k']
+        m = test_case['m']
+        n = test_case['n']
+        lhs_dtype = rhs_dtype = torch.bfloat16
 
-      lhs = torch.rand(m, k, dtype=lhs_dtype)
-      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+        lhs = torch.rand(m, k, dtype=lhs_dtype)
+        rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+        ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
-      out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+        out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
 
-      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+        self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
@@ -180,6 +190,11 @@ class MegabloxTest(unittest.TestCase):
             'm': 32,
             'tm': 4
         },
+        {
+            'group_sizes': [377, 588, 153, 1638, 3261, 5890, 996, 3481],
+            'm': 16384,
+            'tm': 128
+        },
     ]
 
     for test_grid in test_grids:
@@ -192,7 +207,8 @@ class MegabloxTest(unittest.TestCase):
       )
 
       torch_meta = _make_group_metadata(
-          group_sizes=torch.tensor(test_grid['group_sizes']).to("xla"),
+          group_sizes=torch.tensor(test_grid['group_sizes']).to(
+              torch.int32).to("xla"),
           m=test_grid['m'],
           tm=test_grid['tm'],
           visit_empty_groups=True,
@@ -245,6 +261,7 @@ class MegabloxTest(unittest.TestCase):
           max=test_grid['max'],
       )
 
+      self.assertEqual(chart.dtype, torch.int32)
       self.assertTrue(torch.all(torch_chart == chart.cpu()))
 
   def test_histogram_raise(self):
@@ -293,7 +310,7 @@ class MegabloxTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tgmm(self):
     met.clear_all()
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update('jax_default_matmul_precision', "highest")
 
     self._init_test_cases()
     for test_case in self.tests_cases:
@@ -313,7 +330,7 @@ class MegabloxTest(unittest.TestCase):
 
     # Make sure tgmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update('jax_default_matmul_precision', "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tgmm_bf16(self):
@@ -336,6 +353,111 @@ class MegabloxTest(unittest.TestCase):
       self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure tgmm doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_gmm_backward(self):
+    self._init_test_cases()
+    for test_case in self.tests_cases:
+      num_groups = test_case['num_groups']
+      k = test_case['k']
+      m = test_case['m']
+      n = test_case['n']
+      lhs_dtype = rhs_dtype = torch.bfloat16
+
+      lhs = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True)
+      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype, requires_grad=True)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      lhs.retain_grad()
+      rhs.retain_grad()
+
+      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+      ref_out.sum().backward()
+
+      ref_out_backward = torch.ones_like(ref_out)
+      grad_lhs, grad_rhs = gmm_backward(
+          ref_out_backward.to("xla"), lhs.to("xla"), rhs.to("xla"),
+          group_sizes.to("xla"))
+
+      self.assertTrue(torch.allclose(lhs.grad, grad_lhs.cpu()))
+      self.assertTrue(torch.allclose(rhs.grad, grad_rhs.cpu()))
+
+    # Make sure gmm doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_gmm_backward_2(self):
+    self._init_test_cases()
+    for test_case in self.tests_cases:
+      num_groups = test_case['num_groups']
+      k = test_case['k']
+      m = test_case['m']
+      n = test_case['n']
+      lhs_dtype = rhs_dtype = torch.bfloat16
+
+      torch.manual_seed(42)
+      lhs = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True)
+      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype, requires_grad=True)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      lhs.retain_grad()
+      rhs.retain_grad()
+
+      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+      ref_out.sum().backward()
+
+      torch.manual_seed(42)
+      lhs_xla = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True).to("xla")
+      rhs_xla = torch.rand(
+          num_groups, k, n, dtype=rhs_dtype, requires_grad=True).to("xla")
+      lhs_xla.retain_grad()
+      rhs_xla.retain_grad()
+
+      out = GMM.apply(lhs_xla, rhs_xla, group_sizes.to("xla"))
+      out.sum().backward()
+
+      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+      self.assertTrue(torch.allclose(lhs.grad, lhs_xla.grad.cpu()))
+      self.assertTrue(torch.allclose(rhs.grad, rhs_xla.grad.cpu()))
+
+    # Make sure gmm doesn't fallback.
+    self.assertNotIn("aten::", met.short_metrics_report())
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_gmm_backward_3(self):
+    self._init_test_cases()
+    for test_case in self.tests_cases:
+      num_groups = test_case['num_groups']
+      k = test_case['k']
+      m = test_case['m']
+      n = test_case['n']
+      lhs_dtype = rhs_dtype = torch.bfloat16
+
+      torch.manual_seed(42)
+      lhs = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True)
+      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype, requires_grad=True)
+      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+      lhs.retain_grad()
+      rhs.retain_grad()
+
+      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+      ref_out.sum().backward()
+
+      torch.manual_seed(42)
+      lhs_xla = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True).to("xla")
+      rhs_xla = torch.rand(
+          num_groups, k, n, dtype=rhs_dtype, requires_grad=True).to("xla")
+      lhs_xla.retain_grad()
+      rhs_xla.retain_grad()
+
+      out = GMM.apply(lhs_xla, rhs_xla, group_sizes.to("xla"))
+      grad_out = torch.ones_like(out)
+      torch.autograd.backward([out], [grad_out, lhs_xla, rhs_xla])
+
+      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+      self.assertTrue(torch.allclose(lhs.grad, lhs_xla.grad.cpu()))
+      self.assertTrue(torch.allclose(rhs.grad, rhs_xla.grad.cpu()))
+
+    # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
 
 

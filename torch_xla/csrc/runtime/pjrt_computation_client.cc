@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
@@ -25,6 +26,7 @@
 #include "xla/client/xla_computation.h"
 #include "xla/layout_util.h"
 #include "xla/literal.h"
+#include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
 #include "xla/protobuf_util.h"
@@ -315,7 +317,7 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
   XLA_CHECK(dst_device->IsAddressable()) << dst << "is not addressable.";
 
   // Returns error if the buffer is already on `dst_device`.
-  xla::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
+  absl::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
       pjrt_data->buffer->CopyToDevice(dst_device);
   if (!status_or.ok()) {
     return data;
@@ -471,7 +473,7 @@ std::uintptr_t PjRtComputationClient::UnsafeBufferPointer(
   XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
   XLA_CHECK(pjrt_data->buffer != nullptr)
       << "PjRt buffer is null in " << __FUNCTION__;
-  xla::StatusOr<std::uintptr_t> ptr =
+  absl::StatusOr<std::uintptr_t> ptr =
       client_->UnsafeBufferPointer(pjrt_data->buffer.get());
   XLA_CHECK(ptr.ok());
   return ptr.value();
@@ -530,7 +532,11 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
 
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
-  metrics::TimedSection timed(CompileMetric());
+  auto metrics_fn = CompileMetric;
+  if (instances[0].eager_mode) {
+    metrics_fn = EagerCompileMetric;
+  }
+  metrics::TimedSection timed(metrics_fn());
   tsl::profiler::TraceMe activity("PjRtComputationClient::Compile",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
@@ -693,7 +699,11 @@ PjRtComputationClient::ExecuteComputation(
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
   // complete; a copy is held from the lambda that releases it when done.
-  auto timed = std::make_shared<metrics::TimedSection>(ExecuteMetric());
+  auto metrics_fn = ExecuteMetric;
+  if (options.eager_mode) {
+    metrics_fn = EagerExecuteMetric;
+  }
+  auto timed = std::make_shared<metrics::TimedSection>(metrics_fn());
   tsl::profiler::TraceMe activity("PjRtComputationClient::ExecuteComputation",
                                   tsl::profiler::TraceMeLevel::kInfo);
   TF_VLOG(1) << "Executing PjRt computation on " << device;
@@ -709,7 +719,8 @@ PjRtComputationClient::ExecuteComputation(
     const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
 
     XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
-        << pjrt_device->DebugString() << " vs "
+        << "The device currently being used : " << pjrt_device->DebugString()
+        << " is different from the device where the buffer resides: "
         << pjrt_data->buffer->device()->DebugString();
     buffers.push_back(pjrt_data->buffer.get());
   }
@@ -734,7 +745,7 @@ PjRtComputationClient::ExecuteComputation(
           .value();
 
   returned_future->OnReady(std::move(
-      [timed, op_tracker = std::move(op_tracker)](xla::Status unused) mutable {
+      [timed, op_tracker = std::move(op_tracker)](absl::Status unused) mutable {
         timed.reset();
         TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
       }));
@@ -840,7 +851,7 @@ PjRtComputationClient::ExecuteReplicated(
 
     (*returned_futures)[0].OnReady(
         std::move([timed, op_tracker = std::move(op_tracker)](
-                      xla::Status unused) mutable {
+                      absl::Status unused) mutable {
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
         }));
@@ -927,7 +938,7 @@ int PjRtComputationClient::GetNumProcesses() const {
 };
 
 const absl::flat_hash_map<
-    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 PjRtComputationClient::GetDeviceAttributes(const std::string& device) {
   return PjRtComputationClient::StringToPjRtDevice(device)->Attributes();
 }
@@ -974,6 +985,15 @@ ComputationClient::MemoryInfo PjRtComputationClient::GetMemoryInfo(
       stats.bytes_in_use,
       *stats.bytes_limit,
   };
+}
+
+const PJRT_Api* PjRtComputationClient::GetPjRtCApiIfAvailable() const {
+  // dynamic_cast will return a nullptr if the client is not PjRtCApiClient.
+  auto* c_api_client = dynamic_cast<xla::PjRtCApiClient*>(client_.get());
+  if (c_api_client) {
+    return c_api_client->pjrt_c_api();
+  }
+  return nullptr;
 }
 
 }  // namespace runtime

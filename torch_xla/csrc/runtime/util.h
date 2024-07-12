@@ -18,7 +18,6 @@
 #include "torch_xla/csrc/runtime/types.h"
 #include "tsl/platform/errors.h"
 #include "tsl/platform/hash.h"
-#include "xla/status.h"
 
 namespace torch_xla {
 namespace runtime {

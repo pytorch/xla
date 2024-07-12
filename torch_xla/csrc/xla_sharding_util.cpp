@@ -49,8 +49,6 @@ TORCH_LIBRARY_FRAGMENT(xla, m) {
 
 namespace {
 
-using tsl::ERROR;
-using tsl::INFO;
 using xla::internal::XlaBuilderFriend;
 
 static bool use_auto_sharding = false;

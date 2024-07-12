@@ -1,21 +1,23 @@
+import argparse
 from contextlib import contextmanager
 import functools
 import logging
-import numpy as np
 import os
 from os.path import abspath, exists
-import random
 import subprocess
 import torch
 import torch.utils._pytree as pytree
+from typing import Any, Union
 import sys
 import torch_xla.core.xla_model as xm
 from torch_xla._internal import tpu
 
 logger = logging.getLogger(__name__)
 
+StrOrBool = Union[str, bool]
 
-def parse_none_str(a: str):
+
+def parse_none_str(a: Any):
   if isinstance(a, str) and a.upper() == "None".upper():
     return None
   return a
@@ -46,17 +48,8 @@ def patch_torch_manual_seed():
   torch.manual_seed = deterministic_torch_manual_seed
 
 
-def reset_rng_state(benchmark_experiment=None):
-  torch.manual_seed(1337)
-  random.seed(1337)
-  np.random.seed(1337)
-  if benchmark_experiment is not None and benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is not None:
-    device = benchmark_experiment.get_device()
-    xm.set_rng_state(1337, str(device))
-
-
 @functools.lru_cache(maxsize=3)
-def is_xla_device_available(devkind):
+def is_xla_device_available(devkind, use_xla2: bool = False):
   if devkind not in ["CPU", "CUDA", "TPU"]:
     raise ValueError(devkind)
   # Checking the availability of a given device kind.
@@ -72,11 +65,11 @@ def is_xla_device_available(devkind):
   # For more information: https://github.com/pytorch/xla/pull/5960
   CHECK_XLA_DEVICE_PY = "check_xla_device.py"
   python_file = os.path.join(os.path.dirname(__file__), CHECK_XLA_DEVICE_PY)
-  r = subprocess.run([sys.executable, python_file, devkind])
+  r = subprocess.run([sys.executable, python_file, devkind, str(use_xla2)])
   return r.returncode == 0
 
 
-def move_to_device(item, device, torch_xla2=False):
+def move_to_device(item, device, torch_xla2: bool = False):
   if torch_xla2:
     import torch_xla2
     import jax
@@ -96,7 +89,7 @@ def cast_to_dtype(item, dtype):
   )
 
 
-def randomize_input(inputs):
+def randomize_input(inputs: Any):
   if isinstance(inputs, torch.Tensor):
     if inputs.dtype in (torch.float32, torch.float64):
       torch._dynamo.utils.counters["randomize_input"]["times"] += 1
@@ -122,7 +115,7 @@ def randomize_input(inputs):
 
 
 @contextmanager
-def set_cwd(path):
+def set_cwd(path: str):
   original_dir = abspath(os.getcwd())
   os.chdir(path)
   try:
@@ -131,7 +124,7 @@ def set_cwd(path):
     os.chdir(original_dir)
 
 
-def get_accelerator_model(accelerator):
+def get_accelerator_model(accelerator: str):
   if accelerator == "cpu":
     return get_cpu_name()
   elif accelerator == "cuda":
@@ -165,7 +158,7 @@ def get_torchbench_test_name(test):
   return {"train": "training", "eval": "inference"}[test]
 
 
-def find_near_file(names):
+def find_near_file(names: str):
   """Find a file near the current directory.
 
   Looks for `names` in the current directory, up to its two direct parents.

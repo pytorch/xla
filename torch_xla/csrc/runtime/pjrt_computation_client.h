@@ -16,6 +16,7 @@
 #include "tsl/platform/threadpool.h"
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
+#include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
 #include "xla/shape.h"
@@ -104,6 +105,17 @@ class PjRtComputationClient : public ComputationClient {
         xla::PjRtLocalDeviceId(local_device_id));
   }
 
+  std::intptr_t GetCudaStreamForDevice(int local_device_id) const override {
+    absl::StatusOr<xla::PjRtDevice*> pjrt_device =
+        client_->LookupAddressableDevice(
+            xla::PjRtLocalDeviceId(local_device_id));
+    XLA_CHECK(pjrt_device.ok()) << "Failed to get a PjRt device.";
+    absl::StatusOr<std::intptr_t> stream =
+        pjrt_device.value()->GetStreamForExternalReadyEvents();
+    XLA_CHECK(stream.ok()) << "Failed to get a stream.";
+    return stream.value();
+  }
+
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
@@ -115,7 +127,7 @@ class PjRtComputationClient : public ComputationClient {
   int GetNumProcesses() const override;
 
   const absl::flat_hash_map<
-      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
   GetDeviceAttributes(const std::string& device) override;
 
   void SetReplicationDevices(
@@ -140,6 +152,8 @@ class PjRtComputationClient : public ComputationClient {
   std::string PjRtDeviceToString(xla::PjRtDevice* const device) const override;
   std::vector<std::string> PjRtDevicesToString(
       absl::Span<xla::PjRtDevice* const> devices) const;
+
+  const PJRT_Api* GetPjRtCApiIfAvailable() const;
 
  private:
   std::unique_ptr<xla::PjRtClient> client_;

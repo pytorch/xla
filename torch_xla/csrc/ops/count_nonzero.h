@@ -15,7 +15,7 @@ class CountNonzero : public XlaNode {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  c10::optional<std::vector<int64_t>> dims() const { return dims_; }
+  std::optional<std::vector<int64_t>> dims() const { return dims_; }
 
  private:
   std::vector<int64_t> dims_;

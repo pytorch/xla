@@ -98,7 +98,7 @@ std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input);
 
 // Computes the logit function of the input.
 // If eps is given, the input is clamped between eps and 1-eps.
-xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps);
+xla::XlaOp BuildLogit(xla::XlaOp input, std::optional<double> eps);
 
 // Computes the division of input and the divisor.
 xla::XlaOp BuildDiv(xla::XlaOp input, xla::XlaOp divisor);

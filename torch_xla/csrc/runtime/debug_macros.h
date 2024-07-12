@@ -1,6 +1,7 @@
 #ifndef XLA_CLIENT_DEBUG_MACROS_H_
 #define XLA_CLIENT_DEBUG_MACROS_H_
 
+#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "tsl/platform/stacktrace.h"
 #include "xla/statusor.h"
@@ -16,7 +17,7 @@
 #define XLA_CHECK_GT(a, b) TF_CHECK_GT(a, b) << "\n" << tsl::CurrentStackTrace()
 
 template <typename T>
-T ConsumeValue(xla::StatusOr<T>&& status) {
+T ConsumeValue(absl::StatusOr<T>&& status) {
   XLA_CHECK_OK(status.status());
   return std::move(status).value();
 }

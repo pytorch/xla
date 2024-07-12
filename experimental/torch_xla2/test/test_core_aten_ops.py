@@ -33,7 +33,7 @@ def run_export_and_compare(testcase,
                            rtol=1e-5,
                            equal_nan=True,
                            ignore_indices=False):
-  
+
   with testcase.subTest("torch_eval"):
     res = func(*args, **kwargs)
     with testcase.subTest("torch_xla2_eval"):
@@ -65,7 +65,7 @@ class TestCoreAtenOps(unittest.TestCase):
   def setUp(self):
     super().setUp()
     torch.manual_seed(0)
-    self.env = tensor.Environment(0)
+    self.env = tensor.Environment()
 
   def test_aten_abs_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)

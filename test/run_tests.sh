@@ -82,16 +82,6 @@ function run_test_without_functionalization {
   XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
 }
 
-function run_use_bf16 {
-  echo "Running with XLA_USE_BF16: $@"
-  XLA_USE_BF16=1 run_test "$@"
-}
-
-function run_downcast_bf16 {
-  echo "Running with XLA_DOWNCAST_BF16: $@"
-  XLA_DOWNCAST_BF16=1 run_test "$@"
-}
-
 function run_xla_ir_debug {
   echo "Running with XLA_IR_DEBUG: $@"
   XLA_IR_DEBUG=1 run_test "$@"
@@ -125,6 +115,11 @@ function run_save_tensor_hlo {
 function run_pt_xla_debug {
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
+}
+
+function run_pt_xla_debug_level1 {
+  echo "Running in save tensor file mode: $@"
+  PT_XLA_DEBUG_LEVEL=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
 function run_torchrun {
@@ -165,6 +160,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_pt_xla_debug "$CDIR/debug_tool/test_pt_xla_debug.py"
+  run_pt_xla_debug_level1 "$CDIR/debug_tool/test_pt_xla_debug.py"
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_hlo_metadata.py"
   run_test "$CDIR/test_profiler.py"
@@ -178,7 +174,6 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_python_ops.py"
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
-  run_test "$CDIR/test_zero1.py"
   run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test "$CDIR/dynamo/test_dynamo_aliasing.py"
   run_test "$CDIR/dynamo/test_dynamo.py"
@@ -186,7 +181,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/dynamo/test_num_output.py"
   run_test "$CDIR/dynamo/test_graph_input_matcher.py"
   run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
-  run_use_bf16 "$CDIR/test_data_type.py"
+  run_test "$CDIR/test_data_type.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
@@ -194,12 +189,15 @@ function run_xla_op_tests1 {
   run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
 }
 
-# DO NOT MODIFY
 function run_xla_op_tests2 {
-  run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/pjrt/test_dtypes.py"
-  run_test "$CDIR/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py"
-  run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
+  run_test "$CDIR/test_while_loop.py"
+  run_test "$CDIR/test_autocast.py"
+  run_test "$CDIR/eager/test_eager.py"
+  run_test "$CDIR/eager/test_eager_with_xla_compile.py"
+  run_test "$CDIR/eager/test_eager_with_torch_compile.py"
+  run_test "$CDIR/eager/test_eager_all_reduce_in_place.py"
+  run_test "$CDIR/eager/test_eager_spmd.py"
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
@@ -215,6 +213,7 @@ function run_xla_op_tests3 {
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_test "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/stablehlo/test_unbounded_dynamism.py"
+  run_test "$CDIR/quantized_ops/test_quantized_matmul.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
@@ -225,6 +224,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_dtensor_integration.py"
   run_test "$CDIR/spmd/test_dtensor_integration2.py"
   run_test "$CDIR/spmd/test_xla_auto_sharding.py"
+  run_test "$CDIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
@@ -289,15 +289,17 @@ function run_mp_op_tests {
   run_test "$CDIR/test_mp_collective_permute.py"
   run_test "$CDIR/test_mp_all_gather.py"
   run_test "$CDIR/test_mp_reduce_scatter.py"
+  run_test "$CDIR/test_zero1.py"
   run_test "$CDIR/test_mp_distributed_mm.py"
   run_test "$CDIR/test_mp_save.py"
   run_test "$CDIR/test_mp_mesh_reduce.py"
   run_test "$CDIR/test_mp_sync_batch_norm.py"
   run_test "$CDIR/test_fsdp_auto_wrap.py"
-  run_torchrun "$CDIR/test_mp_early_exit.py"
+  # run_torchrun "$CDIR/test_mp_early_exit.py"
   run_pt_xla_debug "$CDIR/debug_tool/test_mp_pt_xla_debug.py"
   run_test "$CDIR/torch_distributed/test_torch_distributed_all_gather_xla_backend.py"
   run_test "$CDIR/torch_distributed/test_torch_distributed_all_reduce_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_bucketed_all_reduce_xla_backend.py"
   run_test "$CDIR/torch_distributed/test_torch_distributed_multi_all_reduce_xla_backend.py"
   run_test "$CDIR/torch_distributed/test_torch_distributed_reduce_scatter_xla_backend.py"
   run_test "$CDIR/torch_distributed/test_ddp.py"

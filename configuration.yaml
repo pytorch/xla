@@ -122,27 +122,6 @@ variables:
           XLANativeFunctions::_copy_from.
       type: bool
       default_value: true
-    XLA_USE_BF16:
-      description:
-        - Tensor arithmetic will be done in reduced precision and so tensors
-          will not be accurate if accumulated over time.
-      type: bool
-      default_value: false
-    XLA_USE_F16:
-      description:
-        - If set to true, transforms all the PyTorch Float values into Float16
-          (PyTorch Half type) when sending to devices which supports them.
-      type: bool
-      default_value: false
-    XLA_USE_32BIT_LONG:
-      description:
-        - If set to true, maps PyTorch Long types to XLA 32bit type. On the
-          versions of the TPU HW at the time of writing, 64bit integer
-          computations are expensive, so setting this flag might help. It
-          should be verified by the user that truncating to 32bit values is a
-          valid operation according to the use of PyTorch Long values in it.
-      type: bool
-      default_value: false
     XLA_IO_THREAD_POOL_SIZE:
       description:
         - Number of threads for the IO thread pool in the XLA client. Defaults

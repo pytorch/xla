@@ -1,3 +1,4 @@
+import argparse
 import functools
 import gc
 import contextlib
@@ -16,6 +17,8 @@ import types
 import yaml
 from util import move_to_device, set_cwd, get_torchbench_test_name, find_near_file
 from benchmark_model import ModelLoader, BenchmarkModel
+from benchmark_experiment import BenchmarkExperiment
+from typing import Any, Dict, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +189,8 @@ class TorchBenchModelLoader(ModelLoader):
   def skip(self):
     return config_data()["skip"]
 
-  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
+  def is_compatible(self, dummy_benchmark_model: BenchmarkModel,
+                    benchmark_experiment: BenchmarkExperiment):
     name = dummy_benchmark_model.model_name
     test = get_torchbench_test_name(benchmark_experiment.test)
 
@@ -216,7 +220,8 @@ class TorchBenchModelLoader(ModelLoader):
 
 class TorchBenchModel(BenchmarkModel):
 
-  def __init__(self, suite_name, model_name, benchmark_experiment):
+  def __init__(self, suite_name: str, model_name: str,
+               benchmark_experiment: BenchmarkExperiment):
     super().__init__(suite_name, model_name, benchmark_experiment)
 
   def _cleanup(self):
@@ -251,11 +256,12 @@ class TorchBenchModel(BenchmarkModel):
       self.example_inputs = (self.example_inputs['input_ids'],)
     self.benchmark_experiment.batch_size = benchmark.batch_size
 
-    # Move the initialized model to XLA device.
-    if self.benchmark_experiment.xla:
+    # Move the initialized model to XLA device if it's not there already.
+    if self.benchmark_experiment.xla and not self.should_initialize_on_xla():
       # First, move the model and the inputs to CPU.
       # This avoids having dupplicated data on CUDA.
-      if self.is_accelerator_cuda():
+      keep_model_data_on_cuda = self.benchmark_experiment.keep_model_data_on_cuda
+      if self.is_accelerator_cuda() and not keep_model_data_on_cuda:
         self.module = self.module.to("cpu")
         self.example_inputs = move_to_device(self.example_inputs, "cpu")
         self._cleanup()
@@ -306,10 +312,15 @@ class TorchBenchModel(BenchmarkModel):
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
-    # torchbench uses `xla` as device instead of `tpu`
-    device = (
-        str(self.benchmark_experiment.get_device())
-        if self.is_accelerator_tpu() else self.benchmark_experiment.accelerator)
+    if self.should_initialize_on_xla():
+      device = "xla"
+    else:
+      # Initialize the model in the given accelerator first. If we are supposed
+      # to run on XLA device, move it later. We do this for a couple of reasons:
+      #
+      #   1. To make sure we are comparing the same model on CUDA and XLA
+      #   2. There are some models that only expect either CUDA or CPU
+      device = self.benchmark_experiment.accelerator
 
     return self.benchmark_cls()(
         test=self.benchmark_experiment.test,
@@ -317,7 +328,7 @@ class TorchBenchModel(BenchmarkModel):
         batch_size=batch_size,
     )
 
-  def update_process_env(self, process_env):
+  def update_process_env(self, process_env: Dict[str, str]):
     if self.model_name in NEED_LARGER_CACHE:
       process_env["XLA_COMPILATION_CACHE_SIZE"] = "2048"
 
@@ -326,6 +337,15 @@ class TorchBenchModel(BenchmarkModel):
     if self.model_name in ("maml",):
       return torch.enable_grad()
     return super().pick_grad()
+
+  def should_initialize_on_xla(self):
+    # Reasons why we need to initialize the benchmark on XLA directly:
+    #
+    #   1. Models don't expect 'tpu' as their device.
+    #   2. 'moco' initializes a ProcessGroup, i.e. the backend depends on
+    #      the given device
+    return self.is_accelerator_tpu() or (self.model_name == "moco" and
+                                         self.benchmark_experiment.xla)
 
   def is_inference(self):
     return self.benchmark_experiment.test == "eval"
@@ -384,7 +404,7 @@ class TorchBenchModel(BenchmarkModel):
       autocast = contextlib.nullcontext
     return (autocast, kwargs)
 
-  def compute_loss(self, pred):
+  def compute_loss(self, pred: Any):
     """Reduce the output of a model to get scalar loss"""
     if isinstance(pred, torch.Tensor):
       # Mean does not work on integer tensors
@@ -404,7 +424,7 @@ class TorchBenchModel(BenchmarkModel):
                  ]) / len(pred.keys())
     raise NotImplementedError("Don't know how to reduce", type(pred))
 
-  def train(self, inputs, collect_full_output=False):
+  def train(self, inputs: Sequence[Any], collect_full_output: bool = False):
     if self.model_name in DETECTRON2_MODELS:
       from detectron2.utils.events import EventStorage
       with EventStorage():

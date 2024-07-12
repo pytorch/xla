@@ -28,6 +28,10 @@ on:
         type: boolean
         default: false
         description: Whether to install CUDA plugin package
+      torch-commit:
+          required: true
+          type: string
+          description: torch-commit
 
     secrets:
       gcloud-service-key:
@@ -73,20 +77,19 @@ jobs:
       BAZEL_JOBS: 16
       BAZEL_REMOTE_CACHE: 1
     steps:
-      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
-      - name: Clean up workspace
-        run: |
-          ls -la
-          rm -rvf ${GITHUB_WORKSPACE}/*
-      - name: Setup gcloud
-        shell: bash
-        run: |
-          echo "${GCLOUD_SERVICE_KEY}" > $GOOGLE_APPLICATION_CREDENTIALS
-      - name: Fetch wheels
-        uses: actions/download-artifact@v4
+      - name: Checkout actions
+        uses: actions/checkout@v4
         with:
-          name: torch-xla-wheels
-          path: /tmp/wheels/
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+      - name: Setup
+        uses: ./.actions/.github/workflows/setup
+        with:
+          torch-commit: ${{ inputs.torch-commit }}
+          cuda: ${{ inputs.install-cuda-plugin && true || false }}
+          wheels-artifact: torch-xla-wheels
+          cuda-plugin-artifact: ${{ inputs.install-cuda-plugin && 'cuda-plugin' || null }}
       - name: Fetch CPP test binaries
         uses: actions/download-artifact@v4
         with:
@@ -100,48 +103,21 @@ jobs:
           chmod +x /tmp/test/bin/*
           ls -l /tmp/test/bin
         if: ${{ matrix.run_cpp_tests }}
-      - name: Fetch CUDA plugin
-        uses: actions/download-artifact@v4
-        with:
-          name: cuda-plugin
-          path: /tmp/wheels/
-        if: ${{ inputs.install-cuda-plugin }}
-      - name: Setup CUDA environment
-        shell: bash
-        run: |
-          # TODO: Make PJRT_DEVICE=CPU work with XLA_REGISTER_INSTALLED_PLUGINS=1
-          echo "XLA_REGISTER_INSTALLED_PLUGINS=1" >> $GITHUB_ENV
-
-          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
-        if: ${{ inputs.install-cuda-plugin }}
       - name: Check GPU
         run: nvidia-smi
         if: ${{ inputs.install-cuda-plugin }}
-      - name: Install wheels
+      - name: Install test deps
         shell: bash
         run: |
-          pip install /tmp/wheels/*.whl
           # TODO: Add these in setup.py
           pip install fsspec
           pip install rich
-
-          echo "Import check..."
-          python -c "import torch_xla"
-      - name: Record PyTorch commit
-        run: |
-          # Don't just pipe output in shell because imports may do extra logging
-          python -c "
-          import torch_xla.version
-          with open('$GITHUB_ENV', 'a') as f:
-            f.write(f'PYTORCH_COMMIT={torch_xla.version.__torch_gitrev__}\n')
-          "
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
           repository: pytorch/pytorch
           path: pytorch
-          ref: ${{ env.PYTORCH_COMMIT }}
+          ref: ${{ inputs.torch-commit }}
       - name: Checkout PyTorch/XLA Repo
         uses: actions/checkout@v4
         with:

@@ -1,7 +1,6 @@
 #include <ATen/dlpack.h>
 #include <Python.h>
 #include <c10/core/Device.h>
-#include <c10/util/Optional.h>
 #include <google/protobuf/text_format.h>
 #include <torch/csrc/autograd/utils/wrap_outputs.h>
 #include <torch/csrc/autograd/variable.h>
@@ -13,6 +12,7 @@
 
 #include <cstring>
 #include <fstream>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/variant.h"
@@ -45,9 +46,11 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/metrics_analysis.h"
 #include "torch_xla/csrc/runtime/metrics_reader.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/runtime.h"
@@ -67,8 +70,12 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 #include "tsl/platform/env.h"
 #include "tsl/profiler/lib/traceme.h"
+#include "xla/pjrt/c/pjrt_c_api_gpu_extension.h"
+#include "xla/pjrt/c/pjrt_c_api_wrapper_impl.h"
 #include "xla/pjrt/distributed/distributed.h"
+#include "xla/pjrt/pjrt_api.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
+#include "xla/service/custom_call_target_registry.h"
 #include "xla/service/hlo_parser.h"
 
 namespace torch_xla {
@@ -104,10 +111,10 @@ class PyPjRtPlugin : public runtime::PjRtPlugin {
   }
 };
 
-c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(
+std::optional<torch::lazy::BackendDevice> GetOptionalDevice(
     const std::string& device_str) {
   if (device_str.empty()) {
-    return c10::nullopt;
+    return std::nullopt;
   }
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
 }
@@ -202,6 +209,24 @@ std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   return replica_groups;
 }
 
+std::vector<at::Tensor> XlaCustomCall(
+    const std::vector<at::Tensor>& inputs, const std::string& payload,
+    const std::vector<std::vector<int64_t>>& output_shapes,
+    const std::vector<py::object>& output_dtypes, bool is_tpu) {
+  std::vector<at::ScalarType> dtypes;
+  dtypes.reserve(output_dtypes.size());
+  for (auto& dtype : output_dtypes) {
+    dtypes.push_back(reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
+  }
+
+  if (is_tpu) {
+    return bridge::AtenFromXlaTensors(tensor_methods::tpu_custom_call(
+        bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes));
+  }
+  return bridge::AtenFromXlaTensors(tensor_methods::gpu_custom_call(
+      bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes));
+}
+
 std::vector<std::pair<int64_t, int64_t>> CreateSourceTargetPairs(
     const py::list& pairs) {
   std::vector<std::pair<int64_t, int64_t>> source_target_pairs;
@@ -251,6 +276,13 @@ at::Tensor DynamicView(const at::Tensor& input,
   XLATensorPtr result = tensor_methods::dynamic_view(
       bridge::GetXlaTensor(input), size, bridge::GetXlaTensor(src_tensor),
       src_dim, target_dim, mul_scaler);
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
+at::Tensor CastInt4(const at::Tensor& weight,
+                    const std::vector<int>& int4_weight_values) {
+  auto result = tensor_methods::cast_int4(bridge::GetXlaTensor(weight),
+                                          int4_weight_values);
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
@@ -839,7 +871,7 @@ void BuildProfilerSubmodule(py::module* m) {
         absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
             ConvertDictToMap(options);
         std::chrono::seconds sleep_s(interval_s);
-        xla::Status status;
+        absl::Status status;
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
@@ -872,7 +904,7 @@ void BuildProfilerSubmodule(py::module* m) {
              return py::none();
            })
       .def("set_metadata", &xla::profiler::TraceMeWrapper::SetMetadata)
-      .def_static("is_enabled", &xla::profiler::TraceMeWrapper::IsEnabled);
+      .def_static("is_enabled", &tsl::profiler::TraceMe::Active);
 
   py::class_<torch::lazy::ScopePusher,
              std::unique_ptr<torch::lazy::ScopePusher>>
@@ -914,22 +946,9 @@ class PyLoweringContext {
   }
 
   // Builds a HLO graph given a set of output tensors, and add unused parameters
-  // needed in xlacomputation.
+  // needed in xlacomputation for fori_loop/while_loop.
   void BuildForiLoop(std::vector<at::Tensor> tensors,
-                     std::vector<at::Tensor> input_arguments = {}) {
-    if (GetNameString() == "condctx") {
-      xla::XlaBuilder* local_builder = lowering_ctx.builder();
-      // hard-code parameter_idx to 2 to skip existing upper/lower arguments
-      int64_t parameter_idx = 2;
-      for (at::Tensor input_argument : input_arguments) {
-        xla::Shape shape =
-            xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {1});
-        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
-                                      "UnusedArgumentsPlaceholder");
-        parameter_idx += 1;
-      }
-    }
-
+                     std::vector<at::Tensor> additional_inputs_list = {}) {
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
@@ -947,6 +966,24 @@ class PyLoweringContext {
           torch::lazy::Output(ir_value.node.get(), ir_value.index));
       lowering_ctx.AddResult(root);
     }
+
+    // add dummy parameter to cond/body xlacomputation's input for xla::while
+    // requriement
+    if ((GetNameString() == "condctx") or
+        (GetNameString() == "bodyctx" && additional_inputs_list.size() != 0)) {
+      xla::XlaBuilder* local_builder = lowering_ctx.builder();
+      int64_t parameter_idx =
+          local_builder->GetProgramShape()->parameters_size();
+      int64_t additional_inputs_list_size = additional_inputs_list.size();
+      for (int64_t i = parameter_idx; i < additional_inputs_list_size; i++) {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(additional_inputs_list[i]);
+        xla::Shape shape = xtensor->shape().get();
+        xla::XlaOp x = xla::Parameter(local_builder, parameter_idx, shape,
+                                      "UnusedArgumentsPlaceholder");
+        parameter_idx += 1;
+      }
+    }
+
     computation = ConsumeValue(lowering_ctx.BuildXla());
 
     // wrap inputs of cond/body_computation
@@ -959,8 +996,9 @@ class PyLoweringContext {
       // default value true
       bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
       if (should_wrap_parameter) {
+        // For now we assume that we for i loop input is not sharded.
         computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-            computation, program_shape.parameters(), buffer_donor_indices));
+            computation, program_shape.parameters(), {}, buffer_donor_indices));
       }
     }
   }
@@ -1176,6 +1214,16 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor) -> std::string {
           return GetXLATensorDebugInfo(tensor);
         });
+  m.def("_get_xla_tensor_shape_type",
+        [](const at::Tensor& tensor) -> std::string {
+          XLATensorPtr xla_tensor = bridge::TryGetXlaTensor(tensor);
+          if (xla_tensor) {
+            xla::Shape shape = xla_tensor->shape().get();
+            return xla::primitive_util::LowercasePrimitiveTypeName(
+                shape.element_type());
+          }
+        });
+
   py::class_<XLATensor::ShardingSpec, XLATensor::ShardingSpecPtr>(
       m, "XlaShardingSpec")
       .def(py::init([](at::Tensor tensor, const py::list& tile_assignment,
@@ -1296,6 +1344,9 @@ void InitXlaModuleBindings(py::module m) {
       return runtime::GetComputationClient()->GetLocalDevices();
     }
   });
+  m.def("_get_stream_for_cuda_device", [](const int device_id) {
+    return runtime::GetComputationClient()->GetCudaStreamForDevice(device_id);
+  });
   m.def("_xla_num_devices", []() -> int64_t {
     if (UseVirtualDevice()) {
       return 1;
@@ -1385,6 +1436,26 @@ void InitXlaModuleBindings(py::module m) {
     return torch::autograd::make_variable(
         result, /*requires_grad=*/input.requires_grad());
   });
+  m.def("_xla_spmd_all_reduce", [](const std::string& reduce_type,
+                                   const at::Tensor& input, double scale,
+                                   const py::list& groups) {
+    std::vector<std::vector<int64_t>> replica_groups =
+        CreateReduceGroups(groups);
+    auto result = tensor_methods::all_reduce(bridge::GetXlaTensor(input),
+                                             GetReduceType(reduce_type), scale,
+                                             std::move(replica_groups));
+    return bridge::AtenFromXlaTensor(std::move(result));
+  });
+  m.def("_xla_cast_int4",
+        [](const at::Tensor& weight,
+           const std::vector<int>& int4_weight_values) -> at::Tensor {
+          at::Tensor result;
+          {
+            NoGilSection nogil;
+            result = CastInt4(weight, int4_weight_values);
+          }
+          return result;
+        });
   m.def("_xla_quantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
            const std::vector<int>& zero_point_list, int quant_min,
@@ -1544,6 +1615,17 @@ void InitXlaModuleBindings(py::module m) {
           result_tuple[1] = new_token;
           return result_tuple;
         });
+  m.def(
+      "_xla_spmd_reduce_scatter",
+      [](const std::string& reduce_type, const at::Tensor& input, double scale,
+         int64_t scatter_dim, int64_t shard_count, const py::list& groups) {
+        std::vector<std::vector<int64_t>> replica_groups =
+            CreateReduceGroups(groups);
+        auto result = tensor_methods::reduce_scatter(
+            bridge::GetXlaTensor(input), GetReduceType(reduce_type), scale,
+            scatter_dim, shard_count, replica_groups);
+        return bridge::AtenFromXlaTensor(std::move(result));
+      });
   m.def("_xla_reduce_scatter",
         [](const std::string& reduce_type, const at::Tensor& input,
            const std::shared_ptr<torch::lazy::Value>& token, double scale,
@@ -1644,9 +1726,9 @@ void InitXlaModuleBindings(py::module m) {
     return bridge::AtenDeviceToXlaDevice(device_str).ordinal();
   });
   m.def("_xla_get_device_attributes", [](const std::string& device_str) {
-    const absl::flat_hash_map<
-        std::string, runtime::ComputationClient::DeviceAttribute>& attributes =
-        runtime::GetComputationClient()->GetDeviceAttributes(
+    const absl::flat_hash_map<std::string,
+                              runtime::ComputationClient::DeviceAttribute>
+        attributes = runtime::GetComputationClient()->GetDeviceAttributes(
             bridge::AtenDeviceToXlaDevice(device_str).toString());
 
     py::dict dict;
@@ -2058,6 +2140,16 @@ void InitXlaModuleBindings(py::module m) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     return GetXLAShardingSpec(xtensor);
   });
+  m.def("_get_xla_op_sharding",
+        [](const at::Tensor& input) -> std::optional<xla::OpSharding> {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          XLATensor::ShardingSpecPtr sharding_spec =
+              xtensor ? xtensor->sharding_spec() : nullptr;
+          if (sharding_spec != nullptr) {
+            return sharding_spec->sharding;
+          }
+          return std::nullopt;
+        });
   m.def("_get_xla_sharding_specs",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<std::string> {
           tsl::profiler::TraceMe activity("_get_xla_sharding_specs",
@@ -2351,6 +2443,11 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_xla_enable_device_data_cache",
         []() { return FLAGS_torch_lazy_enable_device_data_cache; });
+  m.def("_set_use_eager_mode", [](bool use_eager_mode) {
+    XLAGraphExecutor::Get()->SetUseEagerMode(use_eager_mode);
+  });
+  m.def("_get_use_eager_mode",
+        []() { return XLAGraphExecutor::Get()->UseEagerMode(); });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
@@ -2378,17 +2475,77 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<std::vector<int64_t>>& output_shapes,
            const std::vector<py::object>& output_dtypes)
             -> std::vector<at::Tensor> {
-          std::vector<at::ScalarType> dtypes;
-          dtypes.reserve(output_dtypes.size());
-          for (auto& dtype : output_dtypes) {
-            dtypes.push_back(
-                reinterpret_cast<THPDtype*>(dtype.ptr())->scalar_type);
-          }
-
-          auto xtensors = tensor_methods::tpu_custom_call(
-              bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes);
-          return bridge::AtenFromXlaTensors(xtensors);
+          return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
+                               /*is_tpu=*/true);
         });
+  m.def("_has_cuda_support", []() {
+#ifdef GOOGLE_CUDA
+    return true;
+#else
+    return false;
+#endif
+  });
+  m.def("_xla_gpu_custom_call",
+        [](const std::vector<at::Tensor>& inputs, const std::string& payload,
+           const std::vector<std::vector<int64_t>>& output_shapes,
+           const std::vector<py::object>& output_dtypes)
+            -> std::vector<at::Tensor> {
+          return XlaCustomCall(inputs, payload, output_shapes, output_dtypes,
+                               /*is_tpu=*/false);
+        });
+  m.def("_xla_register_custom_call_target", [](const std::string& fn_name,
+                                               const py::capsule& function_ptr,
+                                               const std::string& platform) {
+    if (runtime::sys_util::GetEnvBool("XLA_USE_IFRT", false) ||
+        platform != "CUDA") {
+      XLA_ERROR() << "Custom call targets can only be registered for "
+                     "PJRT CUDA runtime."
+                  << std::endl;
+      return;
+    }
+    if (runtime::sys_util::GetEnvBool(runtime::env::kEnvPjrtDynamicPlugins,
+                                      false)) {
+      runtime::PjRtComputationClient* client =
+          dynamic_cast<runtime::PjRtComputationClient*>(
+              runtime::GetComputationClient());
+      if (!client) {
+        return;
+      }
+      const PJRT_Api* pjrt_api = client->GetPjRtCApiIfAvailable();
+      if (!pjrt_api) {
+        return;
+      }
+      // See openxla reference:
+      // https://github.com/openxla/xla/blob/b604c8d87df842002a7a8de79a434026329fbcb2/xla/pjrt/c/pjrt_c_api_gpu_test.cc#L414
+      const PJRT_Extension_Base* next =
+          reinterpret_cast<const PJRT_Extension_Base*>(
+              pjrt_api->extension_start);
+      while (next != nullptr &&
+             next->type !=
+                 PJRT_Extension_Type::PJRT_Extension_Type_Gpu_Custom_Call) {
+        next = next->next;
+      }
+      if (next == nullptr) {
+        return;
+      }
+      PJRT_Gpu_Register_Custom_Call_Args args;
+      args.struct_size = PJRT_Gpu_Register_Custom_Call_Args_STRUCT_SIZE;
+      args.function_name = fn_name.c_str();
+      args.function_name_size = fn_name.size();
+      args.api_version = 0;
+      args.custom_call_function =
+          reinterpret_cast<void*>(function_ptr.get_pointer());
+      PJRT_Error* error =
+          reinterpret_cast<const PJRT_Gpu_Custom_Call*>(next)->custom_call(
+              &args);
+      if (error) {
+        XLA_ERROR() << error->status << std::endl;
+      }
+    } else {
+      XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(
+          fn_name, function_ptr.get_pointer(), platform);
+    }
+  });
   m.def("_set_xla_custom_op_name_prefix",
         [](const at::Tensor& input, const std::string& op_name_prefix,
            size_t max_call_stack_depth) -> bool {
@@ -2541,8 +2698,8 @@ void InitXlaModuleBindings(py::module m) {
                          "without a data handle or an IR.";
         });
 
-  // from an XLA tensor to a dlpack tensor.
-  // If ext_data is the result of an CUDA computation, we should synchronize
+  // from an XLA tensor to a PyCapsule.
+  // When consuming the PyCapsule, we should synchronize
   // (waits for all kernels in all streams on a CUDA device to complete) if the
   // current stream is different from the ext_data's stream. Otherwise, we may
   // risk of getting incorrect results.
@@ -2555,11 +2712,12 @@ void InitXlaModuleBindings(py::module m) {
     return PyCapsule_New(dlMTensor, "dltensor", dlPack_Capsule_Destructor);
   });
 
-  // from a dlpack tensor to an XLA tensor
+  // from a dlpack PyCapsule to an XLA tensor
   // If ext_data is the result of an CUDA computation, we should synchronize
   // (waits for all kernels in all streams on a CUDA device to complete) if the
   // current stream is different from the ext_data's stream. Otherwise, we may
-  // risk of getting incorrect results.
+  // risk of getting incorrect results. Or you can use torch_xla's
+  // from_dlpack(cuda_tensor) and it will handle the synchronization for you.
   m.def("_from_dlpack", [](py::handle ext_data) -> at::Tensor {
     return tensor_fromDLPack(ext_data.ptr());
   });

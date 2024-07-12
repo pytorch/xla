@@ -46,10 +46,10 @@ xla::Shape AminOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> dim, bool keepdim);
 
 xla::Shape ArgmaxOutputShape(const torch::lazy::Value& input,
-                             c10::optional<int64_t> dim, bool keepdim);
+                             std::optional<int64_t> dim, bool keepdim);
 
 xla::Shape ArgminOutputShape(const torch::lazy::Value& input,
-                             c10::optional<int64_t> dim, bool keepdim);
+                             std::optional<int64_t> dim, bool keepdim);
 
 xla::Shape AnyOutputShape(const torch::lazy::Value& input);
 
@@ -75,12 +75,12 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
 
 xla::Shape BinaryCrossEntropyOutputShape(
     const torch::lazy::Value& input, const torch::lazy::Value& target,
-    const c10::optional<torch::lazy::Value>& weight, int64_t reduction);
+    const std::optional<torch::lazy::Value>& weight, int64_t reduction);
 
 xla::Shape BinaryCrossEntropyBackwardOutputShape(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
     const torch::lazy::Value& target,
-    const c10::optional<torch::lazy::Value>& weight, int64_t reduction);
+    const std::optional<torch::lazy::Value>& weight, int64_t reduction);
 
 xla::Shape BitwiseAndTensorOutputShape(const torch::lazy::Value& input,
                                        const torch::lazy::Value& other);
@@ -99,8 +99,8 @@ xla::Shape CholeskyOutputShape(const torch::lazy::Value& input,
                                const bool upper);
 
 xla::Shape ClampTensorOutputShape(const torch::lazy::Value& input,
-                                  const c10::optional<torch::lazy::Value>& min,
-                                  const c10::optional<torch::lazy::Value>& max);
+                                  const std::optional<torch::lazy::Value>& min,
+                                  const std::optional<torch::lazy::Value>& max);
 
 xla::Shape ClampMaxTensorOutputShape(const torch::lazy::Value& input,
                                      const torch::lazy::Value& target);

@@ -32,7 +32,7 @@ Cast::Cast(const torch::lazy::Value& input, xla::PrimitiveType type)
       type_(type) {}
 
 Cast::Cast(const torch::lazy::Value& input, at::ScalarType dtype,
-           c10::optional<at::ScalarType> stype)
+           std::optional<at::ScalarType> stype)
     : XlaNode(xla_cast, {input},
               NodeOutputShape(input,
                               MakeXlaPrimitiveType(dtype, /*device=*/nullptr)),

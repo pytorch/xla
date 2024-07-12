@@ -2,10 +2,12 @@
 #include <ATen/FunctionalTensorWrapper.h>
 #include <ATen/MetaFunctions.h>
 #include <ATen/NativeFunctions.h>
+#include <ATen/OpMathType.h>
 #include <ATen/Operators.h>
 #include <ATen/native/BinaryOps.h>
 #include <ATen/native/CPUFallback.h>
 #include <ATen/native/TypeProperties.h>
+#include <ATen/ops/_embedding_bag_backward_native.h>
 #include <ATen/ops/expand_copy.h>
 #include <c10/core/Contiguity.h>
 #include <torch/csrc/lazy/core/shape_inference.h>
@@ -53,7 +55,7 @@
 // according to xla_native_functions.yaml,
 //   you can call a boxed CPU fallback kernel instead.
 //   E.g. don't call tensor.op() or at::op(tensor).
-//   use at::native::call_fallback_fn<&xla_cpu_fallback,
+//   use at::native::call_fallback_fn<&xla_fallback,
 //         ATEN_OP2(op_name, overload_name)>::call(args...)
 //   ATEN_OP accepts an operator name without an overload, and
 //   ATEN_OP2 accepts an operator name along with its overload name.
@@ -64,16 +66,181 @@
 namespace torch_xla {
 namespace {
 
+using XLAInputVector = std::vector<XLATensorPtr>;
+
+// Calls the inner function by spreading inputs in order, and adding the
+// common data-type in the end.
+template <class InnerFnType, size_t... Ints>
+XLATensorPtr CallInner(const InnerFnType& inner, XLAInputVector inputs,
+                       at::ScalarType common_dtype,
+                       std::integer_sequence<size_t, Ints...> seq) {
+  return inner(inputs[Ints]..., common_dtype);
+}
+
+// Computes the number of XLATensorPtr arguments of a given function.
+//
+// This is used when calling tensor_methods functions, given a list of inputs.
+// Specifically, in order to know how many inputs we should get from the list.
+template <class T>
+struct NumberOfXLATensorArgs {};
+
+template <class... Args>
+struct NumberOfXLATensorArgs<XLATensorPtr(Args...)> {
+  static constexpr size_t value =
+      (std::is_same_v<XLATensorPtr,
+                      std::remove_cv_t<std::remove_reference_t<Args>>> +
+       ...);
+};
+
+// Stateful configuration structure for pre/post-processing the inputs and the
+// output.
+//
+// There are a few checks and preprocessing that PyTorch does, that we are
+// mirroring with this class. This should help us get many data-type behavior
+// right.
+class OpConfig {
+ public:
+  using InputVector = std::vector<at::Tensor>;
+  using ImplFnType =
+      std::function<XLATensorPtr(const XLAInputVector&, at::ScalarType)>;
+
+  // Construct an instance from a function of exactly ImplFnType.
+  OpConfig(ImplFnType impl) : impl_(impl) {}
+
+  // Construct an instance from a function of the following type:
+  //     XLATensorPtr(Tensor..., ScalarType)
+  //
+  // This is a convenience for wrapping tensor_methods functions.
+  template <class InnerFnType>
+  static OpConfig From(const InnerFnType& inner_impl) {
+    return OpConfig(
+        [&](const XLAInputVector& inputs, at::ScalarType common_dtype) {
+          constexpr size_t num_tensor_args =
+              NumberOfXLATensorArgs<std::remove_pointer_t<InnerFnType>>::value;
+          return CallInner(inner_impl, inputs, common_dtype,
+                           std::make_index_sequence<num_tensor_args>{});
+        });
+  }
+
+  OpConfig& add_input(const at::Tensor& input) {
+    inputs_.push_back(input);
+    return *this;
+  }
+
+  OpConfig& cast_inputs_to_common_dtype() {
+    cast_inputs_to_common_dtype_ = true;
+    return *this;
+  }
+
+  OpConfig& use_opmathtype_for_compute() {
+    use_opmathtype_for_compute_ = true;
+    return *this;
+  }
+
+  // Pre-processes the inputs and post-processes the outputs depending on the
+  // configured state of this class.
+  //
+  // In summary, it will:
+  //   - Compute the common data-type to be used
+  //   - Cast the inputs to the common data-type
+  //   - Cast the inputs to its OpMathType (for computation only)
+  //   - Run the specified impl
+  //   - Cast the output back to the common data-type
+  at::Tensor run() {
+    at::ScalarType common_dtype = at::native::result_type(inputs_);
+    at::ScalarType opmathtype = at::toOpMathType(common_dtype);
+
+    // Pre-process the inputs, given the specified configuration and
+    // common_dtype.
+    InputVector inputs = maybe_preprocess_inputs(common_dtype, opmathtype);
+
+    // Look for, at least, one tensor already in PyTorch/XLA.
+    InputVector::iterator it = std::find_if(
+        inputs.begin(), inputs.end(), [](const at::Tensor& tensor) {
+          return bridge::TryGetXlaTensor(tensor);
+        });
+    XLA_CHECK(it != inputs.end());
+    // Transform the inputs into a list of XLATensorPtr.
+    // For that, either get their corresponding XLATensorPtr, or use the found
+    // XLA tensor's BackendDevice for creating a new one.
+    torch::lazy::BackendDevice device = bridge::GetXlaTensor(*it)->GetDevice();
+    XLAInputVector xla_inputs(inputs.size());
+    std::transform(inputs.begin(), inputs.end(), xla_inputs.begin(),
+                   [&](const at::Tensor& tensor) {
+                     return bridge::GetOrCreateXlaTensor(tensor, device);
+                   });
+
+    // Actually call the impl.
+    at::ScalarType inner_dtype =
+        (use_opmathtype_for_compute_) ? opmathtype : common_dtype;
+    XLATensorPtr xla_out = impl_(xla_inputs, inner_dtype);
+    at::Tensor out = bridge::AtenFromXlaTensor(xla_out);
+
+    // If we used OpMathType for the computation, cast the result back to its
+    // common_dtype.
+    if (use_opmathtype_for_compute_) {
+      out = out.to(common_dtype);
+    }
+
+    return out;
+  }
+
+ private:
+  // Pre-processes the inputs based on the state of this instance.
+  //
+  // In summary:
+  //   - Cast the inputs to the common data-type (if
+  //     cast_inputs_to_common_dtype_ is set)
+  //
+  //   - Cast the inputs to the OpMathType data-type (if
+  //     use_opmathtype_for_compute_ is set)
+  InputVector maybe_preprocess_inputs(at::ScalarType common_dtype,
+                                      at::ScalarType opmathtype) {
+    InputVector inputs = inputs_;
+
+    // Cast only once: either to the common dtype or to OpMathType.
+    if (use_opmathtype_for_compute_) {
+      std::transform(
+          inputs.begin(), inputs.end(), inputs.begin(),
+          [=](const at::Tensor& tensor) { return tensor.to(opmathtype); });
+    } else if (cast_inputs_to_common_dtype_) {
+      std::transform(
+          inputs.begin(), inputs.end(), inputs.begin(),
+          [=](const at::Tensor& tensor) { return tensor.to(common_dtype); });
+    }
+
+    return inputs;
+  }
+
+  // Actual implementation of the operation.
+  ImplFnType impl_;
+
+  // List of tensor inputs.
+  InputVector inputs_;
+
+  // Whether to cast every input to the common data-type.
+  // It's analogous to TensorIterator's flag. If the operation you are lowering
+  // uses TensorIterator in PyTorch, you can check whether to set this flag or
+  // not.
+  bool cast_inputs_to_common_dtype_ = false;
+
+  // Whether to use OpMathType for computation.
+  // This flag mimics the actual PyTorch kernel implementations. When lowering
+  // an operation, take a look at that for deciding whether to set this flag or
+  // not.
+  bool use_opmathtype_for_compute_ = false;
+};
+
 at::Tensor to_meta(const at::Tensor& tensor) {
   // undefined tensors can't be converted to the meta device, since they don't
   // have sizes/strides
   if (!tensor.defined()) return tensor;
   auto out = at::native::empty_strided_meta_symint(
       tensor.sym_sizes(), tensor.sym_strides(),
-      /*dtype=*/c10::make_optional(tensor.scalar_type()),
-      /*layout=*/c10::make_optional(tensor.layout()),
-      /*device=*/c10::make_optional(c10::Device(c10::kMeta)),
-      /*pin_memory=*/c10::nullopt);
+      /*dtype=*/std::make_optional(tensor.scalar_type()),
+      /*layout=*/std::make_optional(tensor.layout()),
+      /*device=*/std::make_optional(c10::Device(c10::kMeta)),
+      /*pin_memory=*/std::nullopt);
   // needs to handle wrapped numbers, so dtype promotion works properly.
   if (tensor.unsafeGetTensorImpl()->is_wrapped_number()) {
     out.unsafeGetTensorImpl()->set_wrapped_number(true);
@@ -82,12 +249,12 @@ at::Tensor to_meta(const at::Tensor& tensor) {
 }
 
 torch::lazy::BackendDevice GetXlaDeviceOrCurrent(
-    const c10::optional<c10::Device>& device) {
+    const std::optional<c10::Device>& device) {
   auto xla_device_opt = bridge::GetXlaDevice(device);
   return xla_device_opt ? *xla_device_opt : bridge::GetCurrentDevice();
 }
 
-bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
+bool IsOperationOnType(const std::optional<at::ScalarType>& opt_dtype,
                        at::ScalarType tensor_type, at::ScalarType type) {
   if (opt_dtype && *opt_dtype == type) {
     return true;
@@ -97,7 +264,7 @@ bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,
 
 bool TensorsAreOfType(std::vector<XLATensorPtr> tensors, at::ScalarType type) {
   for (const XLATensorPtr& tensor : tensors) {
-    if (IsOperationOnType(c10::optional<at::ScalarType>(c10::nullopt),
+    if (IsOperationOnType(std::optional<at::ScalarType>(std::nullopt),
                           tensor->dtype(), type)) {
       return true;
     }
@@ -115,8 +282,8 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
          "`logical_not()` operator instead.";
 }
 
-c10::optional<at::ScalarType> PromoteIntegralType(
-    at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
+std::optional<at::ScalarType> PromoteIntegralType(
+    at::ScalarType src_dtype, const std::optional<at::ScalarType>& opt_dtype) {
   return opt_dtype.has_value() ? opt_dtype.value()
          : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
                                                                : opt_dtype;
@@ -178,8 +345,8 @@ std::pair<XLATensorPtr, XLATensorPtr> GetBinaryOperands(
 
 // The input is in format of {N, C, H, W} and the output will be {H, W}.
 std::vector<int64_t> GetOutputSizeWithScale(
-    absl::Span<const int64_t> input_size, const c10::optional<double> scales_h,
-    const c10::optional<double> scales_w,
+    absl::Span<const int64_t> input_size, const std::optional<double> scales_h,
+    const std::optional<double> scales_w,
     const std::vector<int64_t>& output_size) {
   XLA_CHECK(scales_h);
   XLA_CHECK(scales_w);
@@ -343,8 +510,7 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d(
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()),
                                output_size_list, /*pool_dim=*/3)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self,
-                                                                output_size);
+        &xla_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self, output_size);
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   XLA_CHECK(common_device);
@@ -365,7 +531,7 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
                                /*pool_dim=*/3)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(_adaptive_avg_pool3d_backward)>::call(grad_output, self);
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(grad_output, self);
@@ -385,8 +551,7 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d(
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()),
                                output_size_list, /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool2d)>::call(self,
-                                                                output_size);
+        &xla_fallback, ATEN_OP(_adaptive_avg_pool2d)>::call(self, output_size);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::_adaptive_avg_pool2d(
       bridge::GetXlaTensor(self), output_size_list));
@@ -401,7 +566,7 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool2d_backward(
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
                                /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(_adaptive_avg_pool2d_backward)>::call(grad_output, self);
   }
   return bridge::AtenFromXlaTensor(
@@ -416,8 +581,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::adaptive_max_pool2d(
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()),
                                output_size_list, /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(adaptive_max_pool2d)>::call(self,
-                                                               output_size);
+        &xla_fallback, ATEN_OP(adaptive_max_pool2d)>::call(self, output_size);
   }
   std::tuple<XLATensorPtr, XLATensorPtr> res =
       tensor_methods::adaptive_max_pool2d(bridge::GetXlaTensor(self),
@@ -436,9 +600,9 @@ at::Tensor XLANativeFunctions::adaptive_max_pool2d_backward(
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()), output_size,
                                /*pool_dim=*/2)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback,
-        ATEN_OP(adaptive_max_pool2d_backward)>::call(grad_output, self,
-                                                     indices);
+        &xla_fallback, ATEN_OP(adaptive_max_pool2d_backward)>::call(grad_output,
+                                                                    self,
+                                                                    indices);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::adaptive_max_pool2d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self)));
@@ -524,10 +688,10 @@ std::vector<at::Tensor> XLANativeFunctions::_to_cpu(at::TensorList tensors) {
 // TODO(alanwaketan): Improve the error messages.
 // Let's rewrite it without reusing other native functions.
 at::Tensor XLANativeFunctions::_to_copy(
-    const at::Tensor& self, c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout, c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory, bool non_blocking,
-    c10::optional<at::MemoryFormat> memory_format) {
+    const at::Tensor& self, std::optional<at::ScalarType> dtype,
+    std::optional<at::Layout> layout, std::optional<at::Device> device,
+    std::optional<bool> pin_memory, bool non_blocking,
+    std::optional<at::MemoryFormat> memory_format) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
 
   auto options = self.options();
@@ -570,7 +734,7 @@ at::Tensor XLANativeFunctions::_to_copy(
 }
 
 at::Tensor& XLANativeFunctions::_index_put_impl_(
-    at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+    at::Tensor& self, const c10::List<std::optional<at::Tensor>>& indices,
     const at::Tensor& values, bool accumulate, bool /* unsafe */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return torch_xla::XLANativeFunctions::index_put_(self, indices, values,
@@ -597,7 +761,7 @@ at::Tensor XLANativeFunctions::_log_softmax(const at::Tensor& self, int64_t dim,
   std::vector<torch::lazy::Shape> shapes{
       torch::lazy::Shape(out_meta.scalar_type(), out_meta.sizes().vec())};
   return bridge::AtenFromXlaTensor(tensor_methods::log_softmax(
-      bridge::GetXlaTensor(self), dim, c10::nullopt, std::move(shapes)));
+      bridge::GetXlaTensor(self), dim, std::nullopt, std::move(shapes)));
 }
 
 at::Tensor XLANativeFunctions::_log_softmax_backward_data(
@@ -620,7 +784,7 @@ at::Tensor XLANativeFunctions::_softmax(const at::Tensor& self, int64_t dim,
                                         bool /* half_to_float */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
-      tensor_methods::softmax(bridge::GetXlaTensor(self), dim, c10::nullopt));
+      tensor_methods::softmax(bridge::GetXlaTensor(self), dim, std::nullopt));
 }
 
 at::Tensor XLANativeFunctions::_softmax_backward_data(
@@ -674,9 +838,8 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                                      const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (beta.to<double>() != 1 || alpha.to<double>() != 1) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(addmm)>::call(self, mat1, mat2,
-                                                              beta, alpha);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(addmm)>::call(
+        self, mat1, mat2, beta, alpha);
   }
   return bridge::AtenFromXlaTensor(
       tensor_methods::addmm(bridge::GetXlaTensor(mat1),
@@ -702,7 +865,7 @@ at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
 
 at::Tensor XLANativeFunctions::as_strided_copy(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
-    c10::optional<int64_t> storage_offset) {
+    std::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // Retrieve the base tensor, if there's one.
   // This function actually operates on the tensor's storage. Since XLA does not
@@ -745,9 +908,9 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   if (storage_size == 0) {
     // Return an empty tensor, if no storage is actually needed.
     return empty_symint(c10::fromIntArrayRefSlow(size), tensor.scalar_type(),
-                        /* layout= */ c10::nullopt, tensor.device(),
-                        /* pin_memory= */ c10::nullopt,
-                        /*  memory_format= */ c10::nullopt);
+                        /* layout= */ std::nullopt, tensor.device(),
+                        /* pin_memory= */ std::nullopt,
+                        /*  memory_format= */ std::nullopt);
   }
 
   // At this point, the following is true:
@@ -812,7 +975,7 @@ at::Tensor XLANativeFunctions::as_strided_copy(
 at::Tensor XLANativeFunctions::as_strided_scatter(
     const at::Tensor& base, const at::Tensor& mutated_view,
     at::IntArrayRef size, at::IntArrayRef stride,
-    c10::optional<int64_t> storage_offset) {
+    std::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto base_ = bridge::GetXlaTensor(base);
   auto xsize = XlaHelpers::I64List(size);
@@ -820,10 +983,9 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
   if (!AsStrided::StrideIsSupported(base_->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(as_strided_scatter)>::call(base,
-                                                              mutated_view,
-                                                              size, stride,
-                                                              storage_offset);
+        &xla_fallback, ATEN_OP(as_strided_scatter)>::call(base, mutated_view,
+                                                          size, stride,
+                                                          storage_offset);
   }
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
   return bridge::AtenFromXlaTensor(
@@ -849,7 +1011,7 @@ at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
 at::Tensor XLANativeFunctions::avg_pool2d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
-    c10::optional<int64_t> divisor_override) {
+    std::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
@@ -862,13 +1024,15 @@ at::Tensor XLANativeFunctions::avg_pool2d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
-    c10::optional<int64_t> divisor_override) {
+    std::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::
-        call_fallback_fn<&xla_cpu_fallback, ATEN_OP(avg_pool2d_backward)>::call(
-            grad_output, self, kernel_size, stride, padding, ceil_mode,
-            count_include_pad, divisor_override);
+    return at::native::call_fallback_fn<
+        &xla_fallback, ATEN_OP(avg_pool2d_backward)>::call(grad_output, self,
+                                                           kernel_size, stride,
+                                                           padding, ceil_mode,
+                                                           count_include_pad,
+                                                           divisor_override);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
@@ -880,7 +1044,7 @@ at::Tensor XLANativeFunctions::avg_pool2d_backward(
 at::Tensor XLANativeFunctions::avg_pool3d(
     const at::Tensor& self, at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
-    c10::optional<int64_t> divisor_override) {
+    std::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
@@ -893,13 +1057,15 @@ at::Tensor XLANativeFunctions::avg_pool3d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
     at::IntArrayRef kernel_size, at::IntArrayRef stride,
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
-    c10::optional<int64_t> divisor_override) {
+    std::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::
-        call_fallback_fn<&xla_cpu_fallback, ATEN_OP(avg_pool3d_backward)>::call(
-            grad_output, self, kernel_size, stride, padding, ceil_mode,
-            count_include_pad, divisor_override);
+    return at::native::call_fallback_fn<
+        &xla_fallback, ATEN_OP(avg_pool3d_backward)>::call(grad_output, self,
+                                                           kernel_size, stride,
+                                                           padding, ceil_mode,
+                                                           count_include_pad,
+                                                           divisor_override);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
@@ -921,10 +1087,10 @@ at::Tensor XLANativeFunctions::baddbmm(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::bernoulli(
-    const at::Tensor& self, c10::optional<at::Generator> generator) {
+    const at::Tensor& self, std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
+    return at::native::call_fallback_fn<&xla_fallback,
                                         ATEN_OP(bernoulli)>::call(self,
                                                                   generator);
   }
@@ -933,11 +1099,11 @@ at::Tensor XLANativeFunctions::bernoulli(
 }
 
 at::Tensor XLANativeFunctions::bernoulli(
-    const at::Tensor& self, double p, c10::optional<at::Generator> generator) {
+    const at::Tensor& self, double p, std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(bernoulli, p)>::call(self, p, generator);
+        &xla_fallback, ATEN_OP2(bernoulli, p)>::call(self, p, generator);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::bernoulli(self_tensor, p));
@@ -945,12 +1111,11 @@ at::Tensor XLANativeFunctions::bernoulli(
 
 at::Tensor& XLANativeFunctions::bernoulli_(
     at::Tensor& self, const at::Tensor& p,
-    c10::optional<at::Generator> generator) {
+    std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(bernoulli_, Tensor)>::call(self, p,
-                                                               generator);
+        &xla_fallback, ATEN_OP2(bernoulli_, Tensor)>::call(self, p, generator);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   tensor_methods::bernoulli_(self_tensor, bridge::GetXlaTensor(p));
@@ -959,8 +1124,8 @@ at::Tensor& XLANativeFunctions::bernoulli_(
 
 at::Tensor XLANativeFunctions::binary_cross_entropy_with_logits(
     const at::Tensor& self, const at::Tensor& target,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& pos_weight, int64_t reduction) {
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& pos_weight, int64_t reduction) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return at::native::binary_cross_entropy_with_logits(
       self, target, IsDefined(weight) ? *weight : at::Tensor(),
@@ -1024,8 +1189,8 @@ at::Tensor& XLANativeFunctions::celu_(at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::clamp(const at::Tensor& self,
-                                     const c10::optional<at::Scalar>& min,
-                                     const c10::optional<at::Scalar>& max) {
+                                     const std::optional<at::Scalar>& min,
+                                     const std::optional<at::Scalar>& max) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::clamp(bridge::GetXlaTensor(self), min, max));
@@ -1035,19 +1200,19 @@ at::Tensor XLANativeFunctions::clamp_max(const at::Tensor& self,
                                          const at::Scalar& max) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
-      tensor_methods::clamp(bridge::GetXlaTensor(self), c10::nullopt, max));
+      tensor_methods::clamp(bridge::GetXlaTensor(self), std::nullopt, max));
 }
 
 at::Tensor XLANativeFunctions::clamp_min(const at::Tensor& self,
                                          const at::Scalar& min) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
-      tensor_methods::clamp(bridge::GetXlaTensor(self), min, c10::nullopt));
+      tensor_methods::clamp(bridge::GetXlaTensor(self), min, std::nullopt));
 }
 
 at::Tensor XLANativeFunctions::clone(
     const at::Tensor& self,
-    c10::optional<at::MemoryFormat> /* memory_format */) {
+    std::optional<at::MemoryFormat> /* memory_format */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::clone(bridge::GetXlaTensor(self)));
@@ -1064,7 +1229,7 @@ at::Tensor XLANativeFunctions::constant_pad_nd(const at::Tensor& self,
 // This functions covers the whole convolution lowering.
 at::Tensor XLANativeFunctions::convolution_overrideable(
     const at::Tensor& input, const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias, at::IntArrayRef stride,
+    const std::optional<at::Tensor>& bias, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
     at::IntArrayRef output_padding, int64_t groups) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
@@ -1120,7 +1285,7 @@ at::Tensor& XLANativeFunctions::copy_(at::Tensor& self, const at::Tensor& src,
 
 at::Tensor XLANativeFunctions::cross(const at::Tensor& self,
                                      const at::Tensor& other,
-                                     c10::optional<int64_t> dim) {
+                                     std::optional<int64_t> dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::cross(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other),
@@ -1128,24 +1293,23 @@ at::Tensor XLANativeFunctions::cross(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::cumprod(const at::Tensor& self, int64_t dim,
-                                       c10::optional<at::ScalarType> dtype) {
+                                       std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  c10::optional<at::ScalarType> promoted_dtype =
+  std::optional<at::ScalarType> promoted_dtype =
       PromoteIntegralType(self_tensor->dtype(), dtype);
   if (IsOperationOnType(promoted_dtype, self_tensor->dtype(),
                         at::ScalarType::Long)) {
     // XLA reduce-window does not support S64 mode.
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(cumprod)>::call(self, dim,
-                                                                dtype);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(cumprod)>::call(
+        self, dim, dtype);
   }
   return bridge::AtenFromXlaTensor(
       tensor_methods::cumprod(self_tensor, dim, promoted_dtype));
 }
 
 at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
-                                      c10::optional<at::ScalarType> dtype) {
+                                      std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(
@@ -1192,12 +1356,12 @@ at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base,
 at::Tensor XLANativeFunctions::div(const at::Tensor& self,
                                    const at::Tensor& other) {
   return torch_xla::XLANativeFunctions::div(self, other,
-                                            /*rounding_mode=*/c10::nullopt);
+                                            /*rounding_mode=*/std::nullopt);
 }
 
 at::Tensor XLANativeFunctions::div(
     const at::Tensor& self, const at::Tensor& other,
-    c10::optional<c10::string_view> rounding_mode) {
+    std::optional<c10::string_view> rounding_mode) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   at::ScalarType dtype = at::result_type(self, other);
   auto operands = GetBinaryOperands(self, UnwrapNumber(other, dtype));
@@ -1228,7 +1392,7 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
        at::isIntegralType(tensor.scalar_type(), /*include_bool=*/true) &&
        (at::elementSize(self.scalar_type()) == 8 ||
         at::elementSize(tensor.scalar_type()) == 8))) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(dot)>::call(
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(dot)>::call(
         self, tensor);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::matmul(
@@ -1295,12 +1459,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::_embedding_bag_forward_only(
     const at::Tensor& weight, const at::Tensor& indices,
     const at::Tensor& offsets, bool scale_grad_by_freq, int64_t mode,
-    bool sparse, const c10::optional<at::Tensor>& per_sample_weights,
+    bool sparse, const std::optional<at::Tensor>& per_sample_weights,
     bool include_last_offset, int64_t padding_idx) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (mode == 1 || scale_grad_by_freq || sparse || padding_idx != -1) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(_embedding_bag_forward_only)>::call(weight, indices, offsets,
                                                     scale_grad_by_freq, mode,
                                                     sparse, per_sample_weights,
@@ -1323,13 +1487,39 @@ XLANativeFunctions::_embedding_bag_forward_only(
                          bridge::AtenFromXlaTensor(std::get<3>(result)));
 }
 
-at::Tensor XLANativeFunctions::empty_symint(
-    at::SymIntArrayRef sym_size, c10::optional<at::ScalarType> dtype,
-    c10::optional<at::Layout> layout, c10::optional<at::Device> device,
-    c10::optional<bool> pin_memory,
-    c10::optional<at::MemoryFormat> /* memory_format */) {
+at::Tensor XLANativeFunctions::_embedding_bag_backward(
+    const at::Tensor& grad, const at::Tensor& indices_,
+    const at::Tensor& offsets_, const at::Tensor& offset2bag,
+    const at::Tensor& bag_size_, const at::Tensor& max_indices_,
+    int64_t num_weights, bool scale_grad_by_freq, int64_t mode, bool sparse,
+    const std::optional<at::Tensor>& per_sample_weights_opt,
+    int64_t padding_idx) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  c10::optional<at::IntArrayRef> int_sizes =
+  if (sparse) {
+    TORCH_WARN(
+        "XLA does not support EmbeddingBag sparse backward function. "
+        "Falling back to the dense function.");
+  }
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return at::native::_embedding_bag_backward_symint(
+        grad, indices_, offsets_, offset2bag, bag_size_, max_indices_,
+        num_weights, scale_grad_by_freq, mode, /*sparse=*/false,
+        per_sample_weights_opt, padding_idx);
+  }
+  return at::native::
+      call_fallback_fn<&xla_fallback, ATEN_OP(_embedding_bag_backward)>::call(
+          grad, indices_, offsets_, offset2bag, bag_size_, max_indices_,
+          num_weights, scale_grad_by_freq, mode, /*sparse=*/false,
+          per_sample_weights_opt, padding_idx);
+}
+
+at::Tensor XLANativeFunctions::empty_symint(
+    at::SymIntArrayRef sym_size, std::optional<at::ScalarType> dtype,
+    std::optional<at::Layout> layout, std::optional<at::Device> device,
+    std::optional<bool> pin_memory,
+    std::optional<at::MemoryFormat> /* memory_format */) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  std::optional<at::IntArrayRef> int_sizes =
       c10::asIntArrayRefSlowOpt(sym_size);
   bool all_dims_static = int_sizes.has_value();
   // PT empty*() are optimizations to avoid initializing the data when it is
@@ -1337,37 +1527,47 @@ at::Tensor XLANativeFunctions::empty_symint(
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
+  XLATensorPtr xla_tensor;
   if (all_dims_static) {
-    return bridge::AtenFromXlaTensor(tensor_methods::full(
-        XlaHelpers::I64List(int_sizes.value()), 0,
-        GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+    xla_tensor = tensor_methods::full(XlaHelpers::I64List(int_sizes.value()), 0,
+                                      GetXlaDeviceOrCurrent(device),
+                                      at::dtype_or_default(dtype));
+  } else {
+    xla_tensor =
+        tensor_methods::full_symint(sym_size, 0, GetXlaDeviceOrCurrent(device),
+                                    at::dtype_or_default(dtype));
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::full_symint(
-      sym_size, 0, GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+  // `tensor.to` will trigger an `empty` + `_to_copy`. In the egaer mode, the
+  // `full` will be evulated eagerly and got a replicated sharding. We should
+  // leave the sharding to be empty.
+  if (XLAGraphExecutor::Get()->UseEagerMode() && UseVirtualDevice()) {
+    xla_tensor->ClearShardingSpec();
+  }
+  return bridge::AtenFromXlaTensor(xla_tensor);
 }
 
 at::Tensor XLANativeFunctions::empty_strided_symint(
     at::SymIntArrayRef sym_size, at::SymIntArrayRef sym_stride,
-    c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+    std::optional<at::ScalarType> dtype, std::optional<at::Layout> layout,
+    std::optional<at::Device> device, std::optional<bool> pin_memory) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
+  std::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
   bool is_size_dynamic = !size.has_value();
-  c10::optional<at::IntArrayRef> stride = c10::asIntArrayRefSlowOpt(sym_stride);
+  std::optional<at::IntArrayRef> stride = c10::asIntArrayRefSlowOpt(sym_stride);
   bool is_stride_dynamic = !stride.has_value();
   // As XLATensor doesn't have a storage, it should not care about the memory
   // format or how to jump to the next element (strides). So the term stride
   // does not mean much to us. The size of the tensor has been set by the
   // above `empty_symint` so we feel it is ok to return here.
   return empty_symint(sym_size, dtype, layout, device, pin_memory,
-                      c10::nullopt);
+                      std::nullopt);
 }
 
 at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
                                                   at::SymIntArrayRef sym_size,
                                                   bool implicit) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
+  std::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
   if (size.has_value()) {
     return bridge::AtenFromXlaTensor(tensor_methods::expand(
         bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(*size)));
@@ -1380,10 +1580,10 @@ at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
 }
 
 at::Tensor& XLANativeFunctions::exponential_(
-    at::Tensor& self, double lambd, c10::optional<at::Generator> generator) {
+    at::Tensor& self, double lambd, std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
+    return at::native::call_fallback_fn<&xla_fallback,
                                         ATEN_OP(exponential_)>::call(self,
                                                                      lambd,
                                                                      generator);
@@ -1460,15 +1660,15 @@ at::Tensor XLANativeFunctions::fmod(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::full(at::IntArrayRef size,
                                     const at::Scalar& fill_value,
-                                    c10::optional<at::ScalarType> dtype,
-                                    c10::optional<at::Layout> layout,
-                                    c10::optional<at::Device> device,
-                                    c10::optional<bool> pin_memory) {
+                                    std::optional<at::ScalarType> dtype,
+                                    std::optional<at::Layout> layout,
+                                    std::optional<at::Device> device,
+                                    std::optional<bool> pin_memory) {
   TORCH_LAZY_FN_COUNTER("xla::");
   // Fall back to CPU if layout or pin_memory are not default
   if (layout.value_or(at::Layout::Strided) != at::Layout::Strided ||
       pin_memory.value_or(false)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(full)>::call(
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(full)>::call(
         size, fill_value, dtype, layout, device, pin_memory);
   }
   at::ScalarType intend_dtype;
@@ -1530,11 +1730,11 @@ at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
 
 at::Tensor XLANativeFunctions::index(
     const at::Tensor& self,
-    const c10::List<c10::optional<at::Tensor>>& indices) {
+    const c10::List<std::optional<at::Tensor>>& indices) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   bool indices_on_cpu_or_xla =
       std::all_of(indices.begin(), indices.end(),
-                  [=](const c10::optional<at::Tensor>& opt) {
+                  [=](const std::optional<at::Tensor>& opt) {
                     return opt.has_value() && opt->defined()
                                ? (opt->is_cpu() || bridge::IsXlaTensor(*opt))
                                : true;
@@ -1545,7 +1745,7 @@ at::Tensor XLANativeFunctions::index(
       << " When using XLA, the indexed tensor must be an XLA tensor.";
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
-  c10::optional<torch::lazy::BackendDevice> device =
+  std::optional<torch::lazy::BackendDevice> device =
       bridge::GetXlaDevice(canonical_index_info.base);
   if (!device.has_value()) {
     device = bridge::GetXlaDevice(canonical_index_info.indices);
@@ -1598,12 +1798,12 @@ at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
 }
 
 at::Tensor& XLANativeFunctions::index_put_(
-    at::Tensor& self, const c10::List<c10::optional<at::Tensor>>& indices,
+    at::Tensor& self, const c10::List<std::optional<at::Tensor>>& indices,
     const at::Tensor& values, bool accumulate) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   bool indices_on_cpu_or_xla =
       std::all_of(indices.begin(), indices.end(),
-                  [=](const c10::optional<at::Tensor>& opt) {
+                  [=](const std::optional<at::Tensor>& opt) {
                     return opt.has_value() && opt->defined()
                                ? (opt->is_cpu() || bridge::IsXlaTensor(*opt))
                                : true;
@@ -1615,7 +1815,7 @@ at::Tensor& XLANativeFunctions::index_put_(
   XLA_CHECK(self.scalar_type() == values.scalar_type());
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
-  c10::optional<torch::lazy::BackendDevice> device =
+  std::optional<torch::lazy::BackendDevice> device =
       bridge::GetXlaDevice(canonical_index_info.base);
   if (!device.has_value()) {
     device = bridge::GetXlaDevice(canonical_index_info.indices);
@@ -1721,7 +1921,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_inv_ex(
   // we'll fallback to CPU.
   if (check_errors) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(linalg_inv_ex)>::call(self, check_errors);
+        &xla_fallback, ATEN_OP(linalg_inv_ex)>::call(self, check_errors);
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   TORCH_INTERNAL_ASSERT(common_device);
@@ -1736,19 +1936,16 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_inv_ex(
 
 at::Tensor XLANativeFunctions::linspace(const at::Scalar& start,
                                         const at::Scalar& end, int64_t steps,
-                                        c10::optional<at::ScalarType> dtype,
-                                        c10::optional<at::Layout> layout,
-                                        c10::optional<at::Device> device,
-                                        c10::optional<bool> pin_memory) {
+                                        std::optional<at::ScalarType> dtype,
+                                        std::optional<at::Layout> layout,
+                                        std::optional<at::Device> device,
+                                        std::optional<bool> pin_memory) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // Fall back to CPU if layout or pin_memory are not default
   if (layout.value_or(at::Layout::Strided) != at::Layout::Strided ||
       pin_memory.value_or(false)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(linspace)>::call(start, end,
-                                                                 steps, dtype,
-                                                                 layout, device,
-                                                                 pin_memory);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(linspace)>::call(
+        start, end, steps, dtype, layout, device, pin_memory);
   }
 
   return bridge::AtenFromXlaTensor(
@@ -1763,7 +1960,7 @@ at::Tensor XLANativeFunctions::log(const at::Tensor& self) {
 }
 
 at::Tensor XLANativeFunctions::logit(const at::Tensor& self,
-                                     c10::optional<double> eps) {
+                                     std::optional<double> eps) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::logit(bridge::GetXlaTensor(self), eps));
@@ -1818,7 +2015,7 @@ at::Tensor XLANativeFunctions::masked_select(const at::Tensor& self,
   // Initially make XLA handled masked_select() handling experimental, and
   // opt-in.
   if (!DebugUtil::ExperimentEnabled("masked_select")) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
+    return at::native::call_fallback_fn<&xla_fallback,
                                         ATEN_OP(masked_select)>::call(self,
                                                                       mask);
   }
@@ -1866,12 +2063,11 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool2d_with_indices(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(max_pool2d_with_indices)>::call(self,
-                                                                   kernel_size,
-                                                                   stride,
-                                                                   padding,
-                                                                   dilation,
-                                                                   ceil_mode);
+        &xla_fallback, ATEN_OP(max_pool2d_with_indices)>::call(self,
+                                                               kernel_size,
+                                                               stride, padding,
+                                                               dilation,
+                                                               ceil_mode);
   }
   auto outputs = tensor_methods::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
@@ -1890,7 +2086,7 @@ at::Tensor XLANativeFunctions::max_pool2d_with_indices_backward(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(max_pool2d_with_indices_backward)>::call(grad_output, self,
                                                          kernel_size, stride,
                                                          padding, dilation,
@@ -1919,7 +2115,7 @@ at::Tensor XLANativeFunctions::max_pool3d_with_indices_backward(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(max_pool3d_with_indices_backward)>::call(grad_output, self,
                                                          kernel_size, stride,
                                                          padding, dilation,
@@ -1938,12 +2134,11 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::max_pool3d_with_indices(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(max_pool3d_with_indices)>::call(self,
-                                                                   kernel_size,
-                                                                   stride,
-                                                                   padding,
-                                                                   dilation,
-                                                                   ceil_mode);
+        &xla_fallback, ATEN_OP(max_pool3d_with_indices)>::call(self,
+                                                               kernel_size,
+                                                               stride, padding,
+                                                               dilation,
+                                                               ceil_mode);
   }
   auto outputs = tensor_methods::max_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
@@ -1974,7 +2169,7 @@ at::Tensor XLANativeFunctions::max_unpool3d(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
-                                    c10::optional<at::ScalarType> dtype) {
+                                    std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::mean(
@@ -1985,7 +2180,7 @@ at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::mean(const at::Tensor& self,
                                     at::OptionalIntArrayRef dim, bool keepdim,
-                                    c10::optional<at::ScalarType> dtype) {
+                                    std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::mean(
@@ -2055,11 +2250,14 @@ at::Tensor XLANativeFunctions::mse_loss_backward(const at::Tensor& grad_output,
 at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
                                    const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return DoBinaryOp(self, other,
-                    [&](const XLATensorPtr& xself, const XLATensorPtr& xother,
-                        at::ScalarType dtype) {
-                      return tensor_methods::mul(xself, xother, dtype);
-                    });
+  using FnType = XLATensorPtr(const XLATensorPtr&, const XLATensorPtr&,
+                              c10::optional<at::ScalarType>);
+  return OpConfig::From(static_cast<FnType*>(tensor_methods::mul))
+      .add_input(self)
+      .add_input(other)
+      .cast_inputs_to_common_dtype()
+      .use_opmathtype_for_compute()
+      .run();
 }
 
 at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
@@ -2074,7 +2272,7 @@ at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::multinomial(
     const at::Tensor& self, int64_t num_samples, bool replacement,
-    c10::optional<at::Generator> generator) {
+    std::optional<at::Generator> generator) {
   XLA_CHECK(num_samples > 0)
       << "Multinomial number of samples must be greater than 0";
   XLA_CHECK(at::isFloatingType(self.scalar_type()))
@@ -2084,7 +2282,7 @@ at::Tensor XLANativeFunctions::multinomial(
   // parallelize. See https://github.com/pytorch/xla/issues/4865
   if ((generator.has_value() && generator->defined()) ||
       (!replacement && num_samples != 1)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
+    return at::native::call_fallback_fn<&xla_fallback,
                                         ATEN_OP(multinomial)>::call(self,
                                                                     num_samples,
                                                                     replacement,
@@ -2112,9 +2310,9 @@ at::Tensor& XLANativeFunctions::mv_out(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
-                                          c10::optional<double> nan,
-                                          c10::optional<double> posinf,
-                                          c10::optional<double> neginf) {
+                                          std::optional<double> nan,
+                                          std::optional<double> posinf,
+                                          std::optional<double> neginf) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // nan_to_num doesn't apply to integer types.
   if (!at::native::is_floating_point(self)) {
@@ -2141,10 +2339,10 @@ at::Tensor XLANativeFunctions::nan_to_num(const at::Tensor& self,
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::native_batch_norm(
-    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias,
-    const c10::optional<at::Tensor>& running_mean,
-    const c10::optional<at::Tensor>& running_var, bool training,
+    const at::Tensor& input, const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& running_mean,
+    const std::optional<at::Tensor>& running_var, bool training,
     double momentum, double eps) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
@@ -2164,8 +2362,8 @@ XLANativeFunctions::native_batch_norm(
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::_native_batch_norm_legit(
-    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias, at::Tensor& running_mean,
+    const at::Tensor& input, const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias, at::Tensor& running_mean,
     at::Tensor& running_var, bool training, double momentum, double eps) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
@@ -2183,8 +2381,8 @@ XLANativeFunctions::_native_batch_norm_legit(
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::_native_batch_norm_legit(
-    const at::Tensor& input, const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& bias, bool training, double momentum,
+    const at::Tensor& input, const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& bias, bool training, double momentum,
     double eps) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
@@ -2203,11 +2401,11 @@ XLANativeFunctions::_native_batch_norm_legit(
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::native_batch_norm_backward(
     const at::Tensor& grad_out, const at::Tensor& input,
-    const c10::optional<at::Tensor>& weight,
-    const c10::optional<at::Tensor>& running_mean,
-    const c10::optional<at::Tensor>& running_var,
-    const c10::optional<at::Tensor>& save_mean,
-    const c10::optional<at::Tensor>& save_invstd, bool train, double eps,
+    const std::optional<at::Tensor>& weight,
+    const std::optional<at::Tensor>& running_mean,
+    const std::optional<at::Tensor>& running_var,
+    const std::optional<at::Tensor>& save_mean,
+    const std::optional<at::Tensor>& save_invstd, bool train, double eps,
     std::array<bool, 3> output_mask) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr grad_out_tensor = bridge::GetXlaTensor(grad_out);
@@ -2228,7 +2426,7 @@ XLANativeFunctions::native_batch_norm_backward(
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::native_dropout(
-    const at::Tensor& self, double p, c10::optional<bool> train) {
+    const at::Tensor& self, double p, std::optional<bool> train) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto results = tensor_methods::native_dropout(self_tensor, p, train);
@@ -2248,7 +2446,7 @@ at::Tensor XLANativeFunctions::neg(const at::Tensor& self) {
 
 at::Tensor XLANativeFunctions::nll_loss2d_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& target, const c10::optional<at::Tensor>& weight,
+    const at::Tensor& target, const std::optional<at::Tensor>& weight,
     int64_t reduction, int64_t ignore_index, const at::Tensor& total_weight) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
@@ -2267,7 +2465,7 @@ at::Tensor XLANativeFunctions::nll_loss2d_backward(
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss2d_forward(
     const at::Tensor& self, const at::Tensor& target,
-    const c10::optional<at::Tensor>& weight, int64_t reduction,
+    const std::optional<at::Tensor>& weight, int64_t reduction,
     int64_t ignore_index) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
@@ -2283,7 +2481,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss2d_forward(
 
 at::Tensor XLANativeFunctions::nll_loss_backward(
     const at::Tensor& grad_output, const at::Tensor& self,
-    const at::Tensor& target, const c10::optional<at::Tensor>& weight,
+    const at::Tensor& target, const std::optional<at::Tensor>& weight,
     int64_t reduction, int64_t ignore_index, const at::Tensor& total_weight) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
@@ -2302,7 +2500,7 @@ at::Tensor XLANativeFunctions::nll_loss_backward(
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::nll_loss_forward(
     const at::Tensor& self, const at::Tensor& target,
-    const c10::optional<at::Tensor>& weight, int64_t reduction,
+    const std::optional<at::Tensor>& weight, int64_t reduction,
     int64_t ignore_index) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
@@ -2321,22 +2519,21 @@ at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   // Initially make XLA handled nonzero() handling experimental, and opt-in.
   if (!DebugUtil::ExperimentEnabled("nonzero")) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(nonzero)>::call(self);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(nonzero)>::call(
+        self);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::nonzero(self_tensor));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
-                                    const c10::optional<at::Scalar>& p,
+                                    const std::optional<at::Scalar>& p,
                                     at::ScalarType dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
   // shapes issue.
   if (p.has_value() && p->toDouble() == 0) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dtype)>::call(self, p,
-                                                                  dtype);
+        &xla_fallback, ATEN_OP2(norm, ScalarOpt_dtype)>::call(self, p, dtype);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::norm(
       bridge::GetXlaTensor(self), p, dtype, {}, /*keepdim=*/false));
@@ -2348,15 +2545,15 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
   // shapes issue.
   if (p.toDouble() == 0) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
+    return at::native::call_fallback_fn<&xla_fallback,
                                         ATEN_OP2(norm, Scalar)>::call(self, p);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::norm(
-      bridge::GetXlaTensor(self), p, c10::nullopt, {}, /*keepdim=*/false));
+      bridge::GetXlaTensor(self), p, std::nullopt, {}, /*keepdim=*/false));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
-                                    const c10::optional<at::Scalar>& p,
+                                    const std::optional<at::Scalar>& p,
                                     at::IntArrayRef dim, bool keepdim,
                                     at::ScalarType dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
@@ -2364,49 +2561,48 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
   // shapes issue.
   if (p.has_value() && p->toDouble() == 0) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dim_dtype)>::call(self, p,
-                                                                      dim,
-                                                                      keepdim,
-                                                                      dtype);
+        &xla_fallback, ATEN_OP2(norm, ScalarOpt_dim_dtype)>::call(self, p, dim,
+                                                                  keepdim,
+                                                                  dtype);
   }
   return bridge::AtenFromXlaTensor(
       tensor_methods::norm(bridge::GetXlaTensor(self), p, dtype, dim, keepdim));
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
-                                    const c10::optional<at::Scalar>& p,
+                                    const std::optional<at::Scalar>& p,
                                     at::IntArrayRef dim, bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // If p==0 it is a torch.nonzero(), which is not lowered to XLA due to dynamic
   // shapes issue.
   if (p.has_value() && p->toDouble() == 0) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(norm, ScalarOpt_dim)>::call(self, p, dim,
-                                                                keepdim);
+        &xla_fallback, ATEN_OP2(norm, ScalarOpt_dim)>::call(self, p, dim,
+                                                            keepdim);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::norm(
-      bridge::GetXlaTensor(self), p, c10::nullopt, dim, keepdim));
+      bridge::GetXlaTensor(self), p, std::nullopt, dim, keepdim));
 }
 
 at::Tensor XLANativeFunctions::normal(const at::Tensor& mean, double std,
-                                      c10::optional<at::Generator> generator) {
+                                      std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(normal, Tensor_float)>::call(mean, std,
-                                                                 generator);
+        &xla_fallback, ATEN_OP2(normal, Tensor_float)>::call(mean, std,
+                                                             generator);
   }
   return bridge::AtenFromXlaTensor(
       tensor_methods::normal(bridge::GetXlaTensor(mean), std));
 }
 
 at::Tensor XLANativeFunctions::normal(double mean, const at::Tensor& std,
-                                      c10::optional<at::Generator> generator) {
+                                      std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(normal, float_Tensor)>::call(mean, std,
-                                                                 generator);
+        &xla_fallback, ATEN_OP2(normal, float_Tensor)>::call(mean, std,
+                                                             generator);
   }
   return bridge::AtenFromXlaTensor(
       tensor_methods::normal(mean, bridge::GetXlaTensor(std)));
@@ -2414,12 +2610,12 @@ at::Tensor XLANativeFunctions::normal(double mean, const at::Tensor& std,
 
 at::Tensor XLANativeFunctions::normal(const at::Tensor& mean,
                                       const at::Tensor& std,
-                                      c10::optional<at::Generator> generator) {
+                                      std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(normal, Tensor_Tensor)>::call(mean, std,
-                                                                  generator);
+        &xla_fallback, ATEN_OP2(normal, Tensor_Tensor)>::call(mean, std,
+                                                              generator);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::normal(
       bridge::GetXlaTensor(mean), bridge::GetXlaTensor(std)));
@@ -2427,12 +2623,11 @@ at::Tensor XLANativeFunctions::normal(const at::Tensor& mean,
 
 at::Tensor& XLANativeFunctions::normal_(
     at::Tensor& self, double mean, double std,
-    c10::optional<at::Generator> generator) {
+    std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(normal_)>::call(self, mean, std,
-                                                                generator);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(normal_)>::call(
+        self, mean, std, generator);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   tensor_methods::normal_(self_tensor, mean, std);
@@ -2450,7 +2645,7 @@ at::Tensor XLANativeFunctions::pow(const at::Tensor& self,
                                    const at::Scalar& exponent) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr (*method_pow)(const XLATensorPtr&, const at::Scalar&,
-                             c10::optional<at::ScalarType>) =
+                             std::optional<at::ScalarType>) =
       tensor_methods::pow;
   return DoBinaryOp(self, exponent, method_pow);
 }
@@ -2459,7 +2654,7 @@ at::Tensor XLANativeFunctions::pow(const at::Tensor& self,
                                    const at::Tensor& exponent) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr (*method_pow)(const XLATensorPtr&, const XLATensorPtr&,
-                             c10::optional<at::ScalarType>) =
+                             std::optional<at::ScalarType>) =
       tensor_methods::pow;
   return DoBinaryOp(self, exponent, method_pow);
 }
@@ -2468,7 +2663,7 @@ at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
                                    const at::Tensor& exponent) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr (*method_pow)(const at::Scalar&, const XLATensorPtr&,
-                             c10::optional<at::ScalarType>) =
+                             std::optional<at::ScalarType>) =
       tensor_methods::pow;
   return DoBinaryOp(self, exponent, method_pow);
 }
@@ -2512,7 +2707,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_prelu_kernel_backward(
 }
 
 at::Tensor XLANativeFunctions::prod(const at::Tensor& self,
-                                    c10::optional<at::ScalarType> dtype) {
+                                    std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::prod(
@@ -2524,7 +2719,7 @@ at::Tensor XLANativeFunctions::prod(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::prod(const at::Tensor& self, int64_t dim,
                                     bool keepdim,
-                                    c10::optional<at::ScalarType> dtype) {
+                                    std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::prod(bridge::GetXlaTensor(self), {dim}, keepdim,
@@ -2576,7 +2771,9 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
 
   // 2) Aid SPMD.
   XLATensor::ShardingSpecPtr sharding = input_tensor->sharding_spec();
-  if (sharding && sharding->sharding.type() != xla::OpSharding::UNKNOWN) {
+  // don't propagate sharding in eager mode.
+  if (!XLAGraphExecutor::Get()->UseEagerMode() && sharding &&
+      sharding->sharding.type() != xla::OpSharding::UNKNOWN) {
     tensor_methods::custom_sharding_(output_tensor,
                                      input_tensor->sharding_spec());
   }
@@ -2601,13 +2798,13 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::qr(
 
 // The value generated should be within (from, to].
 at::Tensor& XLANativeFunctions::random_(
-    at::Tensor& self, int64_t from, c10::optional<int64_t> to,
-    c10::optional<at::Generator> generator) {
+    at::Tensor& self, int64_t from, std::optional<int64_t> to,
+    std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(random_, from)>::call(self, from, to,
-                                                          generator);
+        &xla_fallback, ATEN_OP2(random_, from)>::call(self, from, to,
+                                                      generator);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   at::ScalarType dtype = self_tensor->dtype();
@@ -2622,10 +2819,10 @@ at::Tensor& XLANativeFunctions::random_(
 
 // The value generated should be in (0, to].
 at::Tensor& XLANativeFunctions::random_(
-    at::Tensor& self, int64_t to, c10::optional<at::Generator> generator) {
+    at::Tensor& self, int64_t to, std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
+    return at::native::call_fallback_fn<&xla_fallback,
                                         ATEN_OP2(random_, to)>::call(self, to,
                                                                      generator);
   }
@@ -2638,12 +2835,11 @@ at::Tensor& XLANativeFunctions::random_(
 
 // The value generated should be in (self_type_min, self_type_max).
 at::Tensor& XLANativeFunctions::random_(
-    at::Tensor& self, c10::optional<at::Generator> generator) {
+    at::Tensor& self, std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(random_)>::call(self,
-                                                                generator);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(random_)>::call(
+        self, generator);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   at::ScalarType dtype = self_tensor->dtype();
@@ -2655,10 +2851,10 @@ at::Tensor& XLANativeFunctions::random_(
 }
 
 at::Tensor XLANativeFunctions::randperm(int64_t n,
-                                        c10::optional<at::ScalarType> dtype,
-                                        c10::optional<at::Layout> layout,
-                                        c10::optional<at::Device> device,
-                                        c10::optional<bool> pin_memory) {
+                                        std::optional<at::ScalarType> dtype,
+                                        std::optional<at::Layout> layout,
+                                        std::optional<at::Device> device,
+                                        std::optional<bool> pin_memory) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
 
   // Only support the basic version of randperm(int64_t) to start. If there are
@@ -2670,10 +2866,8 @@ at::Tensor XLANativeFunctions::randperm(int64_t n,
   fallback_to_cpu |= n == 0;
 
   if (fallback_to_cpu) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(randperm)>::call(n, dtype,
-                                                                 layout, device,
-                                                                 pin_memory);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(randperm)>::call(
+        n, dtype, layout, device, pin_memory);
   }
 
   return bridge::AtenFromXlaTensor(tensor_methods::randperm(
@@ -2792,7 +2986,7 @@ at::Tensor XLANativeFunctions::replication_pad3d_backward(
 
 const at::Tensor& XLANativeFunctions::resize_(
     const at::Tensor& self, at::IntArrayRef size,
-    c10::optional<at::MemoryFormat> /* memory_format */) {
+    std::optional<at::MemoryFormat> /* memory_format */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   tensor_methods::resize_(self_tensor, XlaHelpers::I64List(size));
@@ -2811,15 +3005,15 @@ at::Tensor XLANativeFunctions::roll(const at::Tensor& self,
 at::Tensor XLANativeFunctions::rrelu_with_noise(
     const at::Tensor& self, const at::Tensor& noise, const at::Scalar& lower,
     const at::Scalar& upper, bool training,
-    c10::optional<at::Generator> generator) {
+    std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     // The fallback path for rrelu_with_noise when training=true is wrong
     XLA_CHECK_EQ(training, false);
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(rrelu_with_noise)>::call(self, noise, lower,
-                                                            upper, training,
-                                                            generator);
+        &xla_fallback, ATEN_OP(rrelu_with_noise)>::call(self, noise, lower,
+                                                        upper, training,
+                                                        generator);
   }
   XLATensorPtr noise_tensor = bridge::GetXlaTensor(noise);
   return bridge::AtenFromXlaTensor(tensor_methods::rrelu_with_noise(
@@ -2865,7 +3059,7 @@ at::Tensor XLANativeFunctions::rsub(const at::Tensor& self,
 
 at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index, const at::Tensor& src,
-                                 c10::optional<c10::string_view> reduce) {
+                                 std::optional<c10::string_view> reduce) {
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   if (!reduce.has_value()) {
     return bridge::AtenFromXlaTensor(
@@ -2878,15 +3072,15 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
   } else {
     // TODO: implement scatter_mul
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(scatter, reduce)>::call(self, dim, index,
-                                                            src, *reduce);
+        &xla_fallback, ATEN_OP2(scatter, reduce)>::call(self, dim, index, src,
+                                                        *reduce);
   }
 }
 
 at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index,
                                  const at::Scalar& value,
-                                 c10::optional<c10::string_view> reduce) {
+                                 std::optional<c10::string_view> reduce) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   if (!reduce.has_value()) {
@@ -2898,9 +3092,8 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
   } else {
     // TODO: implement scatter_mul
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(scatter, value_reduce)>::call(self, dim,
-                                                                  index, value,
-                                                                  *reduce);
+        &xla_fallback, ATEN_OP2(scatter, value_reduce)>::call(self, dim, index,
+                                                              value, *reduce);
   }
 }
 
@@ -2908,14 +3101,14 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Tensor& index,
                                        const at::Tensor& src) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return scatter_reduce_helper(self, dim, index, src, c10::nullopt);
+  return scatter_reduce_helper(self, dim, index, src, std::nullopt);
 }
 
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Tensor& index,
                                        const at::Scalar& value) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return scatter_reduce_helper(self, dim, index, value, c10::nullopt);
+  return scatter_reduce_helper(self, dim, index, value, std::nullopt);
 }
 
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
@@ -2955,10 +3148,9 @@ at::Tensor XLANativeFunctions::scatter_reduce(
         bridge::GetXlaTensor(src), reduce, include_self));
   } else {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(scatter_reduce, two)>::call(self, dim,
-                                                                index, src,
-                                                                reduce,
-                                                                include_self);
+        &xla_fallback, ATEN_OP2(scatter_reduce, two)>::call(self, dim, index,
+                                                            src, reduce,
+                                                            include_self);
   }
 }
 
@@ -3022,8 +3214,8 @@ at::Tensor XLANativeFunctions::sigmoid_backward(const at::Tensor& grad_output,
 }
 
 at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
-                                          c10::optional<int64_t> start,
-                                          c10::optional<int64_t> end,
+                                          std::optional<int64_t> start,
+                                          std::optional<int64_t> end,
                                           int64_t step) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   int64_t start_val = start.has_value() ? start.value() : 0;
@@ -3036,7 +3228,7 @@ at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
 
 at::Tensor XLANativeFunctions::slice_scatter(
     const at::Tensor& base, const at::Tensor& mutated_view, int64_t dim,
-    c10::optional<int64_t> start, c10::optional<int64_t> end, int64_t step) {
+    std::optional<int64_t> start, std::optional<int64_t> end, int64_t step) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
@@ -3110,7 +3302,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
-    const at::Tensor& self, c10::optional<bool> stable, int64_t dim,
+    const at::Tensor& self, std::optional<bool> stable, int64_t dim,
     bool descending) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto results = tensor_methods::topk(
@@ -3191,7 +3383,7 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::std(const at::Tensor& self,
                                    at::OptionalIntArrayRef dim,
-                                   const c10::optional<c10::Scalar>& correction,
+                                   const std::optional<c10::Scalar>& correction,
                                    bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
@@ -3204,7 +3396,7 @@ at::Tensor XLANativeFunctions::std(const at::Tensor& self,
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::std_mean(
     const at::Tensor& self, at::OptionalIntArrayRef dim,
-    const c10::optional<c10::Scalar>& correction, bool keepdim) {
+    const std::optional<c10::Scalar>& correction, bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto results = tensor_methods::std_mean(
@@ -3249,7 +3441,7 @@ at::Tensor XLANativeFunctions::sub(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
-                                   c10::optional<at::ScalarType> dtype) {
+                                   std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::sum(
@@ -3260,7 +3452,7 @@ at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::sum(const at::Tensor& self,
                                    at::OptionalIntArrayRef dim, bool keepdim,
-                                   c10::optional<at::ScalarType> dtype) {
+                                   std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   return bridge::AtenFromXlaTensor(tensor_methods::sum(
@@ -3354,12 +3546,11 @@ std::vector<at::Tensor> XLANativeFunctions::unbind_copy(const at::Tensor& self,
 
 at::Tensor& XLANativeFunctions::uniform_(
     at::Tensor& self, double from, double to,
-    c10::optional<at::Generator> generator) {
+    std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(uniform_)>::call(self, from, to,
-                                                                 generator);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(uniform_)>::call(
+        self, from, to, generator);
   }
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   tensor_methods::uniform_(self_tensor, from, to);
@@ -3375,7 +3566,7 @@ at::Tensor XLANativeFunctions::unsqueeze_copy(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::upsample_bilinear2d(
     const at::Tensor& self, at::IntArrayRef output_size, bool align_corners,
-    c10::optional<double> scales_h, c10::optional<double> scales_w) {
+    std::optional<double> scales_h, std::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   absl::Span<const int64_t> input_dims =
@@ -3398,7 +3589,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
 at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
     const at::Tensor& grad_output, at::IntArrayRef output_size,
     at::IntArrayRef input_size, bool align_corners,
-    c10::optional<double> scales_h, c10::optional<double> scales_w) {
+    std::optional<double> scales_h, std::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by
@@ -3407,7 +3598,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
       static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
   if (!CheckTpuDevice(hw_type)) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(upsample_bilinear2d_backward)>::call(grad_output, output_size,
                                                      input_size, align_corners,
                                                      scales_h, scales_w);
@@ -3430,7 +3621,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
 
 at::Tensor XLANativeFunctions::upsample_nearest2d(
     const at::Tensor& self, at::IntArrayRef output_size,
-    c10::optional<double> scales_h, c10::optional<double> scales_w) {
+    std::optional<double> scales_h, std::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   absl::Span<const int64_t> input_dims =
@@ -3452,8 +3643,8 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
 
 at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
     const at::Tensor& grad_output, at::IntArrayRef output_size,
-    at::IntArrayRef input_size, c10::optional<double> scales_h,
-    c10::optional<double> scales_w) {
+    at::IntArrayRef input_size, std::optional<double> scales_h,
+    std::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr grad_output_tensor = bridge::GetXlaTensor(grad_output);
   // Only the XLA TPU backend for now implements the CustomCall required by
@@ -3462,10 +3653,11 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
       static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
   if (!CheckTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback,
-        ATEN_OP(upsample_nearest2d_backward)>::call(grad_output, output_size,
-                                                    input_size, scales_h,
-                                                    scales_w);
+        &xla_fallback, ATEN_OP(upsample_nearest2d_backward)>::call(grad_output,
+                                                                   output_size,
+                                                                   input_size,
+                                                                   scales_h,
+                                                                   scales_w);
   }
   std::vector<int64_t> scaled_output_size =
       torch::lazy::ToVector<int64_t>(output_size);
@@ -3485,7 +3677,7 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
 
 at::Tensor XLANativeFunctions::var(const at::Tensor& self,
                                    at::OptionalIntArrayRef dim,
-                                   const c10::optional<c10::Scalar>& correction,
+                                   const std::optional<c10::Scalar>& correction,
                                    bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
@@ -3499,7 +3691,7 @@ at::Tensor XLANativeFunctions::var(const at::Tensor& self,
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
     const at::Tensor& self, at::OptionalIntArrayRef dim,
-    const c10::optional<c10::Scalar>& correction, bool keepdim) {
+    const std::optional<c10::Scalar>& correction, bool keepdim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto results = tensor_methods::var_mean(
@@ -3541,7 +3733,7 @@ at::Tensor XLANativeFunctions::view_as_real_copy(const at::Tensor& self) {
 at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
                                                 at::SymIntArrayRef shape) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  c10::optional<at::IntArrayRef> int_shape = c10::asIntArrayRefSlowOpt(shape);
+  std::optional<at::IntArrayRef> int_shape = c10::asIntArrayRefSlowOpt(shape);
   bool input_shape_static = int_shape.has_value();
   XLATensorPtr xla_input = bridge::GetXlaTensor(self);
   bool input_has_dyn_shape = xla_input->shape().get().is_dynamic();
@@ -3575,7 +3767,7 @@ at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
     const at::Tensor& self, bool full_matrices, bool compute_uv,
-    c10::optional<c10::string_view> /* driver */) {
+    std::optional<c10::string_view> /* driver */) {
   // The optional driver string is only for CUDA with a cuSOLVER backend.
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // As per https://pytorch.org/docs/stable/generated/torch.svd.html,
@@ -3608,7 +3800,7 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
                                                   /*wait=*/true);
     TORCH_LAZY_COUNTER("EarlySyncLiveTensorsCount", 1);
   }
-  return at::native::call_fallback_fn<&xla_cpu_fallback,
+  return at::native::call_fallback_fn<&xla_fallback,
                                       ATEN_OP(_local_scalar_dense)>::call(self);
 }
 
@@ -3617,8 +3809,8 @@ at::Scalar XLANativeFunctions::_local_scalar_dense(const at::Tensor& self) {
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::native_layer_norm(const at::Tensor& input,
                                       at::IntArrayRef normalized_shape,
-                                      const c10::optional<at::Tensor>& weight,
-                                      const c10::optional<at::Tensor>& bias,
+                                      const std::optional<at::Tensor>& weight,
+                                      const std::optional<at::Tensor>& bias,
                                       double eps) {
   return at::native::math_native_layer_norm(input, normalized_shape, weight,
                                             bias, eps);
@@ -3628,8 +3820,8 @@ XLANativeFunctions::native_layer_norm(const at::Tensor& input,
 // backwards formula for native_group_norm
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::native_group_norm(const at::Tensor& input,
-                                      const c10::optional<at::Tensor>& weight,
-                                      const c10::optional<at::Tensor>& bias,
+                                      const std::optional<at::Tensor>& weight,
+                                      const std::optional<at::Tensor>& bias,
                                       int64_t N, int64_t C, int64_t HxW,
                                       int64_t group, double eps) {
   return at::native::math_group_norm(input, weight, bias, N, C, HxW, group,
@@ -3638,7 +3830,7 @@ XLANativeFunctions::native_group_norm(const at::Tensor& input,
 
 at::Tensor XLANativeFunctions::_cdist_forward(
     const at::Tensor& x1, const at::Tensor& x2, double p,
-    c10::optional<int64_t> compute_mode) {
+    std::optional<int64_t> compute_mode) {
   // compute_mode is ignored because the use_mm_for_euclid_dist lowering
   // (compute_mode is 0 or 1) is achieved through composite ops from
   // native pytorch.
@@ -3680,7 +3872,7 @@ at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
 
 at::Tensor XLANativeFunctions::_convolution(
     const at::Tensor& input, const at::Tensor& weight,
-    const c10::optional<at::Tensor>& bias, at::IntArrayRef stride,
+    const std::optional<at::Tensor>& bias, at::IntArrayRef stride,
     at::IntArrayRef padding, at::IntArrayRef dilation, bool transposed,
     at::IntArrayRef output_padding, int64_t groups, bool benchmark,
     bool deterministic, bool cudnn_enabled, bool allow_tf32) {
@@ -3737,7 +3929,7 @@ XLANativeFunctions::convolution_backward(
 }
 
 at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
-                                             c10::optional<int64_t> dim) {
+                                             std::optional<int64_t> dim) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr xla_tensor = bridge::GetXlaTensor(self);
   std::vector<int64_t> dims;
@@ -3804,8 +3996,8 @@ at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,
 
 at::Tensor XLANativeFunctions::new_empty_strided_symint(
     const at::Tensor& self, at::SymIntArrayRef size, at::SymIntArrayRef stride,
-    c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
-    c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
+    std::optional<at::ScalarType> dtype, std::optional<at::Layout> layout,
+    std::optional<at::Device> device, std::optional<bool> pin_memory) {
   // See Note: [Disabling functionalization]
   if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return at::native::new_empty_strided_symint(self, size, stride, dtype,
@@ -3863,8 +4055,8 @@ at::Tensor XLANativeFunctions::select_symint(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::slice(const at::Tensor& self, int64_t dim,
-                                     c10::optional<int64_t> start,
-                                     c10::optional<int64_t> end, int64_t step) {
+                                     std::optional<int64_t> start,
+                                     std::optional<int64_t> end, int64_t step) {
   // See Note: [Disabling functionalization]
   if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return slice_copy(self, dim, start, end, step);
@@ -3893,8 +4085,8 @@ at::Tensor XLANativeFunctions::_trilinear(
 }
 
 at::Tensor XLANativeFunctions::linalg_pinv(
-    const at::Tensor& self, const c10::optional<at::Tensor>& atol,
-    const c10::optional<at::Tensor>& rtol, bool hermitian) {
+    const at::Tensor& self, const std::optional<at::Tensor>& atol,
+    const std::optional<at::Tensor>& rtol, bool hermitian) {
   XLA_CHECK(
       !runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP2(
@@ -3910,7 +4102,7 @@ at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor& self, int64_t p) {
 
 at::Tensor XLANativeFunctions::linalg_vector_norm(
     const at::Tensor& self, const at::Scalar& ord, at::OptionalIntArrayRef dim,
-    bool keepdim, c10::optional<at::ScalarType> dtype) {
+    bool keepdim, std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_CHECK(at::isFloatingType(self.scalar_type()))
       << "Input must be a floating type";
@@ -3957,7 +4149,7 @@ at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
 // For ops below, see note [Disabling Functionalization]
 at::Tensor XLANativeFunctions::as_strided(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
-    c10::optional<int64_t> storage_offset) {
+    std::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   const auto& base = bridge::GetXlaTensor(self)->Base();
   const auto& tensor = base.defined() ? base : self;
@@ -3967,8 +4159,8 @@ at::Tensor XLANativeFunctions::as_strided(
   if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(tensor, size, stride,
-                                                      storage_offset);
+        &xla_fallback, ATEN_OP(as_strided)>::call(tensor, size, stride,
+                                                  storage_offset);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::as_strided(
       self_tensor, std::move(xsize), std::move(xstride),
@@ -3977,7 +4169,7 @@ at::Tensor XLANativeFunctions::as_strided(
 
 const at::Tensor& XLANativeFunctions::as_strided_(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
-    c10::optional<int64_t> storage_offset) {
+    std::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
@@ -3985,8 +4177,8 @@ const at::Tensor& XLANativeFunctions::as_strided_(
   if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,
-                                                       storage_offset);
+        &xla_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,
+                                                   storage_offset);
   }
   tensor_methods::as_strided_(self_tensor, std::move(xsize), std::move(xstride),
                               XlaHelpers::I64Optional(storage_offset));
@@ -4004,7 +4196,7 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
                                              at::SymIntArrayRef sym_size,
                                              bool implicit) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
+  std::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
   if (size.has_value()) {
     return bridge::AtenFromXlaTensor(tensor_methods::expand(
         bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(*size)));

@@ -413,7 +413,7 @@ xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
   return grad_output * (xla::Neg(max_deriv) - sign * (buffer - one) / buffer);
 }
 
-xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps) {
+xla::XlaOp BuildLogit(xla::XlaOp input, std::optional<double> eps) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
                                                   input.builder());

@@ -2,6 +2,7 @@
 
 #include <ATen/DLConvertor.h>
 
+#include "absl/status/status.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ops/device_data.h"
@@ -16,7 +17,6 @@
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_future.h"
 #include "xla/pjrt/pjrt_layout.h"
-#include "xla/status.h"
 
 namespace torch_xla {
 
@@ -56,7 +56,7 @@ DLDeviceType DLDeviceTypeForDevice(const xla::PjRtDevice& device) {
 DLDevice DLDeviceForDevice(const xla::PjRtDevice& device) {
   DLDevice dlDevice;
   dlDevice.device_type = DLDeviceTypeForDevice(device);
-  dlDevice.device_id = device.local_hardware_id();
+  dlDevice.device_id = device.local_hardware_id().value();
   return dlDevice;
 }
 
@@ -115,6 +115,7 @@ std::vector<int64_t> StridesForShape(xla::PrimitiveType element_type,
 
 // Convert an XLA tensor to a dlPack tensor.
 DLManagedTensor* toDLPack(const at::Tensor& input) {
+  XLA_CHECK(bridge::IsXlaTensor(input)) << "The input should be an XLA tensor";
   std::shared_ptr<runtime::ComputationClient::Data> handle =
       get_data_handle(input);
   XLA_CHECK(handle != nullptr)
@@ -147,7 +148,7 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
   pack->tensor.manager_ctx = pack.get();
   pack->tensor.deleter = DLPackTensorDeleter;
   dt.device = DLDeviceForDevice(*pjrt_buffer->device());
-  dt.device.device_id = pjrt_buffer->device()->local_hardware_id();
+  dt.device.device_id = pjrt_buffer->device()->local_hardware_id().value();
   dt.ndim = pjrt_buffer->dimensions().size();
   dt.dtype = PrimitiveTypeToDLDataType(pjrt_buffer->element_type());
 
@@ -324,7 +325,7 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
   if (dlmt->deleter) {
     on_delete_callback = [dlmt]() { dlmt->deleter(dlmt); };
   }
-  xla::StatusOr<std::unique_ptr<xla::PjRtBuffer>> pjrt_buffer =
+  absl::StatusOr<std::unique_ptr<xla::PjRtBuffer>> pjrt_buffer =
       device->client()->CreateViewOfDeviceBuffer(
           static_cast<char*>(dlmt->dl_tensor.data) +
               dlmt->dl_tensor.byte_offset,

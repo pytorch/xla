@@ -70,6 +70,12 @@ source ~/.bashrc
 ```
 
 ### Wheel
+
+> **_NOTE:_**  The wheel file is compatible only with x86_64 linux based architecutre. To check the architecture of your linux system, execute the following command:
+> ```
+>uname -a
+> ```
+
 ```
 pip3 install torch==2.3.0
 # GPU whl for python 3.10 + cuda 12.1
@@ -78,9 +84,11 @@ pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.
 Wheels for other Python version and CUDA version can be found [here](https://github.com/pytorch/xla?tab=readme-ov-file#available-docker-images-and-wheels).
 
 
-## Run a simple model
-In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).
+## Run some simple models
+In order to run below examples, you need to clone the pytorch/xla repository.
 
+### MP_ImageNet Example
+This example uses ImageNet. It is included in what we already cloned in our Docker container.
 ```
 (pytorch) root@20ab2c7a2d06:/# export GPU_NUM_DEVICES=1 PJRT_DEVICE=CUDA
 (pytorch) root@20ab2c7a2d06:/# git clone --recursive https://github.com/pytorch/xla.git
@@ -95,6 +103,26 @@ Epoch 1 train begin 06:12:38
 | Training Device=xla:0/0 Epoch=1 Step=100 Loss=3.92699 Rate=384.33 GlobalRate=152.40 Time=06:14:02
 | Training Device=xla:0/0 Epoch=1 Step=120 Loss=2.68816 Rate=388.35 GlobalRate=169.49 Time=06:14:09
 ```
+### ResNet Example
+This example uses ResNet.
+```
+(pytorch) root@20ab2c7a2d06:/# python3 /xla/examples/train_resnet_base.py
+1:35PM UTC on Jun 08, 2024
+epoch: 1, step: 0, loss: 6.887794017791748, rate: 8.746502586051985
+epoch: 1, step: 10, loss: 6.877807140350342, rate: 238.4789458412044
+epoch: 1, step: 20, loss: 6.867819786071777, rate: 329.86095958663503
+epoch: 1, step: 30, loss: 6.857839584350586, rate: 367.3038003653586
+epoch: 1, step: 40, loss: 6.847847938537598, rate: 381.53141087190835
+epoch: 1, step: 50, loss: 6.837860584259033, rate: 387.80462249591113
+...
+epoch: 1, step: 260, loss: 6.628140926361084, rate: 391.135639565343
+epoch: 1, step: 270, loss: 6.618192195892334, rate: 391.6901797745233
+epoch: 1, step: 280, loss: 6.608224391937256, rate: 391.1602680460045
+epoch: 1, step: 290, loss: 6.598264217376709, rate: 391.6731498290759
+Epoch 1 train end  1:36PM UTC
+```
+
+
 ## AMP (AUTOMATIC MIXED PRECISION)
 AMP is very useful on GPU training and PyTorch/XLA reuse Cuda's AMP rule. You can checkout our [mnist example](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py) and [imagenet example](https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_amp.py). Note that we also used a modified version of [optimizers](https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree) to avoid the additional sync between device and host.
 
@@ -138,6 +166,6 @@ XLA_CUDA=1 python setup.py install
 
 3. Verify if PyTorch and PyTorch/XLA have been installed successfully.
 
-If you can run the test in the section
-[Run a simple model](#run-a-simple-model) successfully, then PyTorch and
+If you can run the tests in the section
+[Run some simple models](#run-some-simple-models) successfully, then PyTorch and
 PyTorch/XLA should have been installed successfully.
