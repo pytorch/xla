@@ -5,6 +5,9 @@ import torch
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
+
+import torch.nn as nn
 
 
 class Eager(unittest.TestCase):
@@ -14,6 +17,7 @@ class Eager(unittest.TestCase):
     torch_xla.experimental.eager_mode(True)
 
   def test_eager_basic(self):
+    xm.wait_device_ops()
     met.clear_all()
     self.assertTrue(torch_xla.experimental.is_eager_mode())
     device = torch_xla.device()
@@ -88,6 +92,38 @@ class Eager(unittest.TestCase):
     xm.set_rng_state(old_seed)
     t2 = torch.randn(12, 13, device=device)
     self.assertTrue(torch.allclose(t1.cpu(), t2.cpu()))
+
+  def test_batch_norm_execute_once(self):
+    xm.wait_device_ops()
+    device = torch_xla.device()
+    m = nn.BatchNorm2d(16).to(device)
+    m.train()
+    input = torch.randn(8, 16, 8, 32).to(device)
+    met.clear_all()
+    output = m(input)
+    self.assertIn('xla::native_batch_norm', met.counter_names())
+    # native_batch_norm has 5 outputs, we should execute them in one graph.
+    # However in the egaer mode there will be 2 more graphs to broadcast
+    # 0 to the `u8[0]` and `f32[8,16,8,32]` and one more graph to generate
+    # s64[].
+    self.assertLessEqual(met.metric_data('EagerOpExecuteTime')[0], 4)
+    # make sure running_mean becomes a XLA_Data
+    self.assertIn('Data Shape: f32[16]',
+                  torch_xla._XLAC._get_xla_tensor_debug_info(m.running_mean))
+
+  def test_svd_execute_once(self):
+    device = torch_xla.device()
+    a = torch.randn(5, 3).to(device)
+    xm.wait_device_ops()
+    met.clear_all()
+    u, s, v = torch.svd(a)
+    self.assertIn('xla::_linalg_svd', met.counter_names())
+    # svd has 3 outputs, we should execute them in one graph. However in the
+    # eager mode there will 1 more graph to create an empty f32[5,3] and 2 more
+    # graphs to transpose the results.
+    self.assertLessEqual(met.metric_data('EagerOpExecuteTime')[0], 4)
+    self.assertIn('Data Shape: f32[5,3]',
+                  torch_xla._XLAC._get_xla_tensor_debug_info(u))
 
 
 if __name__ == '__main__':
