@@ -78,9 +78,11 @@ def is_xla_tensor(tensor):
 
 
 # TODO(zpcore): remove this function for release 2.5.
-@deprecated
+@deprecated(torch_xla._internal.util.parse_xla_device)
 def parse_xla_device(device):
-  return torch_xla._internal.util.parse_xla_device(device)
+  m = re.match(r'([A-Z]+):(\d+)$', device)
+  if m:
+    return (m.group(1), int(m.group(2)))
 
 
 def get_xla_supported_devices(devkind=None, max_devices=None):
