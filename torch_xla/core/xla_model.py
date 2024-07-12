@@ -78,7 +78,7 @@ def is_xla_tensor(tensor):
 
 
 # TODO(zpcore): remove this function for release 2.5.
-@deprecated(torch_xla._internal.util.parse_xla_device)
+@deprecated(torch_xla.core.xla_model, torch_xla._internal.util.parse_xla_device)
 def parse_xla_device(device):
   m = re.match(r'([A-Z]+):(\d+)$', device)
   if m:
