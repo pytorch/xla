@@ -791,7 +791,10 @@ void adam_optimizer_step_(const XLATensorPtr& found_inf, XLATensorPtr& step,
   if (graph_executor->UseEagerMode()) {
     // Execute the HLO that will run the `adam_optimizer_step_` and in one hlo
     std::vector<XLATensorPtr> tensors_to_sync = {step, param, exp_avg,
-                                                 exp_avg_sq, max_exp_avg_sq};
+                                                 exp_avg_sq};
+    if (amsgrad) {
+      tensors_to_sync.push_back(max_exp_avg_sq);
+    }
     graph_executor->ApplyEagerSync(tensors_to_sync);
   }
 }
