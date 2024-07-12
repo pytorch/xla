@@ -218,8 +218,8 @@ class HybridMesh(Mesh):
     assert len(ici_mesh_shape) == len(dcn_mesh_shape)
     mesh_shape = tuple([x * y for x, y in zip(ici_mesh_shape, dcn_mesh_shape)])
     self.device_attributes = xr.global_runtime_device_attributes()
-    self.device_attributes.sort(
-        key=lambda attr: xm.parse_xla_device(attr['name'])[1])
+    self.device_attributes.sort(key=lambda attr: torch_xla._internal.util.
+                                _parse_xla_device(attr['name'])[1])
 
     if 'slice_index' in self.device_attributes[0] and np.prod(
         dcn_mesh_shape) == 1:
