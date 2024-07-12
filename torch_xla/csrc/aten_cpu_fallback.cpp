@@ -53,7 +53,7 @@ std::vector<std::string> GetFallbackOperations() {
 // if there was any.
 
 // Decide whether to run OpenXLA fallback operations on CUDA.
-bool UseCUDAFallback(const c10::OperatorHandle& op) {
+bool UseOpenXLAFallbackOnCUDA(const c10::OperatorHandle& op) {
   // In order to run OpenXLA fallback operations on CUDA, the 4 conditions below
   // must be true:
 
@@ -429,7 +429,7 @@ void xla_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
     }
   }
 
-  if (UseCUDAFallback(op)) {
+  if (UseOpenXLAFallbackOnCUDA(op)) {
     cuda_fallback(op, stack, true);
   } else {
     // Call the actual boxed CPU fallback.
