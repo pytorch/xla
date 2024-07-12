@@ -7,7 +7,7 @@
 
 // Context
 // =======
-// aten_cpu_fallback.cpp (compiled into _XLAC.so library) uses these functions
+// aten_fallback.cpp (compiled into _XLAC.so library) uses these functions
 // for providing OpenXLA fallback on CUDA. Therefore, they must be defined at
 // some point, somewhere.
 //
