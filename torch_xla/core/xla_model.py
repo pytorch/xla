@@ -33,7 +33,7 @@ _DEVICE_CONTEXTS_LOCK = threading.Lock()
 
 # Note [Dynamo WORLD_SIEZ and ORDINAL]
 # Belows are workaround to cache the ordinal and world_size such that
-# Dynamo won't do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.
+# Dynamo won't do graph breaks when xm.pjrt_world_size() and xm.get_ordinal() are called.
 _WORLD_SIZE = None
 _ORDINAL = None
 
@@ -48,7 +48,7 @@ def _init_world_size_ordinal():
     return
 
   if _WORLD_SIZE is None:
-    _WORLD_SIZE = xrt_world_size()
+    _WORLD_SIZE = pjrt_world_size()
     _ORDINAL = get_ordinal()
 
 
@@ -115,6 +115,14 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
 
 
 def xrt_world_size(defval=1):
+  # TODO(zpcore): remove this function for release 2.5.
+  logging.warning(
+      "function xrt_world_size will be replaced with pjrt_world_size in release 2.5"
+  )
+  return pjrt_world_size(defval)
+
+
+def pjrt_world_size(defval=1):
   """Retrieves the number of devices which is taking part of the replication.
 
   Args:
@@ -135,7 +143,7 @@ def xrt_world_size(defval=1):
 def get_ordinal(defval=0):
   """Retrieves the replication ordinal of the current thread.
 
-  The ordinals range from 0 to `xrt_world_size()` minus 1.
+  The ordinals range from 0 to `pjrt_world_size()` minus 1.
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
@@ -479,8 +487,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
   groups = groups or []
 
   # No-op if there is only one device
-  if xrt_world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE', bool,
-                                                False):
+  if pjrt_world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE', bool,
+                                                 False):
     if isinstance(inputs, torch.Tensor):
       return inputs.clone()
     else:
@@ -533,7 +541,7 @@ def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
   padding = [0] * (2 * value.dim())
   ordinal = get_ordinal()
   if groups is None:
-    left, right = ordinal, xrt_world_size() - 1 - ordinal
+    left, right = ordinal, pjrt_world_size() - 1 - ordinal
   else:
     ordinals = dict()
     for g in groups:
@@ -584,7 +592,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
       "Replica groups must have the same number of replicas/shards."
   else:
     # All replicas belong to a single group
-    shard_count = xrt_world_size()
+    shard_count = pjrt_world_size()
 
   token, devctx = _get_all_reduce_token()
 
@@ -1137,7 +1145,7 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout when reducing gradients.
       See `xm.all_reduce` for details.
   """
-  count = xrt_world_size()
+  count = pjrt_world_size()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
     all_reduce(

@@ -18,7 +18,7 @@ def _mp_fn():
     train_loader = pl.MpDeviceLoader(train_loader, device)
     max_steps = 10
     for step, inputs in enumerate(train_loader):
-      xm.all_reduce('sum', [inputs], scale=1.0 / xm.xrt_world_size())
+      xm.all_reduce('sum', [inputs], scale=1.0 / xm.pjrt_world_size())
       if step > max_steps:
         break
   else:

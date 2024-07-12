@@ -11,7 +11,7 @@ import torch.distributed as dist
 def _mp_fn(index):
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
-    world_size = xm.xrt_world_size()
+    world_size = xm.pjrt_world_size()
     dist.init_process_group('xla', init_method='xla://')
     # note that we can't use torch.tensor(torch.distributed.get_rank()) directly
     # since 0 and 1 will be special case into constant. In collective ops we need

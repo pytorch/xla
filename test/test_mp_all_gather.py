@@ -12,7 +12,7 @@ def all_gather(tensor, dim):
 
 def _mp_fn(index):
   device = xm.xla_device()
-  world_size = xm.xrt_world_size()
+  world_size = xm.pjrt_world_size()
   input_list_size = 5
   if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
     # Testing with a single replica group

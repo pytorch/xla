@@ -84,12 +84,12 @@ def train_mnist(flags, **kwargs):
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=60000 // flags.batch_size // xm.pjrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=10000 // flags.batch_size // xm.pjrt_world_size())
   else:
     train_dataset = datasets.MNIST(
         os.path.join(flags.datadir, str(xm.get_ordinal())),
@@ -106,10 +106,10 @@ def train_mnist(flags, **kwargs):
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     train_sampler = None
-    if xm.xrt_world_size() > 1:
+    if xm.pjrt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
-          num_replicas=xm.xrt_world_size(),
+          num_replicas=xm.pjrt_world_size(),
           rank=xm.get_ordinal(),
           shuffle=True)
     train_loader = torch.utils.data.DataLoader(
@@ -127,7 +127,7 @@ def train_mnist(flags, **kwargs):
         num_workers=flags.num_workers)
 
   # Scale learning rate to num cores
-  lr = flags.lr * xm.xrt_world_size()
+  lr = flags.lr * xm.pjrt_world_size()
 
   device = xm.xla_device()
   device_hw = xm.xla_device_hw(device)
@@ -160,7 +160,7 @@ def train_mnist(flags, **kwargs):
       if scaler:
         scaler.scale(loss).backward()
         gradients = xm._fetch_gradients(optimizer)
-        xm.all_reduce('sum', gradients, scale=1.0 / xm.xrt_world_size())
+        xm.all_reduce('sum', gradients, scale=1.0 / xm.pjrt_world_size())
         scaler.step(optimizer)
         scaler.update()
       else:

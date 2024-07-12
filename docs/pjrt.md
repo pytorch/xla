@@ -70,7 +70,7 @@ Sample diff from XRT to PJRT:
 
  def _mp_fn(index):
    device = xm.xla_device()
--  dist.init_process_group('xla', rank=xm.get_ordinal(), world_size=xm.xrt_world_size())
+-  dist.init_process_group('xla', rank=xm.get_ordinal(), world_size=xm.pjrt_world_size())
 +  dist.init_process_group('xla', init_method='xla://')
 
    torch.manual_seed(42)

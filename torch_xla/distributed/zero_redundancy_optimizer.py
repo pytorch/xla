@@ -69,7 +69,7 @@ class ZeroRedundancyOptimizer(Optimizer):
   ):
     super().__init__(params, defaults)
 
-    self.global_world_size = xm.xrt_world_size()
+    self.global_world_size = xm.pjrt_world_size()
     self.global_rank = xm.get_ordinal()
     self._sharding_groups = [list(range(self.global_world_size))
                             ] if sharding_groups is None else sharding_groups
