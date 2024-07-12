@@ -904,7 +904,7 @@ void BuildProfilerSubmodule(py::module* m) {
              return py::none();
            })
       .def("set_metadata", &xla::profiler::TraceMeWrapper::SetMetadata)
-      .def_static("is_enabled", &xla::profiler::TraceMeWrapper::IsEnabled);
+      .def_static("is_enabled", &tsl::profiler::TraceMe::Active);
 
   py::class_<torch::lazy::ScopePusher,
              std::unique_ptr<torch::lazy::ScopePusher>>
@@ -1726,9 +1726,9 @@ void InitXlaModuleBindings(py::module m) {
     return bridge::AtenDeviceToXlaDevice(device_str).ordinal();
   });
   m.def("_xla_get_device_attributes", [](const std::string& device_str) {
-    const absl::flat_hash_map<
-        std::string, runtime::ComputationClient::DeviceAttribute>& attributes =
-        runtime::GetComputationClient()->GetDeviceAttributes(
+    const absl::flat_hash_map<std::string,
+                              runtime::ComputationClient::DeviceAttribute>
+        attributes = runtime::GetComputationClient()->GetDeviceAttributes(
             bridge::AtenDeviceToXlaDevice(device_str).toString());
 
     py::dict dict;

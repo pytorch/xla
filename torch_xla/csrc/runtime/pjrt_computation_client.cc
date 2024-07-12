@@ -938,7 +938,7 @@ int PjRtComputationClient::GetNumProcesses() const {
 };
 
 const absl::flat_hash_map<
-    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 PjRtComputationClient::GetDeviceAttributes(const std::string& device) {
   return PjRtComputationClient::StringToPjRtDevice(device)->Attributes();
 }

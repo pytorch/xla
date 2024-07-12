@@ -93,7 +93,7 @@ void ReportComputationError(
   }
   ss << "StackTrace:\n" << tsl::CurrentStackTrace() << "\n";
   ss << "Status: " << status << "\n";
-  XLA_LOG_LINES(tsl::ERROR, ss.str());
+  XLA_LOG_LINES(ERROR, ss.str());
   throw std::runtime_error(status.ToString());
 }
 

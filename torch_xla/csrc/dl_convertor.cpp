@@ -56,7 +56,7 @@ DLDeviceType DLDeviceTypeForDevice(const xla::PjRtDevice& device) {
 DLDevice DLDeviceForDevice(const xla::PjRtDevice& device) {
   DLDevice dlDevice;
   dlDevice.device_type = DLDeviceTypeForDevice(device);
-  dlDevice.device_id = device.local_hardware_id();
+  dlDevice.device_id = device.local_hardware_id().value();
   return dlDevice;
 }
 
@@ -148,7 +148,7 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
   pack->tensor.manager_ctx = pack.get();
   pack->tensor.deleter = DLPackTensorDeleter;
   dt.device = DLDeviceForDevice(*pjrt_buffer->device());
-  dt.device.device_id = pjrt_buffer->device()->local_hardware_id();
+  dt.device.device_id = pjrt_buffer->device()->local_hardware_id().value();
   dt.ndim = pjrt_buffer->dimensions().size();
   dt.dtype = PrimitiveTypeToDLDataType(pjrt_buffer->element_type());
 
