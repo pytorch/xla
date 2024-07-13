@@ -769,6 +769,51 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
 
     self.assertEqual(expected, actual.cpu())
 
+class DynamoDynamicShapeTest(unittest.TestCase):
+
+  def simple_add(self, a, b):
+    c = a + b
+    return c
+
+  def test_dynamic_shape(self):
+    met.clear_all()
+    device = xm.xla_device()
+
+    compiled_fn = torch.compile(
+        self.simple_add, backend="openxla", fullgraph=True, dynamic=True)
+    
+    a_cpu = torch.randn(3, 4)
+    a_xla = a_cpu.to(device)
+    b_cpu = torch.ones(4)
+    b_xla = b_cpu.to(device)
+    print(f'--------------------')
+    res_cpu = compiled_fn(a_cpu, b_cpu)
+    res_xla = compiled_fn(a_xla, b_xla)
+    print(f'[Testing] {res_cpu=}')
+    print(f'[Testing] {res_xla=}')
+    self.assertTrue(torch.all(torch.eq(res_cpu, res_xla.cpu())))
+    print(f"{met.metric_data('CompileTime')[0]=}")
+    print(f'--------------------')
+
+    c_cpu = torch.randn(5, 6)
+    c_xla = c_cpu.to(device)
+    d_cpu = torch.ones(6)
+    d_xla = d_cpu.to(device)
+    print(f'--------------------')
+    res_cpu_2 = compiled_fn(c_cpu, d_cpu)
+    res_xla_2 = compiled_fn(c_xla, d_xla)
+    print(f'[Testing] {res_cpu_2=}')
+    print(f'[Testing] {res_xla_2=}')
+    self.assertTrue(torch.all(torch.eq(res_cpu_2, res_xla_2.cpu())))
+    print(f"{met.metric_data('CompileTime')[0]=}")
+    print(f'--------------------')
+
+    print('Finished!')
+
+    # self.assertTrue(torch.all(torch.eq(t.cpu(), torch.tensor([10, 11, 12]))))
+
+    # compile_count = met.metric_data('CompileTime')[0]
+
 
 if __name__ == '__main__':
   test = unittest.main()
