@@ -7,18 +7,20 @@ FN = TypeVar('FN')
 
 def deprecated(module, new: FN) -> FN:
   already_warned = [False]
+  def decorator(func):
 
-  @functools.wraps(new)
-  def wrapped(*args, **kwargs):
-    if not already_warned[0]:
-      logging.warning(
-          f'{module.__name__}.{new.__name__} is deprecated. Use {new.__module__}.{new.__name__} instead.'
-      )
-      already_warned[0] = True
+    @functools.wraps(new)
+    def wrapped(*args, **kwargs):
+      if not already_warned[0]:
+        logging.warning(
+            f'{module.__name__}.{new.__name__} is deprecated. Use {new.__module__}.{new.__name__} instead.'
+        )
+        already_warned[0] = True
 
-    return new(*args, **kwargs)
+      return new(*args, **kwargs)
 
-  return wrapped
+    return wrapped
+  return decorator
 
 
 def register_deprecated(module, new: FN):

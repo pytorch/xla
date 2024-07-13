@@ -20,6 +20,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 import os
 from torch_xla.experimental.deprecation import deprecated
+from torch_xla._internal import utils
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -76,9 +77,8 @@ def _get_device_context(device=None):
 def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
 
-
 # TODO(zpcore): remove this function for release 2.5.
-@deprecated(torch_xla.core.xla_model, torch_xla._internal.util.parse_xla_device)
+@deprecated(torch_xla.core, utils.parse_xla_device)
 def parse_xla_device(device):
   m = re.match(r'([A-Z]+):(\d+)$', device)
   if m:

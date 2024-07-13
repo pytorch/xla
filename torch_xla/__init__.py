@@ -236,7 +236,7 @@ except importlib.metadata.PackageNotFoundError:
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
 
 from .experimental import plugins
-from ._internal import neuron, xpu, util  # Additional built-in plugins
+from ._internal import neuron, xpu, utils  # Additional built-in plugins
 
 if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS',
              '0' if _XLAC._has_cuda_support() else '1') == '1':
