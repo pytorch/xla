@@ -77,6 +77,7 @@ def _get_device_context(device=None):
 def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
 
+
 # TODO(zpcore): remove this function for release 2.5.
 @deprecated(torch_xla.core, utils.parse_xla_device)
 def parse_xla_device(device):
