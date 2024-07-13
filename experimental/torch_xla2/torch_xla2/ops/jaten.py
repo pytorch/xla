@@ -1562,12 +1562,12 @@ def _aten_as_strided_scatter(x, src, sizes, strides, storage_offset):
 
 # aten.atan2
 @op(torch.ops.aten.atan2)
-def _aten_atan2(self, other):
+def _aten_atan2(input, other):
   if input.dtype == jnp.int64:
     input = input.astype(jnp.int32)
   if other.dtype == jnp.int64:
     other = other.astype(jnp.int32)
-  return jnp.arctan2(self, other)
+  return jnp.arctan2(input, other)
 
 
 # aten.bitwise_and
