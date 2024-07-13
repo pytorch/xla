@@ -330,7 +330,6 @@ skiplist = {
     "addcdiv",
     "addcmul",
     "arange",
-    "atan2",
     "atleast_1d",
     "atleast_2d",
     "atleast_3d",
