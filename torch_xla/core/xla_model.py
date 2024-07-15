@@ -19,7 +19,7 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 import os
-from torch_xla.experimental.deprecation import deprecated, register_deprecated
+from torch_xla.experimental.deprecation import register_deprecated
 import torch_xla._internal.utils as iutils
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
@@ -45,7 +45,6 @@ XLA_LIB = Library("xla", "DEF")
 aliases = [
     iutils.parse_xla_device,
 ]
-parse_xla_device = deprecated(torch_xla.core, iutils.parse_xla_device)
 for alias in aliases:
   register_deprecated(torch_xla.core, alias)
 
