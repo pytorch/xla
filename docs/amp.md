@@ -77,7 +77,7 @@ for input, target in data:
     # Exits the context manager before backward pass
     scaler.scale(loss).backward()
     gradients = xm._fetch_gradients(optimizer)
-    xm.all_reduce('sum', gradients, scale=1.0 / xm.pjrt_world_size())
+    xm.all_reduce('sum', gradients, scale=1.0 / xr.world_size())
     scaler.step(optimizer)
     scaler.update()
 ```

@@ -6,6 +6,7 @@ Example usage:
 ```python3
 import torch
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP
 
 model = FSDP(my_module)
@@ -45,7 +46,7 @@ ckpt = {
     'shard_metadata': model.get_shard_metadata(),
     'optimizer': optimizer.state_dict(),
 }
-ckpt_path = f'/tmp/rank-{xm.get_ordinal()}-of-{xm.pjrt_world_size()}.pth'
+ckpt_path = f'/tmp/rank-{xm.get_ordinal()}-of-{xr.world_size()}.pth'
 xm.save(ckpt, ckpt_path, master_only=False)
 ```
 * The checkpoint consolidation script can also be launched from the command line as follows.

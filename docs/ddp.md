@@ -36,7 +36,7 @@ dist.init_process_group("xla", rank=rank, world_size=world_size)
 
 ```
 new_rank = xm.get_ordinal()
-world_size = xm.pjrt_world_size()
+world_size = xr.world_size()
 ```
 
 4. Pass `gradient_as_bucket_view=True` to the DDP wrapper.
@@ -69,6 +69,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 # additional imports for xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.distributed.xla_backend
 import torch_xla.distributed.xla_multiprocessing as xmp
 
@@ -96,7 +97,7 @@ def demo_basic(rank):
     # xla specific APIs to get rank, world_size.
     new_rank = xm.get_ordinal()
     assert new_rank == rank
-    world_size = xm.pjrt_world_size()
+    world_size = xr.pworld_size()
 
     print(f"Running basic DDP example on rank {rank}.")
     setup(rank, world_size)
