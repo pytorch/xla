@@ -12,7 +12,7 @@
       PIN="{{ torch_pin.stdout }}"
       if [[ $PIN = \#* ]]; then
         PRNUM="${PIN//[!0-9]/}"
-        git fetch origin "pull/$PRNUM/head"
+        git fetch --no-recurse-submodules origin "pull/$PRNUM/head"
       else
         git fetch --no-recurse-submodules origin {{ torch_pin.stdout }}
       fi
