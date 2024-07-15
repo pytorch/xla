@@ -42,6 +42,8 @@ _ORDINAL = None
 
 XLA_LIB = Library("xla", "DEF")
 
+register_deprecated(torch_xla.core, iutils.parse_xla_device)
+
 
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
@@ -79,7 +81,6 @@ def is_xla_tensor(tensor):
 
 
 # TODO(zpcore): remove this function for release 2.5.
-@deprecated(torch_xla.core, iutils.parse_xla_device)
 def parse_xla_device(device):
   m = re.match(r'([A-Z]+):(\d+)$', device)
   if m:
