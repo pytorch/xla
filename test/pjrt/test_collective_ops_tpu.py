@@ -74,7 +74,7 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
   @staticmethod
   def _reduce_scatter(pin_layout):
     device = xm.xla_device()
-    world_size = xm.pjrt_world_size()
+    world_size = xr.world_size()
     tensor = -torch.arange(world_size, dtype=torch.float32).to(device)
 
     out = xm.reduce_scatter(
@@ -99,7 +99,7 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
   @staticmethod
   def _all_to_all(pin_layout):
     device = xm.xla_device()
-    world_size = xm.pjrt_world_size()
+    world_size = xr.world_size()
 
     tensor = torch.cat(
         [

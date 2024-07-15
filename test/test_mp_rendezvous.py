@@ -1,11 +1,12 @@
 import re
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 def _get_replica_group(index):
-  world_size = xm.pjrt_world_size()
+  world_size = xr.world_size()
   split = world_size // 2
   gid = index // split if split > 0 else 0
   return list(range(0, split)) if index < split else list(

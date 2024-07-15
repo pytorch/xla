@@ -19,6 +19,7 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 import os
+from torch_xla.experimental.deprecation import deprecated
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -40,6 +41,8 @@ _ORDINAL = None
 
 XLA_LIB = Library("xla", "DEF")
 
+xrt_world_size = deprecated(torch_xla.core, torch_xla.runtime.world_size)
+
 
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
@@ -49,7 +52,7 @@ def _init_world_size_ordinal():
     return
 
   if _WORLD_SIZE is None:
-    _WORLD_SIZE = pjrt_world_size()
+    _WORLD_SIZE = runtime.world_size()
     _ORDINAL = get_ordinal()
 
 
@@ -115,36 +118,10 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     return kind_devices[:max_devices] if max_devices else kind_devices
 
 
-def xrt_world_size(defval=1):
-  # TODO(zpcore): remove this function for release 2.5.
-  logging.warning(
-      "function xrt_world_size will be replaced with pjrt_world_size in release 2.5"
-  )
-  return pjrt_world_size(defval)
-
-
-def pjrt_world_size(defval=1):
-  """Retrieves the number of devices which is taking part of the replication.
-
-  Args:
-    defval (int, optional): The default value to be returned in case there is no
-      replication information available.
-      Default: 1
-
-  Returns:
-    The number of devices which is taking part of the replication.
-  """
-  global _WORLD_SIZE
-  if _WORLD_SIZE is not None:
-    return _WORLD_SIZE
-
-  return runtime.world_size()
-
-
 def get_ordinal(defval=0):
   """Retrieves the replication ordinal of the current thread.
 
-  The ordinals range from 0 to `pjrt_world_size()` minus 1.
+  The ordinals range from 0 to `runtime.world_size()` minus 1.
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
@@ -488,8 +465,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
   groups = groups or []
 
   # No-op if there is only one device
-  if pjrt_world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE', bool,
-                                                 False):
+  if runtime.world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE',
+                                                    bool, False):
     if isinstance(inputs, torch.Tensor):
       return inputs.clone()
     else:
@@ -542,7 +519,7 @@ def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
   padding = [0] * (2 * value.dim())
   ordinal = get_ordinal()
   if groups is None:
-    left, right = ordinal, pjrt_world_size() - 1 - ordinal
+    left, right = ordinal, runtime.world_size() - 1 - ordinal
   else:
     ordinals = dict()
     for g in groups:
@@ -593,7 +570,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
       "Replica groups must have the same number of replicas/shards."
   else:
     # All replicas belong to a single group
-    shard_count = pjrt_world_size()
+    shard_count = runtime.world_size()
 
   token, devctx = _get_all_reduce_token()
 
@@ -1181,7 +1158,7 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout when reducing gradients.
       See `xm.all_reduce` for details.
   """
-  count = pjrt_world_size()
+  count = runtime.world_size()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
     bucket_cap_mb = int(os.getenv('ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB', 0))

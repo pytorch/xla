@@ -144,8 +144,10 @@ def global_device_count() -> int:
   return len(torch_xla._XLAC._xla_get_all_devices())
 
 
+# TODO(zpcore): remove the defval argument for release 2.5.
 @requires_pjrt
-def world_size() -> int:
+@functools.lru_cache()
+def world_size(defval=1) -> int:
   """Returns the total number of processes participating in the job."""
   if torch_xla._XLAC._xla_get_replication_devices_count() == 0:
     return 1

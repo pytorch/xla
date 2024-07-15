@@ -2,6 +2,7 @@ import os
 import sys
 import torch
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
@@ -12,7 +13,7 @@ def all_gather(tensor, dim):
 
 def _mp_fn(index):
   device = xm.xla_device()
-  world_size = xm.pjrt_world_size()
+  world_size = xr.world_size()
   input_list_size = 5
   if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
     # Testing with a single replica group

@@ -1,5 +1,6 @@
 import torch
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
@@ -12,7 +13,7 @@ def _test_scalar():
   svalue = 1.25
   rvalue = xm.mesh_reduce('test_mp_mesh_reduce._test_scalar', svalue,
                           reduce_add)
-  assert rvalue == svalue * xm.pjrt_world_size()
+  assert rvalue == svalue * xr.world_size()
 
 
 def _test_tensor():
@@ -23,7 +24,7 @@ def _test_tensor():
   tvalue = torch.tensor([[1, 2], [3, 4], [5, 6]], dtype=torch.float32)
   rvalue = xm.mesh_reduce('test_mp_mesh_reduce._test_tensor', tvalue,
                           reduce_add)
-  assert rvalue.allclose(tvalue * xm.pjrt_world_size())
+  assert rvalue.allclose(tvalue * xr.world_size())
 
 
 def _mp_fn(index):
