@@ -25,6 +25,7 @@ python3 test/test_pallas.py
 python3 test/test_pallas_spmd.py
 python3 test/test_input_output_aliases.py
 python3 test/test_gmm.py
+python3 test/eager/test_eager_spmd.py
 python3 test/torch_distributed/test_torch_distributed_all_gather_xla_backend.py
 python3 test/torch_distributed/test_torch_distributed_all_reduce_xla_backend.py
 python3 test/torch_distributed/test_torch_distributed_multi_all_reduce_xla_backend.py
@@ -39,9 +40,11 @@ python3 examples/train_resnet_amp.py
 
 # HACK: don't confuse local `torch_xla` folder with installed package
 # Python 3.11 has the permanent fix: https://stackoverflow.com/a/73636559
+# Egaer tests will take more HBM, only run them on TPU v4 CI
 TPU_VERSION=$(python -c "import sys; sys.path.remove(''); import torch_xla; print(torch_xla._internal.tpu.version())")
 if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
     python3 examples/eager/train_decoder_only_eager.py
+    python3 examples/eager/train_decoder_only_eager_spmd_data_parallel.py
     python3 examples/eager/train_decoder_only_eager_with_compile.py
     python3 examples/eager/train_decoder_only_eager_multi_process.py
 fi

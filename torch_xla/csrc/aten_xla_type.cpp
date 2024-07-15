@@ -1503,13 +1503,23 @@ at::Tensor XLANativeFunctions::empty_symint(
   // does not actually end up doing any memory initialization, we use that and
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
+  XLATensorPtr xla_tensor;
   if (all_dims_static) {
-    return bridge::AtenFromXlaTensor(tensor_methods::full(
-        XlaHelpers::I64List(int_sizes.value()), 0,
-        GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+    xla_tensor = tensor_methods::full(XlaHelpers::I64List(int_sizes.value()), 0,
+                                      GetXlaDeviceOrCurrent(device),
+                                      at::dtype_or_default(dtype));
+  } else {
+    xla_tensor =
+        tensor_methods::full_symint(sym_size, 0, GetXlaDeviceOrCurrent(device),
+                                    at::dtype_or_default(dtype));
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::full_symint(
-      sym_size, 0, GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+  // `tensor.to` will trigger an `empty` + `_to_copy`. In the egaer mode, the
+  // `full` will be evulated eagerly and got a replicated sharding. We should
+  // leave the sharding to be empty.
+  if (XLAGraphExecutor::Get()->UseEagerMode() && UseVirtualDevice()) {
+    xla_tensor->ClearShardingSpec();
+  }
+  return bridge::AtenFromXlaTensor(xla_tensor);
 }
 
 at::Tensor XLANativeFunctions::empty_strided_symint(
@@ -2742,7 +2752,9 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
 
   // 2) Aid SPMD.
   XLATensor::ShardingSpecPtr sharding = input_tensor->sharding_spec();
-  if (sharding && sharding->sharding.type() != xla::OpSharding::UNKNOWN) {
+  // don't propagate sharding in eager mode.
+  if (!XLAGraphExecutor::Get()->UseEagerMode() && sharding &&
+      sharding->sharding.type() != xla::OpSharding::UNKNOWN) {
     tensor_methods::custom_sharding_(output_tensor,
                                      input_tensor->sharding_spec());
   }
