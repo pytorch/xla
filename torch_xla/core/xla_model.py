@@ -19,7 +19,7 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 import os
-from torch_xla.experimental.deprecation import deprecated
+from torch_xla.experimental.deprecation import deprecated, register_deprecated
 import torch_xla._internal.utils as iutils
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
@@ -42,7 +42,12 @@ _ORDINAL = None
 
 XLA_LIB = Library("xla", "DEF")
 
-register_deprecated(torch_xla.core, iutils.parse_xla_device)
+aliases = [
+    iutils.parse_xla_device,
+]
+parse_xla_device = deprecated(torch_xla.core, iutils.parse_xla_device)
+for alias in aliases:
+  register_deprecated(torch_xla.core, alias)
 
 
 def _init_world_size_ordinal():
@@ -78,13 +83,6 @@ def _get_device_context(device=None):
 
 def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
-
-
-# TODO(zpcore): remove this function for release 2.5.
-def parse_xla_device(device):
-  m = re.match(r'([A-Z]+):(\d+)$', device)
-  if m:
-    return (m.group(1), int(m.group(2)))
 
 
 def get_xla_supported_devices(devkind=None, max_devices=None):
