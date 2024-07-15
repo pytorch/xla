@@ -97,7 +97,7 @@ def demo_basic(rank):
     # xla specific APIs to get rank, world_size.
     new_rank = xm.get_ordinal()
     assert new_rank == rank
-    world_size = xr.pworld_size()
+    world_size = xr.world_size()
 
     print(f"Running basic DDP example on rank {rank}.")
     setup(rank, world_size)
