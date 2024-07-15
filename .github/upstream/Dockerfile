@@ -38,6 +38,8 @@ ENV CXX "${cxx}"
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
+RUN apt-get update 
+
 # Install clang as upstream CI forces clang
 RUN apt-get install -y clang
 # Install valgrind
