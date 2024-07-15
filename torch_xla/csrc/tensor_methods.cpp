@@ -49,6 +49,7 @@
 #include "torch_xla/csrc/ops/discrete_uniform.h"
 #include "torch_xla/csrc/ops/dynamic_expand.h"
 #include "torch_xla/csrc/ops/dynamic_view.h"
+#include "torch_xla/csrc/ops/eigh.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/einsum_backward.h"
 #include "torch_xla/csrc/ops/embedding_bag.h"
@@ -2795,6 +2796,21 @@ XLATensorPtr slice(const XLATensorPtr& input, int64_t dim, int64_t start,
   }
   return input->CreateFrom(torch::lazy::MakeNode<Select>(
       input->GetIrValue(), dim, start, end, step));
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr> eigh(const XLATensorPtr& input,
+                                            c10::string_view uplo) {
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<Eigh>(input->GetIrValue(), uplo);
+  // Here we explictly pass std::nullopt as logical_element_type because
+  // otherwise result will inherit the input's logical_element_type. In the
+  // case of eigh(complex) -> (real, complex), we want to derive the dtype
+  // from IR value instead of input's dtype.
+  return std::make_tuple(
+      input->CreateFrom(torch::lazy::Value(node, 0), std::nullopt),
+      // From https://pytorch.org/docs/stable/generated/torch.linalg.eigh.html,
+      // eigenvectors will have the same dtype as A.
+      input->CreateFrom(torch::lazy::Value(node, 1)));
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> slogdet(const XLATensorPtr& input) {

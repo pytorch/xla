@@ -741,6 +741,21 @@ at::Tensor& XLANativeFunctions::_index_put_impl_(
                                                    accumulate);
 }
 
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_linalg_eigh(
+    const at::Tensor& self, c10::string_view uplo, bool compute_v) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  if (!compute_v) {
+    // Fallback to aten in case of `eigvalsh`.
+    return at::native::call_fallback_fn<&xla_fallback,
+                                        ATEN_OP(_linalg_eigh)>::call(self, uplo,
+                                                                     compute_v);
+  }
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto outputs = tensor_methods::eigh(self_tensor, uplo);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+}
+
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::_linalg_slogdet(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
