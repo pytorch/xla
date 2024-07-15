@@ -431,8 +431,11 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   # Don't reset the scope as we might be under some profiler trace scope.
   xm.mark_step(reset_scope=False)
 
-  # TODO add some comments to explain
-  # input shape -> variables mapping
+  # [Note: Dynamo real-time input-shape cache look-up]
+  # We maintain a mapping of input shapes to outputs of extract_graph_helper.
+  # When dynamic=True in torch.compile call, TorchDynamo will not trigger a 
+  # new recompile. Then TorchXLA needs to figure out if these input shapes have
+  # been seen before. 
   input_shape_mappings = {}
 
   (xla_args_sharding_spec, args_and_out, graph_hash,
@@ -442,8 +445,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
 
   def optimized_mod(*args: tuple):
-    print(f'[WONJOO] optimized_mod starting!')
-
     nonlocal input_shape_mappings
     nonlocal xla_model
     nonlocal xla_args_sharding_spec
@@ -456,37 +457,22 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal xla_args_need_update
     nonlocal skip_checking_input_sharding_threashold
 
-    # TODO do the input shape -> local variables mapping here?
-    print(f'[WONJOO] optimized_mod xla_model=')
-    xla_model.print_readable()
-    print(f'[WONJOO] before updating xla_model.args=')
-    print(xla_model.xla_args)
-
+    # When dynamic=True in torch.compile call, TorchDynamo will directly 
+    # call optimized_mod without compiling. Hence, xla_model's xla_args will 
+    # be different from optimized_mod's args. So we manually set them here.
     xla_model.xla_args = args
 
-    print(f'[WONJOO] after updating xla_model.args=')
-    print(xla_model.xla_args)
-
-    print(f'[WONJOO] before cache look-up')
-    print(f'  {str(graph_hash)=}')
-
+    # See [Note: Dynamo real-time input-shape cache look-up] above.
     arg_input_shapes = []
     for arg in args:
-      print(f'[WONJOO] arg, {arg=}')
-      if isinstance(arg, torch.Tensor):
-        print(f'  tensor.shape, {arg.shape=}')
-      # TODO: Do I really need this isinstance check?
       arg_input_shapes.append(tuple(arg.shape))
     arg_input_shapes = tuple(arg_input_shapes)
-    print(f'[WONJOO] {arg_input_shapes=}')
     if arg_input_shapes in input_shape_mappings:
-      print(f'[WONJOO] seen! {arg_input_shapes=}')
       (xla_args_sharding_spec, args_and_out, graph_hash,
         arg_index_to_need_update_index, none_remover, graph_input_matcher,
         dumb_return_handler,
         xla_args_need_update) = input_shape_mappings[arg_input_shapes]
     else:
-      print(f'[WONJOO] not see seen! {arg_input_shapes=}')
       (xla_args_sharding_spec, args_and_out, graph_hash,
         arg_index_to_need_update_index, none_remover, graph_input_matcher,
         dumb_return_handler,
@@ -496,9 +482,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
                                                 arg_index_to_need_update_index, 
                                                 none_remover, graph_input_matcher,
                                                 dumb_return_handler, xla_args_need_update)
-      
-    print(f'[WONJOO] after cache look-up')
-    print(f'  {graph_hash=}')
 
     original_device: torch.device = _get_input_arg_device(args)
     is_cuda_args: bool = False
@@ -561,8 +544,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     none_remover.add_nones(result)
     if is_cuda_args:
       result = _maybe_move_tensors_to_device(tuple(result), original_device)
-
-    print(f'[WONJOO] optimized_mod finished!')
 
     if len(result) == 1:
       return result[0]
@@ -665,7 +646,6 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     return extract_compiled_graph_helper(xla_model, xla_args)
 
 def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
-  print(f'[WONJOO] extract_compiled_graph_helper xla_model=')
   xla_model.print_readable()
   if _args_on_cuda(xla_args):
     xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
