@@ -1,6 +1,7 @@
 import sys
 import torch
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.distributed.xla_multiprocessing as xmp
 
 
