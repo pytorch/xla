@@ -646,7 +646,6 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     return extract_compiled_graph_helper(xla_model, xla_args)
 
 def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
-  xla_model.print_readable()
   if _args_on_cuda(xla_args):
     xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
 
