@@ -2,7 +2,7 @@
 
 This document shows how to use torch.nn.parallel.DistributedDataParallel in xla,
 and further describes its difference against the native xla data parallel
-approach. You can  find a minimum runable example [here](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_ddp.py).
+approach. You can  find a minimum runnable example [here](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_ddp.py).
 
 
 ## Background / Motivation

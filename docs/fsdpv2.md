@@ -4,7 +4,7 @@ Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that re-expresses t
 an experimental feature that aiming to offer a familiar interface for users to enjoy all the benefits that SPMD brings into
 the table. The design doc is [here](https://github.com/pytorch/xla/issues/6379).
 
-Please review the [SPMD user guide](./spmd_basic.md) before proceeding. You can also find a minimum runable example [here](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py).
+Please review the [SPMD user guide](./spmd_basic.md) before proceeding. You can also find a minimum runnable example [here](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py).
 
 Example usage:
 ```python3
