@@ -433,9 +433,9 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
   # [Note: Dynamo real-time input-shape cache look-up]
   # We maintain a mapping of input shapes to outputs of extract_graph_helper.
-  # When dynamic=True in torch.compile call, TorchDynamo will not trigger a 
+  # When dynamic=True in torch.compile call, TorchDynamo will not trigger a
   # new recompile. Then TorchXLA needs to figure out if these input shapes have
-  # been seen before. 
+  # been seen before.
   input_shape_mappings = {}
 
   (xla_args_sharding_spec, args_and_out, graph_hash,
@@ -457,31 +457,34 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal xla_args_need_update
     nonlocal skip_checking_input_sharding_threashold
 
-    # When dynamic=True in torch.compile call, TorchDynamo will directly 
-    # call optimized_mod without compiling. Hence, xla_model's xla_args will 
+    # When dynamic=True in torch.compile call, TorchDynamo will directly
+    # call optimized_mod without compiling. Hence, xla_model's xla_args will
     # be different from optimized_mod's args. So we manually set them here.
     xla_model.xla_args = args
 
     # See [Note: Dynamo real-time input-shape cache look-up] above.
     arg_input_shapes = []
     for arg in args:
-      arg_input_shapes.append(tuple(arg.shape))
+      if isinstance(arg, torch.Tensor):
+        arg_input_shapes.append(tuple(arg.shape))
     arg_input_shapes = tuple(arg_input_shapes)
     if arg_input_shapes in input_shape_mappings:
       (xla_args_sharding_spec, args_and_out, graph_hash,
-        arg_index_to_need_update_index, none_remover, graph_input_matcher,
-        dumb_return_handler,
-        xla_args_need_update) = input_shape_mappings[arg_input_shapes]
+       arg_index_to_need_update_index, none_remover, graph_input_matcher,
+       dumb_return_handler,
+       xla_args_need_update) = input_shape_mappings[arg_input_shapes]
     else:
       (xla_args_sharding_spec, args_and_out, graph_hash,
-        arg_index_to_need_update_index, none_remover, graph_input_matcher,
-        dumb_return_handler,
-        xla_args_need_update) = extract_graph_helper(xla_model)
-      input_shape_mappings[arg_input_shapes] = (xla_args_sharding_spec, 
+       arg_index_to_need_update_index, none_remover, graph_input_matcher,
+       dumb_return_handler,
+       xla_args_need_update) = extract_graph_helper(xla_model)
+      input_shape_mappings[arg_input_shapes] = (xla_args_sharding_spec,
                                                 args_and_out, graph_hash,
-                                                arg_index_to_need_update_index, 
-                                                none_remover, graph_input_matcher,
-                                                dumb_return_handler, xla_args_need_update)
+                                                arg_index_to_need_update_index,
+                                                none_remover,
+                                                graph_input_matcher,
+                                                dumb_return_handler,
+                                                xla_args_need_update)
 
     original_device: torch.device = _get_input_arg_device(args)
     is_cuda_args: bool = False
@@ -645,6 +648,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   with torch_xla.experimental.eager_mode_context(False):
     return extract_compiled_graph_helper(xla_model, xla_args)
 
+
 def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
   if _args_on_cuda(xla_args):
     xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
@@ -673,7 +677,9 @@ def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
       self_args.append(buffer)
 
   # When dynamic_shape=True, TorchDynamo will pass us shapes as integers. We want to deal with the tensors only for now, so keep them separately.
-  all_xla_args = [xla_arg for xla_arg in xla_args if isinstance(xla_arg, torch.Tensor)] + self_args
+  all_xla_args = [
+      xla_arg for xla_arg in xla_args if isinstance(xla_arg, torch.Tensor)
+  ] + self_args
 
   for xla_arg in xla_args:
     if isinstance(xla_arg, torch.Tensor) and xla_arg.device.type != 'xla':

@@ -333,8 +333,8 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
             rtol=1e-05,
             atol=1e-05))
 
-  def get_loader(self, device, sample_count):
-    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
+  def get_loader(self, device, sample_count, batch_size=4):
+    batch_size = xu.getenv_as('BATCH_SIZE', int, batch_size)
     loader = xu.SampleGenerator(
         data=(torch.randn(batch_size, 3, 224, 224, device=device),
               torch.zeros(batch_size, dtype=torch.int64, device=device)),
@@ -360,8 +360,9 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     xm.mark_step()
     xm.wait_device_ops()
     met.clear_all()
+    dynamo_resnet18 = torch.compile(device_resnet18, backend='openxla')
     for data, _ in loader:
-      dynamo_resnet18 = torch.compile(device_resnet18, backend='openxla')
+      # dynamo_resnet18 = torch.compile(device_resnet18, backend='openxla')
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
@@ -373,6 +374,40 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
         met.metric_data('RunCachedGraphInputData')[0], sample_count)
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
+
+  @skipOnTpu
+  @parameterized.parameters(
+      True,
+      False,
+  )
+  def test_dynamic_shape_resnet18(self, initialize_on_cuda):
+    device = self._choose_proper_device(initialize_on_cuda)
+    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
+    loader = self.get_loader(device, sample_count, batch_size=4)
+    resnet18 = torchvision.models.resnet18()
+    resnet18.eval()
+    device_resnet18 = torchvision.models.resnet18()
+    device_resnet18.load_state_dict(resnet18.state_dict())
+    device_resnet18.to(device)
+    device_resnet18.eval()
+    # materalize the fake data for test purpose
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+    dynamo_resnet18 = torch.compile(
+        device_resnet18, backend='openxla', dynamic=True)
+    for data, _ in loader:
+      output = dynamo_resnet18(data)
+      output_cpu = resnet18(data.cpu())
+      self.assertTrue(
+          torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
+
+    loader_new_shape = self.get_loader(device, sample_count, batch_size=8)
+    for data, _ in loader:
+      output = dynamo_resnet18(data)
+      output_cpu = resnet18(data.cpu())
+      self.assertTrue(
+          torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
 
   def test_resnet18_lazy_vs_dynamo(self):
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
@@ -768,35 +803,6 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
     actual = optfoo(Xt)
 
     self.assertEqual(expected, actual.cpu())
-
-class DynamoDynamicShapeTest(unittest.TestCase):
-
-  def simple_add(self, a, b):
-    c = a + b
-    return c
-
-  def test_dynamic_shape(self):
-    met.clear_all()
-    device = xm.xla_device()
-
-    compiled_fn = torch.compile(
-        self.simple_add, backend="openxla", fullgraph=True, dynamic=True)
-    
-    a_cpu = torch.randn(3, 4)
-    a_xla = a_cpu.to(device)
-    b_cpu = torch.ones(4)
-    b_xla = b_cpu.to(device)
-    res_cpu = compiled_fn(a_cpu, b_cpu)
-    res_xla = compiled_fn(a_xla, b_xla)
-    self.assertTrue(torch.all(torch.eq(res_cpu, res_xla.cpu())))
-
-    c_cpu = torch.randn(5, 6)
-    c_xla = c_cpu.to(device)
-    d_cpu = torch.ones(6)
-    d_xla = d_cpu.to(device)
-    res_cpu_2 = compiled_fn(c_cpu, d_cpu)
-    res_xla_2 = compiled_fn(c_xla, d_xla)
-    self.assertTrue(torch.all(torch.eq(res_cpu_2, res_xla_2.cpu())))
 
 
 if __name__ == '__main__':
