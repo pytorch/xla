@@ -87,6 +87,7 @@ def manual_seed(seed, device=None):
   xm.set_rng_state(seed, device)
 
 
+# TODO(wcromar): Update args to type ParamSpec.
 def launch(
     fn: Callable,
     args: Tuple = (),
