@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>How to do DistributedDataParallel &mdash; PyTorch/XLA master documentation</title>
+  <title>How to do DistributedDataParallel(DDP) &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gite523fdf )
+                  master (2.5.0+gita6ab3fe )
                 </div>
               
             
@@ -302,10 +302,10 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="debug.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gpu.html">How to run with PyTorch/XLA:GPU</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to do DistributedDataParallel(DDP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="runtime.html">PJRT Runtime</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd.html#fully-sharded-data-parallel-via-spmd">Fully Sharded Data Parallel via SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd.html#fully-sharded-data-parallel-fsdp-via-spmd">Fully Sharded Data Parallel(FSDP) via SPMD</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd.html#pytorch-xla-spmd-advanced-topics">PyTorch/XLA SPMD advanced topics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd.html#distributed-checkpointing">Distributed Checkpointing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="torch_compile.html">TorchDynamo(torch.compile) integration in PyTorch XLA</a></li>
@@ -349,7 +349,7 @@
       </li>
 
         
-      <li>How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></li>
+      <li>How to do DistributedDataParallel(DDP)</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
@@ -385,11 +385,11 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="how-to-do-distributeddataparallel">
-<h1>How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code><a class="headerlink" href="#how-to-do-distributeddataparallel" title="Permalink to this heading">¶</a></h1>
+  <div class="section" id="how-to-do-distributeddataparallel-ddp">
+<h1>How to do DistributedDataParallel(DDP)<a class="headerlink" href="#how-to-do-distributeddataparallel-ddp" title="Permalink to this heading">¶</a></h1>
 <p>This document shows how to use torch.nn.parallel.DistributedDataParallel in xla,
 and further describes its difference against the native xla data parallel
-approach.</p>
+approach. You can  find a minimum runnable example <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_ddp.py">here</a>.</p>
 <div class="section" id="background-motivation">
 <h2>Background / Motivation<a class="headerlink" href="#background-motivation" title="Permalink to this heading">¶</a></h2>
 <p>Customers have long requested the ability to use PyTorch’s
@@ -719,6 +719,7 @@ python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts –ckpt_prefix /
 <div class="section" id="example-training-scripts-on-mnist-and-imagenet">
 <h3>Example training scripts on MNIST and ImageNet<a class="headerlink" href="#example-training-scripts-on-mnist-and-imagenet" title="Permalink to this heading">¶</a></h3>
 <ul class="simple">
+<li><p>Minimum example : <cite>``examples/fsdp/train_resnet_fsdp_auto_wrap.py`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_resnet_fsdp_auto_wrap.py">https://github.com/pytorch/xla/blob/master/examples/fsdp/train_resnet_fsdp_auto_wrap.py</a>&gt;`_</p></li>
 <li><p>MNIST: <cite>``test/test_train_mp_mnist_fsdp_with_ckpt.py`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py">https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py</a>&gt;`_ (it also tests checkpoint consolidation)</p></li>
 <li><p>ImageNet: <cite>``test/test_train_mp_imagenet_fsdp.py`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py">https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py</a>&gt;`_</p></li>
 </ul>
@@ -816,7 +817,7 @@ python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.f
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a><ul>
+<li><a class="reference internal" href="#">How to do DistributedDataParallel(DDP)</a><ul>
 <li><a class="reference internal" href="#background-motivation">Background / Motivation</a></li>
 <li><a class="reference internal" href="#how-to-use-distributeddataparallel">How to use DistributedDataParallel</a></li>
 <li><a class="reference internal" href="#benchmarking">Benchmarking</a><ul>
