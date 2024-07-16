@@ -374,5 +374,6 @@ def _mp_fn(index, flags):
 
 if __name__ == '__main__':
   # if running with torchrun, nprocs argument will be omitted.
-  do_debug = True if FLAGS.num_cores == 1 else False
-  torch_xla.launch(_mp_fn, args=(FLAGS,), debug_single_process=do_debug)
+  debug_single_process = True if FLAGS.num_cores == 1 else False
+  torch_xla.launch(
+      _mp_fn, args=(FLAGS,), debug_single_process=debug_single_process)
