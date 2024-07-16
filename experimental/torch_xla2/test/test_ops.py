@@ -326,7 +326,6 @@ skiplist = {
     "trapz",
     "H",
     "T",
-    "_softmax_backward_data",
     "atleast_1d",
     "atleast_2d",
     "atleast_3d",
