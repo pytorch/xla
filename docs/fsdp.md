@@ -61,7 +61,7 @@ The implementation of this class is largely inspired by and mostly follows the s
 ---
 
 ### Example training scripts on MNIST and ImageNet
-
+* Minimum example : [`examples/fsdp/train_resnet_fsdp_auto_wrap.py`](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_resnet_fsdp_auto_wrap.py)
 * MNIST: [`test/test_train_mp_mnist_fsdp_with_ckpt.py`](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py) (it also tests checkpoint consolidation)
 * ImageNet: [`test/test_train_mp_imagenet_fsdp.py`](https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py)
 
