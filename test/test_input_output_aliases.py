@@ -85,10 +85,14 @@ class InputOutputAliasesTest(unittest.TestCase):
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
     torch.allclose(k_cache[slot_mapping[0][0]].cpu(), key[0].cpu())
 
-  @unittest.skip("Fail with functionalization (https://github.com/pytorch/xla/issues/7174)")
+  @unittest.skip(
+      "Fail with functionalization (https://github.com/pytorch/xla/issues/7174)"
+  )
   def test_grad_accum(self):
+
     class MLP(nn.Module):
-      def __init__(self, input_size = 28 * 28, output_size = 10):
+
+      def __init__(self, input_size=28 * 28, output_size=10):
         super(MLP, self).__init__()
         self.fc1 = nn.Linear(input_size, output_size, bias=False)
 
@@ -116,13 +120,20 @@ class InputOutputAliasesTest(unittest.TestCase):
     t_model.train()
     c_model.train()
     accum_steps = 4
-    c_grads_5 = try_grad_accum(c_model, 'cpu', train_x_sample, train_label_sample, accum_steps)
+    c_grads_5 = try_grad_accum(c_model, 'cpu', train_x_sample,
+                               train_label_sample, accum_steps)
     met.clear_metrics()
-    t_grads_5 = try_grad_accum(t_model, dev, train_x_sample, train_label_sample, accum_steps)
+    t_grads_5 = try_grad_accum(t_model, dev, train_x_sample, train_label_sample,
+                               accum_steps)
     torch.testing.assert_close(t_grads_5, c_grads_5, rtol=3e-2, atol=1e-3)
     graph_count, alias_count, _ = met.metric_data("InputOutputAliasCount")
-    assert (graph_count == 2), f"Expect 2 graphs for gradient accumulation test, got {graph_count}"
-    assert (alias_count == 1.0), f"Expect 1 input-output alias pair for gradient accumulation, got {alias_count}"
+    assert (
+        graph_count == 2
+    ), f"Expect 2 graphs for gradient accumulation test, got {graph_count}"
+    assert (
+        alias_count == 1.0
+    ), f"Expect 1 input-output alias pair for gradient accumulation, got {alias_count}"
+
 
 if __name__ == '__main__':
   test = unittest.main()
