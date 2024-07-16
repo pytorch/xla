@@ -328,7 +328,6 @@ skiplist = {
     "T",
     "_softmax_backward_data",
     "addcdiv",
-    "addcmul",
     "atleast_1d",
     "atleast_2d",
     "atleast_3d",
