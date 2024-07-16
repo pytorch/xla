@@ -67,6 +67,17 @@ def _handle_int64_trig(self, func):
   return res
 
 
+def _handle_int64_to_int32_trig(func, args):
+  target_type = None
+  for i in range(len(args)):
+    if args[i].dtype.name == 'int64':
+      target_type = jnp.dtype('int32')
+    if target_type is not None:
+      args[i] = args[i].astype(target_type)
+  res = func(*args)
+  return res
+
+
 @op(
   torch.ops.aten.view_copy,
   torch.ops.aten.view,
@@ -1518,6 +1529,12 @@ def _aten_arange(
 ):
   if dtype:
     dtype = mappings.t2j_dtype(dtype)
+  if start and dtype:
+    start = jax.lax.convert_element_type(start, dtype)
+  if end and dtype:
+    end = jax.lax.convert_element_type(end, dtype)
+  if step and dtype:
+    step = jax.lax.convert_element_type(step, dtype)
   return jnp.arange(
     start,
     end,
@@ -1562,8 +1579,8 @@ def _aten_as_strided_scatter(x, src, sizes, strides, storage_offset):
 
 # aten.atan2
 @op(torch.ops.aten.atan2)
-def _aten_atan2(self, other):
-  return jnp.arctan2(self, other)
+def _aten_atan2(input, other):
+  return _handle_int64_to_int32_trig(jnp.arctan2, [input, other])
 
 
 # aten.bitwise_and
