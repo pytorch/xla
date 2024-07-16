@@ -9,7 +9,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
 import torch_xla.debug.metrics as met
 
-from typing import Any, List, Callable, Optional
+from typing import Any, List, Callable, Optional, Tuple
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
@@ -719,7 +719,7 @@ def gmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512)
 ) -> torch.Tensor:
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
@@ -770,7 +770,7 @@ def tgmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512)
 ) -> torch.Tensor:
   """Compute lhs[:, sizes[i-1]:sizes[i]] @ rhs[sizes[i-1]:sizes[i], :].
 
