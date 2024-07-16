@@ -324,7 +324,6 @@ skiplist = {
     "nanmean",
     "trapezoid",
     "trapz",
-    "H",
     "atleast_1d",
     "atleast_2d",
     "atleast_3d",
