@@ -1,5 +1,6 @@
 """Torch ops implemented using jax."""
 
+import functools
 import sys
 from typing import Optional, Sequence
 
@@ -9,6 +10,7 @@ from jax import numpy as jnp
 import numpy as np
 import torch
 import torch.distributed._functional_collectives
+from torch_xla2 import interop
 from torch_xla2.ops import ops_registry
 from torch_xla2.ops import op_base, mappings
 
@@ -54,14 +56,15 @@ def op(*aten, **kwargs):
 
       match type(a):
         case torch._ops.OpOverloadPacket:
-          opname = a._qualified_op_name
+          opname = a.default.name() if 'default' in a.overloads() else a._qualified_op_name
         case torch._ops.OpOverload:
-          # opname = a.name()
-          continue # prevent multiple funcs from being registered?
+          opname = a.name()
         case _:
           raise RuntimeError(f'oops {a}')
 
-      torch.library.impl(opname, 'privateuseone')(func)
+      torchfunc = functools.partial(interop.call_jax, func)
+      # HACK: to_copy is where we make the initial conversion from CPU tensor to JAX tensor
+      torch.library.impl(opname, 'privateuseone')(torchfunc if a != torch.ops.aten._to_copy else func)
     return func
 
   return inner
@@ -108,14 +111,13 @@ def _aten_add(x, y, *, alpha=1):
   return x + y * alpha
 
 
-@op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
+@op(torch.ops.aten.copy_, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
   x._elem = y._elem
   return x
 
 
 @op(torch.ops.aten.clone)
-@op(torch.ops.aten.clone.default)
 def _aten_clone(x, memory_format=None):
   return x
 
@@ -469,7 +471,6 @@ def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
 
 
 @op(torch.ops.aten.empty_permuted)
-@op(torch.ops.aten.empty_permuted.default)
 @op_base.convert_dtype()
 def _aten_empty_permuted(sizes, physical_layout, dtype=None, **kwargs):
   # Ignore the physical layout,
@@ -478,7 +479,6 @@ def _aten_empty_permuted(sizes, physical_layout, dtype=None, **kwargs):
 
 
 @op(torch.ops.aten.empty_strided)
-@op(torch.ops.aten.empty_strided.default)
 @op_base.convert_dtype()
 def _aten_empty_strided(sizes, stride, dtype=None, **kwargs):
   # Ignore stride, since JAX and torch tensor doesn't share the same memory.
@@ -544,7 +544,6 @@ def permute(t, dims):
 
 @op(torch.ops.aten.unsqueeze)
 @op(torch.ops.aten.unsqueeze_copy)
-@op(torch.ops.aten.unsqueeze.default)
 def _aten_unsqueeze(self, dim):
   if dim < 0:
     dim += self.ndim + 1
@@ -1784,7 +1783,6 @@ def _aten_ge(self, other):
 
 
 @op(torch.ops.aten.glu)
-@op(torch.ops.aten.glu.default)
 def _aten_glu(x, dim=-1):
   return jax.nn.glu(x, dim)
 
@@ -2204,12 +2202,6 @@ def _rand(
   if dtype is not None:
     res = res.astype(dtype)
   return res
-
-
-@op(torch.ops.aten.scalar_tensor.default)
-def _aten_scalar_tensor(val, **kwargs):
-  p = torch.ops.aten.scalar_tensor(val)
-  return mappings.t2j(p)
 
 
 @op(torch.ops.aten.outer)

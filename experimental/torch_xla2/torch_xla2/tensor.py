@@ -71,7 +71,7 @@ class XLATensor2(torch.Tensor):
         cls,
         shape,
         dtype=dtype,
-        device='meta',
+        device='jax:0',
         requires_grad=False,
     )
 
@@ -121,7 +121,8 @@ class XLATensor2(torch.Tensor):
         env = arg._env
         break
 
-    with env:
+    with mode_utils.no_dispatch(), log_nested(env, f'DISPATCH: {_name_of_func(func)}'): # env._function_mode:
+      print(func)
       return func(*args, **(kwargs or {}))
 
   def detach(self):

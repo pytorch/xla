@@ -18,9 +18,4 @@ import torch_xla2.ops.jaten
 #     verbose=True,
 # )
 
-# torch.register_privateuse1_backend('foo')
 torch.utils.rename_privateuse1_backend('jax')
-
-
-# print(foo_module.Tensor)
-print('Create a tensor with `jax` device:', torch.tensor([0], device='jax:0'))
