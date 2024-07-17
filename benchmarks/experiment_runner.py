@@ -12,6 +12,7 @@ import time
 import torch
 import torch._dynamo.utils as dynamo_utils
 import tiers
+import typing
 from typing import Optional, Any, List, Dict, Sequence
 import torch_xla.debug.metrics as met
 from tqdm import tqdm
@@ -206,8 +207,8 @@ class ExperimentRunner:
 
   # TODO: Use `_unique_basename` instead.
   def _get_config_fingerprint(
-      self, experiment_config: OrderedDict[str, Optional[StrOrBool]],
-      model_config: OrderedDict[str, Optional[StrOrBool]]) -> str:
+      self, experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]]) -> str:
     # Experiment `batch_size` may be altered by model in `set_up`, so we will
     # ignore that.
     return "-".join(
@@ -290,9 +291,9 @@ class ExperimentRunner:
   def run_once_and_gather_metrics(
       self, benchmark_experiment: BenchmarkExperiment,
       benchmark_model: BenchmarkModel,
-      experiment_config: OrderedDict[str, Optional[StrOrBool]],
-      model_config: OrderedDict[str,
-                                Optional[StrOrBool]], repeat_iteration: int):
+      experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      repeat_iteration: int):
 
     # Prepare inputs.
     self.reset_rng_state(benchmark_experiment)
@@ -463,8 +464,8 @@ class ExperimentRunner:
   ##############################################################################
 
   def _unique_basename(
-      self, experiment_config: OrderedDict[str, Optional[StrOrBool]],
-      model_config: OrderedDict[str, Optional[StrOrBool]]) -> str:
+      self, experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]]) -> str:
 
     def unique_basename_segment(x, max_len=32):
       s = str(x).replace(" ", "")
@@ -483,14 +484,13 @@ class ExperimentRunner:
     ]
     return "-".join(segments)
 
-  def _get_results_file_path(self,
-                             experiment_config: OrderedDict[
-                                 str, Optional[StrOrBool]],
-                             model_config: OrderedDict[str,
-                                                       Optional[StrOrBool]],
-                             partial_name: str,
-                             ext: Optional[str] = "txt",
-                             sub_dirname: Optional[str] = None) -> str:
+  def _get_results_file_path(
+      self,
+      experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      partial_name: str,
+      ext: Optional[str] = "txt",
+      sub_dirname: Optional[str] = None) -> str:
     is_dir = ext is None
     model_name = model_config["model_name"]
     basename = self._unique_basename(experiment_config, model_config)
@@ -507,12 +507,12 @@ class ExperimentRunner:
 
     return path
 
-  def _get_results_dir_path(self,
-                            experiment_config: OrderedDict[str,
-                                                           Optional[StrOrBool]],
-                            model_config: OrderedDict[str, Optional[StrOrBool]],
-                            partial_name: str,
-                            sub_dirname: Optional[str] = None) -> str:
+  def _get_results_dir_path(
+      self,
+      experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      partial_name: str,
+      sub_dirname: Optional[str] = None) -> str:
     return self._get_results_file_path(
         experiment_config,
         model_config,
@@ -520,15 +520,15 @@ class ExperimentRunner:
         ext=None,
         sub_dirname=sub_dirname)
 
-  def _save_results_file(self,
-                         text: str,
-                         experiment_config: OrderedDict[str,
-                                                        Optional[StrOrBool]],
-                         model_config: OrderedDict[str, Optional[StrOrBool]],
-                         partial_name: str,
-                         ext: str = "txt",
-                         sub_dirname: Optional[str] = None,
-                         mode: str = "w"):
+  def _save_results_file(
+      self,
+      text: str,
+      experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      partial_name: str,
+      ext: str = "txt",
+      sub_dirname: Optional[str] = None,
+      mode: str = "w"):
     path = self._get_results_file_path(experiment_config, model_config,
                                        partial_name, ext, sub_dirname)
     with open(path, mode, encoding="utf-8") as f:
@@ -536,9 +536,9 @@ class ExperimentRunner:
 
   def _save_results(
       self,
-      experiment_config: OrderedDict[str, Optional[StrOrBool]],
-      model_config: OrderedDict[str, Optional[StrOrBool]],
-      metrics: OrderedDict[str, Any],
+      experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      metrics: typing.OrderedDict[str, Any],
       verification_result: Optional[VerificationResult] = VerificationResult(
           VerificationCode.CANNOT_PROCEED_WITH_VERIFICATION)):
     results = OrderedDict()
@@ -558,11 +558,11 @@ class ExperimentRunner:
   # Helpers to dump and analyze the PyTorch profile, PyTorch/XLA metrics, etc. #
   ##############################################################################
 
-  def _dump_pytorch_profile(self, profile: Optional[torch.profiler.profile],
-                            experiment_config: OrderedDict[str,
-                                                           Optional[StrOrBool]],
-                            model_config: OrderedDict[str, Optional[StrOrBool]],
-                            repeat_iteration: int):
+  def _dump_pytorch_profile(
+      self, profile: Optional[torch.profiler.profile],
+      experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      repeat_iteration: int):
     assert profile is not None, "Expect PyTorch profile"
 
     # Dump PyTorch trace.
@@ -653,11 +653,10 @@ class ExperimentRunner:
           metrics["inductor_ops"] = dict()
         metrics["inductor_ops"][op_name] = extract_prof_info(event)
 
-  def _dump_dynamo_counters(self,
-                            experiment_config: OrderedDict[str,
-                                                           Optional[StrOrBool]],
-                            model_config: OrderedDict[str, Optional[StrOrBool]],
-                            repeat_iteration: int):
+  def _dump_dynamo_counters(
+      self, experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      repeat_iteration: int):
     text = f"{json.dumps(dynamo_utils.counters)}\n"
     self._save_results_file(
         text,
@@ -667,9 +666,9 @@ class ExperimentRunner:
         sub_dirname=str(repeat_iteration))
 
   def _dump_pytorch_xla_metrics(
-      self, experiment_config: OrderedDict[str, Optional[StrOrBool]],
-      model_config: OrderedDict[str,
-                                Optional[StrOrBool]], repeat_iteration: int):
+      self, experiment_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      model_config: typing.OrderedDict[str, Optional[StrOrBool]],
+      repeat_iteration: int):
     text = met.metrics_report()
     assert isinstance(text, str)
     self._save_results_file(
