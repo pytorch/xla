@@ -16,6 +16,24 @@ from torch_xla.experimental import plugins
 R = TypeVar('R')
 FN = TypeVar('FN')
 
+# Note [Dynamo WORLD_SIEZ and ORDINAL]
+# Belows are workaround to cache the ordinal and world_size such that
+# Dynamo won't do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.
+_WORLD_SIZE = None
+_ORDINAL = None
+
+
+def _init_world_size_ordinal():
+  global _WORLD_SIZE, _ORDINAL
+
+  # Dynamo doesn't support XRT or multithreaded runtime. See Note [V3-8 Threading]
+  if not runtime.using_pjrt() or runtime.addressable_device_count() > 1:
+    return
+
+  if _WORLD_SIZE is None:
+    _WORLD_SIZE = xrt_world_size()
+    _ORDINAL = get_ordinal()
+
 
 def set_device_type(pjrt_device: str) -> None:
   """Sets the current PjRt device type.
@@ -147,9 +165,32 @@ def global_device_count() -> int:
 @requires_pjrt
 def world_size() -> int:
   """Returns the total number of processes participating in the job."""
+  global _WORLD_SIZE
+  if _WORLD_SIZE is not None:
+    return _WORLD_SIZE
   if torch_xla._XLAC._xla_get_replication_devices_count() == 0:
-    return 1
-  return global_device_count()
+    _WORLD_SIZE = 1
+  else:
+    _WORLD_SIZE = global_device_count()
+  return _WORLD_SIZE
+
+@requires_pjrt
+def get_ordinal(defval=0):
+  """Retrieves the replication ordinal of the current thread.
+
+  The ordinals range from 0 to `runtime.world_size()` minus 1.
+
+  Args:
+    defval (int, optional): The default value to be returned in case there is no
+      replication information available. Ignored for runtime.
+      Default: 0
+
+  Returns:
+    The replication ordinal of the current thread.
+  """
+  global _ORDINAL
+  if _ORDINAL is not None:
+    return _ORDINAL
 
 
 @requires_pjrt
