@@ -178,7 +178,11 @@ def _aten_mm(x, y):
 
 @op(torch.ops.aten.mul.Tensor, torch.ops.aten.mul.Scalar)
 def _aten_mul(x, y):
-  return x * y
+  new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+  res = x * y
+  if isinstance(x, float) or isinstance(y, float):
+    res = res.astype(new_dtype)
+  return res
 
 
 @op(torch.ops.aten.silu)
@@ -274,6 +278,8 @@ def _aten_div(x, y, rounding_mode=""):
   res_dtype = None
   if _is_int(x) and _is_int(y):
     res_dtype = jnp.dtype('float32')
+  if isinstance(x, float) or isinstance(y, float):
+    res_dtype = new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
   res = x / y
   if rounding_mode == "trunc":
     res = jnp.trunc(res)
