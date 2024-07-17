@@ -20,7 +20,6 @@ import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 import os
 from torch_xla.experimental.deprecation import deprecated
-from . import xla_model as this_module
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -36,19 +35,9 @@ _DEVICE_CONTEXTS_LOCK = threading.Lock()
 
 XLA_LIB = Library("xla", "DEF")
 
+from . import xla_model as this_module
 xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size)
 get_ordinal = deprecated(this_module, torch_xla.runtime.get_ordinal)
-
-# def _init_world_size_ordinal():
-#   global _WORLD_SIZE, _ORDINAL
-
-#   # Dynamo doesn't support XRT or multithreaded runtime. See Note [V3-8 Threading]
-#   if not runtime.using_pjrt() or runtime.addressable_device_count() > 1:
-#     return
-
-#   if _WORLD_SIZE is None:
-#     _WORLD_SIZE = runtime.world_size()
-#     _ORDINAL = get_ordinal()
 
 
 class DeviceContext(object):
@@ -111,26 +100,6 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
       kind_devices.append('xla:{}'.format(i))
   if kind_devices:
     return kind_devices[:max_devices] if max_devices else kind_devices
-
-
-# def get_ordinal(defval=0):
-#   """Retrieves the replication ordinal of the current thread.
-
-#   The ordinals range from 0 to `runtime.world_size()` minus 1.
-
-#   Args:
-#     defval (int, optional): The default value to be returned in case there is no
-#       replication information available. Ignored for runtime.
-#       Default: 0
-
-#   Returns:
-#     The replication ordinal of the current thread.
-#   """
-#   global _ORDINAL
-#   if _ORDINAL is not None:
-#     return _ORDINAL
-
-#   return runtime.global_ordinal()
 
 
 def get_local_ordinal(defval=0):

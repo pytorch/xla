@@ -19,7 +19,7 @@ FN = TypeVar('FN')
 
 # Note [Dynamo WORLD_SIEZ and ORDINAL]
 # Belows are workaround to cache the ordinal and world_size such that
-# Dynamo won't do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.
+# Dynamo won't do graph breaks when runtime.xrt_world_size() and runtime.get_ordinal() are called.
 _WORLD_SIZE = None
 _ORDINAL = None
 
@@ -206,6 +206,8 @@ def get_ordinal(defval=0):
   global _ORDINAL
   if _ORDINAL is not None:
     return _ORDINAL
+  __ORDINAL = torch_xla._XLAC._xla_get_default_device_ordinal()
+  return _ORDINAL
 
 
 @requires_pjrt
