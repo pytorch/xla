@@ -8,7 +8,7 @@ In this user guide, we discuss how [GSPMD](https://arxiv.org/abs/2105.04663) is 
 
 [GSPMD](https://arxiv.org/abs/2105.04663) is an automatic parallelization system for common ML workloads. The XLA compiler will transform the single device program into a partitioned one with proper collectives, based on the user provided sharding hints. This feature allows developers to write PyTorch programs as if they are on a single large device without any custom sharded computation ops and/or collective communications to scale.
 
-![alt_text](assets/spmd_mode.png "image_tooltip")
+![alt_text](_static/img/spmd_mode.png "image_tooltip")
 _<span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span>_
 
 To support GSPMD in PyTorch/XLA, we are introducing a new execution mode. Before GSPMD, the execution mode in PyTorch/XLA assumed multiple model replicas, each with a single core (Figure 1.a). This mode of execution, as illustrated in the above  suits data parallelism frameworks, like the popular PyTorch [Distributed Data Parallel (DDP)](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html) or Fully Sharded Data Parallel (FSDP), but is also limited in that a replica can only reside on one device core for execution. PyTorch/XLA SPMD introduces a new execution mode that assumes a single replica with multiple cores (Figure 1.b), allowing a replica to run across multiple device cores. This shift unlocks more advanced parallelism strategies for better large model training performance.
@@ -98,7 +98,7 @@ For a given cluster of devices, a physical mesh is a representation of the inter
 
 We derive a logical mesh based on this topology to create sub-groups of devices which can be used for partitioning different axes of tensors in a model.
 
-![alt_text](assets/mesh_spmd2.png "image_tooltip")
+![alt_text](_static/img/mesh_spmd2.png "image_tooltip")
 
 We abstract logical mesh with [Mesh API](https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharding.py#L17). The axes of the logical Mesh can be named. Here is an example:
 
@@ -502,8 +502,8 @@ from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 generated_table = visualize_tensor_sharding(t, use_color=False)
 ```
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/spmd_debug_1.png">
-  <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="assets/spmd_debug_1_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="_static/img/spmd_debug_1.png">
+  <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="_static/img/spmd_debug_1_light.png">
 </picture>
 
 - Code snippet used `visualize_sharding` and visualization result:
@@ -514,8 +514,8 @@ sharding = '{devices=[2,2]0,1,2,3}'
 generated_table = visualize_sharding(sharding, use_color=False)
 ```
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/spmd_debug_2.png">
-  <img alt="visualize_sharding example on TPU v4-8(single-host)" src="assets/spmd_debug_2_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="_static/img/spmd_debug_2.png">
+  <img alt="visualize_sharding example on TPU v4-8(single-host)" src="_static/img/spmd_debug_2_light.png">
 </picture>
 
 You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style `tiled`, `partial_replication` and `replicated`.
