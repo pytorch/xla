@@ -12,6 +12,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla._internal.tpu as tpu
 from torch_xla.experimental import plugins
+from torch_xla import runtime
 
 R = TypeVar('R')
 FN = TypeVar('FN')
@@ -31,8 +32,20 @@ def _init_world_size_ordinal():
     return
 
   if _WORLD_SIZE is None:
-    _WORLD_SIZE = xrt_world_size()
-    _ORDINAL = get_ordinal()
+    _WORLD_SIZE = runtime.world_size()
+    _ORDINAL = runtime.get_ordinal()
+
+
+def run_once(func):
+  result = []
+
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    if len(result) == 0:
+      result.append(func(*args, **kwargs))
+    return result[0]
+
+  return wrapper
 
 
 def set_device_type(pjrt_device: str) -> None:
@@ -88,6 +101,7 @@ def device_type() -> Optional[str]:
   return pjrt_device.split('_')[0] if pjrt_device else pjrt_device
 
 
+@run_once
 def using_pjrt() -> bool:
   """Returns whether this process is using PjRt runtime.
 
@@ -173,6 +187,7 @@ def world_size() -> int:
   else:
     _WORLD_SIZE = global_device_count()
   return _WORLD_SIZE
+
 
 @requires_pjrt
 def get_ordinal(defval=0):

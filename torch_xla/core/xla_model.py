@@ -34,7 +34,6 @@ REDUCE_MAX = 'max'
 _DEVICE_CONTEXTS = dict()
 _DEVICE_CONTEXTS_LOCK = threading.Lock()
 
-
 XLA_LIB = Library("xla", "DEF")
 
 xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size)
@@ -461,7 +460,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
   groups = groups or []
 
   # No-op if there is only one device
-  if  runtime.world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE',
+  if runtime.world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE',
                                                     bool, False):
     if isinstance(inputs, torch.Tensor):
       return inputs.clone()
