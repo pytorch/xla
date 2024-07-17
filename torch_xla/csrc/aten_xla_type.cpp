@@ -15,6 +15,7 @@
 #include <torch/csrc/lazy/core/util.h>
 
 #include <mutex>
+#include <optional>
 
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/shape_inference.h"
@@ -2266,7 +2267,7 @@ at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
                                    const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   using FnType = XLATensorPtr(const XLATensorPtr&, const XLATensorPtr&,
-                              c10::optional<at::ScalarType>);
+                              std::optional<at::ScalarType>);
   return OpConfig::From(static_cast<FnType*>(tensor_methods::mul))
       .add_input(self)
       .add_input(other)
