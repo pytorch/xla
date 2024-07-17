@@ -231,7 +231,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   // internal state of the object.
   // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
   torch::lazy::Value GetIrValue() const;
-  void SetIrValue(torch::lazy::Value ir_value, bool inplace = true);
+  void SetIrValue(torch::lazy::Value ir_value, bool inplace = true,
+                  bool delay_eager_executation = false);
   void SetInPlaceIrValue(torch::lazy::Value ir_value,
                          bool delay_eager_executation = false);
 
@@ -333,8 +334,6 @@ class XLATensor : public torch::lazy::LazyTensor {
   torch::lazy::Value GetIrValueForTensor(
       const at::Tensor& tensor,
       const torch::lazy::BackendDevice& device) const final;
-
-  static bool UseEagerDebugMode();
 
   bool ShouldSyncIrNode();
 
