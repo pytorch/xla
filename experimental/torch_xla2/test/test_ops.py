@@ -378,7 +378,6 @@ skiplist = {
     "meshgrid",
     "movedim",
     "msort",
-    "mul",
     "mv",
     "nan_to_num",
     "native_dropout_backward",
