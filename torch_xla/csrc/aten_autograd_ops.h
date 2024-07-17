@@ -13,7 +13,7 @@ namespace aten_autograd_ops {
 struct EinsumAutogradFunction
     : public torch::autograd::Function<EinsumAutogradFunction> {
   static torch::Tensor forward(torch::autograd::AutogradContext* ctx,
-                               c10::string_view equation,
+                               std::string_view equation,
                                at::TensorList tensors);
   static torch::autograd::variable_list backward(
       torch::autograd::AutogradContext* ctx,
