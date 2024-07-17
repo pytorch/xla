@@ -32,21 +32,9 @@ def mark_deprecated(module, new: FN) -> FN:
   Returns:
     Wrapper of the new function.
   """
-  already_warned = [False]
 
   def decorator(func):
-
-    @functools.wraps(new)
-    def wrapped(*args, **kwargs):
-      if not already_warned[0]:
-        logging.warning(
-            f'{module.__name__}.{func.__name__} is deprecated. Use {new.__module__}.{new.__name__} instead.'
-        )
-        already_warned[0] = True
-
-      return new(*args, **kwargs)
-
-    return wrapped
+    return deprecated(module, new, old_name=func.__name__)
 
   return decorator
 
