@@ -43,7 +43,6 @@ skiplist = {
     "diff",
     "digamma",
     "dist",
-    "div",
     "equal",
     "erfc",
     "erfinv",
