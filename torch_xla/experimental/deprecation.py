@@ -5,14 +5,15 @@ from typing import TypeVar
 FN = TypeVar('FN')
 
 
-def deprecated(module, new: FN) -> FN:
+def deprecated(module, new: FN, old_name=None) -> FN:
   already_warned = [False]
+  old_name = old_name or new.__name__
 
   @functools.wraps(new)
   def wrapped(*args, **kwargs):
     if not already_warned[0]:
       logging.warning(
-          f'{module.__name__}.{new.__name__} is deprecated. Use {new.__module__}.{new.__name__} instead.'
+          f'{module.__name__}.{old_name} is deprecated. Use {new.__module__}.{new.__name__} instead.'
       )
       already_warned[0] = True
 
