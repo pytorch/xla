@@ -29,6 +29,7 @@ import torch_xla.utils.dlpack as torch_xla_dlpack
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
+disable_partitioner = int(os.environ.get('DYNAMO_DISABLE_PARTITIONER', '0')) == 1
 
 
 @contextmanager
@@ -338,6 +339,10 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
   if not isinstance(xla_out, (tuple, list)):
     xla_out = (xla_out,)
 
+  # TODO @wonjoo clean-up
+  # xla_model(*xla_args) replaces/creates a new tensor, clean it?
+  xm.mark_step(reset_scope=False)
+
   none_remover = NoneRemover()
   none_remover.remove_nones(xla_out)
 
@@ -628,6 +633,11 @@ def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
   # them create XLA tensors, where possible, instead. i.e. replace the
   # device=CPU keyword-argument of tensor constructor nodes by XLA.
   XLAConstructorMoverPass()(xla_model.graph)
+
+  # For debugging only. TODO @wonjoo clean up.
+  if disable_partitioner:
+    xla_model.xla_args = xla_args
+    return extract_internal(xla_model)
 
   # If a model's `forward` function has an in-place op that acts on its `self.tensor`, the
   # `self.tensor` is not included as a part of the `xla_args` and does not get materialized.
