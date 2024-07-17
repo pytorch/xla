@@ -25,8 +25,8 @@ def mark_deprecated(module, new: FN) -> FN:
   """Decorator to mark a function as deprecated and map to new function.
 
   Args:
-    module: current module of the deprecated function is in. Assume current module name is X, you can use `from . import X` and pass X here.
-    new: new function that we map to. Need to include the path the new functioin is in.
+    module: current module of the deprecated function that is in. Assume current module name is X, you can use `from . import X` and pass X here.
+    new: new function that we map to. Need to include the path the new function that is in.
 
   Returns:
     Wrapper of the new function.
