@@ -12,6 +12,8 @@ dependencies = [
     "tensorflow-cpu",
     # Developers should install `dev-requirements.txt` first
     "torch>=2.3.0",
+    # TODO: needed for JIT compiling C++ module
+    "ninja",
 ]
 requires-python = ">=3.10"
 license = {file = "LICENSE"}

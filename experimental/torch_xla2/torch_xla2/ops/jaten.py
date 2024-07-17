@@ -51,6 +51,17 @@ def op(*aten, **kwargs):
   def inner(func):
     for a in aten:
       ops_registry.register_torch_dispatch_op(a, func, **kwargs)
+
+      match type(a):
+        case torch._ops.OpOverloadPacket:
+          opname = a._qualified_op_name
+        case torch._ops.OpOverload:
+          # opname = a.name()
+          continue # prevent multiple funcs from being registered?
+        case _:
+          raise RuntimeError(f'oops {a}')
+
+      torch.library.impl(opname, 'privateuseone')(func)
     return func
 
   return inner
@@ -409,10 +420,21 @@ def _aten_dot(x, y):
 
 @op(torch.ops.aten._to_copy)
 def _aten__to_copy(self, **kwargs):
+  # HACK: should we wrap every function to do this?
+  import torch_xla2
+  if type(self) is torch.Tensor:
+    return torch_xla2.default_env().j2t_iso(mappings.t2j(self))
+    # return torch_xla2.tensor.XLATensor2(mappings.t2j(self))
   dtype = mappings.t2j_dtype(kwargs["dtype"])
   if dtype != self.dtype:
     return self.astype(dtype)
   return jnp.copy(self)
+
+# TODO: not clear what this function should actually do
+# https://github.com/pytorch/pytorch/blob/d96c80649f301129219469d8b4353e52edab3b78/aten/src/ATen/native/native_functions.yaml#L7933-L7940
+@op(torch.ops.aten.lift_fresh)
+def _aten_lift_fresh(self):
+  return self
 
 
 @op(torch.ops.aten.empty)
