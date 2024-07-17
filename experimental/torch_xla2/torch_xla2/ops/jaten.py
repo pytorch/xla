@@ -283,6 +283,7 @@ def _aten_div(x, y, rounding_mode=""):
   res = x / y
   if rounding_mode == "trunc":
     res = jnp.trunc(res)
+    res_dtype = jax.numpy.int64
   if res_dtype:
     res = res.astype(res_dtype)
   return res
