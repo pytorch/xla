@@ -912,7 +912,7 @@ def gmm_xla(
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
     # pytorch custom op does not allow tuple type, use list instead
-    tiling: Optional[list[int]] = [512, 512, 512]):
+    tiling: Optional[List[int]] = [512, 512, 512]):
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(
@@ -925,7 +925,7 @@ def gmm_xla(
 def gmm_non_xla(lhs: torch.Tensor,
                 rhs: torch.Tensor,
                 group_sizes: torch.Tensor,
-                tiling: Optional[list[int]] = [512, 512, 512]):
+                tiling: Optional[List[int]] = [512, 512, 512]):
   # This will be called when dynamo use fake tensor to construct the fake output.
   # We need to make sure output tensor's shape is correct.
   if lhs.device != torch.device("meta"):
