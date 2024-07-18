@@ -1,6 +1,7 @@
 import argparse
 from contextlib import contextmanager
 import functools
+import gc
 import logging
 import os
 from os.path import abspath, exists
@@ -182,3 +183,13 @@ def reset_rng_state(benchmark_experiment: "BenchmarkExperiment"):
   if benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is None:
     device = benchmark_experiment.get_device()
     xm.set_rng_state(SEED, str(device))
+
+
+def cleanup(experiment: "BenchmarkExperiment"):
+  # Garbage-collect right now.
+  gc.collect()
+
+  # If we are using CUDA, clean-up its cache left-over.
+  if experiment.accelerator == "cuda" and torch.cuda.is_available():
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()

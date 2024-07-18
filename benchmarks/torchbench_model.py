@@ -15,7 +15,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import types
 import yaml
-from util import move_to_device, set_cwd, get_torchbench_test_name, find_near_file
+from util import cleanup, move_to_device, set_cwd, get_torchbench_test_name, find_near_file
 from benchmark_model import ModelLoader, BenchmarkModel
 from benchmark_experiment import BenchmarkExperiment
 from typing import Any, Dict, Optional, Sequence, Set, Union
@@ -236,14 +236,6 @@ class TorchBenchModel(BenchmarkModel):
                benchmark_experiment: BenchmarkExperiment):
     super().__init__(suite_name, model_name, benchmark_experiment)
 
-  def _cleanup(self):
-    # Garbage-collect right now.
-    gc.collect()
-
-    # If we are using CUDA, clean-up its cache left-over.
-    if self.is_accelerator_cuda():
-      torch.cuda.empty_cache()
-
   def set_up(self):
     """Set up module, actual batch_size, example_inputs, and optimizer_class
 
@@ -276,7 +268,7 @@ class TorchBenchModel(BenchmarkModel):
       if self.is_accelerator_cuda() and not keep_model_data_on_cuda:
         self.module = self.module.to("cpu")
         self.example_inputs = move_to_device(self.example_inputs, "cpu")
-        self._cleanup()
+        cleanup(self.benchmark_experiment)
 
     # Torchbench has quite different setup for yolov3, so directly passing
     # the right example_inputs
@@ -285,7 +277,7 @@ class TorchBenchModel(BenchmarkModel):
                                         384, 512),)
 
     del benchmark
-    self._cleanup()
+    cleanup(self.benchmark_experiment)
 
   @functools.lru_cache(maxsize=1)
   def benchmark_cls(self):
