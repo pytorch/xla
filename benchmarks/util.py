@@ -80,7 +80,7 @@ def move_to_device(item, device, torch_xla2: bool = False):
   return pytree.tree_map_only(torch.Tensor, move_to_device_func, item)
 
 
-def cast_to_dtype(item, dtype):
+def cast_to_dtype(item: Any, dtype: torch.dtype) -> Any:
   return pytree.tree_map_only(
       torch.Tensor,
       lambda t: t.to(dtype)
@@ -169,3 +169,16 @@ def find_near_file(names: str):
       if exists(path):
         return abspath(path)
   return None
+
+
+def reset_rng_state(benchmark_experiment: "BenchmarkExperiment"):
+  import numpy as np
+  import random
+  SEED = 1337
+  torch.manual_seed(SEED)
+  random.seed(SEED)
+  np.random.seed(SEED)
+  # TODO(piz): setup the rng state on jax for torch_xla2.
+  if benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is None:
+    device = benchmark_experiment.get_device()
+    xm.set_rng_state(SEED, str(device))

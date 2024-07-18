@@ -27,7 +27,7 @@ from enum import Enum
 from torchbench_model import TorchBenchModelLoader
 from benchmark_model import BenchmarkModel
 from benchmark_experiment import ExperimentLoader, BenchmarkExperiment
-from util import move_to_device, randomize_input, us_to_s, ns_to_s, StrOrBool
+from util import move_to_device, randomize_input, reset_rng_state, us_to_s, ns_to_s, StrOrBool
 
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
@@ -53,15 +53,6 @@ class ExperimentRunner:
     self.output_dir = os.path.abspath(self._args.output_dirname)
     os.makedirs(self.output_dir, exist_ok=True)
     self.output_file = os.path.join(self.output_dir, self._args.output_basename)
-
-  def reset_rng_state(self, benchmark_experiment: BenchmarkExperiment):
-    torch.manual_seed(1337)
-    random.seed(1337)
-    np.random.seed(1337)
-    # TODO(piz): setup the rng state on jax for torch_xla2.
-    if benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is None:
-      device = benchmark_experiment.get_device()
-      xm.set_rng_state(1337, str(device))
 
   def run(self):
     is_main_process = self._args.experiment_config is None and \
@@ -259,7 +250,7 @@ class ExperimentRunner:
     model_config = json.loads(self._args.model_config)
     benchmark_experiment = self.experiment_loader.load_experiment(
         experiment_config)
-    self.reset_rng_state(benchmark_experiment)
+    reset_rng_state(benchmark_experiment)
     benchmark_model = self.model_loader.load_model(model_config,
                                                    benchmark_experiment)
 
@@ -296,12 +287,12 @@ class ExperimentRunner:
       repeat_iteration: int):
 
     # Prepare inputs.
-    self.reset_rng_state(benchmark_experiment)
+    reset_rng_state(benchmark_experiment)
     inputs_list = self._prepare_inputs(benchmark_model.example_inputs,
                                        self._args.randomize_input)
 
     # Reset state and sync.
-    self.reset_rng_state(benchmark_experiment)
+    reset_rng_state(benchmark_experiment)
     if benchmark_experiment.torch_xla2:
       self._mark_step(benchmark_experiment, inputs_list)
     else:
