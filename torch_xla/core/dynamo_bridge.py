@@ -435,8 +435,9 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   # We maintain a mapping of input shapes to outputs of extract_graph_helper.
   # When dynamic=True in torch.compile call, TorchDynamo will not trigger a
   # new recompile. Then TorchXLA needs to figure out if these input shapes have
-  # been seen before. The keys are tuple of input shapes, and values are a tuple
-  # of (xla_args_sharding_spec, args_and_out, graph_hash,
+  # been seen before.
+  # Keys: tuple of input shapes
+  # Values: tuple of (xla_args_sharding_spec, args_and_out, graph_hash,
   # arg_index_to_need_update_index, none_remover, graph_input_matcher,
   # dumb_return_handler, xla_args_need_update).
   input_shape_mappings: dict[tuple[int, ...], tuple[object, ...]] = {}
@@ -460,8 +461,21 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal skip_checking_input_sharding_threashold
     nonlocal input_shape_mappings
 
+    # See [Note: Dynamo real-time input-shape cache look-up] above.
     if not torch._dynamo.config.assume_static_by_default:
-      # See [Note: Dynamo real-time input-shape cache look-up] above.
+      # TODO figure out why we need this mark_step or sync here.
+      # Without it, the results are off slightly.
+      xm.mark_step()
+      # input_tensors_to_sync = [
+      #     args[i] for i, x in enumerate(
+      #         torch_xla._XLAC._check_tensor_need_materialization(
+      #             [a for a in args if isinstance(a, torch.Tensor)])) if x
+      # ]
+      # if len(input_tensors_to_sync) > 0:
+      #   torch_xla._XLAC._xla_increment_counter('DynamoSyncInputExecuteTime', 1)
+      #   torch_xla._XLAC._xla_sync_multi(
+      #       input_tensors_to_sync, devices=[], wait=True, sync_xla_data=True)
+
       arg_input_shapes = []
       # When dynamic=True in torch.compile call, TorchDynamo will directly
       # call optimized_mod without compiling. Hence, xla_model's xla_args will
@@ -501,6 +515,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
             torch_xla._XLAC._check_tensor_need_materialization(
                 [a for a in args if isinstance(a, torch.Tensor)])) if x
     ]
+
     if len(input_tensors_to_sync) > 0:
       torch_xla._XLAC._xla_increment_counter('DynamoSyncInputExecuteTime', 1)
       torch_xla._XLAC._xla_sync_multi(
@@ -557,7 +572,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     print(
         '=================== OpenXLA Dynamo Compile Debug End =====================\n'
     )
-
   return optimized_mod
 
 
@@ -568,10 +582,9 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
     self._unsupported_nodes = []
 
   def run_node(self, n: torch.fx.Node):
-    original_metrics = {
-        counter_name: metrics.counter_value(counter_name)
-        for counter_name in metrics.counter_names()
-    }
+    # We need to restore this metric count later, so save it in a separate variable
+    dynamo_extract_graph_helper_metric_count = metrics.counter_value(
+        'DynamoExtractCompiledGraph')
 
     metrics.clear_counters()
     result = super().run_node(n)
@@ -607,8 +620,9 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
       if not (result_is_supported and args_are_supported):
         self._unsupported_nodes.append(n)
 
-    for name, value in original_metrics.items():
-      torch_xla._XLAC._xla_increment_counter(name, value)
+    # Restore this metric counter
+    torch_xla._XLAC._xla_increment_counter(
+        'DynamoExtractCompiledGraph', dynamo_extract_graph_helper_metric_count)
 
     return result
 

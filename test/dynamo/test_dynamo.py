@@ -362,7 +362,6 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     met.clear_all()
     dynamo_resnet18 = torch.compile(device_resnet18, backend='openxla')
     for data, _ in loader:
-      # dynamo_resnet18 = torch.compile(device_resnet18, backend='openxla')
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
@@ -375,7 +374,6 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
 
-  @skipOnTpu
   @parameterized.parameters(
       True,
       False,
@@ -408,14 +406,17 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
         'DynamoExtractCompiledGraph')
 
     loader_new_shape = self.get_loader(device, sample_count, batch_size=2)
-    diffs = []
     for data, _ in loader_new_shape:
       output_new_shape = dynamo_resnet18(data)
       output_cpu_new_shape = resnet18(data.cpu())
       # # TPU has some precision issues, skipping allclose check
-      # if not _is_on_tpu():
-      #   self.assertTrue(
-      #       torch.allclose(output_cpu_new_shape, output_new_shape.cpu(), rtol=1e-05, atol=1e-05))
+      if not _is_on_tpu():
+        self.assertTrue(
+            torch.allclose(
+                output_cpu_new_shape,
+                output_new_shape.cpu(),
+                rtol=1e-05,
+                atol=1e-05))
 
     self.assertEqual(
         met.counter_value('DynamoExtractCompiledGraph'),
