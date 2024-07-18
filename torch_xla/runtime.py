@@ -206,7 +206,7 @@ def get_ordinal(defval=0):
   global _ORDINAL
   if _ORDINAL is not None:
     return _ORDINAL
-  __ORDINAL = torch_xla._XLAC._xla_get_default_device_ordinal()
+  _ORDINAL = torch_xla._XLAC._xla_get_default_device_ordinal()
   return _ORDINAL
 
 
