@@ -1303,7 +1303,7 @@ def _aten_lt(self, other):
 # aten.logical_not_
 @op(torch.ops.aten.logical_not_)
 def _aten_logical_not_(input):
-  return jnp.logical_not_(input)
+  return jnp.logical_not(input)
 
 
 def pool(inputs, init, reduce_fn, window_shape, strides, padding):
