@@ -1,0 +1,1 @@
+.. mdinclude:: ../spmd.md

@@ -13,7 +13,7 @@ This section provides a brief overview of the basic details of PyTorch XLA,
 
 Unlike regular PyTorch, which executes code line by line and does not block execution until the value of a <ins> PyTorch tensor </ins> is fetched, PyTorch XLA works differently. It iterates through the python code and records the operations on <ins> (PyTorch) XLA tensors </ins> in an intermediate representation (IR) graph until it encounters a barrier (discussed below). This process of generating the IR graph is referred to as tracing (LazyTensor tracing or code tracing). PyTorch XLA then converts the IR graph to a lower-level machine-readable format called HLO (High-Level Opcodes). HLO is a representation of a computation that is specific to the XLA compiler and allows it to generate efficient code for the hardware that it is running on. HLO is fed to the XLA compiler for compilation and optimization. Compilation is then cached by PyTorch XLA to be reused later if/when needed. The compilation of the graph is done on the host (CPU), which is the machine that runs the Python code. If there are multiple XLA devices, the host compiles the code for each of the devices separately except when using SPMD (single-program, multiple-data). For example, v4-8 has one host machine and [four devices](https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#tpu_v4). In this case the host compiles the code for each of the four devices separately. In case of pod slices, when there are multiple hosts, each host does the compilation for XLA devices it is attached to. If SPMD is used, then the code is compiled only once (for given shapes and computations) on each host for all the devices.
 
-![img](assets/pytorchXLA_flow.svg)
+![img](_static/img/pytorchXLA_flow.svg)
 
 For more details and examples, please refer to the [LazyTensor guide](https://pytorch.org/blog/understanding-lazytensor-system-performance-with-pytorch-xla-on-cloud-tpu/).
 
@@ -32,7 +32,7 @@ for x, y in tensors_on_device:
 
 Without a barrier, the Python tracing will result in a single graph that wraps the addition of tensors `len(tensors_on_device)` times. This is because the `for` loop is not captured by the tracing, so each iteration of the loop will create a new  subgraph corresponding to the computation of `z += x+y` and add it to the graph. Here is an example when `len(tensors_on_device)=3`.
 
-![img](assets/IRgraph_no_markstep.png)
+![img](_static/img/IRgraph_no_markstep.png)
 
 However, introducing a barrier at the end of the loop will result in a smaller graph that will be compiled once during the first pass inside the `for` loop and will be reused for the next  `len(tensors_on_device)-1 ` iterations. The barrier will signal to the tracing that the graph traced so far can be submitted for execution, and if that graph has been seen before, a cached compiled program will be reused.
 
@@ -44,7 +44,7 @@ for x, y in tensors_on_device:
 
 In this case there will be a small graph that is used `len(tensors_on_device)=3` times.
 
-![img](assets/IRgraph_markstep.png)
+![img](_static/img/IRgraph_markstep.png)
 
 It is important to highlight that in PyTorch XLA Python code inside for loops is traced and a new graph is constructed for each iteration if there is a barrier at the end. This can be a significant performance bottleneck.
 
@@ -216,27 +216,27 @@ Starting from Stable Diffusion model version 2.1
 
 If we capture a profile without inserting any traces, we will see the following:
 
-![Alt text](assets/image.png)
+![Alt text](_static/img/image.png)
 
 The single TPU device on v4-8, which has two cores, appears to be busy. There are no significant gaps in their usage, except for a small one in the middle. If we scroll up to try to find which process is occupying the host machine, we will not find any information. Therefore, we will add `xp.traces` to the pipeline [file](https://github.com/pytorch-tpu/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py) as well as the U-net [function](https://github.com/pytorch-tpu/diffusers/blob/main/src/diffusers/models/unet_2d_condition.py). The latter may not be useful for this particular use case, but it does demonstrate how traces can be added in different places and how their information is displayed in TensorBoard.
 
 If we add traces and re-capture the profile with the largest batch size that can fit on the device (32 in this case), we will see that the gap in the device is caused by a Python process that is running on the host machine.
-![Alt text](assets/image-1.png)
-![Alt text](assets/image-2.png)
+![Alt text](_static/img/image-1.png)
+![Alt text](_static/img/image-2.png)
 
 We can use the appropriate tool to zoom in on the timeline and see which process is running during that period. This is when the Python code tracing happens on the host, and we cannot improve the tracing further at this point.
 
 
 Now, let's examine the XL version of the model and do the same thing. We will add traces to the pipeline [file](https://github.com/pytorch-tpu/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py) in the same way that we did for the 2.1 version and capture a profile.
 
-![Alt text](assets/image-4.png)
+![Alt text](_static/img/image-4.png)
 
 This time, in addition to the large gap in the middle, which is caused by the `pipe_watermark` tracing, there are many small gaps between the inference steps within [this loop](https://github.com/pytorch-tpu/diffusers/blob/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d/src/diffusers/pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py#L814-L830).
 
 First look closer into the large gap that is caused by `pipe_watermark`. The gap is preceded with `TransferFromDevice` which indicates that something is happening on the host machine that is waiting for computation to finish before proceeding. Looking into watermark [code](https://github.com/pytorch-tpu/diffusers/blob/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d/src/diffusers/pipelines/stable_diffusion_xl/watermark.py#L29), we can see that tensors are transferred to cpu and converted to numpy arrays in order to be processed with `cv2` and `pywt` libraries later. Since this part is not straightforward to optimize, we will leave this as is.
 
 Now if we zoom in on the loop, we can see that the graph within the loop is broken into smaller parts because the `TransferFromDevice` operation happens.
-![Alt text](assets/image-3.png)
+![Alt text](_static/img/image-3.png)
 
 
 If we investigate the U-Net function and the scheduler, we can see that the U-Net code does not contain any optimization targets for PyTorch/XLA. However, there are `.item()` and `.nonzero()` calls inside the [scheduler.step](https://github.com/huggingface/diffusers/blob/15782fd506e8c4a7c2b288fc2e558bd77fdfa51a/src/diffusers/schedulers/scheduling_euler_discrete.py#L371). We can [rewrite](https://github.com/pytorch-tpu/diffusers/blob/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d/src/diffusers/schedulers/scheduling_euler_discrete.py#L310) the function to avoid those calls. If we fix this issue and rerun a profile, we will not see much difference. However, since we have reduced the device-host communication that was introducing smaller graphs, we allowed the compiler to optimize the code better. The function [scale_model_input](https://github.com/huggingface/diffusers/blob/15782fd506e8c4a7c2b288fc2e558bd77fdfa51a/src/diffusers/schedulers/scheduling_euler_discrete.py#L205) has similar issues, and  we can fix these by making the changes we made above to the  `step` function. Overall, since many of the gaps are caused from python level code tracing and graph building, these gaps are not possible to optimize with the current version of PyTorch XLA, but we may see improvements in the future when dynamo is enabled in PyTorch XLA.
