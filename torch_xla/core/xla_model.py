@@ -20,7 +20,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 import os
 from torch_xla.experimental.deprecation import deprecated
-import torch_xla._internal.utils as iutils
+import torch_xla._internal.utils as _utils
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -42,7 +42,8 @@ _ORDINAL = None
 
 XLA_LIB = Library("xla", "DEF")
 
-parse_xla_device = deprecated(torch_xla.core, iutils.parse_xla_device)
+from . import xla_model as this_module
+parse_xla_device = deprecated(this_module, _utils.parse_xla_device)
 
 
 def _init_world_size_ordinal():
