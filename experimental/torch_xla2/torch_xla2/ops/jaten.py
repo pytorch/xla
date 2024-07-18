@@ -1300,6 +1300,11 @@ def _aten_pixel_shuffle(x, upscale_factor):
 def _aten_lt(self, other):
   return self < other
 
+# aten.logical_not_
+@op(torch.ops.aten.logical_not_)
+def _aten_logical_not_(input):
+  return jnp.logical_not_(input)
+
 
 def pool(inputs, init, reduce_fn, window_shape, strides, padding):
   """Helper function to define pooling functions.
