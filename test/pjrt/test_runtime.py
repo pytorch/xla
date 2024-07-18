@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Dict, Optional
 from unittest import mock
+from importlib import reload
 
 import torch_xla
 from absl.testing import absltest, parameterized
@@ -14,6 +15,8 @@ from torch_xla import runtime as xr
 class TestExperimentalPjrt(parameterized.TestCase):
 
   def setUp(self):
+    global xr
+    reload(xr)
     xr.set_device_type('CPU')
 
   @parameterized.parameters(('CPU', 'CPU'), ('CUDA', 'CUDA'), ('TPU', 'TPU'))
