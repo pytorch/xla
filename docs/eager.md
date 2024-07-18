@@ -59,7 +59,7 @@ The implementation of the `torch_xla.experimental.compile` is actually pretty st
 ```python
 torch_xla.experimental.eager_mode(True)
 
-compiled_model = torch_xla.compile(model, backend="openxla")
+compiled_model = torch.compile(model, backend="openxla")
 ```
 It is recommened to use the `torch.compile` instead of `torch_xla.experimental.compile` for inference to reduce the tracing overhad. 
 
