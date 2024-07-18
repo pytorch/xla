@@ -67,9 +67,16 @@ class BenchmarkModel:
   def conversion_dtype(self):
     return None
 
-  def prepare_for_experiment(self, dynamo_compilation_opts: Dict[str, str]):
+  def prepare_for_experiment(self,
+                             dynamo_compilation_opts: Dict[str, str],
+                             force_dtype: Optional[torch.dtype] = None):
     self.device = self.benchmark_experiment.get_device()
-    self.dtype = self.conversion_dtype()
+
+    if force_dtype is None:
+      self.dtype = self.conversion_dtype()
+    else:
+      self.dtype = force_dtype
+
     if self.dtype is not None:
       self.module = self.module.to(self.dtype)
       self.example_inputs = cast_to_dtype(self.example_inputs, self.dtype)
@@ -217,7 +224,8 @@ class ModelLoader:
   def load_model(self,
                  model_config: Dict[str, Any],
                  benchmark_experiment: BenchmarkExperiment,
-                 dummy: bool = False) -> BenchmarkModel:
+                 dummy: bool = False,
+                 force_dtype: Optional[torch.dtype] = None) -> BenchmarkModel:
     suite_name = self.suite_name
     model_name = model_config["model_name"]
     benchmark_model = self.benchmark_model_class(
@@ -229,6 +237,8 @@ class ModelLoader:
     if not dummy:
       benchmark_model.set_up()
       benchmark_model.prepare_for_experiment(
-          dynamo_compilation_opts=self._dynamo_compile_opts)
+          dynamo_compilation_opts=self._dynamo_compile_opts,
+          force_dtype=force_dtype,
+      )
 
     return benchmark_model
