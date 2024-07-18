@@ -1,5 +1,6 @@
 import functools
 import logging
+import importlib
 from typing import TypeVar
 
 FN = TypeVar('FN')
@@ -22,7 +23,7 @@ def deprecated(module, new: FN, old_name=None) -> FN:
   return wrapped
 
 
-def mark_deprecated(module, new: FN) -> FN:
+def mark_deprecated(new: FN) -> FN:
   """Decorator to mark a function as deprecated and map to new function.
 
   Args:
@@ -34,7 +35,8 @@ def mark_deprecated(module, new: FN) -> FN:
   """
 
   def decorator(func):
-    return deprecated(module, new, old_name=func.__name__)
+    return deprecated(
+        importlib.import_module(func.__module__), new, old_name=func.__name__)
 
   return decorator
 
