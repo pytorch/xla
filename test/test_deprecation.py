@@ -4,8 +4,6 @@ import io
 import unittest
 import importlib
 
-from unittest.mock import patch
-
 from torch_xla.experimental.deprecation import deprecated, mark_deprecated
 
 
@@ -15,11 +13,6 @@ def old_function():
 
 def new_function():
   return True
-
-
-@mark_deprecated(new_function)
-def old_funtion_to_wrap():
-  return False
 
 
 class TestDepecation(unittest.TestCase):
@@ -33,7 +26,7 @@ class TestDepecation(unittest.TestCase):
       self.assertIn("random_old_name", log.output[0])
       assert (result)
 
-  @patch('__main__.new_function')
+  @unittest.mock.patch('__main__.new_function')
   def test_decorator(self, mock_new_function):
     mock_new_function.__name__ = "new_name"
     mock_new_function.return_value = True
