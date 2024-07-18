@@ -91,7 +91,7 @@ PjRtCompilationClient::PjRtCompilationClient(
       env::kEnvTpuLibraryPath,
       sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
   XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
-  xla::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
+  absl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
   XLA_CHECK_OK(tpu_status);
 
   absl::flat_hash_map<std::string, xla::PjRtValueType> create_options = {};
@@ -626,7 +626,7 @@ int PjRtCompilationClient::GetNumProcesses() const {
 };
 
 const absl::flat_hash_map<
-    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 PjRtCompilationClient::GetDeviceAttributes(const std::string& device) {
   return PjRtCompilationClient::StringToPjRtDevice(device)->Attributes();
 }
