@@ -22,7 +22,6 @@ import os
 from torch_xla.experimental.deprecation import deprecated
 import torch_xla._internal.utils as _utils
 
-
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
 REDUCE_SUM = 'sum'
