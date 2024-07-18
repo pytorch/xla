@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; PyTorch/XLA master documentation</title>
+  <title>How to run with PyTorch/XLA:GPU &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -29,8 +29,10 @@
   <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="index" title="Index" href="#" />
+    <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="How to do DistributedDataParallel" href="multi_process_distributed.html" />
+    <link rel="prev" title="Troubleshooting" href="debug.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -297,9 +299,9 @@
 <li class="toctree-l1"><a class="reference internal" href="index.html">PyTorch/XLA documentation</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Docs</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="debug.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gpu.html">How to run with PyTorch/XLA:GPU</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to run with PyTorch/XLA:GPU</a></li>
 <li class="toctree-l1"><a class="reference internal" href="multi_process_distributed.html">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a></li>
 <li class="toctree-l1"><a class="reference internal" href="runtime.html">PJRT Runtime</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spmd.html">PyTorch/XLA SPMD User Guide</a></li>
@@ -344,12 +346,14 @@
       </li>
 
         
-      <li>Index</li>
+      <li>How to run with PyTorch/XLA:GPU</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
+            <a href="_sources/gpu.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
         
       </li>
     
@@ -378,342 +382,164 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-
-<h1 id="index">Index</h1>
-
-<div class="genindex-jumpbox">
- <a href="#A"><strong>A</strong></a>
- | <a href="#C"><strong>C</strong></a>
- | <a href="#D"><strong>D</strong></a>
- | <a href="#E"><strong>E</strong></a>
- | <a href="#G"><strong>G</strong></a>
- | <a href="#H"><strong>H</strong></a>
- | <a href="#I"><strong>I</strong></a>
- | <a href="#L"><strong>L</strong></a>
- | <a href="#M"><strong>M</strong></a>
- | <a href="#O"><strong>O</strong></a>
- | <a href="#P"><strong>P</strong></a>
- | <a href="#R"><strong>R</strong></a>
- | <a href="#S"><strong>S</strong></a>
- | <a href="#T"><strong>T</strong></a>
- | <a href="#U"><strong>U</strong></a>
- | <a href="#W"><strong>W</strong></a>
- | <a href="#X"><strong>X</strong></a>
- 
+  <div class="section" id="how-to-run-with-pytorch-xla-gpu">
+<h1>How to run with PyTorch/XLA:GPU<a class="headerlink" href="#how-to-run-with-pytorch-xla-gpu" title="Permalink to this heading">¶</a></h1>
+<p>PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, and CPU. This doc will go over the basic steps to run PyTorch/XLA on a nvidia GPU instances.</p>
+<div class="section" id="create-a-gpu-instance">
+<h2>Create a GPU instance<a class="headerlink" href="#create-a-gpu-instance" title="Permalink to this heading">¶</a></h2>
+<p>You can either use a local machine with GPU attached or a GPU VM on the cloud. For example in Google Cloud you can follow this <a class="reference external" href="https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus">doc</a> to create the GPU VM.</p>
 </div>
-<h2 id="A">A</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.add_step_closure">add_step_closure() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.runtime.addressable_device_count">addressable_device_count() (in module torch_xla.runtime)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.all_gather">all_gather() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.core.xla_model.all_reduce">all_reduce() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.core.xla_model.all_to_all">all_to_all() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-</tr></table>
+<div class="section" id="environment-setup">
+<h2>Environment Setup<a class="headerlink" href="#environment-setup" title="Permalink to this heading">¶</a></h2>
+<p>Make sure you have cuda driver installed on the host.</p>
+<div class="section" id="docker">
+<h3>Docker<a class="headerlink" href="#docker" title="Permalink to this heading">¶</a></h3>
+<p>Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.8/12.1 and python 3.8. We recommend users to create a docker container with corresponding config. For a full list of docker images and wheels, please refer to <a class="reference external" href="https://github.com/pytorch/xla#available-docker-images-and-wheels">this doc</a>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1
 
-<h2 id="C">C</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.spmd.clear_sharding">clear_sharding() (in module torch_xla.distributed.spmd)</a>
-</li>
-      <li><a href="index.html#torch_xla.experimental.compile">compile() (in module torch_xla.experimental)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.debug.metrics.counter_names">counter_names() (in module torch_xla.debug.metrics)</a>
-</li>
-      <li><a href="index.html#torch_xla.debug.metrics.counter_value">counter_value() (in module torch_xla.debug.metrics)</a>
-</li>
-  </ul></td>
-</tr></table>
+# Installing the NVIDIA Container Toolkit per https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+# For example
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  &amp;&amp; curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed &#39;s#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g&#39; | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
 
-<h2 id="D">D</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.device">device() (in module torch_xla)</a>
-</li>
-      <li><a href="index.html#torch_xla.device_count">device_count() (in module torch_xla)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.device_type">device_type() (in module torch_xla.runtime)</a>
-</li>
-      <li><a href="index.html#torch_xla.devices">devices() (in module torch_xla)</a>
-</li>
-  </ul></td>
-</tr></table>
+# Configuring the NVIDIA Container Toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
 
-<h2 id="E">E</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.experimental.eager_mode">eager_mode() (in module torch_xla.experimental)</a>
-</li>
-  </ul></td>
-</tr></table>
+sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1 bin/bash
+sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/bash
+</pre></div>
+</div>
+<p>Note that you need to restart the docker to make gpu devices visible in the docker container. After logging into the docker, you can use <code class="docutils literal notranslate"><span class="pre">nvidia-smi</span></code> to verify the device is setup correctly.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># nvidia-smi</span>
+<span class="n">Thu</span> <span class="n">Dec</span>  <span class="mi">8</span> <span class="mi">06</span><span class="p">:</span><span class="mi">24</span><span class="p">:</span><span class="mi">29</span> <span class="mi">2022</span>
+<span class="o">+-----------------------------------------------------------------------------+</span>
+<span class="o">|</span> <span class="n">NVIDIA</span><span class="o">-</span><span class="n">SMI</span> <span class="mf">510.47.03</span>    <span class="n">Driver</span> <span class="n">Version</span><span class="p">:</span> <span class="mf">510.47.03</span>    <span class="n">CUDA</span> <span class="n">Version</span><span class="p">:</span> <span class="mf">11.6</span>     <span class="o">|</span>
+<span class="o">|-------------------------------+----------------------+----------------------+</span>
+<span class="o">|</span> <span class="n">GPU</span>  <span class="n">Name</span>        <span class="n">Persistence</span><span class="o">-</span><span class="n">M</span><span class="o">|</span> <span class="n">Bus</span><span class="o">-</span><span class="n">Id</span>        <span class="n">Disp</span><span class="o">.</span><span class="n">A</span> <span class="o">|</span> <span class="n">Volatile</span> <span class="n">Uncorr</span><span class="o">.</span> <span class="n">ECC</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">Fan</span>  <span class="n">Temp</span>  <span class="n">Perf</span>  <span class="n">Pwr</span><span class="p">:</span><span class="n">Usage</span><span class="o">/</span><span class="n">Cap</span><span class="o">|</span>         <span class="n">Memory</span><span class="o">-</span><span class="n">Usage</span> <span class="o">|</span> <span class="n">GPU</span><span class="o">-</span><span class="n">Util</span>  <span class="n">Compute</span> <span class="n">M</span><span class="o">.</span> <span class="o">|</span>
+<span class="o">|</span>                               <span class="o">|</span>                      <span class="o">|</span>               <span class="n">MIG</span> <span class="n">M</span><span class="o">.</span> <span class="o">|</span>
+<span class="o">|===============================+======================+======================|</span>
+<span class="o">|</span>   <span class="mi">0</span>  <span class="n">Tesla</span> <span class="n">V100</span><span class="o">-</span><span class="n">SXM2</span><span class="o">...</span>  <span class="n">Off</span>  <span class="o">|</span> <span class="mi">00000000</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mf">04.0</span> <span class="n">Off</span> <span class="o">|</span>                    <span class="mi">0</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">N</span><span class="o">/</span><span class="n">A</span>   <span class="mi">36</span><span class="n">C</span>    <span class="n">P0</span>    <span class="mi">38</span><span class="n">W</span> <span class="o">/</span> <span class="mi">300</span><span class="n">W</span> <span class="o">|</span>      <span class="mi">0</span><span class="n">MiB</span> <span class="o">/</span> <span class="mi">16384</span><span class="n">MiB</span> <span class="o">|</span>      <span class="mi">1</span><span class="o">%</span>      <span class="n">Default</span> <span class="o">|</span>
+<span class="o">|</span>                               <span class="o">|</span>                      <span class="o">|</span>                  <span class="n">N</span><span class="o">/</span><span class="n">A</span> <span class="o">|</span>
+<span class="o">+-------------------------------+----------------------+----------------------+</span>
 
-<h2 id="G">G</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.spmd.get_global_mesh">get_global_mesh() (in module torch_xla.distributed.spmd)</a>
-</li>
-      <li><a href="index.html#torch_xla.runtime.get_master_ip">get_master_ip() (in module torch_xla.runtime)</a>
-</li>
-      <li><a href="index.html#torch_xla.core.xla_model.get_memory_info">get_memory_info() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.core.xla_model.get_rng_state">get_rng_state() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.get_stablehlo">get_stablehlo() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.core.xla_model.get_stablehlo_bytecode">get_stablehlo_bytecode() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.runtime.global_device_count">global_device_count() (in module torch_xla.runtime)</a>
-</li>
-      <li><a href="index.html#torch_xla.runtime.global_ordinal">global_ordinal() (in module torch_xla.runtime)</a>
-</li>
-      <li><a href="index.html#torch_xla.runtime.global_runtime_device_count">global_runtime_device_count() (in module torch_xla.runtime)</a>
-</li>
-  </ul></td>
-</tr></table>
+<span class="o">+-----------------------------------------------------------------------------+</span>
+<span class="o">|</span> <span class="n">Processes</span><span class="p">:</span>                                                                  <span class="o">|</span>
+<span class="o">|</span>  <span class="n">GPU</span>   <span class="n">GI</span>   <span class="n">CI</span>        <span class="n">PID</span>   <span class="n">Type</span>   <span class="n">Process</span> <span class="n">name</span>                  <span class="n">GPU</span> <span class="n">Memory</span> <span class="o">|</span>
+<span class="o">|</span>        <span class="n">ID</span>   <span class="n">ID</span>                                                   <span class="n">Usage</span>      <span class="o">|</span>
+<span class="o">|=============================================================================|</span>
+<span class="o">|</span>  <span class="n">No</span> <span class="n">running</span> <span class="n">processes</span> <span class="n">found</span>                                                 <span class="o">|</span>
+<span class="o">+-----------------------------------------------------------------------------+</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="check-environment-variable">
+<h3>Check environment variable<a class="headerlink" href="#check-environment-variable" title="Permalink to this heading">¶</a></h3>
+<p>Make sure <code class="docutils literal notranslate"><span class="pre">PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">LD_LIBRARY_PATH</span></code> environment variables account for cuda. Please do a <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$LD_LIBRARY_PATH</span></code> to verify. If not, please follow <a class="reference external" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#mandatory-actions">link</a> to do so. Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">echo</span> <span class="s2">&quot;export PATH=\$PATH:/usr/local/cuda-12.1/bin&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
+<span class="n">echo</span> <span class="s2">&quot;export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
+<span class="n">source</span> <span class="o">~/.</span><span class="n">bashrc</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="wheel">
+<h3>Wheel<a class="headerlink" href="#wheel" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="n">torch</span><span class="o">==</span><span class="mf">2.3.0</span>
+<span class="c1"># GPU whl for python 3.10 + cuda 12.1</span>
+<span class="n">pip3</span> <span class="n">install</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">storage</span><span class="o">.</span><span class="n">googleapis</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">-</span><span class="n">xla</span><span class="o">-</span><span class="n">releases</span><span class="o">/</span><span class="n">wheels</span><span class="o">/</span><span class="n">cuda</span><span class="o">/</span><span class="mf">12.1</span><span class="o">/</span><span class="n">torch_xla</span><span class="o">-</span><span class="mf">2.3.0</span><span class="o">-</span><span class="n">cp310</span><span class="o">-</span><span class="n">cp310</span><span class="o">-</span><span class="n">manylinux_2_28_x86_64</span><span class="o">.</span><span class="n">whl</span>
+</pre></div>
+</div>
+<p>Wheels for other Python version and CUDA version can be found <a class="reference external" href="https://github.com/pytorch/xla?tab=readme-ov-file#available-docker-images-and-wheels">here</a>.</p>
+</div>
+</div>
+<div class="section" id="run-a-simple-model">
+<h2>Run a simple model<a class="headerlink" href="#run-a-simple-model" title="Permalink to this heading">¶</a></h2>
+<p>In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># export GPU_NUM_DEVICES=1 PJRT_DEVICE=CUDA</span>
+<span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># git clone --recursive https://github.com/pytorch/xla.git</span>
+<span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># python xla/test/test_train_mp_imagenet.py --fake_data</span>
+<span class="o">==&gt;</span> <span class="n">Preparing</span> <span class="n">data</span><span class="o">..</span>
+<span class="n">Epoch</span> <span class="mi">1</span> <span class="n">train</span> <span class="n">begin</span> <span class="mi">06</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">38</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">0</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">6.89059</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">2.82</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">2.82</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">23</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">20</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">6.79297</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">117.16</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">45.84</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">36</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">40</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">6.43628</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">281.16</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">80.49</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">43</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">60</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">5.83108</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">346.88</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">108.82</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">49</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">80</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">4.99023</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">373.62</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">132.43</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">56</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">100</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">3.92699</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">384.33</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">152.40</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">14</span><span class="p">:</span><span class="mi">02</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">120</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">2.68816</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">388.35</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">169.49</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">14</span><span class="p">:</span><span class="mi">09</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="amp-automatic-mixed-precision">
+<h2>AMP (AUTOMATIC MIXED PRECISION)<a class="headerlink" href="#amp-automatic-mixed-precision" title="Permalink to this heading">¶</a></h2>
+<p>AMP is very useful on GPU training and PyTorch/XLA reuse Cuda’s AMP rule. You can checkout our <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py">mnist example</a> and <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_amp.py">imagenet example</a>. Note that we also used a modified version of <a class="reference external" href="https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree">optimizers</a> to avoid the additional sync between device and host.</p>
+</div>
+<div class="section" id="develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support">
+<h2>Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)<a class="headerlink" href="#develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Inside a GPU VM, create a docker container from a development docker image. For example:</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1
 
-<h2 id="H">H</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.spmd.HybridMesh">HybridMesh (class in torch_xla.distributed.spmd)</a>
-</li>
-  </ul></td>
-</tr></table>
+# Installing the NVIDIA Container Toolkit per https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+# For example
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  &amp;&amp; curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed &#39;s#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g&#39; | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
 
-<h2 id="I">I</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.initialize_cache">initialize_cache() (in module torch_xla.runtime)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.is_master_ordinal">is_master_ordinal() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.runtime.is_spmd">is_spmd() (in module torch_xla.runtime)</a>
-</li>
-  </ul></td>
-</tr></table>
+# Configuring the NVIDIA Container Toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
 
-<h2 id="L">L</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.local_device_count">local_device_count() (in module torch_xla.runtime)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.local_ordinal">local_ordinal() (in module torch_xla.runtime)</a>
-</li>
-      <li><a href="index.html#torch_xla.runtime.local_process_count">local_process_count() (in module torch_xla.runtime)</a>
-</li>
-  </ul></td>
-</tr></table>
+sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1
+sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/bash
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li><p>Build PyTorch and PyTorch/XLA from source.</p></li>
+</ol>
+<p>Make sure <code class="docutils literal notranslate"><span class="pre">PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">LD_LIBRARY_PATH</span></code> environment variables account for cuda. See the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/gpu.md#check-environment-variable">above</a> for more info.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">/</span><span class="n">pytorch</span><span class="o">.</span><span class="n">git</span>
+<span class="n">cd</span> <span class="n">pytorch</span>
+<span class="n">USE_CUDA</span><span class="o">=</span><span class="mi">1</span> <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
 
-<h2 id="M">M</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.spmd.mark_sharding">mark_sharding() (in module torch_xla.distributed.spmd)</a>
-</li>
-      <li><a href="index.html#torch_xla.distributed.spmd.Mesh">Mesh (class in torch_xla.distributed.spmd)</a>
-</li>
-      <li><a href="index.html#torch_xla.core.xla_model.mesh_reduce">mesh_reduce() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.debug.metrics.metric_data">metric_data() (in module torch_xla.debug.metrics)</a>
-</li>
-      <li><a href="index.html#torch_xla.debug.metrics.metric_names">metric_names() (in module torch_xla.debug.metrics)</a>
-</li>
-      <li><a href="index.html#torch_xla.debug.metrics.metrics_report">metrics_report() (in module torch_xla.debug.metrics)</a>
-</li>
-      <li>
-    module
-
-      <ul>
-        <li><a href="index.html#module-torch_xla">torch_xla</a>
-</li>
-        <li><a href="index.html#module-torch_xla.core.xla_model">torch_xla.core.xla_model</a>
-</li>
-        <li><a href="index.html#module-torch_xla.debug.metrics">torch_xla.debug.metrics</a>
-</li>
-        <li><a href="index.html#module-torch_xla.distributed.parallel_loader">torch_xla.distributed.parallel_loader</a>
-</li>
-        <li><a href="index.html#module-torch_xla.distributed.spmd">torch_xla.distributed.spmd</a>
-</li>
-        <li><a href="index.html#module-torch_xla.distributed.xla_multiprocessing">torch_xla.distributed.xla_multiprocessing</a>
-</li>
-        <li><a href="index.html#module-torch_xla.experimental">torch_xla.experimental</a>
-</li>
-        <li><a href="index.html#module-torch_xla.runtime">torch_xla.runtime</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
-
-<h2 id="O">O</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.optimizer_step">optimizer_step() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="P">P</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.parallel_loader.ParallelLoader">ParallelLoader (class in torch_xla.distributed.parallel_loader)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader">per_device_loader() (torch_xla.distributed.parallel_loader.ParallelLoader method)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="R">R</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.rendezvous">rendezvous() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="S">S</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.save">save() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.distributed.spmd.set_global_mesh">set_global_mesh() (in module torch_xla.distributed.spmd)</a>
-</li>
-      <li><a href="index.html#torch_xla.core.xla_model.set_rng_state">set_rng_state() (in module torch_xla.core.xla_model)</a>
-</li>
-      <li><a href="index.html#torch_xla.distributed.spmd.ShardingSpec">ShardingSpec (class in torch_xla.distributed.spmd)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.debug.metrics.short_metrics_report">short_metrics_report() (in module torch_xla.debug.metrics)</a>
-</li>
-      <li><a href="index.html#torch_xla.distributed.xla_multiprocessing.spawn">spawn() (in module torch_xla.distributed.xla_multiprocessing)</a>
-</li>
-      <li><a href="index.html#torch_xla.step">step() (in module torch_xla)</a>
-</li>
-      <li><a href="index.html#torch_xla.sync">sync() (in module torch_xla)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="T">T</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li>
-    torch_xla
-
-      <ul>
-        <li><a href="index.html#module-torch_xla">module</a>
-</li>
-      </ul></li>
-      <li>
-    torch_xla.core.xla_model
-
-      <ul>
-        <li><a href="index.html#module-torch_xla.core.xla_model">module</a>
-</li>
-      </ul></li>
-      <li>
-    torch_xla.debug.metrics
-
-      <ul>
-        <li><a href="index.html#module-torch_xla.debug.metrics">module</a>
-</li>
-      </ul></li>
-      <li>
-    torch_xla.distributed.parallel_loader
-
-      <ul>
-        <li><a href="index.html#module-torch_xla.distributed.parallel_loader">module</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li>
-    torch_xla.distributed.spmd
-
-      <ul>
-        <li><a href="index.html#module-torch_xla.distributed.spmd">module</a>
-</li>
-      </ul></li>
-      <li>
-    torch_xla.distributed.xla_multiprocessing
-
-      <ul>
-        <li><a href="index.html#module-torch_xla.distributed.xla_multiprocessing">module</a>
-</li>
-      </ul></li>
-      <li>
-    torch_xla.experimental
-
-      <ul>
-        <li><a href="index.html#module-torch_xla.experimental">module</a>
-</li>
-      </ul></li>
-      <li>
-    torch_xla.runtime
-
-      <ul>
-        <li><a href="index.html#module-torch_xla.runtime">module</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
-
-<h2 id="U">U</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.use_spmd">use_spmd() (in module torch_xla.runtime)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="W">W</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.wait_device_ops">wait_device_ops() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.world_size">world_size() (in module torch_xla.runtime)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="X">X</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.xla_device">xla_device() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.xla_device_hw">xla_device_hw() (in module torch_xla.core.xla_model)</a>
-</li>
-  </ul></td>
-</tr></table>
-
+<span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">.</span><span class="n">git</span>
+<span class="n">cd</span> <span class="n">xla</span>
+<span class="n">XLA_CUDA</span><span class="o">=</span><span class="mi">1</span> <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li><p>Verify if PyTorch and PyTorch/XLA have been installed successfully.</p></li>
+</ol>
+<p>If you can run the test in the section
+<a class="reference external" href="#run-a-simple-model">Run a simple model</a> successfully, then PyTorch and
+PyTorch/XLA should have been installed successfully.</p>
+</div>
+</div>
 
 
              </article>
              
             </div>
             <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="multi_process_distributed.html" class="btn btn-neutral float-right" title="How to do DistributedDataParallel" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="debug.html" class="btn btn-neutral" title="Troubleshooting" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
   
 
   
@@ -742,7 +568,22 @@
         <div class="pytorch-content-right" id="pytorch-content-right">
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
-              
+              <ul>
+<li><a class="reference internal" href="#">How to run with PyTorch/XLA:GPU</a><ul>
+<li><a class="reference internal" href="#create-a-gpu-instance">Create a GPU instance</a></li>
+<li><a class="reference internal" href="#environment-setup">Environment Setup</a><ul>
+<li><a class="reference internal" href="#docker">Docker</a></li>
+<li><a class="reference internal" href="#check-environment-variable">Check environment variable</a></li>
+<li><a class="reference internal" href="#wheel">Wheel</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#run-a-simple-model">Run a simple model</a></li>
+<li><a class="reference internal" href="#amp-automatic-mixed-precision">AMP (AUTOMATIC MIXED PRECISION)</a></li>
+<li><a class="reference internal" href="#develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support">Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)</a></li>
+</ul>
+</li>
+</ul>
+
             </div>
           </div>
         </div>

@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torch_xla.experimental.eager &mdash; PyTorch/XLA master documentation</title>
+  <title>TorchDynamo(torch.compile) integration in PyTorch XLA &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -25,12 +25,13 @@
 
   
 
-  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
-    <link rel="index" title="Index" href="../../../genindex.html" />
-    <link rel="search" title="Search" href="../../../search.html" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="PyTorch/XLA SPMD User Guide" href="spmd.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -41,16 +42,16 @@
   
 
   
-  <script src="../../../_static/js/modernizr.min.js"></script>
+  <script src="_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -277,7 +278,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -294,16 +295,16 @@
             
             
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../index.html">PyTorch/XLA documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">PyTorch/XLA documentation</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Docs</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../debug.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../gpu.html">How to run with PyTorch/XLA:GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../multi_process_distributed.html">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../runtime.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../spmd.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../torch_compile.html">TorchDynamo(torch.compile) integration in PyTorch XLA</a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="debug.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpu.html">How to run with PyTorch/XLA:GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multi_process_distributed.html">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="runtime.html">PJRT Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd.html">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">TorchDynamo(torch.compile) integration in PyTorch XLA</a></li>
 </ul>
 
             
@@ -336,7 +337,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="../../../index.html">
+        <a href="index.html">
           
             Docs
           
@@ -344,12 +345,14 @@
       </li>
 
         
-          <li><a href="../../index.html">Module code</a> &gt;</li>
-        
-      <li>torch_xla.experimental.eager</li>
+      <li>TorchDynamo(torch.compile) integration in PyTorch XLA</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="_sources/torch_compile.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
         
       </li>
     
@@ -378,74 +381,126 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <h1>Source code for torch_xla.experimental.eager</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">functools</span>
-<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+  <div class="section" id="torchdynamo-torch-compile-integration-in-pytorch-xla">
+<h1>TorchDynamo(torch.compile) integration in PyTorch XLA<a class="headerlink" href="#torchdynamo-torch-compile-integration-in-pytorch-xla" title="Permalink to this heading">¶</a></h1>
+<p><a class="reference external" href="https://pytorch.org/docs/stable/torch.compiler.html">TorchDynamo</a> is a Python-level JIT compiler designed to make unmodified PyTorch programs faster. It provides a clean API for compiler backends to hook in and its biggest feature is to dynamically modify Python bytecode right before it is executed. In the pytorch/xla 2.0 release, PyTorch/XLA provided an experimental backend for the TorchDynamo for both inference and training.</p>
+<p>The way that XLA bridge works is that Dynamo will provide a TorchFX graph when it recognizes a model pattern and PyTorch/XLA will use existing Lazy Tensor technology to compile the FX graph and return the compiled function.</p>
+<div class="section" id="integration">
+<h2>Integration<a class="headerlink" href="#integration" title="Permalink to this heading">¶</a></h2>
+<p>Support for PyTorch/XLA and Dynamo currently exists by adding the <code class="docutils literal notranslate"><span class="pre">backend='openxla'</span></code> argument to <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code>. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 
-<span class="kn">import</span> <span class="nn">torch_xla</span>
+<span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+  <span class="n">a_xla</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+  <span class="n">b_xla</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+  <span class="k">return</span> <span class="n">a_xla</span> <span class="o">+</span> <span class="n">b_xla</span>
 
-
-<div class="viewcode-block" id="eager_mode"><a class="viewcode-back" href="../../../index.html#torch_xla.experimental.eager_mode">[docs]</a><span class="k">def</span> <span class="nf">eager_mode</span><span class="p">(</span><span class="n">enable</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Configure torch_xla&#39;s default executation mode.</span>
-
-<span class="sd">  Under eager mode only functions that was `torch_xla.compile`d will be</span>
-<span class="sd">  traced and compiled. Other torch ops will be executed eagerly.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="n">enable</span><span class="p">)</span></div>
-
-
-<span class="k">def</span> <span class="nf">is_eager_mode</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Return True if torch_xla is currently under eager mode</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_use_eager_mode</span><span class="p">()</span>
-
-
-<span class="nd">@contextmanager</span>
-<span class="k">def</span> <span class="nf">eager_mode_context</span><span class="p">(</span><span class="n">enable</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Context manager to enable/disable the eager mode.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">saved_eager_mode</span> <span class="o">=</span> <span class="n">is_eager_mode</span><span class="p">()</span>
-  <span class="n">eager_mode</span><span class="p">(</span><span class="n">enable</span><span class="p">)</span>
-  <span class="k">try</span><span class="p">:</span>
-    <span class="k">yield</span> <span class="n">saved_eager_mode</span>
-  <span class="k">finally</span><span class="p">:</span>
-    <span class="n">eager_mode</span><span class="p">(</span><span class="n">saved_eager_mode</span><span class="p">)</span>
-
-
-<div class="viewcode-block" id="compile"><a class="viewcode-back" href="../../../index.html#torch_xla.experimental.compile">[docs]</a><span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Compile the func with Lazy Tensor.</span>
-
-<span class="sd">  Return the optimized function that takes exact same input. Compile will</span>
-<span class="sd">  run the target func under the tracing mode using Lazy tensor.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>  <span class="c1"># Keep function&#39;s name, docstring, etc.</span>
-  <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="c1"># compile should only be called with</span>
-    <span class="k">assert</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_use_eager_mode</span><span class="p">()</span> <span class="o">==</span> <span class="kc">True</span>
-    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-    <span class="c1"># clear the pending graph if any</span>
-    <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
-    <span class="k">try</span><span class="p">:</span>
-      <span class="c1"># Target Function Execution</span>
-      <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-      <span class="c1"># Sync the graph generated by the target function.</span>
-      <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-      <span class="c1"># Handle exceptions (if needed)</span>
-      <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in target function: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-      <span class="k">raise</span>  <span class="c1"># Re-raise the exception</span>
-    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">result</span>
-
-  <span class="k">return</span> <span class="n">wrapper</span></div>
+<span class="n">compiled_code</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;openxla&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">compiled_code</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">)))</span>
 </pre></div>
+</div>
+</div>
+<div class="section" id="inference">
+<h2>Inference<a class="headerlink" href="#inference" title="Permalink to this heading">¶</a></h2>
+<p>Here is a small code example of running resnet18 with <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torchvision</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+
+<span class="k">def</span> <span class="nf">eval_model</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+  <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+  <span class="n">dynamo_resnet18</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+    <span class="n">xla_resnet18</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;openxla&#39;</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+      <span class="n">output</span> <span class="o">=</span> <span class="n">dynamo_resnet18</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>With the <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> you will see that PyTorch/XLA only traces the resent18 model once during the init time and executes the compiled binary every time <code class="docutils literal notranslate"><span class="pre">dynamo_resnet18</span></code> is invoked, instead of tracing the model every time. Here is a inference speed analysis to compare Dynamo and Lazy using torch bench on Cloud TPU v4-8</p>
+<p>resnet18 | 2.59
+resnet50 | 2.64
+resnext50_32x4d | 1.91
+alexnet | 1.28
+mobilenet_v2 | 18.62
+mnasnet1_0 | 2.68
+vgg16 | 1.33
+BERT_pytorch | 7.49
+squeezenet1_1 | 2.29
+timm_vision_transformer | 3.52
+geomean | 3.04</p>
+</div>
+<div class="section" id="training">
+<h2>Training<a class="headerlink" href="#training" title="Permalink to this heading">¶</a></h2>
+<p>PyTorch/XLA also supports Dynamo for training, but it is  experimental and we are working with the PyTorch Compiler team to iterate on the implementation. Here is an example of training a resnet18 with <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torchvision</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+
+<span class="k">def</span> <span class="nf">train_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">):</span>
+  <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">()</span>
+  <span class="n">pred</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+  <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+  <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+  <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">pred</span>
+
+<span class="k">def</span> <span class="nf">train_model_main</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+  <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+  <span class="n">dynamo_train_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+        <span class="n">train_model</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;openxla&#39;</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
+    <span class="n">xla_optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">weight_decay</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">dynamo_train_model</span><span class="p">(</span><span class="n">xla_resnet18</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">xla_optimizer</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We expect to extract and execute 3 graphs per training step instead of 1 graph per training step if you use the Lazy tensor. Here is a training speed analysis to compare Dynamo and Lazy using a torch bench on Cloud TPU v4-8.</p>
+<p>resnet50 | 1.33
+resnet18 | 1.33
+BERT_pytorch | 3.07
+resnext50_32x4d | 1.43
+alexnet | 1.12
+mobilenet_v2 | 1.4
+mnasnet1_0 | 1.19
+vgg16 | 0.81
+timm_vision_transformer | 1.87
+squeezenet1_1 | 1.41
+geomean | 1.41</p>
+<blockquote>
+<div><p><strong>NOTE:</strong> We run each model’s fwd and bwd for a single step and then collect the e2e time. In the real world we will run multiple steps at each training job which can easily hide the tracing cost from execution(since it is async). Lazy Tensor will have much better performance in that scenario.</p>
+</div></blockquote>
+</div>
+<div class="section" id="feature-gaps">
+<h2>Feature gaps<a class="headerlink" href="#feature-gaps" title="Permalink to this heading">¶</a></h2>
+<p>There is one gap we want to call out that are preventing us from using the TorchDynamo on larger scale models.</p>
+<ol class="arabic simple">
+<li><p>TorchDynamo will trace forward and backward into separate graphs. For PyTorch/XLA it is important to let the XLA compiler see the whole step as one graph to best optimize the speed. There is also a fixed overhead to launch every device execution which make executing multiple graphs per training step less ideal.</p></li>
+</ol>
+<p>This gap compared to Lazy Tensor makes it less efficient in real world training use cases, especially the tracing cost can be overlapped with the execution in training.</p>
+</div>
+<div class="section" id="take-away">
+<h2>Take away<a class="headerlink" href="#take-away" title="Permalink to this heading">¶</a></h2>
+<p>TorchDynamo provides a really promising way for the compiler backend to hide the complexity from the user and easily retrieve the modeling code in a graph format. Compared with PyTorch/XLA’s traditional Lazy Tensor way of extracting the graph, TorchDynamo can skip the graph tracing for every iteration, hence providing a much better inference response time.</p>
+<p>Most models supported by PyTorch/XLA, have seen significant speedup when running inference with the new dynamo-xla bridge. Our community is working hard to expand the set of supported models. Regarding the training feature gaps mentioned above, the PyTorch/XLA community is super excited to improve the training gap in our upcoming development work. The team continues to heavily invest in TorchDynamo and work with the upstream to mature the training story.</p>
+</div>
+</div>
+
 
              </article>
              
             </div>
             <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="spmd.html" class="btn btn-neutral" title="PyTorch/XLA SPMD User Guide" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
   
 
   
@@ -474,7 +529,17 @@
         <div class="pytorch-content-right" id="pytorch-content-right">
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
-              
+              <ul>
+<li><a class="reference internal" href="#">TorchDynamo(torch.compile) integration in PyTorch XLA</a><ul>
+<li><a class="reference internal" href="#integration">Integration</a></li>
+<li><a class="reference internal" href="#inference">Inference</a></li>
+<li><a class="reference internal" href="#training">Training</a></li>
+<li><a class="reference internal" href="#feature-gaps">Feature gaps</a></li>
+<li><a class="reference internal" href="#take-away">Take away</a></li>
+</ul>
+</li>
+</ul>
+
             </div>
           </div>
         </div>
@@ -487,21 +552,21 @@
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
-         <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-         <script src="../../../_static/jquery.js"></script>
-         <script src="../../../_static/underscore.js"></script>
-         <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="../../../_static/doctools.js"></script>
-         <script src="../../../_static/sphinx_highlight.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+         <script src="_static/jquery.js"></script>
+         <script src="_static/underscore.js"></script>
+         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="_static/doctools.js"></script>
+         <script src="_static/sphinx_highlight.js"></script>
      
 
   
 
-  <script type="text/javascript" src="../../../_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="../../../_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -606,7 +671,7 @@
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="../../../_static/images/pytorch-x.svg">
+    <img class="close-button" src="_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -739,7 +804,7 @@
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="../../../_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {
