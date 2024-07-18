@@ -20,12 +20,6 @@ class TpuInfoCliTest(parameterized.TestCase):
     cls.chip_type = chip_type
     cls.num_chips = num_chips
 
-  def setUp(self):
-    os.environ.pop("TPU_RUNTIME_METRICS_PORTS", None)
-
-  def tearDown(self):
-    os.environ.pop("TPU_RUNTIME_METRICS_PORTS", None)
-
   @staticmethod
   def _init_tpu_and_wait(
       # accept index as first arg to make xmp.spawn happy
@@ -41,14 +35,10 @@ class TpuInfoCliTest(parameterized.TestCase):
     done.wait()
 
   @contextlib.contextmanager
-  def _torch_xla_process(self, extra_env: Dict[str, str]):
+  def _torch_xla_process(self, env: Dict[str, str]):
     with multiprocessing.Manager() as m:
       q = m.Queue()
       done = m.Event()
-      env = {
-          "TPU_RUNTIME_METRICS_PORTS": "8431",
-      }
-      env.update(extra_env)
       p = multiprocessing.Process(
           target=self._init_tpu_and_wait, args=(0, q, done, env))
       p.start()
@@ -86,19 +76,18 @@ class TpuInfoCliTest(parameterized.TestCase):
     with multiprocessing.Manager() as m:
       q = m.Queue()
       done = m.Event()
-      # TODO: This should get set automatically by libtpu
-      os.environ["TPU_RUNTIME_METRICS_PORTS"] = ",".join(
-          str(i) for i in range(8431, 8431 + self.num_chips))
       # HACK: run xmp.spawn in a thread because `join` arg is not implemented
       t = threading.Thread(
-          target=lambda: xmp.spawn(self._init_tpu_and_wait, args=(q, done)))
+          target=xmp.spawn,
+          args=(self._init_tpu_and_wait,),
+          kwargs={'args': (q, done)})
       t.start()
 
       # v2 and v3 may have duplicates due to multithreading
       child_pids = set()
       for _ in range(self.chip_type.value.accelerators_per_chip *
                      self.num_chips):
-        child_pids.add(q.get(timeout=10.0))
+        child_pids.add(q.get(timeout=20.0))
       with contextlib.ExitStack() as e:
         e.callback(done.set)
         yield child_pids

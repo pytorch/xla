@@ -80,12 +80,14 @@ XLATensorPtr XLATensor::Create(
 
 XLATensorPtr XLATensor::Create(
     torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-    std::optional<at::ScalarType> logical_element_type) {
+    std::optional<at::ScalarType> logical_element_type,
+    bool delay_eager_executation) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   graph_executor->RegisterTensor(xtensor->data());
-  if (UseEagerDebugMode() || graph_executor->UseEagerMode()) {
+  if ((UseEagerDebugMode() || graph_executor->UseEagerMode()) &&
+      !delay_eager_executation) {
     std::vector<XLATensorPtr> xtensors({xtensor});
     graph_executor->ApplyEagerSync(xtensors);
   }
@@ -620,26 +622,32 @@ torch::lazy::Value XLATensor::MaybeCastIrValue(
   return ir_value;
 }
 
-XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
+XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
+                                   bool delay_eager_executation) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               /*logical_element_type=*/std::nullopt);
-  return Create(std::move(ir_value), GetDevice(), dtype_optional());
+  return Create(std::move(ir_value), GetDevice(), dtype_optional(),
+                delay_eager_executation);
 }
 
 XLATensorPtr XLATensor::CreateFrom(
     torch::lazy::Value ir_value,
-    std::optional<at::ScalarType> logical_element_type_opt) const {
+    std::optional<at::ScalarType> logical_element_type_opt,
+    bool delay_eager_executation) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               logical_element_type_opt);
-  return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
+  return Create(std::move(ir_value), GetDevice(), logical_element_type_opt,
+                delay_eager_executation);
 }
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
                                    const torch::lazy::BackendDevice& device,
-                                   at::ScalarType logical_element_type) const {
+                                   at::ScalarType logical_element_type,
+                                   bool delay_eager_executation) const {
   ir_value =
       MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
-  return Create(std::move(ir_value), device, logical_element_type);
+  return Create(std::move(ir_value), device, logical_element_type,
+                delay_eager_executation);
 }
 
 void XLATensor::ApplyPendingGraph() {

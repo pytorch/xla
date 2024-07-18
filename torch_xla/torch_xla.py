@@ -1,9 +1,14 @@
 import contextlib
-from typing import List
+from typing import Callable, List, Tuple
 
 import torch
+import torch.distributed as dist
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.core.xla_env_vars as xenv
+import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.runtime as xr
+import torch_xla.utils.utils as xu
 
 
 def device(index: int = None) -> torch.device:
@@ -80,3 +85,28 @@ def manual_seed(seed, device=None):
       If missing the default device seed will be set.
   """
   xm.set_rng_state(seed, device)
+
+
+# TODO(wcromar): Update args to type ParamSpec.
+def launch(
+    fn: Callable,
+    args: Tuple = (),
+    start_method: str = 'spawn',
+    debug_single_process: bool = False,
+):
+  """ Entry to launch multiprocess.
+
+  Raises:
+    NotImplementedError: SPMD is not supported yet.
+  """
+  if xr.is_spmd():
+    # TODO(piz): SPMD is specified differently from mp. Skip for now.
+    raise NotImplementedError(
+        'launch function does not support SPMD at this time')
+
+  nprocs = 1 if debug_single_process else None
+
+  if dist.is_torchelastic_launched():
+    fn(xu.getenv_as(xenv.LOCAL_RANK, int), *args)
+  else:
+    xmp.spawn(fn, args=args, nprocs=nprocs, start_method=start_method)

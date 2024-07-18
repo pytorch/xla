@@ -9,7 +9,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
 import torch_xla.debug.metrics as met
 
-from typing import Any, List, Callable, Optional
+from typing import Any, List, Callable, Optional, Tuple
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
@@ -439,7 +439,8 @@ def paged_attention(q,
                     lengths,
                     page_indices,
                     pages_per_compute_block,
-                    megacore_mode: str = None):
+                    megacore_mode: str = None,
+                    attn_logits_soft_cap: float = None):
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
@@ -458,7 +459,10 @@ def paged_attention(q,
       page_indices,
       pages_per_compute_block=pages_per_compute_block,
       megacore_mode=megacore_mode,
-      static_argnames=["pages_per_compute_block", "megacore_mode"],
+      attn_logits_soft_cap=attn_logits_soft_cap,
+      static_argnames=[
+          "pages_per_compute_block", "megacore_mode", "attn_logits_soft_cap"
+      ],
   )
 
   batch_size, num_heads, head_dim = q.shape
@@ -719,7 +723,7 @@ def gmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512)
 ) -> torch.Tensor:
   """Compute lhs[sizes[i-1]:sizes[i], :] @ rhs for each group 'i'.
 
@@ -770,7 +774,7 @@ def tgmm(
     lhs: torch.Tensor,
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
-    tiling: tuple[int, int, int] = (512, 512, 512)
+    tiling: Tuple[int, int, int] = (512, 512, 512)
 ) -> torch.Tensor:
   """Compute lhs[:, sizes[i-1]:sizes[i]] @ rhs[sizes[i-1]:sizes[i], :].
 
@@ -874,7 +878,7 @@ def flash_attention_non_xla(q: torch.Tensor,
 
 
 XLA_LIB.define(
-    "paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block, str megacore_mode=None) -> Tensor",
+    "paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int pages_per_compute_block, str megacore_mode=None, float attn_logits_soft_cap=None) -> Tensor",
 )
 
 
@@ -885,9 +889,11 @@ def paged_attention_xla(q: torch.Tensor,
                         lengths: torch.Tensor,
                         page_indices: torch.Tensor,
                         pages_per_compute_block: int,
-                        megacore_mode: str = None):
+                        megacore_mode: str = None,
+                        attn_logits_soft_cap: float = None):
   return paged_attention(q, k_pages, v_pages, lengths, page_indices,
-                         pages_per_compute_block, megacore_mode)
+                         pages_per_compute_block, megacore_mode,
+                         attn_logits_soft_cap)
 
 
 @impl(XLA_LIB, "paged_attention", "CompositeExplicitAutograd")
@@ -897,7 +903,8 @@ def paged_attention_non_xla(q: torch.Tensor,
                             lengths: torch.Tensor,
                             page_indices: torch.Tensor,
                             pages_per_compute_block: int,
-                            megacore_mode: str = None):
+                            megacore_mode: str = None,
+                            attn_logits_soft_cap: float = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 
@@ -912,7 +919,7 @@ def gmm_xla(
     rhs: torch.Tensor,
     group_sizes: torch.Tensor,
     # pytorch custom op does not allow tuple type, use list instead
-    tiling: Optional[list[int]] = [512, 512, 512]):
+    tiling: Optional[List[int]] = [512, 512, 512]):
   assert len(tiling) == 3, "tiling must be a list with 3 integers"
   assert lhs.dim() == 2, "lhs must be a 2d, torch.Tensor with shape [k, m]"
   assert rhs.dim(
@@ -925,7 +932,7 @@ def gmm_xla(
 def gmm_non_xla(lhs: torch.Tensor,
                 rhs: torch.Tensor,
                 group_sizes: torch.Tensor,
-                tiling: Optional[list[int]] = [512, 512, 512]):
+                tiling: Optional[List[int]] = [512, 512, 512]):
   # This will be called when dynamo use fake tensor to construct the fake output.
   # We need to make sure output tensor's shape is correct.
   if lhs.device != torch.device("meta"):

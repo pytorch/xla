@@ -156,19 +156,23 @@ class XLATensor : public torch::lazy::LazyTensor {
       std::optional<at::ScalarType> logical_element_type = std::nullopt);
   static XLATensorPtr Create(
       torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-      std::optional<at::ScalarType> logical_element_type = std::nullopt);
+      std::optional<at::ScalarType> logical_element_type = std::nullopt,
+      bool delay_eager_executation = false);
   static XLATensorPtr Create(std::shared_ptr<Data> data);
 
   // Create a new XLA tensor with the same metadata of the input tensor (with
   // possible overrides), and the new IR value.
-  XLATensorPtr CreateFrom(torch::lazy::Value ir_value) const;
+  XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
+                          bool delay_eager_executation = false) const;
   XLATensorPtr CreateFrom(
       torch::lazy::Value ir_value,
-      std::optional<at::ScalarType> logical_element_type_opt) const;
+      std::optional<at::ScalarType> logical_element_type_opt,
+      bool delay_eager_executation = false) const;
   // TODO: We should remove this one once MaybeCastIrValue is no longer needed.
   XLATensorPtr CreateFrom(torch::lazy::Value ir_value,
                           const torch::lazy::BackendDevice& device,
-                          at::ScalarType logical_element_type) const;
+                          at::ScalarType logical_element_type,
+                          bool delay_eager_executation = false) const;
 
   // The default ctor previously created a null LazyTensor (one with no 'data'
   // obj). Creating a null XLATensor is no longer possible, since the same can

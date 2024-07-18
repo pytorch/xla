@@ -8,13 +8,15 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.optim as optim
 import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla
+import torch_xla.core.xla_model as xm
 
 
 class TrainResNetDDP(TrainResNetBase):
 
   def __init__(self):
-    super().__init__()
     dist.init_process_group('xla', init_method='xla://')
+    super().__init__()
     self.model = DDP(
         self.model, gradient_as_bucket_view=True, broadcast_buffers=False)
     self.optimizer = optim.SGD(self.model.parameters(), weight_decay=1e-4)
@@ -26,5 +28,7 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  print('consider using train_resnet_spmd_data_parallel.py instead to get better performance')
-  xmp.spawn(_mp_fn, args=())
+  print(
+      'consider using train_resnet_spmd_data_parallel.py instead to get better performance'
+  )
+  torch_xla.launch(_mp_fn)

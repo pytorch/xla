@@ -121,6 +121,7 @@ supported:
   - _copy_from
   - _copy_from_and_resize
   - _index_put_impl_
+  - _linalg_eigh
   - _linalg_slogdet
   - _linalg_svd
   - _local_scalar_dense
