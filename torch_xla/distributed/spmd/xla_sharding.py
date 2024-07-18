@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla._internal.utils as iutils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 
@@ -219,7 +220,7 @@ class HybridMesh(Mesh):
     mesh_shape = tuple([x * y for x, y in zip(ici_mesh_shape, dcn_mesh_shape)])
     self.device_attributes = xr.global_runtime_device_attributes()
     self.device_attributes.sort(
-        key=lambda attr: xm.parse_xla_device(attr['name'])[1])
+        key=lambda attr: iutils.parse_xla_device(attr['name'])[1])
 
     if 'slice_index' in self.device_attributes[0] and np.prod(
         dcn_mesh_shape) == 1:
