@@ -59,17 +59,27 @@ class BenchmarkModel:
       self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
 
   def tolerance(self):
+    """Tolerance to be used by the verifier.
+    """
+    # Default value taken from: PyTorch
+    # Source: benchmarks/dynamo/torchbench.py
     return 1e-4
 
   def use_cosine_similarity(self):
+    """Whether the verifier should use cosine similarity for checking the result's accuracy.
+    """
+    # Default value taken from: PyTorch
+    # Source: benchmarks/dynamo/torchbench.py
     return False
 
   def conversion_dtype(self):
     return None
 
-  def prepare_for_experiment(self,
-                             dynamo_compilation_opts: Dict[str, str],
-                             force_dtype: Optional[torch.dtype] = None):
+  def prepare_for_experiment(
+      self,
+      dynamo_compilation_opts: Dict[str, str],
+      force_dtype: Optional[torch.dtype] = None,
+  ):
     self.device = self.benchmark_experiment.get_device()
 
     if force_dtype is None:
@@ -212,20 +222,30 @@ class ModelLoader:
   def get_benchmark_indices(self, length: int):
     start = self._args.partition_id * (length // self._args.total_partitions)
     end = ((self._args.partition_id + 1) *
-           (length // self._args.total_partitions)
-           if self._args.partition_id < self._args.total_partitions - 1 else
-           length)
+           (length // self._args.total_partitions) if self._args.partition_id
+           < self._args.total_partitions - 1 else length)
     return start, end
 
   def skip_model(self, model_name: str):
     return (not re.search("|".join(self._args.filter), model_name, re.I) or
             re.search("|".join(self._args.exclude), model_name, re.I))
 
-  def load_model(self,
-                 model_config: Dict[str, Any],
-                 benchmark_experiment: BenchmarkExperiment,
-                 dummy: bool = False,
-                 force_dtype: Optional[torch.dtype] = None) -> BenchmarkModel:
+  def load_model(
+      self,
+      model_config: Dict[str, Any],
+      benchmark_experiment: BenchmarkExperiment,
+      dummy: bool = False,
+      force_dtype: Optional[torch.dtype] = None,
+  ) -> BenchmarkModel:
+    """Loads the model.
+
+    Using both model and experiment configuration, this function will return an
+    instance of BenchmarkModel.
+
+    If specified, `force_dtype` will force the underlying model to be cast to
+    that data type. This is useful when running the verifier, where we force
+    float64 data-type for checking the accuracy.
+    """
     suite_name = self.suite_name
     model_name = model_config["model_name"]
     benchmark_model = self.benchmark_model_class(

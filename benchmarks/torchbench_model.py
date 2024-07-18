@@ -101,6 +101,17 @@ NEED_LARGER_CACHE = {
 
 
 class _Config:
+  """Helper class for easier access of the torchbench.yaml configuration.
+
+  This will wrap any mapping data-type, so that it's easier to access a
+  nested object. For example, instead of:
+
+  > config["skip"]["device"].get(benchmark_experiment.accelerator, {})
+
+  We can write:
+
+  > config().skip.device.get(benchmark_experiment.accelerator, {})
+  """
 
   def __init__(self, inner: Dict[str, Any]) -> None:
     self.inner = inner
@@ -358,14 +369,16 @@ class TorchBenchModel(BenchmarkModel):
     return self.benchmark_experiment.accelerator == "tpu"
 
   def use_amp(self):
-    return self.is_training(
-    ) or self.model_name in config().dtype.force_amp_for_fp16_bf16_models
+    return self.is_training() or self.model_name in config(
+    ).dtype.force_amp_for_fp16_bf16_models
 
   def use_fp16(self):
-    return self.is_inference(
-    ) and self.model_name in config().dtype.force_fp16_for_bf16_models
+    return self.is_inference() and self.model_name in config(
+    ).dtype.force_fp16_for_bf16_models
 
   def tolerance(self):
+    # Logic taken from: PyTorch
+    # Source: benchmarks/dynamo/torchbench.py
     if self.is_inference():
       return 1e-2
 
@@ -379,6 +392,8 @@ class TorchBenchModel(BenchmarkModel):
     return super().tolerance()
 
   def use_cosine_similarity(self):
+    # Logic taken from: PyTorch
+    # Source: benchmarks/dynamo/torchbench.py
     return self.model_name in config().tolerance.cosine
 
   def conversion_dtype(self):
