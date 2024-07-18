@@ -284,6 +284,8 @@ def _aten_div(x, y, rounding_mode=""):
 
   if rounding_mode == "floor":
     res = jnp.floor_divide(x, y)
+    if _is_int(x) and _is_int(y):
+      res_dtype = jnp.dtype('int64')
   else:
     res = x / y
   if rounding_mode == "trunc":
