@@ -9,7 +9,7 @@ from torch._dynamo.testing import collect_results
 from torch.utils import _pytree as pytree
 from util import cast_to_dtype, move_to_device
 from benchmark_experiment import BenchmarkExperiment
-from typing import Dict, Any, Sequence
+from typing import Any, Dict, Optional, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,12 @@ class BenchmarkModel:
       # For some special models, self.set_up() may have initialized an
       # optimizer to use. So only initialize it when there is none existing.
       self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
+
+  def tolerance(self):
+    return 1e-4
+
+  def use_cosine_similarity(self):
+    return False
 
   def conversion_dtype(self):
     return None
