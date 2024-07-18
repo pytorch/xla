@@ -79,9 +79,7 @@ step_fn = torch_xla.experimental.compile(step_fn)
 ```
 In training we asked user to refactor the `step_fn` out because it is usually better to compile the model's forward, backward and optimizer together. The long term goal is to also use `torch.compile` for training but right now we recommend user to use `torch_xla.experimental.compile`(for perfomrance reason).
 
-## Performance
-
-# Benchmark
+## Benchmark
 
 I run a 2 layer decoder only model training(it is pretty much just a llama2) with fake data on a single chip of v4-8 for 300 steps. Below is the number I observed.
 
