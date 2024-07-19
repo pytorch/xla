@@ -86,7 +86,7 @@ XLATensorPtr XLATensor::Create(
       XLATensor(std::move(ir_value), device, logical_element_type));
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   graph_executor->RegisterTensor(xtensor->data());
-  if ((graph_executor->UseEagerMode()) && !delay_eager_executation) {
+  if (graph_executor->UseEagerMode() && !delay_eager_executation) {
     std::vector<XLATensorPtr> xtensors({xtensor});
     graph_executor->ApplyEagerSync(xtensors);
   }
