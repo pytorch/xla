@@ -421,8 +421,6 @@ skiplist = {
     "resolve_conj",
     "resolve_neg",
     "roll",
-    "slice",
-    "slice_scatter",
     "sparse.mm",
     "sparse.sampled_addmm",
     "special.entr",
