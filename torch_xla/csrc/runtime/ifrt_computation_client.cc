@@ -637,7 +637,7 @@ int IfrtComputationClient::GetNumProcesses() const {
 const absl::flat_hash_map<
     std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 IfrtComputationClient::GetDeviceAttributes(const std::string& device) {
-  return xla::ifrt::ToPjRtDeviceAttributeMap(
+  return xla::ifrt::ToPjRtAttributeMap(
       IfrtComputationClient::StringToIfrtDevice(device)->Attributes());
 }
 
