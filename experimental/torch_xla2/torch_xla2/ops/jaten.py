@@ -2267,3 +2267,10 @@ def _aten_randint(
 @op(torch.ops.aten.dim, is_jax_function=False)
 def _aten_dim(self):
   return len(self.shape)
+
+
+@op(torch.ops.aten.i0)
+def _aten_i0(self):
+  if self.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
+    self = self.astype(jnp.float32)
+  return jax.scipy.special.i0(self)
