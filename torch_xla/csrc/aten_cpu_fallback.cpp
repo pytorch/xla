@@ -5,7 +5,7 @@
 #include <ATen/ops/_to_cpu.h>
 #include <torch/csrc/utils/device_lazy_init.h>
 
-#include <sstream>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -107,7 +107,7 @@ static bool is_valid_xla_tensor(const at::Tensor& tensor) {
 }
 
 static at::Tensor to_cuda_tensor(const at::Tensor& tensor,
-                                 c10::optional<DeviceInfo>& info) {
+                                 std::optional<DeviceInfo>& info) {
   // Skip undefined or non-XLA tensors.
   if (!is_valid_xla_tensor(tensor)) {
     return tensor;
@@ -134,7 +134,7 @@ static at::Tensor to_cuda_tensor(const at::Tensor& tensor,
 //   1. Synchronize the XLA tensors, so that we can access their data pointer
 //   2. Use DLPack in order to create a CUDA tensor
 static std::vector<at::Tensor> to_cuda(const at::TensorList& tensors,
-                                       c10::optional<DeviceInfo>& info) {
+                                       std::optional<DeviceInfo>& info) {
   // Synchronize tensors, so that we are able to grab their data pointer.
   std::vector<XLATensorPtr> xla_tensors;
   for (auto& tensor : tensors) {
@@ -189,7 +189,7 @@ void cuda_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack,
   // device.
   //
   // This variable is updated over the course of 'to_cuda' calls.
-  c10::optional<DeviceInfo> info;
+  std::optional<DeviceInfo> info;
 
   // Initialize CUDA device.
   torch::utils::device_lazy_init(at::kCUDA);
