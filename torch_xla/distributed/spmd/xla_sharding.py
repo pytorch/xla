@@ -29,18 +29,18 @@ class Mesh:
         of the `devices` argument. Its length should match the rank of `devices`.
 
   Example:
-  —------------------------------
-  mesh_shape = (4, 2)
-  num_devices = len(xm.get_xla_supported_devices())
-  device_ids = np.array(range(num_devices))
-  mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
-  mesh.get_logical_mesh()
-  >> array([[0, 1],
-            [2, 3],
-            [4, 5],
-            [6, 7]])
-  mesh.shape()
-  >> OrderedDict([('x', 4), ('y', 2)])
+
+    >>> mesh_shape = (4, 2)
+    >>> num_devices = len(xm.get_xla_supported_devices())
+    >>> device_ids = np.array(range(num_devices))
+    >>> mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+    >>> mesh.get_logical_mesh()
+    >>> array([[0, 1],
+              [2, 3],
+              [4, 5],
+              [6, 7]])
+    >>> mesh.shape()
+    >>> OrderedDict([('x', 4), ('y', 2)])
   """
 
   device_ids: np.ndarray
@@ -134,9 +134,10 @@ def set_global_mesh(mesh: Mesh):
     mesh: (Mesh) Mesh object that will be the global mesh.
 
   Example:
-    import torch_xla.distributed.spmd as xs
-    mesh = xs.get_1d_mesh("data")
-    xs.set_global_mesh(mesh)
+
+    >>> import torch_xla.distributed.spmd as xs
+    >>> mesh = xs.get_1d_mesh("data")
+    >>> xs.set_global_mesh(mesh)
   """
   global _GLOBAL_MESH
   _GLOBAL_MESH = mesh
@@ -150,8 +151,9 @@ def get_global_mesh() -> Optional[Mesh]:
     mesh: (Optional[Mesh]) Mesh object if global mesh is set, otherwise return None.
 
   Example:
-    import torch_xla.distributed.spmd as xs
-    xs.get_global_mesh()
+
+    >>> import torch_xla.distributed.spmd as xs
+    >>> xs.get_global_mesh()
   """
   global _GLOBAL_MESH
   return _GLOBAL_MESH
@@ -168,13 +170,14 @@ def get_1d_mesh(axis_name: Optional[str] = None) -> Mesh:
     Mesh: Mesh object
 
   Example:
-    # This example is assuming 1 TPU v4-8
-    import torch_xla.distributed.spmd as xs
-    mesh = xs.get_1d_mesh("data")
-    print(mesh.mesh_shape)
-    >> (4,)
-    print(mesh.axis_names)
-    >> ('data',)
+
+    >>> # This example is assuming 1 TPU v4-8
+    >>> import torch_xla.distributed.spmd as xs
+    >>> mesh = xs.get_1d_mesh("data")
+    >>> print(mesh.mesh_shape)
+    >>> (4,)
+    >>> print(mesh.axis_names)
+    >>> ('data',)
   """
   num_devices = xr.global_runtime_device_count()
   mesh_shape = (num_devices,)
@@ -197,13 +200,13 @@ class HybridMesh(Mesh):
     dcn_mesh_shape: shape of logical mesh for outer connected devices.
 
   Example:
-    # This example is assuming 2 slices of v4-8.
-    ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)
-    dcn_mesh_shape = (2, 1, 1)
 
-    mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, ('data','fsdp','tensor'))
-    print(mesh.shape())
-    >> OrderedDict([('data', 2), ('fsdp', 4), ('tensor', 1)])
+    >>> # This example is assuming 2 slices of v4-8.
+    >>> ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)
+    >>> dcn_mesh_shape = (2, 1, 1)
+    >>> mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, ('data','fsdp','tensor'))
+    >>> print(mesh.shape())
+    >>> >> OrderedDict([('data', 2), ('fsdp', 4), ('tensor', 1)])
   """
   ici_mesh_shape: Tuple[int, ...]
   dcn_mesh_shape: Tuple[int, ...]
@@ -595,23 +598,23 @@ def mark_sharding(
         dynamo_custom_op (bool): if set to True, it calls the dynamo custom op variant of mark_sharding
           to make itself recognizeable and traceable by dynamo.
 
-    Examples
-    —------------------------------
-    import torch_xla.runtime as xr
-    import torch_xla.distributed.spmd as xs
+    Example:
 
-    mesh_shape = (4, 2)
-    num_devices = xr.global_runtime_device_count()
-    device_ids = np.array(range(num_devices))
-    mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+      >>> import torch_xla.runtime as xr
+      >>> import torch_xla.distributed.spmd as xs
 
-    # 4-way data parallel
-    input = torch.randn(8, 32).to(xm.xla_device())
-    xs.mark_sharding(input, mesh, (0, None))
+      >>> mesh_shape = (4, 2)
+      >>> num_devices = xr.global_runtime_device_count()
+      >>> device_ids = np.array(range(num_devices))
+      >>> mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
 
-    # 2-way model parallel
-    linear = nn.Linear(32, 10).to(xm.xla_device())
-    xs.mark_sharding(linear.weight, mesh, (None, 1))
+      >>> # 4-way data parallel
+      >>> input = torch.randn(8, 32).to(xm.xla_device())
+      >>> xs.mark_sharding(input, mesh, (0, None))
+
+      >>> # 2-way model parallel
+      >>> linear = nn.Linear(32, 10).to(xm.xla_device())
+      >>> xs.mark_sharding(linear.weight, mesh, (None, 1))
   """
   num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
@@ -641,14 +644,15 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   Return:
     t (torch.Tensor): tensor that without sharding.
 
-  Examples:
-  import torch_xla.distributed.spmd as xs
-  torch_xla.runtime.use_spmd()
+  Example:
 
-  t1 = torch.randn(8,8).to(torch_xla.device())
-  mesh = xs.get_1d_mesh()
-  xs.mark_sharding(t1, mesh, (0, None))
-  xs.clear_sharding(t1)
+    >>> import torch_xla.distributed.spmd as xs
+    >>> torch_xla.runtime.use_spmd()
+
+    >>> t1 = torch.randn(8,8).to(torch_xla.device())
+    >>> mesh = xs.get_1d_mesh()
+    >>> xs.mark_sharding(t1, mesh, (0, None))
+    >>> xs.clear_sharding(t1)
   """
   torch_xla._XLAC._xla_clear_sharding(unwrap_sharded_tensor(t))
   if isinstance(t, XLAShardedTensor):
