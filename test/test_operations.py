@@ -600,7 +600,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(x.device.type, 'xla')
 
   def test_randperm(self):
-    x = torch.randperm(3, device=xm.xla_device())
+    x = torch.randperm(3, device=xm.xla_device(), dtype=torch.int32)
     self.assertEqual(x.device.type, 'xla')
 
   def test_randn_like(self):
@@ -2354,7 +2354,7 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
     xm.mark_step()
     xm.wait_device_ops()
     self.assertTrue("ExecuteTime" in met.metric_names() or
-                    "ExecuteChainedTime" in met.metric_names())
+                    "EagerOpExecuteTime" in met.metric_names())
 
 
 class TestDebuggingUtil(test_utils.XlaTestCase):
