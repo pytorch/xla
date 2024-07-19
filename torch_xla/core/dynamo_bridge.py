@@ -449,22 +449,11 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   # Values: tuple of (xla_args_sharding_spec, args_and_out, graph_hash,
   # arg_index_to_need_update_index, none_remover, graph_input_matcher,
   # dumb_return_handler, xla_args_need_update).
-  input_shape_mappings: dict[tuple[int, ...], tuple[object, ...]] = {}
+  input_shape_mappings: Dict[Tuple[int, ...], Tuple[Any, ...]] = {}
 
   (xla_args_sharding_spec, args_and_out, graph_hash,
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
    dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
-
-  # If dynamic=True, we cache the result to avoid recompilation.
-  if not torch._dynamo.config.assume_static_by_default:
-    arg_input_shapes = _get_arg_input_shapes(xla_model.xla_args)
-    input_shape_mappings[arg_input_shapes] = (xla_args_sharding_spec,
-                                              args_and_out, graph_hash,
-                                              arg_index_to_need_update_index,
-                                              none_remover, graph_input_matcher,
-                                              dumb_return_handler,
-                                              xla_args_need_update)
-
   skip_checking_input_sharding_threashold = xu.getenv_as(
       'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
 
@@ -491,6 +480,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
          dumb_return_handler,
          xla_args_need_update) = input_shape_mappings[arg_input_shapes]
       else:
+        # First time seeing these tensors since dynamic=True. Like we do in extract_compiled_graph_helper, explicitly call mark_step for the first time.
         xm.mark_step()
         (xla_args_sharding_spec, args_and_out, graph_hash,
          arg_index_to_need_update_index, none_remover, graph_input_matcher,

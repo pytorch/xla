@@ -409,7 +409,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     for data, _ in loader_new_shape:
       output_new_shape = dynamo_resnet18(data)
       output_cpu_new_shape = resnet18(data.cpu())
-      # # TPU has some precision issues, skipping allclose check
+      # TPU has some precision issues, skipping allclose check
       if not _is_on_tpu():
         self.assertTrue(
             torch.allclose(
