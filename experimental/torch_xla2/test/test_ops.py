@@ -457,8 +457,6 @@ skiplist = {
     "stack",
     "sum_to_size",
     "tensordot",
-    "tile",
-    "tril",
     "tril_indices",
     "triu_indices",
     "true_divide",
