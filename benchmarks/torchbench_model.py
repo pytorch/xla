@@ -356,6 +356,10 @@ class TorchBenchModel(BenchmarkModel):
     return self.is_accelerator_tpu() or (self.model_name == "moco" and
                                          self.benchmark_experiment.xla)
 
+  def skip_verifier(self):
+    return self.model_name in (config().accuracy.skip.large_models |
+                               config().accuracy.skip.eager_not_deterministic)
+
   def is_inference(self):
     return self.benchmark_experiment.test == "eval"
 

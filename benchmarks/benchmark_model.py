@@ -58,6 +58,11 @@ class BenchmarkModel:
       # optimizer to use. So only initialize it when there is none existing.
       self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
 
+  def skip_verifier(self):
+    """Returns whether the verifier should be skipped for this model.
+    """
+    return False
+
   def tolerance(self):
     """Tolerance to be used by the verifier.
     """
