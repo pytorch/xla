@@ -1989,6 +1989,11 @@ def _aten_topk(input, k, dim=None, largest=True, sorted=True, *, out=None):
   return values, indices
 
 
+# aten.tril_indices
+@op(torch.ops.aten.tril_indices)
+def _aten_tril_indices(a):
+  return jnp.tril_indices(a)
+
 # aten.trunc
 @op(torch.ops.aten.trunc)
 def _aten_trunc(a):
