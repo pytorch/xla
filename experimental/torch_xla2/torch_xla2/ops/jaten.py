@@ -178,7 +178,11 @@ def _aten_mm(x, y):
 
 @op(torch.ops.aten.mul.Tensor, torch.ops.aten.mul.Scalar)
 def _aten_mul(x, y):
-  return x * y
+  new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+  res = x * y
+  if isinstance(x, float) or isinstance(y, float):
+    res = res.astype(new_dtype)
+  return res
 
 
 @op(torch.ops.aten.silu)
@@ -274,9 +278,20 @@ def _aten_div(x, y, rounding_mode=""):
   res_dtype = None
   if _is_int(x) and _is_int(y):
     res_dtype = jnp.dtype('float32')
-  res = x / y
+
+  if (isinstance(x, float) or isinstance(y, float)):
+    res_dtype = new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+
+  if rounding_mode == "floor":
+    res = jnp.floor_divide(x, y)
+    if _is_int(x) and _is_int(y):
+      res_dtype = jnp.dtype('int64')
+  else:
+    res = x / y
   if rounding_mode == "trunc":
     res = jnp.trunc(res)
+    if _is_int(x) and _is_int(y):
+      res_dtype = jnp.dtype('int64')
   if res_dtype:
     res = res.astype(res_dtype)
   return res
@@ -1284,6 +1299,11 @@ def _aten_pixel_shuffle(x, upscale_factor):
 @op(torch.ops.aten.lt)
 def _aten_lt(self, other):
   return self < other
+
+# aten.logical_not_
+@op(torch.ops.aten.logical_not_)
+def _aten_logical_not_(input):
+  return jnp.logical_not(input)
 
 
 def pool(inputs, init, reduce_fn, window_shape, strides, padding):
