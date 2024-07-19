@@ -243,6 +243,10 @@ if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS',
   plugins.use_dynamic_plugins()
   plugins.register_installed_plugins()
 
+if os.getenv('XLA_USE_EAGER_DEBUG_MODE', '0') == '1':
+  from .experimental import eager_mode
+  eager_mode(True)
+
 from .torch_xla import *
 
 # register all custom kenels and decomp by default

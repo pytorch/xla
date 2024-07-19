@@ -65,12 +65,8 @@ def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
 
-def _is_on_eager_debug_mode():
-  return xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', bool, defval=False)
-
-
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
-skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
+skipOnEagerDebug = unittest.skipIf(torch_xla.experimental.is_eager_mode(),
                                    'skip on eager debug mode')
 
 
@@ -604,7 +600,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(x.device.type, 'xla')
 
   def test_randperm(self):
-    x = torch.randperm(3, device=xm.xla_device())
+    x = torch.randperm(3, device=xm.xla_device(), dtype=torch.int32)
     self.assertEqual(x.device.type, 'xla')
 
   def test_randn_like(self):
@@ -1690,10 +1686,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     y = torch.rand(5)
     self.assertEqual(x + y, y + x)
 
-  @unittest.skipIf(
-      os.environ.get('XLA_USE_EAGER_DEBUG_MODE'),
-      'Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.'
-  )
+  # Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.
+  @skipOnEagerDebug
   def test_pow_constant(self):
     t1 = torch.pow(torch.tensor([2.0, 3.0], device=xm.xla_device()), 5)
     hlo_text = torch_xla._XLAC._get_xla_tensors_text([t1])
@@ -2360,16 +2354,13 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
     xm.mark_step()
     xm.wait_device_ops()
     self.assertTrue("ExecuteTime" in met.metric_names() or
-                    "ExecuteChainedTime" in met.metric_names())
+                    "EagerOpExecuteTime" in met.metric_names())
 
 
 class TestDebuggingUtil(test_utils.XlaTestCase):
 
+  @skipOnEagerDebug
   def test_get_xla_tensor_debug_info(self):
-    if xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', str, '1'):
-      # ignore this test for eager debug mode since it will
-      # mess up the IR.
-      return
     device = xm.xla_device()
     # test non xla tensor
     cpu_t1 = torch.randn(5)

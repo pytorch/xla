@@ -86,8 +86,7 @@ XLATensorPtr XLATensor::Create(
       XLATensor(std::move(ir_value), device, logical_element_type));
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   graph_executor->RegisterTensor(xtensor->data());
-  if ((UseEagerDebugMode() || graph_executor->UseEagerMode()) &&
-      !delay_eager_executation) {
+  if (graph_executor->UseEagerMode() && !delay_eager_executation) {
     std::vector<XLATensorPtr> xtensors({xtensor});
     graph_executor->ApplyEagerSync(xtensors);
   }
@@ -330,7 +329,8 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
   data()->is_cloned = false;
 }
 
-void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
+void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace,
+                           bool delay_eager_executation) {
   data()->handle = nullptr;
   data()->tensor_data = std::nullopt;
   if (data()->view != nullptr && inplace) {
@@ -346,11 +346,15 @@ void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
     AssignIrValue(std::move(ir_value));
     TryLimitGraphSize();
   }
-  if (UseEagerDebugMode() && ShouldSyncIrNode()) {
-    std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
-    XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
-  }
   data()->is_cloned = false;
+
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  // Update should also be triggered eagerly if configured
+  if (graph_executor->UseEagerMode() && !delay_eager_executation &&
+      ShouldSyncIrNode()) {
+    std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
+    graph_executor->ApplyEagerSync(xtensors);
+  }
 }
 
 void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value,
@@ -360,14 +364,7 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value,
     ir_value =
         torch::lazy::MakeNode<Cast>(ir_value, xla_shape.get().element_type());
   }
-  SetIrValue(std::move(ir_value), /*inplace=*/true);
-  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
-
-  // in place update should also be triggered eagerly if configured
-  if (graph_executor->UseEagerMode() && !delay_eager_executation) {
-    std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
-    graph_executor->ApplyEagerSync(xtensors);
-  }
+  SetIrValue(std::move(ir_value), /*inplace=*/true, delay_eager_executation);
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
@@ -659,12 +656,6 @@ void XLATensor::ApplyPendingGraph() {
     XLAGraphExecutor::Get()->SyncTensorsGraph(&tensors, {}, /*wait=*/true,
                                               /*sync_xla_data=*/false);
   }
-}
-
-bool XLATensor::UseEagerDebugMode() {
-  static const bool use_eager_debug_mode =
-      runtime::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
-  return use_eager_debug_mode;
 }
 
 bool XLATensor::ShouldSyncIrNode() {
