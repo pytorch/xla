@@ -12,6 +12,14 @@ from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
 
 
+def global_ordinal():
+  return xr.global_ordinal()
+
+
+def local_ordinal():
+  return xr.local_ordinal()
+
+
 class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
 
   def setUp(self):
@@ -41,17 +49,15 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
-  @parameterized.named_parameters(('xla_model', xm.get_ordinal),
-                                  ('pjrt', xr.global_ordinal))
+  @parameterized.named_parameters(('xla_model', get_ordinal),
+                                  ('pjrt', global_ordinal))
   def test_global_ordinal(self, ordinal_func):
     results = pjrt.run_multiprocess(ordinal_func)
     self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
 
-  @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
-                                  ('pjrt', xr.local_ordinal))
-  def test_local_ordinal(self, ordinal_func):
+  def test_local_ordinal(self):
     # TODO(wcromar): add multiprocess tests
-    results = pjrt.run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(xm.get_local_ordinal)
     self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
 
   @staticmethod
