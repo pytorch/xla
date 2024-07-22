@@ -20,6 +20,10 @@ def local_ordinal():
   return xr.local_ordinal()
 
 
+def get_ordinal():
+  return xr.get_ordinal()
+
+
 class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
 
   def setUp(self):
