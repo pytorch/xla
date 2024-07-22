@@ -185,11 +185,11 @@ def reset_rng_state(benchmark_experiment: "BenchmarkExperiment"):
     xm.set_rng_state(SEED, str(device))
 
 
-def cleanup(experiment: "BenchmarkExperiment"):
+def cleanup(cuda: bool = False):
   # Garbage-collect right now.
   gc.collect()
 
   # If we are using CUDA, clean-up its cache left-over.
-  if experiment.accelerator == "cuda" and torch.cuda.is_available():
+  if cuda and torch.cuda.is_available():
     torch.cuda.empty_cache()
     torch.cuda.synchronize()

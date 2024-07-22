@@ -6,8 +6,8 @@ from benchmark_experiment import ExperimentLoader
 from benchmark_model import ModelLoader
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Optional
-from util import Any, cleanup, reset_rng_state, StrOrBool
+from typing import Any, Callable, Dict, Optional
+from util import cleanup, reset_rng_state, StrOrBool
 
 logger = logging.getLogger(__name__)
 
@@ -139,8 +139,11 @@ def _run(
     maybe_synchronize()
     return output
   finally:
-    del model
-    cleanup(eager_benchmark_experiment)
+    if model is not None:
+      # Delete the model for saving up memory.
+      del model
+      # Clean-up CUDA as well.
+      cleanup(cuda=True)
 
 
 def _apply_eager_config(experiment):

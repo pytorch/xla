@@ -296,7 +296,7 @@ class ExperimentRunner:
     # Delete the instantiated BenchmarkModel, so we can save memory
     # for verifying the result.
     del benchmark_model
-    cleanup(benchmark_experiment)
+    cleanup(benchmark_experiment.is_cuda())
 
     # Run the verifier iff:
     #

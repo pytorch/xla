@@ -279,7 +279,7 @@ class TorchBenchModel(BenchmarkModel):
       if self.is_accelerator_cuda() and not keep_model_data_on_cuda:
         self.module = self.module.to("cpu")
         self.example_inputs = move_to_device(self.example_inputs, "cpu")
-        cleanup(self.benchmark_experiment)
+        cleanup(self.is_accelerator_cuda())
 
     # Torchbench has quite different setup for yolov3, so directly passing
     # the right example_inputs
@@ -288,7 +288,7 @@ class TorchBenchModel(BenchmarkModel):
                                         384, 512),)
 
     del benchmark
-    cleanup(self.benchmark_experiment)
+    cleanup(self.is_accelerator_cuda())
 
   @functools.lru_cache(maxsize=1)
   def benchmark_cls(self):
@@ -367,7 +367,7 @@ class TorchBenchModel(BenchmarkModel):
     return self.benchmark_experiment.test == "train"
 
   def is_accelerator_cuda(self):
-    return self.benchmark_experiment.accelerator == "cuda"
+    return self.benchmark_experiment.is_cuda()
 
   def is_accelerator_tpu(self):
     return self.benchmark_experiment.accelerator == "tpu"
