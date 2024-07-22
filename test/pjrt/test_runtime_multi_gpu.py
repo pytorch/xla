@@ -17,6 +17,18 @@ from torch_xla._internal import pjrt
 from absl.testing import absltest, parameterized
 
 
+def global_ordinal():
+  return xr.global_ordinal()
+
+
+def local_ordinal():
+  return xr.local_ordinal()
+
+
+def get_ordinal():
+  return xr.get_ordinal()
+
+
 @unittest.skipIf(xr.device_type() != "CUDA",
                  f"GPU tests should only run on GPU devices.")
 class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
@@ -43,8 +55,8 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
-  @parameterized.named_parameters(('xla_model', xm.get_ordinal),
-                                  ('pjrt', xr.global_ordinal))
+  @parameterized.named_parameters(('xla_model', get_ordinal),
+                                  ('pjrt', global_ordinal))
   def test_global_ordinal(self, ordinal_func):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = [i for i in range(num_devices)]
@@ -52,13 +64,11 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     results = pjrt.run_multiprocess(ordinal_func)
     self.assertListEqual(sorted(results.values()), expected)
 
-  @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
-                                  ('pjrt', xr.local_ordinal))
-  def test_local_ordinal(self, ordinal_func):
+  def test_local_ordinal(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = [i for i in range(num_devices)]
 
-    results = pjrt.run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(xm.get_local_ordinal)
     self.assertListEqual(sorted(results.values()), expected)
 
   def test_global_device_count(self):
