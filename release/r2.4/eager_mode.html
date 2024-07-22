@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>torch_xla.torch_xla &mdash; PyTorch/XLA master documentation</title>
+  <title>Eager Mode + Compile API &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -25,12 +25,14 @@
 
   
 
-  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-  <!-- <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" /> -->
-  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-    <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="How to run with PyTorch/XLA:GPU" href="gpu.html" />
+    <link rel="prev" title="Troubleshooting" href="debug.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -41,16 +43,16 @@
   
 
   
-  <script src="../../_static/js/modernizr.min.js"></script>
+  <script src="_static/js/modernizr.min.js"></script>
 
   <!-- Preload the theme fonts -->
 
-<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-<link rel="preload" href="../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 
 <!-- Preload the katex fonts -->
 
@@ -277,7 +279,7 @@
 
 
 <div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
@@ -294,17 +296,17 @@
             
             
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../index.html">PyTorch/XLA documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">PyTorch/XLA documentation</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Docs</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../debug.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../eager_mode.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../gpu.html">How to run with PyTorch/XLA:GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../multi_process_distributed.html">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../runtime.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../spmd.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../torch_compile.html">TorchDynamo(torch.compile) integration in PyTorch XLA</a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="debug.html">Troubleshooting</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpu.html">How to run with PyTorch/XLA:GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multi_process_distributed.html">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="runtime.html">PJRT Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="spmd.html">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torch_compile.html">TorchDynamo(torch.compile) integration in PyTorch XLA</a></li>
 </ul>
 
             
@@ -337,7 +339,7 @@
   <ul class="pytorch-breadcrumbs">
     
       <li>
-        <a href="../../index.html">
+        <a href="index.html">
           
             Docs
           
@@ -345,12 +347,14 @@
       </li>
 
         
-          <li><a href="../index.html">Module code</a> &gt;</li>
-        
-      <li>torch_xla.torch_xla</li>
+      <li>Eager Mode + Compile API</li>
     
     
       <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="_sources/eager_mode.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
         
       </li>
     
@@ -379,84 +383,138 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <h1>Source code for torch_xla.torch_xla</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">contextlib</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
-
-<span class="kn">import</span> <span class="nn">torch</span>
+  <div class="section" id="eager-mode-compile-api">
+<h1>Eager Mode + Compile API<a class="headerlink" href="#eager-mode-compile-api" title="Permalink to this heading">¶</a></h1>
+<p>In this doc we will go over how to use PyTorch/XLA’s new experimental <code class="docutils literal notranslate"><span class="pre">eager</span></code> mode with the <code class="docutils literal notranslate"><span class="pre">compile</span></code> API. The goal is to make PyTorch/XLA experience more aligned with the native PyTorch and make development process easier.</p>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this heading">¶</a></h2>
+<p>Currently PyTorch/XLA runs on the LazyTensor tracing mode by default. In the following code</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torchvision</span>
 
+<span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+<span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
-<div class="viewcode-block" id="device"><a class="viewcode-back" href="../../index.html#torch_xla.device">[docs]</a><span class="k">def</span> <span class="nf">device</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a given instance of an XLA device.</span>
+<span class="c1"># model tracing</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
 
-<span class="sd">  If SPMD enables, returns a virtual device that wraps all devices available</span>
-<span class="sd">  to this process.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    index: index of the XLA device to be returned. Corresponds to index in</span>
-<span class="sd">      `torch_xla.devices()`.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    An XLA `torch.device`.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="k">return</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">index</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="devices"><a class="viewcode-back" href="../../index.html#torch_xla.devices">[docs]</a><span class="k">def</span> <span class="nf">devices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns all devices available in the current process.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    A list of XLA `torch.devices`.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="k">return</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">()]</span></div>
-
-
-<span class="k">def</span> <span class="nf">real_devices</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns local XLA device types and indices.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    A list strings representing the XLA devices available in the current</span>
-<span class="sd">    process, e.g. `[&#39;TPU:0&#39;, &#39;TPU:1&#39;, ...]`.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_real_devices</span><span class="p">()</span>
-
-
-<div class="viewcode-block" id="device_count"><a class="viewcode-back" href="../../index.html#torch_xla.device_count">[docs]</a><span class="k">def</span> <span class="nf">device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns number of addressable devices in the current process.&quot;&quot;&quot;</span>
-  <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">real_devices</span><span class="p">())</span></div>
-
-
-<div class="viewcode-block" id="sync"><a class="viewcode-back" href="../../index.html#torch_xla.sync">[docs]</a><span class="k">def</span> <span class="nf">sync</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Launches all pending graph operations.&quot;&quot;&quot;</span>
-  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span></div>
-
-
-<div class="viewcode-block" id="step"><a class="viewcode-back" href="../../index.html#torch_xla.step">[docs]</a><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
-<span class="k">def</span> <span class="nf">step</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps code that should be dispatched to the runtime.</span>
-
-<span class="sd">  Experimental: `xla.step` is still a work in progress. Some code that currently</span>
-<span class="sd">  works with `xla.step` but does not follow best practices will become errors in</span>
-<span class="sd">  future releases. See https://github.com/pytorch/xla/issues/6751 for context.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="c1"># Clear pending operations</span>
-  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
-
-  <span class="k">try</span><span class="p">:</span>
-    <span class="k">yield</span>
-  <span class="k">finally</span><span class="p">:</span>
-    <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span></div>
+<span class="c1"># model execution, same as `xm.mark_step`</span>
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
 </pre></div>
+</div>
+<p>The actual model compilation and device execution happens when <code class="docutils literal notranslate"><span class="pre">torch_xla.sync</span></code> is called. There are multiple drawback of this approach.</p>
+<ol class="arabic simple">
+<li><p>Users are often confused about when the framework is tracing and when the framework is executing.</p></li>
+<li><p>Non-core model code(data preprocessing for example) often generates some small pending execution that gets leaked into the main graph(step function) and causes recompilation. The recompilation of the whole graph is usually very expensive.</p></li>
+<li><p>It is hard to debug when/why recompilation happens.</p></li>
+</ol>
+<p>To mitigate above issues we want to introduce the new UX with eager and compile.</p>
+</div>
+<div class="section" id="basic-usage">
+<h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Permalink to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_xla</span>
+<span class="kn">import</span> <span class="nn">torchvision</span>
+
+<span class="c1"># Run ops eagerly by default</span>
+<span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">eager_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">()</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+<span class="c1"># Mark the function to be compiled</span>
+<span class="n">compiled_model</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+<span class="c1"># Compilation and execution happens right away.</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">compiled_model</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that</p>
+<ol class="arabic simple">
+<li><p>Currently user has to manually enable the eager mode by <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.eager_mode(True)</span></code>.</p></li>
+<li><p>The region of the code that wants to be compiled should be wrapped by <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.compile</span></code>.</p></li>
+</ol>
+<p>The implementation of the <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.compile</span></code> is actually pretty straight forward, it disable the eager mode when entering the target function and start tracing. It will call the <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> when target function returns and reenable the eager mode. You can expect the same perfomrance by using the <code class="docutils literal notranslate"><span class="pre">eager</span></code> + <code class="docutils literal notranslate"><span class="pre">compile</span></code> API compared to the existing <code class="docutils literal notranslate"><span class="pre">mark_step/sync</span></code> approach.</p>
+<div class="section" id="inference">
+<h3>Inference<a class="headerlink" href="#inference" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">eager_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">compiled_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;openxla&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It is recommened to use the <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> instead of <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.compile</span></code> for inference to reduce the tracing overhad.</p>
+</div>
+<div class="section" id="training">
+<h3>Training<a class="headerlink" href="#training" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">eager_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">step_fn</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">):</span>
+    <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+    <span class="n">logits</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+    <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+    <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">loss</span>
+
+<span class="n">step_fn</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">step_fn</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In training we asked user to refactor the <code class="docutils literal notranslate"><span class="pre">step_fn</span></code> out because it is usually better to compile the model’s forward, backward and optimizer together. The long term goal is to also use <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> for training but right now we recommend user to use <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.compile</span></code>(for perfomrance reason).</p>
+</div>
+</div>
+<div class="section" id="benchmark">
+<h2>Benchmark<a class="headerlink" href="#benchmark" title="Permalink to this heading">¶</a></h2>
+<p>I run a 2 layer decoder only model training(it is pretty much just a llama2) with fake data on a single chip of v4-8 for 300 steps. Below is the number I observed.</p>
+<table>
+  <tr>
+   <td>
+   </td>
+   <td>token/s
+
+  </tr>
+  <tr>
+   <td>Tracing mode(base line)
+   </td>
+   <td>147
+   </td>
+   </td>
+  </tr>
+  <tr>
+   <td>Eager mode
+   </td>
+   <td>65
+   </td>
+
+   </td>
+  </tr>
+  <tr>
+   <td>Eager + torch_xla compile
+   </td>
+   <td>147
+   </td>
+   </td>
+  </tr>
+</table><p>Eager mode can achieve ~45% performance of the fully compiled model for the decoder only model. The trainer I used to test can be found <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/train_decoder_only_base.py">here</a> and <a class="reference external" href="https://github.com/pytorch/xla/tree/master/examples/eager">here</a>. Note that perfomrane of the eager mode is very model dependent. When I tried to run the resnet50, the eager mode perfomrance is ~1% of the compiled mode. We don’t exepct user to use eager mode  to execute the main training loop. Eager mode is meant to be used to handle non-core part of the training/inference logic(Data preprocessing, random number generations etc) or debug.</p>
+</div>
+</div>
+
 
              </article>
              
             </div>
             <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="gpu.html" class="btn btn-neutral float-right" title="How to run with PyTorch/XLA:GPU" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="debug.html" class="btn btn-neutral" title="Troubleshooting" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
   
 
   
@@ -485,7 +543,19 @@
         <div class="pytorch-content-right" id="pytorch-content-right">
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
-              
+              <ul>
+<li><a class="reference internal" href="#">Eager Mode + Compile API</a><ul>
+<li><a class="reference internal" href="#background">Background</a></li>
+<li><a class="reference internal" href="#basic-usage">Basic Usage</a><ul>
+<li><a class="reference internal" href="#inference">Inference</a></li>
+<li><a class="reference internal" href="#training">Training</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#benchmark">Benchmark</a></li>
+</ul>
+</li>
+</ul>
+
             </div>
           </div>
         </div>
@@ -498,21 +568,21 @@
   
 
      
-       <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-         <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-         <script src="../../_static/jquery.js"></script>
-         <script src="../../_static/underscore.js"></script>
-         <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-         <script src="../../_static/doctools.js"></script>
-         <script src="../../_static/sphinx_highlight.js"></script>
+       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+         <script src="_static/jquery.js"></script>
+         <script src="_static/underscore.js"></script>
+         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="_static/doctools.js"></script>
+         <script src="_static/sphinx_highlight.js"></script>
      
 
   
 
-  <script type="text/javascript" src="../../_static/js/vendor/popper.min.js"></script>
-  <script type="text/javascript" src="../../_static/js/vendor/bootstrap.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
 
   <script type="text/javascript">
       jQuery(function () {
@@ -617,7 +687,7 @@
   <div class="cookie-banner-wrapper">
   <div class="container">
     <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
-    <img class="close-button" src="../../_static/images/pytorch-x.svg">
+    <img class="close-button" src="_static/images/pytorch-x.svg">
   </div>
 </div>
 
@@ -750,7 +820,7 @@
 
   <!-- End Mobile Menu -->
 
-  <script type="text/javascript" src="../../_static/js/vendor/anchor.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
 
   <script type="text/javascript">
     $(document).ready(function() {
