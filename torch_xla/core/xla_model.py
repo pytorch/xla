@@ -770,7 +770,8 @@ def collective_broadcast(tensors: List[torch.Tensor],
     # so each replica must have the same multiply op with the same parameters.
     for tensor in tensors:
       scale = torch.tensor(
-          1 if runtime.global_ordinal() == root_ordinal else 0, dtype=tensor.dtype)
+          1 if runtime.global_ordinal() == root_ordinal else 0,
+          dtype=tensor.dtype)
       # Transfer scale tensor as device data instead of constant 1 or 0.
       xscale = send_cpu_data_to_device(scale, tensor.device)
       tensor.mul_(xscale[0])
