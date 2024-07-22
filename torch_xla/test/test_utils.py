@@ -41,7 +41,7 @@ def mp_test(func):
 
 
 def _get_device_spec(device):
-  ordinal = xm.get_ordinal(defval=-1)
+  ordinal = xm.get_ordinal()
   return str(device) if ordinal < 0 else '{}/{}'.format(device, ordinal)
 
 
