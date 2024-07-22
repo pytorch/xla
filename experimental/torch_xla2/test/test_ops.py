@@ -269,7 +269,6 @@ skiplist = {
     "softmax",
     "sort",
     "special.airy_ai",
-    "special.bessel_j0",
     "special.bessel_j1",
     "special.bessel_y0",
     "special.bessel_y1",
