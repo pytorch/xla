@@ -462,6 +462,6 @@ class TorchBenchModel(BenchmarkModel):
     if self.model_name in config().detectron2_models:
       from detectron2.utils.events import EventStorage
       with EventStorage():
-        super().train(inputs, collect_full_output=collect_full_output)
+        return super().train(inputs, collect_full_output=collect_full_output)
     else:
-      super().train(inputs, collect_full_output=collect_full_output)
+      return super().train(inputs, collect_full_output=collect_full_output)
