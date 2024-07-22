@@ -124,6 +124,65 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
     self.assertNotIn('CompileTime', met.metric_names())
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
+  def test_dynamic_shape_mix_with_non_dynamic(self):
+    torch_xla.manual_seed(100)
+    device = torch_xla.device()
+    # model setup
+    in_dim = 15
+    out_dum = 31
+    out_dum_2 = 33
+    batch = 8
+    _, dummy_linear_xla, _, input_xla = self._get_linear_and_input(
+        in_dim, out_dum, batch, device)
+    dynamic_compiled_linear_xla = torch.compile(
+        dummy_linear_xla, backend="openxla", dynamic=True)
+    _, dummy_linear_xla_2, _, input_xla_2 = self._get_linear_and_input(
+        in_dim, out_dum_2, batch, device)
+    static_compiled_linear_xla = torch.compile(
+        dummy_linear_xla_2, backend="openxla")
+    xm.wait_device_ops()
+    met.clear_all()
+
+    # first run the dynamic compiled model
+    res_xla = dynamic_compiled_linear_xla(input_xla)
+    # torch.compile should be called once
+    xm.wait_device_ops()
+    self.assertEqual(met.counter_value('DynamoExtractCompiledGraph'), 1)
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
+    # and then run dynamic compiled model with differnt batch size
+    met.clear_all()
+    batch = 32
+    input_xla = torch.randn(batch, in_dim).to(device)
+    res_xla = dynamic_compiled_linear_xla(input_xla)
+    # torch.compile should not retrace but xla will recompile
+    xm.wait_device_ops()
+    self.assertNotIn('DynamoExtractCompiledGraph', met.counter_names())
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
+    # now run the static compiled model
+    met.clear_all()
+    res_xla = static_compiled_linear_xla(input_xla_2)
+    # torch.compile should be called
+    xm.wait_device_ops()
+    self.assertEqual(met.counter_value('DynamoExtractCompiledGraph'), 1)
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
+    # run static compiled model with different batch size, we expect the dynamo
+    # to retrace the model.
+    met.clear_all()
+    batch = 12
+    input_xla_2 = torch.randn(batch, in_dim).to(device)
+    res_xla = static_compiled_linear_xla(input_xla_2)
+    # torch.compile should be called
+    xm.wait_device_ops()
+    self.assertEqual(met.counter_value('DynamoExtractCompiledGraph'), 1)
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
   def test_dynamic_shape_resnet18(self):
     device = torch_xla.device()
 
