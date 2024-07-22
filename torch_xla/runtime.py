@@ -19,7 +19,7 @@ FN = TypeVar('FN')
 
 # Note [Dynamo WORLD_SIEZ and ORDINAL]
 # Belows are workaround to cache the ordinal and world_size such that
-# Dynamo won't do graph breaks when runtime.xrt_world_size() and runtime.get_ordinal() are called.
+# Dynamo won't do graph breaks when runtime.xrt_world_size() and runtime.global_ordinal() are called.
 _WORLD_SIZE = None
 _ORDINAL = None
 
@@ -33,7 +33,7 @@ def _init_world_size_ordinal():
 
   if _WORLD_SIZE is None:
     _WORLD_SIZE = runtime.world_size()
-    _ORDINAL = runtime.get_ordinal()
+    _ORDINAL = runtime.global_ordinal()
 
 
 def run_once(func):

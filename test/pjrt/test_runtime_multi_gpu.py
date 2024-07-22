@@ -17,18 +17,6 @@ from torch_xla._internal import pjrt
 from absl.testing import absltest, parameterized
 
 
-def global_ordinal():
-  return xr.global_ordinal()
-
-
-def local_ordinal():
-  return xr.local_ordinal()
-
-
-def get_ordinal():
-  return xr.get_ordinal()
-
-
 @unittest.skipIf(xr.device_type() != "CUDA",
                  f"GPU tests should only run on GPU devices.")
 class TestExperimentalPjrtMultiGpu(parameterized.TestCase):

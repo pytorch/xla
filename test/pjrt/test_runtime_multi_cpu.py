@@ -12,18 +12,6 @@ from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
 
 
-def global_ordinal():
-  return xr.global_ordinal()
-
-
-def local_ordinal():
-  return xr.local_ordinal()
-
-
-def get_ordinal():
-  return xr.get_ordinal()
-
-
 class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
 
   def setUp(self):

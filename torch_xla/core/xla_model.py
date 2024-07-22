@@ -126,7 +126,7 @@ def is_master_ordinal(local=True):
   Returns:
     A boolean indicating whether the current process is the master ordinal.
   """
-  ordinal = get_local_ordinal() if local else runtime.get_ordinal()
+  ordinal = get_local_ordinal() if local else runtime.global_ordinal()
   return ordinal == 0
 
 
@@ -477,7 +477,7 @@ def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
     dim = value.dim() + dim
   size = value.size(dim)
   padding = [0] * (2 * value.dim())
-  ordinal = runtime.get_ordinal()
+  ordinal = runtime.global_ordinal()
   if groups is None:
     left, right = ordinal, runtime.world_size() - 1 - ordinal
   else:
@@ -770,7 +770,7 @@ def collective_broadcast(tensors: List[torch.Tensor],
     # so each replica must have the same multiply op with the same parameters.
     for tensor in tensors:
       scale = torch.tensor(
-          1 if runtime.get_ordinal() == root_ordinal else 0, dtype=tensor.dtype)
+          1 if runtime.global_ordinal() == root_ordinal else 0, dtype=tensor.dtype)
       # Transfer scale tensor as device data instead of constant 1 or 0.
       xscale = send_cpu_data_to_device(scale, tensor.device)
       tensor.mul_(xscale[0])
@@ -1343,7 +1343,7 @@ def do_on_ordinals(target, data=(), ordinals=(0,)):
     In the ordinals that ran the `target` function, the function return value,
     otherwise `None`.
   """
-  running = runtime.get_ordinal() in ordinals
+  running = runtime.global_ordinal() in ordinals
   cpu_data = _maybe_convert_to_cpu(data, convert=running)
   if running:
     result = target(*cpu_data)
