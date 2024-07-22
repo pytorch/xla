@@ -109,7 +109,7 @@ def _run(
     model = runner.model_loader.load_model(
         model_config, experiment, force_dtype=force_dtype)
 
-    iterations = runner._args.iterations_per_run
+    iterations = runner._args.verify_iterations
     inputs = copy.deepcopy(model.example_inputs)
 
     def maybe_mark_step():
