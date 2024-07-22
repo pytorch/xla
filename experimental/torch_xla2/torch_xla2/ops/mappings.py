@@ -5,45 +5,9 @@ import torch
 import torch.func
 import torch.utils.dlpack as torchdl
 
+UNSUPPORTED_TORCH_TO_NUMPY_DTYPE = [torch.bfloat16, torch.float8_e4m3fn, torch.float8_e5m2]
 
-def t2j(t):
-  is_bool = False
-  if t.dtype == torch.bool:
-    is_bool = True
-    t = t.to(torch.int8)
-
-  if not t.is_contiguous():
-    t = t.contiguous()
-
-  try:
-    dl = torchdl.to_dlpack(t)
-    res = jaxdl.from_dlpack(dl)
-  except Exception:
-    # https://github.com/google/jax/issues/7657
-    # https://github.com/google/jax/issues/17784
-    if t.dtype == torch.bfloat16:
-      nparray = (t.cpu().detach().to(torch.float32).numpy()
-                )  # numpy don't support bfloat16
-    else:
-      nparray = t.cpu().detach().numpy()
-    res = jnp.asarray(nparray)
-    if t.dtype == torch.bfloat16:
-      res = res.astype(jnp.bfloat16)
-
-  if is_bool:
-    res = res.astype(jnp.bool_)
-  return res
-
-
-def j2t(x):
-  try:
-    dl = jaxdl.to_dlpack(x)
-    res = torchdl.from_dlpack(dl)
-  except Exception:
-    res = torch.from_numpy(numpy.asarray(x))
-  if x.dtype == jnp.bool_:
-    res = res.to(torch.bool)
-  return res
+UNSUPPORTED_NUMPY_TO_TORCH_DTYPE = [jnp.dtype("bfloat16"), jnp.dtype("float8_e4m3fn"), jnp.dtype("float8_e5m2")]
 
 TORCH_DTYPE_TO_JAX = {
     # NO_MAPPING        : jnp.float0.dtype (signless scalar int),
@@ -92,3 +56,48 @@ def j2t_dtype(dtype):
   if dtype not in JAX_DTYPE_TO_TORCH:
     raise RuntimeError(f'Attempting to convert unknown type: {dtype} to torch type,')
   return JAX_DTYPE_TO_TORCH[dtype]
+
+def t2j(t):
+  is_bool = False
+  if t.dtype == torch.bool:
+    is_bool = True
+    t = t.to(torch.int8)
+
+  if not t.is_contiguous():
+    t = t.contiguous()
+
+  try:
+    dl = torchdl.to_dlpack(t)
+    res = jaxdl.from_dlpack(dl)
+  except Exception:
+    # https://github.com/google/jax/issues/7657
+    # https://github.com/google/jax/issues/17784
+    if t.dtype in UNSUPPORTED_TORCH_TO_NUMPY_DTYPE:
+      nparray = (t.cpu().detach().to(torch.float32).numpy()
+                )  # numpy don't support bfloat16
+    else:
+      nparray = t.cpu().detach().numpy()
+    res = jnp.asarray(nparray)
+    if t.dtype in UNSUPPORTED_TORCH_TO_NUMPY_DTYPE:
+      res = res.astype(TORCH_DTYPE_TO_JAX[t.dtype])
+
+  if is_bool:
+    res = res.astype(jnp.bool_)
+  return res
+
+
+def j2t(x):
+  try:
+    dl = jaxdl.to_dlpack(x)
+    res = torchdl.from_dlpack(dl)
+  except Exception:
+    if x.dtype in UNSUPPORTED_NUMPY_TO_TORCH_DTYPE:
+      res = x.astype(jnp.float32)
+    else:
+      res = x
+    res = torch.from_numpy(numpy.asarray(res))
+    if x.dtype in UNSUPPORTED_NUMPY_TO_TORCH_DTYPE:
+      res = res.to(JAX_DTYPE_TO_TORCH[x.dtype])
+  if x.dtype == jnp.bool_:
+    res = res.to(torch.bool)
+  return res
