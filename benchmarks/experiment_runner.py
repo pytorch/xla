@@ -975,10 +975,10 @@ def parse_args(args=None):
       help="""If set, verifies the model output with PT Eager mode, and saves relative error to the output file."""
   )
   parser.add_argument(
-    "--verify-iterations",
-    type=int,
-    default=1,
-    help="Number of iterations to be run in the verification process.",
+      "--verify-iterations",
+      type=int,
+      default=1,
+      help="Number of iterations to be run in the verification process.",
   )
   parser.add_argument(
       "--no-skip",

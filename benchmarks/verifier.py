@@ -146,7 +146,6 @@ def _apply_eager_config(experiment):
   return experiment
 
 
-
 def _collect(out: Any) -> List[Any]:
   """Collect leaf objects into a nested list.
 
@@ -187,8 +186,6 @@ def _collect(out: Any) -> List[Any]:
   # name of this composite class.
   typename = type(out).__name__
   return [typename] + collect_impl(out)
-
-
 
 
 def _same(

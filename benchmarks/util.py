@@ -77,12 +77,14 @@ def move_to_device(item, device, torch_xla2: bool = False):
     move_to_device_func = lambda t: jax.device_put(
         torch_xla2.tensor.t2j(t), device)
   else:
+
     def move_to_device_func(tensor: torch.Tensor) -> torch.Tensor:
       # If `tensor` is an XLA tensor, first move it to CPU. We need to do
       # that if we want to move the tensor to, say, CUDA.
       if tensor.device.type == "xla":
         return tensor.cpu().to(device)
       return tensor.to(device)
+
   return pytree.tree_map_only(torch.Tensor, move_to_device_func, item)
 
 
