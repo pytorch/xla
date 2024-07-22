@@ -1,3 +1,4 @@
+import copy
 import logging
 import torch
 import traceback
@@ -6,8 +7,8 @@ from benchmark_experiment import ExperimentLoader
 from benchmark_model import ModelLoader
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Optional
-from util import cleanup, reset_rng_state, StrOrBool
+from typing import Any, Callable, Dict, List, Optional
+from util import cleanup, move_to_device, reset_rng_state, StrOrBool
 
 logger = logging.getLogger(__name__)
 
@@ -95,28 +96,20 @@ def _run(
 
   `eager` modifies the experiment configuration, running it with PyTorch eager.
   """
-  try:
-    reset_rng_state(experiment)
+  model = None
 
+  try:
     if eager:
       experiment_config = _apply_eager_config(experiment_config)
 
     experiment = runner.experiment_loader.load_experiment(experiment_config)
+    reset_rng_state(experiment)
+
+    force_dtype = torch.float64 if force_fp64 else None
     model = runner.model_loader.load_model(
-        model_config,
-        eager_benchmark_experiment,
-        force_dtype=torch.float64 if force_fp64 else None,
-    )
+        model_config, experiment, force_dtype=force_dtype)
 
-    experiment, model = get_benchmark_model(
-        runner,
-        experiment_config,
-        model_config,
-        force_fp64=force_fp64,
-        eager=eager,
-    )
-
-    n = runner._args.iterations_per_run
+    iterations = runner._args.iterations_per_run
     inputs = copy.deepcopy(model.example_inputs)
 
     def maybe_mark_step():
@@ -129,9 +122,9 @@ def _run(
     maybe_synchronize()
 
     with model.pick_grad():
-      for i in range(runner._args.iterations_per_run):
+      for i in range(iterations):
         # Collect grad results only in the last run.
-        collect_full_output = i == n - 1
+        collect_full_output = i == iterations - 1
         output = model.model_iter_fn(
             inputs, collect_full_output=collect_full_output)
         maybe_mark_step()
@@ -153,17 +146,77 @@ def _apply_eager_config(experiment):
   return experiment
 
 
+
+def _collect(out: Any) -> List[Any]:
+  """Collect leaf objects into a nested list.
+
+  This function uses the conditions used by `torch._dynamo.utils.same` for
+  collecting recursively the objects that will be compared by that function.
+
+  This is needed because, otherwise, we can't move ALL XLA tensors to be on
+  the same device as the eager runs. Without that move, `torch.allclose`
+  calls the XLA kernel with a CPU/CUDA tensor, failing due to an assertion
+  error.
+  """
+
+  def collect_impl(out: Any) -> List[Any]:
+    if isinstance(out, (list, tuple, torch.nn.ParameterList, torch.Size)):
+      return [_collect(x) for x in out]
+    elif type(out).__name__ == "QuestionAnsweringModelOutput":
+      return _collect(out.loss)
+    elif isinstance(out, dict):
+      return [_collect(out[k]) for k in sorted(out.keys())]
+    elif type(out).__name__ in (
+        "MaskedLMOutput",
+        "Seq2SeqLMOutput",
+        "CausalLMOutputWithCrossAttentions",
+        "LongformerMaskedLMOutput",
+        "Instances",
+        "SquashedNormal",
+        "Boxes",
+        "Normal",
+        "TanhTransform",
+        "Foo",
+        "Variable",
+    ):
+      return [_collect(getattr(out, k)) for k in sorted(out.__dict__.keys())]
+    else:
+      return [out]
+
+  # Have the first element of ever list in this nested list be the type
+  # name of this composite class.
+  typename = type(out).__name__
+  return [typename] + collect_impl(out)
+
+
+
+
 def _same(
-    out1: Any,
-    out2: Any,
+    ref: Any,
+    res: Any,
     fp64_ref: Any = None,
     cos_similarity: bool = False,
     tol: float = 0,
     equal_nan: bool = True,
 ) -> bool:
+  ref = _collect(ref)
+  res = _collect(res)
+  fp64_ref = _collect(fp64_ref)
+
+  # Find, at least, one tensor in `ref`, and grab its device.
+  ref_device = None
+  for x in ref:
+    if isinstance(x, torch.Tensor):
+      ref_device = x.device
+      break
+
+  # Then, move `res` to the found device, so that we have no errors when
+  # trying to call `allclose`.
+  res = move_to_device(res, ref_device)
+
   return torch._dynamo.utils.same(
-      out1,
-      out2,
+      ref,
+      res,
       fp64_ref=fp64_ref,
       cos_similarity=cos_similarity,
       tol=tol,
