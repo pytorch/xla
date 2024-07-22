@@ -75,9 +75,11 @@
   ansible.builtin.shell: |
     pushd /tmp/staging-wheels
     cp {{ item.dir }}/*.whl .
-    rename -v "s/^({{ item.prefix }}-\d+\.\d+\.\d+)(.*)\.whl$/\1+nightly$(date -u +%Y%m%d)\2.whl/" *.whl
+    rename -v "s/^({{ item.prefix }}-\d+\.\d+\.\d+)(.*)\.whl$/\1+nightly\2.whl/" *.whl
     mv /tmp/staging-wheels/* /dist/
     popd
+
+    rename -v "s/^({{ item.prefix }}-\d+\.\d+\.\d+\+nightly)(.*)\.whl$/\1$(date -u +%Y%m%d)\2.whl/" *.whl
   args:
     executable: /bin/bash
     chdir: "{{ item.dir }}"
