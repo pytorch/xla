@@ -178,6 +178,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test "$CDIR/dynamo/test_dynamo_aliasing.py"
   run_test "$CDIR/dynamo/test_dynamo.py"
+  run_test "$CDIR/dynamo/test_dynamo_dynamic_shape.py"
   run_test "$CDIR/dynamo/test_bridge.py"
   run_test "$CDIR/dynamo/test_num_output.py"
   run_test "$CDIR/dynamo/test_graph_input_matcher.py"

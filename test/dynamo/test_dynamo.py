@@ -27,7 +27,7 @@ import test_utils
 
 
 def _is_on_tpu():
-  return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
+  return xr.device_type() == 'TPU'
 
 
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
@@ -373,54 +373,6 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
         met.metric_data('RunCachedGraphInputData')[0], sample_count)
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
-
-  @parameterized.parameters(
-      True,
-      False,
-  )
-  def test_dynamic_shape_resnet18(self, initialize_on_cuda):
-    device = self._choose_proper_device(initialize_on_cuda)
-    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
-    loader = self.get_loader(device, sample_count, batch_size=4)
-    resnet18 = torchvision.models.resnet18()
-    resnet18.eval()
-    device_resnet18 = torchvision.models.resnet18()
-    device_resnet18.load_state_dict(resnet18.state_dict())
-    device_resnet18.to(device)
-    device_resnet18.eval()
-    # materalize the fake data for test purpose
-    xm.mark_step()
-    xm.wait_device_ops()
-    met.clear_all()
-    dynamo_resnet18 = torch.compile(
-        device_resnet18, backend='openxla', dynamic=True)
-    for data, _ in loader:
-      output = dynamo_resnet18(data)
-      output_cpu = resnet18(data.cpu())
-      # TPU has some precision issues, skipping allclose check
-      if not _is_on_tpu():
-        self.assertTrue(
-            torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
-
-    previous_extract_compile_count = met.counter_value(
-        'DynamoExtractCompiledGraph')
-
-    loader_new_shape = self.get_loader(device, sample_count, batch_size=2)
-    for data, _ in loader_new_shape:
-      output_new_shape = dynamo_resnet18(data)
-      output_cpu_new_shape = resnet18(data.cpu())
-      # TPU has some precision issues, skipping allclose check
-      if not _is_on_tpu():
-        self.assertTrue(
-            torch.allclose(
-                output_cpu_new_shape,
-                output_new_shape.cpu(),
-                rtol=1e-05,
-                atol=1e-05))
-
-    self.assertEqual(
-        met.counter_value('DynamoExtractCompiledGraph'),
-        previous_extract_compile_count)
 
   def test_resnet18_lazy_vs_dynamo(self):
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
