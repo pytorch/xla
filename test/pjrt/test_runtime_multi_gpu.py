@@ -55,20 +55,11 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
-  @parameterized.named_parameters(('xla_model', get_ordinal),
-                                  ('pjrt', global_ordinal))
-  def test_global_ordinal(self, ordinal_func):
+  def test_global_ordinal(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = [i for i in range(num_devices)]
 
-    results = pjrt.run_multiprocess(ordinal_func)
-    self.assertListEqual(sorted(results.values()), expected)
-
-  def test_local_ordinal(self):
-    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
-    expected = [i for i in range(num_devices)]
-
-    results = pjrt.run_multiprocess(xm.get_local_ordinal)
+    results = pjrt.run_multiprocess(xr.global_ordinal)
     self.assertListEqual(sorted(results.values()), expected)
 
   def test_global_device_count(self):

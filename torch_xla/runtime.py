@@ -190,26 +190,6 @@ def world_size() -> int:
 
 
 @requires_pjrt
-def get_ordinal(defval=0):
-  """Retrieves the replication ordinal of the current thread.
-
-  The ordinals range from 0 to `runtime.world_size()` minus 1.
-
-  Args:
-    defval (int, optional): The default value to be returned in case there is no
-      replication information available. Ignored for runtime.
-      Default: 0
-
-  Returns:
-    The replication ordinal of the current thread.
-  """
-  global _ORDINAL
-  if _ORDINAL is not None:
-    return _ORDINAL
-  return torch_xla._XLAC._xla_get_default_device_ordinal()
-
-
-@requires_pjrt
 def local_device_count() -> int:
   """Returns the total number of devices on this host.
 
@@ -231,6 +211,9 @@ def global_ordinal() -> int:
   Global ordinal is in range [0, global_device_count). Global ordinals are not
   guaranteed to have any predictable relationship to the TPU worker ID nor are
   they guaranteed to be contiguous on each host."""
+  global _ORDINAL
+  if _ORDINAL is not None:
+    return _ORDINAL
   return torch_xla._XLAC._xla_get_default_device_ordinal()
 
 

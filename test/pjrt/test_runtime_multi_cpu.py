@@ -53,15 +53,8 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
-  @parameterized.named_parameters(('xla_model', get_ordinal),
-                                  ('pjrt', global_ordinal))
-  def test_global_ordinal(self, ordinal_func):
-    results = pjrt.run_multiprocess(ordinal_func)
-    self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
-
-  def test_local_ordinal(self):
-    # TODO(wcromar): add multiprocess tests
-    results = pjrt.run_multiprocess(xm.get_local_ordinal)
+  def test_global_ordinal(self):
+    results = pjrt.run_multiprocess(xr.global_ordinal)
     self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
 
   @staticmethod
@@ -72,14 +65,14 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
 
       @staticmethod
       def forward(ctx, x):
-        ordinal = xm.get_ordinal()
+        ordinal = xr.global_ordinal()
         ctx.forward_ordinal = ordinal
         return x
 
       @staticmethod
       def backward(ctx, grad_output):
         results['forward_ordinal'] = ctx.forward_ordinal
-        results['backward_ordinal'] = xm.get_ordinal()
+        results['backward_ordinal'] = xr.global_ordinal()
         results['device'] = str(xm.xla_device())
         return grad_output
 
