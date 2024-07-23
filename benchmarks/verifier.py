@@ -188,6 +188,25 @@ def _collect(out: Any) -> List[Any]:
   return [typename] + collect_impl(out)
 
 
+def _maybe_get_device(r: Any) -> Optional[torch.device]:
+  """Get the device from a tensor inside `r`, if one exists.
+
+  Recursively go through `r`, looking for a tensor. Once found,
+  return its device. Otherwise, return None.
+
+  This is used so that we can move the XLA result into the same
+  device as the eager output.
+  """
+  if isinstance(r, torch.Tensor):
+    return r.device
+  if isinstance(r, list):
+    for x in r:
+      maybe_device = _maybe_get_device(x)
+      if maybe_device is not None:
+        return maybe_device
+  return None
+
+
 def _same(
     ref: Any,
     res: Any,
@@ -201,11 +220,8 @@ def _same(
   fp64_ref = _collect(fp64_ref)
 
   # Find, at least, one tensor in `ref`, and grab its device.
-  ref_device = None
-  for x in ref:
-    if isinstance(x, torch.Tensor):
-      ref_device = x.device
-      break
+  ref_device = _maybe_get_device(ref)
+  assert ref_device is not None, f"could not find any tensor in output {ref}"
 
   # Then, move `res` to the found device, so that we have no errors when
   # trying to call `allclose`.
