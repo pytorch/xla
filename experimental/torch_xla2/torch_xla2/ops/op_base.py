@@ -1,9 +1,11 @@
 import functools
+import jax
+import jax.numpy as jnp
 import torch
 from torch_xla2.ops import mappings
 from torch_xla2 import types
 
-from typing import Optional, ParamSpec
+from typing import Callable, Concatenate, Optional, ParamSpec
 
 
 class InplaceOp:
@@ -39,8 +41,8 @@ def convert_dtype(use_default_dtype: bool = True):
     A decorator that wraps a JAX implementation of a torch function.
   """
 
-  def decorator(func: types.TorchCallable):
-
+  def decorator(
+        func: Callable[Concatenate[..., torch.dtype, P], types.JaxValue]):
     @functools.wraps(func)
     def wrapper(*args: P.args,
                 dtype: Optional[torch.dtype] = None,
@@ -54,3 +56,16 @@ def convert_dtype(use_default_dtype: bool = True):
     return wrapper
 
   return decorator
+
+
+def promote_int_input(f: Callable[Concatenate[jax.Array, P], types.JaxValue]):
+   """If the first argument is an int array, promote it to float32."""
+   @functools.wraps(f)
+   def wrapper(x: jax.Array, *args: P.args, **kwargs: P.kwargs):
+      if x.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
+        x = x.astype(jnp.float32)
+
+      return f(x, *args, **kwargs)
+
+   return wrapper
+
