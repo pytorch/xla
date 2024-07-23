@@ -171,6 +171,15 @@ def _maybe_move_tensors_to_device(tensors: tuple,
   return tuple(moved_tensors)
 
 
+# Given a list of args, returns a tuple of all the args' shapes.
+def _get_arg_input_shapes(args):
+  arg_input_shapes = []
+  for arg in args:
+    if isinstance(arg, torch.Tensor):
+      arg_input_shapes.append(tuple(arg.shape))
+  return tuple(arg_input_shapes)
+
+
 class Deduper:
 
   def __init__(self):
@@ -430,6 +439,18 @@ def extract_internal(xla_model: torch.fx.GraphModule):
         print(torch_xla._XLAC._get_xla_tensor_debug_info(xla_arg))
   # Don't reset the scope as we might be under some profiler trace scope.
   xm.mark_step(reset_scope=False)
+
+  # [Note: Dynamo real-time input-shape cache look-up]
+  # We maintain a mapping of input shapes to outputs of extract_graph_helper.
+  # When dynamic=True in torch.compile call, TorchDynamo will not trigger a
+  # new recompile. Then TorchXLA needs to figure out if these input shapes have
+  # been seen before.
+  # Keys: tuple of input shapes
+  # Values: tuple of (xla_args_sharding_spec, args_and_out, graph_hash,
+  # arg_index_to_need_update_index, none_remover, graph_input_matcher,
+  # dumb_return_handler, xla_args_need_update).
+  input_shape_mappings: Dict[Tuple[int, ...], Tuple[Any, ...]] = {}
+
   (xla_args_sharding_spec, args_and_out, graph_hash,
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
    dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
@@ -447,6 +468,28 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal dumb_return_handler
     nonlocal xla_args_need_update
     nonlocal skip_checking_input_sharding_threashold
+    nonlocal input_shape_mappings
+
+    # See [Note: Dynamo real-time input-shape cache look-up] above.
+    if not torch._dynamo.config.assume_static_by_default:
+      xla_model.xla_args = args
+      arg_input_shapes = _get_arg_input_shapes(xla_model.xla_args)
+      if arg_input_shapes in input_shape_mappings:
+        (xla_args_sharding_spec, args_and_out, graph_hash,
+         arg_index_to_need_update_index, none_remover, graph_input_matcher,
+         dumb_return_handler,
+         xla_args_need_update) = input_shape_mappings[arg_input_shapes]
+      else:
+        # First time seeing these tensors since dynamic=True. Like we do in extract_compiled_graph_helper, explicitly call mark_step for the first time.
+        xm.mark_step()
+        (xla_args_sharding_spec, args_and_out, graph_hash,
+         arg_index_to_need_update_index, none_remover, graph_input_matcher,
+         dumb_return_handler,
+         xla_args_need_update) = extract_graph_helper(xla_model)
+        input_shape_mappings[arg_input_shapes] = (
+            xla_args_sharding_spec, args_and_out, graph_hash,
+            arg_index_to_need_update_index, none_remover, graph_input_matcher,
+            dumb_return_handler, xla_args_need_update)
 
     original_device: torch.device = _get_input_arg_device(args)
     is_cuda_args: bool = False
@@ -463,6 +506,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
             torch_xla._XLAC._check_tensor_need_materialization(
                 [a for a in args if isinstance(a, torch.Tensor)])) if x
     ]
+
     if len(input_tensors_to_sync) > 0:
       torch_xla._XLAC._xla_increment_counter('DynamoSyncInputExecuteTime', 1)
       torch_xla._XLAC._xla_sync_multi(
@@ -479,7 +523,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
             args) != xla_args_sharding_spec:
           # update the xla_args with the input with new sharding and retrace
           xla_model.xla_args = args
-          (xla_args_sharding_spec, args_and_ou_copy, graph_hash,
+          (xla_args_sharding_spec, args_and_out_copy, graph_hash,
            arg_index_to_need_update_index, none_remover, graph_input_matcher,
            dumb_return_handler,
            xla_args_need_update) = extract_graph_helper(xla_model)
@@ -529,6 +573,10 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
     self._unsupported_nodes = []
 
   def run_node(self, n: torch.fx.Node):
+    # We need to restore this metric count later, so save it in a separate variable
+    dynamo_extract_graph_helper_metric_count = metrics.counter_value(
+        'DynamoExtractCompiledGraph')
+
     metrics.clear_counters()
     result = super().run_node(n)
     fallback_ops = get_fallback_ops()
@@ -562,6 +610,10 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
       # the _unsupported_nodes list.
       if not (result_is_supported and args_are_supported):
         self._unsupported_nodes.append(n)
+
+    # Restore this metric counter
+    torch_xla._XLAC._xla_increment_counter(
+        'DynamoExtractCompiledGraph', dynamo_extract_graph_helper_metric_count)
 
     return result
 
@@ -605,7 +657,8 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
-  # graph extraction must happens under tracing mode
+  torch_xla._XLAC._xla_increment_counter('DynamoExtractCompiledGraph', 1)
+
   with torch_xla.experimental.eager_mode_context(False):
     return extract_compiled_graph_helper(xla_model, xla_args)
 
@@ -636,10 +689,14 @@ def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
   for name, buffer in xla_model.named_buffers():
     if "self" in name:
       self_args.append(buffer)
-  all_xla_args = list(xla_args) + self_args
+
+  # When dynamic_shape=True, TorchDynamo will pass us shapes as integers. We want to deal with the tensors only for now, so keep them separately.
+  all_xla_args = [
+      xla_arg for xla_arg in xla_args if isinstance(xla_arg, torch.Tensor)
+  ] + self_args
 
   for xla_arg in xla_args:
-    if xla_arg.device.type != 'xla':
+    if isinstance(xla_arg, torch.Tensor) and xla_arg.device.type != 'xla':
       warnings.warn(
           "Found tensor with shape " + str(xla_arg.size()) + " on " +
           str(xla_arg.device) +
