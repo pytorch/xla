@@ -269,8 +269,6 @@ skiplist = {
     "softmax",
     "sort",
     "special.airy_ai",
-    "special.bessel_y0",
-    "special.bessel_y1",
     "special.chebyshev_polynomial_t",
     "special.chebyshev_polynomial_u",
     "special.erfcx",
