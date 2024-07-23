@@ -52,6 +52,7 @@ import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
 import torch_xla.core.functions as xf
 import torch_xla.debug.profiler as xp
+import torch_xla._internal.utils as _utils
 import unittest
 import test_utils
 
@@ -210,7 +211,7 @@ class TestToXlaTensorArena(test_utils.XlaTestCase):
             return False
       return True
 
-    xla_data = xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
+    xla_data = _utils.ToXlaTensorArena(convert_fn, select_fn).transform(data)
     self.assertTrue(check_fn(xla_data))
 
 

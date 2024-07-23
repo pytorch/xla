@@ -4,6 +4,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 from torch_xla.distributed.zero_redundancy_optimizer import ZeroRedundancyOptimizer
+import torch_xla._internal.utils as _utils
 from torch_xla import runtime as xr
 from copy import deepcopy
 
@@ -28,7 +29,7 @@ def _get_partial_states(s):
   def select_fn(v):
     return type(v) == torch.Tensor and xm.is_xla_tensor(v)
 
-  return xm.ToXlaTensorArena(convert_fn, select_fn).transform(s)
+  return _utils.ToXlaTensorArena(convert_fn, select_fn).transform(s)
 
 
 class XlaZeRO1Test(test_utils.XlaTestCase):

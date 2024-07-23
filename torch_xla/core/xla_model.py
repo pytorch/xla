@@ -45,6 +45,7 @@ XLA_LIB = Library("xla", "DEF")
 from . import xla_model as this_module
 parse_xla_device = deprecated(this_module, _utils.parse_xla_device)
 reduce_gradients = deprecated(this_module, _utils.reduce_gradients)
+ToXlaTensorArena = deprecared(this_module, _utils.ToXlaTensorArena)
 
 
 def _init_world_size_ordinal():
@@ -1199,7 +1200,7 @@ def _maybe_convert_to_cpu(data, convert=True):
   def select_fn(v):
     return type(v) == torch.Tensor and is_xla_tensor(v)
 
-  return ToXlaTensorArena(convert_fn, select_fn).transform(data)
+  return _utils.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
 def send_cpu_data_to_device(datas, device, input_sharding=None):
@@ -1218,7 +1219,7 @@ def send_cpu_data_to_device(datas, device, input_sharding=None):
 
   if type(datas) is torch.Tensor:
     datas = [datas]
-  return ToXlaTensorArena(convert_fn, select_fn).transform(datas)
+  return _utils.ToXlaTensorArena(convert_fn, select_fn).transform(datas)
 
 
 def xla_rendezvous(payload: bytes = b'',

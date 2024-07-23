@@ -40,7 +40,7 @@ def _rewrite_data(path, data, save_tensors):
     if os.path.isdir(path):
       shutil.rmtree(path)
     os.mkdir(path)
-  return xm.ToXlaTensorArena(convert_fn, select_fn).transform(data)
+  return _utils.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
 def save(data, path, master_only=True, global_master=False):
@@ -97,4 +97,4 @@ def load(path):
   def select_fn(v):
     return type(v) == TensorReference
 
-  return xm.ToXlaTensorArena(convert_fn, select_fn).transform(ref_data)
+  return _utils.ToXlaTensorArena(convert_fn, select_fn).transform(ref_data)
