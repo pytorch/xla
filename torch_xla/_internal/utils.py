@@ -24,7 +24,7 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout when reducing gradients.
       See `xm.all_reduce` for details.
   """
-  count = xrt_world_size()
+  count = xm.xrt_world_size()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
     bucket_cap_mb = int(os.getenv('ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB', 0))
