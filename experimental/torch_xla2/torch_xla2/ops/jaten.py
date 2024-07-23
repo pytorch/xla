@@ -1,7 +1,7 @@
 """Torch ops implemented using jax."""
 
 import sys
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 import jax
 from jax import numpy as jnp
@@ -2271,77 +2271,64 @@ def _aten_i0(self):
   return jax.scipy.special.i0(self)
 
 
+# TODO: move out of jaten
+def foreach_loop(seq: jax.Array, fn: Callable[[jax.Array, jax.Array], jax.Array], init_val=0.):
+  assert len(seq.shape) == 1
+  return jax.lax.fori_loop(0, len(seq), lambda i, carry: fn(carry, seq[i]), init_val)
+
+
 @op(torch.ops.aten.special_bessel_j0)
 def _aten_special_bessel_j0(self):
   # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2379-L2489
 
-  PP = jnp.array([7.96936729297347051624e-04, 8.28352392107440799803e-02,
-                  1.23953371646414299388e+00, 5.44725003058768775090e+00,
-                  8.74716500199817011941e+00, 5.30324038235394892183e+00,
-                  9.99999999999999997821e-01], dtype=self.dtype)
-
-  PQ = jnp.array([9.24408810558863637013e-04, 8.56288474354474431428e-02,
-                  1.25352743901058953537e+00, 5.47097740330417105182e+00,
-                  8.76190883237069594232e+00, 5.30605288235394617618e+00,
-                  1.00000000000000000218e+00], dtype=self.dtype)
-
-  QP = jnp.array([-1.13663838898469149931e-02, -1.28252718670509318512e+00,
-                  -1.95539544257735972385e+01, -9.32060152123768231369e+01,
-                  -1.77681167980488050595e+02, -1.47077505154951170175e+02,
-                  -5.14105326766599330220e+01, -6.05014350600728481186e+00], dtype=self.dtype)
-
-  QQ = jnp.array([6.43178256118178023184e+01, 8.56430025976980587198e+02,
-                  3.88240183605401609683e+03, 7.24046774195652478189e+03,
-                  5.93072701187316984827e+03, 2.06209331660327847417e+03,
-                  2.42005740240291393179e+02], dtype=self.dtype)
-
-  RP = jnp.array([-4.79443220978201773821e+09, 1.95617491946556577543e+12,
-                  -2.49248344360967716204e+14, 9.70862251047306323952e+15], dtype=self.dtype)
-
-  RQ = jnp.array([4.99563147152651017219e+02, 1.73785401676374683123e+05,
-                  4.84409658339962045305e+07, 1.11855537045356834862e+10,
-                  2.11277520115489217587e+12, 3.10518229857422583814e+14,
-                  3.18121955943204943306e+16, 1.71086294081043136091e+18], dtype=self.dtype)
-
-  def f(x):
+  @jnp.vectorize
+  def vectorized(x):
     def very_small(x):
       return 1.0 - x * x / 4.0
 
     def small(x):
-      rp = 0.0
+      RP = jnp.array([-4.79443220978201773821e+09, 1.95617491946556577543e+12,
+                      -2.49248344360967716204e+14, 9.70862251047306323952e+15], dtype=self.dtype)
+      RQ = jnp.array([4.99563147152651017219e+02, 1.73785401676374683123e+05,
+                      4.84409658339962045305e+07, 1.11855537045356834862e+10,
+                      2.11277520115489217587e+12, 3.10518229857422583814e+14,
+                      3.18121955943204943306e+16, 1.71086294081043136091e+18], dtype=self.dtype)
 
-      for i, _ in enumerate(RP):
-        rp =  rp * (x * x) + RP[i]
-
-      rq = 0.0
-      for i, _ in enumerate(RQ):
-        rq = rq * (x * x) + RQ[i]
+      rp = foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
+      rq = foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
 
       return (x * x - 5.78318596294678452118e+00) * (x * x - 3.04712623436620863991e+01) * rp / rq
 
     def other(x):
-      pp = 0.0
-      for i, _ in enumerate(PP):
-        pp = pp * (25.0 / (x * x)) + PP[i]
+      PP = jnp.array([7.96936729297347051624e-04, 8.28352392107440799803e-02,
+                1.23953371646414299388e+00, 5.44725003058768775090e+00,
+                8.74716500199817011941e+00, 5.30324038235394892183e+00,
+                9.99999999999999997821e-01], dtype=self.dtype)
+      PQ = jnp.array([9.24408810558863637013e-04, 8.56288474354474431428e-02,
+                      1.25352743901058953537e+00, 5.47097740330417105182e+00,
+                      8.76190883237069594232e+00, 5.30605288235394617618e+00,
+                      1.00000000000000000218e+00], dtype=self.dtype)
+      QP = jnp.array([-1.13663838898469149931e-02, -1.28252718670509318512e+00,
+                      -1.95539544257735972385e+01, -9.32060152123768231369e+01,
+                      -1.77681167980488050595e+02, -1.47077505154951170175e+02,
+                      -5.14105326766599330220e+01, -6.05014350600728481186e+00], dtype=self.dtype)
+      QQ = jnp.array([6.43178256118178023184e+01, 8.56430025976980587198e+02,
+                      3.88240183605401609683e+03, 7.24046774195652478189e+03,
+                      5.93072701187316984827e+03, 2.06209331660327847417e+03,
+                      2.42005740240291393179e+02], dtype=self.dtype)
 
-      pq = 0.0
-      for i, _ in enumerate(PQ):
-        pq = pq * (25.0 / (x * x)) + PQ[i]
 
-      qp = 0.0
-      for i, _ in enumerate(QP):
-        qp = qp * (25.0 / (x * x)) + QP[i]
-
-      qq = 0.0
-      for i, _ in enumerate(QQ):
-        qq = qq * (25.0 / (x * x)) + QQ[i]
+      pp = foreach_loop(PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
+      pq = foreach_loop(PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
+      qp = foreach_loop(QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
+      qq = foreach_loop(QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
 
       return (pp / pq * jnp.cos(x - 0.785398163397448309615660845819875721) - 5.0 / x * (qp / qq) * jnp.sin(x - 0.785398163397448309615660845819875721)) * 0.797884560802865355879892119868763737 / jnp.sqrt(x)
 
     return jnp.piecewise(x, [x < 0.00001, x <= 5.0], [very_small, small, other])
 
   # TODO: better type promotion
-  return jnp.vectorize(f)(jnp.abs(self).astype(jnp.float32))
+  return vectorized(jnp.abs(self).astype(jnp.float32))
 
 
 @op(torch.ops.aten.special_bessel_j1)
