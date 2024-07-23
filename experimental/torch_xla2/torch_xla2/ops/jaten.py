@@ -2391,3 +2391,124 @@ def _aten_special_bessel_j0(self):
   return jnp.piecewise(
     self, [self < 0.00001, self <= 5.0], [very_small, small, other]
   )
+
+
+@op(torch.ops.aten.special_bessel_j1)
+def _aten_special_bessel_j1(self):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2491-L2597
+
+  def small(x):
+    RP = jnp.array(
+      [
+        -8.99971225705559398224e08,
+        4.52228297998194034323e11,
+        -7.27494245221818276015e13,
+        3.68295732863852883286e15,
+      ],
+      dtype=self.dtype,
+    )
+    RQ = jnp.array(
+      [
+        6.20836478118054335476e02,
+        2.56987256757748830383e05,
+        8.35146791431949253037e07,
+        2.21511595479792499675e10,
+        4.74914122079991414898e12,
+        7.84369607876235854894e14,
+        8.95222336184627338078e16,
+        5.32278620332680085395e18,
+      ],
+      dtype=self.dtype,
+    )
+
+    rp = foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
+    rq = foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
+
+    return (
+      rp
+      / rq
+      * x
+      * (x * x - 1.46819706421238932572e01)
+      * (x * x - 4.92184563216946036703e01)
+    )
+
+  def other(x):
+    PP = jnp.array(
+      [
+        7.62125616208173112003e-04,
+        7.31397056940917570436e-02,
+        1.12719608129684925192e00,
+        5.11207951146807644818e00,
+        8.42404590141772420927e00,
+        5.21451598682361504063e00,
+        1.00000000000000000254e00,
+      ],
+      dtype=self.dtype,
+    )
+    PQ = jnp.array(
+      [
+        5.71323128072548699714e-04,
+        6.88455908754495404082e-02,
+        1.10514232634061696926e00,
+        5.07386386128601488557e00,
+        8.39985554327604159757e00,
+        5.20982848682361821619e00,
+        9.99999999999999997461e-01,
+      ],
+      dtype=self.dtype,
+    )
+    QP = jnp.array(
+      [
+        5.10862594750176621635e-02,
+        4.98213872951233449420e00,
+        7.58238284132545283818e01,
+        3.66779609360150777800e02,
+        7.10856304998926107277e02,
+        5.97489612400613639965e02,
+        2.11688757100572135698e02,
+        2.52070205858023719784e01,
+      ],
+      dtype=self.dtype,
+    )
+    QQ = jnp.array(
+      [
+        7.42373277035675149943e01,
+        1.05644886038262816351e03,
+        4.98641058337653607651e03,
+        9.56231892404756170795e03,
+        7.99704160447350683650e03,
+        2.82619278517639096600e03,
+        3.36093607810698293419e02,
+      ],
+      dtype=self.dtype,
+    )
+
+    pp = foreach_loop(PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
+    pq = foreach_loop(PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
+    qp = foreach_loop(QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
+    qq = foreach_loop(QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
+
+    return (
+      (
+        pp / pq * jnp.cos(x - 2.356194490192344928846982537459627163)
+        - 5.0
+        / x
+        * (qp / qq)
+        * jnp.sin(x - 2.356194490192344928846982537459627163)
+      )
+      * 0.797884560802865355879892119868763737
+      / jnp.sqrt(x)
+    )
+
+
+  # TODO: better type promotion
+  self = self.astype(jnp.float32)
+
+  # If x < 0, bessel_j1(x) = -bessel_j1(-x)
+  sign = jnp.sign(self)
+  self = jnp.abs(self)
+  return sign * jnp.piecewise(
+    self,
+    [self <= 5.0],
+    [small, other],
+  )
