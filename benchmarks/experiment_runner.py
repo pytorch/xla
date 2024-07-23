@@ -306,7 +306,7 @@ class ExperimentRunner:
       res = verify(self, experiment_config, model_config, tolerance,
                    use_cosine_similarity)
     else:
-      res = VerificationCode.SKIP_VERIFICATION
+      res = VerificationCode.VERIFIER_SKIPPED
 
     self._save_results(experiment_dict, model_dict, accumulated_metrics, res)
 
