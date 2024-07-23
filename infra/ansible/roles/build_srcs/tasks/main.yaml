@@ -71,15 +71,15 @@
     state: directory
     mode: '0755'
 
-- name: Rename and append +nightlyYYYYMMDD suffix to nightly wheels
+- name: Rename and append +YYYYMMDD suffix to nightly wheels
   ansible.builtin.shell: |
     pushd /tmp/staging-wheels
     cp {{ item.dir }}/*.whl .
-    rename -v "s/^({{ item.prefix }}-\d+\.\d+\.\d+)(.*)\.whl$/\1+nightly\2.whl/" *.whl
+    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-\1+nightly-cp/" *.whl
     mv /tmp/staging-wheels/* /dist/
     popd
 
-    rename -v "s/^({{ item.prefix }}-\d+\.\d+\.\d+\+nightly)(.*)\.whl$/\1$(date -u +%Y%m%d)\2.whl/" *.whl
+    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-\1+nightly$(date -u +%Y%m%d)-cp/" *.whl
   args:
     executable: /bin/bash
     chdir: "{{ item.dir }}"
