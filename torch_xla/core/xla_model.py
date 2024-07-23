@@ -45,7 +45,7 @@ XLA_LIB = Library("xla", "DEF")
 from . import xla_model as this_module
 parse_xla_device = deprecated(this_module, _utils.parse_xla_device)
 reduce_gradients = deprecated(this_module, _utils.reduce_gradients)
-ToXlaTensorArena = deprecared(this_module, _utils.ToXlaTensorArena)
+ToXlaTensorArena = deprecated(this_module, _utils.ToXlaTensorArena)
 
 
 def _init_world_size_ordinal():
