@@ -41,8 +41,7 @@ def convert_dtype(use_default_dtype: bool = True):
     A decorator that wraps a JAX implementation of a torch function.
   """
 
-  def decorator(
-        func: Callable[Concatenate[..., torch.dtype, P], types.JaxValue]):
+  def decorator(func: types.TorchCallable):
     @functools.wraps(func)
     def wrapper(*args: P.args,
                 dtype: Optional[torch.dtype] = None,
