@@ -138,7 +138,6 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
       SetShardingSpec(sharding);
     }
   }
-  TryLimitGraphSize();
 }
 
 XLATensor::XLATensor(std::shared_ptr<View> view,
@@ -344,7 +343,6 @@ void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace,
     data()->view = nullptr;
     data()->generation = 1;
     AssignIrValue(std::move(ir_value));
-    TryLimitGraphSize();
   }
   data()->is_cloned = false;
 
