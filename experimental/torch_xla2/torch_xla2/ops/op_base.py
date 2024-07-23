@@ -68,3 +68,14 @@ def promote_int_input(f: Callable[Concatenate[jax.Array, P], types.JaxValue]):
 
    return wrapper
 
+
+def foreach_loop(
+  seq: jax.Array, fn: Callable[[jax.Array, jax.Array], jax.Array], init_val=0.0
+):
+  """Run `fn` for each element of 1D array `seq`.
+
+  Similar to `functools.reduce`, but implemented with `jax.lax.fori_loop`."""
+  assert len(seq.shape) == 1
+  return jax.lax.fori_loop(
+    0, len(seq), lambda i, carry: fn(carry, seq[i]), init_val
+  )

@@ -2271,12 +2271,6 @@ def _aten_i0(self):
   return jax.scipy.special.i0(self)
 
 
-# TODO: move out of jaten
-def foreach_loop(seq: jax.Array, fn: Callable[[jax.Array, jax.Array], jax.Array], init_val=0.):
-  assert len(seq.shape) == 1
-  return jax.lax.fori_loop(0, len(seq), lambda i, carry: fn(carry, seq[i]), init_val)
-
-
 @op(torch.ops.aten.special_bessel_j0)
 def _aten_special_bessel_j0(self):
   # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2379-L2489
@@ -2308,8 +2302,8 @@ def _aten_special_bessel_j0(self):
       dtype=self.dtype,
     )
 
-    rp = foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
-    rq = foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
+    rp = op_base.foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
+    rq = op_base.foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
 
     return (
       (x * x - 5.78318596294678452118e00)
@@ -2369,10 +2363,10 @@ def _aten_special_bessel_j0(self):
       dtype=self.dtype,
     )
 
-    pp = foreach_loop(PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
-    pq = foreach_loop(PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
-    qp = foreach_loop(QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
-    qq = foreach_loop(QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
+    pp = op_base.foreach_loop(PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
+    pq = op_base.foreach_loop(PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
+    qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
+    qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
 
     return (
       (
@@ -2421,8 +2415,8 @@ def _aten_special_bessel_j1(self):
       dtype=self.dtype,
     )
 
-    rp = foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
-    rq = foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
+    rp = op_base.foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
+    rq = op_base.foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
 
     return (
       rp
@@ -2483,10 +2477,10 @@ def _aten_special_bessel_j1(self):
       dtype=self.dtype,
     )
 
-    pp = foreach_loop(PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
-    pq = foreach_loop(PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
-    qp = foreach_loop(QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
-    qq = foreach_loop(QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
+    pp = op_base.foreach_loop(PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
+    pq = op_base.foreach_loop(PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
+    qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
+    qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
 
     return (
       (
@@ -2551,8 +2545,8 @@ def _aten_special_bessel_y0(self):
       dtype=self.dtype,
     )
 
-    yp = foreach_loop(YP, lambda carry, yp_i: carry * (x * x) + yp_i)
-    yq = foreach_loop(YQ, lambda carry, yq_i: carry * (x * x) + yq_i)
+    yp = op_base.foreach_loop(YP, lambda carry, yp_i: carry * (x * x) + yp_i)
+    yq = op_base.foreach_loop(YQ, lambda carry, yq_i: carry * (x * x) + yq_i)
 
     return yp / yq + (0.636619772367581343075535053490057448 * jnp.log(x) * _aten_special_bessel_j0(x))
 
@@ -2608,10 +2602,10 @@ def _aten_special_bessel_y0(self):
     )
 
     factor = 25.0 / (x * x)
-    pp = foreach_loop(PP, lambda carry, pp_i: carry * factor + pp_i)
-    pq = foreach_loop(PQ, lambda carry, pq_i: carry * factor + pq_i)
-    qp = foreach_loop(QP, lambda carry, qp_i: carry * factor + qp_i)
-    qq = foreach_loop(QQ, lambda carry, qq_i: carry * factor + qq_i)
+    pp = op_base.foreach_loop(PP, lambda carry, pp_i: carry * factor + pp_i)
+    pq = op_base.foreach_loop(PQ, lambda carry, pq_i: carry * factor + pq_i)
+    qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * factor + qp_i)
+    qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * factor + qq_i)
 
     return (
       (
@@ -2671,8 +2665,8 @@ def _aten_special_bessel_y1(self):
       dtype=self.dtype,
     )
 
-    yp = foreach_loop(YP, lambda carry, yp_i: carry * (x * x) + yp_i)
-    yq = foreach_loop(YQ, lambda carry, yq_i: carry * (x * x) + yq_i)
+    yp = op_base.foreach_loop(YP, lambda carry, yp_i: carry * (x * x) + yp_i)
+    yq = op_base.foreach_loop(YQ, lambda carry, yq_i: carry * (x * x) + yq_i)
 
     return (
       x * (yp / yq)
@@ -2734,10 +2728,10 @@ def _aten_special_bessel_y1(self):
     )
 
     factor = 25.0 / (x * x)
-    pp = foreach_loop(PP, lambda carry, pp_i: carry * factor + pp_i)
-    pq = foreach_loop(PQ, lambda carry, pq_i: carry * factor + pq_i)
-    qp = foreach_loop(QP, lambda carry, qp_i: carry * factor + qp_i)
-    qq = foreach_loop(QQ, lambda carry, qq_i: carry * factor + qq_i)
+    pp = op_base.foreach_loop(PP, lambda carry, pp_i: carry * factor + pp_i)
+    pq = op_base.foreach_loop(PQ, lambda carry, pq_i: carry * factor + pq_i)
+    qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * factor + qp_i)
+    qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * factor + qq_i)
 
     return (
       (
