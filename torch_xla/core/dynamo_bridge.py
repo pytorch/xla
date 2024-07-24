@@ -204,9 +204,11 @@ class Deduper:
     return [deduped_list[i] for i in self.permute_for_orig]
 
 
-class DumbReturnHandler:
+class SpecialReturnHandler:
   """
-  Define dumb return as an output that is also an input.
+  In this class we handle 2 types of special outputs
+  1. dump return
+  We Define dumb return as an output that is also an input.
   Torch xla does not return such tensors as its graph output. That breaks the
   API contract with the caller of the graph. Also AOTAutograd
   may generate such a graph quite often.
@@ -221,6 +223,11 @@ class DumbReturnHandler:
   (this is a graph generated for a model with a single BatchNorm2d)
   XLA will dedup those duplicate items, but we need recover the duplications to maintain
   the contract with the caller.
+
+  2. Int output from dynamic compile
+  In the case of the `torch.compile(Dynamic=True)` there might be some int outputs related
+  to the dynmiac dimension of the tensor. These ints are static for a given input shape
+  combinations so we can cache them and inject to the final result directly.
   """
 
   def __init__(self, trace_inputs, trace_outputs,
@@ -391,9 +398,10 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
     else:
       args_and_out_tensor_only.append(arg)
 
-  dumb_return_handler = DumbReturnHandler(xla_args, args_and_out_tensor_only,
-                                          xla_args_need_update_bool,
-                                          int_outputs_and_indexes)
+  special_return_handler = SpecialReturnHandler(xla_args,
+                                                args_and_out_tensor_only,
+                                                xla_args_need_update_bool,
+                                                int_outputs_and_indexes)
 
   # There is a `mark_step` in the beginning of this function call, we need to wait
   # for that to finish before retriving the device data nodes.
@@ -456,7 +464,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
 
   vars_to_return = (xla_args_sharding_spec, args_and_out, graph_hash,
                     arg_index_to_need_update_index, none_remover,
-                    graph_input_matcher, dumb_return_handler,
+                    graph_input_matcher, special_return_handler,
                     xla_args_need_update)
   # populate the cache if model is compiled with `dynamic=True`
   if not torch._dynamo.config.assume_static_by_default:
@@ -483,12 +491,12 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   # Keys: tuple of input shapes
   # Values: tuple of (xla_args_sharding_spec, args_and_out, graph_hash,
   # arg_index_to_need_update_index, none_remover, graph_input_matcher,
-  # dumb_return_handler, xla_args_need_update).
+  # special_return_handler, xla_args_need_update).
   shapes_to_graph_vars: Dict[Tuple[int, ...], Tuple[Any, ...]] = {}
 
   (xla_args_sharding_spec, args_and_out, graph_hash,
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
-   dumb_return_handler,
+   special_return_handler,
    xla_args_need_update) = extract_graph_helper(xla_model, shapes_to_graph_vars)
   skip_checking_input_sharding_threashold = xu.getenv_as(
       'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
@@ -501,7 +509,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal arg_index_to_need_update_index
     nonlocal none_remover
     nonlocal graph_input_matcher
-    nonlocal dumb_return_handler
+    nonlocal special_return_handler
     nonlocal xla_args_need_update
     nonlocal skip_checking_input_sharding_threashold
     nonlocal shapes_to_graph_vars
@@ -513,12 +521,12 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       if arg_input_shapes in shapes_to_graph_vars:
         (xla_args_sharding_spec, args_and_out, graph_hash,
          arg_index_to_need_update_index, none_remover, graph_input_matcher,
-         dumb_return_handler,
+         special_return_handler,
          xla_args_need_update) = shapes_to_graph_vars[arg_input_shapes]
       else:
         (xla_args_sharding_spec, args_and_out, graph_hash,
          arg_index_to_need_update_index, none_remover, graph_input_matcher,
-         dumb_return_handler,
+         special_return_handler,
          xla_args_need_update) = extract_graph_helper(xla_model,
                                                       shapes_to_graph_vars)
 
@@ -556,7 +564,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
           xla_model.xla_args = args
           (xla_args_sharding_spec, args_and_out_copy, graph_hash,
            arg_index_to_need_update_index, none_remover, graph_input_matcher,
-           dumb_return_handler,
+           special_return_handler,
            xla_args_need_update) = extract_graph_helper(xla_model,
                                                         shapes_to_graph_vars)
           skip_checking_input_sharding_threashold = xu.getenv_as(
@@ -571,7 +579,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     graph_input = graph_input_matcher(args)
     start_ts = time.time()
     res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
-    res = dumb_return_handler.addDumbReturn(args, res)
+    res = special_return_handler.addDumbReturn(args, res)
 
     assert len(res) == len(args_and_out), f"{len(res)} v.s. {len(args_and_out)}"
     ncopy = 0
