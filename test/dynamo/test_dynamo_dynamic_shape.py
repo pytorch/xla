@@ -183,6 +183,22 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
+  def test_dynamic_shape_no_retracing(self):
+    device = torch_xla.device()
+    # model setup
+    _, dummy_linear_xla, _, input_xla = self._get_linear_and_input(
+        8, 10, 20, device)
+    compiled_linear_xla = torch.compile(
+        dummy_linear_xla, backend="openxla", dynamic=True)
+    xm.wait_device_ops()
+    met.clear_all()
+
+    # first run
+    res_xla = compiled_linear_xla(input_xla)
+    # Dynamo execution should not trigger `CachedCompile` counter. If we do it likely
+    # means we retrace the same fx multiple times.
+    self.assertNotIn('CachedCompile', met.counter_names())
+
   def test_dynamic_shape_resnet18(self):
     device = torch_xla.device()
 
