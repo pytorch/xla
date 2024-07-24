@@ -14,7 +14,7 @@ def run_once(func):
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
     nonlocal result
-    if result is not None:
+    if result is None:
       result = func(*args, **kwargs)
     return result
 
