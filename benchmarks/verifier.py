@@ -219,13 +219,19 @@ def _same(
   res = _collect(res)
   fp64_ref = _collect(fp64_ref)
 
-  # Find, at least, one tensor in `ref`, and grab its device.
+  # If there's a tensor in `ref`, then retrieve its device.
+  # Do the the same for `res`. They should agree on whether there should
+  # be a tensor in the output (i.e. both None or both not None).
   ref_device = _maybe_get_device(ref)
-  assert ref_device is not None, f"could not find any tensor in output {ref}"
+  res_device = _maybe_get_device(res)
+  assert not ((res_device is not None) ^ (ref_device is not None)), (
+      "the device found of (i) the result and (ii) the reference should be either: both None or both not None. "
+      f"Found: {res_device} (result) vs. {ref_device} (reference).")
 
-  # Then, move `res` to the found device, so that we have no errors when
-  # trying to call `allclose`.
-  res = move_to_device(res, ref_device)
+  if ref_device is not None:
+    # Then, move `res` to the found device, so that we have no errors when
+    # trying to call `allclose`.
+    res = move_to_device(res, ref_device)
 
   return torch._dynamo.utils.same(
       ref,
