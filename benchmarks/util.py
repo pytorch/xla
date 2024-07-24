@@ -1,6 +1,7 @@
 import argparse
 from contextlib import contextmanager
 import functools
+import gc
 import logging
 import os
 from os.path import abspath, exists
@@ -76,11 +77,18 @@ def move_to_device(item, device, torch_xla2: bool = False):
     move_to_device_func = lambda t: jax.device_put(
         torch_xla2.tensor.t2j(t), device)
   else:
-    move_to_device_func = lambda t: t.to(device)
+
+    def move_to_device_func(tensor: torch.Tensor) -> torch.Tensor:
+      # If `tensor` is an XLA tensor, first move it to CPU. We need to do
+      # that if we want to move the tensor to, say, CUDA.
+      if tensor.device.type == "xla":
+        return tensor.cpu().to(device)
+      return tensor.to(device)
+
   return pytree.tree_map_only(torch.Tensor, move_to_device_func, item)
 
 
-def cast_to_dtype(item, dtype):
+def cast_to_dtype(item: Any, dtype: torch.dtype) -> Any:
   return pytree.tree_map_only(
       torch.Tensor,
       lambda t: t.to(dtype)
@@ -169,3 +177,26 @@ def find_near_file(names: str):
       if exists(path):
         return abspath(path)
   return None
+
+
+def reset_rng_state(benchmark_experiment: "BenchmarkExperiment"):
+  import numpy as np
+  import random
+  SEED = 1337
+  torch.manual_seed(SEED)
+  random.seed(SEED)
+  np.random.seed(SEED)
+  # TODO(piz): setup the rng state on jax for torch_xla2.
+  if benchmark_experiment.xla is not None and benchmark_experiment.torch_xla2 is None:
+    device = benchmark_experiment.get_device()
+    xm.set_rng_state(SEED, str(device))
+
+
+def cleanup(cuda: bool = False):
+  # Garbage-collect right now.
+  gc.collect()
+
+  # If we are using CUDA, clean-up its cache left-over.
+  if cuda and torch.cuda.is_available():
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()

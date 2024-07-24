@@ -9,7 +9,7 @@ from torch._dynamo.testing import collect_results
 from torch.utils import _pytree as pytree
 from util import cast_to_dtype, move_to_device
 from benchmark_experiment import BenchmarkExperiment
-from typing import Dict, Any, Sequence
+from typing import Any, Dict, Optional, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +58,40 @@ class BenchmarkModel:
       # optimizer to use. So only initialize it when there is none existing.
       self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
 
+  def skip_verifier(self):
+    """Returns whether the verifier should be skipped for this model.
+    """
+    return False
+
+  def tolerance(self):
+    """Tolerance to be used by the verifier.
+    """
+    # Default value taken from: PyTorch
+    # Source: benchmarks/dynamo/torchbench.py
+    return 1e-4
+
+  def use_cosine_similarity(self):
+    """Whether the verifier should use cosine similarity for checking the result's accuracy.
+    """
+    # Default value taken from: PyTorch
+    # Source: benchmarks/dynamo/torchbench.py
+    return False
+
   def conversion_dtype(self):
     return None
 
-  def prepare_for_experiment(self, dynamo_compilation_opts: Dict[str, str]):
+  def prepare_for_experiment(
+      self,
+      dynamo_compilation_opts: Dict[str, str],
+      force_dtype: Optional[torch.dtype] = None,
+  ):
     self.device = self.benchmark_experiment.get_device()
-    self.dtype = self.conversion_dtype()
+
+    if force_dtype is None:
+      self.dtype = self.conversion_dtype()
+    else:
+      self.dtype = force_dtype
+
     if self.dtype is not None:
       self.module = self.module.to(self.dtype)
       self.example_inputs = cast_to_dtype(self.example_inputs, self.dtype)
@@ -208,10 +236,22 @@ class ModelLoader:
     return (not re.search("|".join(self._args.filter), model_name, re.I) or
             re.search("|".join(self._args.exclude), model_name, re.I))
 
-  def load_model(self,
-                 model_config: Dict[str, Any],
-                 benchmark_experiment: BenchmarkExperiment,
-                 dummy: bool = False) -> BenchmarkModel:
+  def load_model(
+      self,
+      model_config: Dict[str, Any],
+      benchmark_experiment: BenchmarkExperiment,
+      dummy: bool = False,
+      force_dtype: Optional[torch.dtype] = None,
+  ) -> BenchmarkModel:
+    """Loads the model.
+
+    Using both model and experiment configuration, this function will return an
+    instance of BenchmarkModel.
+
+    If specified, `force_dtype` will force the underlying model to be cast to
+    that data type. This is useful when running the verifier, where we force
+    float64 data-type for checking the accuracy.
+    """
     suite_name = self.suite_name
     model_name = model_config["model_name"]
     benchmark_model = self.benchmark_model_class(
@@ -223,6 +263,8 @@ class ModelLoader:
     if not dummy:
       benchmark_model.set_up()
       benchmark_model.prepare_for_experiment(
-          dynamo_compilation_opts=self._dynamo_compile_opts)
+          dynamo_compilation_opts=self._dynamo_compile_opts,
+          force_dtype=force_dtype,
+      )
 
     return benchmark_model

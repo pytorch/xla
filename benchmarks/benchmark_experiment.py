@@ -221,6 +221,9 @@ class BenchmarkExperiment:
     short_strs = map(to_short_string, self.to_dict().values())
     return "-".join(short_strs).replace(" ", "")
 
+  def is_cuda(self):
+    return self.accelerator == "cuda"
+
   def to_dict(self):
     d = OrderedDict()
     d["accelerator"] = self.accelerator
