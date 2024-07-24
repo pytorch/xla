@@ -3,6 +3,7 @@ import sys
 import torch
 import torch.distributed as dist
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.xla_backend
@@ -18,7 +19,7 @@ def _mp_fn():
     train_loader = pl.MpDeviceLoader(train_loader, device)
     max_steps = 10
     for step, inputs in enumerate(train_loader):
-      xm.all_reduce('sum', [inputs], scale=1.0 / xm.xrt_world_size())
+      xm.all_reduce('sum', [inputs], scale=1.0 / xr.world_size())
       if step > max_steps:
         break
   else:

@@ -34,28 +34,12 @@ REDUCE_MAX = 'max'
 _DEVICE_CONTEXTS = dict()
 _DEVICE_CONTEXTS_LOCK = threading.Lock()
 
-# Note [Dynamo WORLD_SIEZ and ORDINAL]
-# Belows are workaround to cache the ordinal and world_size such that
-# Dynamo won't do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.
-_WORLD_SIZE = None
-_ORDINAL = None
-
 XLA_LIB = Library("xla", "DEF")
 
 from . import xla_model as this_module
+xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size)
+get_ordinal = deprecated(this_module, torch_xla.runtime.global_ordinal)
 parse_xla_device = deprecated(this_module, _utils.parse_xla_device)
-
-
-def _init_world_size_ordinal():
-  global _WORLD_SIZE, _ORDINAL
-
-  # Dynamo doesn't support XRT or multithreaded runtime. See Note [V3-8 Threading]
-  if not runtime.using_pjrt() or runtime.addressable_device_count() > 1:
-    return
-
-  if _WORLD_SIZE is None:
-    _WORLD_SIZE = xrt_world_size()
-    _ORDINAL = get_ordinal()
 
 
 class DeviceContext(object):
@@ -114,44 +98,6 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     return kind_devices[:max_devices] if max_devices else kind_devices
 
 
-def xrt_world_size(defval=1):
-  """Retrieves the number of devices which is taking part of the replication.
-
-  Args:
-    defval (int, optional): The default value to be returned in case there is no
-      replication information available.
-      Default: 1
-
-  Returns:
-    The number of devices which is taking part of the replication.
-  """
-  global _WORLD_SIZE
-  if _WORLD_SIZE is not None:
-    return _WORLD_SIZE
-
-  return runtime.world_size()
-
-
-def get_ordinal(defval=0):
-  """Retrieves the replication ordinal of the current thread.
-
-  The ordinals range from 0 to `xrt_world_size()` minus 1.
-
-  Args:
-    defval (int, optional): The default value to be returned in case there is no
-      replication information available. Ignored for runtime.
-      Default: 0
-
-  Returns:
-    The replication ordinal of the current thread.
-  """
-  global _ORDINAL
-  if _ORDINAL is not None:
-    return _ORDINAL
-
-  return runtime.global_ordinal()
-
-
 def get_local_ordinal(defval=0):
   """Retrieves the replication local ordinal of the current thread.
 
@@ -180,7 +126,7 @@ def is_master_ordinal(local=True):
   Returns:
     A boolean indicating whether the current process is the master ordinal.
   """
-  ordinal = get_local_ordinal() if local else get_ordinal()
+  ordinal = get_local_ordinal() if local else runtime.global_ordinal()
   return ordinal == 0
 
 
@@ -479,8 +425,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
   groups = groups or []
 
   # No-op if there is only one device
-  if xrt_world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE', bool,
-                                                False):
+  if runtime.world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE',
+                                                    bool, False):
     if isinstance(inputs, torch.Tensor):
       return inputs.clone()
     else:
@@ -531,9 +477,9 @@ def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
     dim = value.dim() + dim
   size = value.size(dim)
   padding = [0] * (2 * value.dim())
-  ordinal = get_ordinal()
+  ordinal = runtime.global_ordinal()
   if groups is None:
-    left, right = ordinal, xrt_world_size() - 1 - ordinal
+    left, right = ordinal, runtime.world_size() - 1 - ordinal
   else:
     ordinals = dict()
     for g in groups:
@@ -584,7 +530,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
       "Replica groups must have the same number of replicas/shards."
   else:
     # All replicas belong to a single group
-    shard_count = xrt_world_size()
+    shard_count = runtime.world_size()
 
   token, devctx = _get_all_reduce_token()
 
@@ -824,7 +770,8 @@ def collective_broadcast(tensors: List[torch.Tensor],
     # so each replica must have the same multiply op with the same parameters.
     for tensor in tensors:
       scale = torch.tensor(
-          1 if get_ordinal() == root_ordinal else 0, dtype=tensor.dtype)
+          1 if runtime.global_ordinal() == root_ordinal else 0,
+          dtype=tensor.dtype)
       # Transfer scale tensor as device data instead of constant 1 or 0.
       xscale = send_cpu_data_to_device(scale, tensor.device)
       tensor.mul_(xscale[0])
@@ -1172,7 +1119,7 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout when reducing gradients.
       See `xm.all_reduce` for details.
   """
-  count = xrt_world_size()
+  count = runtime.world_size()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
     bucket_cap_mb = int(os.getenv('ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB', 0))
@@ -1397,7 +1344,7 @@ def do_on_ordinals(target, data=(), ordinals=(0,)):
     In the ordinals that ran the `target` function, the function return value,
     otherwise `None`.
   """
-  running = get_ordinal() in ordinals
+  running = runtime.global_ordinal() in ordinals
   cpu_data = _maybe_convert_to_cpu(data, convert=running)
   if running:
     result = target(*cpu_data)

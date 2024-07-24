@@ -27,7 +27,7 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(len(devices), 1)
 
   def test_world_size(self):
-    self.assertEqual(xm.xrt_world_size(), 1)
+    self.assertEqual(xr.world_size(), 1)
 
   def test_get_ordinal(self):
     self.assertEqual(xm.get_ordinal(), 0)

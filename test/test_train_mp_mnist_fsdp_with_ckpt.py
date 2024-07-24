@@ -62,6 +62,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
@@ -119,12 +120,12 @@ def train_mnist(flags, **kwargs):
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=60000 // flags.batch_size // xr.world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=10000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=10000 // flags.batch_size // xr.world_size())
   else:
     train_dataset = datasets.MNIST(
         os.path.join(flags.datadir, str(xm.get_ordinal())),
@@ -141,10 +142,10 @@ def train_mnist(flags, **kwargs):
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     train_sampler = None
-    if xm.xrt_world_size() > 1:
+    if xr.world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
-          num_replicas=xm.xrt_world_size(),
+          num_replicas=xr.world_size(),
           rank=xm.get_ordinal(),
           shuffle=True)
     train_loader = torch.utils.data.DataLoader(
@@ -162,7 +163,7 @@ def train_mnist(flags, **kwargs):
         num_workers=flags.num_workers)
 
   # Scale learning rate to num cores
-  lr = flags.lr * xm.xrt_world_size()
+  lr = flags.lr * xr.world_size()
 
   device = xm.xla_device()
   model = MNIST()
@@ -282,7 +283,7 @@ def train_mnist(flags, **kwargs):
 
     # Save the final model checkpoint
     rank = xm.get_ordinal()
-    world_size = xm.xrt_world_size()
+    world_size = xr.world_size()
     ckpt_path = f'{flags.ckpt_prefix}_rank-{rank:08d}-of-{world_size:08d}.pth'
     ckpt = {
         'model': model.state_dict(),

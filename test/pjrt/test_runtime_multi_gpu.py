@@ -43,22 +43,11 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
-  @parameterized.named_parameters(('xla_model', xm.get_ordinal),
-                                  ('pjrt', xr.global_ordinal))
-  def test_global_ordinal(self, ordinal_func):
+  def test_global_ordinal(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = [i for i in range(num_devices)]
 
-    results = pjrt.run_multiprocess(ordinal_func)
-    self.assertListEqual(sorted(results.values()), expected)
-
-  @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
-                                  ('pjrt', xr.local_ordinal))
-  def test_local_ordinal(self, ordinal_func):
-    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
-    expected = [i for i in range(num_devices)]
-
-    results = pjrt.run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(xr.global_ordinal)
     self.assertListEqual(sorted(results.values()), expected)
 
   def test_global_device_count(self):
@@ -210,7 +199,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
   @staticmethod
   def _reduce_scatter(pin_layout):
     device = xm.xla_device()
-    world_size = xm.xrt_world_size()
+    world_size = xr.world_size()
     tensor = -torch.arange(world_size, dtype=torch.float32).to(device)
 
     out = xm.reduce_scatter(
@@ -236,7 +225,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
   @staticmethod
   def _all_to_all(pin_layout):
     device = xm.xla_device()
-    world_size = xm.xrt_world_size()
+    world_size = xr.world_size()
 
     tensor = torch.cat(
         [

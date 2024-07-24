@@ -7,6 +7,7 @@ import torch.optim as optim
 import torch.nn.parallel
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.distributed.xla_backend
 
 
@@ -91,7 +92,7 @@ def ddp_correctness(init_method: str = 'env://',
                     debug: bool = False):
   if init_method == 'env://':
     rank = xm.get_ordinal()
-    world_size = xm.xrt_world_size()
+    world_size = xr.world_size()
     dist.init_process_group(
         "xla", init_method=init_method, rank=rank, world_size=world_size)
   else:
