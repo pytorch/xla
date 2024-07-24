@@ -2751,6 +2751,7 @@ def _aten_special_bessel_y1(self):
 @op(torch.ops.aten.special_chebyshev_polynomial_t)
 @op_base.promote_int_input
 def _aten_special_chebyshev_polynomial_t(self, n):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2828-L2865
 
   @jnp.vectorize
   def vectorized(x, n_i):
