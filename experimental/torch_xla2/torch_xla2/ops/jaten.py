@@ -2269,6 +2269,12 @@ def _aten_i0(self):
   return jax.scipy.special.i0(self)
 
 
+@op(torch.ops.aten.special_i0e)
+@op_base.promote_int_input
+def _aten_i0e(self):
+  return jax.scipy.special.i0e(self)
+
+
 @op(torch.ops.aten.special_bessel_j0)
 @op_base.promote_int_input
 def _aten_special_bessel_j0(self):
@@ -2849,7 +2855,6 @@ def _aten_special_chebyshev_polynomial_u(self, n):
 def _aten_special_hermite_polynomial_h(self, n):
   # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L3036-L3061
 
-  # breakpoint()
   @jnp.vectorize
   def vectorized(x, n_i):
     def negative_n(x):
@@ -2871,6 +2876,37 @@ def _aten_special_hermite_polynomial_h(self, n):
 
     return jnp.piecewise(
       x, [n_i == 1, n_i == 0, n_i < 0], [one_n, zero_n, negative_n, default]
+    )
+
+  return vectorized(self, n.astype(jnp.int64))
+
+
+@op(torch.ops.aten.special_hermite_polynomial_he)
+@op_base.promote_int_input
+def _aten_special_hermite_polynomial_he(self, n):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L3073-L3098
+
+  @jnp.vectorize
+  def vectorized(x, n_i):
+    def negative_n(x):
+      return jnp.zeros_like(x)
+
+    def zero_n(x):
+      return jnp.ones_like(x)
+
+    def one_n(x):
+      return x
+
+    def default(x):
+      def f(k, carry):
+        p, q = carry
+        return (q, x * q - k * p)
+
+      _, r = jax.lax.fori_loop(1, n_i, f, init_val=(1.0, x))
+      return r
+
+    return jnp.piecewise(
+      x, [n_i == 1.0, n_i == 0.0, n_i < 0], [one_n, zero_n, negative_n, default]
     )
 
   return vectorized(self, n.astype(jnp.int64))
