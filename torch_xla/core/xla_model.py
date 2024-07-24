@@ -44,6 +44,8 @@ XLA_LIB = Library("xla", "DEF")
 
 from . import xla_model as this_module
 parse_xla_device = deprecated(this_module, _utils.parse_xla_device)
+reduce_gradients = deprecated(this_module, _utils.reduce_gradients)
+ToXlaTensorArena = deprecated(this_module, _utils.ToXlaTensorArena)
 
 
 def _init_world_size_ordinal():
@@ -350,51 +352,6 @@ class RateTracker(object):
     delta = time.time() - self._start_time
     count = self._partial_count + self._count
     return count / delta if delta > 0 else 0.0
-
-
-class ToXlaTensorArena(object):
-
-  def __init__(self, convert_fn, select_fn):
-    self._convert_fn = convert_fn
-    self._select_fn = select_fn
-    self._tensors = []
-
-  def _add(self, tensor):
-    self._tensors.append(tensor)
-
-  def _convert(self):
-    self._index = 0
-    if self._tensors:
-      self._converted_tensors = self._convert_fn(self._tensors)
-    else:
-      self._converted_tensors = []
-
-  def _get_converted_tensor(self):
-    assert self._index < len(self._converted_tensors)
-    new_tensor = self._converted_tensors[self._index]
-    self._index += 1
-    return new_tensor
-
-  def _collect_tensors(self, inputs):
-
-    def collect_fn(value):
-      self._add(value)
-
-    xu.for_each_instance(inputs, lambda x: self._select_fn(x), collect_fn)
-
-  def _replace_tensors(self, inputs):
-
-    def convert_fn(value):
-      return self._get_converted_tensor()
-
-    return xu.for_each_instance_rewrite(inputs, lambda x: self._select_fn(x),
-                                        convert_fn)
-
-  def transform(self, inputs):
-    self._tensors = []
-    self._collect_tensors(inputs)
-    self._convert()
-    return self._replace_tensors(inputs)
 
 
 def check_view_sharing(obj):
@@ -1158,44 +1115,6 @@ def all_reduce_bucketized_gradients(gradients,
         pin_layout=pin_layout)
 
 
-def reduce_gradients(optimizer, groups=None, pin_layout=True):
-  """Reduces all the gradients handled by an optimizer.
-
-  Args:
-    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance
-      containing the gradients to be reduced.
-    groups (list, optional): A list of list, representing the replica groups for
-      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
-        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
-        all the replicas in it.
-    pin_layout (bool, optional): whether to pin the layout when reducing gradients.
-      See `xm.all_reduce` for details.
-  """
-  count = xrt_world_size()
-  if count > 1:
-    gradients = _fetch_gradients(optimizer)
-    bucket_cap_mb = int(os.getenv('ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB', 0))
-    # Reverse the gradients list so that we start allreduce from the last layer
-    # onwards. This allows allreduce to trigger as soon as the bucket fills up and
-    # overlap with backward pass.
-    if bucket_cap_mb > 0:
-      gradients = reversed(gradients)
-      all_reduce_bucketized_gradients(
-          gradients,
-          scale=1.0 / count,
-          groups=groups,
-          pin_layout=pin_layout,
-          bucket_cap_mb=bucket_cap_mb)
-    else:
-      all_reduce(
-          REDUCE_SUM,
-          gradients,
-          scale=1.0 / count,
-          groups=groups,
-          pin_layout=pin_layout)
-
-
 def optimizer_step(optimizer,
                    barrier=False,
                    optimizer_args={},
@@ -1225,7 +1144,7 @@ def optimizer_step(optimizer,
   Returns:
     The same value returned by the `optimizer.step()` call.
   """
-  reduce_gradients(optimizer, groups=groups, pin_layout=pin_layout)
+  _utils.reduce_gradients(optimizer, groups=groups, pin_layout=pin_layout)
   loss = optimizer.step(**optimizer_args)
   if barrier:
     mark_step()
@@ -1281,7 +1200,7 @@ def _maybe_convert_to_cpu(data, convert=True):
   def select_fn(v):
     return type(v) == torch.Tensor and is_xla_tensor(v)
 
-  return ToXlaTensorArena(convert_fn, select_fn).transform(data)
+  return _utils.ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
 def send_cpu_data_to_device(datas, device, input_sharding=None):
@@ -1300,7 +1219,7 @@ def send_cpu_data_to_device(datas, device, input_sharding=None):
 
   if type(datas) is torch.Tensor:
     datas = [datas]
-  return ToXlaTensorArena(convert_fn, select_fn).transform(datas)
+  return _utils.ToXlaTensorArena(convert_fn, select_fn).transform(datas)
 
 
 def xla_rendezvous(payload: bytes = b'',
