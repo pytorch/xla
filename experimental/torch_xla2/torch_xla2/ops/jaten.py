@@ -55,27 +55,6 @@ def op(*aten, **kwargs):
 
   return inner
 
-def _handle_int64_trig(self, func):
-  target_type = None
-  # Torch's atanh returns f32 for int64 input
-  if self.dtype.name == 'int64':
-    target_type = jnp.dtype('float32')
-  res = func(self)
-  if target_type is not None:
-    res = res.astype(target_type)
-  return res
-
-
-def _handle_int64_to_int32_trig(func, args):
-  target_type = None
-  for i in range(len(args)):
-    if args[i].dtype.name == 'int64':
-      target_type = jnp.dtype('int32')
-    if target_type is not None:
-      args[i] = args[i].astype(target_type)
-  res = func(*args)
-  return res
-
 
 @op(
   torch.ops.aten.view_copy,
@@ -892,8 +871,9 @@ def _aten_argmin(self, dim=None, keepdim=False):
 
 
 @op(torch.ops.aten.sin)
+@op_base.promote_int_input
 def _aten_sin(x):
-  return _handle_int64_trig(x, jnp.sin)
+  return jnp.sin(x)
 
 
 @op(torch.ops.aten.sym_size)
@@ -1041,8 +1021,9 @@ def _aten_alias(self, *args):
 
 # aten.sinh
 @op(torch.ops.aten.sinh)
+@op_base.promote_int_input
 def _aten_sinh(self):
-  return _handle_int64_trig(self, jnp.sinh)
+  return jnp.sinh(self)
 
 
 # aten.native_layer_norm_backward
@@ -1074,8 +1055,9 @@ def _aten_native_layer_norm_backward(
 
 # aten.atanh
 @op(torch.ops.aten.atanh)
+@op_base.promote_int_input
 def _aten_atanh(self):
-  res = _handle_int64_trig(self, jnp.arctanh)
+  res = jnp.arctanh(self)
   return res
 
 
@@ -1116,20 +1098,23 @@ def _aten_sum(self, dim=None, keepdim=False, dtype=None):
 
 # aten.sqrt
 @op(torch.ops.aten.sqrt)
+@op_base.promote_int_input
 def _aten_sqrt(self):
-  return _handle_int64_trig(self, jnp.sqrt)
+  return jnp.sqrt(self)
 
 
 @op(torch.ops.aten.tan)
+@op_base.promote_int_input
 def _aten_tanh(self):
-  res = _handle_int64_trig(self, jnp.tan)
+  res = jnp.tan(self)
   return res
 
 
 # aten.tanh
 @op(torch.ops.aten.tanh)
+@op_base.promote_int_input
 def _aten_tanh(self):
-  res = _handle_int64_trig(self, jnp.tanh)
+  res = jnp.tanh(self)
   return res
 
 
@@ -1141,8 +1126,9 @@ def _aten_ceil(self):
 
 # aten.asin
 @op(torch.ops.aten.asin)
+@op_base.promote_int_input
 def _aten_asin(self):
-  res = _handle_int64_trig(self, jnp.arcsin)
+  res = jnp.arcsin(self)
   return res
 
 
@@ -1199,23 +1185,24 @@ def _aten_sign(x):
 
 # aten.sigmoid
 @op(torch.ops.aten.sigmoid)
+@op_base.promote_int_input
 def _aten_sigmoid(x):
-  if x.dtype in (jnp.int32, jnp.int64):
-    x = x.astype(jnp.float32)
   return jax.nn.sigmoid(x)
 
 
 # implement aten.asinh in jax
 @op(torch.ops.aten.asinh)
+@op_base.promote_int_input
 def _aten_asinh(self):
-  res = _handle_int64_trig(self, jnp.arcsinh)
+  res = jnp.arcsinh(self)
   return res
 
 
 # aten.atan
 @op(torch.ops.aten.atan)
+@op_base.promote_int_input
 def _aten_atan(self):
-  res = _handle_int64_trig(self, jnp.arctan)
+  res = jnp.arctan(self)
   return res
 
 
@@ -1239,8 +1226,9 @@ def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
 
 # aten.acos
 @op(torch.ops.aten.acos)
+@op_base.promote_int_input
 def _aten_acos(self):
-  return _handle_int64_trig(self, jnp.arccos)
+  return jnp.arccos(self)
 
 
 # aten.sym_storage_offset
@@ -1461,8 +1449,9 @@ def _aten_scatter(input, dim, index, src, reduce=None):
 
 # aten.acosh
 @op(torch.ops.aten.acosh)
+@op_base.promote_int_input
 def _aten_acosh(self):
-  return _handle_int64_trig(self, jnp.arccosh)
+  return jnp.arccosh(self)
 
 
 # aten.avg_pool2d_backward
@@ -1588,8 +1577,9 @@ def _aten_as_strided_scatter(x, src, sizes, strides, storage_offset):
 
 # aten.atan2
 @op(torch.ops.aten.atan2)
+@op_base.promote_int_input
 def _aten_atan2(input, other):
-  return _handle_int64_to_int32_trig(jnp.arctan2, [input, other])
+  return jnp.arctan2(input, other)
 
 
 # aten.bitwise_and
@@ -1671,14 +1661,16 @@ def _aten__pdist_forward(x, p=2):
 
 # aten.cos
 @op(torch.ops.aten.cos)
+@op_base.promote_int_input
 def _aten_cos(input):
-  return _handle_int64_trig(input, jnp.cos)
+  return jnp.cos(input)
 
 
 # aten.cosh
 @op(torch.ops.aten.cosh)
+@op_base.promote_int_input
 def _aten_cosh(input):
-  return _handle_int64_trig(input, jnp.cosh)
+  return jnp.cosh(input)
 
 
 # aten.diagonal
@@ -1695,9 +1687,8 @@ def _aten_eq(input1, input2):
 
 # aten.erf
 @op(torch.ops.aten.erf)
+@op_base.promote_int_input
 def _aten_erf(x):
-  if x.dtype in (jnp.int32, jnp.int64):
-    x = x.astype(jnp.float32)
   return jax.lax.erf(x)
 
 
@@ -1819,26 +1810,30 @@ def _aten_leaky_relu(x, negative_slope):
 
 # aten.log
 @op(torch.ops.aten.log)
+@op_base.promote_int_input
 def _aten_log(x):
-  return _handle_int64_trig(x, jnp.log)
+  return jnp.log(x)
 
 
 # aten.log10
 @op(torch.ops.aten.log10)
+@op_base.promote_int_input
 def _aten_log10(x):
-  return _handle_int64_trig(x, jnp.log10)
+  return jnp.log10(x)
 
 
 # aten.log1p
 @op(torch.ops.aten.log1p)
+@op_base.promote_int_input
 def _aten_log1p(x):
-  return _handle_int64_trig(x, jnp.log1p)
+  return jnp.log1p(x)
 
 
 # aten.log2
 @op(torch.ops.aten.log2)
+@op_base.promote_int_input
 def _aten_log2(x):
-  return _handle_int64_trig(x, jnp.log2)
+  return jnp.log2(x)
 
 
 # aten.logical_and
