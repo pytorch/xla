@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gitfb9f54e )
+                  master (2.5.0+git7f8ef79 )
                 </div>
               
             
@@ -419,28 +419,12 @@
 <span class="n">_DEVICE_CONTEXTS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 <span class="n">_DEVICE_CONTEXTS_LOCK</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
 
-<span class="c1"># Note [Dynamo WORLD_SIEZ and ORDINAL]</span>
-<span class="c1"># Belows are workaround to cache the ordinal and world_size such that</span>
-<span class="c1"># Dynamo won&#39;t do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.</span>
-<span class="n">_WORLD_SIZE</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="n">_ORDINAL</span> <span class="o">=</span> <span class="kc">None</span>
-
 <span class="n">XLA_LIB</span> <span class="o">=</span> <span class="n">Library</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="s2">&quot;DEF&quot;</span><span class="p">)</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">xla_model</span> <span class="k">as</span> <span class="n">this_module</span>
+<span class="n">xrt_world_size</span> <span class="o">=</span> <span class="n">deprecated</span><span class="p">(</span><span class="n">this_module</span><span class="p">,</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">)</span>
+<span class="n">get_ordinal</span> <span class="o">=</span> <span class="n">deprecated</span><span class="p">(</span><span class="n">this_module</span><span class="p">,</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">)</span>
 <span class="n">parse_xla_device</span> <span class="o">=</span> <span class="n">deprecated</span><span class="p">(</span><span class="n">this_module</span><span class="p">,</span> <span class="n">_utils</span><span class="o">.</span><span class="n">parse_xla_device</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">_init_world_size_ordinal</span><span class="p">():</span>
-  <span class="k">global</span> <span class="n">_WORLD_SIZE</span><span class="p">,</span> <span class="n">_ORDINAL</span>
-
-  <span class="c1"># Dynamo doesn&#39;t support XRT or multithreaded runtime. See Note [V3-8 Threading]</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">()</span> <span class="ow">or</span> <span class="n">runtime</span><span class="o">.</span><span class="n">addressable_device_count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-    <span class="k">return</span>
-
-  <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">_WORLD_SIZE</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
-    <span class="n">_ORDINAL</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span>
 
 
 <span class="k">class</span> <span class="nc">DeviceContext</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -499,44 +483,6 @@
     <span class="k">return</span> <span class="n">kind_devices</span><span class="p">[:</span><span class="n">max_devices</span><span class="p">]</span> <span class="k">if</span> <span class="n">max_devices</span> <span class="k">else</span> <span class="n">kind_devices</span>
 
 
-<span class="k">def</span> <span class="nf">xrt_world_size</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the number of devices which is taking part of the replication.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
-<span class="sd">      replication information available.</span>
-<span class="sd">      Default: 1</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    The number of devices which is taking part of the replication.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">global</span> <span class="n">_WORLD_SIZE</span>
-  <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">_WORLD_SIZE</span>
-
-  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
-
-
-<span class="k">def</span> <span class="nf">get_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the replication ordinal of the current thread.</span>
-
-<span class="sd">  The ordinals range from 0 to `xrt_world_size()` minus 1.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
-<span class="sd">      replication information available. Ignored for runtime.</span>
-<span class="sd">      Default: 0</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    The replication ordinal of the current thread.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">global</span> <span class="n">_ORDINAL</span>
-  <span class="k">if</span> <span class="n">_ORDINAL</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">_ORDINAL</span>
-
-  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
-
-
 <span class="k">def</span> <span class="nf">get_local_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the replication local ordinal of the current thread.</span>
 
@@ -565,7 +511,7 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    A boolean indicating whether the current process is the master ordinal.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">ordinal</span> <span class="o">=</span> <span class="n">get_local_ordinal</span><span class="p">()</span> <span class="k">if</span> <span class="n">local</span> <span class="k">else</span> <span class="n">get_ordinal</span><span class="p">()</span>
+  <span class="n">ordinal</span> <span class="o">=</span> <span class="n">get_local_ordinal</span><span class="p">()</span> <span class="k">if</span> <span class="n">local</span> <span class="k">else</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
   <span class="k">return</span> <span class="n">ordinal</span> <span class="o">==</span> <span class="mi">0</span></div>
 
 
@@ -864,8 +810,8 @@
   <span class="n">groups</span> <span class="o">=</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[]</span>
 
   <span class="c1"># No-op if there is only one device</span>
-  <span class="k">if</span> <span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_ALWAYS_ALLREDUCE&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span>
-                                                <span class="kc">False</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_ALWAYS_ALLREDUCE&#39;</span><span class="p">,</span>
+                                                    <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
       <span class="k">return</span> <span class="n">inputs</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
     <span class="k">else</span><span class="p">:</span>
@@ -916,9 +862,9 @@
     <span class="n">dim</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">+</span> <span class="n">dim</span>
   <span class="n">size</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
   <span class="n">padding</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">())</span>
-  <span class="n">ordinal</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span>
+  <span class="n">ordinal</span> <span class="o">=</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">groups</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">ordinal</span><span class="p">,</span> <span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ordinal</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">ordinal</span><span class="p">,</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ordinal</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="n">ordinals</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
@@ -969,7 +915,7 @@
       <span class="s2">&quot;Replica groups must have the same number of replicas/shards.&quot;</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="c1"># All replicas belong to a single group</span>
-    <span class="n">shard_count</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
+    <span class="n">shard_count</span> <span class="o">=</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
 
   <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
 
@@ -1209,7 +1155,8 @@
     <span class="c1"># so each replica must have the same multiply op with the same parameters.</span>
     <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">:</span>
       <span class="n">scale</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
-          <span class="mi">1</span> <span class="k">if</span> <span class="n">get_ordinal</span><span class="p">()</span> <span class="o">==</span> <span class="n">root_ordinal</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+          <span class="mi">1</span> <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span> <span class="o">==</span> <span class="n">root_ordinal</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+          <span class="n">dtype</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
       <span class="c1"># Transfer scale tensor as device data instead of constant 1 or 0.</span>
       <span class="n">xscale</span> <span class="o">=</span> <span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
       <span class="n">tensor</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">xscale</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -1557,7 +1504,7 @@
 <span class="sd">    pin_layout (bool, optional): whether to pin the layout when reducing gradients.</span>
 <span class="sd">      See `xm.all_reduce` for details.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">count</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
+  <span class="n">count</span> <span class="o">=</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
     <span class="n">gradients</span> <span class="o">=</span> <span class="n">_fetch_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
     <span class="n">bucket_cap_mb</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
@@ -1782,7 +1729,7 @@
 <span class="sd">    In the ordinals that ran the `target` function, the function return value,</span>
 <span class="sd">    otherwise `None`.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">running</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span> <span class="ow">in</span> <span class="n">ordinals</span>
+  <span class="n">running</span> <span class="o">=</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span> <span class="ow">in</span> <span class="n">ordinals</span>
   <span class="n">cpu_data</span> <span class="o">=</span> <span class="n">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="n">running</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">running</span><span class="p">:</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">target</span><span class="p">(</span><span class="o">*</span><span class="n">cpu_data</span><span class="p">)</span>

@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gitfb9f54e )
+                  master (2.5.0+git7f8ef79 )
                 </div>
               
             
@@ -395,11 +395,31 @@
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_env_vars</span> <span class="k">as</span> <span class="nn">xenv</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
+<span class="kn">import</span> <span class="nn">torch_xla._internal.utils</span> <span class="k">as</span> <span class="nn">_utils</span>
 <span class="kn">import</span> <span class="nn">torch_xla._internal.tpu</span> <span class="k">as</span> <span class="nn">tpu</span>
 <span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">plugins</span>
+<span class="kn">from</span> <span class="nn">torch_xla</span> <span class="kn">import</span> <span class="n">runtime</span>
 
 <span class="n">R</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;R&#39;</span><span class="p">)</span>
 <span class="n">FN</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;FN&#39;</span><span class="p">)</span>
+
+<span class="c1"># Note [Dynamo WORLD_SIEZ and ORDINAL]</span>
+<span class="c1"># Belows are workaround to cache the ordinal and world_size such that</span>
+<span class="c1"># Dynamo won&#39;t do graph breaks when runtime.xrt_world_size() and runtime.global_ordinal() are called.</span>
+<span class="n">_WORLD_SIZE</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">_ORDINAL</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">_init_world_size_ordinal</span><span class="p">():</span>
+  <span class="k">global</span> <span class="n">_WORLD_SIZE</span><span class="p">,</span> <span class="n">_ORDINAL</span>
+
+  <span class="c1"># Dynamo doesn&#39;t support XRT or multithreaded runtime. See Note [V3-8 Threading]</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">()</span> <span class="ow">or</span> <span class="n">runtime</span><span class="o">.</span><span class="n">addressable_device_count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">return</span>
+
+  <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">_WORLD_SIZE</span> <span class="o">=</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
+    <span class="n">_ORDINAL</span> <span class="o">=</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
 
 
 <span class="k">def</span> <span class="nf">set_device_type</span><span class="p">(</span><span class="n">pjrt_device</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -455,6 +475,7 @@
   <span class="k">return</span> <span class="n">pjrt_device</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">pjrt_device</span> <span class="k">else</span> <span class="n">pjrt_device</span></div>
 
 
+<span class="nd">@_utils</span><span class="o">.</span><span class="n">run_once</span>
 <span class="k">def</span> <span class="nf">using_pjrt</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns whether this process is using PjRt runtime.</span>
 
@@ -532,9 +553,14 @@
 <div class="viewcode-block" id="world_size"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.world_size">[docs]</a><span class="nd">@requires_pjrt</span>
 <span class="k">def</span> <span class="nf">world_size</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the total number of processes participating in the job.&quot;&quot;&quot;</span>
+  <span class="k">global</span> <span class="n">_WORLD_SIZE</span>
+  <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_WORLD_SIZE</span>
   <span class="k">if</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_replication_devices_count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-    <span class="k">return</span> <span class="mi">1</span>
-  <span class="k">return</span> <span class="n">global_device_count</span><span class="p">()</span></div>
+    <span class="n">_WORLD_SIZE</span> <span class="o">=</span> <span class="mi">1</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">_WORLD_SIZE</span> <span class="o">=</span> <span class="n">global_device_count</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">_WORLD_SIZE</span></div>
 
 
 <div class="viewcode-block" id="local_device_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.local_device_count">[docs]</a><span class="nd">@requires_pjrt</span>
@@ -559,6 +585,9 @@
 <span class="sd">  Global ordinal is in range [0, global_device_count). Global ordinals are not</span>
 <span class="sd">  guaranteed to have any predictable relationship to the TPU worker ID nor are</span>
 <span class="sd">  they guaranteed to be contiguous on each host.&quot;&quot;&quot;</span>
+  <span class="k">global</span> <span class="n">_ORDINAL</span>
+  <span class="k">if</span> <span class="n">_ORDINAL</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_ORDINAL</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device_ordinal</span><span class="p">()</span></div>
 
 

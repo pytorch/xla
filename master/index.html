@@ -266,7 +266,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gitfb9f54e )
+                  master (2.5.0+git7f8ef79 )
                 </div>
               
             
@@ -928,6 +928,12 @@ Default: True</p>
 <dd class="field-even"><p>A boolean indicating whether the current process is the master ordinal.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="torch_xla.core.xla_model.xrt_world_size">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.core.xla_model.</span></span><span class="sig-name descname"><span class="pre">xrt_world_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="headerlink" href="#torch_xla.core.xla_model.xrt_world_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the total number of processes participating in the job.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -1739,6 +1745,7 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
 <li><a class="reference internal" href="#torch_xla.core.xla_model.xla_device"><code class="docutils literal notranslate"><span class="pre">xla_device()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.core.xla_model.xla_device_hw"><code class="docutils literal notranslate"><span class="pre">xla_device_hw()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.core.xla_model.is_master_ordinal"><code class="docutils literal notranslate"><span class="pre">is_master_ordinal()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.core.xla_model.xrt_world_size"><code class="docutils literal notranslate"><span class="pre">xrt_world_size()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.core.xla_model.all_reduce"><code class="docutils literal notranslate"><span class="pre">all_reduce()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.core.xla_model.all_gather"><code class="docutils literal notranslate"><span class="pre">all_gather()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.core.xla_model.all_to_all"><code class="docutils literal notranslate"><span class="pre">all_to_all()</span></code></a></li>

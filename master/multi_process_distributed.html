@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gitfb9f54e )
+                  master (2.5.0+git7f8ef79 )
                 </div>
               
             
@@ -420,7 +420,7 @@ device</a>.</p>
 <li><p>Use xla specific APIs to get rank and world_size if you need to.</p></li>
 </ol>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">new_rank</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_ordinal</span><span class="p">()</span>
-<span class="n">world_size</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xrt_world_size</span><span class="p">()</span>
+<span class="n">world_size</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
 </pre></div>
 </div>
 <ol class="arabic simple">
@@ -451,6 +451,7 @@ specific touches on a single device plus the above five changes to your script.<
 
 <span class="c1"># additional imports for xla</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
 <span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_backend</span>
 <span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_multiprocessing</span> <span class="k">as</span> <span class="nn">xmp</span>
 
@@ -478,7 +479,7 @@ specific touches on a single device plus the above five changes to your script.<
     <span class="c1"># xla specific APIs to get rank, world_size.</span>
     <span class="n">new_rank</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">get_ordinal</span><span class="p">()</span>
     <span class="k">assert</span> <span class="n">new_rank</span> <span class="o">==</span> <span class="n">rank</span>
-    <span class="n">world_size</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xrt_world_size</span><span class="p">()</span>
+    <span class="n">world_size</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running basic DDP example on rank </span><span class="si">{</span><span class="n">rank</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
     <span class="n">setup</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="p">)</span>
@@ -657,6 +658,7 @@ native xla data parallel approach, here is the
 <p>Example usage:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
 <span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">XlaFullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDP</span>
 
 <span class="n">model</span> <span class="o">=</span> <span class="n">FSDP</span><span class="p">(</span><span class="n">my_module</span><span class="p">)</span>
@@ -703,7 +705,7 @@ native xla data parallel approach, here is the
 </dd>
 </dl>
 <p>}
-ckpt_path = f’/tmp/rank-{xm.get_ordinal()}-of-{xm.xrt_world_size()}.pth’
+ckpt_path = f’/tmp/rank-{xm.get_ordinal()}-of-{xr.world_size()}.pth’
 xm.save(ckpt, ckpt_path, master_only=False)</p>
 </div></blockquote>
 </li>
