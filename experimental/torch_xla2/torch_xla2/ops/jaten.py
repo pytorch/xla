@@ -1,7 +1,7 @@
 """Torch ops implemented using jax."""
 
 import sys
-from typing import Callable, Optional, Sequence
+from typing import Optional, Sequence
 
 import jax
 from jax import numpy as jnp
