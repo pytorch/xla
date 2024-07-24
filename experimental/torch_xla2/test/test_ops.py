@@ -269,7 +269,6 @@ skiplist = {
     "softmax",
     "sort",
     "special.airy_ai",
-    "special.erfcx",
     "special.i1",
     "special.i1e",
     "special.laguerre_polynomial_l",

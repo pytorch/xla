@@ -2850,6 +2850,12 @@ def _aten_special_chebyshev_polynomial_u(self, n):
   return vectorized(self, n.astype(jnp.int64))
 
 
+@op(torch.ops.aten.special_erfcx)
+@op_base.promote_int_input
+def _aten_special_erfcx(x):
+  return jnp.exp(x * x) * jax.lax.erfc(x)
+
+
 @op(torch.ops.aten.special_hermite_polynomial_h)
 @op_base.promote_int_input
 def _aten_special_hermite_polynomial_h(self, n):
