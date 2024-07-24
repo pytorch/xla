@@ -224,9 +224,10 @@ class DumbReturnHandler:
   """
 
   def __init__(self, trace_inputs, trace_outputs,
-               trace_inputs_inplace_update_bool):
+               trace_inputs_inplace_update_bool, int_outputs_and_indexes):
     self.trace_inputs = trace_inputs
     self.trace_outputs = trace_outputs
+    self.int_outputs_and_indexes = int_outputs_and_indexes
 
     # dedup the traced outputs first
     self.deduper = Deduper()
@@ -251,6 +252,12 @@ class DumbReturnHandler:
       real_outputs.insert(out_pos, real_inputs[in_pos])
 
     ret = self.deduper.recover(real_outputs)
+
+    if len(self.int_outputs_and_indexes) != 0:
+      # insert the int outputs back to the res
+      for index, value in self.int_outputs_and_indexes:
+        ret.insert(index, value)
+
     return ret
 
 
@@ -371,22 +378,35 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
       xla_args_need_update.append(tensor)
 
   args_and_out = tuple(xla_args_need_update) + tuple(xla_out)
+  # args_and_out should be tensor only, in the dynamic cases there might be
+  # symint return as the result. In that case we want to extract them and separate
+  # them from the device computation.
+  int_outputs_and_indexes = []
+  args_and_out_tensor_only = []
+  for i in range(len(args_and_out)):
+    arg = args_and_out[i]
+    if not isinstance(arg, torch.Tensor):
+      assert type(arg) == int
+      int_outputs_and_indexes.append((i, arg))
+    else:
+      args_and_out_tensor_only.append(arg)
 
-  # calculate graph hash
-  dumb_return_handler = DumbReturnHandler(xla_args, args_and_out,
-                                          xla_args_need_update_bool)
+  dumb_return_handler = DumbReturnHandler(xla_args, args_and_out_tensor_only,
+                                          xla_args_need_update_bool,
+                                          int_outputs_and_indexes)
 
   # There is a `mark_step` in the beginning of this function call, we need to wait
   # for that to finish before retriving the device data nodes.
   xm.wait_device_ops()
-  # Collect all device data nodes that is needed to compute the args_and_out
+  # Collect all device data nodes that is needed to compute the args_and_out_tensor_only
   # and wrap those device data nodes inside a at::tensor(graph_input_xla_values).
   # Return the tensor_id that is corresponding to every device_data node as
   # graph_input_tensor_ids.
   (
       graph_input_tensor_ids,
       graph_input_xla_values,
-  ) = torch_xla._XLAC._get_tensors_xla_device_data_node(args_and_out)
+  ) = torch_xla._XLAC._get_tensors_xla_device_data_node(
+      args_and_out_tensor_only)
   assert len(graph_input_tensor_ids) == len(
       graph_input_xla_values
   ), f"{len(graph_input_tensor_ids)} v.s. {len(graph_input_xla_values)}"
@@ -402,18 +422,20 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
       buffer_donor_count += 1 if isinstance(
           graph_input, torch.Tensor) and torch_xla._XLAC._get_buffer_donation(
               graph_input) else 0
-    print(f"Number of HLO Output: {len(args_and_out)}")
+    print(f"Number of HLO Output: {len(args_and_out_tensor_only)}")
     print(
         f"Number of HLO Input can be aliased with Output: {buffer_donor_count}")
     print(
-        f"XLA IR Text: \n{torch_xla._XLAC._get_xla_tensors_text(args_and_out)}")
+        f"XLA IR Text: \n{torch_xla._XLAC._get_xla_tensors_text(args_and_out_tensor_only)}"
+    )
 
   with alias_with_buffer_donor_config() as saved_config:
-    graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
+    # calculate graph hash
+    graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out_tensor_only)
     if dynamo_debug:
       print("Graph Hash: ", graph_hash)
-    # compiles and cache graph rooted at tensors in 'args_and_out'
-    torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
+    # compiles and cache graph rooted at tensors in 'args_and_out_tensor_only'
+    torch_xla._XLAC._xla_warm_up_cache(args_and_out_tensor_only, [])
 
   # Restore the origional `xla_args`. Dynamo passed the real tensor as
   # `xla_args`` and we performend the tracing on them. During the tracing,
