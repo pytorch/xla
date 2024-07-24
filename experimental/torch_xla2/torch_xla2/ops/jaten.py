@@ -2312,7 +2312,7 @@ def _aten_special_bessel_j0(self):
       / rq
     )
 
-  def other(x):
+  def default(x):
     PP = jnp.array(
       [
         7.96936729297347051624e-04,
@@ -2380,10 +2380,11 @@ def _aten_special_bessel_j0(self):
       / jnp.sqrt(x)
     )
 
-  # TODO: better type promotion
   self = jnp.abs(self).astype(jnp.float32)
+  # Last True condition in  `piecewise` takes priority, but last function is
+  # default. See https://github.com/numpy/numpy/issues/16475
   return jnp.piecewise(
-    self, [self < 0.00001, self <= 5.0], [very_small, small, other]
+    self, [self <= 5.0, self < 0.00001], [small, very_small, default]
   )
 
 
@@ -2426,7 +2427,7 @@ def _aten_special_bessel_j1(self):
       * (x * x - 4.92184563216946036703e01)
     )
 
-  def other(x):
+  def default(x):
     PP = jnp.array(
       [
         7.62125616208173112003e-04,
@@ -2504,7 +2505,7 @@ def _aten_special_bessel_j1(self):
   return sign * jnp.piecewise(
     self,
     [self <= 5.0],
-    [small, other],
+    [small, default],
   )
 
 
@@ -2550,7 +2551,7 @@ def _aten_special_bessel_y0(self):
 
     return yp / yq + (0.636619772367581343075535053490057448 * jnp.log(x) * _aten_special_bessel_j0(x))
 
-  def other(x):
+  def default(x):
     PP = jnp.array(
       [
         7.96936729297347051624e-04,
@@ -2624,8 +2625,8 @@ def _aten_special_bessel_y0(self):
 
   return jnp.piecewise(
     self,
-    [self == 0., self < 0., self <= 5.0],
-    [zero, negative, small, other],
+    [self <= 5.0, self < 0., self == 0.],
+    [small, negative, zero, default],
   )
 
 
@@ -2676,7 +2677,7 @@ def _aten_special_bessel_y1(self):
       )
     )
 
-  def other(x):
+  def default(x):
     PP = jnp.array(
       [
         7.62125616208173112003e-04,
@@ -2750,6 +2751,6 @@ def _aten_special_bessel_y1(self):
 
   return jnp.piecewise(
     self,
-    [self == 0., self < 0., self <= 5.0],
-    [zero, negative, small, other],
+    [self <= 5.0, self < 0., self == 0.],
+    [small, negative, zero, default],
   )
