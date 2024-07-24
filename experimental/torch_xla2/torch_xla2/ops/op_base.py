@@ -62,7 +62,7 @@ def promote_int_input(f: Callable[Concatenate[jax.Array, P], types.JaxValue]):
    @functools.wraps(f)
    def wrapper(x: jax.Array, *args: P.args, **kwargs: P.kwargs):
       if x.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
-        x = x.astype(jnp.float32)
+        x = x.astype(mappings.t2j_dtype(torch.get_default_dtype()))
 
       return f(x, *args, **kwargs)
 
