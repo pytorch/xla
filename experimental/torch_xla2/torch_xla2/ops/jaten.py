@@ -2746,3 +2746,42 @@ def _aten_special_bessel_y1(self):
     [self <= 5.0, self < 0., self == 0.],
     [small, negative, zero, default],
   )
+
+
+@op(torch.ops.aten.special_chebyshev_polynomial_t)
+@op_base.promote_int_input
+def _aten_special_chebyshev_polynomial_t(self, n):
+
+  @jnp.vectorize
+  def vectorized(x, n_i):
+    def negative_n(x):
+      return jnp.zeros_like(x)
+
+    def one_x(x):
+      return jnp.where((x > 0) | (n_i % 2 == 0), jnp.ones_like(x), -jnp.ones_like(x))
+
+    def large_n_small_x(x):
+      return jnp.cos(n_i * jnp.acos(x))
+
+    def zero_n(x):
+      return jnp.ones_like(x)
+
+    def one_n(x):
+      return x
+
+    def default(x):
+      def f(_, carry):
+        p, q = carry
+        return (q, 2 * x * q - p)
+
+      _, r  = jax.lax.fori_loop(0, n_i - 1, f, init_val=(1., x))
+      return r
+
+    return jnp.piecewise(
+      x,
+      [n_i == 1., n_i == 0., (n_i == 6) & (jnp.abs(x) < 1), jnp.abs(x) == 1., n_i < 0],
+      [one_n, zero_n, large_n_small_x, one_x, negative_n, default]
+    )
+
+  # Explcicitly vectorize since this vectorizes over both self and n
+  return vectorized(self, n.astype(jnp.int64))
