@@ -55,6 +55,10 @@ std::string DeviceType::toString() const {
   return absl::StrCat(type_name_, ":");
 }
 
+XlaDeviceType DeviceType::getType() const {
+  return static_cast<XlaDeviceType>(type);
+}
+
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   XLA_CHECK(!device_spec.empty()) << "empty device spec";
   XLA_CHECK(device_spec[0] != ':')
