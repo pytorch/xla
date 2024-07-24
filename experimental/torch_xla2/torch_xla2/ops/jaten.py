@@ -367,9 +367,8 @@ def _aten__embedding_bag(
 
 
 @op(torch.ops.aten.rsqrt)
+@op_base.promote_int_input
 def _aten_rsqrt(x):
-  if x.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
-    x = x.astype(jnp.float32)
   return jax.lax.rsqrt(x)
 
 
@@ -2265,13 +2264,13 @@ def _aten_dim(self):
 
 
 @op(torch.ops.aten.i0)
+@op_base.promote_int_input
 def _aten_i0(self):
-  if self.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
-    self = self.astype(jnp.float32)
   return jax.scipy.special.i0(self)
 
 
 @op(torch.ops.aten.special_bessel_j0)
+@op_base.promote_int_input
 def _aten_special_bessel_j0(self):
   # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2379-L2489
 
@@ -2380,7 +2379,7 @@ def _aten_special_bessel_j0(self):
       / jnp.sqrt(x)
     )
 
-  self = jnp.abs(self).astype(jnp.float32)
+  self = jnp.abs(self)
   # Last True condition in  `piecewise` takes priority, but last function is
   # default. See https://github.com/numpy/numpy/issues/16475
   return jnp.piecewise(
@@ -2389,6 +2388,7 @@ def _aten_special_bessel_j0(self):
 
 
 @op(torch.ops.aten.special_bessel_j1)
+@op_base.promote_int_input
 def _aten_special_bessel_j1(self):
   # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2491-L2597
 
@@ -2495,10 +2495,6 @@ def _aten_special_bessel_j1(self):
       / jnp.sqrt(x)
     )
 
-
-  # TODO: better type promotion
-  self = self.astype(jnp.float32)
-
   # If x < 0, bessel_j1(x) = -bessel_j1(-x)
   sign = jnp.sign(self)
   self = jnp.abs(self)
@@ -2510,6 +2506,7 @@ def _aten_special_bessel_j1(self):
 
 
 @op(torch.ops.aten.special_bessel_y0)
+@op_base.promote_int_input
 def _aten_special_bessel_y0(self):
   # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2599-L2712
 
@@ -2620,9 +2617,6 @@ def _aten_special_bessel_y0(self):
       / jnp.sqrt(x)
     )
 
-  # TODO: better type promotion
-  self = self.astype(jnp.float32)
-
   return jnp.piecewise(
     self,
     [self <= 5.0, self < 0., self == 0.],
@@ -2631,6 +2625,7 @@ def _aten_special_bessel_y0(self):
 
 
 @op(torch.ops.aten.special_bessel_y1)
+@op_base.promote_int_input
 def _aten_special_bessel_y1(self):
   # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2714-L2826
 
@@ -2745,9 +2740,6 @@ def _aten_special_bessel_y1(self):
       * 0.797884560802865355879892119868763737
       / jnp.sqrt(x)
     )
-
-  # TODO: better type promotion
-  self = self.astype(jnp.float32)
 
   return jnp.piecewise(
     self,
