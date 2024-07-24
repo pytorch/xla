@@ -270,7 +270,6 @@ skiplist = {
     "sort",
     "special.airy_ai",
     "special.erfcx",
-    "special.hermite_polynomial_h",
     "special.hermite_polynomial_he",
     "special.i0e",
     "special.i1",

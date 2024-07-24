@@ -2781,8 +2781,8 @@ def _aten_special_chebyshev_polynomial_t(self, n):
     return jnp.piecewise(
       x,
       [
-        n_i == 1.,
-        n_i == 0.,
+        n_i == 1,
+        n_i == 0,
         (n_i == 6) & (jnp.abs(x) < 1),
         jnp.abs(x) == 1.,
         n_i < 0
@@ -2832,8 +2832,8 @@ def _aten_special_chebyshev_polynomial_u(self, n):
     return jnp.piecewise(
       x,
       [
-        n_i == 1.0,
-        n_i == 0.0,
+        n_i == 1,
+        n_i == 0,
         (n_i > 8) & (jnp.abs(x) < 1),
         jnp.abs(x) == 1.0,
         n_i < 0,
@@ -2841,5 +2841,36 @@ def _aten_special_chebyshev_polynomial_u(self, n):
       [one_n, zero_n, large_n_small_x, one_x, negative_n, default],
     )
 
-  # Explicitly vectorize since we must vectorize over both self and n
+  return vectorized(self, n.astype(jnp.int64))
+
+
+@op(torch.ops.aten.special_hermite_polynomial_h)
+@op_base.promote_int_input
+def _aten_special_hermite_polynomial_h(self, n):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L3036-L3061
+
+  # breakpoint()
+  @jnp.vectorize
+  def vectorized(x, n_i):
+    def negative_n(x):
+      return jnp.zeros_like(x)
+
+    def zero_n(x):
+      return jnp.ones_like(x)
+
+    def one_n(x):
+      return 2 * x
+
+    def default(x):
+      def f(k, carry):
+        p, q = carry
+        return (q, 2 * x * q - 2 * k * p)
+
+      _, r = jax.lax.fori_loop(1, n_i, f, init_val=(1.0, 2 * x))
+      return r
+
+    return jnp.piecewise(
+      x, [n_i == 1, n_i == 0, n_i < 0], [one_n, zero_n, negative_n, default]
+    )
+
   return vectorized(self, n.astype(jnp.int64))
