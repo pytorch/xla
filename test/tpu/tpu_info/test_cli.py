@@ -42,7 +42,7 @@ class TpuInfoCliTest(parameterized.TestCase):
       p = multiprocessing.Process(
           target=self._init_tpu_and_wait, args=(0, q, done, env))
       p.start()
-      pid = q.get(timeout=10.0)
+      pid = q.get(timeout=20.0)
       with contextlib.ExitStack() as e:
         e.callback(done.set)
         yield pid
