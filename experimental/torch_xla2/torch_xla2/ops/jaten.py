@@ -387,14 +387,9 @@ def _aten__embedding_bag(
     return output, None, None, None
 
 
-
-
-
 @op(torch.ops.aten.rsqrt)
 def _aten_rsqrt(x):
-  if isinstance(x, int):
-    x = float(x)
-  if x.dtype == jnp.int32:
+  if x.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
     x = x.astype(jnp.float32)
   return jax.lax.rsqrt(x)
 
@@ -1928,7 +1923,6 @@ def _aten_roll(input, shifts, dims=None):
   return jnp.roll(input, shifts, dims)
 
 
-# aten.scalar_tensor
 # aten.slice_scatter
 @op(torch.ops.aten.slice_scatter)
 def _aten_slice_scatter(input, src, dim=0, start=None, end=None, step=1):
@@ -2077,13 +2071,11 @@ def _aten_var_mean_correction(self, dim=None, correction=None, keepdim=False):
 
 
 @op(torch.ops.aten.scalar_tensor)
+@op_base.convert_dtype()
 def _aten_scalar_tensor(
   s, dtype=None, layout=None, device=None, pin_memory=None
 ):
-  if dtype is not None:
-    dtype = mappings.t2j_dtype(dtype)
-    return jnp.array(s, dtype=dtype)
-  return jnp.array(s)
+  return jnp.array(s, dtype=dtype)
 
 
 @op(torch.ops.aten.to.device)
@@ -2209,12 +2201,6 @@ def _rand(
   return res
 
 
-@op(torch.ops.aten.scalar_tensor.default)
-def _aten_scalar_tensor(val, **kwargs):
-  p = torch.ops.aten.scalar_tensor(val)
-  return mappings.t2j(p)
-
-
 @op(torch.ops.aten.outer)
 def _aten_outer(a, b):
   return jnp.outer(a, b)
@@ -2281,3 +2267,10 @@ def _aten_randint(
 @op(torch.ops.aten.dim, is_jax_function=False)
 def _aten_dim(self):
   return len(self.shape)
+
+
+@op(torch.ops.aten.i0)
+def _aten_i0(self):
+  if self.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
+    self = self.astype(jnp.float32)
+  return jax.scipy.special.i0(self)
