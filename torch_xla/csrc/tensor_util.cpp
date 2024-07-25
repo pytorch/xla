@@ -62,6 +62,23 @@ struct Caster<tsl::bfloat16> {
     return static_cast<D>(static_cast<float>(value));
   }
 };
+
+template <>
+struct Caster<at::Float8_e5m2> {
+  template <typename D>
+  D cast(const at::Float8_e5m2& value) const {
+    return static_cast<D>(static_cast<float>(value));
+  }
+};
+
+template <>
+struct Caster<tsl::float8_e5m2> {
+  template <typename D>
+  D cast(const tsl::float8_e5m2& value) const {
+    return static_cast<D>(static_cast<float>(value));
+  }
+};
+
 template <>
 struct Caster<at::Half> {
   template <typename D>
@@ -185,6 +202,14 @@ struct NeedCast<at::BFloat16> {
   static constexpr bool value = true;
 };
 template <>
+struct NeedCast<tsl::float8_e5m2> {
+  static constexpr bool value = true;
+};
+template <>
+struct NeedCast<at::Float8_e5m2> {
+  static constexpr bool value = true;
+};
+template <>
 struct NeedCast<xla::half> {
   static constexpr bool value = true;
 };
@@ -247,6 +272,18 @@ void CopyData<tsl::bfloat16, at::BFloat16>(tsl::bfloat16* dest,
                                            const at::BFloat16* source,
                                            int64_t n, const CopyCasted&) {
   CheckedMemcpy<tsl::bfloat16, at::BFloat16>(dest, source, n);
+}
+template <>
+void CopyData<at::Float8_e5m2, tsl::float8_e5m2>(at::Float8_e5m2* dest,
+                                                 const tsl::float8_e5m2* source,
+                                                 int64_t n, const CopyCasted&) {
+  CheckedMemcpy<at::Float8_e5m2, tsl::float8_e5m2>(dest, source, n);
+}
+template <>
+void CopyData<tsl::float8_e5m2, at::Float8_e5m2>(tsl::float8_e5m2* dest,
+                                                 const at::Float8_e5m2* source,
+                                                 int64_t n, const CopyCasted&) {
+  CheckedMemcpy<tsl::float8_e5m2, at::Float8_e5m2>(dest, source, n);
 }
 
 std::vector<int64_t> GetIterationDimensions(const xla::Shape& shape) {
@@ -414,6 +451,10 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
       TensorToBuffer<SType, double>(tensor, dest_shape, dest_buffer,
                                     dest_buffer_size, device);
       break;
+    case xla::PrimitiveType::F8E5M2:
+      TensorToBuffer<SType, tsl::float8_e5m2>(tensor, dest_shape, dest_buffer,
+                                              dest_buffer_size, device);
+      break;
     case xla::PrimitiveType::PRED:
       TensorToBuffer<SType, bool>(tensor, dest_shape, dest_buffer,
                                   dest_buffer_size, device);
@@ -537,6 +578,9 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
                                                      dest_element_type);
     case at::ScalarType::Half:
       return XlaLiteralToTensor<SType, at::Half>(literal, dest_element_type);
+    case at::ScalarType::Float8_e5m2:
+      return XlaLiteralToTensor<SType, at::Float8_e5m2>(literal,
+                                                        dest_element_type);
     case at::ScalarType::ComplexFloat:
       return XlaLiteralToTensor<SType, c10::complex<float>>(literal,
                                                             dest_element_type);
@@ -566,6 +610,10 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
     case at::ScalarType::BFloat16:
       TensorToBufferSType<at::BFloat16>(tensor, dest_shape, dest_buffer,
                                         dest_buffer_size, device);
+      break;
+    case at::ScalarType::Float8_e5m2:
+      TensorToBufferSType<at::Float8_e5m2>(tensor, dest_shape, dest_buffer,
+                                           dest_buffer_size, device);
       break;
     case at::ScalarType::Half:
       TensorToBufferSType<at::Half>(tensor, dest_shape, dest_buffer,
@@ -626,6 +674,9 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
     case xla::PrimitiveType::BF16:
       return XlaLiteralToTensorHelper<tsl::bfloat16>(literal,
                                                      dest_element_type);
+    case xla::PrimitiveType::F8E5M2:
+      return XlaLiteralToTensorHelper<tsl::float8_e5m2>(literal,
+                                                        dest_element_type);
     case xla::PrimitiveType::F16:
       return XlaLiteralToTensorHelper<xla::half>(literal, dest_element_type);
     case xla::PrimitiveType::F32:
