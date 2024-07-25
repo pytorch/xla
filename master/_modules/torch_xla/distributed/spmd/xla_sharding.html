@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git2c77068 )
+                  master (2.5.0+git735dd43 )
                 </div>
               
             
@@ -415,18 +415,18 @@
 <span class="sd">        of the `devices` argument. Its length should match the rank of `devices`.</span>
 
 <span class="sd">  Example:</span>
-<span class="sd">  —------------------------------</span>
-<span class="sd">  mesh_shape = (4, 2)</span>
-<span class="sd">  num_devices = len(xm.get_xla_supported_devices())</span>
-<span class="sd">  device_ids = np.array(range(num_devices))</span>
-<span class="sd">  mesh = Mesh(device_ids, mesh_shape, (&#39;x&#39;, &#39;y&#39;))</span>
-<span class="sd">  mesh.get_logical_mesh()</span>
-<span class="sd">  &gt;&gt; array([[0, 1],</span>
-<span class="sd">            [2, 3],</span>
-<span class="sd">            [4, 5],</span>
-<span class="sd">            [6, 7]])</span>
-<span class="sd">  mesh.shape()</span>
-<span class="sd">  &gt;&gt; OrderedDict([(&#39;x&#39;, 4), (&#39;y&#39;, 2)])</span>
+
+<span class="sd">    &gt;&gt;&gt; mesh_shape = (4, 2)</span>
+<span class="sd">    &gt;&gt;&gt; num_devices = len(xm.get_xla_supported_devices())</span>
+<span class="sd">    &gt;&gt;&gt; device_ids = np.array(range(num_devices))</span>
+<span class="sd">    &gt;&gt;&gt; mesh = Mesh(device_ids, mesh_shape, (&#39;x&#39;, &#39;y&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; mesh.get_logical_mesh()</span>
+<span class="sd">    &gt;&gt;&gt; array([[0, 1],</span>
+<span class="sd">              [2, 3],</span>
+<span class="sd">              [4, 5],</span>
+<span class="sd">              [6, 7]])</span>
+<span class="sd">    &gt;&gt;&gt; mesh.shape()</span>
+<span class="sd">    &gt;&gt;&gt; OrderedDict([(&#39;x&#39;, 4), (&#39;y&#39;, 2)])</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="n">device_ids</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
@@ -520,9 +520,10 @@
 <span class="sd">    mesh: (Mesh) Mesh object that will be the global mesh.</span>
 
 <span class="sd">  Example:</span>
-<span class="sd">    import torch_xla.distributed.spmd as xs</span>
-<span class="sd">    mesh = xs.get_1d_mesh(&quot;data&quot;)</span>
-<span class="sd">    xs.set_global_mesh(mesh)</span>
+
+<span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
+<span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh(&quot;data&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; xs.set_global_mesh(mesh)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">global</span> <span class="n">_GLOBAL_MESH</span>
   <span class="n">_GLOBAL_MESH</span> <span class="o">=</span> <span class="n">mesh</span></div>
@@ -536,8 +537,9 @@
 <span class="sd">    mesh: (Optional[Mesh]) Mesh object if global mesh is set, otherwise return None.</span>
 
 <span class="sd">  Example:</span>
-<span class="sd">    import torch_xla.distributed.spmd as xs</span>
-<span class="sd">    xs.get_global_mesh()</span>
+
+<span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
+<span class="sd">    &gt;&gt;&gt; xs.get_global_mesh()</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">global</span> <span class="n">_GLOBAL_MESH</span>
   <span class="k">return</span> <span class="n">_GLOBAL_MESH</span></div>
@@ -554,13 +556,14 @@
 <span class="sd">    Mesh: Mesh object</span>
 
 <span class="sd">  Example:</span>
-<span class="sd">    # This example is assuming 1 TPU v4-8</span>
-<span class="sd">    import torch_xla.distributed.spmd as xs</span>
-<span class="sd">    mesh = xs.get_1d_mesh(&quot;data&quot;)</span>
-<span class="sd">    print(mesh.mesh_shape)</span>
-<span class="sd">    &gt;&gt; (4,)</span>
-<span class="sd">    print(mesh.axis_names)</span>
-<span class="sd">    &gt;&gt; (&#39;data&#39;,)</span>
+
+<span class="sd">    &gt;&gt;&gt; # This example is assuming 1 TPU v4-8</span>
+<span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
+<span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh(&quot;data&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; print(mesh.mesh_shape)</span>
+<span class="sd">    &gt;&gt;&gt; (4,)</span>
+<span class="sd">    &gt;&gt;&gt; print(mesh.axis_names)</span>
+<span class="sd">    &gt;&gt;&gt; (&#39;data&#39;,)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
   <span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,)</span>
@@ -583,13 +586,13 @@
 <span class="sd">    dcn_mesh_shape: shape of logical mesh for outer connected devices.</span>
 
 <span class="sd">  Example:</span>
-<span class="sd">    # This example is assuming 2 slices of v4-8.</span>
-<span class="sd">    ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)</span>
-<span class="sd">    dcn_mesh_shape = (2, 1, 1)</span>
 
-<span class="sd">    mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, (&#39;data&#39;,&#39;fsdp&#39;,&#39;tensor&#39;))</span>
-<span class="sd">    print(mesh.shape())</span>
-<span class="sd">    &gt;&gt; OrderedDict([(&#39;data&#39;, 2), (&#39;fsdp&#39;, 4), (&#39;tensor&#39;, 1)])</span>
+<span class="sd">    &gt;&gt;&gt; # This example is assuming 2 slices of v4-8.</span>
+<span class="sd">    &gt;&gt;&gt; ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)</span>
+<span class="sd">    &gt;&gt;&gt; dcn_mesh_shape = (2, 1, 1)</span>
+<span class="sd">    &gt;&gt;&gt; mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, (&#39;data&#39;,&#39;fsdp&#39;,&#39;tensor&#39;))</span>
+<span class="sd">    &gt;&gt;&gt; print(mesh.shape())</span>
+<span class="sd">    &gt;&gt;&gt; &gt;&gt; OrderedDict([(&#39;data&#39;, 2), (&#39;fsdp&#39;, 4), (&#39;tensor&#39;, 1)])</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">ici_mesh_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
   <span class="n">dcn_mesh_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
@@ -981,23 +984,20 @@
 <span class="sd">        dynamo_custom_op (bool): if set to True, it calls the dynamo custom op variant of mark_sharding</span>
 <span class="sd">          to make itself recognizeable and traceable by dynamo.</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    —------------------------------</span>
-<span class="sd">    import torch_xla.runtime as xr</span>
-<span class="sd">    import torch_xla.distributed.spmd as xs</span>
+<span class="sd">    Example:</span>
 
-<span class="sd">    mesh_shape = (4, 2)</span>
-<span class="sd">    num_devices = xr.global_runtime_device_count()</span>
-<span class="sd">    device_ids = np.array(range(num_devices))</span>
-<span class="sd">    mesh = Mesh(device_ids, mesh_shape, (&#39;x&#39;, &#39;y&#39;))</span>
-
-<span class="sd">    # 4-way data parallel</span>
-<span class="sd">    input = torch.randn(8, 32).to(xm.xla_device())</span>
-<span class="sd">    xs.mark_sharding(input, mesh, (0, None))</span>
-
-<span class="sd">    # 2-way model parallel</span>
-<span class="sd">    linear = nn.Linear(32, 10).to(xm.xla_device())</span>
-<span class="sd">    xs.mark_sharding(linear.weight, mesh, (None, 1))</span>
+<span class="sd">      &gt;&gt;&gt; import torch_xla.runtime as xr</span>
+<span class="sd">      &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
+<span class="sd">      &gt;&gt;&gt; mesh_shape = (4, 2)</span>
+<span class="sd">      &gt;&gt;&gt; num_devices = xr.global_runtime_device_count()</span>
+<span class="sd">      &gt;&gt;&gt; device_ids = np.array(range(num_devices))</span>
+<span class="sd">      &gt;&gt;&gt; mesh = Mesh(device_ids, mesh_shape, (&#39;x&#39;, &#39;y&#39;))</span>
+<span class="sd">      &gt;&gt;&gt; # 4-way data parallel</span>
+<span class="sd">      &gt;&gt;&gt; input = torch.randn(8, 32).to(xm.xla_device())</span>
+<span class="sd">      &gt;&gt;&gt; xs.mark_sharding(input, mesh, (0, None))</span>
+<span class="sd">      &gt;&gt;&gt; # 2-way model parallel</span>
+<span class="sd">      &gt;&gt;&gt; linear = nn.Linear(32, 10).to(xm.xla_device())</span>
+<span class="sd">      &gt;&gt;&gt; xs.mark_sharding(linear.weight, mesh, (None, 1))</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
   <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;This requires XLA supported device(s).&quot;</span>
@@ -1027,14 +1027,14 @@
 <span class="sd">  Return:</span>
 <span class="sd">    t (torch.Tensor): tensor that without sharding.</span>
 
-<span class="sd">  Examples:</span>
-<span class="sd">  import torch_xla.distributed.spmd as xs</span>
-<span class="sd">  torch_xla.runtime.use_spmd()</span>
+<span class="sd">  Example:</span>
 
-<span class="sd">  t1 = torch.randn(8,8).to(torch_xla.device())</span>
-<span class="sd">  mesh = xs.get_1d_mesh()</span>
-<span class="sd">  xs.mark_sharding(t1, mesh, (0, None))</span>
-<span class="sd">  xs.clear_sharding(t1)</span>
+<span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
+<span class="sd">    &gt;&gt;&gt; torch_xla.runtime.use_spmd()</span>
+<span class="sd">    &gt;&gt;&gt; t1 = torch.randn(8,8).to(torch_xla.device())</span>
+<span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh()</span>
+<span class="sd">    &gt;&gt;&gt; xs.mark_sharding(t1, mesh, (0, None))</span>
+<span class="sd">    &gt;&gt;&gt; xs.clear_sharding(t1)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_clear_sharding</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
   <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">):</span>

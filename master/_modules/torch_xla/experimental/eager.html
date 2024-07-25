@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git2c77068 )
+                  master (2.5.0+git735dd43 )
                 </div>
               
             
@@ -425,8 +425,7 @@
 
   <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>  <span class="c1"># Keep function&#39;s name, docstring, etc.</span>
   <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="c1"># compile should only be called with</span>
-    <span class="k">assert</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_use_eager_mode</span><span class="p">()</span> <span class="o">==</span> <span class="kc">True</span>
+    <span class="n">saved_eager_mode_status</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_use_eager_mode</span><span class="p">()</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
     <span class="c1"># clear the pending graph if any</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
@@ -439,7 +438,7 @@
       <span class="c1"># Handle exceptions (if needed)</span>
       <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in target function: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
       <span class="k">raise</span>  <span class="c1"># Re-raise the exception</span>
-    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="n">saved_eager_mode_status</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">result</span>
 

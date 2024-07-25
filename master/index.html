@@ -266,7 +266,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git2c77068 )
+                  master (2.5.0+git735dd43 )
                 </div>
               
             
@@ -1403,20 +1403,21 @@ to make itself recognizeable and traceable by dynamo.</p></li>
 </ul>
 </dd>
 </dl>
-<p>Examples
-———————————
-import torch_xla.runtime as xr
-import torch_xla.distributed.spmd as xs</p>
-<p>mesh_shape = (4, 2)
-num_devices = xr.global_runtime_device_count()
-device_ids = np.array(range(num_devices))
-mesh = Mesh(device_ids, mesh_shape, (‘x’, ‘y’))</p>
-<p># 4-way data parallel
-input = torch.randn(8, 32).to(xm.xla_device())
-xs.mark_sharding(input, mesh, (0, None))</p>
-<p># 2-way model parallel
-linear = nn.Linear(32, 10).to(xm.xla_device())
-xs.mark_sharding(linear.weight, mesh, (None, 1))</p>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># 4-way data parallel</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">32</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># 2-way model parallel</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">linear</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">linear</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -1435,13 +1436,15 @@ is a in place operation but will also return the same torch.Tensor back.</p>
 <dd class="field-odd"><p>t (torch.Tensor)</p>
 </dd>
 </dl>
-<p>Examples:
-import torch_xla.distributed.spmd as xs
-torch_xla.runtime.use_spmd()</p>
-<p>t1 = torch.randn(8,8).to(torch_xla.device())
-mesh = xs.get_1d_mesh()
-xs.mark_sharding(t1, mesh, (0, None))
-xs.clear_sharding(t1)</p>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">torch_xla</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">get_1d_mesh</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">clear_sharding</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -1454,9 +1457,11 @@ xs.clear_sharding(t1)</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<p>import torch_xla.distributed.spmd as xs
-mesh = xs.get_1d_mesh(“data”)
-xs.set_global_mesh(mesh)</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">get_1d_mesh</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">set_global_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -1472,8 +1477,10 @@ xs.set_global_mesh(mesh)</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<p>import torch_xla.distributed.spmd as xs
-xs.get_global_mesh()</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">get_global_mesh</span><span class="p">()</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -1492,13 +1499,15 @@ xs.get_global_mesh()</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<p># This example is assuming 1 TPU v4-8
-import torch_xla.distributed.spmd as xs
-mesh = xs.get_1d_mesh(“data”)
-print(mesh.mesh_shape)
-&gt;&gt; (4,)
-print(mesh.axis_names)
-&gt;&gt; (‘data’,)</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># This example is assuming 1 TPU v4-8</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">get_1d_mesh</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="mi">4</span><span class="p">,)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">axis_names</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py class">
@@ -1518,21 +1527,20 @@ of the <cite>devices</cite> argument. Its length should match the rank of <cite>
 </ul>
 </dd>
 </dl>
-<p>Example:
-———————————
-mesh_shape = (4, 2)
-num_devices = len(xm.get_xla_supported_devices())
-device_ids = np.array(range(num_devices))
-mesh = Mesh(device_ids, mesh_shape, (‘x’, ‘y’))
-mesh.get_logical_mesh()
-&gt;&gt; array([[0, 1],</p>
-<blockquote>
-<div><p>[2, 3],
-[4, 5],
-[6, 7]])</p>
-</div></blockquote>
-<p>mesh.shape()
-&gt;&gt; OrderedDict([(‘x’, 4), (‘y’, 2)])</p>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">num_devices</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">get_xla_supported_devices</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span><span class="o">.</span><span class="n">get_logical_mesh</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="go">          [2, 3],</span>
+<span class="go">          [4, 5],</span>
+<span class="go">          [6, 7]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py class">
@@ -1553,12 +1561,14 @@ requirements.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<p># This example is assuming 2 slices of v4-8.
-ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)
-dcn_mesh_shape = (2, 1, 1)</p>
-<p>mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, (‘data’,’fsdp’,’tensor’))
-print(mesh.shape())
-&gt;&gt; OrderedDict([(‘data’, 2), (‘fsdp’, 4), (‘tensor’, 1)])</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># This example is assuming 2 slices of v4-8.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ici_mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># (data, fsdp, tensor)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dcn_mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">HybridMesh</span><span class="p">(</span><span class="n">ici_mesh_shape</span><span class="p">,</span> <span class="n">dcn_mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span><span class="s1">&#39;tensor&#39;</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="o">&gt;&gt;</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;tensor&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </div>
