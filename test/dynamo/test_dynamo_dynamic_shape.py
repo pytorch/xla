@@ -1,3 +1,11 @@
+import sys
+import os
+example_folder = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(
+        sys.argv[0])))) + "/examples"
+sys.path.append(example_folder)
+from decoder_only_model import DecoderOnlyConfig, DecoderOnlyModel
+
 import unittest
 import sys
 
@@ -182,6 +190,25 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
     self.assertEqual(met.counter_value('DynamoExtractCompiledGraph'), 1)
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
+  def test_dynamic_shape_symint_as_return(self):
+    device = torch_xla.device()
+    config = DecoderOnlyConfig()
+    config.num_hidden_layers = 2
+    config.hidden_size = 512
+    seq_len = 512
+    decoder_model = DecoderOnlyModel(config).to(device)
+    compiled_decoder_model = torch.compile(
+        decoder_model, backend="openxla", dynamic=True)
+    xm.wait_device_ops()
+    met.clear_all()
+    for batch_size in [1, 2, 3, 4, 5]:
+      input = torch.zeros(batch_size, seq_len, dtype=torch.int64).to(device)
+      res = compiled_decoder_model(input)
+    # For some reason `batch_size == 1` is a special case where output does not
+    # have additional ints. We will have on compile for batch size 1 and one compile
+    # for other batch sizes.
+    self.assertEqual(met.counter_value('DynamoExtractCompiledGraph'), 2)
 
   def test_dynamic_shape_no_retracing(self):
     device = torch_xla.device()
