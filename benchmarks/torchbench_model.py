@@ -316,7 +316,7 @@ class TorchBenchModel(BenchmarkModel):
     if batch_size is None:
       test = get_torchbench_test_name(self.benchmark_experiment.test)
       if self.model_name in config().batch_size.get(test, {}):
-        batch_size = config().batch_size.get(test).get(model_name)
+        batch_size = config().batch_size.get(test).get(self.model_name)
 
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
