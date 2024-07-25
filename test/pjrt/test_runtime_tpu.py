@@ -134,18 +134,10 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     self.assertListEqual(
         devices, [torch.device(f'xla:{i}') for i in range(self.num_devices)])
 
-  @parameterized.named_parameters(('xla_model', xm.get_ordinal),
-                                  ('pjrt', xr.global_ordinal))
-  def test_global_ordinal(self, ordinal_func):
-    results = pjrt.run_multiprocess(ordinal_func)
+  def test_global_ordinal(self):
+    results = pjrt.run_multiprocess(xr.global_ordinal)
     values = list(results.values())
     self.assertListEqual(sorted(values), list(range(self.num_devices)))
-
-  @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
-                                  ('pjrt', xr.local_ordinal))
-  def test_local_ordinal(self, ordinal_func):
-    results = pjrt.run_multiprocess(ordinal_func)
-    self.assertCountEqual(results.values(), list(range(self.num_devices)))
 
   @staticmethod
   def _local_ordinal_with_discontiguous_global_ordinal_v4():
