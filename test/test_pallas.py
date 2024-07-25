@@ -925,7 +925,6 @@ if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
+  torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
