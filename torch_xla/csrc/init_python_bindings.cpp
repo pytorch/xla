@@ -1939,14 +1939,11 @@ void InitXlaModuleBindings(py::module m) {
       py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def("_xla_memory_info",
         [](const std::string& device) { return GetMemoryInfo(device); });
-  m.def(
-      "_xla_set_use_full_mat_mul_precision",
-      [](bool use_full_mat_mul_precision) {
-        XlaHelpers::set_mat_mul_precision(use_full_mat_mul_precision
-                                              ? xla::PrecisionConfig::HIGHEST
-                                              : xla::PrecisionConfig::DEFAULT);
-      },
-      py::arg("use_full_mat_mul_precision") = true);
+  m.def("_xla_set_mat_mul_precision", [](const std::string& mat_mul_precision) {
+    xla::PrecisionConfig::Precision precision =
+        ConsumeValue(xla::StringToPrecision(mat_mul_precision));
+    XlaHelpers::set_mat_mul_precision(precision);
+  });
 
   py::class_<xla::XlaBuilder, op_builder::BuilderPtr>(m, "XlaBuilder");
   py::class_<op_builder::Op, op_builder::OpPtr>(m, "XlaOp");

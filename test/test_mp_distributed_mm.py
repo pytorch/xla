@@ -12,8 +12,7 @@ def _mp_fn(index):
 
   if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
     world_size = xr.world_size()
-    torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-        use_full_mat_mul_precision=True)
+    torch_xla._XLAC._xla_set_mat_mul_precision('highest')
     torch.manual_seed(11)
     xm.set_rng_state(11)
 

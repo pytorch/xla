@@ -29,6 +29,7 @@ from benchmark_model import BenchmarkModel
 from benchmark_experiment import ExperimentLoader, BenchmarkExperiment
 from util import cleanup, move_to_device, randomize_input, reset_rng_state, us_to_s, ns_to_s, StrOrBool
 
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 
@@ -940,6 +941,11 @@ def parse_args(args=None):
       help="Whether to enable fast F32 multiplication in PyTorch.",
   )
   parser.add_argument(
+      "--matmul-precision",
+      choices=["default", "high", "highest"],
+      help="Set matrix multiplication for both PyTorch and PyTorch/XLA.",
+  )
+  parser.add_argument(
       "--experiment-config",
       type=str,
       help="""JSON string defining the experiment configuration. When set an
@@ -1009,9 +1015,15 @@ def main():
   logging.basicConfig(level=args.log_level.value, force=True)
   logger.debug(f"Parsed args: {args}")
 
+  precision = 'highest'
+  if args.matmul_precision is not None:
+    precision = args.matmul_precision
+  # --disable-tf32 flag may overwrite precision settings for BC reasons.
   if not args.disable_tf32:
     logger.warning('Enabling fast F32 multiplication for PyTorch')
-    torch.set_float32_matmul_precision('high')
+    precision = 'high'
+  torch.set_float32_matmul_precision(precision)
+  torch_xla._XLAC._xla_set_mat_mul_precision(precision)
 
   if args.profile_xla:
     logger.info(
