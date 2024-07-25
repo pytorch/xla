@@ -33,7 +33,7 @@ class TrainResNetBase():
     self.model = torchvision.models.resnet50().to(self.device)
     self.optimizer = optim.SGD(self.model.parameters(), weight_decay=1e-4)
     self.loss_fn = nn.CrossEntropyLoss()
-    self.compiled_step_fn = torch_xla.experimental.compile(self.step_fn)
+    self.compiled_step_fn = torch_xla.compile(self.step_fn)
 
   def _train_update(self, step, loss, tracker, epoch):
     print(f'epoch: {epoch}, step: {step}, loss: {loss}, rate: {tracker.rate()}')

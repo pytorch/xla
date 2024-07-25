@@ -28,7 +28,7 @@ torch_xla
 .. autofunction:: devices
 .. autofunction:: device_count
 .. autofunction:: sync
-.. autofunction:: step
+.. autofunction:: compile
 .. autofunction:: manual_seed
 
 runtime
@@ -96,7 +96,6 @@ experimental
 ----------------------------------
 .. automodule:: torch_xla.experimental
 .. autofunction:: eager_mode
-.. autofunction:: compile
 
 debug
 ----------------------------------

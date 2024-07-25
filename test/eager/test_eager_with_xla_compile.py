@@ -26,7 +26,7 @@ class EagerWithXLACompileTest(unittest.TestCase):
     t1 *= 5
 
     t2 = self.dummy_cos_sin(t1)
-    t2_compiled = torch_xla.experimental.compile(self.dummy_cos_sin)(t1)
+    t2_compiled = torch_xla.compile(self.dummy_cos_sin)(t1)
     self.assertTrue(torch.allclose(t2, t2_compiled))
     xm.wait_device_ops()
     # We execute one compiled graph
@@ -42,7 +42,7 @@ def test_eager_execute_compiled_multiple_times(self):
   # this part happens eagerly
   t1 = torch.randn(10, 5, device=device)
   t1.add_(0.5)
-  compiled = torch_xla.experimental.compile(self.dummy_cos_sin)
+  compiled = torch_xla.compile(self.dummy_cos_sin)
   res = compiled(compiled(t1))
   self.assertTrue(
       torch.allclose(res * 0.3,

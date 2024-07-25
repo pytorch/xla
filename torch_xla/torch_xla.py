@@ -61,12 +61,43 @@ def sync():
   xm.mark_step()
 
 
-def step(f: Optional[Callable] = None):
+def step():
   """Wraps code that should be dispatched to the runtime.
 
   Experimental: `xla.step` is still a work in progress. Some code that currently
   works with `xla.step` but does not follow best practices will become errors in
   future releases. See https://github.com/pytorch/xla/issues/6751 for context.
+  """
+  return compile()
+
+
+def compile(f: Optional[Callable] = None):
+  """
+  Optimizes given model/function using torch_xla's LazyTensor tracing mode.
+  PyTorch/XLA will trace the given function with given inputs and then generate
+  graphs to represent the pytorch operations happens within this function. This
+  graph will be compiled by the XLA and executed on the accelerator(decided by the
+  tensor's device). Eager mode will be disabled for the compiled region of the funciton.
+
+  Args:
+      model (Callable): Module/function to optimize, if not passed this function will
+        act as a context manager.
+
+  Example::
+
+      # usage 1
+      @torch_xla.compile()
+      def foo(x):
+        return torch.sin(x) + torch.cos(x)
+
+      def foo2(x):
+        return torch.sin(x) + torch.cos(x)
+      # usage 2
+      compiled_foo2 = torch_xla.compile(foo2)
+
+      # usage 3
+      with torch_xla.compile():
+        res = foo2(x)
   """
 
   @contextlib.contextmanager
