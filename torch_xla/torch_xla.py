@@ -82,17 +82,10 @@ def step(f: Optional[Callable] = None, *, eager_mode=False):
       sync()
       torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
 
-  # breakpoint()
   if f:
-    # print(step)
-    return step()(f)
+    return _step()(f)
 
   return _step()
-
-
-# @step.register
-# def _(f: collections.abc.Callable):
-#   return step(1)(f)
 
 
 def manual_seed(seed, device=None):
