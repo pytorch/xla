@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gitd77bf6f )
+                  master (2.5.0+git2e1ebfc )
                 </div>
               
             
@@ -383,8 +383,10 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.torch_xla</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">contextlib</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+<span></span><span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">contextlib</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
@@ -444,24 +446,28 @@
   <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="step"><a class="viewcode-back" href="../../index.html#torch_xla.step">[docs]</a><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
-<span class="k">def</span> <span class="nf">step</span><span class="p">():</span>
+<div class="viewcode-block" id="step"><a class="viewcode-back" href="../../index.html#torch_xla.step">[docs]</a><span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="n">f</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps code that should be dispatched to the runtime.</span>
 
 <span class="sd">  Experimental: `xla.step` is still a work in progress. Some code that currently</span>
 <span class="sd">  works with `xla.step` but does not follow best practices will become errors in</span>
 <span class="sd">  future releases. See https://github.com/pytorch/xla/issues/6751 for context.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">saved_eager_mode_status</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_use_eager_mode</span><span class="p">()</span>
-  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-  <span class="c1"># Clear pending operations</span>
-  <span class="n">sync</span><span class="p">()</span>
 
-  <span class="k">try</span><span class="p">:</span>
-    <span class="k">yield</span>
-  <span class="k">finally</span><span class="p">:</span>
+  <span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+  <span class="k">def</span> <span class="nf">_step</span><span class="p">():</span>
+    <span class="n">saved_eager_mode_status</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_use_eager_mode</span><span class="p">()</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+    <span class="c1"># Clear pending operations</span>
     <span class="n">sync</span><span class="p">()</span>
-    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="n">saved_eager_mode_status</span><span class="p">)</span></div>
+
+    <span class="k">try</span><span class="p">:</span>
+      <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="n">sync</span><span class="p">()</span>
+      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="n">saved_eager_mode_status</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">_step</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span> <span class="k">else</span> <span class="n">_step</span><span class="p">()(</span><span class="n">f</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="manual_seed"><a class="viewcode-back" href="../../index.html#torch_xla.manual_seed">[docs]</a><span class="k">def</span> <span class="nf">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
