@@ -41,6 +41,7 @@ class TrainDecoderSpmdDDP(TrainDecoderOnlyBase):
         self.device,
         # Shard the input's batch dimension along the `data` axis, no sharding along other dimensions
         input_sharding=xs.ShardingSpec(mesh, ('data', None)))
+    self.compiled_step_fn = self.step_fn
 
 
 if __name__ == '__main__':

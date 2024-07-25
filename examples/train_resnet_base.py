@@ -33,6 +33,7 @@ class TrainResNetBase():
     self.model = torchvision.models.resnet50().to(self.device)
     self.optimizer = optim.SGD(self.model.parameters(), weight_decay=1e-4)
     self.loss_fn = nn.CrossEntropyLoss()
+    self.compiled_step_fn = torch_xla.experimental.compile(self.step_fn)
 
   def _train_update(self, step, loss, tracker, epoch):
     print(f'epoch: {epoch}, step: {step}, loss: {loss}, rate: {tracker.rate()}')
@@ -40,16 +41,19 @@ class TrainResNetBase():
   def run_optimizer(self):
     self.optimizer.step()
 
+  def step_fn(self, data, target):
+    self.optimizer.zero_grad()
+    output = self.model(data)
+    loss = self.loss_fn(output, target)
+    loss.backward()
+    self.run_optimizer()
+
   def train_loop_fn(self, loader, epoch):
     tracker = xm.RateTracker()
     self.model.train()
     loader = itertools.islice(loader, self.num_steps)
     for step, (data, target) in enumerate(loader):
-      self.optimizer.zero_grad()
-      output = self.model(data)
-      loss = self.loss_fn(output, target)
-      loss.backward()
-      self.run_optimizer()
+      loss = self.compiled_step_fn(data, target)
       tracker.add(self.batch_size)
       if step % 10 == 0:
         xm.add_step_closure(

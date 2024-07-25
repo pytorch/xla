@@ -67,13 +67,16 @@ def step():
   works with `xla.step` but does not follow best practices will become errors in
   future releases. See https://github.com/pytorch/xla/issues/6751 for context.
   """
+  saved_eager_mode_status = torch_xla._XLAC._get_use_eager_mode()
+  torch_xla._XLAC._set_use_eager_mode(False)
   # Clear pending operations
-  xm.mark_step()
+  sync()
 
   try:
     yield
   finally:
-    xm.mark_step()
+    sync()
+    torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
 
 
 def manual_seed(seed, device=None):
