@@ -1,5 +1,7 @@
+import collections
 import contextlib
-from typing import Callable, List, Tuple
+import functools
+from typing import Any, Callable, List, Optional, Tuple
 
 import torch
 import torch.distributed as dist
@@ -59,24 +61,38 @@ def sync():
   xm.mark_step()
 
 
-@contextlib.contextmanager
-def step():
+def step(f: Optional[Callable] = None, *, eager_mode=False):
   """Wraps code that should be dispatched to the runtime.
 
   Experimental: `xla.step` is still a work in progress. Some code that currently
   works with `xla.step` but does not follow best practices will become errors in
   future releases. See https://github.com/pytorch/xla/issues/6751 for context.
   """
-  saved_eager_mode_status = torch_xla._XLAC._get_use_eager_mode()
-  torch_xla._XLAC._set_use_eager_mode(False)
-  # Clear pending operations
-  sync()
 
-  try:
-    yield
-  finally:
+  @contextlib.contextmanager
+  def _step():
+    saved_eager_mode_status = torch_xla._XLAC._get_use_eager_mode()
+    torch_xla._XLAC._set_use_eager_mode(eager_mode)
+    # Clear pending operations
     sync()
-    torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
+
+    try:
+      yield
+    finally:
+      sync()
+      torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
+
+  # breakpoint()
+  if f:
+    # print(step)
+    return step()(f)
+
+  return _step()
+
+
+# @step.register
+# def _(f: collections.abc.Callable):
+#   return step(1)(f)
 
 
 def manual_seed(seed, device=None):

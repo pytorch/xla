@@ -57,6 +57,24 @@ class TestDevices(parameterized.TestCase):
 
     self.assertEqual(met.counter_value('MarkStep'), 2)
 
+  def test_step_decorator(self):
+
+    @xla.step
+    def f():
+      torch.ones((3, 3), device=xla.device())
+
+    f()
+    self.assertEqual(met.counter_value('MarkStep'), 2)
+
+  @parameterized.parameters([True, False])
+  def test_step_decorator_eager(self, eager):
+
+    @xla.step(eager_mode=eager)
+    def f():
+      self.assertIs(xla._XLAC._get_use_eager_mode(), eager)
+
+    f()
+
   # Should roughly match example given in README
   def test_trivial_model(self):
 
