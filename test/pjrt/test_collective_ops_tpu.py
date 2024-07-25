@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from absl.testing import absltest, parameterized
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 from torch_xla._internal import pjrt, tpu
 
 

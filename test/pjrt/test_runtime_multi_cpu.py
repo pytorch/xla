@@ -45,6 +45,10 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     results = pjrt.run_multiprocess(xr.global_ordinal)
     self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
 
+  def test_local_ordinal(self):
+    results = pjrt.run_multiprocess(xr.local_ordinal)
+    self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
+
   @staticmethod
   def _multi_cpu_backwards():
     results = {}

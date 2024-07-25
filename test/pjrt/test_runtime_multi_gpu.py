@@ -50,6 +50,13 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     results = pjrt.run_multiprocess(xr.global_ordinal)
     self.assertListEqual(sorted(results.values()), expected)
 
+  def test_local_ordinal(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = [i for i in range(num_devices)]
+
+    results = pjrt.run_multiprocess(xr.local_ordinal)
+    self.assertListEqual(sorted(results.values()), expected)
+
   def test_global_device_count(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = {i: num_devices for i in range(num_devices)}
