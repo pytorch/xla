@@ -199,7 +199,7 @@ def xla_replication_devices(local_devices):
   real_devices = xla_real_devices(local_devices)
   device_types = set()
   for device in real_devices:
-    xdev = parse_xla_device(device)
+    xdev = _utils.parse_xla_device(device)
     device_types.add(xdev[0])
   if len(device_types) != 1:
     # No replication if the device set spawns multiple device types.
@@ -216,13 +216,14 @@ def xla_replication_devices(local_devices):
   replication_devices = []
   for device in torch_xla._XLAC._xla_get_all_devices():
     # device is like 'CUDA:0'
-    xdev = parse_xla_device(device)
+    xdev = _utils.parse_xla_device(device)
     if not xdev:
       raise RuntimeError('Invalid device format: {}'.format(device))
     if xdev[0] == device_type:
       replication_devices.append(device)
   sorted_by_ordinal = sorted(
-      replication_devices, key=lambda device: parse_xla_device(device)[1])
+      replication_devices,
+      key=lambda device: _utils.parse_xla_device(device)[1])
   return sorted_by_ordinal
 
 
