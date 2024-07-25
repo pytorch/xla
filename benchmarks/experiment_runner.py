@@ -268,6 +268,11 @@ class ExperimentRunner:
     benchmark_model = self.model_loader.load_model(model_config,
                                                    benchmark_experiment)
 
+    # Turn on CUDAGraphs if we are running inductor
+    if benchmark_experiment.is_inductor():
+      from torch._inductor import config as inductor_config
+      inductor_config.triton.cudagraphs = True
+
     # Repeat the experiment and accumulate metrics.
     with benchmark_model.pick_grad():
       accumulated_metrics = OrderedDict()
@@ -985,7 +990,6 @@ def parse_args(args=None):
   parser.add_argument(
       "--profile-xla",
       action="store_true",
-      default=False,
       help="Dumps the XLA profiler traces to the output directory via XPlane. It later can be opened by Tensorboard."
   )
   parser.add_argument(

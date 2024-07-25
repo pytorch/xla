@@ -224,6 +224,9 @@ class BenchmarkExperiment:
   def is_cuda(self):
     return self.accelerator == "cuda"
 
+  def is_inductor(self):
+    return self.dynamo == "inductor"
+
   def to_dict(self):
     d = OrderedDict()
     d["accelerator"] = self.accelerator
