@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gitb4d8258 )
+                  master (2.5.0+gitdf59b1c )
                 </div>
               
             
@@ -452,13 +452,16 @@
 <span class="sd">  works with `xla.step` but does not follow best practices will become errors in</span>
 <span class="sd">  future releases. See https://github.com/pytorch/xla/issues/6751 for context.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">saved_eager_mode_status</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_use_eager_mode</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
   <span class="c1"># Clear pending operations</span>
-  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+  <span class="n">sync</span><span class="p">()</span>
 
   <span class="k">try</span><span class="p">:</span>
     <span class="k">yield</span>
   <span class="k">finally</span><span class="p">:</span>
-    <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span></div>
+    <span class="n">sync</span><span class="p">()</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="n">saved_eager_mode_status</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="manual_seed"><a class="viewcode-back" href="../../index.html#torch_xla.manual_seed">[docs]</a><span class="k">def</span> <span class="nf">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
