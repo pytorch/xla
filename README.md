@@ -185,8 +185,6 @@ The torch wheel version `2.5.0.dev20240613+cpu` can be found at https://download
 | 2.2 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.2.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.1 (XRT + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/xrt/tpuvm/torch_xla-2.1.0%2Bxrt-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.1 (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.1.0-cp38-cp38-linux_x86_64.whl` |
-| 2.0 (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
-| 1.13 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
 
@@ -210,8 +208,6 @@ The torch wheel version `2.5.0.dev20240613+cpu` can be found at https://download
 | 2.3 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.3.0_3.10_tpuvm` |
 | 2.2 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm` |
 | 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm` |
-| 2.0 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.0_3.8_tpuvm` |
-| 1.13 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r1.13_3.8_tpuvm` |
 | nightly python | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm` |
 
 To use the above dockers, please pass `--privileged --net host --shm-size=16G` along. Here is an example:
