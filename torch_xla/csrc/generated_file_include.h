@@ -3,7 +3,7 @@
 
 #include <torch/csrc/lazy/core/shape.h>
 
-#include "torch_xla/csrc/aten_cpu_fallback.h"
+#include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/ops_xla_shape_fn.h"

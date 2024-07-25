@@ -1,7 +1,7 @@
 #include <ATen/ATen.h>
 #include <torch/library.h>
 
-#include "torch_xla/csrc/aten_cpu_fallback.h"
+#include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/ops/nms.h"
