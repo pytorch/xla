@@ -61,7 +61,7 @@ def sync():
   xm.mark_step()
 
 
-def step(f: Optional[Callable] = None, *, eager_mode=False):
+def step(f: Optional[Callable] = None):
   """Wraps code that should be dispatched to the runtime.
 
   Experimental: `xla.step` is still a work in progress. Some code that currently
@@ -72,7 +72,7 @@ def step(f: Optional[Callable] = None, *, eager_mode=False):
   @contextlib.contextmanager
   def _step():
     saved_eager_mode_status = torch_xla._XLAC._get_use_eager_mode()
-    torch_xla._XLAC._set_use_eager_mode(eager_mode)
+    torch_xla._XLAC._set_use_eager_mode(False)
     # Clear pending operations
     sync()
 
