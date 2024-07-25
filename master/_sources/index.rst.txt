@@ -56,7 +56,6 @@ xla_model
 .. autofunction:: xla_device
 .. autofunction:: xla_device_hw
 .. autofunction:: is_master_ordinal
-.. autofunction:: xrt_world_size
 .. autofunction:: all_reduce
 .. autofunction:: all_gather
 .. autofunction:: all_to_all
