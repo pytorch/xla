@@ -583,7 +583,6 @@ def _aten_native_layer_norm(
 
 
 # - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
-@op(torch.ops.aten.sparse_sampled_addmm)
 @op(torch.ops.aten.addmm)
 @op(torch.ops.aten.addmv)
 def _aten_addmm(self, mat1, mat2, *, beta=1.0, alpha=1.0):
@@ -591,6 +590,14 @@ def _aten_addmm(self, mat1, mat2, *, beta=1.0, alpha=1.0):
   beta = jnp.array(beta).astype(mat1.dtype)
   self *= beta
   self += alpha * jnp.matmul(mat1, mat2)
+  return self
+
+@op(torch.ops.aten.sparse_sampled_addmm)
+def _aten_sparse_addmm(self, mat1, mat2, *, beta=1.0, alpha=1.0):
+  alpha = jnp.array(alpha).astype(mat1.dtype)
+  beta = jnp.array(beta).astype(mat1.dtype)
+  self *= beta
+  self += alpha * jnp.matmul(mat1, mat2) * (self != 0)
   return self
 
 
