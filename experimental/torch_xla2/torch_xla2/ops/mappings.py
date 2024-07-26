@@ -12,6 +12,8 @@ def t2j(t):
     is_bool = True
     t = t.to(torch.int8)
 
+  t = t.to_dense()
+
   if not t.is_contiguous():
     t = t.contiguous()
 

@@ -235,9 +235,10 @@ def _is_int(x):
 
 @op(torch.ops.aten.pow)
 def _aten_pow(x, y):
+  y_orig = y
   if isinstance(y, int):
     y = float(y)
-  if _is_int(x) and _is_int(y):
+  if _is_int(x) and _is_int(y_orig):
     # Do the math in float then cast
     return jnp.astype(
       jnp.power(jnp.astype(x, jnp.dtype('float')), y), x.dtype)
@@ -589,6 +590,14 @@ def _aten_addmm(self, mat1, mat2, *, beta=1.0, alpha=1.0):
   beta = jnp.array(beta).astype(mat1.dtype)
   self *= beta
   self += alpha * jnp.matmul(mat1, mat2)
+  return self
+
+@op(torch.ops.aten.sparse_sampled_addmm)
+def _aten_sparse_addmm(self, mat1, mat2, *, beta=1.0, alpha=1.0):
+  alpha = jnp.array(alpha).astype(mat1.dtype)
+  beta = jnp.array(beta).astype(mat1.dtype)
+  self *= beta
+  self += alpha * jnp.matmul(mat1, mat2) * (self != 0)
   return self
 
 
@@ -2035,6 +2044,7 @@ def _aten_unbind(a, dim=0):
 @op(torch.ops.aten.where.self)
 @op(torch.ops.aten.where.ScalarSelf)
 @op(torch.ops.aten.where.ScalarOther)
+@op(torch.ops.aten.where.Scalar)
 def _aten_where(condition, x, y):
   return jnp.where(condition, x, y)
 
@@ -2925,3 +2935,30 @@ def _aten_special_hermite_polynomial_he(self, n):
     )
 
   return vectorized(self, n.astype(jnp.int64))
+
+
+@op(torch.ops.aten.narrow)
+def _aten_narrow(input, dim, start, length):
+  return jax.lax.dynamic_slice_in_dim(input, start, length, axis=dim)
+
+
+@op(torch.ops.aten.flatten)
+def _aten_flatten(x, start_dim=0, end_dim=-1):
+  """
+  Flattens a JAX array (similar to torch.flatten).
+
+  Args:
+      x: The JAX array to be flattened.
+      start_dim: The first dimension to include in the flattening.
+      end_dim: The last dimension to include in the flattening.
+
+  Returns:
+      A flattened JAX array.
+  """
+  shape = x.shape
+
+  if end_dim < 0:
+    end_dim += len(shape)  # Handle negative indexing
+
+  new_shape = (*shape[:start_dim], -1, *shape[end_dim + 1:])
+  return jnp.reshape(x, new_shape)

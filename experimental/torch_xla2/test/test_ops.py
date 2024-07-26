@@ -406,21 +406,6 @@ skiplist = {
     "reciprocal",
     "remainder",
     "repeat",
-    "reshape_as",
-    "reshape",
-    "resolve_conj",
-    "resolve_neg",
-    "roll",
-    "sparse.mm",
-    "sparse.sampled_addmm",
-    "special.entr",
-    "special.ndtr",
-    "special.xlog1py",
-    "split",
-    "split_with_sizes",
-    "split_with_sizes_copy",
-    "square",
-    "stack",
     "true_divide",
     "trunc",
     "unflatten",
@@ -429,8 +414,6 @@ skiplist = {
     "unsqueeze",
     "view_as_complex",
     "view_as",
-    "view_copy",
-    "view",
 }
 
 # These inputs are themselves views
@@ -456,6 +439,9 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_ou
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
+    if output1.layout != torch.strided:
+      # We only compare dense tensors. We dont currently support sparse tensors
+      output1 = output1.to_dense()
     if check_output:
       torch.testing.assert_close(
           output2_cpu, output1, rtol=rtol, atol=atol, equal_nan=equal_nan)
