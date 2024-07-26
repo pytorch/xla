@@ -1218,13 +1218,10 @@ def save(data, file_or_path, master_only=True, global_master=False):
 
   Example:
 
-    import torch_xla.core.xla_model as xm
-    # wait for all pending operations to finish.
-    xm.wait_device_ops()
-    xm.save(obj_to_save, path_to_save)
-    # only do this for multi process context, by default only the master process
-    # will save so we want to block all process until save is completed.
-    xm.rendezvous('torch_xla.core.xla_model.save')
+    >>> import torch_xla.core.xla_model as xm
+    >>> xm.wait_device_ops() # wait for all pending operations to finish.
+    >>> xm.save(obj_to_save, path_to_save)
+    >>> xm.rendezvous('torch_xla.core.xla_model.save') # multi process context only
   """
   should_write_data = not master_only or is_master_ordinal(
       local=not global_master)

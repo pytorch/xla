@@ -41,7 +41,7 @@ class Mesh:
               [4, 5],
               [6, 7]])
     >>> mesh.shape()
-    >>> OrderedDict([('x', 4), ('y', 2)])
+    OrderedDict([('x', 4), ('y', 2)])
   """
 
   device_ids: np.ndarray
@@ -176,9 +176,9 @@ def get_1d_mesh(axis_name: Optional[str] = None) -> Mesh:
     >>> import torch_xla.distributed.spmd as xs
     >>> mesh = xs.get_1d_mesh("data")
     >>> print(mesh.mesh_shape)
-    >>> (4,)
+    (4,)
     >>> print(mesh.axis_names)
-    >>> ('data',)
+    ('data',)
   """
   num_devices = xr.global_runtime_device_count()
   mesh_shape = (num_devices,)
@@ -579,21 +579,18 @@ def mark_sharding(
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
+
     Args:
         t (Union[torch.Tensor, XLAShardedTensor]): input tensor to be annotated with partition_spec.
 
         mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.
 
         partition_spec (Tuple[Tuple, int, str, None]): A tuple of device_mesh dimension index or
-          `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.
-          This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
-          When a tuple is specified, the corresponding input tensor axis will be sharded along all
-          logical axes in the tuple. Note that the order the mesh axes are specified in the tuple
-          will impact the resulting sharding.
-        For example, we can shard an 8x10 tensor 4-way row-wise, and replicate column-wise.
-        >> input = torch.randn(8, 10)
-        >> mesh_shape = (4, 2)
-        >> partition_spec = (0, None)
+            `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.
+            This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
+            When a tuple is specified, the corresponding input tensor axis will be sharded along all
+            logical axes in the tuple. Note that the order the mesh axes are specified in the tuple
+            will impact the resulting sharding.
 
         dynamo_custom_op (bool): if set to True, it calls the dynamo custom op variant of mark_sharding
           to make itself recognizeable and traceable by dynamo.
@@ -606,12 +603,10 @@ def mark_sharding(
       >>> num_devices = xr.global_runtime_device_count()
       >>> device_ids = np.array(range(num_devices))
       >>> mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
-      >>> # 4-way data parallel
       >>> input = torch.randn(8, 32).to(xm.xla_device())
-      >>> xs.mark_sharding(input, mesh, (0, None))
-      >>> # 2-way model parallel
+      >>> xs.mark_sharding(input, mesh, (0, None)) # 4-way data parallel
       >>> linear = nn.Linear(32, 10).to(xm.xla_device())
-      >>> xs.mark_sharding(linear.weight, mesh, (None, 1))
+      >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
   num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
