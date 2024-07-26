@@ -38,7 +38,6 @@ python3 test/torch_distributed/test_torch_distributed_reduce_scatter_xla_backend
 python3 examples/data_parallel/train_resnet_spmd_data_parallel.py
 python3 examples/data_parallel/train_resnet_xla_ddp.py
 python3 examples/fsdp/train_decoder_only_fsdp_v2.py
-python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py
 python3 examples/train_resnet_amp.py
 
 # HACK: don't confuse local `torch_xla` folder with installed package
@@ -46,6 +45,7 @@ python3 examples/train_resnet_amp.py
 # Egaer tests will take more HBM, only run them on TPU v4 CI
 TPU_VERSION=$(python -c "import sys; sys.path.remove(''); import torch_xla; print(torch_xla._internal.tpu.version())")
 if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
+    python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py
     python3 examples/eager/train_decoder_only_eager.py
     python3 examples/eager/train_decoder_only_eager_spmd_data_parallel.py
     python3 examples/eager/train_decoder_only_eager_with_compile.py
