@@ -20,6 +20,18 @@ def is_eager_mode() -> bool:
   return torch_xla._XLAC._get_use_eager_mode()
 
 
+@contextmanager
+def eager_mode_context(enable: bool):
+  """Context manager to enable/disable the eager mode.
+  """
+  saved_eager_mode = is_eager_mode()
+  eager_mode(enable)
+  try:
+    yield saved_eager_mode
+  finally:
+    eager_mode(saved_eager_mode)
+
+
 def compile(func):
   # can's use deprecated wrapper at import time due to circular dependency
   logging.warning(
