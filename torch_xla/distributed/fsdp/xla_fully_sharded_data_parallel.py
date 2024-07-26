@@ -116,7 +116,7 @@ class XlaFullyShardedDataParallel(nn.Module):
               'shard_metadata': model.get_shard_metadata(),
               'optimizer': optimizer.state_dict(),
           }
-          ckpt_path = f'/tmp/rank-{xm.get_ordinal()}-of-{xr.world_size()}.pth'
+          ckpt_path = f'/tmp/rank-{xr.global_ordinal()}-of-{xr.world_size()}.pth'
           xm.save(ckpt, ckpt_path, master_only=False)
 
       When resuming training of an FSDP model from saved checkpoints, all
@@ -189,7 +189,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       sharding_rank (int, Optional):
           The rank of this sharding instance. This must be specified if
           ``sharding_groups`` is provided. Otherwise it defaults to
-          ``xm.get_ordinal()``.
+          ``xr.global_ordinal()``.
       sharding_world_size (int, Optional):
           The world_size of this sharding instance. This must be specified if
           ``sharding_groups`` is provided. Otherwise it defaults to
@@ -427,7 +427,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     # FSDP data parallelism with model parallelism (e.g. Megatron)
     self.sharding_groups = sharding_groups
     if sharding_groups is None:
-      self.rank = xm.get_ordinal()
+      self.rank = xr.global_ordinal()
       self.world_size = xr.world_size()
     else:
       if sharding_rank is None or sharding_world_size is None:

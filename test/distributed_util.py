@@ -91,7 +91,7 @@ def ddp_correctness(init_method: str = 'env://',
                     use_large_net: bool = False,
                     debug: bool = False):
   if init_method == 'env://':
-    rank = xm.get_ordinal()
+    rank = xr.global_ordinal()
     world_size = xr.world_size()
     dist.init_process_group(
         "xla", init_method=init_method, rank=rank, world_size=world_size)

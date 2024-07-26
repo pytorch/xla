@@ -2,6 +2,7 @@ from types import MethodType
 
 import torch
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 from torch_xla.utils.checkpoint import checkpoint
 
 
@@ -69,7 +70,7 @@ def dummy_reduce_scatter(reduce_type,
   assert shard_count == xr.world_size()
   full_size = input.size(scatter_dim)
   shard_size = full_size // xr.world_size()
-  begin = shard_size * xm.get_ordinal()
+  begin = shard_size * xr.global_ordinal()
   end = begin + shard_size
   slices = [None] * input.dim()
   slices[scatter_dim] = slice(begin, end)

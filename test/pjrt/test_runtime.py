@@ -51,7 +51,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
         xr.xla_device()
 
   def test_default_ordinals(self):
-    global_ordinal = xm.get_ordinal()
+    global_ordinal = xr.global_ordinal()
     self.assertEqual(global_ordinal, 0)
 
     local_ordinal = xm.get_local_ordinal()

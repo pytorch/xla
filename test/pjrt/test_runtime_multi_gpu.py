@@ -114,14 +114,14 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
       @staticmethod
       def forward(ctx, x):
-        ordinal = xm.get_ordinal()
+        ordinal = xr.global_ordinal()
         ctx.forward_ordinal = ordinal
         return x
 
       @staticmethod
       def backward(ctx, grad_output):
         results['forward_ordinal'] = ctx.forward_ordinal
-        results['backward_ordinal'] = xm.get_ordinal()
+        results['backward_ordinal'] = xr.global_ordinal()
         results['device'] = str(xm.xla_device())
         return grad_output
 
@@ -165,7 +165,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
   @staticmethod
   def _broadcast(sync):
-    torch.manual_seed(xm.get_ordinal())
+    torch.manual_seed(xr.global_ordinal())
     device = xm.xla_device()
     model = nn.Linear(5, 5).to(device)
     if sync:
@@ -189,7 +189,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
   @staticmethod
   def _all_gather(pin_layout):
     device = xm.xla_device()
-    ordinal = torch.tensor([xm.get_ordinal()], device=device)
+    ordinal = torch.tensor([xr.global_ordinal()], device=device)
     out = xm.all_gather(ordinal, pin_layout=pin_layout)
     xm.mark_step()
 
@@ -237,7 +237,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     tensor = torch.cat(
         [
             -torch.arange(world_size, dtype=torch.float32).view(-1, 1, 1),
-            torch.ones(world_size, 1, 1) * xm.get_ordinal(),
+            torch.ones(world_size, 1, 1) * xr.global_ordinal(),
         ],
         dim=1,
     ).to(device)

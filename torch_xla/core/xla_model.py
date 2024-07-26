@@ -37,9 +37,14 @@ _DEVICE_CONTEXTS_LOCK = threading.Lock()
 XLA_LIB = Library("xla", "DEF")
 
 from . import xla_model as this_module
-xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size)
-get_ordinal = deprecated(this_module, torch_xla.runtime.global_ordinal)
-parse_xla_device = deprecated(this_module, _utils.parse_xla_device)
+xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size,
+                            'xrt_world_size() will be removed in release 2.6.')
+get_ordinal = deprecated(
+    this_module, torch_xla.runtime.global_ordinal,
+    'xla_model.get_ordinal() will be removed in release 2.6.')
+parse_xla_device = deprecated(
+    this_module, _utils.parse_xla_device,
+    'xla_model.parse_xla_device() will be removed in release 2.6.')
 
 
 class DeviceContext(object):

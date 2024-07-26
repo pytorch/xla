@@ -14,7 +14,7 @@ def _get_replica_group(index):
 
 
 def _mp_fn(index):
-  ordinal = xm.get_ordinal()
+  ordinal = xr.global_ordinal()
   print('Core {} waiting for rendezvous ...'.format(ordinal))
   replicas, gid = _get_replica_group(index)
   data = xm.rendezvous(

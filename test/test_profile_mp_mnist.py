@@ -108,14 +108,14 @@ def train_mnist(flags,
         sample_count=100000 // flags.batch_size // xr.world_size())
   else:
     train_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xr.global_ordinal())),
         train=True,
         download=True,
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
+        os.path.join(flags.datadir, str(xr.global_ordinal())),
         train=False,
         download=True,
         transform=transforms.Compose(
@@ -126,7 +126,7 @@ def train_mnist(flags,
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
           num_replicas=xr.world_size(),
-          rank=xm.get_ordinal(),
+          rank=xr.global_ordinal(),
           shuffle=True)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
