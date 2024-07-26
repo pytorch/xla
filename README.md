@@ -33,8 +33,7 @@ To install PyTorch/XLA nightly build in a new TPU VM:
 
 ```
 pip3 install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl
-pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl' -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
 
 ### GPU Plugin (beta)
