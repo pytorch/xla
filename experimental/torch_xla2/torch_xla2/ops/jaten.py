@@ -235,9 +235,10 @@ def _is_int(x):
 
 @op(torch.ops.aten.pow)
 def _aten_pow(x, y):
+  y_orig = y
   if isinstance(y, int):
     y = float(y)
-  if _is_int(x) and _is_int(y):
+  if _is_int(x) and _is_int(y_orig):
     # Do the math in float then cast
     return jnp.astype(
       jnp.power(jnp.astype(x, jnp.dtype('float')), y), x.dtype)
@@ -2035,6 +2036,7 @@ def _aten_unbind(a, dim=0):
 @op(torch.ops.aten.where.self)
 @op(torch.ops.aten.where.ScalarSelf)
 @op(torch.ops.aten.where.ScalarOther)
+@op(torch.ops.aten.where.Scalar)
 def _aten_where(condition, x, y):
   return jnp.where(condition, x, y)
 
@@ -2925,3 +2927,8 @@ def _aten_special_hermite_polynomial_he(self, n):
     )
 
   return vectorized(self, n.astype(jnp.int64))
+
+
+@op(torch.ops.aten.narrow)
+def _aten_narrow(input, dim, start, length):
+  return jax.lax.dynamic_slice_in_dim(input, start, length, axis=dim)

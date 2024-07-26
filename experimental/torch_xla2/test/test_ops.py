@@ -411,16 +411,6 @@ skiplist = {
     "resolve_conj",
     "resolve_neg",
     "roll",
-    "sparse.mm",
-    "sparse.sampled_addmm",
-    "special.entr",
-    "special.ndtr",
-    "special.xlog1py",
-    "split",
-    "split_with_sizes",
-    "split_with_sizes_copy",
-    "square",
-    "stack",
     "true_divide",
     "trunc",
     "unflatten",
@@ -429,8 +419,6 @@ skiplist = {
     "unsqueeze",
     "view_as_complex",
     "view_as",
-    "view_copy",
-    "view",
 }
 
 # These inputs are themselves views

@@ -147,3 +147,8 @@ def getitem(self, indexes):
   elif isinstance(indexes, list):
     indexes = tuple(indexes)
   return self[indexes]
+
+
+@register_function(torch.sparse.mm, is_jax_function=False)
+def _sparse_mm(mat1, mat2, reduce='sum'):
+  return torch.mm(mat1, mat2)
