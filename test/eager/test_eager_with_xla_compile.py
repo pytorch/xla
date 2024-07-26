@@ -16,6 +16,12 @@ class EagerWithXLACompileTest(unittest.TestCase):
   def dummy_cos_sin(self, tensor):
     return torch.cos(torch.sin(tensor))
 
+  def dummy_graph_break(self, t):
+    if t[0][0] > 0:
+      return torch.sin(t)
+    else:
+      return torch.cos(t)
+
   def test_eager_with_compile_basic(self):
     met.clear_all()
     self.assertTrue(torch_xla.experimental.is_eager_mode())
@@ -34,21 +40,34 @@ class EagerWithXLACompileTest(unittest.TestCase):
     # and many eager ops
     self.assertGreater(met.metric_data("EagerOpExecuteTime")[0], 5)
 
+  def test_eager_execute_compiled_multiple_times(self):
+    met.clear_all()
+    self.assertTrue(torch_xla.experimental.is_eager_mode())
+    device = torch_xla.device()
+    # this part happens eagerly
+    t1 = torch.randn(10, 5, device=device)
+    t1.add_(0.5)
+    compiled = torch_xla.compile(self.dummy_cos_sin)
+    res = compiled(compiled(t1))
+    self.assertTrue(
+        torch.allclose(res * 0.3,
+                       self.dummy_cos_sin(self.dummy_cos_sin(t1)) * 0.3))
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data("ExecuteTime")[0], 2)
 
-def test_eager_execute_compiled_multiple_times(self):
-  met.clear_all()
-  self.assertTrue(torch_xla.experimental.is_eager_mode())
-  device = torch_xla.device()
-  # this part happens eagerly
-  t1 = torch.randn(10, 5, device=device)
-  t1.add_(0.5)
-  compiled = torch_xla.compile(self.dummy_cos_sin)
-  res = compiled(compiled(t1))
-  self.assertTrue(
-      torch.allclose(res * 0.3,
-                     self.dummy_cos_sin(self.dummy_cos_sin(t1)) * 0.3))
-  xm.wait_device_ops()
-  self.assertEqual(met.metric_data("ExecuteTime")[0], 2)
+  def test_eager_with_compile_graph_break(self):
+    met.clear_all()
+    self.assertTrue(torch_xla.experimental.is_eager_mode())
+    device = torch_xla.device()
+    t1 = torch.randn(5, 5, device=device)
+
+    with self.assertRaises(Exception) as context:
+      t2_compiled = torch_xla.compile(
+          self.dummy_graph_break, full_graph=True)(
+              t1)
+    self.assertIn(
+        'Unexpected execution happens inside the compiled function, exiting',
+        context.exception.__str__())
 
 
 if __name__ == '__main__':

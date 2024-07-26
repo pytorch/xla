@@ -2444,6 +2444,11 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_use_eager_mode",
         []() { return XLAGraphExecutor::Get()->UseEagerMode(); });
+  m.def("_set_allow_execution", [](bool allow_execution) {
+    XLAGraphExecutor::Get()->SetAllowExecution(allow_execution);
+  });
+  m.def("_get_allow_execution",
+        []() { return XLAGraphExecutor::Get()->AllowExecution(); });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
