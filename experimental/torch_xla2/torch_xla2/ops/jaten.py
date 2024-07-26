@@ -583,6 +583,7 @@ def _aten_native_layer_norm(
 
 
 # - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
+@op(torch.ops.aten.sparse_sampled_addmm)
 @op(torch.ops.aten.addmm)
 @op(torch.ops.aten.addmv)
 def _aten_addmm(self, mat1, mat2, *, beta=1.0, alpha=1.0):
@@ -2932,3 +2933,25 @@ def _aten_special_hermite_polynomial_he(self, n):
 @op(torch.ops.aten.narrow)
 def _aten_narrow(input, dim, start, length):
   return jax.lax.dynamic_slice_in_dim(input, start, length, axis=dim)
+
+
+@op(torch.ops.aten.flatten)
+def _aten_flatten(x, start_dim=0, end_dim=-1):
+  """
+  Flattens a JAX array (similar to torch.flatten).
+
+  Args:
+      x: The JAX array to be flattened.
+      start_dim: The first dimension to include in the flattening.
+      end_dim: The last dimension to include in the flattening.
+
+  Returns:
+      A flattened JAX array.
+  """
+  shape = x.shape
+
+  if end_dim < 0:
+    end_dim += len(shape)  # Handle negative indexing
+
+  new_shape = (*shape[:start_dim], -1, *shape[end_dim + 1:])
+  return jnp.reshape(x, new_shape)
