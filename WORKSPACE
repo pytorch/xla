@@ -68,7 +68,6 @@ http_archive(
     ],
 )
 
-
 # For development, one often wants to make changes to the OpenXLA repository as well
 # as the PyTorch/XLA repository. You can override the pinned repository above with a
 # local checkout by either:
