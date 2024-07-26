@@ -367,9 +367,8 @@ def _aten__embedding_bag(
 
 
 @op(torch.ops.aten.rsqrt)
+@op_base.promote_int_input
 def _aten_rsqrt(x):
-  if x.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
-    x = x.astype(jnp.float32)
   return jax.lax.rsqrt(x)
 
 
@@ -2265,7 +2264,655 @@ def _aten_dim(self):
 
 
 @op(torch.ops.aten.i0)
+@op_base.promote_int_input
 def _aten_i0(self):
-  if self.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
-    self = self.astype(jnp.float32)
   return jax.scipy.special.i0(self)
+
+
+@op(torch.ops.aten.special_i0e)
+@op_base.promote_int_input
+def _aten_i0e(self):
+  return jax.scipy.special.i0e(self)
+
+
+@op(torch.ops.aten.special_bessel_j0)
+@op_base.promote_int_input
+def _aten_special_bessel_j0(self):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2379-L2489
+
+  def very_small(x):
+    return 1.0 - x * x / 4.0
+
+  def small(x):
+    RP = jnp.array(
+      [
+        -4.79443220978201773821e09,
+        1.95617491946556577543e12,
+        -2.49248344360967716204e14,
+        9.70862251047306323952e15,
+      ],
+      dtype=self.dtype,
+    )
+    RQ = jnp.array(
+      [
+        4.99563147152651017219e02,
+        1.73785401676374683123e05,
+        4.84409658339962045305e07,
+        1.11855537045356834862e10,
+        2.11277520115489217587e12,
+        3.10518229857422583814e14,
+        3.18121955943204943306e16,
+        1.71086294081043136091e18,
+      ],
+      dtype=self.dtype,
+    )
+
+    rp = op_base.foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
+    rq = op_base.foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
+
+    return (
+      (x * x - 5.78318596294678452118e00)
+      * (x * x - 3.04712623436620863991e01)
+      * rp
+      / rq
+    )
+
+  def default(x):
+    PP = jnp.array(
+      [
+        7.96936729297347051624e-04,
+        8.28352392107440799803e-02,
+        1.23953371646414299388e00,
+        5.44725003058768775090e00,
+        8.74716500199817011941e00,
+        5.30324038235394892183e00,
+        9.99999999999999997821e-01,
+      ],
+      dtype=self.dtype,
+    )
+    PQ = jnp.array(
+      [
+        9.24408810558863637013e-04,
+        8.56288474354474431428e-02,
+        1.25352743901058953537e00,
+        5.47097740330417105182e00,
+        8.76190883237069594232e00,
+        5.30605288235394617618e00,
+        1.00000000000000000218e00,
+      ],
+      dtype=self.dtype,
+    )
+    QP = jnp.array(
+      [
+        -1.13663838898469149931e-02,
+        -1.28252718670509318512e00,
+        -1.95539544257735972385e01,
+        -9.32060152123768231369e01,
+        -1.77681167980488050595e02,
+        -1.47077505154951170175e02,
+        -5.14105326766599330220e01,
+        -6.05014350600728481186e00,
+      ],
+      dtype=self.dtype,
+    )
+    QQ = jnp.array(
+      [
+        6.43178256118178023184e01,
+        8.56430025976980587198e02,
+        3.88240183605401609683e03,
+        7.24046774195652478189e03,
+        5.93072701187316984827e03,
+        2.06209331660327847417e03,
+        2.42005740240291393179e02,
+      ],
+      dtype=self.dtype,
+    )
+
+    pp = op_base.foreach_loop(PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
+    pq = op_base.foreach_loop(PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
+    qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
+    qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
+
+    return (
+      (
+        pp / pq * jnp.cos(x - 0.785398163397448309615660845819875721)
+        - 5.0
+        / x
+        * (qp / qq)
+        * jnp.sin(x - 0.785398163397448309615660845819875721)
+      )
+      * 0.797884560802865355879892119868763737
+      / jnp.sqrt(x)
+    )
+
+  self = jnp.abs(self)
+  # Last True condition in  `piecewise` takes priority, but last function is
+  # default. See https://github.com/numpy/numpy/issues/16475
+  return jnp.piecewise(
+    self, [self <= 5.0, self < 0.00001], [small, very_small, default]
+  )
+
+
+@op(torch.ops.aten.special_bessel_j1)
+@op_base.promote_int_input
+def _aten_special_bessel_j1(self):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2491-L2597
+
+  def small(x):
+    RP = jnp.array(
+      [
+        -8.99971225705559398224e08,
+        4.52228297998194034323e11,
+        -7.27494245221818276015e13,
+        3.68295732863852883286e15,
+      ],
+      dtype=self.dtype,
+    )
+    RQ = jnp.array(
+      [
+        6.20836478118054335476e02,
+        2.56987256757748830383e05,
+        8.35146791431949253037e07,
+        2.21511595479792499675e10,
+        4.74914122079991414898e12,
+        7.84369607876235854894e14,
+        8.95222336184627338078e16,
+        5.32278620332680085395e18,
+      ],
+      dtype=self.dtype,
+    )
+
+    rp = op_base.foreach_loop(RP, lambda carry, rp_i: carry * (x * x) + rp_i)
+    rq = op_base.foreach_loop(RQ, lambda carry, rq_i: carry * (x * x) + rq_i)
+
+    return (
+      rp
+      / rq
+      * x
+      * (x * x - 1.46819706421238932572e01)
+      * (x * x - 4.92184563216946036703e01)
+    )
+
+  def default(x):
+    PP = jnp.array(
+      [
+        7.62125616208173112003e-04,
+        7.31397056940917570436e-02,
+        1.12719608129684925192e00,
+        5.11207951146807644818e00,
+        8.42404590141772420927e00,
+        5.21451598682361504063e00,
+        1.00000000000000000254e00,
+      ],
+      dtype=self.dtype,
+    )
+    PQ = jnp.array(
+      [
+        5.71323128072548699714e-04,
+        6.88455908754495404082e-02,
+        1.10514232634061696926e00,
+        5.07386386128601488557e00,
+        8.39985554327604159757e00,
+        5.20982848682361821619e00,
+        9.99999999999999997461e-01,
+      ],
+      dtype=self.dtype,
+    )
+    QP = jnp.array(
+      [
+        5.10862594750176621635e-02,
+        4.98213872951233449420e00,
+        7.58238284132545283818e01,
+        3.66779609360150777800e02,
+        7.10856304998926107277e02,
+        5.97489612400613639965e02,
+        2.11688757100572135698e02,
+        2.52070205858023719784e01,
+      ],
+      dtype=self.dtype,
+    )
+    QQ = jnp.array(
+      [
+        7.42373277035675149943e01,
+        1.05644886038262816351e03,
+        4.98641058337653607651e03,
+        9.56231892404756170795e03,
+        7.99704160447350683650e03,
+        2.82619278517639096600e03,
+        3.36093607810698293419e02,
+      ],
+      dtype=self.dtype,
+    )
+
+    pp = op_base.foreach_loop(PP, lambda carry, pp_i: carry * (25.0 / (x * x)) + pp_i)
+    pq = op_base.foreach_loop(PQ, lambda carry, pq_i: carry * (25.0 / (x * x)) + pq_i)
+    qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * (25.0 / (x * x)) + qp_i)
+    qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * (25.0 / (x * x)) + qq_i)
+
+    return (
+      (
+        pp / pq * jnp.cos(x - 2.356194490192344928846982537459627163)
+        - 5.0
+        / x
+        * (qp / qq)
+        * jnp.sin(x - 2.356194490192344928846982537459627163)
+      )
+      * 0.797884560802865355879892119868763737
+      / jnp.sqrt(x)
+    )
+
+  # If x < 0, bessel_j1(x) = -bessel_j1(-x)
+  sign = jnp.sign(self)
+  self = jnp.abs(self)
+  return sign * jnp.piecewise(
+    self,
+    [self <= 5.0],
+    [small, default],
+  )
+
+
+@op(torch.ops.aten.special_bessel_y0)
+@op_base.promote_int_input
+def _aten_special_bessel_y0(self):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2599-L2712
+
+  def zero(x):
+    return jnp.array(-jnp.inf, x.dtype)
+
+  def negative(x):
+    return jnp.array(jnp.nan, x.dtype)
+
+  def small(x):
+    YP = jnp.array(
+      [
+        1.55924367855235737965e04,
+        -1.46639295903971606143e07,
+        5.43526477051876500413e09,
+        -9.82136065717911466409e11,
+        8.75906394395366999549e13,
+        -3.46628303384729719441e15,
+        4.42733268572569800351e16,
+        -1.84950800436986690637e16,
+      ],
+      dtype=self.dtype,
+    )
+    YQ = jnp.array(
+      [
+        1.04128353664259848412e03,
+        6.26107330137134956842e05,
+        2.68919633393814121987e08,
+        8.64002487103935000337e10,
+        2.02979612750105546709e13,
+        3.17157752842975028269e15,
+        2.50596256172653059228e17,
+      ],
+      dtype=self.dtype,
+    )
+
+    yp = op_base.foreach_loop(YP, lambda carry, yp_i: carry * (x * x) + yp_i)
+    yq = op_base.foreach_loop(YQ, lambda carry, yq_i: carry * (x * x) + yq_i)
+
+    return yp / yq + (0.636619772367581343075535053490057448 * jnp.log(x) * _aten_special_bessel_j0(x))
+
+  def default(x):
+    PP = jnp.array(
+      [
+        7.96936729297347051624e-04,
+        8.28352392107440799803e-02,
+        1.23953371646414299388e00,
+        5.44725003058768775090e00,
+        8.74716500199817011941e00,
+        5.30324038235394892183e00,
+        9.99999999999999997821e-01,
+      ],
+      dtype=self.dtype,
+    )
+    PQ = jnp.array(
+      [
+        9.24408810558863637013e-04,
+        8.56288474354474431428e-02,
+        1.25352743901058953537e00,
+        5.47097740330417105182e00,
+        8.76190883237069594232e00,
+        5.30605288235394617618e00,
+        1.00000000000000000218e00,
+      ],
+      dtype=self.dtype,
+    )
+    QP = jnp.array(
+      [
+        -1.13663838898469149931e-02,
+        -1.28252718670509318512e00,
+        -1.95539544257735972385e01,
+        -9.32060152123768231369e01,
+        -1.77681167980488050595e02,
+        -1.47077505154951170175e02,
+        -5.14105326766599330220e01,
+        -6.05014350600728481186e00,
+      ],
+      dtype=self.dtype,
+    )
+    QQ = jnp.array(
+      [
+        6.43178256118178023184e01,
+        8.56430025976980587198e02,
+        3.88240183605401609683e03,
+        7.24046774195652478189e03,
+        5.93072701187316984827e03,
+        2.06209331660327847417e03,
+        2.42005740240291393179e02,
+      ],
+      dtype=self.dtype,
+    )
+
+    factor = 25.0 / (x * x)
+    pp = op_base.foreach_loop(PP, lambda carry, pp_i: carry * factor + pp_i)
+    pq = op_base.foreach_loop(PQ, lambda carry, pq_i: carry * factor + pq_i)
+    qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * factor + qp_i)
+    qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * factor + qq_i)
+
+    return (
+      (
+        pp / pq * jnp.sin(x - 0.785398163397448309615660845819875721)
+        + 5.0
+        / x
+        * (qp / qq)
+        * jnp.cos(x - 0.785398163397448309615660845819875721)
+      )
+      * 0.797884560802865355879892119868763737
+      / jnp.sqrt(x)
+    )
+
+  return jnp.piecewise(
+    self,
+    [self <= 5.0, self < 0., self == 0.],
+    [small, negative, zero, default],
+  )
+
+
+@op(torch.ops.aten.special_bessel_y1)
+@op_base.promote_int_input
+def _aten_special_bessel_y1(self):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2714-L2826
+
+  def zero(x):
+    return jnp.array(-jnp.inf, x.dtype)
+
+  def negative(x):
+    return jnp.array(jnp.nan, x.dtype)
+
+  def small(x):
+    YP = jnp.array(
+      [
+        1.26320474790178026440e09,
+        -6.47355876379160291031e11,
+        1.14509511541823727583e14,
+        -8.12770255501325109621e15,
+        2.02439475713594898196e17,
+        -7.78877196265950026825e17,
+      ],
+      dtype=self.dtype,
+    )
+    YQ = jnp.array(
+      [
+        5.94301592346128195359e02,
+        2.35564092943068577943e05,
+        7.34811944459721705660e07,
+        1.87601316108706159478e10,
+        3.88231277496238566008e12,
+        6.20557727146953693363e14,
+        6.87141087355300489866e16,
+        3.97270608116560655612e18,
+      ],
+      dtype=self.dtype,
+    )
+
+    yp = op_base.foreach_loop(YP, lambda carry, yp_i: carry * (x * x) + yp_i)
+    yq = op_base.foreach_loop(YQ, lambda carry, yq_i: carry * (x * x) + yq_i)
+
+    return (
+      x * (yp / yq)
+      + (
+        0.636619772367581343075535053490057448
+        * (_aten_special_bessel_j1(x) * jnp.log(x) - 1.0 / x)
+      )
+    )
+
+  def default(x):
+    PP = jnp.array(
+      [
+        7.62125616208173112003e-04,
+        7.31397056940917570436e-02,
+        1.12719608129684925192e00,
+        5.11207951146807644818e00,
+        8.42404590141772420927e00,
+        5.21451598682361504063e00,
+        1.00000000000000000254e00,
+      ],
+      dtype=self.dtype,
+    )
+    PQ = jnp.array(
+      [
+        5.71323128072548699714e-04,
+        6.88455908754495404082e-02,
+        1.10514232634061696926e00,
+        5.07386386128601488557e00,
+        8.39985554327604159757e00,
+        5.20982848682361821619e00,
+        9.99999999999999997461e-01,
+      ],
+      dtype=self.dtype,
+    )
+    QP = jnp.array(
+      [
+        5.10862594750176621635e-02,
+        4.98213872951233449420e00,
+        7.58238284132545283818e01,
+        3.66779609360150777800e02,
+        7.10856304998926107277e02,
+        5.97489612400613639965e02,
+        2.11688757100572135698e02,
+        2.52070205858023719784e01,
+      ],
+      dtype=self.dtype,
+    )
+    QQ = jnp.array(
+      [
+        7.42373277035675149943e01,
+        1.05644886038262816351e03,
+        4.98641058337653607651e03,
+        9.56231892404756170795e03,
+        7.99704160447350683650e03,
+        2.82619278517639096600e03,
+        3.36093607810698293419e02,
+      ],
+      dtype=self.dtype,
+    )
+
+    factor = 25.0 / (x * x)
+    pp = op_base.foreach_loop(PP, lambda carry, pp_i: carry * factor + pp_i)
+    pq = op_base.foreach_loop(PQ, lambda carry, pq_i: carry * factor + pq_i)
+    qp = op_base.foreach_loop(QP, lambda carry, qp_i: carry * factor + qp_i)
+    qq = op_base.foreach_loop(QQ, lambda carry, qq_i: carry * factor + qq_i)
+
+    return (
+      (
+        pp / pq * jnp.sin(x - 2.356194490192344928846982537459627163)
+        + 5.0
+        / x
+        * (qp / qq)
+        * jnp.cos(x - 2.356194490192344928846982537459627163)
+      )
+      * 0.797884560802865355879892119868763737
+      / jnp.sqrt(x)
+    )
+
+  return jnp.piecewise(
+    self,
+    [self <= 5.0, self < 0., self == 0.],
+    [small, negative, zero, default],
+  )
+
+
+@op(torch.ops.aten.special_chebyshev_polynomial_t)
+@op_base.promote_int_input
+def _aten_special_chebyshev_polynomial_t(self, n):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2828-L2865
+
+  @jnp.vectorize
+  def vectorized(x, n_i):
+    def negative_n(x):
+      return jnp.zeros_like(x)
+
+    def one_x(x):
+      return jnp.where((x > 0) | (n_i % 2 == 0), jnp.ones_like(x), -jnp.ones_like(x))
+
+    def large_n_small_x(x):
+      return jnp.cos(n_i * jnp.acos(x))
+
+    def zero_n(x):
+      return jnp.ones_like(x)
+
+    def one_n(x):
+      return x
+
+    def default(x):
+      def f(_, carry):
+        p, q = carry
+        return (q, 2 * x * q - p)
+
+      _, r  = jax.lax.fori_loop(0, n_i - 1, f, init_val=(1., x))
+      return r
+
+    return jnp.piecewise(
+      x,
+      [
+        n_i == 1,
+        n_i == 0,
+        (n_i == 6) & (jnp.abs(x) < 1),
+        jnp.abs(x) == 1.,
+        n_i < 0
+      ],
+      [one_n, zero_n, large_n_small_x, one_x, negative_n, default]
+    )
+
+  # Explcicitly vectorize since we must vectorizes over both self and n
+  return vectorized(self, n.astype(jnp.int64))
+
+
+@op(torch.ops.aten.special_chebyshev_polynomial_u)
+@op_base.promote_int_input
+def _aten_special_chebyshev_polynomial_u(self, n):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L2872-L2913
+
+  @jnp.vectorize
+  def vectorized(x, n_i):
+    def negative_n(x):
+      return jnp.zeros_like(x)
+
+    def one_x(x):
+      return jnp.where((x > 0) | (n_i % 2 == 0), n_i + 1, -(n_i + 1))
+
+    def large_n_small_x(x):
+      sin_acos_x = jnp.sin(jnp.acos(x))
+      return jnp.where(
+        sin_acos_x != 0,
+        jnp.sin((n_i + 1) * jnp.acos(x)) / sin_acos_x,
+        (n_i + 1) * jnp.cos((n_i + 1) * jnp.acos(x)) / x,
+      )
+
+    def zero_n(x):
+      return jnp.ones_like(x)
+
+    def one_n(x):
+      return 2 * x
+
+    def default(x):
+      def f(_, carry):
+        p, q = carry
+        return (q, 2 * x * q - p)
+
+      _, r = jax.lax.fori_loop(0, n_i - 1, f, init_val=(1.0, 2 * x))
+      return r
+
+    return jnp.piecewise(
+      x,
+      [
+        n_i == 1,
+        n_i == 0,
+        (n_i > 8) & (jnp.abs(x) < 1),
+        jnp.abs(x) == 1.0,
+        n_i < 0,
+      ],
+      [one_n, zero_n, large_n_small_x, one_x, negative_n, default],
+    )
+
+  return vectorized(self, n.astype(jnp.int64))
+
+
+@op(torch.ops.aten.special_erfcx)
+@op_base.promote_int_input
+def _aten_special_erfcx(x):
+  return jnp.exp(x * x) * jax.lax.erfc(x)
+
+
+@op(torch.ops.aten.special_hermite_polynomial_h)
+@op_base.promote_int_input
+def _aten_special_hermite_polynomial_h(self, n):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L3036-L3061
+
+  @jnp.vectorize
+  def vectorized(x, n_i):
+    def negative_n(x):
+      return jnp.zeros_like(x)
+
+    def zero_n(x):
+      return jnp.ones_like(x)
+
+    def one_n(x):
+      return 2 * x
+
+    def default(x):
+      def f(k, carry):
+        p, q = carry
+        return (q, 2 * x * q - 2 * k * p)
+
+      _, r = jax.lax.fori_loop(1, n_i, f, init_val=(1.0, 2 * x))
+      return r
+
+    return jnp.piecewise(
+      x, [n_i == 1, n_i == 0, n_i < 0], [one_n, zero_n, negative_n, default]
+    )
+
+  return vectorized(self, n.astype(jnp.int64))
+
+
+@op(torch.ops.aten.special_hermite_polynomial_he)
+@op_base.promote_int_input
+def _aten_special_hermite_polynomial_he(self, n):
+  # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L3073-L3098
+
+  @jnp.vectorize
+  def vectorized(x, n_i):
+    def negative_n(x):
+      return jnp.zeros_like(x)
+
+    def zero_n(x):
+      return jnp.ones_like(x)
+
+    def one_n(x):
+      return x
+
+    def default(x):
+      def f(k, carry):
+        p, q = carry
+        return (q, x * q - k * p)
+
+      _, r = jax.lax.fori_loop(1, n_i, f, init_val=(1.0, x))
+      return r
+
+    return jnp.piecewise(
+      x, [n_i == 1.0, n_i == 0.0, n_i < 0], [one_n, zero_n, negative_n, default]
+    )
+
+  return vectorized(self, n.astype(jnp.int64))
