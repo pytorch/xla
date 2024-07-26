@@ -45,7 +45,7 @@ pip:
       - mkl-include
 
     release_tpu:
-      - torch_xla[tpuvm]
+      - torch_xla[tpu]
 
   # Packages that will be installed with the `--nodeps` flag.
   pkgs_nodeps:

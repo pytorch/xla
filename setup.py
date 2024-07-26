@@ -313,9 +313,6 @@ setup(
         # On Cloud TPU VM install with:
         # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
         'tpu': [f'libtpu-nightly=={_libtpu_version}'],
-        # On nightly, install libtpu with `pip install torch_xla[tpuvm]`
-        # Remove from release branches since this is not allowed by PyPI.
-        'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
         'pallas': [f'jaxlib=={_jax_version}', f'jax=={_jax_version}'],
     },
