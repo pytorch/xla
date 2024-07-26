@@ -1998,9 +1998,18 @@ def _aten_topk(input, k, dim=None, largest=True, sorted=True, *, out=None):
 
 
 # aten.tril_indices
+#tril_indices(int row, int col, int offset=0, *, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None)
 @op(torch.ops.aten.tril_indices)
-def _aten_tril_indices(a):
-  return jnp.tril_indices(a)
+def _aten_tril_indices(row, col, offset=0, *, dtype=jnp.int64.dtype, layout=None, device=None, pin_memory=None):
+  a, b = jnp.tril_indices(row, offset, col)
+  return jnp.stack((a, b))
+
+# aten.tril_indices
+#tril_indices(int row, int col, int offset=0, *, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None)
+@op(torch.ops.aten.triu_indices)
+def _aten_triu_indices(row, col, offset=0, *, dtype=jnp.int64.dtype, layout=None, device=None, pin_memory=None):
+  a, b = jnp.triu_indices(row, offset, col)
+  return jnp.stack((a, b))
 
 # aten.trunc
 @op(torch.ops.aten.trunc)
