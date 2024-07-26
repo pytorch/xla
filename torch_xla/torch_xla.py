@@ -1,3 +1,4 @@
+import sys
 import collections
 import contextlib
 import functools
@@ -71,7 +72,7 @@ def step():
   return compile()
 
 
-def compile(f: Optional[Callable] = None):
+def compile(f: Optional[Callable] = None, full_graph=False):
   """
   Optimizes given model/function using torch_xla's LazyTensor tracing mode.
   PyTorch/XLA will trace the given function with given inputs and then generate
@@ -82,6 +83,9 @@ def compile(f: Optional[Callable] = None):
   Args:
       model (Callable): Module/function to optimize, if not passed this function will
         act as a context manager.
+      full_graph (bool): Whether this compile should generate a single graph. If set to True
+        and multiple graphs will be generated torch_xla will throw an error with debug info
+        and exit.
 
   Example::
 
@@ -103,13 +107,18 @@ def compile(f: Optional[Callable] = None):
   @contextlib.contextmanager
   def _step():
     saved_eager_mode_status = torch_xla._XLAC._get_use_eager_mode()
+    saved_allow_execution = torch_xla._XLAC._get_allow_execution()
     torch_xla._XLAC._set_use_eager_mode(False)
     # Clear pending operations
     sync()
 
+    # if full_graph sets to true execution can not happen before the sync below
+    torch_xla._XLAC._set_allow_execution(not full_graph)
+
     try:
       yield
     finally:
+      torch_xla._XLAC._set_allow_execution(saved_allow_execution)
       sync()
       torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
 
