@@ -15,6 +15,7 @@ python3 test/spmd/test_fsdp_v2.py
 XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shape_models.py -v
 XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shapes.py -v
 python3 test/test_autocast.py
+python3 test/test_fp8.py
 python3 test/test_grad_checkpoint.py
 python3 test/dynamo/test_dynamo.py
 python3 test/dynamo/test_dynamo_dynamic_shape.py
