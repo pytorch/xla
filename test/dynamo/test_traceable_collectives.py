@@ -17,6 +17,7 @@ def _mp_fn(index):
   world_size = xr.world_size()
   if xm.xla_device_hw(device) not in ('TPU', 'CUDA', 'NEURON'):
     print(f'skip this test for hw {xm.xla_device_hw(device)}')
+    return
   ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
   for dynamic in [True, False]:
     met.clear_all()
