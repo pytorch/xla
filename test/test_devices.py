@@ -57,15 +57,6 @@ class TestDevices(parameterized.TestCase):
 
     self.assertEqual(met.counter_value('MarkStep'), 2)
 
-  def test_step_decorator(self):
-
-    @xla.step
-    def f():
-      torch.ones((3, 3), device=xla.device())
-
-    f()
-    self.assertEqual(met.counter_value('MarkStep'), 2)
-
   # Should roughly match example given in README
   def test_trivial_model(self):
 

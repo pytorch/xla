@@ -13,6 +13,10 @@ class EagerWithXLACompileTest(unittest.TestCase):
   def setUpClass(cls):
     torch_xla.experimental.eager_mode(True)
 
+  @torch_xla.compile
+  def dummy_cos_sin_decored(self, tensor):
+    return torch.cos(torch.sin(tensor))
+
   def dummy_cos_sin(self, tensor):
     return torch.cos(torch.sin(tensor))
 
@@ -24,15 +28,22 @@ class EagerWithXLACompileTest(unittest.TestCase):
     # this part happens eagerly
     t1 = torch.randn(5, 5, device=device)
     t1 *= 5
+    self.assertGreater(met.metric_data("EagerOpExecuteTime")[0], 1)
 
     t2 = self.dummy_cos_sin(t1)
-    t2_compiled = torch_xla.experimental.compile(self.dummy_cos_sin)(t1)
-    self.assertTrue(torch.allclose(t2, t2_compiled))
-    xm.wait_device_ops()
-    # We execute one compiled graph
-    self.assertEqual(met.metric_data("ExecuteTime")[0], 1)
-    # and many eager ops
-    self.assertGreater(met.metric_data("EagerOpExecuteTime")[0], 5)
+    for compiled in [
+        self.dummy_cos_sin_decored,
+        torch_xla.compile(self.dummy_cos_sin)
+    ]:
+      xm.wait_device_ops()
+      met.clear_all()
+      t2_compiled = compiled(t1)
+      self.assertTrue(torch.allclose(t2.cpu(), t2_compiled.cpu()))
+      xm.wait_device_ops()
+      # We execute one compiled graph
+      self.assertEqual(met.metric_data("ExecuteTime")[0], 1)
+    # no egaer execution should happen inside this compiled graph
+    self.assertNotIn("EagerOpExecuteTime", met.metric_names())
 
 
 def test_eager_execute_compiled_multiple_times(self):
@@ -42,7 +53,7 @@ def test_eager_execute_compiled_multiple_times(self):
   # this part happens eagerly
   t1 = torch.randn(10, 5, device=device)
   t1.add_(0.5)
-  compiled = torch_xla.experimental.compile(self.dummy_cos_sin)
+  compiled = torch_xla.compile(self.dummy_cos_sin)
   res = compiled(compiled(t1))
   self.assertTrue(
       torch.allclose(res * 0.3,
