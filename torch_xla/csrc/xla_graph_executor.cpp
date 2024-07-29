@@ -1306,8 +1306,9 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   static const size_t parameter_wrapping_threadshold =
       runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
   static const bool use_autosharding = ShardingUtil::GetAutoSharding();
-  LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
-                               po_data->post_order,
+  std::string graph_name =
+      (CurrentGraphName() != "") ? CurrentGraphName() : "SyncTensorsGraph";
+  LoweringContext lowering_ctx(graph_name, coll.device, po_data->post_order,
                                std::move(po_data->emission_map));
   for (auto ir_value : ir_values) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(

@@ -72,7 +72,9 @@ def step():
   return compile()
 
 
-def compile(f: Optional[Callable] = None, full_graph=False):
+def compile(f: Optional[Callable] = None,
+            full_graph: Optional[bool] = False,
+            name: Optional[str] = None):
   """
   Optimizes given model/function using torch_xla's LazyTensor tracing mode.
   PyTorch/XLA will trace the given function with given inputs and then generate
@@ -83,9 +85,12 @@ def compile(f: Optional[Callable] = None, full_graph=False):
   Args:
       model (Callable): Module/function to optimize, if not passed this function will
         act as a context manager.
-      full_graph (bool): Whether this compile should generate a single graph. If set to True
+      full_graph (Optional[bool]): Whether this compile should generate a single graph. If set to True
         and multiple graphs will be generated torch_xla will throw an error with debug info
         and exit.
+      name (Optional[name]): Name of the compiled program. The name of the function `f` will be used
+        if not specified. This name will be used in the `PT_XLA_DEBUG` messages as well as HLO/IR dump
+        file.
 
   Example::
 
@@ -103,12 +108,20 @@ def compile(f: Optional[Callable] = None, full_graph=False):
       with torch_xla.compile():
         res = foo2(x)
   """
+  if name == None and f:
+    if hasattr(f, '__name__'):
+      name = f.__name__
+    elif hasattr(f, '__str__'):
+      name = f.__str__()
 
   @contextlib.contextmanager
   def _step():
     saved_eager_mode_status = torch_xla._XLAC._get_use_eager_mode()
     saved_allow_execution = torch_xla._XLAC._get_allow_execution()
+    saved_current_graph_name = torch_xla._XLAC._get_current_graph_name()
     torch_xla._XLAC._set_use_eager_mode(False)
+    if name != None:
+      torch_xla._XLAC._set_current_graph_name(name)
     # Clear pending operations
     sync()
 
@@ -121,6 +134,7 @@ def compile(f: Optional[Callable] = None, full_graph=False):
       torch_xla._XLAC._set_allow_execution(saved_allow_execution)
       sync()
       torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
+      torch_xla._XLAC._set_current_graph_name(saved_current_graph_name)
 
   return _step() if not f else _step()(f)
 
