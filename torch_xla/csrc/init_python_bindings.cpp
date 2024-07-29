@@ -2445,6 +2445,11 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_allow_execution",
         []() { return XLAGraphExecutor::Get()->AllowExecution(); });
+  m.def("_set_current_graph_name", [](std::string current_graph_name) {
+    XLAGraphExecutor::Get()->SetCurrentGraphName(current_graph_name);
+  });
+  m.def("_get_current_graph_name",
+        []() { return XLAGraphExecutor::Get()->CurrentGraphName(); });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
