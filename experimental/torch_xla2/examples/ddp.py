@@ -25,6 +25,7 @@ class DistributedDataParallel(torch.nn.Module):
     if kwargs:
       logging.warning(f'Unsupported kwargs {kwargs}')
 
+    # Does this make sense? https://pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_pre_hook
     # TODO broadcast and/or check params
     for p in module.parameters():
       if p.requires_grad:
@@ -35,19 +36,19 @@ class DistributedDataParallel(torch.nn.Module):
     self._mesh = Mesh(mesh_utils.create_device_mesh((4,)), axis_names=('torch_dist',))
 
   def forward(self, *args):
+    return self._module(*args)
+    # @functools.partial(
+    #       shard_map,
+    #       mesh=self._mesh,
+    #       in_specs=P('torch_dist'),
+    #       out_specs=P('torch_dist'))
+    # def jax_wrapper(jax_args):
+    #     args = env.j2t_iso(jax_args)
+    #     torch_outputs = self._module(*args)
+    #     return env.t2j_iso(torch_outputs)
 
-    @functools.partial(
-          shard_map,
-          mesh=self._mesh,
-          in_specs=P('torch_dist'),
-          out_specs=P('torch_dist'))
-    def jax_wrapper(jax_args):
-        args = env.j2t_iso(jax_args)
-        torch_outputs = self._module(*args)
-        return env.t2j_iso(torch_outputs)
-
-    jax_outputs = jax_wrapper(env.t2j_iso(args))
-    return env.j2t_iso(jax_outputs) # TODO: output has no grad
+    # jax_outputs = jax_wrapper(env.t2j_iso(args))
+    # return env.j2t_iso(jax_outputs) # TODO: output has no grad
 
 
 env = torch_xla2.default_env()
@@ -67,15 +68,28 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, sampler=sampler)
 loss_fn = nn.MSELoss()
 optimizer = optim.SGD(model.parameters(), lr=1)
 
+
+@functools.partial(
+      shard_map,
+      mesh=model._mesh,
+      in_specs=P('torch_dist'),
+      out_specs=P())
+def step_fn(data, target):
+    data, target = env.j2t_iso((data, target))
+    optimizer.zero_grad()
+    output = model(data)
+    loss = loss_fn(output, target)
+    loss.backward()
+    optimizer.step()
+
+    return jax.lax.psum(loss._elem, 'torch_dist')
+
 # Training loop
 for epoch in range(3):
     print(epoch)
     for data, target in dataloader:
-        data, target = env.j2t_iso(jax.device_put([data.numpy(), target.numpy()], NamedSharding(model._mesh, P('torch_dist'))))
-        optimizer.zero_grad()
-        output = model(data)
-        loss = loss_fn(output, target)
-        loss.backward()
-        optimizer.step()
+        data, target = jax.device_put([data.numpy(), target.numpy()], NamedSharding(model._mesh, P('torch_dist')))
+        jax_loss = step_fn(data, target)
+        print(jax_loss)
         print([p.grad for p in model.parameters()])
         print([p.mean().numpy() for p in model.parameters()])
