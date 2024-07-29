@@ -60,7 +60,7 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-
+        "//openxla_patches:gpu_race_condition.diff",
     ],
     strip_prefix = "xla-" + xla_hash,
     urls = [
