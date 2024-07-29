@@ -105,12 +105,12 @@ def compile(f: Optional[Callable] = None, full_graph=False):
   """
 
   @contextlib.contextmanager
-  def _step():
+  def _compile():
     saved_eager_mode_status = torch_xla._XLAC._get_use_eager_mode()
     saved_allow_execution = torch_xla._XLAC._get_allow_execution()
     torch_xla._XLAC._set_use_eager_mode(False)
     # Clear pending operations
-    sync()
+    xm.mark_step()
 
     # if full_graph sets to true execution can not happen before the sync below
     torch_xla._XLAC._set_allow_execution(not full_graph)
@@ -119,10 +119,12 @@ def compile(f: Optional[Callable] = None, full_graph=False):
       yield
     finally:
       torch_xla._XLAC._set_allow_execution(saved_allow_execution)
+      # Collect the traced graph after running the target function and
+      # execute the graph.
       sync()
       torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
 
-  return _step() if not f else _step()(f)
+  return _compile() if not f else _compile()(f)
 
 
 def manual_seed(seed, device=None):

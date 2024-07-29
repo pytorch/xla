@@ -330,6 +330,15 @@ void DebugUtil::analyze_graph_execution_python_frame(
                endsWith(frames[1].file, "dynamo_bridge.py")) {
       ss << debug_output_prefix
          << "  mark_step when dynamo processing input graphs\n";
+    } else if (frames[1].function == "sync" &&
+               frames[2].function == "_compile" &&
+               endsWith(frames[2].file, "torch_xla.py")) {
+      ss << debug_output_prefix << "  torch_xla.compile\n";
+    } else if (frames[1].function == "_compile" &&
+               endsWith(frames[1].file, "torch_xla.py")) {
+      ss << debug_output_prefix
+         << "  torch_xla.compile clear the pending graph prior calling the "
+            "target function\n";
     } else {
       ss << debug_output_prefix << "  user mark_step\n";
     }

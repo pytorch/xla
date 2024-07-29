@@ -160,6 +160,43 @@ class PtXLADebugTest(unittest.TestCase):
 
     open(self.debug_file_name, 'w').close()
 
+  def test_torch_xla_compile(self):
+    device = xm.xla_device()
+    t1 = torch.randn(4, 4, device=device)
+
+    def toy_program(t1):
+      return torch.logsumexp(t1, 1)
+
+    compiled = torch_xla.compile(toy_program)
+    res = compiled(t1)
+    with open(self.debug_file_name, 'rb') as f:
+      lines = f.readlines()
+      executation_causes = extract_execution_cause(lines)
+      compilation_causes = extract_compilation_cause(lines)
+      graph_infos = extract_graph_infos(lines)
+
+    if self.debug_level > 1:
+      self.assertEqual(len(executation_causes), 2)
+      self.assertIn(
+          'torch_xla.compile clear the pending graph prior calling the target function',
+          executation_causes[0])
+      self.assertIn('torch_xla.compile\n', executation_causes[1])
+    else:
+      self.assertEqual(len(executation_causes), 0)
+
+    self.assertEqual(len(compilation_causes), 2)
+    self.assertIn(
+        'torch_xla.compile clear the pending graph prior calling the target function',
+        compilation_causes[0])
+    self.assertIn('torch_xla.compile\n', compilation_causes[1])
+
+    if self.debug_level > 1:
+      # one graph info from compilation, one from execution, hash should match
+      self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+    # this graph has one input(random seed) and one output(t1)
+    self.assertEqual(graph_infos[0].num_input, 1)
+    self.assertEqual(graph_infos[0].num_output, 1)
+
   def test_parallel_loader(self):
     device = xm.xla_device()
 
