@@ -266,7 +266,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git009e31a )
+                  master (2.5.0+gitbdd00e5 )
                 </div>
               
             
@@ -755,12 +755,35 @@ to this process.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="torch_xla.step">
-<span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/torch_xla.html#step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.step" title="Permalink to this definition">¶</a></dt>
-<dd><p>Wraps code that should be dispatched to the runtime.</p>
-<p>Experimental: <cite>xla.step</cite> is still a work in progress. Some code that currently
-works with <cite>xla.step</cite> but does not follow best practices will become errors in
-future releases. See <a class="reference external" href="https://github.com/pytorch/xla/issues/6751">https://github.com/pytorch/xla/issues/6751</a> for context.</p>
+<dt class="sig sig-object py" id="torch_xla.compile">
+<span class="sig-prename descclassname"><span class="pre">torch_xla.</span></span><span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/torch_xla.html#compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optimizes given model/function using torch_xla’s LazyTensor tracing mode.
+PyTorch/XLA will trace the given function with given inputs and then generate
+graphs to represent the pytorch operations happens within this function. This
+graph will be compiled by the XLA and executed on the accelerator(decided by the
+tensor’s device). Eager mode will be disabled for the compiled region of the funciton.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>Callable</em>) – Module/function to optimize, if not passed this function will
+act as a context manager.</p>
+</dd>
+</dl>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># usage 1</span>
+<span class="nd">@torch_xla</span><span class="o">.</span><span class="n">compile</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">foo2</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="c1"># usage 2</span>
+<span class="n">compiled_foo2</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">foo2</span><span class="p">)</span>
+
+<span class="c1"># usage 3</span>
+<span class="k">with</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">compile</span><span class="p">():</span>
+  <span class="n">res</span> <span class="o">=</span> <span class="n">foo2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">
@@ -1576,14 +1599,6 @@ requirements.</p>
 traced and compiled. Other torch ops will be executed eagerly.</p>
 </dd></dl>
 
-<dl class="py function">
-<dt class="sig sig-object py" id="torch_xla.experimental.compile">
-<span class="sig-prename descclassname"><span class="pre">torch_xla.experimental.</span></span><span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/experimental/eager.html#compile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.experimental.compile" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compile the func with Lazy Tensor.</p>
-<p>Return the optimized function that takes exact same input. Compile will
-run the target func under the tracing mode using Lazy tensor.</p>
-</dd></dl>
-
 </div>
 <div class="section" id="module-torch_xla.debug.metrics">
 <span id="debug"></span><h2>debug<a class="headerlink" href="#module-torch_xla.debug.metrics" title="Permalink to this heading">¶</a></h2>
@@ -1725,7 +1740,7 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
 <li><a class="reference internal" href="#torch_xla.devices"><code class="docutils literal notranslate"><span class="pre">devices()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.device_count"><code class="docutils literal notranslate"><span class="pre">device_count()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.sync"><code class="docutils literal notranslate"><span class="pre">sync()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.step"><code class="docutils literal notranslate"><span class="pre">step()</span></code></a></li>
+<li><a class="reference internal" href="#torch_xla.compile"><code class="docutils literal notranslate"><span class="pre">compile()</span></code></a></li>
 <li><a class="reference internal" href="#torch_xla.manual_seed"><code class="docutils literal notranslate"><span class="pre">manual_seed()</span></code></a></li>
 </ul>
 </li>
@@ -1785,7 +1800,6 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
 </li>
 <li><a class="reference internal" href="#module-torch_xla.experimental">experimental</a><ul>
 <li><a class="reference internal" href="#torch_xla.experimental.eager_mode"><code class="docutils literal notranslate"><span class="pre">eager_mode()</span></code></a></li>
-<li><a class="reference internal" href="#torch_xla.experimental.compile"><code class="docutils literal notranslate"><span class="pre">compile()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-torch_xla.debug.metrics">debug</a><ul>
