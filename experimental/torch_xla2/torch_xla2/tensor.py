@@ -179,6 +179,7 @@ def debug_accuracy(func, args, kwargs, current_output):
 
   for ex, real in zip(flattened_expected_out, flattened_current_out):
     if ex.dtype != real.dtype:
+      print("torch_xla2 output's dtype: ", real.dtype, "is not the same as jax output's dtype: ", ex.dtype)
       ex = ex.to(real.dtype)
     try:
       if (isinstance(ex, torch.Tensor) and
