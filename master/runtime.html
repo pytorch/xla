@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gitbdd00e5 )
+                  master (2.5.0+git5702dae )
                 </div>
               
             
@@ -461,7 +461,7 @@ use the <code class="docutils literal notranslate"><span class="pre">xla://</spa
 
 <span class="w"> </span>def _mp_fn(index):
 <span class="w"> </span>  device = xm.xla_device()
-<span class="gd">-  dist.init_process_group(&#39;xla&#39;, rank=xm.get_ordinal(), world_size=xr.world_size())</span>
+<span class="gd">-  dist.init_process_group(&#39;xla&#39;, rank=xr.global_ordinal(), world_size=xr.world_size())</span>
 <span class="gi">+  dist.init_process_group(&#39;xla&#39;, init_method=&#39;xla://&#39;)</span>
 
 <span class="w"> </span>  torch.manual_seed(42)
