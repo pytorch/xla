@@ -3030,3 +3030,8 @@ def _aten_flatten(x, start_dim=0, end_dim=-1):
 
   new_shape = (*shape[:start_dim], -1, *shape[end_dim + 1:])
   return jnp.reshape(x, new_shape)
+
+
+@op(torch.ops.aten.new_empty_strided)
+def _new_empty_strided(self, size, stride, **kwargs):
+  return jnp.empty(size)
