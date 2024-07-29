@@ -22,7 +22,7 @@ device](../API_GUIDE.md#running-on-a-single-xla-device).
 1. Import xla specific distributed packages:
 
 ```
-import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.distributed.xla_backend
 ```
 
@@ -35,7 +35,7 @@ dist.init_process_group("xla", rank=rank, world_size=world_size)
 3. Use xla specific APIs to get rank and world\_size if you need to.
 
 ```
-new_rank = xm.get_ordinal()
+new_rank = xr.global_ordinal()
 world_size = xr.world_size()
 ```
 
@@ -95,7 +95,7 @@ class ToyModel(nn.Module):
 
 def demo_basic(rank):
     # xla specific APIs to get rank, world_size.
-    new_rank = xm.get_ordinal()
+    new_rank = xr.global_ordinal()
     assert new_rank == rank
     world_size = xr.world_size()
 

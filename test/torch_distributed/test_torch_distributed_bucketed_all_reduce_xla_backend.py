@@ -3,6 +3,7 @@ import sys
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.distributed.xla_backend
 import torch.distributed as dist
@@ -11,8 +12,8 @@ import torch.distributed as dist
 def _mp_fn(index):
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
-    world_size = xm.xrt_world_size()
-    rank = xm.get_ordinal()
+    world_size = xr.world_size()
+    rank = xr.global_ordinal()
 
     dist.init_process_group(
         'xla', init_method='xla://', world_size=world_size, rank=rank)

@@ -171,12 +171,12 @@ def train_imagenet():
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
           num_replicas=xr.world_size(),
-          rank=xm.get_ordinal(),
+          rank=xr.global_ordinal(),
           shuffle=True)
       test_sampler = torch.utils.data.distributed.DistributedSampler(
           test_dataset,
           num_replicas=xr.world_size(),
-          rank=xm.get_ordinal(),
+          rank=xr.global_ordinal(),
           shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,

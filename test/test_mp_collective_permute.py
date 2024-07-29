@@ -10,7 +10,7 @@ def _mp_fn(index):
   device = xm.xla_device()
   if xm.xla_device_hw(device) == 'TPU':
     world_size = xr.world_size()
-    ordinal = xm.get_ordinal()
+    ordinal = xr.global_ordinal()
     value = torch.tensor([ordinal] * 100, dtype=torch.int32, device=device)
     pairs = []
     for i in range(1, world_size):

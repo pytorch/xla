@@ -6,6 +6,7 @@ import torch
 from torch.optim import AdamW
 import evaluate
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -34,7 +35,7 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
   train_sampler = torch.utils.data.distributed.DistributedSampler(
       train_dataset,
       num_replicas=xr.world_size(),
-      rank=xm.get_ordinal(),
+      rank=xr.global_ordinal(),
       shuffle=True)
 
   # Use thread safe random number generator with a consistent seed

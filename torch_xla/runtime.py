@@ -20,7 +20,7 @@ FN = TypeVar('FN')
 
 # Note [Dynamo WORLD_SIEZ and ORDINAL]
 # Belows are workaround to cache the ordinal and world_size such that
-# Dynamo won't do graph breaks when runtime.xrt_world_size() and runtime.global_ordinal() are called.
+# Dynamo won't do graph breaks when runtime.world_size() and runtime.global_ordinal() are called.
 _WORLD_SIZE = None
 _ORDINAL = None
 

@@ -26,7 +26,7 @@ def run_step(model: torch.nn.Module, batch: torch.Tensor) -> torch.Tensor:
     loss.backward()
     optimizer.step()
     split_size = batch.shape[0] // xr.world_size()
-    result = result.split(split_size, dim=0)[xm.get_ordinal()]
+    result = result.split(split_size, dim=0)[xr.global_ordinal()]
 
   return result
 

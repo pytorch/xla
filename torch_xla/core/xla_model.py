@@ -37,9 +37,14 @@ _DEVICE_CONTEXTS_LOCK = threading.Lock()
 XLA_LIB = Library("xla", "DEF")
 
 from . import xla_model as this_module
-xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size)
-get_ordinal = deprecated(this_module, torch_xla.runtime.global_ordinal)
-parse_xla_device = deprecated(this_module, _utils.parse_xla_device)
+xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size,
+                            'xrt_world_size() will be removed in release 2.6.')
+get_ordinal = deprecated(
+    this_module, torch_xla.runtime.global_ordinal,
+    'xla_model.get_ordinal() will be removed in release 2.6.')
+parse_xla_device = deprecated(
+    this_module, _utils.parse_xla_device,
+    'xla_model.parse_xla_device() will be removed in release 2.6.')
 
 
 class DeviceContext(object):
@@ -199,7 +204,7 @@ def xla_replication_devices(local_devices):
   real_devices = xla_real_devices(local_devices)
   device_types = set()
   for device in real_devices:
-    xdev = parse_xla_device(device)
+    xdev = _utils.parse_xla_device(device)
     device_types.add(xdev[0])
   if len(device_types) != 1:
     # No replication if the device set spawns multiple device types.
@@ -216,13 +221,14 @@ def xla_replication_devices(local_devices):
   replication_devices = []
   for device in torch_xla._XLAC._xla_get_all_devices():
     # device is like 'CUDA:0'
-    xdev = parse_xla_device(device)
+    xdev = _utils.parse_xla_device(device)
     if not xdev:
       raise RuntimeError('Invalid device format: {}'.format(device))
     if xdev[0] == device_type:
       replication_devices.append(device)
   sorted_by_ordinal = sorted(
-      replication_devices, key=lambda device: parse_xla_device(device)[1])
+      replication_devices,
+      key=lambda device: _utils.parse_xla_device(device)[1])
   return sorted_by_ordinal
 
 

@@ -58,7 +58,7 @@ class AllGather(torch.autograd.Function):
   @staticmethod
   def forward(ctx, input, dim):
     ctx.dim = dim
-    ctx.ordinal = xm.get_ordinal()
+    ctx.ordinal = xr.global_ordinal()
     ctx.world_size = xr.world_size()
     return xm.all_gather(input, dim=dim)
 
@@ -101,7 +101,7 @@ def distributed_mm(w, x, split=1):
   Returns:
     The result of the distributed matrix multiplication operation.
   """
-  ordinal = xm.get_ordinal()
+  ordinal = xr.global_ordinal()
   # w = N x Ko
   # WG = Ko * WORLD_SIZE
   # x = WG x M

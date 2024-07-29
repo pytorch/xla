@@ -46,7 +46,7 @@ ckpt = {
     'shard_metadata': model.get_shard_metadata(),
     'optimizer': optimizer.state_dict(),
 }
-ckpt_path = f'/tmp/rank-{xm.get_ordinal()}-of-{xr.world_size()}.pth'
+ckpt_path = f'/tmp/rank-{xr.global_ordinal()}-of-{xr.world_size()}.pth'
 xm.save(ckpt, ckpt_path, master_only=False)
 ```
 * The checkpoint consolidation script can also be launched from the command line as follows.
