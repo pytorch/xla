@@ -4,7 +4,7 @@ example_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(example_folder)
 from train_decoder_only_base import TrainDecoderOnlyBase
 
-import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla
 import torch_xla.core.xla_model as xm
 
 
@@ -28,4 +28,4 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=())
+  torch_xla.launch(_mp_fn, args=())

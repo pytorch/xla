@@ -1,8 +1,8 @@
 import os
 
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 from extract_debug_helper import (check_env_flag, extract_execution_cause,
                                   extract_python_frames)
@@ -43,4 +43,4 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=())
+  torch_xla.launch(_mp_fn, args=())

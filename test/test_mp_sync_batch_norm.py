@@ -6,7 +6,6 @@ import torch_xla.core.xla_model as xm
 import torch_xla.core.functions as xf
 from torch_xla import runtime as xr
 import torch_xla.debug.metrics as met
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 ATOL: float = 1e-4
 RTOL: float = 7e-2
@@ -140,16 +139,16 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     xm.master_print('sync_bn3d_test ok')
 
   def test_sync_bn1d_no_channel(self):
-    xmp.spawn(self._sync_bn1d_no_channel, args=())
+    torch_xla.launch(self._sync_bn1d_no_channel, args=())
 
   def test_sync_bn1d_multi_channel(self):
-    xmp.spawn(self._sync_bn1d_multi_channel, args=())
+    torch_xla.launch(self._sync_bn1d_multi_channel, args=())
 
   def test_sync_bn2d(self):
-    xmp.spawn(self._sync_bn2d, args=())
+    torch_xla.launch(self._sync_bn2d, args=())
 
   def test_sync_bn3d(self):
-    xmp.spawn(self._sync_bn3d, args=())
+    torch_xla.launch(self._sync_bn3d, args=())
 
 
 if __name__ == '__main__':

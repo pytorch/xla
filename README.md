@@ -52,7 +52,6 @@ To update your existing training loop, make the following changes:
 -import torch.multiprocessing as mp
 +import torch_xla as xla
 +import torch_xla.core.xla_model as xm
-+import torch_xla.distributed.xla_multiprocessing as xmp
 
  def _mp_fn(index):
    ...
@@ -74,8 +73,8 @@ To update your existing training loop, make the following changes:
 
  if __name__ == '__main__':
 -  mp.spawn(_mp_fn, args=(), nprocs=world_size)
-+  # xmp.spawn automatically selects the correct world size
-+  xmp.spawn(_mp_fn, args=())
++  # xla.launch automatically selects the correct world size
++  xla.launch(_mp_fn, args=())
 ```
 
 If you're using `DistributedDataParallel`, make the following changes:
@@ -85,7 +84,6 @@ If you're using `DistributedDataParallel`, make the following changes:
  import torch.distributed as dist
 -import torch.multiprocessing as mp
 +import torch_xla as xla
-+import torch_xla.distributed.xla_multiprocessing as xmp
 +import torch_xla.distributed.xla_backend
 
  def _mp_fn(rank):
@@ -115,7 +113,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 
  if __name__ == '__main__':
 -  mp.spawn(_mp_fn, args=(), nprocs=world_size)
-+  xmp.spawn(_mp_fn, args=())
++  xla.launch(_mp_fn, args=())
 ```
 
 Additional information on PyTorch/XLA, including a description of its semantics

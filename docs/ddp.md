@@ -22,6 +22,7 @@ device](../API_GUIDE.md#running-on-a-single-xla-device).
 1. Import xla specific distributed packages:
 
 ```
+import torch_xla
 import torch_xla.runtime as xr
 import torch_xla.distributed.xla_backend
 ```
@@ -48,7 +49,7 @@ ddp_model = DDP(model, gradient_as_bucket_view=True)
 5. Finally launch your model with xla specific launcher.
 
 ```
-xmp.spawn(demo_fn)
+torch_xla.launch(demo_fn)
 ```
 
 Here we have put everything together (the example is actually taken from the
@@ -68,10 +69,10 @@ import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 # additional imports for xla
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.distributed.xla_backend
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -124,7 +125,7 @@ def demo_basic(rank):
 
 def run_demo(demo_fn):
     # xla specific launcher
-    xmp.spawn(demo_fn)
+    torch_xla.launch(demo_fn)
 
 if __name__ == "__main__":
     run_demo(demo_basic)
