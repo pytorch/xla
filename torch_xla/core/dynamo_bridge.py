@@ -14,11 +14,11 @@ from contextlib import contextmanager
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
 from torch.fx.passes.utils.fuser_utils import topo_sort
-
-import torch._inductor
-from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
-
 from torch.utils import _pytree as pytree
+from torch._functorch._aot_autograd.schemas import ViewAndMutationMeta, OutputAliasInfo, OutputType
+from torch._functorch._aot_autograd.runtime_wrappers import make_output_handler
+from torch._guards import TracingContext
+from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
 
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -30,6 +30,7 @@ import torch_xla.utils.dlpack as torch_xla_dlpack
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
+enable_skip_handler = int(os.environ.get('XLA_ENABLE_SKIP_HANDLER', '0')) == 1
 
 
 @contextmanager
@@ -710,11 +711,44 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
     return (device is not None and device.type == self.target)
 
 
-def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+class MaybeReconstructOutputs:
+
+  def __init__(self, graph: torch.fx.GraphModule, metadata: ViewAndMutationMeta) -> None:
+    self.graph = graph
+    self.metadata = metadata
+
+  def __call__(self, *args):
+    outputs = self.graph(*args)
+
+    def maybe_skip_handler(o: torch.Tensor, info: OutputAliasInfo) -> torch.Tensor:
+      handler = make_output_handler(info, self.metadata, trace_joint=False)
+      print(f"[MaybeReconstructOutputs] {info.output_type=}")
+      if (
+          info.output_type in (
+            OutputType.alias_of_input,
+            OutputType.alias_of_intermediate,
+            OutputType.alias_of_intermediate_save_as_output,
+            OutputType.alias_of_intermediate_base_is_user_output,
+          )
+          and not torch.is_grad_enabled()
+          and info.functional_tensor is not None
+          and enable_skip_handler
+      ):
+        print("[MaybeReconstructOutputs] Skipping handler...")
+        return torch_xla._XLAC._fresh_functional_tensor_from(o, handler.base(), info.functional_tensor.tensor);
+      else:
+        print("[MaybeReconstructOutputs] Running handler...")
+        return handler(args, outputs, o)
+
+    return [maybe_skip_handler(o, info) for o, info in zip(outputs, self.metadata.output_info)]
+
+
+def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args, tracing_context: TracingContext):
   torch_xla._XLAC._xla_increment_counter('DynamoExtractCompiledGraph', 1)
 
   with torch_xla.experimental.eager_mode_context(False):
-    return extract_compiled_graph_helper(xla_model, xla_args)
+    g = extract_compiled_graph_helper(xla_model, xla_args)
+    return MaybeReconstructOutputs(g, tracing_context.fw_metadata)
 
 
 def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,

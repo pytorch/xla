@@ -2673,6 +2673,19 @@ void InitXlaModuleBindings(py::module m) {
                          "without a data handle or an IR.";
         });
 
+  m.def("_fresh_functional_tensor_from",
+        [](const at::Tensor& value, const at::Tensor& storage_source,
+           const at::Tensor& view_metas_source) {
+          at::FunctionalTensorWrapper* storage_source_ =
+              at::functionalization::impl::unsafeGetFunctionalWrapper(
+                  storage_source);
+          at::FunctionalTensorWrapper* view_metas_source_ =
+              at::functionalization::impl::unsafeGetFunctionalWrapper(
+                  view_metas_source);
+          return at::detail::make_tensor<at::FunctionalTensorWrapper>(
+              value, storage_source_, view_metas_source_);
+        });
+
   // from an XLA tensor to a PyCapsule.
   // When consuming the PyCapsule, we should synchronize
   // (waits for all kernels in all streams on a CUDA device to complete) if
