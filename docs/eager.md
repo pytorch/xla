@@ -41,7 +41,7 @@ device = torch_xla.device()
 model = torchvision.models.resnet18().to(device)
 
 # Mark the function to be compiled
-compiled_model = torch_xla.experimental.compile(model)
+compiled_model = torch_xla.compile(model)
 input = torch.randn(64, 3, 224, 224).to(device)
 
 # Compilation and execution happens right away.
@@ -50,9 +50,9 @@ res = compiled_model(input)
 Note that
 
 1. Currently user has to manually enable the eager mode by `torch_xla.experimental.eager_mode(True)`.
-2. The region of the code that wants to be compiled should be wrapped by `torch_xla.experimental.compile`.
+2. The region of the code that wants to be compiled should be wrapped by `torch_xla.compile`.
 
-The implementation of the `torch_xla.experimental.compile` is actually pretty straight forward, it disable the eager mode when entering the target function and start tracing. It will call the `torch_xla.sync()` when target function returns and reenable the eager mode. You can expect the same perfomrance by using the `eager` + `compile` API compared to the existing `mark_step/sync` approach.
+The implementation of the `torch_xla.compile` is actually pretty straight forward, it disable the eager mode when entering the target function and start tracing. It will call the `torch_xla.sync()` when target function returns and reenable the eager mode. You can expect the same perfomrance by using the `eager` + `compile` API compared to the existing `mark_step/sync` approach.
 
 
 ### Inference
@@ -61,7 +61,7 @@ torch_xla.experimental.eager_mode(True)
 
 compiled_model = torch.compile(model, backend="openxla")
 ```
-It is recommened to use the `torch.compile` instead of `torch_xla.experimental.compile` for inference to reduce the tracing overhad. 
+It is recommened to use the `torch.compile` instead of `torch_xla.compile` for inference to reduce the tracing overhad. 
 
 ### Training
 ```python
@@ -75,9 +75,9 @@ def step_fn(model, data, target, loss_fn, optimizer):
     optimizer.step()
     return loss
 
-step_fn = torch_xla.experimental.compile(step_fn)
+step_fn = torch_xla.compile(step_fn)
 ```
-In training we asked user to refactor the `step_fn` out because it is usually better to compile the model's forward, backward and optimizer together. The long term goal is to also use `torch.compile` for training but right now we recommend user to use `torch_xla.experimental.compile`(for perfomrance reason).
+In training we asked user to refactor the `step_fn` out because it is usually better to compile the model's forward, backward and optimizer together. The long term goal is to also use `torch.compile` for training but right now we recommend user to use `torch_xla.compile`(for perfomrance reason).
 
 ## Benchmark
 
