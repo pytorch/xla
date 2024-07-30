@@ -30,7 +30,7 @@ import torch_xla.utils.dlpack as torch_xla_dlpack
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
-enable_skip_handler = int(os.environ.get('XLA_ENABLE_SKIP_HANDLER', '0')) == 1
+enable_skip_handler = int(os.environ.get('XLA_ENABLE_SKIP_HANDLER', '1')) == 1
 
 
 @contextmanager
