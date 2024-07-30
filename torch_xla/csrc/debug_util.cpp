@@ -316,7 +316,9 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // can either analyze the C++ call stack or rely on caller to pass a boolean
     // variable.
     ss << debug_output_prefix << "  dynamo is executing a compiled program\n";
-  } else if (frames[0].function == "mark_step") {
+  } else if (frames[0].function == "mark_step" ||
+             (frames[0].function == "sync" &&
+              endsWith(frames[0].file, "torch_xla.py"))) {
     if (frames[1].function == "next" &&
         endsWith(frames[1].file, "parallel_loader.py")) {
       ss << debug_output_prefix
@@ -330,11 +332,10 @@ void DebugUtil::analyze_graph_execution_python_frame(
                endsWith(frames[1].file, "dynamo_bridge.py")) {
       ss << debug_output_prefix
          << "  mark_step when dynamo processing input graphs\n";
-    } else if (frames[1].function == "sync" &&
-               frames[2].function == "_compile" &&
-               endsWith(frames[2].file, "torch_xla.py")) {
-      ss << debug_output_prefix << "  torch_xla.compile\n";
     } else if (frames[1].function == "_compile" &&
+               endsWith(frames[1].file, "torch_xla.py")) {
+      ss << debug_output_prefix << "  torch_xla.compile\n";
+    } else if (frames[1].function == "_clear_pending_ops_before_compile" &&
                endsWith(frames[1].file, "torch_xla.py")) {
       ss << debug_output_prefix
          << "  torch_xla.compile clear the pending graph prior calling the "

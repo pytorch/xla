@@ -57,9 +57,20 @@ def device_count() -> int:
   return len(real_devices())
 
 
-def sync():
-  """Launches all pending graph operations."""
-  xm.mark_step()
+def sync(wait: bool = False):
+  """Launches all pending graph operations.
+  
+  Args:
+    wait (bool): whether to block the current process until the execution finished.
+
+  """
+  torch_xla._XLAC._xla_step_marker(
+      torch_xla._XLAC._xla_get_default_device(),
+      [],
+      wait=wait,
+  )
+  devctx = xm._run_step_closures()
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
 def step():
@@ -104,13 +115,15 @@ def compile(f: Optional[Callable] = None, full_graph=False):
         res = foo2(x)
   """
 
+  def _clear_pending_ops_before_compile():
+    sync()
+
   @contextlib.contextmanager
   def _compile():
     saved_eager_mode_status = torch_xla._XLAC._get_use_eager_mode()
     saved_allow_execution = torch_xla._XLAC._get_allow_execution()
     torch_xla._XLAC._set_use_eager_mode(False)
-    # Clear pending operations
-    xm.mark_step()
+    _clear_pending_ops_before_compile()
 
     # if full_graph sets to true execution can not happen before the sync below
     torch_xla._XLAC._set_allow_execution(not full_graph)
