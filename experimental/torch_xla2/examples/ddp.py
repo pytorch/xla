@@ -1,4 +1,4 @@
-import functools
+import copy
 import logging
 import jax
 import torch
@@ -13,6 +13,7 @@ from jax.sharding import NamedSharding
 
 from jax.sharding import Mesh, PartitionSpec as P
 from jax.experimental import mesh_utils
+import torch.utils._pytree as torch_pytree
 
 # Initialize distributed communication
 dist.init_process_group(backend='jax', init_method='jax://')
@@ -23,38 +24,22 @@ class DistributedDataParallel(torch.nn.Module):
     if kwargs:
       logging.warning(f'Unsupported kwargs {kwargs}')
 
-    # TODO broadcast and/or check params
-    # for p in module.parameters():
-    #   if p.requires_grad:
-    #     p.register_hook(lambda grad: print('backward hook') or breakpoint() or torch.distributed._functional_collectives.all_reduce(grad, 'sum', ''))
-
     super().__init__()
-    self._module = module
     self._mesh = Mesh(mesh_utils.create_device_mesh((4,)), axis_names=('batch',))
+    replicated_state = torch_pytree.tree_map_only(torch.Tensor, lambda t: env.j2t_iso(jax.device_put(t.numpy(), NamedSharding(self._mesh, P()))), module.state_dict())
+    # TODO: broadcast
+    module.load_state_dict(replicated_state, assign=True)
+    self._module = module
 
   def forward(self, *args):
     return self._module(*args)
-    # @functools.partial(
-    #       shard_map,
-    #       mesh=self._mesh,
-    #       in_specs=P('torch_dist'),
-    #       out_specs=P('torch_dist'))
-    # def jax_wrapper(jax_args):
-    #     args = env.j2t_iso(jax_args)
-    #     torch_outputs = self._module(*args)
-    #     return env.t2j_iso(torch_outputs)
-
-    # jax_outputs = jax_wrapper(env.t2j_iso(args))
-    # return env.j2t_iso(jax_outputs) # TODO: output has no grad
-
 
 env = torch_xla2.default_env()
 
 # Create model and wrap with DDP
-with env:
-  model = nn.Linear(10, 1)
-model = DistributedDataParallel(model)
-
+model = nn.Linear(10, 1)
+cpu_model = copy.deepcopy(model)
+jax_model = DistributedDataParallel(model)
 
 # Create distributed data loader
 dataset = torch.utils.data.TensorDataset(torch.randn(100, 10), torch.randn(100, 1))
@@ -63,20 +48,25 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, sampler=sampler)
 
 # Define loss and optimizer
 loss_fn = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=1)
-
+cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1)
+jax_optimizer = optim.SGD(jax_model.parameters(), lr=1)
 
 # Training loop
 for epoch in range(3):
-    print(epoch)
+    print('epoch', epoch)
     for data, target in dataloader:
-        data, target = env.j2t_iso(jax.device_put([data.numpy(), target.numpy()], NamedSharding(model._mesh, P('batch'))))
-        # print(data._elem.addressable_shards, f(data).addressable_shards)
-        # exit(0)
-        optimizer.zero_grad()
-        output = model(data)
-        loss = loss_fn(output, target)
-        loss.backward()
-        optimizer.step()
-        print([p.grad for p in model.parameters()])
-        print([p._elem.addressable_shards for p in model.parameters()])
+        cpu_optimizer.zero_grad()
+        cpu_output = cpu_model(data)
+        cpu_loss = loss_fn(cpu_output, target)
+        cpu_loss.backward()
+        cpu_optimizer.step()
+
+        jax_data, jax_target = env.j2t_iso(jax.device_put([data.numpy(), target.numpy()], NamedSharding(jax_model._mesh, P('batch'))))
+        jax_optimizer.zero_grad()
+        jax_output = jax_model(jax_data)
+        jax_loss = loss_fn(jax_output, jax_target)
+        jax_loss.backward()
+        jax_optimizer.step()
+
+        for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
+          torch.testing.assert_close(jp, cp, check_device=False)
