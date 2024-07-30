@@ -8,6 +8,7 @@ import itertools
 import os
 import time
 from typing import Any, Dict, List, Set, Tuple
+from numbers import Number
 from contextlib import contextmanager
 
 import torch
@@ -224,17 +225,17 @@ class SpecialReturnHandler:
   XLA will dedup those duplicate items, but we need recover the duplications to maintain
   the contract with the caller.
 
-  2. Int output from dynamic compile
-  In the case of the `torch.compile(Dynamic=True)` there might be some int outputs related
-  to the dynmiac dimension of the tensor. These ints are static for a given input shape
+  2. constant output from dynamic compile
+  In the case of the `torch.compile(Dynamic=True)` there might be some int or float outputs related
+  to the dynmiac dimension of the tensor. These numbers are static for a given input shape
   combinations so we can cache them and inject to the final result directly.
   """
 
   def __init__(self, trace_inputs, trace_outputs,
-               trace_inputs_inplace_update_bool, int_outputs_and_indexes):
+               trace_inputs_inplace_update_bool, constant_outputs_and_indexes):
     self.trace_inputs = trace_inputs
     self.trace_outputs = trace_outputs
-    self.int_outputs_and_indexes = int_outputs_and_indexes
+    self.constant_outputs_and_indexes = constant_outputs_and_indexes
 
     # dedup the traced outputs first
     self.deduper = Deduper()
@@ -260,9 +261,9 @@ class SpecialReturnHandler:
 
     ret = self.deduper.recover(real_outputs)
 
-    if len(self.int_outputs_and_indexes) != 0:
+    if len(self.constant_outputs_and_indexes) != 0:
       # insert the int outputs back to the res
-      for index, value in self.int_outputs_and_indexes:
+      for index, value in self.constant_outputs_and_indexes:
         ret.insert(index, value)
 
     return ret
@@ -386,22 +387,22 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule,
 
   args_and_out = tuple(xla_args_need_update) + tuple(xla_out)
   # args_and_out should be tensor only, in the dynamic cases there might be
-  # symint return as the result. In that case we want to extract them and separate
+  # symint or symfloat return as the result. In that case we want to extract them and separate
   # them from the device computation.
-  int_outputs_and_indexes = []
+  constant_outputs_and_indexes = []
   args_and_out_tensor_only = []
   for i in range(len(args_and_out)):
     arg = args_and_out[i]
     if not isinstance(arg, torch.Tensor):
-      assert type(arg) == int
-      int_outputs_and_indexes.append((i, arg))
+      assert isinstance(arg, Number)
+      constant_outputs_and_indexes.append((i, arg))
     else:
       args_and_out_tensor_only.append(arg)
 
   special_return_handler = SpecialReturnHandler(xla_args,
                                                 args_and_out_tensor_only,
                                                 xla_args_need_update_bool,
-                                                int_outputs_and_indexes)
+                                                constant_outputs_and_indexes)
 
   # There is a `mark_step` in the beginning of this function call, we need to wait
   # for that to finish before retriving the device data nodes.
