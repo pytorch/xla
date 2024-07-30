@@ -12,6 +12,11 @@ def dummy_collective_fn(input):
   return res_tensor
 
 
+def collective_broadcast_and_cos(input, src):
+  res_tensor = torch.ops._c10d_functional.broadcast(input, src, "default")
+  return torch.cos(res_tensor)
+
+
 def _mp_fn(index):
   device = xm.xla_device()
   world_size = xr.world_size()
@@ -26,6 +31,16 @@ def _mp_fn(index):
     res_tensor = compiled_collective(ordinal_tensor)
     expected_tensor = torch.tensor(
         [world_size * world_size / 2] * world_size, dtype=torch.float) + 3.0
+    torch_xla.sync()
+    torch.allclose(res_tensor.cpu(), expected_tensor)
+    assert met.metric_data("ExecuteTime")[0] == 1
+
+  for dynamic in [True, False]:
+    met.clear_all()
+    compiled_collective = torch.compile(
+        collective_broadcast_and_cos, backend="openxla", dynamic=dynamic)
+    res_tensor = compiled_collective(ordinal_tensor, 2)
+    expected_tensor = torch.cos(torch.tensor([2]))
     torch_xla.sync()
     torch.allclose(res_tensor.cpu(), expected_tensor)
     assert met.metric_data("ExecuteTime")[0] == 1
