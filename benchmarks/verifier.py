@@ -7,7 +7,7 @@ from benchmark_experiment import ExperimentLoader
 from benchmark_model import ModelLoader
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from util import cleanup, move_to_device, reset_rng_state, StrOrBool
 
 logger = logging.getLogger(__name__)
@@ -31,6 +31,13 @@ class VerificationCode(str, Enum):
   VERIFIER_SKIPPED_UNEXPECTEDLY = 'VERIFIER_SKIPPED_UNEXPECTEDLY'
 
 
+class VerificationException(Exception):
+
+  def __init__(self, code: VerificationCode) -> None:
+    super().__init__(f"verifier failed with code: {code}")
+    self.code = code
+
+
 def verify(
     runner: "ExperimentRunner",
     experiment_config: Dict[str, Optional[StrOrBool]],
@@ -43,15 +50,15 @@ def verify(
   Both `tolerance` and `use_cosine_similarity` will be used when checking whether the
   accuracy of the actual experiment is close to that of eager.
   """
+
   try:
     # 1. Run eager twice, so as to make sure the model actually outputs deterministic results.
     try:
       eager_output = _run(runner, experiment_config, model_config, eager=True)
       additional_eager_output = _run(
           runner, experiment_config, model_config, eager=True)
-    except:
-      traceback.print_exc()
-      return VerificationCode.EAGER_FAILED
+    except Exception as e:
+      raise VerificationException(VerificationCode.EAGER_FAILED) from e
 
     # If the results are not close, it might mean that this model is not deterministic.
     # Therefore, we give up the verification process, entirely.
@@ -60,8 +67,14 @@ def verify(
 
     # 2. Compute the output using float64 precision for increased precision. This should
     #    help deciding whether the outputs of the actual experiment have acceptable accuracy.
-    eager_fp64_output = _run(
-        runner, experiment_config, model_config, force_fp64=True, eager=True)
+    try:
+      eager_fp64_output = _run(
+          runner, experiment_config, model_config, force_fp64=True, eager=True)
+    except:
+      logger.warning(
+          "failed running fp64 golden ref. Setting accuracy to cosine.")
+      eager_fp64_output = None
+      use_cosine_similarity = True
 
     # 3. Compute the output of the actual experiment.
     output = _run(runner, experiment_config, model_config)
@@ -76,9 +89,12 @@ def verify(
         tol=tolerance,
     ):
       return VerificationCode.FAIL
-  except:
-    traceback.print_exc()
-    return VerificationCode.VERIFIER_FAILED
+  except VerificationException:
+    raise
+  except Exception as e:
+    # If anythin went wrong (other than an explicit VerificationException), raise
+    # a VerificationException with VERIFIER_FAILED code, while chaining the cause.
+    raise VerificationException(VerificationCode.VERIFIER_FAILED) from e
 
   return VerificationCode.PASS
 

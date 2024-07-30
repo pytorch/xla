@@ -12,6 +12,7 @@ import time
 import torch
 import torch._dynamo.utils as dynamo_utils
 import tiers
+import traceback
 import typing
 from typing import Any, Dict, List, Optional, Sequence
 import torch_xla.debug.metrics as met
@@ -22,7 +23,7 @@ from torch.profiler import profile, ProfilerActivity
 import copy
 from torch.autograd import DeviceType
 from benchmark_model import ModelLoader
-from verifier import VerificationCode, verify
+from verifier import VerificationCode, VerificationException, verify
 from enum import Enum
 from torchbench_model import TorchBenchModelLoader
 from benchmark_model import BenchmarkModel
@@ -262,59 +263,56 @@ class ExperimentRunner:
 
     # Load experiment and model.
     experiment_config = json.loads(self._args.experiment_config)
+    experiment = self.experiment_loader.load_experiment(experiment_config)
+    experiment_dict = experiment.to_dict()
+
     model_config = json.loads(self._args.model_config)
-    benchmark_experiment = self.experiment_loader.load_experiment(
-        experiment_config)
-    reset_rng_state(benchmark_experiment)
-    benchmark_model = self.model_loader.load_model(model_config,
-                                                   benchmark_experiment)
+    model = self.model_loader.load_model(model_config, experiment, dummy=True)
+    model_dict = model.to_dict()
+
+    # Initialize output variables
+    accumulated_metrics = OrderedDict()
+    verification_code = VerificationCode.VERIFIER_SKIPPED
 
     # Turn on CUDAGraphs if we are running inductor
     if benchmark_experiment.is_inductor():
       from torch._inductor import config as inductor_config
       inductor_config.triton.cudagraphs = True
 
-    # Repeat the experiment and accumulate metrics.
-    with benchmark_model.pick_grad():
-      accumulated_metrics = OrderedDict()
-      for repeat_iteration in range(self._args.repeat):
-        metrics, _ = self.run_once_and_gather_metrics(benchmark_experiment,
-                                                      benchmark_model,
-                                                      experiment_config,
-                                                      model_config,
-                                                      repeat_iteration)
-        for k, v in metrics.items():
-          if k not in accumulated_metrics:
-            accumulated_metrics[k] = []
-          accumulated_metrics[k].append(v)
+    # Only run the actual experiment first if the --verify flag is not
+    # specified. This is so we avoid using too much memory before running
+    # eager.
+    if not self._args.verify:
+      reset_rng_state(experiment)
+      model = self.model_loader.load_model(model_config, experiment)
 
-    # Save the dict representation before deleting them.
-    # This will be used later for saving the results.
-    experiment_dict = benchmark_experiment.to_dict()
-    model_dict = benchmark_model.to_dict()
+      # Repeat the experiment and accumulate metrics.
+      with model.pick_grad():
+        for repeat_iteration in range(self._args.repeat):
+          metrics, _ = self.run_once_and_gather_metrics(experiment, model,
+                                                        experiment_config,
+                                                        model_config,
+                                                        repeat_iteration)
+          for k, v in metrics.items():
+            if k not in accumulated_metrics:
+              accumulated_metrics[k] = []
+            accumulated_metrics[k].append(v)
+    elif not model.skip_verifier():
+      try:
+        verification_code = verify(
+            self,
+            experiment_config,
+            model_config,
+            tolerance=model.tolerance(),
+            use_cosine_similarity=model.use_cosine_similarity())
+      except VerificationException as e:
+        verification_code = e.code
+        # Record the error in the metrics dictionary.
+        # Similar to what's done when the whole experiment fails.
+        accumulated_metrics["error"] = traceback.format_exc()
 
-    # Save other model-specific configuration: tolerance and whether
-    # to use cosine similarity on accuracy checks.
-    tolerance = benchmark_model.tolerance()
-    use_cosine_similarity = benchmark_model.use_cosine_similarity()
-    skip_verifier = benchmark_model.skip_verifier()
-
-    # Delete the instantiated BenchmarkModel, so we can save memory
-    # for verifying the result.
-    del benchmark_model
-    cleanup(benchmark_experiment.is_cuda())
-
-    # Run the verifier iff:
-    #
-    #   1. We are running this script with --verify flag
-    #   2. It should not be skipped
-    if self._args.verify and not skip_verifier:
-      res = verify(self, experiment_config, model_config, tolerance,
-                   use_cosine_similarity)
-    else:
-      res = VerificationCode.VERIFIER_SKIPPED
-
-    self._save_results(experiment_dict, model_dict, accumulated_metrics, res)
+    self._save_results(experiment_dict, model_dict, accumulated_metrics,
+                       verification_code)
 
   def run_once_and_gather_metrics(
       self, benchmark_experiment: BenchmarkExperiment,
