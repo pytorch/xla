@@ -162,7 +162,7 @@ class PtXLADebugTest(unittest.TestCase):
 
   def test_torch_xla_compile(self):
     device = xm.xla_device()
-    t1 = torch.randn(4, 4, device=device)
+    t1 = torch.randn(12, 4, device=device)
 
     def toy_program(t1):
       return torch.logsumexp(t1, 1)
@@ -196,6 +196,7 @@ class PtXLADebugTest(unittest.TestCase):
     # this graph has one input(random seed) and one output(t1)
     self.assertEqual(graph_infos[0].num_input, 1)
     self.assertEqual(graph_infos[0].num_output, 1)
+    open(self.debug_file_name, 'w').close()
 
   def test_parallel_loader(self):
     device = xm.xla_device()
