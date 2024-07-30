@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git622f4f9 )
+                  master (2.5.0+git28de4eb )
                 </div>
               
             
@@ -428,7 +428,7 @@
 <span class="n">model</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
 <span class="c1"># Mark the function to be compiled</span>
-<span class="n">compiled_model</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<span class="n">compiled_model</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
 <span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
 <span class="c1"># Compilation and execution happens right away.</span>
@@ -438,9 +438,9 @@
 <p>Note that</p>
 <ol class="arabic simple">
 <li><p>Currently user has to manually enable the eager mode by <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.eager_mode(True)</span></code>.</p></li>
-<li><p>The region of the code that wants to be compiled should be wrapped by <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.compile</span></code>.</p></li>
+<li><p>The region of the code that wants to be compiled should be wrapped by <code class="docutils literal notranslate"><span class="pre">torch_xla.compile</span></code>.</p></li>
 </ol>
-<p>The implementation of the <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.compile</span></code> is actually pretty straight forward, it disable the eager mode when entering the target function and start tracing. It will call the <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> when target function returns and reenable the eager mode. You can expect the same perfomrance by using the <code class="docutils literal notranslate"><span class="pre">eager</span></code> + <code class="docutils literal notranslate"><span class="pre">compile</span></code> API compared to the existing <code class="docutils literal notranslate"><span class="pre">mark_step/sync</span></code> approach.</p>
+<p>The implementation of the <code class="docutils literal notranslate"><span class="pre">torch_xla.compile</span></code> is actually pretty straight forward, it disable the eager mode when entering the target function and start tracing. It will call the <code class="docutils literal notranslate"><span class="pre">torch_xla.sync()</span></code> when target function returns and reenable the eager mode. You can expect the same perfomrance by using the <code class="docutils literal notranslate"><span class="pre">eager</span></code> + <code class="docutils literal notranslate"><span class="pre">compile</span></code> API compared to the existing <code class="docutils literal notranslate"><span class="pre">mark_step/sync</span></code> approach.</p>
 <div class="section" id="inference">
 <h3>Inference<a class="headerlink" href="#inference" title="Permalink to this heading">¶</a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">eager_mode</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
@@ -448,7 +448,7 @@
 <span class="n">compiled_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;openxla&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>It is recommened to use the <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> instead of <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.compile</span></code> for inference to reduce the tracing overhad.</p>
+<p>It is recommened to use the <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> instead of <code class="docutils literal notranslate"><span class="pre">torch_xla.compile</span></code> for inference to reduce the tracing overhad.</p>
 </div>
 <div class="section" id="training">
 <h3>Training<a class="headerlink" href="#training" title="Permalink to this heading">¶</a></h3>
@@ -462,10 +462,10 @@
     <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">loss</span>
 
-<span class="n">step_fn</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">step_fn</span><span class="p">)</span>
+<span class="n">step_fn</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">step_fn</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>In training we asked user to refactor the <code class="docutils literal notranslate"><span class="pre">step_fn</span></code> out because it is usually better to compile the model’s forward, backward and optimizer together. The long term goal is to also use <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> for training but right now we recommend user to use <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.compile</span></code>(for perfomrance reason).</p>
+<p>In training we asked user to refactor the <code class="docutils literal notranslate"><span class="pre">step_fn</span></code> out because it is usually better to compile the model’s forward, backward and optimizer together. The long term goal is to also use <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> for training but right now we recommend user to use <code class="docutils literal notranslate"><span class="pre">torch_xla.compile</span></code>(for perfomrance reason).</p>
 </div>
 </div>
 <div class="section" id="benchmark">
