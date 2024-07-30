@@ -660,8 +660,11 @@ ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
     const std::string& serialized) {
   auto executable_or = client_->DeserializeExecutable(serialized, std::nullopt);
   if (!executable_or.ok()) {
-    TF_LOG(WARNING) << "Failed to deserialize executable: "
-                    << executable_or.status();
+    TF_LOG(WARNING)
+        << "Failed to deserialize executable: " << executable_or.status()
+        << ". This usually means that you are trying to load from "
+           "persistent cache dir but failed. If you just updated the torch_xla "
+           "or libtpu version please clear the cache dir and recompile";
     return nullptr;
   }
   auto executable = std::move(*executable_or);
