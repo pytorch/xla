@@ -184,7 +184,7 @@ class ExperimentRunner:
               benchmark_experiment.to_dict(),
               benchmark_model.to_dict(),
               metrics={"error": str(e)},
-              verification_code=VerificationCode.VERIFIER_SKIPPED_UNEXPECTEDLY,
+              verification_code=VerificationCode.VERIFIER_DIDNT_RUN,
           )
         except subprocess.CalledProcessError as e:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
@@ -193,7 +193,7 @@ class ExperimentRunner:
               benchmark_experiment.to_dict(),
               benchmark_model.to_dict(),
               metrics={"error": e.stderr},
-              verification_code=VerificationCode.VERIFIER_SKIPPED_UNEXPECTEDLY,
+              verification_code=VerificationCode.VERIFIER_DIDNT_RUN,
           )
         except subprocess.SubprocessError as e:
           logger.error("ERROR when launching child process")
@@ -201,7 +201,7 @@ class ExperimentRunner:
               benchmark_experiment.to_dict(),
               benchmark_model.to_dict(),
               metrics={"error": str(e)},
-              verification_code=VerificationCode.VERIFIER_SKIPPED_UNEXPECTEDLY,
+              verification_code=VerificationCode.VERIFIER_DIDNT_RUN,
           )
         except ValueError as e:
           logger.error(f"ERROR {e}")
@@ -209,7 +209,7 @@ class ExperimentRunner:
               benchmark_experiment.to_dict(),
               benchmark_model.to_dict(),
               metrics={"error": str(e)},
-              verification_code=VerificationCode.VERIFIER_SKIPPED_UNEXPECTEDLY,
+              verification_code=VerificationCode.VERIFIER_DIDNT_RUN,
           )
 
   # TODO: Use `_unique_basename` instead.

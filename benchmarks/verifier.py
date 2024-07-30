@@ -20,15 +20,15 @@ class VerificationCode(str, Enum):
   FAIL = 'FAIL',
   # Eager execution failed.
   EAGER_FAILED = 'EAGER_FAILED'
-  # Verifier failed, raising an exception.
-  VERIFIER_FAILED = 'VERIFIER_FAILED'
+  # An exception was raised when running the verifier.
+  EXCEPTION_RAISED = 'EXCEPTION_RAISED'
   # Eager runs do not agree.
   NONDETERMINISTIC_EAGER_RUN = 'NONDETERMINISTIC_EAGER_RUN'
   # Verifier skipped.
   VERIFIER_SKIPPED = 'VERIFIER_SKIPPED'
   # Verifier did not run. It was skipped, but due to an unexpected reason.
   # Either an exception was raised or the process timeout.
-  VERIFIER_SKIPPED_UNEXPECTEDLY = 'VERIFIER_SKIPPED_UNEXPECTEDLY'
+  VERIFIER_DIDNT_RUN = 'VERIFIER_DIDNT_RUN'
 
 
 class VerificationException(Exception):
@@ -93,8 +93,8 @@ def verify(
     raise
   except Exception as e:
     # If anythin went wrong (other than an explicit VerificationException), raise
-    # a VerificationException with VERIFIER_FAILED code, while chaining the cause.
-    raise VerificationException(VerificationCode.VERIFIER_FAILED) from e
+    # a VerificationException with EXCEPTION_RAISED code, while chaining the cause.
+    raise VerificationException(VerificationCode.EXCEPTION_RAISED) from e
 
   return VerificationCode.PASS
 
