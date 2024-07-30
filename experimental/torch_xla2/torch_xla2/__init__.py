@@ -22,7 +22,8 @@ try:
     f'ml_framework_name:PyTorch/XLA2;ml_framework_version:{"v0.0.1"}'
   )
   xla_bridge._clear_backends()
-  jax.devices()  # open PJRT  to see if it opens
+  if os.environ.get("disable_xla2_PJRT_test") != "true":
+    jax.devices()  # open PJRT  to see if it opens
 except RuntimeError:
   jax.config.update(
     'jax_pjrt_client_create_options', old_pjrt_options
