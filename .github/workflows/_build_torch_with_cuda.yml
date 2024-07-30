@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           cd pytorch
-          TORCH_CUDA_ARCH_LIST="5.2;8.6" USE_CUDA=1 MAX_JOBS="$(nproc --ignore=2)" python setup.py bdist_wheel
+          TORCH_CUDA_ARCH_LIST="5.2;8.6" USE_CUDA=1 MAX_JOBS="$(nproc --ignore=4)" python setup.py bdist_wheel
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
