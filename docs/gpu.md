@@ -158,6 +158,7 @@ Make sure `PATH` and `LD_LIBRARY_PATH` environment variables account for cuda. S
 git clone https://github.com/pytorch/pytorch.git
 cd pytorch
 USE_CUDA=1 python setup.py install
+USE_CUDA=1 python setup.py bdist_wheel # Required for hermetic Python in PyTorch/XLA build setup.
 
 git clone https://github.com/pytorch/xla.git
 cd xla
