@@ -260,9 +260,10 @@ void DebugUtil::analyze_graph_execution_python_frame(
   static const int64_t max_frame_count =
       runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_MAX_FRAME", 8);
 
-  static const std::string executation_output_prefix = "Execution Analysis: ";
-  static const std::string compilation_output_prefix = "Compilation Analysis: ";
-  static const std::string unexpected_execution_prefix =
+  constexpr std::string_view executation_output_prefix = "Execution Analysis: ";
+  constexpr std::string_view compilation_output_prefix =
+      "Compilation Analysis: ";
+  constexpr std::string_view unexpected_execution_prefix =
       "Unexpected Execution Analysis: ";
 
   bool unexpected_execution = !XLAGraphExecutor::Get()->AllowExecution();
@@ -286,7 +287,7 @@ void DebugUtil::analyze_graph_execution_python_frame(
     return;
   }
 
-  std::string debug_output_prefix =
+  std::string_view debug_output_prefix =
       unexpected_execution ? unexpected_execution_prefix
       : (source == GraphAnalysisSource::Compilation)
           ? compilation_output_prefix
@@ -409,7 +410,8 @@ void DebugUtil::post_compilation_analysis(
     return;
   }
 
-  static const std::string debug_output_prefix = "Post Compilation Analysis: ";
+  constexpr std::string_view debug_output_prefix =
+      "Post Compilation Analysis: ";
   std::stringstream ss;
   ss << "\n"
      << debug_output_prefix

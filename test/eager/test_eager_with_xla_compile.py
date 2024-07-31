@@ -72,13 +72,12 @@ class EagerWithXLACompileTest(unittest.TestCase):
     device = torch_xla.device()
     t1 = torch.randn(5, 5, device=device)
 
-    with self.assertRaises(Exception) as context:
+    with self.assertRaisesRegex(
+        RuntimeError,
+        r'Unexpected execution happens inside the compiled function, exiting'):
       t2_compiled = torch_xla.compile(
           self.dummy_graph_break, full_graph=True)(
               t1)
-    self.assertIn(
-        'Unexpected execution happens inside the compiled function, exiting',
-        context.exception.__str__())
 
 
 if __name__ == '__main__':
