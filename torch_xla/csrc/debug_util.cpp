@@ -262,29 +262,36 @@ void DebugUtil::analyze_graph_execution_python_frame(
 
   static const std::string executation_output_prefix = "Execution Analysis: ";
   static const std::string compilation_output_prefix = "Compilation Analysis: ";
+  static const std::string unexpected_execution_prefix =
+      "Unexpected Execution Analysis: ";
 
-  if (pt_xla_debug_level <= 0) {
+  bool unexpected_execution = !XLAGraphExecutor::Get()->AllowExecution();
+
+  if (unexpected_execution) {
+    // if unexpected_execution happens we want to alywas print
+    // debugg message on master process
+  } else if (XLAGraphExecutor::Get()->UseEagerMode() &&
+             source != GraphAnalysisSource::DynamoExecution) {
+    // don't output analysis for eager mode execution/compilation
     return;
-  }
-
-  // don't output analysis for eager mode execution/compilation
-  if (XLAGraphExecutor::Get()->UseEagerMode() &&
-      source != GraphAnalysisSource::DynamoExecution) {
+  } else if (pt_xla_debug_level <= 0) {
     return;
-  }
-
-  if (pt_xla_debug_level <= 1 && source != GraphAnalysisSource::Compilation) {
+  } else if (pt_xla_debug_level <= 1 &&
+             source != GraphAnalysisSource::Compilation) {
     // for debug level <=1, only output compilation analysis in this function.
     return;
   }
 
-  std::string debug_output_prefix = (source == GraphAnalysisSource::Compilation)
-                                        ? compilation_output_prefix
-                                        : executation_output_prefix;
-  // TODO: Make this configurable.
   if (!is_master_process) {
     return;
   }
+
+  std::string debug_output_prefix =
+      unexpected_execution ? unexpected_execution_prefix
+      : (source == GraphAnalysisSource::Compilation)
+          ? compilation_output_prefix
+          : executation_output_prefix;
+  // TODO: Make this configurable.
   std::vector<torch::lazy::SourceLocation> frames =
       torch::lazy::GetPythonFrames();
   // python frame must be > 1
@@ -378,6 +385,10 @@ void DebugUtil::analyze_graph_execution_python_frame(
     std::ofstream outFile;
     outFile.open(debug_file_name, std::ios_base::app);
     outFile << ss.rdbuf();
+  }
+  if (unexpected_execution) {
+    XLA_ERROR() << "Unexpected execution happens inside the compiled function, "
+                   "exiting\n";
   }
 }
 
