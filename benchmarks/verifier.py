@@ -92,7 +92,7 @@ def verify(
   except VerificationException:
     raise
   except Exception as e:
-    # If anythin went wrong (other than an explicit VerificationException), raise
+    # If anything went wrong (other than an explicit VerificationException), raise
     # a VerificationException with EXCEPTION_RAISED code, while chaining the cause.
     raise VerificationException(VerificationCode.EXCEPTION_RAISED) from e
 
