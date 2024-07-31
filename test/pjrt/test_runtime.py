@@ -88,7 +88,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
       else:
         logs_context = contextlib.nullcontext()
 
-
       if expect_using_pjrt:
         self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])
       else:

@@ -58,9 +58,6 @@ def _maybe_select_default_device():
                   '1') == '0' or xenv.PJRT_DEVICE in os.environ:
     return
 
-  # TODO: Update this link in the release branch
-  logging.warning('PJRT is now the default runtime. For more information, see '
-                  'https://github.com/pytorch/xla/blob/master/docs/pjrt.md')
   # Check for libtpu _and_ the TPU device
   if torch_xla._found_libtpu and tpu.num_available_chips() > 0:
     logging.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')
@@ -82,12 +79,8 @@ def _maybe_select_default_device():
 
 def device_type() -> Optional[str]:
   """Returns the current PjRt device type.
-
-  Selects a default device if none has been configured
   """
-  _maybe_select_default_device()
-  pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
-  return pjrt_device.split('_')[0] if pjrt_device else pjrt_device
+  return pjrt_device.split('_')[0]
 
 
 def is_bf16_supported():

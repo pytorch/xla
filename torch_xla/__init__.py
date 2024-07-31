@@ -205,7 +205,6 @@ atexit.register(_prepare_to_exit)
 _apply_patches()
 _init_xla_lazy_backend()
 
-
 # This is to temporarily disable the automtic dynamic shape in PyTorch Dynamo,
 # which was enabled by https://github.com/pytorch/pytorch/pull/103623.
 # While we come up with a long term fix, we'll set this flag to False to
