@@ -80,6 +80,7 @@ def _maybe_select_default_device():
 def device_type() -> Optional[str]:
   """Returns the current PjRt device type.
   """
+  pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
   return pjrt_device.split('_')[0]
 
 
