@@ -14,7 +14,6 @@ import torch_xla.debug.metrics as met
 from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
 from torch_xla._internal import tpu
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 assert tpu.num_available_chips() > 0, 'Must be run on a TPU!'
 
@@ -119,7 +118,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     def _assert(i):
       assert i == 0, f"the device index {i} must be 0 in nprocs=1"
 
-    xmp.spawn(_assert, nprocs=1)
+      debug_single_process = FLAGS.num_cores == 1
+      torch_xla.launch(
+          _mp_fn, args=(FLAGS,), debug_single_process=debug_single_process)
 
   def test_xla_devices_single_process_one_chip_one_device_spawn(self):
     # Avoid initializing the TPU client in the parent process
@@ -188,7 +189,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     # Initialize the client in the parent process
     xm.xla_device()
 
-    xmp.spawn(xm.xla_device)
+    torch_xla.launch(xm.xla_device)
 
   def test_spawn_error(self):
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:

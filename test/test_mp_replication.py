@@ -3,7 +3,6 @@ import torch
 import torch_xla
 from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 def all_reduce(tensor):
@@ -52,4 +51,4 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=())
+  torch_xla.launch(_mp_fn, args=())

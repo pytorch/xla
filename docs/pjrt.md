@@ -61,10 +61,10 @@ Sample diff from XRT to PJRT:
  from torch.nn.parallel import DistributedDataParallel as DDP
  import torch.optim as optim
  import torch.distributed as dist
+ import torch_xla
  import torch_xla.core.xla_model as xm
  import torch_xla.distributed.parallel_loader as pl
  import torch_xla.distributed.xla_backend
- import torch_xla.distributed.xla_multiprocessing as xmp
 +import torch_xla.runtime as xr
 
 
@@ -105,7 +105,7 @@ Sample diff from XRT to PJRT:
 +  # Recommended: set PJRT_DEVICE to your local device type
 +  os.environ['PJRT_DEVICE'] = 'TPU'
 
-   xmp.spawn(_mp_fn)
+   torch_xla.launch(_mp_fn)
 ```
 
 ## Benefits
@@ -357,9 +357,9 @@ example:
 
 ```python
 import torch
+import torch_xla
 import torch.distributed as dist
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 from torch_xla.experimental import pjrt
 
 # Required for `xla://` init_method and `xla` backend
@@ -377,7 +377,7 @@ def _all_gather(index: int):
   print(output)
 
 if __name__ == '__main__':
-  xmp.spawn(_all_gather)
+  torch_xla.launch(_all_gather)
 ```
 
 Note: Although the `xla://` init_method is not required on TPU v4, it is still

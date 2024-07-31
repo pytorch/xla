@@ -138,7 +138,7 @@ After making these changes, the code will run on TPUs. However, the performance 
 
 Now the [code](https://github.com/pytorch-tpu/stable-diffusion/blob/ss-inference/scripts/txt2img.py) is ready to run on TPUs in a reasonable time. More optimization and analysis can be done by [capturing a profile](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm) and investigating further. However, this is not covered here.
 
-Note: if you are running on v4-8 TPU, then you have 4 available XLA (TPU) devices. Running the code as above will only use one XLA device. In order to run on all 4 devices you need to use `xmp.spawn()` function to spawn the code on all the devices. We will discuss an `xmp.spawn` in the next example.
+Note: if you are running on v4-8 TPU, then you have 4 available XLA (TPU) devices. Running the code as above will only use one XLA device. In order to run on all 4 devices you need to use `torch_xla.launch()` function to spawn the code on all the devices. We will discuss a `torch_xla.launch` in the next example.
 
 # Example 2. HF Stable Diffusion Inference
 Now, consider using [Stable Diffusion Inference](https://github.com/huggingface/diffusers/tree/main/examples/text_to_image) in the HuggingFace diffusers library for both the SD-XL and 2.1 versions of the model. For your reference, the changes described below can be found in this [repo](https://github.com/pytorch-tpu/diffusers). You can clone the repo and run the inference using the following command on your TPU VM:
@@ -231,17 +231,17 @@ If we investigate the U-Net function and the scheduler, we can see that the U-Ne
 
 # Running on Multiple TPU Devices
 
-To use multiple TPU devices, you can use the `xmp.spawn` function to spawn the function you ran on a single device to multiple devices. The `xmp.spawn` function will start processes on multiple TPU devices and sync them when needed. This can be done by passing the `index` argument to the function that runs on a single device. For example,
+To use multiple TPU devices, you can use the `torch_xla.launch` function to spawn the function you ran on a single device to multiple devices. The `torch_xla.launch` function will start processes on multiple TPU devices and sync them when needed. This can be done by passing the `index` argument to the function that runs on a single device. For example,
 ```
-import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla
 
 def my_function(index):
   # function that runs on a single device
 
-xmp.spawn(my_function, args=(0,), nprocs=4)
+torch_xla.launch(my_function, args=(0,))
 ```
 
-In this example, the `my_function` function will be spawned on 4 TPU devices on v4-8, with each device being assigned an index from 0 to 3.
+In this example, the `my_function` function will be spawned on 4 TPU devices on v4-8, with each device being assigned an index from 0 to 3. Note that by default, the launch() function will spawn preocesses on all TPU devices. If you only want to run single process, set the argument `launch(..., debug_single_process=True)`.
 
 [This file](https://github.com/ssusie/diffusers/blob/main/examples/text_to_image/inference_tpu_multidevice.py) illustrates how xmp.spawn can be used to run stable diffusion 2.1 version on multiple TPU devices. For this version similar to the above changes were made to the [pipeline](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py) file.
 
