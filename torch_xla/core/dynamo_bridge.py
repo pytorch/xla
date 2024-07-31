@@ -735,7 +735,11 @@ class MaybeReconstructOutputs:
           and enable_skip_handler
       ):
         print("[MaybeReconstructOutputs] Skipping handler...")
-        return torch_xla._XLAC._fresh_functional_tensor_from(o, handler.base(), info.functional_tensor.tensor);
+        return torch_xla._XLAC._fresh_functional_tensor_from(
+          o,
+          handler.base(args, outputs),
+          info.functional_tensor.tensor,
+        )
       else:
         print("[MaybeReconstructOutputs] Running handler...")
         return handler(args, outputs, o)
