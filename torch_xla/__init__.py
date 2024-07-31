@@ -253,4 +253,4 @@ from .torch_xla import *
 from .core import custom_kernel, decomp_registration
 
 # select default PJRT_DEVICE before any execution
-runtime.maybe_select_default_device()
+runtime._maybe_select_default_device()
