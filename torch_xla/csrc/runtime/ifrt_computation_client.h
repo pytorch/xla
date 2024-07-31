@@ -155,6 +155,11 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
+  void OnReadyCallback(DataPtr data,
+                       const std::function<void()>& callback) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
  private:
   std::shared_ptr<xla::ifrt::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;
