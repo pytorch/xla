@@ -254,4 +254,4 @@ from .torch_xla import *
 from .core import custom_kernel, decomp_registration
 
 import torch_xla
-torch_xla._maybe_select_default_device()
+torch_xla.runtime._maybe_select_default_device()

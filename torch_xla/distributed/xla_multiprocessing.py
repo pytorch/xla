@@ -3,7 +3,7 @@ from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
 
 
-@xr.requires_pjrt
+# @xr.requires_pjrt
 def spawn(fn,
           args=(),
           nprocs=None,
