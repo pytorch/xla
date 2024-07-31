@@ -53,7 +53,7 @@ def set_device_type(pjrt_device: str) -> None:
   os.environ[xenv.PJRT_DEVICE] = pjrt_device
 
 
-def _maybe_select_default_device():
+def maybe_select_default_device():
   if xu.getenv_as(xenv.PJRT_SELECT_DEFAULT_DEVICE, str,
                   '1') == '0' or xenv.PJRT_DEVICE in os.environ:
     return
