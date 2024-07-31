@@ -275,7 +275,7 @@ class ExperimentRunner:
     verification_code = VerificationCode.VERIFIER_SKIPPED
 
     # Turn on CUDAGraphs if we are running inductor
-    if benchmark_experiment.is_inductor():
+    if experiment.is_inductor():
       from torch._inductor import config as inductor_config
       inductor_config.triton.cudagraphs = True
 
