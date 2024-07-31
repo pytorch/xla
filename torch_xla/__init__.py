@@ -252,5 +252,5 @@ from .torch_xla import *
 # register all custom kenels and decomp by default
 from .core import custom_kernel, decomp_registration
 
-import torch_xla
-torch_xla.runtime.maybe_select_default_device()
+# select default PJRT_DEVICE before any execution
+runtime._maybe_select_default_device()

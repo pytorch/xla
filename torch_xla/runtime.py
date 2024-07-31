@@ -53,7 +53,7 @@ def set_device_type(pjrt_device: str) -> None:
   os.environ[xenv.PJRT_DEVICE] = pjrt_device
 
 
-def maybe_select_default_device():
+def _maybe_select_default_device():
   if xu.getenv_as(xenv.PJRT_SELECT_DEFAULT_DEVICE, str,
                   '1') == '0' or xenv.PJRT_DEVICE in os.environ:
     return
@@ -81,7 +81,7 @@ def device_type() -> Optional[str]:
   """Returns the current PjRt device type.
   """
   pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
-  return pjrt_device.split('_')[0]
+  return pjrt_device.split('_')[0] if pjrt_device else pjrt_device
 
 
 def is_bf16_supported():
