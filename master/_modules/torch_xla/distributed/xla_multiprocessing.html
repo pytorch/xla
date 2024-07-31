@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git731eb08 )
+                  master (2.5.0+git6c18d50 )
                 </div>
               
             
@@ -440,7 +440,7 @@
 <span class="sd">      model = WRAPPED_MODEL.to(device)</span>
 <span class="sd">      ...</span>
 
-<span class="sd">    xmp.spawn(_mp_fn, ..., start_method=&#39;fork&#39;)</span>
+<span class="sd">    torch_xla.launch(_mp_fn, ..., start_method=&#39;fork&#39;)</span>
 
 <span class="sd">  This method has two advantages. First it uses only one copy of the memory</span>
 <span class="sd">  pages to host the original model weights, and second it serializes the move</span>
@@ -487,7 +487,7 @@
 <span class="sd">      dataset = SERIAL_EXEC.run(lambda: load_dataset(&#39;/tmp/mnist-data&#39;))</span>
 <span class="sd">      ...</span>
 
-<span class="sd">    xmp.spawn(_mp_fn, ...)</span>
+<span class="sd">    torch_xla.launch(_mp_fn, ...)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>

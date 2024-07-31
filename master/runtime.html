@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git731eb08 )
+                  master (2.5.0+git6c18d50 )
                 </div>
               
             
@@ -452,10 +452,10 @@ use the <code class="docutils literal notranslate"><span class="pre">xla://</spa
 <span class="w"> </span>from torch.nn.parallel import DistributedDataParallel as DDP
 <span class="w"> </span>import torch.optim as optim
 <span class="w"> </span>import torch.distributed as dist
+<span class="w"> </span>import torch_xla
 <span class="w"> </span>import torch_xla.core.xla_model as xm
 <span class="w"> </span>import torch_xla.distributed.parallel_loader as pl
 <span class="w"> </span>import torch_xla.distributed.xla_backend
-<span class="w"> </span>import torch_xla.distributed.xla_multiprocessing as xmp
 <span class="gi">+import torch_xla.runtime as xr</span>
 
 
@@ -496,7 +496,7 @@ use the <code class="docutils literal notranslate"><span class="pre">xla://</spa
 <span class="gi">+  # Recommended: set PJRT_DEVICE to your local device type</span>
 <span class="gi">+  os.environ[&#39;PJRT_DEVICE&#39;] = &#39;TPU&#39;</span>
 
-<span class="w"> </span>  xmp.spawn(_mp_fn)
+<span class="w"> </span>  torch_xla.launch(_mp_fn)
 </pre></div>
 </div>
 </div>
@@ -728,9 +728,9 @@ we strongly recommend using the new <code class="docutils literal notranslate"><
 finds the replica IDs, world size, and master IP by querying the runtime. For
 example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_xla</span>
 <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_multiprocessing</span> <span class="k">as</span> <span class="nn">xmp</span>
 <span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
 
 <span class="c1"># Required for `xla://` init_method and `xla` backend</span>
@@ -748,7 +748,7 @@ example:</p>
   <span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-  <span class="n">xmp</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">_all_gather</span><span class="p">)</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">_all_gather</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Note: Although the <code class="docutils literal notranslate"><span class="pre">xla://</span></code> init_method is not required on TPU v4, it is still

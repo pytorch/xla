@@ -266,7 +266,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git731eb08 )
+                  master (2.5.0+git6c18d50 )
                 </div>
               
             
@@ -507,9 +507,9 @@ how XLA creates graphs and runs operations.</p>
 <h3>Running on Multiple XLA Devices with Multi-processing<a class="headerlink" href="#running-on-multiple-xla-devices-with-multi-processing" title="Permalink to this heading">¶</a></h3>
 <p>PyTorch/XLA makes it easy to accelerate training by running on multiple XLA
 devices. The following snippet shows how:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 <span class="kn">import</span> <span class="nn">torch_xla.distributed.parallel_loader</span> <span class="k">as</span> <span class="nn">pl</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_multiprocessing</span> <span class="k">as</span> <span class="nn">xmp</span>
 
 <span class="k">def</span> <span class="nf">_mp_fn</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
   <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
@@ -527,16 +527,16 @@ devices. The following snippet shows how:</p>
     <span class="n">xm</span><span class="o">.</span><span class="n">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-  <span class="n">xmp</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">())</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">())</span>
 </pre></div>
 </div>
 <p>There are three differences between this multi-device snippet and the previous
 single device snippet. Let’s go over then one by one.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code></p>
+<li><p><code class="docutils literal notranslate"><span class="pre">torch_xla.launch()</span></code></p>
 <ul>
 <li><p>Creates the processes that each run an XLA device.</p></li>
-<li><p>Each process will only be able to access the device assigned to the current process. For example on a TPU v4-8, there will be 4 processes being spawn up and each process will own a TPU device.</p></li>
+<li><p>This function is a wrapper of multithreading spawn to allow user run the script with torchrun command line also. Each process will only be able to access the device assigned to the current process. For example on a TPU v4-8, there will be 4 processes being spawn up and each process will own a TPU device.</p></li>
 <li><p>Note that if you print the <code class="docutils literal notranslate"><span class="pre">xm.xla_device()</span></code> on each process you will see <code class="docutils literal notranslate"><span class="pre">xla:0</span></code> on all devices. This is because each process can only see one device. This does not mean multi-process is not functioning. The only execution is with PJRT runtime on TPU v2 and TPU v3 since there will be <code class="docutils literal notranslate"><span class="pre">#devices/2</span></code> processes and each process will have 2 threads(check this <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpus-v2v3-vs-v4">doc</a> for more details).</p></li>
 </ul>
 </li>
@@ -558,7 +558,7 @@ single device snippet. Let’s go over then one by one.</p>
 <blockquote>
 <div><p><strong>NOTE:</strong> It is important to note that, when using multi-processing, the user can start
 retrieving and accessing XLA devices only from within the target function of
-<code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code> (or any function which has <code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code> as parent in the call
+<code class="docutils literal notranslate"><span class="pre">torch_xla.launch()</span></code> (or any function which has <code class="docutils literal notranslate"><span class="pre">torch_xla.launch()</span></code> as parent in the call
 stack).</p>
 </div></blockquote>
 <p>See the
