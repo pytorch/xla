@@ -205,6 +205,7 @@ atexit.register(_prepare_to_exit)
 _apply_patches()
 _init_xla_lazy_backend()
 
+
 # This is to temporarily disable the automtic dynamic shape in PyTorch Dynamo,
 # which was enabled by https://github.com/pytorch/pytorch/pull/103623.
 # While we come up with a long term fix, we'll set this flag to False to
@@ -251,3 +252,6 @@ from .torch_xla import *
 
 # register all custom kenels and decomp by default
 from .core import custom_kernel, decomp_registration
+
+import torch_xla
+torch_xla._maybe_select_default_device()
