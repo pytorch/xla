@@ -44,12 +44,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
             torch_xla._XLAC, '_xla_runtime_is_initialized', return_value=True):
       xr.set_device_type('CPU')
 
-  def test_requires_pjrt(self):
-    with mock.patch.dict(
-        os.environ, {'PJRT_SELECT_DEFAULT_DEVICE': '0'}, clear=True):
-      with self.assertRaises(NotImplementedError):
-        xr.xla_device()
-
   def test_default_ordinals(self):
     global_ordinal = xr.global_ordinal()
     self.assertEqual(global_ordinal, 0)
@@ -94,9 +88,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
       else:
         logs_context = contextlib.nullcontext()
 
-      with logs_context:
-        # Configure default device
-        xr.using_pjrt()
 
       if expect_using_pjrt:
         self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])

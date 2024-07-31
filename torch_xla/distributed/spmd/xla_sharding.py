@@ -573,7 +573,6 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   return wrap_as_sharded_tensor(t)
 
 
-# @xr.requires_pjrt
 def mark_sharding(
     t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
@@ -695,7 +694,6 @@ class ShardingSpec:
   _replication_groups: List[int] = field(init=False)
   _sharding_type: ShardingType = field(init=False)
 
-  # @xr.requires_pjrt
   def __post_init__(self):
     mesh = self.mesh
     partition_spec = _translate_named_partition_spec(mesh, self.partition_spec)

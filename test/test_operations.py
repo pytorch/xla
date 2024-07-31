@@ -1659,9 +1659,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         t += torch.tensor(i, dtype=torch.float, device=t.device)
       return t
 
-    # This test is for PjRT only
-    if xr.using_pjrt():
-      self.runAtenTest([torch.tensor(20.0)], test_fn)
+    self.runAtenTest([torch.tensor(20.0)], test_fn)
 
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
