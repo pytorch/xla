@@ -65,7 +65,7 @@ import build_util
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 _date = '20240726'
-_libtpu_version = f'0.1.dev{_date}+nightly'
+_libtpu_version = f'0.1.dev{_date}'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 _jax_version = f'0.4.31.dev{_date}'
 
@@ -312,7 +312,7 @@ setup(
     extras_require={
         # On Cloud TPU VM install with:
         # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
-        'tpu': [f'libtpu-nightly=={_libtpu_version}'],
+        'tpu': [f'libtpu-nightly=={_libtpu_version}+nightly'],
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
         'pallas': [f'jaxlib=={_jax_version}', f'jax=={_jax_version}'],
     },
