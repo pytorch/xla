@@ -1,14 +1,11 @@
 import torch
 import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
-from torch.library import Library
 from typing import List, Optional, TypedDict
-
-c10d_lib = Library("_c10d_functional", "IMPL")
 
 
 # "broadcast(Tensor self, int src, str tag, int[] ranks, int group_size) -> Tensor",
-@torch.library.impl(c10d_lib, "broadcast", "XLA")
+@torch.library.impl("_c10d_functional::broadcast", "XLA")
 def broadcast_xla(self: torch.Tensor,
                   src: int,
                   tag: str,
