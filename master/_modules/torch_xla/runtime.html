@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+giteef7bb4 )
+                  master (2.5.0+git2ba4e05 )
                 </div>
               
             
@@ -414,7 +414,7 @@
   <span class="k">global</span> <span class="n">_WORLD_SIZE</span><span class="p">,</span> <span class="n">_ORDINAL</span>
 
   <span class="c1"># Dynamo doesn&#39;t support XRT or multithreaded runtime. See Note [V3-8 Threading]</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">()</span> <span class="ow">or</span> <span class="n">runtime</span><span class="o">.</span><span class="n">addressable_device_count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">addressable_device_count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
     <span class="k">return</span>
 
   <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -443,9 +443,6 @@
                   <span class="s1">&#39;1&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;0&#39;</span> <span class="ow">or</span> <span class="n">xenv</span><span class="o">.</span><span class="n">PJRT_DEVICE</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
     <span class="k">return</span>
 
-  <span class="c1"># TODO: Update this link in the release branch</span>
-  <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;PJRT is now the default runtime. For more information, see &#39;</span>
-                  <span class="s1">&#39;https://github.com/pytorch/xla/blob/master/docs/pjrt.md&#39;</span><span class="p">)</span>
   <span class="c1"># Check for libtpu _and_ the TPU device</span>
   <span class="k">if</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_found_libtpu</span> <span class="ow">and</span> <span class="n">tpu</span><span class="o">.</span><span class="n">num_available_chips</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
     <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.&#39;</span><span class="p">)</span>
@@ -467,40 +464,9 @@
 
 <div class="viewcode-block" id="device_type"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.device_type">[docs]</a><span class="k">def</span> <span class="nf">device_type</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the current PjRt device type.</span>
-
-<span class="sd">  Selects a default device if none has been configured</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">_maybe_select_default_device</span><span class="p">()</span>
   <span class="n">pjrt_device</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">PJRT_DEVICE</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">pjrt_device</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">pjrt_device</span> <span class="k">else</span> <span class="n">pjrt_device</span></div>
-
-
-<span class="nd">@_utils</span><span class="o">.</span><span class="n">run_once</span>
-<span class="k">def</span> <span class="nf">using_pjrt</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns whether this process is using PjRt runtime.</span>
-
-<span class="sd">  Selects a default device if none has been configured.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">_maybe_select_default_device</span><span class="p">()</span>
-  <span class="k">return</span> <span class="n">device_type</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-
-
-<span class="k">def</span> <span class="nf">requires_pjrt</span><span class="p">(</span><span class="n">fn</span><span class="p">:</span> <span class="n">FN</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FN</span><span class="p">:</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps `fn` and checks if this process is using PjRt.</span>
-
-<span class="sd">  Raises:</span>
-<span class="sd">    NotImplementedError: Not using PjRt runtime</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
-  <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">using_pjrt</span><span class="p">():</span>
-      <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;`</span><span class="si">{}</span><span class="s1">` not implemented for XRT&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-          <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
-
-    <span class="k">return</span> <span class="n">fn</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-  <span class="k">return</span> <span class="n">wrapper</span>
 
 
 <span class="k">def</span> <span class="nf">is_bf16_supported</span><span class="p">():</span>
@@ -513,7 +479,6 @@
     <span class="k">return</span> <span class="kc">False</span>
 
 
-<span class="nd">@requires_pjrt</span>
 <span class="k">def</span> <span class="nf">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">devkind</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns an XLA device.</span>
@@ -538,20 +503,17 @@
   <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="local_process_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.local_process_count">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">local_process_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="local_process_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.local_process_count">[docs]</a><span class="k">def</span> <span class="nf">local_process_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the number of processes running on this host.&quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">PJRT_LOCAL_PROCESS_COUNT</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="global_device_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.global_device_count">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">global_device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="global_device_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.global_device_count">[docs]</a><span class="k">def</span> <span class="nf">global_device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the total number of devices across all processes/hosts.&quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_all_devices</span><span class="p">())</span></div>
 
 
-<div class="viewcode-block" id="world_size"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.world_size">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">world_size</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="world_size"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.world_size">[docs]</a><span class="k">def</span> <span class="nf">world_size</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the total number of processes participating in the job.&quot;&quot;&quot;</span>
   <span class="k">global</span> <span class="n">_WORLD_SIZE</span>
   <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -563,8 +525,7 @@
   <span class="k">return</span> <span class="n">_WORLD_SIZE</span></div>
 
 
-<div class="viewcode-block" id="local_device_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.local_device_count">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">local_device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="local_device_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.local_device_count">[docs]</a><span class="k">def</span> <span class="nf">local_device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the total number of devices on this host.</span>
 
 <span class="sd">  Assumes each process has the same number of addressable devices.</span>
@@ -572,14 +533,12 @@
   <span class="k">return</span> <span class="n">local_process_count</span><span class="p">()</span> <span class="o">*</span> <span class="n">addressable_device_count</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="addressable_device_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.addressable_device_count">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">addressable_device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="addressable_device_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.addressable_device_count">[docs]</a><span class="k">def</span> <span class="nf">addressable_device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the number of devices visible to this process.&quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_num_devices</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="global_ordinal"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.global_ordinal">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">global_ordinal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="global_ordinal"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.global_ordinal">[docs]</a><span class="k">def</span> <span class="nf">global_ordinal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns global ordinal of this thread within all processes.</span>
 
 <span class="sd">  Global ordinal is in range [0, global_device_count). Global ordinals are not</span>
@@ -591,8 +550,7 @@
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device_ordinal</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="local_ordinal"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.local_ordinal">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">local_ordinal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="local_ordinal"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.local_ordinal">[docs]</a><span class="k">def</span> <span class="nf">local_ordinal</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns local ordinal of this thread within this host.</span>
 
 <span class="sd">  Local ordinal is in range [0, local_device_count).&quot;&quot;&quot;</span>
@@ -601,17 +559,14 @@
   <span class="k">return</span> <span class="n">local_rank</span> <span class="o">*</span> <span class="n">devices_per_process</span> <span class="o">+</span> <span class="n">xla_device</span><span class="p">()</span><span class="o">.</span><span class="n">index</span></div>
 
 
-<span class="nd">@requires_pjrt</span>
 <span class="k">def</span> <span class="nf">process_index</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_process_index</span><span class="p">()</span>
 
 
-<span class="nd">@requires_pjrt</span>
 <span class="k">def</span> <span class="nf">process_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_num_processes</span><span class="p">()</span>
 
 
-<span class="nd">@requires_pjrt</span>
 <span class="k">def</span> <span class="nf">host_index</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
   <span class="k">if</span> <span class="n">plugins</span><span class="o">.</span><span class="n">using_dynamic_plugins</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">plugins</span><span class="o">.</span><span class="n">default</span><span class="p">()</span><span class="o">.</span><span class="n">host_index</span><span class="p">()</span>
@@ -623,24 +578,20 @@
 
 
 <span class="c1"># API below will be used to query physcial device attribute.</span>
-<span class="nd">@requires_pjrt</span>
 <span class="k">def</span> <span class="nf">runtime_device_attributes</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]:</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_device_attributes</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
 
-<span class="nd">@requires_pjrt</span>
 <span class="k">def</span> <span class="nf">global_runtime_device_attributes</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]]:</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_all_device_attributes</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="global_runtime_device_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.global_runtime_device_count">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">()</span>
+<div class="viewcode-block" id="global_runtime_device_count"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.global_runtime_device_count">[docs]</a><span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">global_runtime_device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the total number of runtime devices across all processes/hosts, especially useful for SPMD.&quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_all_runtime_devices</span><span class="p">())</span></div>
 
 
-<span class="nd">@requires_pjrt</span>
 <span class="k">def</span> <span class="nf">addressable_runtime_device_count</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the number of devices visible to this process.&quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_num_runtime_devices</span><span class="p">()</span>
@@ -650,8 +601,7 @@
 <span class="c1"># This forces SPMD mode if some tensors are already initialized on non-SPMD</span>
 <span class="c1"># devices. This means that those tensors would be replicated across the devices.</span>
 <span class="c1"># TODO(yeounoh) introduce SPMD configuration.</span>
-<div class="viewcode-block" id="use_spmd"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.use_spmd">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">use_spmd</span><span class="p">(</span><span class="n">auto</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="use_spmd"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.use_spmd">[docs]</a><span class="k">def</span> <span class="nf">use_spmd</span><span class="p">(</span><span class="n">auto</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
   <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;XLA_USE_SPMD&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;XLA_USE_SPMD is being deprecated. &quot;</span>
                   <span class="s2">&quot;Use torch_xla.runtime.use_spmd() &quot;</span>
@@ -674,15 +624,13 @@
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;XLA_AUTO_SPMD&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span></div>
 
 
-<div class="viewcode-block" id="is_spmd"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.is_spmd">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">is_spmd</span><span class="p">():</span>
+<div class="viewcode-block" id="is_spmd"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.is_spmd">[docs]</a><span class="k">def</span> <span class="nf">is_spmd</span><span class="p">():</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns if SPMD is set for execution.&quot;&quot;&quot;</span>
   <span class="c1"># TODO(yeounoh) replace this when we fully deprecate the flag.</span>
   <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">check_env_flag</span><span class="p">(</span><span class="s1">&#39;XLA_USE_SPMD&#39;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="get_master_ip"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.get_master_ip">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">get_master_ip</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<div class="viewcode-block" id="get_master_ip"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.get_master_ip">[docs]</a><span class="k">def</span> <span class="nf">get_master_ip</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieve the master worker IP for the runtime. This calls into</span>
 <span class="sd">  backend-specific discovery APIs.</span>
 
@@ -692,8 +640,7 @@
   <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;IP discovery not supported for device: </span><span class="si">{</span><span class="n">device_type</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="initialize_cache"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.initialize_cache">[docs]</a><span class="nd">@requires_pjrt</span>
-<span class="k">def</span> <span class="nf">initialize_cache</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">readonly</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="initialize_cache"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.initialize_cache">[docs]</a><span class="k">def</span> <span class="nf">initialize_cache</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">readonly</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Initializes the persistent compilation cache. This API must be called</span>
 <span class="sd">  before any computations have been performed.</span>
 
