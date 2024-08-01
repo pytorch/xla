@@ -31,8 +31,6 @@ def _profile(logdir: str, port: int = 9012):
 class TestPjRtProfiler(absltest.TestCase):
 
   def setUp(self):
-    assert xr.using_pjrt()
-
     # HACK: ensure libtpu is loaded if using TPU
     xm.xla_device()
 

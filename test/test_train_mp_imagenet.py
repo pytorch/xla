@@ -255,8 +255,7 @@ def train_imagenet():
 
   # Initialization is nondeterministic with multiple threads in PjRt.
   # Synchronize model parameters across replicas manually.
-  if xr.using_pjrt():
-    xm.broadcast_master_param(model)
+  xm.broadcast_master_param(model)
 
   if FLAGS.ddp:
     model = DDP(model, gradient_as_bucket_view=True, broadcast_buffers=False)

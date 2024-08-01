@@ -135,8 +135,7 @@ def train_mnist(flags, **kwargs):
 
   # Initialization is nondeterministic with multiple threads in PjRt.
   # Synchronize model parameters across replicas manually.
-  if xr.using_pjrt():
-    xm.broadcast_master_param(model)
+  xm.broadcast_master_param(model)
 
   if flags.ddp:
     model = DDP(model, gradient_as_bucket_view=True)
