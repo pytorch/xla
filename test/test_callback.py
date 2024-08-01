@@ -24,6 +24,7 @@ class TestExperimentalCallback(absltest.TestCase):
       event.set()
 
     callback.on_ready_callback(c, cb)
+    event.wait(3)
 
 
 if __name__ == "__main__":
