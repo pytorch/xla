@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git52ea89f )
+                  master (2.5.0+git4e94ff6 )
                 </div>
               
             
@@ -442,9 +442,20 @@
   <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">real_devices</span><span class="p">())</span></div>
 
 
-<div class="viewcode-block" id="sync"><a class="viewcode-back" href="../../index.html#torch_xla.sync">[docs]</a><span class="k">def</span> <span class="nf">sync</span><span class="p">():</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Launches all pending graph operations.&quot;&quot;&quot;</span>
-  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span></div>
+<div class="viewcode-block" id="sync"><a class="viewcode-back" href="../../index.html#torch_xla.sync">[docs]</a><span class="k">def</span> <span class="nf">sync</span><span class="p">(</span><span class="n">wait</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Launches all pending graph operations.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    wait (bool): whether to block the current process until the execution finished.</span>
+
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_step_marker</span><span class="p">(</span>
+      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span>
+      <span class="p">[],</span>
+      <span class="n">wait</span><span class="o">=</span><span class="n">wait</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="n">devctx</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">_run_step_closures</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span></div>
 
 
 <span class="k">def</span> <span class="nf">step</span><span class="p">():</span>
@@ -489,13 +500,15 @@
 <span class="sd">        res = foo2(x)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
+  <span class="k">def</span> <span class="nf">_clear_pending_ops_before_compile</span><span class="p">():</span>
+    <span class="n">sync</span><span class="p">()</span>
+
   <span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
-  <span class="k">def</span> <span class="nf">_step</span><span class="p">():</span>
+  <span class="k">def</span> <span class="nf">_compile</span><span class="p">():</span>
     <span class="n">saved_eager_mode_status</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_use_eager_mode</span><span class="p">()</span>
     <span class="n">saved_allow_execution</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_allow_execution</span><span class="p">()</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
-    <span class="c1"># Clear pending operations</span>
-    <span class="n">sync</span><span class="p">()</span>
+    <span class="n">_clear_pending_ops_before_compile</span><span class="p">()</span>
 
     <span class="c1"># if full_graph sets to true execution can not happen before the sync below</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_allow_execution</span><span class="p">(</span><span class="ow">not</span> <span class="n">full_graph</span><span class="p">)</span>
@@ -504,10 +517,12 @@
       <span class="k">yield</span>
     <span class="k">finally</span><span class="p">:</span>
       <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_allow_execution</span><span class="p">(</span><span class="n">saved_allow_execution</span><span class="p">)</span>
+      <span class="c1"># Collect the traced graph after running the target function and</span>
+      <span class="c1"># execute the graph.</span>
       <span class="n">sync</span><span class="p">()</span>
       <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_use_eager_mode</span><span class="p">(</span><span class="n">saved_eager_mode_status</span><span class="p">)</span>
 
-  <span class="k">return</span> <span class="n">_step</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span> <span class="k">else</span> <span class="n">_step</span><span class="p">()(</span><span class="n">f</span><span class="p">)</span></div>
+  <span class="k">return</span> <span class="n">_compile</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">f</span> <span class="k">else</span> <span class="n">_compile</span><span class="p">()(</span><span class="n">f</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="manual_seed"><a class="viewcode-back" href="../../index.html#torch_xla.manual_seed">[docs]</a><span class="k">def</span> <span class="nf">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
