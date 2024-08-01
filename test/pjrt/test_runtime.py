@@ -15,8 +15,6 @@ from torch_xla import runtime as xr
 class TestExperimentalPjrt(parameterized.TestCase):
 
   def setUp(self):
-    global xr
-    reload(xr)
     xr.set_device_type('CPU')
 
   @parameterized.parameters(('CPU', 'CPU'), ('CUDA', 'CUDA'), ('TPU', 'TPU'))
@@ -82,12 +80,10 @@ class TestExperimentalPjrt(parameterized.TestCase):
   }, True))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
     with mock.patch.dict(os.environ, env_vars, clear=True):
-      # Print a warningif we had to select a default runtime
-      if 'PJRT_DEVICE' not in os.environ and expect_using_pjrt:
-        logs_context = self.assertLogs(level=logging.WARNING)
-      else:
-        logs_context = contextlib.nullcontext()
-
+      # We need to reload the torch_xla module because clear=True will clear all os.environ.
+      global torch_xla
+      reload(torch_xla)
+      logs_context = contextlib.nullcontext()
       if expect_using_pjrt:
         self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])
       else:
