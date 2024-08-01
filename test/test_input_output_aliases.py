@@ -85,9 +85,6 @@ class InputOutputAliasesTest(unittest.TestCase):
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
     torch.allclose(k_cache[slot_mapping[0][0]].cpu(), key[0].cpu())
 
-  @unittest.skip(
-      "Fail with functionalization (https://github.com/pytorch/xla/issues/7174)"
-  )
   def test_grad_accum(self):
 
     class MLP(nn.Module):
