@@ -964,8 +964,11 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
 void PjRtComputationClient::WaitDeviceOps(
     absl::Span<const std::string> devices) {
   TF_VLOG(3) << "Waiting for " << absl::StrJoin(devices, ", ");
-  operation_manager_.WaitForDevices(devices.empty() ? GetLocalDevices()
-                                                    : devices);
+  operation_manager_.WaitForDevices(
+      devices.empty()
+          ? (UseVirtualDevice() ? std::vector<std::string>({spmd_device_str})
+                                : GetLocalDevices())
+          : devices);
 }
 
 std::map<std::string, Metric> PjRtComputationClient::GetMetrics() const {
