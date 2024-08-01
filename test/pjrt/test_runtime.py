@@ -57,9 +57,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
                    xr.global_device_count())
 
-  def test_world_size(self):
-    self.assertEqual(xr.world_size(), xr.world_size())
-
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
@@ -79,15 +76,19 @@ class TestExperimentalPjrt(parameterized.TestCase):
       'GPU_NUM_DEVICES': '4'
   }, True))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
-    with mock.patch.dict(os.environ, env_vars, clear=True):
-      # We need to reload the torch_xla module because clear=True will clear all os.environ.
-      global torch_xla
-      reload(torch_xla)
-      logs_context = contextlib.nullcontext()
-      if expect_using_pjrt:
-        self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])
-      else:
-        self.assertIsNone(xr.device_type())
+    # Prevent flag checking during reinitialization of PJRT backend.
+    # Without the patch, the test will be impacted by other tests when torch_xla reloads.
+    with mock.patch(
+        'torch_xla._XLAC._xla_runtime_is_initialized', return_value=False):
+      with mock.patch.dict(os.environ, env_vars, clear=True):
+        # We need to reload the torch_xla module because clear=True will clear all os.environ.
+        global torch_xla
+        reload(torch_xla)
+        logs_context = contextlib.nullcontext()
+        if expect_using_pjrt:
+          self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])
+        else:
+          self.assertIsNone(xr.device_type())
 
   def test_host_index(self):
     self.assertEqual(xr.host_index(), 0)
