@@ -200,6 +200,8 @@ function run_xla_op_tests2 {
   run_test "$CDIR/eager/test_eager_with_torch_compile.py"
   run_test "$CDIR/eager/test_eager_all_reduce_in_place.py"
   run_test "$CDIR/eager/test_eager_spmd.py"
+  run_test "$CDIR/test_callback.py"
+  XLA_USE_SPMD=1 run_test "$CDIR/test_callback.py"
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
