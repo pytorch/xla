@@ -2,19 +2,29 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-
 [project]
 version = "0.0.1"
 name = "torch_xla2"
 dependencies = [
     "absl-py",
-    "flatbuffers",
-    "jax>=0.4.24",
-    "jaxlib>=0.4.24",
+    "immutabledict",
     "pytest",
-    "tensorflow",
-    "torch",
+    "tensorflow-cpu",
+    # Developers should install `dev-requirements.txt` first
+    "torch>=2.3.0",
 ]
-
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
+
+[project.optional-dependencies]
+cpu = ["jax[cpu]>=0.4.30", "jax[cpu]"]
+# Add libtpu index `-f https://storage.googleapis.com/libtpu-releases/index.html`
+tpu = ["jax[cpu]>=0.4.30", "jax[tpu]"]
+cuda = ["jax[cpu]>=0.4.30", "jax[cuda12]"]
+
+[tool.pytest.ini_options]
+addopts="-n auto"
+
+[tool.ruff]
+line-length = 80
+indent-width = 2

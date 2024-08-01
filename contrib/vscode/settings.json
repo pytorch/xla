@@ -14,9 +14,19 @@
     "coverage-gutters.coverageFileNames": [
         "./bazel-out/_coverage/_coverage_report.dat"
     ],
-    "lcov.path": [
-        "./bazel-out/_coverage/_coverage_report.dat"
+    "git.detectSubmodules": false,
+    "[python]": {
+        "editor.defaultFormatter": "eeyore.yapf",
+        "editor.formatOnSave": true,
+    },
+    "python.analysis.exclude": [
+        "**/third_party",
+        "**/build",
+        "**/__pycache__",
+        "**/.git",
     ],
-    "python.formatting.provider": "yapf",
-    "editor.formatOnSave": true
+    "[cpp]": {
+        "editor.defaultFormatter": "xaver.clang-format",
+        "editor.formatOnSave": true,
+    }
 }

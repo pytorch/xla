@@ -6,12 +6,14 @@ dev_images = [
   },
   {
     accelerator  = "cuda"
-    cuda_version = "11.8"
+    cuda_version = "12.1"
     extra_tags   = ["cuda"]
+    python_version = "3.10"
   },
   {
     accelerator  = "cuda"
-    cuda_version = "12.1"
+    cuda_version = "12.3"
     extra_tags   = ["cuda"]
+    python_version = "3.10"
   }
 ]

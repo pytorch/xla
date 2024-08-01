@@ -6,10 +6,67 @@ import torch
 from torch import nn as nn
 
 import torch_xla
+import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
+from torch_xla._internal import tpu
+
+import numpy as np
+
+if xr.device_type() == 'TPU':
+  from torch_xla.experimental.custom_kernel import jax_import_guard
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
+  from jax.experimental import pallas as pl
 
 
 class PallasTest(unittest.TestCase):
+
+  # This is to create a diagonal mask where only elements within the same segment
+  # can attend to each other. Since the mask is to mask out the unrelevant parts,
+  # therefore we use != instead of ==.
+  def _make_attention_mask_from_segment_ids(self, q_segment_ids,
+                                            kv_segment_ids):
+    return q_segment_ids.view(q_segment_ids.shape[0], 1,
+                              q_segment_ids.shape[1], 1) != kv_segment_ids.view(
+                                  kv_segment_ids.shape[0], 1, 1,
+                                  kv_segment_ids.shape[1])
+
+  def _attention(self, q, k, v, *, attn_mask=None):
+    attn_weight = q @ k.transpose(-2, -1)
+    if attn_mask is not None:
+      # Masked out the unrelevant parts.
+      attn_weight = attn_weight.masked_fill(attn_mask,
+                                            torch.finfo(attn_weight.dtype).min)
+    attn_weight = nn.functional.softmax(attn_weight, dim=-1)
+    attn_output = attn_weight @ v
+    return attn_output
+
+  # The following helper functions prefixed with _pagedattention are used for PagedAttention unit tests
+  # Reference: https://github.com/google/jax/blob/main/tests/pallas/paged_attention_kernel_test.py
+  def _pagedattention_generate_qkv(
+      self,
+      seq_lens,
+      page_size,
+      max_seq_len,
+      num_kv_heads,
+      num_heads,
+      head_dim,
+      dtype=torch.float32,
+  ):
+    assert max_seq_len % page_size == 0
+    pages_per_sequence = max_seq_len // page_size
+    batch_size = len(seq_lens)
+    total_pages = batch_size * pages_per_sequence
+    k_pages = torch.randn(
+        num_kv_heads, total_pages, page_size, head_dim, dtype=dtype)
+    v_pages = torch.randn(
+        num_kv_heads, total_pages, page_size, head_dim, dtype=dtype)
+    page_indices = torch.randperm(
+        batch_size * pages_per_sequence, dtype=torch.int32)
+    page_indices = page_indices.reshape(batch_size, pages_per_sequence)
+    q = torch.randn(batch_size, num_heads, head_dim, dtype=dtype)
+    return q, k_pages, v_pages, page_indices
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_add(self):
@@ -22,10 +79,10 @@ class PallasTest(unittest.TestCase):
     x = torch.arange(8, dtype=torch.int).to("xla")
     y = torch.arange(8, dtype=torch.int).to("xla")
     expected_output = x + y
-    output = torch.arange(8, dtype=torch.int).to("xla")
 
-    torch_xla._XLAC._xla_tpu_custom_call_(output, [x, y], payload)
-    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+    output = torch_xla._XLAC._xla_tpu_custom_call([x, y], payload, [x.shape],
+                                                  [x.dtype])
+    self.assertTrue(torch.allclose(output[0].cpu(), expected_output.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_add_one(self):
@@ -36,10 +93,10 @@ class PallasTest(unittest.TestCase):
 
     x = torch.arange(8, dtype=torch.int).to("xla")
     expected_output = x + 1
-    output = torch.arange(8, dtype=torch.int).to("xla")
 
-    torch_xla._XLAC._xla_tpu_custom_call_(output, [x], payload)
-    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+    output = torch_xla._XLAC._xla_tpu_custom_call([x], payload, [x.shape],
+                                                  [x.dtype])
+    self.assertTrue(torch.allclose(output[0].cpu(), expected_output.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_raise(self):
@@ -48,21 +105,16 @@ class PallasTest(unittest.TestCase):
     #   o_ref[...] = x_ref[...] + 1
     payload = "{\"custom_call_config\": {\"body\": \"TUzvUgFNTElSMTguMC4wZ2l0AAEtCwEDBQcJAQMLAwUDDQcFDxEJBxMVFwNlSQ0BRwcPCw8PDxMLDzMLCwsLZQsLCwsPCw8LEw8PCxMPCxMTDwsLBQNhAQ0bDxMHFw8CpgIfFSsxBRkdQwMdRQMRCwEDAw8nBRsdKQMDCxUXGRsfCyELIyUFHQEBBR8NCWFmZmluZV9tYXA8KGQwKSAtPiAoZDApPgAFIQUjBSUFJxEHAQUpHS0vBSsXBRsBFTM5HTU3BS0XBS8BHTs9BS8XBUUBAwMPQREDBQUxBTMjdHB1Lm1lbW9yeV9zcGFjZTx2bWVtPgAXRwMhAx0BAgInAyEDAwUFAQEBAQIEBKEFARABBwMBBQMRARMHAxMnBQEBAQEHAxENAwcLBhEDBQUBBQcDBz8DAw0GBwMFAwkJBgcDBQUHCwcDCQ0DBwsGCQMFBQMPDwQJBw0DDwUAAQYDAQUBAMIHNdsLEyEv2QsTIyEdKQ1DDRULCxMPDw8NCQsRYnVpbHRpbgBmdW5jAHRwdQBhcml0aAB2ZWN0b3IAbW9kdWxlAHJldHVybgBjb25zdGFudABhZGRpAGxvYWQAYnJvYWRjYXN0AHN0b3JlAC9ob21lL2p3dGFuL3BhbGxhcy9wYWxsYXNfYWRkLnB5AHZhbHVlAGRpbWVuc2lvbl9zZW1hbnRpY3MAZnVuY3Rpb25fdHlwZQBzY2FsYXJfcHJlZmV0Y2gAc2NyYXRjaF9vcGVyYW5kcwBzeW1fbmFtZQBtYWluAC9nZXRbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAGFkZF9vbmVfdmVjdG9yc19rZXJuZWwAYWRkX3ZlY3RvcnNfb25lADxtb2R1bGU+AC9hZGQAL3N3YXBbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAA==\", \"needs_layout_passes\": true}}"
 
-    output = torch.arange(8, dtype=torch.int).to("xla")
-
-    # _xla_tpu_custom_call_ requires at least one input.
+    # _xla_tpu_custom_call requires at least one input.
     with self.assertRaises(RuntimeError):
-      torch_xla._XLAC._xla_tpu_custom_call_(output, [], payload)
+      torch_xla._XLAC._xla_tpu_custom_call([], payload, [(8, 1)], [torch.int32])
       output.cpu()
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
-  # Mosiac is not compatible with our sorted layout that boosts performance for dim > 2 tensor input applications, like resnet.
-  # For LLM, it should be fine since all inputs are 2D.
-  @unittest.mock.patch.dict(os.environ, {"XLA_TPU_LAYOUT": "0"})
   def test_tpu_custom_call_pallas_flash_attention(self):
     # This payload is generated by the following Pallas code:
     # https://github.com/google/jax/blob/b2058d72b7e1693a41303d5411572aabf99b7981/jax/experimental/pallas/ops/tpu/flash_attention.py#L139
-    # To be noted, set `jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)`` before generating the payload.
+    # To be noted, set `jax.config.update('jax_default_matmul_precision', 'highest')`` before generating the payload.
     payload = "{\"custom_call_config\": {\"body\": \"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eC9leHBlcmltZW50YWwvcGFsbGFzL29wcy90cHUvZmxhc2hfYXR0ZW50aW9uLnB5AF9mbGFzaF9hdHRlbnRpb25fa2VybmVsX3NpbmdsZV9iYXRjaF9zaW5nbGVfc3RlcAB2YWx1ZQBmdW5jdGlvbl90eXBlAHN5bV9uYW1lAHRyYW5zZm9ybV9pbmRpY2VzAHdpbmRvd19ib3VuZHMAL2dldFt0cmVlPVB5VHJlZURlZigoQ3VzdG9tTm9kZShOREluZGV4ZXJbKFB5VHJlZURlZigoKiwgKiwgQ3VzdG9tTm9kZShTbGljZVsoMCwgMTI4KV0sIFtdKSwgQ3VzdG9tTm9kZShTbGljZVsoMCwgNCldLCBbXSkpKSwgKDEsIDEsIDEyOCwgNCksICgpKV0sIFsqLCAqXSksKSldAHRyYW5zZm9ybV8wAHRyYW5zZm9ybV8xAHRyYW5zZm9ybV8yAHRyYW5zZm9ybV8zAHByZWNpc2lvbgB0cmFuc3Bvc2VfbGhzAHRyYW5zcG9zZV9yaHMAa2luZAByZWR1Y3Rpb25fZGltcwAvYnJvYWRjYXN0X2luX2RpbVtzaGFwZT0oMTI4LCAxKSBicm9hZGNhc3RfZGltZW5zaW9ucz0oMCwpXQBkaW1lbnNpb25fc2VtYW50aWNzAGl0ZXJhdGlvbl9ib3VuZHMAc2NhbGFyX3ByZWZldGNoAHNjcmF0Y2hfb3BlcmFuZHMAbWFpbgB3aW5kb3dfcGFyYW1zAF9mbGFzaF9hdHRlbnRpb25fa2VybmVsAF9mbGFzaF9hdHRlbnRpb25faW1wbABfZmxhc2hfYXR0ZW50aW9uAGZsYXNoX2F0dGVudGlvbgA8bW9kdWxlPgAvbW50L2Rpc2tzL3NzZC93b3JrL3BhbGxhcy9wYWxsYXNfYWRkLnB5AC9kb3RfZ2VuZXJhbFtkaW1lbnNpb25fbnVtYmVycz0oKCgxLCksICgxLCkpLCAoKCksICgpKSkgcHJlY2lzaW9uPSg8UHJlY2lzaW9uLkhJR0hFU1Q6IDI+LCA8UHJlY2lzaW9uLkhJR0hFU1Q6IDI+KSBwcmVmZXJyZWRfZWxlbWVudF90eXBlPWZsb2F0MzJdAC9yZWR1Y2VfbWF4W2F4ZXM9KDEsKV0AL3N1YgBmYXN0bWF0aAAvZXhwAC9yZWR1Y2Vfc3VtW2F4ZXM9KDEsKV0AL2RpdgAvZG90X2dlbmVyYWxbZGltZW5zaW9uX251bWJlcnM9KCgoMSwpLCAoMCwpKSwgKCgpLCAoKSkpIHByZWNpc2lvbj0oPFByZWNpc2lvbi5ISUdIRVNUOiAyPiwgPFByZWNpc2lvbi5ISUdIRVNUOiAyPikgcHJlZmVycmVkX2VsZW1lbnRfdHlwZT1mbG9hdDMyXQAvc3dhcFt0cmVlPVB5VHJlZURlZigoQ3VzdG9tTm9kZShOREluZGV4ZXJbKFB5VHJlZURlZigoKiwgKiwgQ3VzdG9tTm9kZShTbGljZVsoMCwgMTI4KV0sIFtdKSwgQ3VzdG9tTm9kZShTbGljZVsoMCwgNCldLCBbXSkpKSwgKDEsIDEsIDEyOCwgNCksICgpKV0sIFsqLCAqXSksKSldAA==\", \"needs_layout_passes\": true}}"
 
     # The division is to cause potential precision issue on TPU.
@@ -72,50 +124,16 @@ class PallasTest(unittest.TestCase):
     q = q_mini.broadcast_to(3, 2, 128, 4).to("xla")
     k = k_mini.broadcast_to(3, 2, 128, 4).to("xla")
     v = torch.ones(3, 2, 128, 4).to("xla")
-    o = torch.zeros(3, 2, 128, 4).to("xla")
 
-    def attention(q, k, v):
-      attn_weight = q @ k.transpose(-2, -1)
-      attn_weight = nn.functional.softmax(attn_weight, dim=-1)
-      attn_output = attn_weight @ v
-      return attn_output
+    expected_o = self._attention(q, k, v)
 
-    expected_o = attention(q, k, v)
-
-    torch_xla._XLAC._xla_tpu_custom_call_(o, [q, k, v], payload)
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
-
-  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
-  # TODO: Make the tpu_custom_call_ as functional.
-  @unittest.mock.patch.dict(os.environ, {"XLA_DISABLE_FUNCTIONALIZATION": "1"})
-  def test_tpu_custom_call_pallas_add_one_dynamo(self):
-    # This payload is generated by the following Pallas code:
-    # def add_vectors_kernel(x_ref, o_ref):
-    #   o_ref[...] = x_ref[...] + 1
-    payload = "{\"custom_call_config\": {\"body\": \"TUzvUgFNTElSMTguMC4wZ2l0AAEtCwEDBQcJAQMLAwUDDQcFDxEJBxMVFwNlSQ0BRwcPCw8PDxMLDzMLCwsLZQsLCwsPCw8LEw8PCxMPCxMTDwsLBQNhAQ0bDxMHFw8CpgIfFSsxBRkdQwMdRQMRCwEDAw8nBRsdKQMDCxUXGRsfCyELIyUFHQEBBR8NCWFmZmluZV9tYXA8KGQwKSAtPiAoZDApPgAFIQUjBSUFJxEHAQUpHS0vBSsXBRsBFTM5HTU3BS0XBS8BHTs9BS8XBUUBAwMPQREDBQUxBTMjdHB1Lm1lbW9yeV9zcGFjZTx2bWVtPgAXRwMhAx0BAgInAyEDAwUFAQEBAQIEBKEFARABBwMBBQMRARMHAxMnBQEBAQEHAxENAwcLBhEDBQUBBQcDBz8DAw0GBwMFAwkJBgcDBQUHCwcDCQ0DBwsGCQMFBQMPDwQJBw0DDwUAAQYDAQUBAMIHNdsLEyEv2QsTIyEdKQ1DDRULCxMPDw8NCQsRYnVpbHRpbgBmdW5jAHRwdQBhcml0aAB2ZWN0b3IAbW9kdWxlAHJldHVybgBjb25zdGFudABhZGRpAGxvYWQAYnJvYWRjYXN0AHN0b3JlAC9ob21lL2p3dGFuL3BhbGxhcy9wYWxsYXNfYWRkLnB5AHZhbHVlAGRpbWVuc2lvbl9zZW1hbnRpY3MAZnVuY3Rpb25fdHlwZQBzY2FsYXJfcHJlZmV0Y2gAc2NyYXRjaF9vcGVyYW5kcwBzeW1fbmFtZQBtYWluAC9nZXRbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAGFkZF9vbmVfdmVjdG9yc19rZXJuZWwAYWRkX3ZlY3RvcnNfb25lADxtb2R1bGU+AC9hZGQAL3N3YXBbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAA==\", \"needs_layout_passes\": true}}"
-
-    x = torch.arange(8, dtype=torch.int).to("xla")
-    expected_output = x + 1
-    output = torch.arange(8, dtype=torch.int).to("xla")
-
-    import torch_xla.experimental.custom_kernel
-
-    def add_one_pallas(output, inputs, payload):
-      torch.ops.xla.tpu_custom_call_(output, inputs, payload)
-
-    compiled_add_one_pallas = torch.compile(
-        add_one_pallas, backend='openxla', fullgraph=True)
-
-    compiled_add_one_pallas(output, [x], payload)
-    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+    o = torch_xla._XLAC._xla_tpu_custom_call([q, k, v], payload, [q.shape],
+                                             [q.dtype])
+    self.assertTrue(torch.allclose(o[0].cpu(), expected_o.cpu()))
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_extract_add_payload(self):
-    import jax
-    import jax.numpy as jnp
     import jax._src.pallas.mosaic.pallas_call_registration
-
-    from jax.experimental import pallas as pl
 
     def add_vectors_kernel(x_ref, y_ref, o_ref):
       x, y = x_ref[...], y_ref[...]
@@ -136,13 +154,7 @@ class PallasTest(unittest.TestCase):
     self.assertIn("custom_call_config", payload)
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
-  # TODO: This test cannot be ran individually, let's fix it.
   def test_tpu_custom_call_pallas_wrap_add_payload(self):
-    import jax
-    import jax.numpy as jnp
-    import jax._src.pallas.mosaic.pallas_call_registration
-
-    from jax.experimental import pallas as pl
 
     def add_vectors_kernel(x_ref, y_ref, o_ref):
       x, y = x_ref[...], y_ref[...]
@@ -155,11 +167,12 @@ class PallasTest(unittest.TestCase):
                                                              x.dtype))(x, y)
 
     from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
-    pt_kernel = make_kernel_from_pallas(add_vectors, lambda x, y:
-                                        (x.shape, x.dtype))
+    pt_kernel = make_kernel_from_pallas(add_vectors,
+                                        lambda x, y: [(x.shape, x.dtype)])
 
-    dtypes = [torch.float32, torch.float
-             ]  # TODO: torch.float64, torch.bfloat16, torch.float16 don't work.
+    dtypes = [
+        torch.float32, torch.float
+    ]  # Add doesn't support torch.float64, torch.bfloat16, torch.float16.
     for i in range(len(dtypes)):
       x = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
       y = torch.randn((i + 1, i + 1), dtype=dtypes[i]).to("xla")
@@ -169,7 +182,7 @@ class PallasTest(unittest.TestCase):
 
     dtypes = [
         torch.int32, torch.int
-    ]  # TODO: torch.int64, torch.int16, torch.int8, torch.uint8 don't work.
+    ]  # Add doesn't support torch.int64, torch.int16, torch.int8, torch.uint8.
     for i in range(len(dtypes)):
       x = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
       y = torch.arange(i + 1, dtype=dtypes[i]).to("xla")
@@ -177,13 +190,741 @@ class PallasTest(unittest.TestCase):
       output = pt_kernel(x, y)
       self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
 
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_tpu_custom_call_pallas_wrap_flash_attention(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention
+    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    flash_attention_kernel = make_kernel_from_pallas(
+        flash_attention, lambda q, k, v: [(q.shape, q.dtype)])
+
+    q_mini = torch.arange(128 * 4, dtype=torch.bfloat16).reshape(128, 4) / 13
+    k_mini = torch.arange(
+        1000, 1000 + 128 * 4, dtype=torch.bfloat16).reshape(128, 4) / 13
+    q = q_mini.broadcast_to(3, 2, 128, 4).to("xla")
+    k = k_mini.broadcast_to(3, 2, 128, 4).to("xla")
+    v = torch.ones(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+
+    o = flash_attention_kernel(q, k, v)
+    expected_o = self._attention(q, k, v)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu()))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+
+    o = flash_attention(q, k, v)
+    expected_o = self._attention(q, k, v)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper_with_dynamo(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    def flash_attention_wrapper(q, k, v, causal=False):
+      return torch.ops.xla.flash_attention(q, k, v, causal)
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+
+    compiled_flash_attention = torch.compile(
+        flash_attention_wrapper, backend="openxla")
+    o_no_causal = compiled_flash_attention(q, k, v)
+    o_with_causal = compiled_flash_attention(q, k, v, causal=True)
+    expected_o = self._attention(q, k, v)
+    self.assertTrue(torch.allclose(o_no_causal.cpu(), expected_o.cpu()))
+    # The causal mask is turned on by default in the wrapper.
+    # It masks out the top right triangle of the attention matrix,
+    # therefore it speeds up the compute but also changes the output.
+    self.assertFalse(
+        torch.allclose(o_with_causal.cpu(), expected_o.cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper_causal(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+
+    # The causal mask is turned on by default in the wrapper.
+    # It masks out the top right triangle of the attention matrix, therefore it speeds up the compute but also changes the output.
+    o = flash_attention(q, k, v, causal=True)
+    expected_o = self._attention(q, k, v)
+    self.assertFalse(torch.allclose(o.cpu(), expected_o.cpu()))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_multiple_returns(self):
+    import jax._src.pallas.mosaic.pallas_call_registration
+
+    def add_minus_vectors_kernel(x_ref, y_ref, o1_ref, o2_ref):
+      x, y = x_ref[...], y_ref[...]
+      o1_ref[...] = x + y
+      o2_ref[...] = x - y
+
+    @jax.jit
+    def add_minus_vectors(x: jax.Array, y: jax.Array) -> jax.Array:
+      out_shape = jax.ShapeDtypeStruct(x.shape, x.dtype)
+      return pl.pallas_call(
+          add_minus_vectors_kernel, out_shape=[out_shape, out_shape])(x, y)
+
+    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    pt_kernel = make_kernel_from_pallas(
+        add_minus_vectors, lambda x, y: [(x.shape, x.dtype),
+                                         (x.shape, x.dtype)])
+    x = torch.arange(8, device="xla", dtype=torch.float)
+    o = pt_kernel(x, x)
+    self.assertEqual(len(o), 2)
+
+    expected_o0 = x + x
+    expected_o1 = x - x
+    self.assertTrue(torch.allclose(o[0].cpu(), expected_o0.cpu()))
+    self.assertTrue(torch.allclose(o[1].cpu(), expected_o1.cpu()))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test__flash_attention_impl(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
+    from torch_xla.experimental.custom_kernel import make_kernel_from_pallas
+    MIN_BLOCK_SIZE = 128
+
+    def shape_dtype(q, *arg):
+      res_shape = list(q.shape)
+      res_shape[-1] = MIN_BLOCK_SIZE
+      return [(q.shape, q.dtype), (res_shape, torch.float32),
+              (res_shape, torch.float32)]
+
+    flash_attention_kernel = make_kernel_from_pallas(_flash_attention_impl,
+                                                     shape_dtype)
+
+    q = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+    k = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+    v = torch.randn(3, 2, 128, 4, dtype=torch.bfloat16).to("xla")
+
+    o, l, m = flash_attention_kernel(
+        q,
+        k,
+        v,
+        None,
+        None,
+        True,
+        False,
+        1.0,
+        2,
+        128,
+        128,
+        128,
+        False,
+        static_argnums=range(5, 13))
+    xm.mark_step()
+
+    # TODO: I don't really know how to test the value. Let's do the shape check for now.
+    self.assertEqual(l.shape, (3, 2, 128, MIN_BLOCK_SIZE))
+    self.assertEqual(l.dtype, torch.float32)
+    self.assertEqual(m.shape, (3, 2, 128, MIN_BLOCK_SIZE))
+    self.assertEqual(m.dtype, torch.float32)
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test__flash_attention_bwd_dkv(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dkv
+    from torch_xla.experimental.custom_kernel import trace_pallas
+    MIN_BLOCK_SIZE = 128
+    DEFAULT_MASK_VALUE = -0.7 * float(torch.finfo(torch.float32).max)
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    l = torch.randn(3, 2, 128).to("xla")
+    m = torch.randn(3, 2, 128).to("xla")
+    grad_i = torch.randn(3, 2, 128, dtype=torch.float32).to("xla")
+    grad_o = torch.randn(3, 2, 128, 4).to("xla")
+
+    payload, _ = trace_pallas(
+        _flash_attention_bwd_dkv,
+        q,
+        k,
+        v,
+        None,
+        None,
+        l,
+        m,
+        grad_o,
+        grad_i,
+        block_q_major=128,
+        block_k_major=128,
+        block_k=128,
+        block_q=128,
+        sm_scale=1.0,
+        causal=False,
+        mask_value=DEFAULT_MASK_VALUE,
+        debug=False,
+        static_argnames=[
+            "block_q_major", "block_k_major", "block_k", "block_q", "sm_scale",
+            "causal", "mask_value", "debug"
+        ])
+
+    # TODO: Because of the following reshapes, we can't use make_kernel_from_pallas directly.
+    l = l.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    m = m.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    output = torch_xla._XLAC._xla_tpu_custom_call(
+        [q, k, v, l, m, grad_o, grad_i], payload, [k.shape, v.shape],
+        [k.dtype, v.dtype])
+
+    xm.mark_step()
+
+    # TODO: I don't really know how to test the value. Let's do the shape check for now.
+    self.assertEqual(output[0].shape, (3, 2, 128, 4))
+    self.assertEqual(output[1].shape, (3, 2, 128, 4))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test__flash_attention_bwd_dkv(self):
+    from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq
+    from torch_xla.experimental.custom_kernel import trace_pallas
+    MIN_BLOCK_SIZE = 128
+    DEFAULT_MASK_VALUE = -0.7 * float(torch.finfo(torch.float32).max)
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    l = torch.randn(3, 2, 128).to("xla")
+    m = torch.randn(3, 2, 128).to("xla")
+    grad_i = torch.randn(3, 2, 128, dtype=torch.float32).to("xla")
+    grad_o = torch.randn(3, 2, 128, 4).to("xla")
+
+    payload, _ = trace_pallas(
+        _flash_attention_bwd_dq,
+        q,
+        k,
+        v,
+        None,
+        None,
+        l,
+        m,
+        grad_o,
+        grad_i,
+        block_q_major=128,
+        block_k_major=128,
+        block_k=128,
+        sm_scale=1.0,
+        causal=False,
+        mask_value=DEFAULT_MASK_VALUE,
+        debug=False,
+        static_argnames=[
+            "block_q_major", "block_k_major", "block_k", "sm_scale", "causal",
+            "mask_value", "debug"
+        ])
+
+    # TODO: Because of the following reshapes, we can't use make_kernel_from_pallas directly.
+    l = l.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    m = m.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    grad_i = grad_i.unsqueeze(-1).expand(3, 2, 128, MIN_BLOCK_SIZE)
+    output = torch_xla._XLAC._xla_tpu_custom_call(
+        [q, k, v, l, m, grad_o, grad_i], payload, [q.shape], [q.dtype])
+
+    xm.mark_step()
+
+    # TODO: I don't really know how to test the value. Let's do the shape check for now.
+    self.assertEqual(output[0].shape, (3, 2, 128, 4))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_backward(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = flash_attention(q, k, v)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = self._attention(q, k, v)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_paged_attention_wrapper(self):
+    from torch_xla.experimental.custom_kernel import paged_attention
+    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
+
+    max_kv_len = 2048
+    block_size = 512
+    page_size = 64
+    num_kv_heads = 8
+    q_kv_head_ratio = 8
+    head_dim = 256
+    dtype = torch.float32
+    seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
+
+    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+        seq_lens,
+        page_size,
+        max_kv_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+    )
+
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    seq_lens_xla = seq_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+
+    output = paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        seq_lens_xla,
+        page_indices_xla,
+        pages_per_compute_block=block_size // page_size,
+    )
+
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    seq_lens_jax = jnp.array(seq_lens.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    expected_output = torch.from_numpy(
+        np.array(
+            jax_paged_attention(
+                q_jax,
+                k_pages_jax,
+                v_pages_jax,
+                seq_lens_jax,
+                page_indices_jax,
+                pages_per_compute_block=block_size // page_size,
+            )))
+
+    self.assertTrue(
+        torch.allclose(
+            output.cpu()[seq_lens > 0],
+            expected_output.cpu()[seq_lens > 0],
+            atol=1e-5,
+            rtol=1e-5))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
+                   "This test only works on TPUv4 and TPUv5p.")
+  def test_paged_attention_wrapper_with_megacore_modes(self):
+    # TODO: enable checking TPU accelerator types.
+    from torch_xla.experimental.custom_kernel import paged_attention
+    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
+
+    max_kv_len = 2048
+    block_size = 512
+    page_size = 64
+    num_kv_heads = 8
+    q_kv_head_ratio = 8
+    head_dim = 256
+    dtype = torch.float32
+    seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
+
+    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+        seq_lens,
+        page_size,
+        max_kv_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+    )
+
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    seq_lens_xla = seq_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+
+    outputs = []
+    for megacore_mode in ['kv_head', 'batch', None]:
+      outputs.append(
+          paged_attention(
+              q_xla,
+              k_pages_xla,
+              v_pages_xla,
+              seq_lens_xla,
+              page_indices_xla,
+              pages_per_compute_block=block_size // page_size,
+              megacore_mode=megacore_mode))
+
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    seq_lens_jax = jnp.array(seq_lens.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    expected_outputs = []
+    for megacore_mode in ['kv_head', 'batch', None]:
+      expected_outputs.append(
+          torch.from_numpy(
+              np.array(
+                  jax_paged_attention(
+                      q_jax,
+                      k_pages_jax,
+                      v_pages_jax,
+                      seq_lens_jax,
+                      page_indices_jax,
+                      pages_per_compute_block=block_size // page_size,
+                      megacore_mode=megacore_mode))))
+
+    for output, expected_output in zip(outputs, expected_outputs):
+      self.assertTrue(
+          torch.allclose(
+              output.cpu()[seq_lens > 0],
+              expected_output.cpu()[seq_lens > 0],
+              atol=1e-5,
+              rtol=1e-5))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_paged_attention_wrapper_with_dynamo(self):
+    from torch_xla.experimental.custom_kernel import paged_attention
+    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
+
+    max_kv_len = 2048
+    block_size = 512
+    page_size = 64
+    num_kv_heads = 8
+    q_kv_head_ratio = 8
+    head_dim = 256
+    dtype = torch.float32
+    seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
+
+    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+        seq_lens,
+        page_size,
+        max_kv_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+    )
+
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    seq_lens_xla = seq_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+
+    def paged_attention_wrapper(q, k, v, seq_lens, page_indices,
+                                pages_per_compute_block):
+      return torch.ops.xla.paged_attention(
+          q,
+          k,
+          v,
+          seq_lens,
+          page_indices,
+          pages_per_compute_block=pages_per_compute_block,
+      )
+
+    compiled_paged_attention = torch.compile(
+        paged_attention_wrapper, backend="openxla")
+
+    output = compiled_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        seq_lens_xla,
+        page_indices_xla,
+        pages_per_compute_block=block_size // page_size,
+    )
+
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    seq_lens_jax = jnp.array(seq_lens.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    expected_output = torch.from_numpy(
+        np.array(
+            jax_paged_attention(
+                q_jax,
+                k_pages_jax,
+                v_pages_jax,
+                seq_lens_jax,
+                page_indices_jax,
+                pages_per_compute_block=block_size // page_size,
+            )))
+
+    self.assertTrue(
+        torch.allclose(
+            output.cpu()[seq_lens > 0],
+            expected_output.cpu()[seq_lens > 0],
+            atol=1e-5,
+            rtol=1e-5))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_paged_attention_wrapper_with_attn_logits_soft_cap(self):
+    # TODO: enable checking TPU accelerator types.
+    from torch_xla.experimental.custom_kernel import paged_attention
+    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
+
+    max_kv_len = 2048
+    block_size = 512
+    page_size = 64
+    num_kv_heads = 8
+    q_kv_head_ratio = 8
+    head_dim = 256
+    dtype = torch.float32
+    seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
+
+    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+        seq_lens,
+        page_size,
+        max_kv_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+    )
+
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    seq_lens_xla = seq_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+
+    outputs = []
+    for attn_logits_soft_cap in [1.0, None]:
+      outputs.append(
+          paged_attention(
+              q_xla,
+              k_pages_xla,
+              v_pages_xla,
+              seq_lens_xla,
+              page_indices_xla,
+              pages_per_compute_block=block_size // page_size,
+              attn_logits_soft_cap=attn_logits_soft_cap))
+
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    seq_lens_jax = jnp.array(seq_lens.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    expected_outputs = []
+    for attn_logits_soft_cap in [1.0, None]:
+      expected_outputs.append(
+          torch.from_numpy(
+              np.array(
+                  jax_paged_attention(
+                      q_jax,
+                      k_pages_jax,
+                      v_pages_jax,
+                      seq_lens_jax,
+                      page_indices_jax,
+                      pages_per_compute_block=block_size // page_size,
+                      attn_logits_soft_cap=attn_logits_soft_cap))))
+
+    for output, expected_output in zip(outputs, expected_outputs):
+      self.assertTrue(
+          torch.allclose(
+              output.cpu()[seq_lens > 0],
+              expected_output.cpu()[seq_lens > 0],
+              atol=1e-5,
+              rtol=1e-5))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper_segment_ids_1(self):
+    from torch_xla.experimental.custom_kernel import flash_attention
+    from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention as jax_flash_attention, SegmentIds
+
+    q = torch.randn(3, 2, 128, 4)
+    k = torch.randn(3, 2, 128, 4)
+    v = torch.randn(3, 2, 128, 4)
+    zeros = torch.zeros(3, 32)
+    segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
+    o = flash_attention(
+        q.to("xla"), k.to("xla"), v.to("xla"), False, segment_ids.to("xla"),
+        segment_ids.to("xla"))
+
+    jax_q = jnp.array(q.numpy(), dtype=jnp.float32)
+    jax_k = jnp.array(k.numpy(), dtype=jnp.float32)
+    jax_v = jnp.array(v.numpy(), dtype=jnp.float32)
+    jax_segment_ids = jnp.array(segment_ids.numpy(), dtype=jnp.float32)
+    expected_o = torch.from_numpy(
+        np.array(
+            jax_flash_attention(
+                jax_q,
+                jax_k,
+                jax_v,
+                segment_ids=SegmentIds(jax_segment_ids, jax_segment_ids),
+            )))
+
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper_segment_ids_2(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    zeros = torch.zeros(3, 32).to("xla")
+    segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
+    o = flash_attention(q, k, v, False, segment_ids, segment_ids)
+
+    expected_o = self._attention(
+        q,
+        k,
+        v,
+        attn_mask=self._make_attention_mask_from_segment_ids(
+            segment_ids, segment_ids))
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_backward_segment_ids(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    zeros = torch.zeros(4, 32).to("xla")
+    segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = flash_attention(q, k, v, False, segment_ids, segment_ids)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    zeros = torch.zeros(4, 32).to("xla")
+    segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = self._attention(
+        q,
+        k,
+        v,
+        attn_mask=self._make_attention_mask_from_segment_ids(
+            segment_ids, segment_ids))
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper_sm_scale(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    sm_scale = 0.7
+    o = flash_attention(q, k, v, False, None, None, sm_scale)
+
+    expected_o = self._attention(q * sm_scale, k, v)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_sm_scale_backward(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    sm_scale = 0.7
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = flash_attention(q, k, v, False, None, None, sm_scale)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = self._attention(q * sm_scale, k, v)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    # Hmm, the gradients are the same even the autograd graph seems different.
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
-  # TODO: do we want to set the following flags?
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
+  torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

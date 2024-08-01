@@ -2,8 +2,8 @@ import os
 import sys
 import torch
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 def all_gather(tensor, dim):
@@ -12,7 +12,7 @@ def all_gather(tensor, dim):
 
 def _mp_fn(index):
   device = xm.xla_device()
-  world_size = xm.xrt_world_size()
+  world_size = xr.world_size()
   input_list_size = 5
   if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
     # Testing with a single replica group
@@ -95,6 +95,66 @@ def _mp_fn(index):
             file=sys.stderr)
         print(f'[{index}] {cpu_result}', file=sys.stderr)
         sys.exit(1)
+
+    # Testing with a single replica group and tensor list as input (Bucketized)
+    # TODO: add support for list input with pin_layout=True and output=None
+    result_list = xm.all_gather_bucketized(
+        ordinal_tensors, dim=0, pin_layout=False)
+
+    for i, result in enumerate(result_list):
+      cpu_result = result.cpu()
+      expected = i * 1000 + torch.arange(world_size, dtype=torch.float)
+      if not cpu_result.allclose(expected):
+        print(
+            'xm.all_gather_bucketized() produced wrong reductions for item {i} in result list',
+            file=sys.stderr)
+        print(f'[{index}] {cpu_result}', file=sys.stderr)
+        sys.exit(1)
+
+    # Testing with a single replica group and tensor list as input and output!=None (out-of-place) (Bucketized)
+    # Reuse ordinal_tensors from previous test
+    output_tensors = [
+        torch.zeros([world_size], dtype=torch.float).to(device)
+        for i in range(input_list_size)
+    ]
+    # TODO: add support for list input with pin_layout=True and output!=None
+    result_list = xm.all_gather_bucketized(
+        ordinal_tensors, dim=0, output=output_tensors, pin_layout=False)
+
+    for i, result in enumerate(result_list):
+      cpu_result = result.cpu()
+      expected = i * 1000 + torch.arange(world_size, dtype=torch.float)
+      if not cpu_result.allclose(expected):
+        print(
+            'xm.all_gather() produced wrong reductions for item {i} in result list',
+            file=sys.stderr)
+        print(f'[{index}] {cpu_result}', file=sys.stderr)
+        sys.exit(1)
+
+    # Testing with a single replica group and tensor list as input and output!=None (out-of-place) (Bucketized, zero bucket size)
+    # Reuse ordinal_tensors from previous test
+    output_tensors = [
+        torch.zeros([world_size], dtype=torch.float).to(device)
+        for i in range(input_list_size)
+    ]
+    # TODO: add support for list input with pin_layout=True and output!=None
+    result_list = xm.all_gather_bucketized(
+        ordinal_tensors,
+        dim=0,
+        output=output_tensors,
+        pin_layout=False,
+        bucket_cap_mb=0)
+
+    for i, result in enumerate(result_list):
+      cpu_result = result.cpu()
+      expected = i * 1000 + torch.arange(world_size, dtype=torch.float)
+      if not cpu_result.allclose(expected):
+        print(
+            'xm.all_gather() produced wrong reductions for item {i} in result list',
+            file=sys.stderr)
+        print(f'[{index}] {cpu_result}', file=sys.stderr)
+        sys.exit(1)
+
     # TODO: add test for torch.compile when support for list input is ready
 
   else:
@@ -102,4 +162,4 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=())
+  torch_xla.launch(_mp_fn, args=())

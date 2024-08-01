@@ -9,20 +9,36 @@ import torch_xla.utils.utils as xu
 import torch_xla.distributed.parallel_loader as pl
 import unittest
 from extract_debug_helper import (check_env_flag, extract_execution_cause,
-                                  extract_compilation_cause, GraphInfo,
-                                  extract_graph_infos, extract_python_frames)
+                                  extract_compilation_cause,
+                                  extract_graph_infos, extract_python_frames,
+                                  extract_post_compilation_analysis)
 
 
 class PtXLADebugTest(unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
-    if not check_env_flag('PT_XLA_DEBUG'):
+    pt_xla_debug_enabled = xu.getenv_as('PT_XLA_DEBUG', bool, False)
+    cls.debug_level = xu.getenv_as('PT_XLA_DEBUG_LEVEL', int, -1)
+    cls.debug_level = 100 if (cls.debug_level == -1 and
+                              pt_xla_debug_enabled) else cls.debug_level
+    if not check_env_flag('PT_XLA_DEBUG') and cls.debug_level == -1:
       assert False, "This test should be run with PT_XLA_DEBUG"
     cls.debug_file_name = os.getenv('PT_XLA_DEBUG_FILE')
     if not cls.debug_file_name:
       assert False, "This test should be run with PT_XLA_DEBUG_FILE"
     open(cls.debug_file_name, 'w').close()
+
+  def test_eager_mark_step(self):
+    with torch_xla.experimental.eager_mode_context(True):
+      device = xm.xla_device()
+      t1 = torch.randn(5, 9, device=device)
+      xm.mark_step()
+      with open(self.debug_file_name, 'rb') as f:
+        lines = f.readlines()
+      # We expect PT_XLA_BUDEG not to output anything under the eager mode
+      self.assertEqual(len(lines), 0)
+      open(self.debug_file_name, 'w').close()
 
   def test_user_mark_step(self):
     device = xm.xla_device()
@@ -33,19 +49,33 @@ class PtXLADebugTest(unittest.TestCase):
       executation_causes = extract_execution_cause(lines)
       compilation_causes = extract_compilation_cause(lines)
       graph_infos = extract_graph_infos(lines)
+      post_compilation_infos = extract_post_compilation_analysis(lines)
 
-    self.assertEqual(len(executation_causes), 1)
-    self.assertIn('user mark_step', executation_causes[0])
+    self.assertEqual(len(post_compilation_infos), 1)
+    self.assertIn('GB', post_compilation_infos[0].input_size)
+    self.assertIn('GB', post_compilation_infos[0].output_size)
+    self.assertIn('GB', post_compilation_infos[0].aliased_size)
+    self.assertIn('GB', post_compilation_infos[0].intermediate_size)
+    self.assertIn('GB', post_compilation_infos[0].program_size)
+
+    if self.debug_level > 1:
+      self.assertEqual(len(executation_causes), 1)
+      self.assertIn('user mark_step', executation_causes[0])
+    else:
+      self.assertEqual(len(executation_causes), 0)
 
     self.assertEqual(len(compilation_causes), 1)
     self.assertIn('user mark_step', compilation_causes[0])
 
-    self.assertEqual(len(graph_infos), 2)
-    # one graph info from compilation, one from execution, hash should match
-    self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+    if self.debug_level > 1:
+      self.assertEqual(len(graph_infos), 2)
+      # one graph info from compilation, one from execution, hash should match
+      self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+    else:
+      self.assertEqual(len(graph_infos), 1)
     # this graph has one input(random seed) and one output(t1)
-    self.assertEqual(graph_infos[1].num_input, 1)
-    self.assertEqual(graph_infos[1].num_output, 1)
+    self.assertEqual(graph_infos[0].num_input, 1)
+    self.assertEqual(graph_infos[0].num_output, 1)
     open(self.debug_file_name, 'w').close()
 
   def test_step_trace(self):
@@ -58,20 +88,26 @@ class PtXLADebugTest(unittest.TestCase):
       compilation_causes = extract_compilation_cause(lines)
       graph_infos = extract_graph_infos(lines)
 
-    self.assertEqual(len(causes), 1)
-    self.assertIn('mark_step when exiting a profiler StepTrace region',
-                  causes[0])
+    if self.debug_level > 1:
+      self.assertEqual(len(causes), 1)
+      self.assertIn('mark_step when exiting a profiler StepTrace region',
+                    causes[0])
+    else:
+      self.assertEqual(len(causes), 0)
 
     self.assertEqual(len(compilation_causes), 1)
     self.assertIn('mark_step when exiting a profiler StepTrace region',
                   compilation_causes[0])
 
-    self.assertEqual(len(graph_infos), 2)
-    # one graph info from compilation, one from execution, hash should match
-    self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+    if self.debug_level > 1:
+      self.assertEqual(len(graph_infos), 2)
+      # one graph info from compilation, one from execution, hash should match
+      self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+    else:
+      self.assertEqual(len(graph_infos), 1)
     # this graph has one input(random seed) and one output(t1)
-    self.assertEqual(graph_infos[1].num_input, 1)
-    self.assertEqual(graph_infos[1].num_output, 1)
+    self.assertEqual(graph_infos[0].num_input, 1)
+    self.assertEqual(graph_infos[0].num_output, 1)
     open(self.debug_file_name, 'w').close()
 
   def test_dynamo(self):
@@ -89,11 +125,14 @@ class PtXLADebugTest(unittest.TestCase):
       compilation_causes = extract_compilation_cause(lines)
       graph_infos = extract_graph_infos(lines)
 
-    self.assertEqual(len(executation_causes), 2)
-    self.assertIn('mark_step when dynamo processing input graphs',
-                  executation_causes[0])
-    self.assertIn('dynamo is executing a compiled program',
-                  executation_causes[1])
+    if self.debug_level > 1:
+      self.assertEqual(len(executation_causes), 2)
+      self.assertIn('mark_step when dynamo processing input graphs',
+                    executation_causes[0])
+      self.assertIn('dynamo is executing a compiled program',
+                    executation_causes[1])
+    else:
+      self.assertEqual(len(executation_causes), 0)
 
     self.assertEqual(len(compilation_causes), 2)
     self.assertIn('mark_step when dynamo processing input graphs',
@@ -101,17 +140,62 @@ class PtXLADebugTest(unittest.TestCase):
     self.assertIn('dynamo is compiling a FX graph to HLO',
                   compilation_causes[1])
 
-    # one graph info from compilation, one from execution, hash should match
-    self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+    if self.debug_level > 1:
+      # one graph info from compilation, one from execution, hash should match
+      self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
     # this graph has one input(random seed) and one output(t1)
-    self.assertEqual(graph_infos[1].num_input, 1)
-    self.assertEqual(graph_infos[1].num_output, 1)
+    self.assertEqual(graph_infos[0].num_input, 1)
+    self.assertEqual(graph_infos[0].num_output, 1)
 
-    # one graph info from dynamo compilation, one from dynamo execution, hash should match
-    self.assertEqual(graph_infos[2].hash, graph_infos[3].hash)
-    # this graph has two input(t1, 100) and one output
-    self.assertEqual(graph_infos[3].num_input, 2)
-    self.assertEqual(graph_infos[3].num_output, 1)
+    if self.debug_level > 1:
+      # one graph info from dynamo compilation, one from dynamo execution, hash should match
+      self.assertEqual(graph_infos[2].hash, graph_infos[3].hash)
+      # this graph has two input(t1, 100) and one output
+      self.assertEqual(graph_infos[3].num_input, 2)
+      self.assertEqual(graph_infos[3].num_output, 1)
+    else:
+      # this graph has two input(t1, 100) and one output
+      self.assertEqual(graph_infos[1].num_input, 2)
+      self.assertEqual(graph_infos[1].num_output, 1)
+
+    open(self.debug_file_name, 'w').close()
+
+  def test_torch_xla_compile(self):
+    device = xm.xla_device()
+    t1 = torch.randn(12, 4, device=device)
+
+    def toy_program(t1):
+      return torch.logsumexp(t1, 1)
+
+    compiled = torch_xla.compile(toy_program)
+    res = compiled(t1)
+    with open(self.debug_file_name, 'rb') as f:
+      lines = f.readlines()
+      executation_causes = extract_execution_cause(lines)
+      compilation_causes = extract_compilation_cause(lines)
+      graph_infos = extract_graph_infos(lines)
+
+    if self.debug_level > 1:
+      self.assertEqual(len(executation_causes), 2)
+      self.assertIn(
+          'torch_xla.compile clear the pending graph prior calling the target function',
+          executation_causes[0])
+      self.assertIn('torch_xla.compile\n', executation_causes[1])
+    else:
+      self.assertEqual(len(executation_causes), 0)
+
+    self.assertEqual(len(compilation_causes), 2)
+    self.assertIn(
+        'torch_xla.compile clear the pending graph prior calling the target function',
+        compilation_causes[0])
+    self.assertIn('torch_xla.compile\n', compilation_causes[1])
+
+    if self.debug_level > 1:
+      # one graph info from compilation, one from execution, hash should match
+      self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+    # this graph has one input(random seed) and one output(t1)
+    self.assertEqual(graph_infos[0].num_input, 1)
+    self.assertEqual(graph_infos[0].num_output, 1)
     open(self.debug_file_name, 'w').close()
 
   def test_parallel_loader(self):
@@ -140,22 +224,26 @@ class PtXLADebugTest(unittest.TestCase):
       compilation_causes = extract_compilation_cause(lines)
       graph_infos = extract_graph_infos(lines)
 
-    self.assertEqual(len(executation_causes), batch_size)
-    for cause in executation_causes:
-      self.assertIn('mark_step in parallel loader at step end', cause)
+    if self.debug_level > 1:
+      self.assertEqual(len(executation_causes), batch_size)
+      for cause in executation_causes:
+        self.assertIn('mark_step in parallel loader at step end', cause)
+    else:
+      self.assertEqual(len(executation_causes), 0)
 
     # We should only compile once.
     self.assertEqual(len(compilation_causes), 1)
     self.assertIn('mark_step in parallel loader at step end',
                   compilation_causes[0])
 
-    self.assertEqual(len(graph_infos), batch_size + 1)
-    # one graph info from compilation, batch size from execution, hash should match
-    for i in range(batch_size + 1):
-      self.assertEqual(graph_infos[0].hash, graph_infos[i].hash)
-      # this graph has two input(data, 100) and one output(dummy)
-      self.assertEqual(graph_infos[i].num_input, 2)
-      self.assertEqual(graph_infos[i].num_output, 1)
+    if self.debug_level > 1:
+      self.assertEqual(len(graph_infos), batch_size + 1)
+      # one graph info from compilation, batch size from execution, hash should match
+      for i in range(batch_size + 1):
+        self.assertEqual(graph_infos[0].hash, graph_infos[i].hash)
+        # this graph has two input(data, 100) and one output(dummy)
+        self.assertEqual(graph_infos[i].num_input, 2)
+        self.assertEqual(graph_infos[i].num_output, 1)
     open(self.debug_file_name, 'w').close()
 
   def test_print(self):
@@ -168,19 +256,22 @@ class PtXLADebugTest(unittest.TestCase):
       compilation_causes = extract_compilation_cause(lines)
       graph_infos = extract_graph_infos(lines)
 
-    self.assertEqual(len(executation_causes), 1)
-    self.assertIn('user code trying to access tensor value',
-                  executation_causes[0])
+    if self.debug_level > 1:
+      self.assertEqual(len(executation_causes), 1)
+      self.assertIn('user code trying to access tensor value',
+                    executation_causes[0])
+      # one graph info from compilation, one from execution, hash should match
+      self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+    else:
+      self.assertEqual(len(executation_causes), 0)
 
     self.assertEqual(len(compilation_causes), 1)
     self.assertIn('user code trying to access tensor value',
                   compilation_causes[0])
 
-    # one graph info from compilation, one from execution, hash should match
-    self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
     # this graph has one input(random seed) and one output(t1)
-    self.assertEqual(graph_infos[1].num_input, 1)
-    self.assertEqual(graph_infos[1].num_output, 1)
+    self.assertEqual(graph_infos[0].num_input, 1)
+    self.assertEqual(graph_infos[0].num_output, 1)
     open(self.debug_file_name, 'w').close()
 
   def test_frame(self):
@@ -191,15 +282,20 @@ class PtXLADebugTest(unittest.TestCase):
       lines = f.readlines()
       frames = extract_python_frames(lines)
 
-    # one for compilation, one for execution
-    self.assertEqual(len(frames), 2)
+    # one for compilation, one for post-compilation analysis, one for execution
+    if self.debug_level > 1:
+      self.assertEqual(len(frames), 3)
+    else:
+      self.assertEqual(len(frames), 2)
     max_frame = os.getenv('PT_XLA_DEBUG_MAX_FRAME', 8)
     # Additonal lines are
     # 1. Python Frame Triggered Execution:
     # 2. ....
     # 3. empty line
     self.assertEqual(len(frames[0].split('\n')), max_frame + 3)
-    self.assertEqual(len(frames[1].split('\n')), max_frame + 3)
+    # second frame will be empty from the post-compilation-analysis
+    if self.debug_level > 1:
+      self.assertEqual(len(frames[2].split('\n')), max_frame + 3)
     # Check mark_step is the first frame
     self.assertIn('mark_step', frames[0].split('\n')[1])
 

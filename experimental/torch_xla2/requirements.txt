@@ -1,7 +1,0 @@
-absl-py==2.0.0
-flatbuffers==23.5.26
-jax==0.4.23
-jaxlib==0.4.23
-pytest
-tensorflow
-torch==2.2.1+cpu

@@ -1,3 +1,28 @@
+- name: Read PyTorch pin
+  ansible.builtin.command: cat {{ (src_root, 'pytorch/xla/.torch_pin') | path_join }}
+  register: torch_pin
+  # Pin may not exist
+  ignore_errors: true
+
+- name: Checkout PyTorch pin
+  # ansible.builtin.git wants to fetch the entire history, so check out the pin manually
+  ansible.builtin.shell:
+    cmd: |
+      set -xe
+      PIN="{{ torch_pin.stdout }}"
+      if [[ $PIN = \#* ]]; then
+        PRNUM="${PIN//[!0-9]/}"
+        git fetch --no-recurse-submodules origin "pull/$PRNUM/head"
+      else
+        git fetch --no-recurse-submodules origin {{ torch_pin.stdout }}
+      fi
+      git checkout --no-recurse-submodules FETCH_HEAD
+      git submodule update --init --recursive
+    chdir: "{{ (src_root, 'pytorch') | path_join }}"
+  args:
+    executable: /bin/bash
+  when: torch_pin is succeeded
+
 - name: Build PyTorch
   ansible.builtin.command:
     cmd: python setup.py bdist_wheel
@@ -22,13 +47,6 @@
     cmd: python setup.py bdist_wheel
     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
   environment: "{{ env_vars }}"
-
-- name: Build PyTorch/XLA CUDA Plugin
-  ansible.builtin.command:
-    cmd: pip wheel -w dist plugins/cuda -v
-    chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
-  environment: "{{ env_vars }}"
-  when: accelerator == "cuda"
 
 - name: Find XLA *.whl files in pytorch/xla/dist
   ansible.builtin.find:
@@ -83,6 +101,42 @@
     path: /tmp/staging-wheels
     state: absent
     mode: '0755'
+
+- name: Create temp directory for C++ tests
+  ansible.builtin.file:
+    path: /tmp/test/bin
+    state: directory
+    mode: '0755'
+  when: build_cpp_tests
+
+- name: Collect C++ test files
+  ansible.builtin.shell: |
+    cd pytorch/xla/build/temp*
+    bazel query 'kind(".*_test", tests(//:cpp_tests))' --output=label | xargs -n 1 bazel cquery --output=files | xargs cp -t /tmp/test/bin
+  args:
+    executable: bash
+    chdir: "{{ src_root }}"
+  when: build_cpp_tests
+
+- name: Read Torchvision pin
+  ansible.builtin.command: cat {{ (src_root, 'pytorch') | path_join }}/.github/ci_commit_pins/vision.txt
+  register: torchvision_pin
+
+- name: Build Torchvision wheel
+  ansible.builtin.command:
+    cmd: pip wheel --no-build-isolation --no-deps "git+https://github.com/pytorch/vision.git@{{ torchvision_pin.stdout }}"
+    chdir: /dist
+  environment: "{{ env_vars }}"
+
+- name: Find Torchvision *.whl files in /dist
+  ansible.builtin.find:
+    path: /dist
+    pattern: "torchvision*.whl"
+  register: torchvision_wheels
+
+- name: Install Torchvision wheel
+  ansible.builtin.pip:
+    name: "{{ torchvision_wheels.files | map(attribute='path') }}"
 
 - name: "Tests"
   include_tasks: tests.yaml

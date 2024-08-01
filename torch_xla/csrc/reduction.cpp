@@ -119,9 +119,12 @@ SummationResult CreateSummation(xla::XlaOp input,
         result.result, result.rinfo.element_count.size, shape.element_type());
   }
   if (keep_reduced_dimensions) {
-    if (XlaHelpers::IsUnboundedDynamismEnabled()) {
-      // TODO(lsy323): Use XLA DynamicReshape once unbounded dynamism support is
-      // added.
+    if (shape.is_unbounded_dynamic()) {
+      for (size_t i = 0; i < result.rinfo.new_dimensions.size(); ++i) {
+        if (shape.is_unbounded_dynamic_dimension(i)) {
+          result.rinfo.new_dimensions[i] = xla::Shape::kUnboundedSize;
+        }
+      }
       result.result = XlaHelpers::DynamicUnboundedReshape(
           result.result, input, result.rinfo.new_dimensions);
     } else {
@@ -306,9 +309,16 @@ xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp mean =
       BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
-  xla::XlaOp bcast_mean =
-      xla::BroadcastInDim(mean, input_shape.dimensions(),
-                          torch::lazy::Iota<int64_t>(input_shape.rank()));
+  xla::XlaOp bcast_mean;
+  if (input_shape.is_unbounded_dynamic()) {
+    auto promoted = XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
+        input, mean, input_shape);
+    bcast_mean = promoted.second;
+  } else {
+    bcast_mean =
+        xla::BroadcastInDim(mean, input_shape.dimensions(),
+                            torch::lazy::Iota<int64_t>(input_shape.rank()));
+  }
   xla::XlaOp input_mean_diff = input - bcast_mean;
   xla::XlaOp diff2 = input_mean_diff * input_mean_diff;
   xla::XlaOp var;
@@ -449,9 +459,9 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
       shape = &ShapeHelper::ShapeOfXlaOp(operand);
     }
   }
-  xla::XlaOp result = xla::ArgMin(
+  xla::XlaOp result = xla::ArgMinMax(
       operand, GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::S64),
-      dim);
+      dim, /* is_min */ true);
   if (keepdim) {
     auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
     if (dim_is_none) {

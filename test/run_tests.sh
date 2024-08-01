@@ -8,7 +8,7 @@ VERBOSITY=2
 
 # Note [Keep Going]
 #
-# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CircleCI tests continue on error.
+# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CI tests continue on error.
 # This will allow you to see all the failures on your PR, not stopping with the first
 # test failure like the default behavior.
 CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
@@ -82,16 +82,6 @@ function run_test_without_functionalization {
   XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
 }
 
-function run_use_bf16 {
-  echo "Running with XLA_USE_BF16: $@"
-  XLA_USE_BF16=1 run_test "$@"
-}
-
-function run_downcast_bf16 {
-  echo "Running with XLA_DOWNCAST_BF16: $@"
-  XLA_DOWNCAST_BF16=1 run_test "$@"
-}
-
 function run_xla_ir_debug {
   echo "Running with XLA_IR_DEBUG: $@"
   XLA_IR_DEBUG=1 run_test "$@"
@@ -104,7 +94,7 @@ function run_xla_hlo_debug {
 
 function run_dynamic {
   echo "Running in DynamicShape mode: $@"
-  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" run_test "$@"
+  XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter:nms" run_test "$@"
 }
 
 function run_eager_debug {
@@ -127,9 +117,9 @@ function run_pt_xla_debug {
   PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
-function run_xla_backend_mp {
-  echo "Running XLA backend multiprocessing test: $@"
-  MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
+function run_pt_xla_debug_level1 {
+  echo "Running in save tensor file mode: $@"
+  PT_XLA_DEBUG_LEVEL=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
 function run_torchrun {
@@ -167,10 +157,10 @@ function run_xla_op_tests1 {
   run_dynamic "$CDIR/ds/test_dynamic_shapes.py"
   run_dynamic "$CDIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_test "$CDIR/test_grad_checkpoint.py"
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_pt_xla_debug "$CDIR/debug_tool/test_pt_xla_debug.py"
+  run_pt_xla_debug_level1 "$CDIR/debug_tool/test_pt_xla_debug.py"
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_hlo_metadata.py"
   run_test "$CDIR/test_profiler.py"
@@ -184,15 +174,16 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_python_ops.py"
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
-  run_test "$CDIR/test_zero1.py"
+  run_test "$CDIR/test_deprecation.py"
   run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test "$CDIR/dynamo/test_dynamo_aliasing.py"
   run_test "$CDIR/dynamo/test_dynamo.py"
+  run_test "$CDIR/dynamo/test_dynamo_dynamic_shape.py"
   run_test "$CDIR/dynamo/test_bridge.py"
   run_test "$CDIR/dynamo/test_num_output.py"
   run_test "$CDIR/dynamo/test_graph_input_matcher.py"
   run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
-  run_use_bf16 "$CDIR/test_data_type.py"
+  run_test "$CDIR/test_data_type.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
@@ -200,24 +191,31 @@ function run_xla_op_tests1 {
   run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
 }
 
-# DO NOT MODIFY
 function run_xla_op_tests2 {
-  run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/pjrt/test_dtypes.py"
-  run_test "$CDIR/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py"
-  run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
+  run_test "$CDIR/test_while_loop.py"
+  run_test "$CDIR/test_autocast.py"
+  run_test "$CDIR/eager/test_eager.py"
+  run_test "$CDIR/eager/test_eager_with_xla_compile.py"
+  run_test "$CDIR/eager/test_eager_with_torch_compile.py"
+  run_test "$CDIR/eager/test_eager_all_reduce_in_place.py"
+  run_test "$CDIR/eager/test_eager_spmd.py"
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
 function run_xla_op_tests3 {
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
+  run_test "$CDIR/stablehlo/test_exports.py"
+  run_test "$CDIR/stablehlo/test_export_fx_passes.py"
   run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
-  run_test "$CDIR/stablehlo/test_mark_pattern.py"
+  run_test "$CDIR/stablehlo/test_composite.py"
   run_test "$CDIR/stablehlo/test_pt2e_qdq.py"
+  run_test "$CDIR/stablehlo/test_stablehlo_custom_call.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_test "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/stablehlo/test_unbounded_dynamism.py"
+  run_test "$CDIR/quantized_ops/test_quantized_matmul.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
@@ -226,6 +224,9 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_xla_distributed_checkpoint.py"
   run_test "$CDIR/spmd/test_xla_spmd_python_api_interaction.py"
   run_test "$CDIR/spmd/test_dtensor_integration.py"
+  run_test "$CDIR/spmd/test_dtensor_integration2.py"
+  run_test "$CDIR/spmd/test_xla_auto_sharding.py"
+  run_test "$CDIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
@@ -236,6 +237,43 @@ function run_xla_op_tests3 {
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
   run_test "$CDIR/test_pallas.py"
+
+  # CUDA tests
+  if [ -x "$(command -v nvidia-smi)" ]; then
+    # Please keep PJRT_DEVICE and GPU_NUM_DEVICES explicit in the following test commands.
+    echo "single-host-single-process"
+    PJRT_DEVICE=CUDA GPU_NUM_DEVICES=1 python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_cores=1 --num_steps=25 --model=resnet18
+    PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
+
+    echo "single-host-multi-process"
+    num_devices=$(nvidia-smi --list-gpus | wc -l)
+    PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python3 test/test_train_mp_imagenet.py --fake_data --batch_size=16 --num_epochs=1 --num_steps=25 --model=resnet18
+    PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=$num_devices test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=16 --num_epochs=1  --num_steps=25 --model=resnet18
+
+    echo "single-host-SPMD"
+    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
+    XLA_USE_SPMD=1 PJRT_DEVICE=CUDA torchrun --nnodes=1 --node_rank=0 --nproc_per_node=1 test/spmd/test_train_spmd_imagenet.py --fake_data --batch_size 8 --sharding=batch --num_epochs=1 --num_steps=25 --model=resnet18
+
+    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
+    PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1 --batch_size 32 --test_set_batch_size 32
+    # TODO: Reduce BS due to GPU test OOM in CI after pin update to 03/05/2024 (#6677)
+    PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1 --batch_size 32 --test_set_batch_size 32
+    XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+    # Syncfree SGD optimizer tests
+    if [ -d ./torch_xla/amp/syncfree ]; then
+      echo "Running Syncfree Optimizer Test"
+      PJRT_DEVICE=CUDA python test/test_syncfree_optimizers.py
+
+      # Following test scripts are mainly useful for
+      # performance evaluation & comparison among different
+      # amp optimizers.
+      echo "Running ImageNet Test"
+      PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python test/test_train_mp_imagenet_amp.py --fake_data --num_epochs=1 --batch_size 64 --num_steps=25 --model=resnet18
+
+      echo "Running MNIST Test"
+      PJRT_DEVICE=CUDA GPU_NUM_DEVICES=$num_devices python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1 --batch_size 64 --num_steps=25
+    fi
+  fi
 }
 
 #######################################################################################
@@ -253,18 +291,22 @@ function run_mp_op_tests {
   run_test "$CDIR/test_mp_collective_permute.py"
   run_test "$CDIR/test_mp_all_gather.py"
   run_test "$CDIR/test_mp_reduce_scatter.py"
+  run_test "$CDIR/test_zero1.py"
   run_test "$CDIR/test_mp_distributed_mm.py"
   run_test "$CDIR/test_mp_save.py"
   run_test "$CDIR/test_mp_mesh_reduce.py"
   run_test "$CDIR/test_mp_sync_batch_norm.py"
+  run_test "$CDIR/dynamo/test_traceable_collectives.py"
+  run_test "$CDIR/test_fsdp_auto_wrap.py"
+  # run_torchrun "$CDIR/test_mp_early_exit.py"
   run_pt_xla_debug "$CDIR/debug_tool/test_mp_pt_xla_debug.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_ddp.py"
-  run_xla_backend_mp "$CDIR/test_fsdp_auto_wrap.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_fsdp_meta.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_all_gather_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_all_reduce_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_bucketed_all_reduce_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_multi_all_reduce_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_reduce_scatter_xla_backend.py"
+  run_test "$CDIR/torch_distributed/test_ddp.py"
+  run_test "$CDIR/torch_distributed/test_torch_distributed_fsdp_meta.py"
 }
 
 function run_tests {

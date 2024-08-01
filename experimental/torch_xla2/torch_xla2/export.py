@@ -2,145 +2,13 @@
 """Utilities for exporting a torch program to jax/stablehlo."""
 import copy
 from typing import Any, Dict, Tuple
-import jax
 import torch
-from torch.fx import _pytree as fx_pytree
-from torch_xla2 import ops_registry, tensor
 from torch.utils import _pytree as pytree
-
-
-class JaxProgram:
-
-  def _wrap_inputs(self, xs, allow_torch_tensor=False):
-
-    def convert(t):
-      if isinstance(t, tensor.XLATensor2):
-        return t
-      if isinstance(t, torch.Tensor):
-        if allow_torch_tensor:
-          return tensor.move_to_device(t)
-        else:
-          raise ValueError('Regular torch.Tensor is not allowed.')
-      if isinstance(t, jax.Array):
-        return tensor.XLATensor2(t)
-      return t
-
-    return jax.tree_util.tree_map(convert, xs)
-
-  def _unwrap_outputs(self, xs):
-
-    def convert(t):
-      if isinstance(t, tensor.XLATensor2):
-        return t.jax()
-      if isinstance(t, torch.Tensor):
-        raise ValueError('Regular torch.Tensor is not allowed.')
-      return t
-
-    return jax.tree_util.tree_map(convert, xs)
-
-  def __init__(
-      self,
-      exported_program,
-      param_buffer_values,
-      ordered_tensor_constants,
-  ):
-
-    self.param_buffer_values = self._wrap_inputs(
-        param_buffer_values, allow_torch_tensor=True)
-    self.ordered_tensor_constants = self._wrap_inputs(
-        ordered_tensor_constants, allow_torch_tensor=True)
-    self.exported_program = exported_program
-
-  def __hash__(self):
-    return hash(self.exported_program)
-
-  @property
-  def example_inputs(self):
-    args, kwargs = self.exported_program.example_inputs
-    args = pytree.tree_map(tensor.t2j, args)
-    kwargs = pytree.tree_map(tensor.t2j, kwargs)
-    return args, kwargs
-
-  def flatten_inputs(self, args, kwargs):
-    if args is None:
-      args = tuple()
-    if kwargs is None:
-      kwargs = {}
-
-    if (in_spec := self.exported_program.call_spec.in_spec) is not None:
-      if (in_spec.type == tuple and len(in_spec.children_specs) == 2 and
-          in_spec.children_specs[0].type == tuple and
-          in_spec.children_specs[1].type == dict):
-        # NOTE: this is the case where in_spec is for both args and kwargs
-        return fx_pytree.tree_flatten_spec((args, kwargs), in_spec)
-      return fx_pytree.tree_flatten_spec(args, in_spec)
-    return copy.deepcopy(args)
-
-  def unflatten_outputs(self, res):
-    return pytree.tree_unflatten(res, self.exported_program.call_spec.out_spec)
-
-  def __call__(self, *args, **kwargs):
-
-    inputs = self.flatten_inputs(args, kwargs)
-    res = self.flatten_callable(*inputs)
-    res = self.unflatten_outputs(res)
-
-    return res
-
-  @property
-  def flatten_callable(self):
-
-    def func(*inputs: jax.Array):
-      nonlocal self
-      inputs = self._wrap_inputs(inputs)
-      num_mutations = len(
-          self.exported_program.graph_signature.buffers_to_mutate)
-      res = torch.fx.Interpreter(self.exported_program.graph_module).run(
-          *self.param_buffer_values,
-          *inputs,
-          *self.ordered_tensor_constants,
-          enable_io_processing=False,
-      )
-      res = res[num_mutations:]
-      res = self._unwrap_outputs(res)
-      return res
-
-    return func
-
-  def jit(self, *args, **kwargs):
-    """Returns `jax.jit(self, *args, **kwargs)`."""
-    return jax.jit(self, *args, **kwargs)
-
-  def jit_lower(self, *args, **kwargs):
-    """Returns `jax.jit(self, *args, **kwargs).lower(...)` with example_inputs used in export."""
-    example_args, example_kwargs = self.example_inputs
-    return self.jit(*args, **kwargs).lower(*example_args, **example_kwargs)
-
-
-def exported_program_to_jax_program(ep):
-  """exported_program_to_jax_program.
-
-  Args:
-    ep: torch.export.ExportedProgram
-
-  Returns:
-    JaxProgram
-
-  """
-  if torch.__version__ >= '2.2':
-    ep = ep.run_decompositions()
-
-  param_buffer_keys = ep.graph_signature.parameters + ep.graph_signature.buffers
-  param_buffer_values = tuple(ep.state_dict[key] for key in param_buffer_keys)
-
-  if hasattr(ep.graph_signature, 'lifted_tensor_constants'):
-    ordered_tensor_constants = tuple(
-        ep.tensor_constants[name]
-        for name in ep.graph_signature.lifted_tensor_constants)
-  else:
-    ordered_tensor_constants = tuple()
-
-  return JaxProgram(ep, param_buffer_values, ordered_tensor_constants)
+from torch_xla2 import tensor
+from torch_xla2.ops import ops_registry
+import jax
+import jax.numpy as jnp
+import sympy
 
 
 DEBUG = False
@@ -148,6 +16,11 @@ DEBUG = False
 
 class JaxInterpreter(torch.fx.Interpreter):
   """Experimental."""
+
+  def __init__(self, graph_module):
+    super().__init__(graph_module)
+    import torch_xla2.ops.jaten
+    import torch_xla2.ops.jtorch
 
   def call_function(self, target, args: Tuple, kwargs: Dict) -> Any:
     if not isinstance(target,
@@ -157,7 +30,9 @@ class JaxInterpreter(torch.fx.Interpreter):
     if DEBUG:
       print('Running ', target.name(), '--------')
 
-    op = ops_registry.lowerings.lookup(target)
+    op = ops_registry.all_aten_ops.get(target)
+    if op is None:
+      op = ops_registry.all_aten_ops.get(target.overloadpacket)
     if op is None:
       print(target.name(), target.tags)
       raise RuntimeError('No lowering found for', target.name())
@@ -231,3 +106,125 @@ def exported_program_to_jax(exported_program, export_raw: bool = False):
 
   states = pytree.tree_map_only(torch.Tensor, tensor.t2j, states)
   return states, func
+
+
+def extract_avals(exported):
+  """Return JAX Abstract Value shapes for all input parameters of the exported
+  program. This supports dynamic batch dimensions, including with constraints.
+  """
+
+  def _to_aval(arg_meta, symbolic_shapes):
+    """Convet from torch type to jax abstract value for export tracing
+    """
+    def _get_dim(d):
+      if isinstance(d, torch.SymInt):
+        return symbolic_shapes[str(d)]
+      return d
+
+    val = arg_meta['val']
+    is_scalar = isinstance(val, float) or isinstance(val, int) or isinstance(val, bool)
+    if is_scalar:
+      return jax.ShapeDtypeStruct([], type(arg_meta['val']))
+
+    tensor_meta = arg_meta['tensor_meta']
+    shape = [_get_dim(d) for d in tensor_meta.shape]
+    return jax.ShapeDtypeStruct(shape, tensor.t2j_dtype(tensor_meta.dtype))
+
+  def _get_inputs(exported):
+    """Return placeholders with input metadata"""
+    placeholders = [p for p in exported.graph.nodes if p.op == "placeholder"]
+    input_placeholders = [
+      p
+      for p, s in zip(placeholders, exported.graph_signature.input_specs)
+      if s.kind == torch.export.graph_signature.InputKind.USER_INPUT
+    ]
+    return input_placeholders
+
+  def _build_symbolic_shapes(range_constraints):
+    """Convert torch SymInt to JAX symbolic_shape and stores in a map using the
+    string name of the torch symbolic int.
+ 
+    TODO: There is probably a better way of storing a key for a symbolic int.
+    This value needs to be looked up again in `_to_aval` to figure out which
+    JAX symbolic to map to for a given torch tensor.
+    """
+    if len(range_constraints) == 0:
+      return None
+
+    def _build_symbolic_constraints(symbol_name, torch_constraint):
+      """Convert torch SymInt constraints to string for JAX symbolic_shape
+      Using sympy may be overkill here, currently PyTorch only uses ValueRanges
+      which allow specifying the min and the max of a value, for example:
+        torch.export.Dim("a", min=5, max=10)
+         ==> ("a >= 5", "a <= 10",)
+      """
+      if not isinstance(torch_constraint, torch.utils._sympy.value_ranges.ValueRanges) or torch_constraint.is_bool:
+        raise TypeError(f"No symbolic constraint handler for: {torch_constraint}")
+
+      constraints = []
+      symbol = sympy.Symbol(symbol_name)
+      if torch_constraint.lower != 2:
+        constraints.append(symbol >= torch_constraint.lower)
+      if not torch_constraint.upper.is_infinite:
+        constraints.append(symbol <= torch_constraint.upper)
+      
+      return tuple(sympy.pretty(c, use_unicode=False) for c in constraints)
+
+    def _build_symbolic_shape(sym, constraint, free_symbols):
+      """Returns a JAX symbolic shape for a given symbol and constraint
+
+      There are two possible sympy `sym` inputs:
+        1. Symbol - (s0) These can have custom constraints.
+        2. Expr - (s0*2) These apply the expr to s0's constraints, cannot override.
+      
+        Currently support is limited to operations with a symbol and and int,
+        in `torch/export/dynamic_shapes.py`:
+        "Only increasing linear operations with integer coefficients are supported."
+      """
+      symbol_name = str(sym)
+      constraints = _build_symbolic_constraints(symbol_name, constraint)
+      if sym.is_symbol:
+        symbolic_shape = jax.export.symbolic_shape(symbol_name, constraints=constraints)
+      else:
+        assert len(sym.free_symbols) > 0
+        scope = free_symbols[str(list(sym.free_symbols)[0])].scope
+        symbolic_shape = jax.export.symbolic_shape(symbol_name, scope=scope)
+      assert len(symbolic_shape) == 1
+      return symbolic_shape[0]
+
+    # Populate symbol variables before expressions, exprs need to use the same
+    # Symbolic scope as the variable they operate on. Expressions can only be
+    # integer compuations on symbol variables, so each symbol variable is OK to
+    # have its own scope.
+    symbolic_shapes = {}
+    symbol_variables = [(s,v) for s,v in range_constraints.items() if s.is_symbol]
+    symbol_exprs = [(s,v) for s,v in range_constraints.items() if not s.is_symbol]
+    for sym, constraint in symbol_variables + symbol_exprs:
+      symbolic_shape = _build_symbolic_shape(sym, constraint, symbolic_shapes)
+      symbolic_shapes[str(sym)] = symbolic_shape
+    return symbolic_shapes
+
+  symbolic_shapes = _build_symbolic_shapes(exported.range_constraints)
+  args = _get_inputs(exported)
+
+  if DEBUG:
+    print('Inputs to aval:', args, '--------')
+    print('Symbolic shapes:', symbolic_shapes)
+    for arg in args:
+      print('Meta2Aval', arg.meta, '--> ', _to_aval(arg.meta, symbolic_shapes))
+
+  return [_to_aval(arg.meta, symbolic_shapes) for arg in args]
+
+
+def exported_program_to_stablehlo(exported_program):
+  """Replacement for torch_xla.stablehlo.exported_program_to_stablehlo
+
+  Convert a program exported via torch.export to StableHLO.
+
+  This supports dynamic dimension sizes and generates explicit checks for
+  dynamo guards in the IR using shape_assertion custom_call ops.
+  """
+  weights, func = exported_program_to_jax(exported_program)
+  jax_avals = extract_avals(exported_program)
+  jax_export = jax.export.export(jax.jit(func))(weights, (jax_avals,))
+  return jax_export

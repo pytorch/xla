@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
 
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "xla/pjrt/distributed/distributed.h"
 
@@ -13,11 +14,23 @@ XlaCoordinator::XlaCoordinator(int global_rank, int world_size,
   if (global_rank == 0) {
     xla::CoordinationServiceImpl::Options service_options;
     service_options.num_nodes = world_size;
-    xla::StatusOr<std::unique_ptr<xla::DistributedRuntimeService>>
+    // Default value can be found in
+    // https://github.com/openxla/xla/blob/4b88636002bc5834d7fe3f862997c66a490987bc/xla/pjrt/distributed/client.h#L63-L72.
+    int heartbeat_interval_sec =
+        sys_util::GetEnvInt(env::kEnvDistSvcHeartbeatIntervalInSec, 10);
+    service_options.heartbeat_interval = absl::Seconds(heartbeat_interval_sec);
+    service_options.max_missing_heartbeats =
+        sys_util::GetEnvInt(env::kEnvDistSvcMaxMissingHeartbeats, 10);
+    int shutdown_timeout =
+        sys_util::GetEnvInt(env::kEnvDistSvcShutdownTimeoutInMin, 5);
+    service_options.shutdown_timeout = absl::Minutes(shutdown_timeout);
+
+    absl::StatusOr<std::unique_ptr<xla::DistributedRuntimeService>>
         dist_runtime_service = xla::GetDistributedRuntimeService(
             dist_service_addr, service_options);
     XLA_CHECK(dist_runtime_service.ok())
         << "Failed to initialize distributed runtime service.";
+
     dist_runtime_service_ = std::move(dist_runtime_service.value());
   }
 

@@ -11,7 +11,7 @@ from torch.ao.quantization.quantize_pt2e import convert_pt2e, prepare_pt2e
 from torch.ao.quantization.quantizer.xnnpack_quantizer import (
     XNNPACKQuantizer, get_symmetric_quantization_config)
 from torch_xla import stablehlo
-from utils import has_tf_package
+from torch_xla.utils.stablehlo_test_utils import has_tf_package
 
 try:
   from torch_xla.tf_saved_model_integration import \
@@ -126,8 +126,10 @@ class PT2EExportTest(unittest.TestCase):
     quantizer = XNNPACKQuantizer().set_global(
         get_symmetric_quantization_config(is_per_channel=True))
     m = prepare_pt2e(m, quantizer)
-
-    # Step 3: Quantize the model
+    # Step 3: Run through example inputs, otherwise per-channel
+    # quant may have scalar scale/zero_point
+    m(*args)
+    # Step 4: Quantize the model
     m = convert_pt2e(m, fold_quantize=False)
 
     # Trace with torch/xla and export stablehlo

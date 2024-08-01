@@ -7,9 +7,9 @@
 
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/TopologicalSortUtils.h"
 #include "single_include/nlohmann/json.hpp"
 #include "stablehlo/dialect/StablehloOps.h"
 
@@ -190,35 +190,78 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     return metadata;
   }
 
+  mlir::FailureOr<mlir::Attribute> BuildAttrFromJson(mlir::OpBuilder& builder,
+                                                     mlir::Operation* op,
+                                                     const json& json_value) {
+    switch (json_value.type()) {
+      case json::value_t::number_integer:
+      case json::value_t::number_unsigned:
+        return builder.getI64IntegerAttr(json_value.template get<int64_t>());
+      case json::value_t::number_float:
+        return builder.getF32FloatAttr(json_value.template get<float>());
+      case json::value_t::boolean:
+        return builder.getBoolAttr(json_value.template get<bool>());
+      case json::value_t::string:
+        return builder.getStringAttr(json_value.template get<std::string>());
+      case json::value_t::array: {
+        if (json_value.empty()) {
+          return builder.getArrayAttr({});
+        }
+        auto get_json_type = [](const json& j) {
+          auto ty = j.type();
+          if (ty == json::value_t::number_unsigned) {
+            return json::value_t::number_integer;
+          }
+          return ty;
+        };
+
+        auto head_type = get_json_type(json_value[0]);
+        bool is_homogeneous = llvm::all_of(json_value, [&](auto& el) {
+          return get_json_type(el) == head_type;
+        });
+        if (!is_homogeneous) {
+          return op->emitError()
+                 << "invalid JSON to MLIR, arrays must be homogeneous";
+        }
+
+        switch (head_type) {
+          case json::value_t::number_integer:
+            return builder.getI64TensorAttr(
+                json_value.template get<llvm::SmallVector<int64_t>>());
+          case json::value_t::number_float:
+            return mlir::DenseFPElementsAttr::get(
+                mlir::RankedTensorType::get(json_value.size(),
+                                            builder.getF32Type()),
+                json_value.template get<llvm::SmallVector<float>>());
+          case json::value_t::boolean:
+            return mlir::DenseIntElementsAttr::get(
+                mlir::RankedTensorType::get(json_value.size(),
+                                            builder.getI1Type()),
+                json_value.template get<llvm::SmallVector<bool>>());
+          default:
+            return op->emitError()
+                   << "invalid JSON to MLIR: invalid array type. arrays must "
+                      "be "
+                      "1-D homogeneous arrays of supported primitive types";
+        }
+      }
+      default:
+        return op->emitError()
+               << "invalid JSON to MLIR: unsupported json value type";
+    }
+  }
+
   mlir::FailureOr<mlir::DictionaryAttr> BuildDictionaryAttrFromJsonMap(
-      mlir::OpBuilder& builder,
+      mlir::OpBuilder& builder, mlir::Operation* op,
       const std::unordered_map<std::string, json>& json_map) {
     llvm::SmallVector<mlir::NamedAttribute> named_attrs;
     for (auto& [key, j] : json_map) {
-      switch (j.type()) {
-        case json::value_t::number_integer:
-        case json::value_t::number_unsigned:
-          named_attrs.push_back(
-              {builder.getStringAttr(key),
-               builder.getI64IntegerAttr(j.template get<int64_t>())});
-          break;
-        case json::value_t::number_float:
-          named_attrs.push_back(
-              {builder.getStringAttr(key),
-               builder.getF32FloatAttr(j.template get<float>())});
-          break;
-        case json::value_t::boolean:
-          named_attrs.push_back({builder.getStringAttr(key),
-                                 builder.getBoolAttr(j.template get<bool>())});
-          break;
-        case json::value_t::string:
-          named_attrs.push_back(
-              {builder.getStringAttr(key),
-               builder.getStringAttr(j.template get<std::string>())});
-          break;
-        default:
-          return mlir::failure();
+      mlir::FailureOr<mlir::Attribute> attribute_or =
+          BuildAttrFromJson(builder, op, j);
+      if (mlir::failed(attribute_or)) {
+        return mlir::failure();
       }
+      named_attrs.push_back({builder.getStringAttr(key), *attribute_or});
     }
     return builder.getDictionaryAttr(named_attrs);
   }
@@ -430,44 +473,21 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     mlir::OpBuilder builder(context);
 
     mlir::FailureOr<mlir::DictionaryAttr> attributes_or =
-        BuildDictionaryAttrFromJsonMap(builder, metadata.attrs);
+        BuildDictionaryAttrFromJsonMap(builder, boundary_output_op,
+                                       metadata.attrs);
     if (mlir::failed(attributes_or)) {
       return boundary_output_op->emitError()
              << "failed to transform boundary attr "
                 "JSON into composite attributes.";
     }
 
-    builder.setInsertionPointAfter(boundary_output_op);
-    llvm::SmallVector<mlir::NamedAttribute> call_attrs{
-        {
-            builder.getStringAttr("call_target_name"),
-            builder.getStringAttr("stablehlo.composite"),
-        },
-        {
-            builder.getStringAttr("called_computations"),
-            builder.getArrayAttr(mlir::FlatSymbolRefAttr::get(
-                builder.getContext(), impl_func.getSymName())),
-        },
-        {
-            builder.getStringAttr("composite.backend_config"),
-            builder.getDictionaryAttr(llvm::SmallVector<mlir::NamedAttribute>{
-                {
-                    builder.getStringAttr("attributes"),
-                    *attributes_or,
-                },
-                {
-                    builder.getStringAttr("name"),
-                    builder.getStringAttr(metadata.name),
-                },
-            }),
-        },
-    };
-
     // Creates and inserts composite call op.
+    builder.setInsertionPointAfter(boundary_output_op);
     mlir::Operation* composite_op =
-        builder.create<mlir::stablehlo::CustomCallOp>(
+        builder.create<mlir::stablehlo::CompositeOp>(
             boundary_output_op->getLoc(),
-            impl_func.getFunctionType().getResults(), args, call_attrs);
+            impl_func.getFunctionType().getResults(), args, metadata.name,
+            *attributes_or, impl_func.getSymName());
     return composite_op;
   }
 };

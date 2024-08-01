@@ -1,11 +1,25 @@
 import logging
 import os
 import re
+import sys
 import tempfile
+import warnings
 
 import torch
+
+if not torch.cuda.is_available():
+  # Load _XLAC_cuda_functions to RTLD_GLOBAL, so that it can be used by _XLAC.
+  flags = sys.getdlopenflags()
+  sys.setdlopenflags(flags | os.RTLD_NOW | os.RTLD_GLOBAL)
+
+  import _XLAC_cuda_functions
+
+  # Then, restore the original flags.
+  sys.setdlopenflags(flags)
+
 import _XLAC
 from ._internal import tpu
+from .version import __version__
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -27,8 +41,6 @@ def _set_missing_flags(flags, sets):
 def _setup_xla_flags():
   flags = os.environ.get('XLA_FLAGS', '').split(' ')
   flags = _set_missing_flags(flags, (('xla_cpu_enable_fast_math', 'false'),))
-  flags = _set_missing_flags(
-      flags, (('xla_gpu_simplify_all_fp_conversions', 'false'),))
   flags = _set_missing_flags(flags,
                              (('xla_gpu_force_compilation_parallelism', '8'),))
   os.environ['XLA_FLAGS'] = ' '.join(flags)
@@ -76,6 +88,9 @@ def _setup_default_env():
 
     os.environ.setdefault('ALLOW_MULTIPLE_LIBTPU_LOAD', '1')
     os.environ.setdefault('TPU_ML_PLATFORM', 'PyTorch/XLA')
+    # This is used for ML Framework Telemetry.
+    os.environ.setdefault('TPU_ML_PLATFORM_VERSION', __version__)
+    os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
 
     if tpu.version() == 4:
       os.environ.setdefault('TPU_MEGACORE', 'megacore_dense')
@@ -138,9 +153,21 @@ def _setup_tpu_vm_library_path() -> bool:
     return False
 
 
+def _check_deprecated_env_var():
+  deprecated_env_vars = [
+      'XLA_USE_BF16', 'XLA_USE_FP16', 'XLA_DOWNCAST_BF16', 'XLA_DOWNCAST_FP16',
+      'XLA_USE_32BIT_LONG'
+  ]
+  for env_var in deprecated_env_vars:
+    if os.environ.get(env_var):
+      warnings.warn(f"The environment variable '{env_var}' is deprecated "
+                    "Please update your code to avoid using it.")
+
+
 # These needs to be called before the _XLAC module is loaded.
 _setup_default_env()
 _setup_xla_flags()
+_check_deprecated_env_var()
 if int(os.environ.get('PT_XLA_DEBUG', '0')):
   _fd, _tmp_fname = _setup_debug_env()
 
@@ -149,7 +176,6 @@ if os.environ.get('TF_CPP_MIN_LOG_LEVEL') == '0':
 
 import atexit
 from ._patched_functions import _apply_patches
-from .version import __version__
 
 _found_libtpu = _setup_tpu_vm_library_path()
 
@@ -186,12 +212,42 @@ _init_xla_lazy_backend()
 # TODO @wonjoo come up with a long term fix in Dynamo.
 torch._dynamo.config.automatic_dynamic_shapes = False
 
+# Activate view-replay on AOTAutograd.
+# See: https://github.com/pytorch/pytorch/pull/124488
+import torch._functorch.config
+
+torch._functorch.config.view_replay_for_aliased_outputs = True
+
+import importlib.metadata
+import warnings
+
+try:
+  # TensorFlow TPU distribution has the same package name as GPU, but not CPU
+  dist = importlib.metadata.distribution('tensorflow')
+  warnings.warn(
+      "`tensorflow` can conflict with `torch-xla`. Prefer `tensorflow-cpu` when"
+      " using PyTorch/XLA. To silence this warning, `pip uninstall -y "
+      "tensorflow && pip install tensorflow-cpu`. If you are in a notebook "
+      "environment such as Colab or Kaggle, restart your notebook runtime "
+      "afterwards.")
+except importlib.metadata.PackageNotFoundError:
+  pass
+
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
 
 from .experimental import plugins
+from ._internal import neuron, xpu  # Additional built-in plugins
 
-if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS') == '1':
+if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS',
+             '0' if _XLAC._has_cuda_support() else '1') == '1':
   plugins.use_dynamic_plugins()
   plugins.register_installed_plugins()
 
+if os.getenv('XLA_USE_EAGER_DEBUG_MODE', '0') == '1':
+  from .experimental import eager_mode
+  eager_mode(True)
+
 from .torch_xla import *
+
+# register all custom kenels and decomp by default
+from ._internal import custom_kernel, decomp_registration, c10d_registration

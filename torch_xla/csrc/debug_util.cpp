@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <regex>
 #include <sstream>
 #include <unordered_set>
 
@@ -233,11 +234,25 @@ static bool endsWith(const std::string& str, const std::string& suffix) {
          0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
 }
 
+int GetDebugLevel() {
+  static const bool pt_xla_debug_enabled =
+      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const int pt_xla_debug_level_env =
+      runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_LEVEL", -1);
+  static const int default_debug_level_if_enabled = 100;
+  // default the pt_xla_debug_level to 100 if PT_XLA_DEBUG is set but
+  // PT_XLA_DEBUG_LEVEL is not specified.
+  static const int pt_xla_debug_level =
+      (pt_xla_debug_level_env == -1) && pt_xla_debug_enabled
+          ? default_debug_level_if_enabled
+          : pt_xla_debug_level_env;
+  return pt_xla_debug_level;
+}
+
 void DebugUtil::analyze_graph_execution_python_frame(
     GraphAnalysisSource source, torch::lazy::hash_t graph_hash,
     const xla::ProgramShape* program_shape) {
-  static const bool pt_xla_debug_enabled =
-      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const int pt_xla_debug_level = GetDebugLevel();
   static const bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
   static const std::string debug_file_name =
@@ -245,20 +260,39 @@ void DebugUtil::analyze_graph_execution_python_frame(
   static const int64_t max_frame_count =
       runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_MAX_FRAME", 8);
 
-  static const std::string executation_output_prefix = "Execution Analysis: ";
-  static const std::string compilation_output_prefix = "Compilation Analysis: ";
+  constexpr std::string_view executation_output_prefix = "Execution Analysis: ";
+  constexpr std::string_view compilation_output_prefix =
+      "Compilation Analysis: ";
+  constexpr std::string_view unexpected_execution_prefix =
+      "Unexpected Execution Analysis: ";
 
-  if (!pt_xla_debug_enabled) {
+  bool unexpected_execution = !XLAGraphExecutor::Get()->AllowExecution();
+
+  if (unexpected_execution) {
+    // if unexpected_execution happens we want to alywas print
+    // debugg message on master process
+  } else if (XLAGraphExecutor::Get()->UseEagerMode() &&
+             source != GraphAnalysisSource::DynamoExecution) {
+    // don't output analysis for eager mode execution/compilation
+    return;
+  } else if (pt_xla_debug_level <= 0) {
+    return;
+  } else if (pt_xla_debug_level <= 1 &&
+             source != GraphAnalysisSource::Compilation) {
+    // for debug level <=1, only output compilation analysis in this function.
     return;
   }
 
-  std::string debug_output_prefix = (source == GraphAnalysisSource::Compilation)
-                                        ? compilation_output_prefix
-                                        : executation_output_prefix;
-  // TODO: Make this configurable.
   if (!is_master_process) {
     return;
   }
+
+  std::string_view debug_output_prefix =
+      unexpected_execution ? unexpected_execution_prefix
+      : (source == GraphAnalysisSource::Compilation)
+          ? compilation_output_prefix
+          : executation_output_prefix;
+  // TODO: Make this configurable.
   std::vector<torch::lazy::SourceLocation> frames =
       torch::lazy::GetPythonFrames();
   // python frame must be > 1
@@ -282,7 +316,9 @@ void DebugUtil::analyze_graph_execution_python_frame(
     // can either analyze the C++ call stack or rely on caller to pass a boolean
     // variable.
     ss << debug_output_prefix << "  dynamo is executing a compiled program\n";
-  } else if (frames[0].function == "mark_step") {
+  } else if (frames[0].function == "mark_step" ||
+             (frames[0].function == "sync" &&
+              endsWith(frames[0].file, "torch_xla.py"))) {
     if (frames[1].function == "next" &&
         endsWith(frames[1].file, "parallel_loader.py")) {
       ss << debug_output_prefix
@@ -291,11 +327,19 @@ void DebugUtil::analyze_graph_execution_python_frame(
                endsWith(frames[1].file, "profiler.py")) {
       ss << debug_output_prefix
          << "  mark_step when exiting a profiler StepTrace region\n";
-    } else if ((frames[1].function == "extract_compiled_graph" ||
+    } else if ((frames[1].function == "extract_compiled_graph_helper" ||
                 frames[1].function == "extract_internal") &&
                endsWith(frames[1].file, "dynamo_bridge.py")) {
       ss << debug_output_prefix
          << "  mark_step when dynamo processing input graphs\n";
+    } else if (frames[1].function == "_compile" &&
+               endsWith(frames[1].file, "torch_xla.py")) {
+      ss << debug_output_prefix << "  torch_xla.compile\n";
+    } else if (frames[1].function == "_clear_pending_ops_before_compile" &&
+               endsWith(frames[1].file, "torch_xla.py")) {
+      ss << debug_output_prefix
+         << "  torch_xla.compile clear the pending graph prior calling the "
+            "target function\n";
     } else {
       ss << debug_output_prefix << "  user mark_step\n";
     }
@@ -345,6 +389,82 @@ void DebugUtil::analyze_graph_execution_python_frame(
 
   // TODO(JackCaoG): print more information about the graph that is about to get
   // executed.
+  if (debug_file_name == "") {
+    // print to stderr by default
+    std::cerr << ss.str();
+  } else {
+    std::ofstream outFile;
+    outFile.open(debug_file_name, std::ios_base::app);
+    outFile << ss.rdbuf();
+  }
+  if (unexpected_execution) {
+    XLA_ERROR() << "Unexpected execution happens inside the compiled function, "
+                   "exiting\n";
+  }
+}
+
+void DebugUtil::post_compilation_analysis(
+    runtime::ComputationClient::ComputationPtr computation) {
+  static const int pt_xla_debug_level = GetDebugLevel();
+  static const bool is_master_process =
+      (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
+  static const std::string debug_file_name =
+      runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
+  if (pt_xla_debug_level <= 0 || !is_master_process) {
+    return;
+  }
+
+  // don't output analysis for eager mode execution/compilation.
+  // TODO(JackCaoG): enable this for eager+dynamo
+  if (XLAGraphExecutor::Get()->UseEagerMode()) {
+    return;
+  }
+
+  constexpr std::string_view debug_output_prefix =
+      "Post Compilation Analysis: ";
+  std::stringstream ss;
+  ss << "\n"
+     << debug_output_prefix
+     << "======================================================================"
+        "=========="
+     << "\n";
+  std::string memory_info = computation->get_memory_info();
+
+  std::vector<std::string> keysToExtract = {
+      "generated_code_size_in_bytes", "argument_size_in_bytes",
+      "output_size_in_bytes", "alias_size_in_bytes", "temp_size_in_bytes"};
+  std::vector<std::string> sizes_in_gb;
+
+  for (const std::string& key : keysToExtract) {
+    std::regex pattern(key + "=([0-9]+)");
+    std::smatch match;
+
+    if (std::regex_search(memory_info, match, pattern)) {
+      sizes_in_gb.push_back(
+          std::to_string(std::stoll(match[1]) * 1.0 / 1024 / 1024 / 1024));
+    } else {
+      sizes_in_gb.push_back("Unknown ");
+    }
+  }
+
+  ss << debug_output_prefix << "Graph input size: " << sizes_in_gb[1]
+     << " GB\n";
+  ss << debug_output_prefix << "Graph output size: " << sizes_in_gb[2]
+     << " GB\n";
+  ss << debug_output_prefix << "Aliased Input size: " << sizes_in_gb[3]
+     << " GB\n";
+  ss << debug_output_prefix << "Intermediate tensor size: " << sizes_in_gb[4]
+     << " GB\n";
+  ss << debug_output_prefix << "Compiled program size: " << sizes_in_gb[0]
+     << " GB\n";
+  ss << debug_output_prefix
+     << "----------------------------------------------------------------------"
+        "----------"
+     << "\n";
+  ss << debug_output_prefix
+     << "======================================================================"
+        "=========="
+     << "\n";
   if (debug_file_name == "") {
     // print to stderr by default
     std::cerr << ss.str();

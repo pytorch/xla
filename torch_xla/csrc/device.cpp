@@ -55,6 +55,10 @@ std::string DeviceType::toString() const {
   return absl::StrCat(type_name_, ":");
 }
 
+XlaDeviceType DeviceType::getType() const {
+  return static_cast<XlaDeviceType>(type);
+}
+
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   XLA_CHECK(!device_spec.empty()) << "empty device spec";
   XLA_CHECK(device_spec[0] != ':')
@@ -75,7 +79,8 @@ torch::lazy::BackendDevice GetVirtualDevice() {
 
 bool ShouldUseVirtualDevice() {
   bool use_virtual_device =
-      runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
+      runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false) ||
+      runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false);
   if (use_virtual_device) {
     TF_LOG(INFO) << "Using SPMD virtual device optimization";
   }

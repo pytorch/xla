@@ -2,14 +2,15 @@
 #define XLA_TORCH_XLA_CSRC_HELPERS_H_
 
 #include <c10/core/Scalar.h>
-#include <c10/util/Optional.h>
 #include <torch/csrc/lazy/core/shape.h>
 #include <torch/csrc/lazy/core/util.h>
 
 #include <functional>
+#include <optional>
 #include <tuple>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -180,6 +181,10 @@ class XlaHelpers {
       xla::XlaOp input, xla::XlaOp aux_input,
       const std::vector<int64_t>& aux_input_dimensions);
 
+  static xla::XlaOp DynamicBroadcastInDim(
+      xla::XlaOp op, const xla::Shape& final_shape,
+      xla::XlaOp final_broadcast_dimensions);
+
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 
   static bool SameStaticDimensions(const xla::Shape& shape1,
@@ -194,8 +199,8 @@ class XlaHelpers {
     return torch::lazy::ToVector<int64_t>(input);
   }
 
-  static c10::optional<int64_t> I64Optional(c10::optional<int64_t> opt) {
-    return opt ? c10::optional<int64_t>(*opt) : c10::nullopt;
+  static std::optional<int64_t> I64Optional(std::optional<int64_t> opt) {
+    return opt ? std::optional<int64_t>(*opt) : std::nullopt;
   }
 
   // Creates an XLA padding configuration from a n-dimensional padding list.
@@ -382,11 +387,14 @@ class XlaHelpers {
     s_mat_mul_precision = precision;
   }
 
-  static xla::StatusOr<xla::XlaComputation> WrapXlaComputation(
+  static absl::StatusOr<xla::XlaComputation> WrapXlaComputation(
       const xla::XlaComputation& computation,
       const std::vector<xla::Shape>& parameter_shapes,
-      const std::vector<std::pair<int64_t, int64_t>>& input_output_alias_pair,
+      const std::vector<xla::HloSharding>& parameter_shardings,
       const std::vector<size_t>& buffer_donor_indices);
+
+  static std::vector<xla::HloSharding> ExtractInputShardings(
+      const xla::XlaComputation& computation);
 
   static torch::lazy::Shape ConvertXlaShapeToLazy(const xla::Shape& shape);
 

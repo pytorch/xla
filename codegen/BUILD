@@ -8,6 +8,10 @@ py_binary(
         "//torch_xla/csrc:aten_xla_type.cpp",
         "@torch//:torchgen_deps",
     ],
+    deps = [
+        "@pypi_torch//:pkg",
+        "@pypi_pyyaml//:pkg",
+    ],
     tags = [
         "local",
         "no-remote-exec",

@@ -36,6 +36,8 @@ MODEL_OPTS = {
 FLAGS = args_parse.parse_common_options(
     batch_size=128, num_epochs=1, opts=MODEL_OPTS.items())
 
+xr.use_spmd(auto=FLAGS.auto_spmd)
+
 
 class SimpleLinear(nn.Module):
 

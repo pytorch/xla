@@ -3,8 +3,8 @@
 
 #include <memory>
 
-#include "tsl/distributed_runtime/preemption/preemption_sync_manager.h"
 #include "xla/pjrt/distributed/distributed.h"
+#include "xla/tsl/distributed_runtime/preemption/preemption_sync_manager.h"
 
 namespace torch_xla {
 namespace runtime {

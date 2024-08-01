@@ -3,12 +3,12 @@ FROM us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu as b
 # Replace value with the latest runner release version
 # source: https://github.com/actions/runner/releases
 # ex: 2.303.0
-ARG RUNNER_VERSION="2.314.1"
+ARG RUNNER_VERSION="2.317.0"
 ARG RUNNER_ARCH="x64"
 # Replace value with the latest runner-container-hooks release version
 # source: https://github.com/actions/runner-container-hooks/releases
 # ex: 0.3.1
-ARG RUNNER_CONTAINER_HOOKS_VERSION="0.5.1"
+ARG RUNNER_CONTAINER_HOOKS_VERSION="0.6.1"
 
 ARG USER=runner
 

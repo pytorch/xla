@@ -5,7 +5,7 @@ BUILDTYPE="opt"
 VERB=
 FILTER=
 LOGFILE=/tmp/pytorch_cpp_test.log
-XLA_EXPERIMENTAL="nonzero:masked_select"
+XLA_EXPERIMENTAL="nonzero:masked_select:nms"
 BAZEL_REMOTE_CACHE="0"
 BAZEL_VERB="test"
 

@@ -36,8 +36,6 @@ module "dev_images" {
   image_name = "development"
   image_tags = concat(each.value.extra_tags, [
     each.key,
-    # Append _YYYYMMDD suffix to the dev image name.
-    "${each.key}_$(date +%Y%m%d)",
   ])
 
   dockerfile = "development.Dockerfile"

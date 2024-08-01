@@ -6,6 +6,7 @@
 #include <iterator>
 #include <limits>
 
+#include "absl/status/status.h"
 #include "absl/strings/str_join.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/dtype.h"
@@ -387,8 +388,6 @@ xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
       aux_input.builder(), "mhlo.dynamic_reshape", {input, concat_op},
       xla::ShapeUtil::MakeShape(aux_input_shape.element_type(), output_sizes,
                                 output_dynamic));
-
-  return input;
 }
 
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
@@ -826,9 +825,12 @@ std::string StringifyBroadcastDimensions(std::vector<int64_t> broadcast_dims) {
   return str;
 };
 
+}  // namespace
+
 // Emit XLA custom call for dynamic_broadcast_in_dim.
-xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
-                                 xla::XlaOp final_broadcast_dimensions) {
+xla::XlaOp XlaHelpers::DynamicBroadcastInDim(
+    xla::XlaOp op, const xla::Shape& final_shape,
+    xla::XlaOp final_broadcast_dimensions) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op);
 
   std::vector<int64_t> op_broadcast_dims(shape.dimensions().size());
@@ -840,8 +842,6 @@ xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
       /*operands=*/{op, final_broadcast_dimensions}, /*shape*/ final_shape,
       /*opaque=*/StringifyBroadcastDimensions(op_broadcast_dims));
 }
-
-}  // namespace
 
 xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
     xla::XlaOp input, xla::XlaOp aux_input,
@@ -972,10 +972,10 @@ xla::XlaOp XlaHelpers::PromotedLogicalUnaryOp(
   return unary_op(op);
 }
 
-xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
+absl::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
     const xla::XlaComputation& computation,
     const std::vector<xla::Shape>& parameter_shapes,
-    const std::vector<std::pair<int64_t, int64_t>>& input_output_alias_pair,
+    const std::vector<xla::HloSharding>& parameter_shardings,
     const std::vector<size_t>& buffer_donor_indices) {
   xla::XlaBuilder builder(computation.proto().name());
 
@@ -986,7 +986,17 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   for (int i = 0; i < parameter_shapes.size(); ++i) {
     *input_tuple_shape.add_tuple_shapes() = parameter_shapes[i];
   }
+  // Parameters are sharded, need to attach the tuple sharding to the wrapped
+  // parameter.
+  if (parameter_shardings.size()) {
+    xla::HloSharding tuple_sharding =
+        xla::HloSharding::Tuple(input_tuple_shape, parameter_shardings);
+    builder.SetSharding(tuple_sharding.ToProto());
+  }
   xla::XlaOp input_tuple = xla::Parameter(&builder, 0, input_tuple_shape, "in");
+  if (parameter_shardings.size()) {
+    builder.ClearSharding();
+  }
 
   // Handle the results of the original computation.
   std::vector<xla::XlaOp> inner_params;
@@ -999,16 +1009,7 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   xla::XlaOp orig_result = xla::Call(&builder, computation, inner_params);
 
   // Rebuild aliasing.
-  if (input_output_alias_pair.size() > 0) {
-    for (const auto& [input_index, output_index] : input_output_alias_pair) {
-      // Both input and output will be a tuple so parameter_number will always
-      // be
-      // 0
-      builder.SetUpAlias(/*output_index=*/xla::ShapeIndex({output_index}),
-                         /*param_number=*/0,
-                         /*param_index=*/xla::ShapeIndex({input_index}));
-    }
-  } else if (buffer_donor_indices.size() > 0) {
+  if (buffer_donor_indices.size() > 0) {
     for (size_t i : buffer_donor_indices) {
       builder.AddBufferDonor(/*param_number=*/0,
                              /*param_index=*/xla::ShapeIndex({i}));
@@ -1018,13 +1019,33 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   return builder.Build(orig_result);
 }
 
+std::vector<xla::HloSharding> XlaHelpers::ExtractInputShardings(
+    const xla::XlaComputation& computation) {
+  std::vector<xla::HloSharding> param_shardings;
+  // entry computation is always the last computation
+  for (const xla::HloInstructionProto& instr :
+       computation.proto().computations().rbegin()->instructions()) {
+    if (instr.opcode() == HloOpcodeString(xla::HloOpcode::kParameter)) {
+      const int64_t index = instr.parameter_number();
+      // we assume that parameter is ordered.
+      XLA_CHECK_EQ(index, param_shardings.size());
+      param_shardings.push_back(*xla::HloSharding::FromProto(instr.sharding()));
+      TF_VLOG(5) << "index = " << index
+                 << " shape = " << xla::Shape(instr.shape()).ToString()
+                 << " sharding = "
+                 << xla::HloSharding::FromProto(instr.sharding())->ToString();
+    }
+  }
+  return param_shardings;
+}
+
 torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
   at::ScalarType scalar_type = MaybeUpcastToHostTorchType(shape.element_type());
-  c10::optional<std::vector<bool>> is_symbolic = c10::nullopt;
+  std::optional<std::vector<bool>> is_symbolic = std::nullopt;
   if (shape.is_dynamic()) {
     std::vector<bool> xla_dynamic_dimensions =
         runtime::util::ToVector<bool>(shape.dynamic_dimensions());
-    is_symbolic = c10::make_optional(xla_dynamic_dimensions);
+    is_symbolic = std::make_optional(xla_dynamic_dimensions);
   }
 
   return torch::lazy::Shape(

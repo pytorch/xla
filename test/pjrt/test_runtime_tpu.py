@@ -7,13 +7,13 @@ import requests
 
 import torch
 from absl.testing import absltest, parameterized
+import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
 from torch_xla._internal import tpu
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 assert tpu.num_available_chips() > 0, 'Must be run on a TPU!'
 
@@ -118,7 +118,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     def _assert(i):
       assert i == 0, f"the device index {i} must be 0 in nprocs=1"
 
-    xmp.spawn(_assert, nprocs=1)
+      debug_single_process = FLAGS.num_cores == 1
+      torch_xla.launch(
+          _mp_fn, args=(FLAGS,), debug_single_process=debug_single_process)
 
   def test_xla_devices_single_process_one_chip_one_device_spawn(self):
     # Avoid initializing the TPU client in the parent process
@@ -133,17 +135,13 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     self.assertListEqual(
         devices, [torch.device(f'xla:{i}') for i in range(self.num_devices)])
 
-  @parameterized.named_parameters(('xla_model', xm.get_ordinal),
-                                  ('pjrt', xr.global_ordinal))
-  def test_global_ordinal(self, ordinal_func):
-    results = pjrt.run_multiprocess(ordinal_func)
+  def test_global_ordinal(self):
+    results = pjrt.run_multiprocess(xr.global_ordinal)
     values = list(results.values())
     self.assertListEqual(sorted(values), list(range(self.num_devices)))
 
-  @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
-                                  ('pjrt', xr.local_ordinal))
-  def test_local_ordinal(self, ordinal_func):
-    results = pjrt.run_multiprocess(ordinal_func)
+  def test_local_ordinal(self):
+    results = pjrt.run_multiprocess(xr.local_ordinal)
     self.assertCountEqual(results.values(), list(range(self.num_devices)))
 
   @staticmethod
@@ -191,7 +189,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     # Initialize the client in the parent process
     xm.xla_device()
 
-    xmp.spawn(xm.xla_device)
+    torch_xla.launch(xm.xla_device)
 
   def test_spawn_error(self):
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
@@ -206,7 +204,8 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def test_runtime_device_attributes(self):
     result = pjrt.run_multiprocess(self._runtime_device_attributes)
     for device in result.values():
-      self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
+      self.assertCountEqual(['coords', 'core_on_chip', 'num_cores'],
+                            list(device.keys()))
       self.assertIsInstance(device['coords'], list)
       self.assertIsInstance(device['core_on_chip'], int)
 
@@ -218,7 +217,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     results = pjrt.run_multiprocess(self._global_runtime_device_attributes)
     for result in results.values():
       for device in result:
-        self.assertCountEqual(['coords', 'core_on_chip', 'name'],
+        self.assertCountEqual(['coords', 'core_on_chip', 'name', 'num_cores'],
                               list(device.keys()))
         self.assertIsInstance(device['coords'], list)
         self.assertIsInstance(device['core_on_chip'], int)
@@ -250,6 +249,16 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           v, expected_time_seconds * 1e-9,
           f"Expected exectue time of {i} to take more than "
           f"{expected_time_seconds} seconds, got {v / 1e9} seconds")
+
+  @staticmethod
+  def _memory_usage():
+    return xm.get_memory_info()
+
+  def test_memory_usage(self):
+    results = pjrt.run_multiprocess(self._memory_usage)
+    for usage in results.values():
+      self.assertIn('bytes_used', usage)
+      self.assertIn('bytes_limit', usage)
 
 
 if __name__ == '__main__':

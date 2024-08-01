@@ -1,3 +1,4 @@
+import contextlib
 import io
 import itertools
 import logging
@@ -6,7 +7,7 @@ import re
 import threading
 import time
 import warnings
-from typing import List, Optional
+from typing import List, Optional, TypedDict
 import torch
 import torch.distributed._functional_collectives
 from torch.library import Library
@@ -17,6 +18,9 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
+import os
+from torch_xla.experimental.deprecation import deprecated
+import torch_xla._internal.utils as _utils
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -30,25 +34,17 @@ REDUCE_MAX = 'max'
 _DEVICE_CONTEXTS = dict()
 _DEVICE_CONTEXTS_LOCK = threading.Lock()
 
-# Note [Dynamo WORLD_SIEZ and ORDINAL]
-# Belows are workaround to cache the ordinal and world_size such that
-# Dynamo won't do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.
-_WORLD_SIZE = None
-_ORDINAL = None
-
 XLA_LIB = Library("xla", "DEF")
 
-
-def _init_world_size_ordinal():
-  global _WORLD_SIZE, _ORDINAL
-
-  # Dynamo doesn't support XRT or multithreaded runtime. See Note [V3-8 Threading]
-  if not runtime.using_pjrt() or runtime.addressable_device_count() > 1:
-    return
-
-  if _WORLD_SIZE is None:
-    _WORLD_SIZE = xrt_world_size()
-    _ORDINAL = get_ordinal()
+from . import xla_model as this_module
+xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size,
+                            'xrt_world_size() will be removed in release 2.6.')
+get_ordinal = deprecated(
+    this_module, torch_xla.runtime.global_ordinal,
+    'xla_model.get_ordinal() will be removed in release 2.6.')
+parse_xla_device = deprecated(
+    this_module, _utils.parse_xla_device,
+    'xla_model.parse_xla_device() will be removed in release 2.6.')
 
 
 class DeviceContext(object):
@@ -72,12 +68,6 @@ def _get_device_context(device=None):
 
 def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
-
-
-def parse_xla_device(device):
-  m = re.match(r'([A-Z]+):(\d+)$', device)
-  if m:
-    return (m.group(1), int(m.group(2)))
 
 
 def get_xla_supported_devices(devkind=None, max_devices=None):
@@ -113,44 +103,6 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     return kind_devices[:max_devices] if max_devices else kind_devices
 
 
-def xrt_world_size(defval=1):
-  """Retrieves the number of devices which is taking part of the replication.
-
-  Args:
-    defval (int, optional): The default value to be returned in case there is no
-      replication information available.
-      Default: 1
-
-  Returns:
-    The number of devices which is taking part of the replication.
-  """
-  global _WORLD_SIZE
-  if _WORLD_SIZE is not None:
-    return _WORLD_SIZE
-
-  return runtime.world_size()
-
-
-def get_ordinal(defval=0):
-  """Retrieves the replication ordinal of the current thread.
-
-  The ordinals range from 0 to `xrt_world_size()` minus 1.
-
-  Args:
-    defval (int, optional): The default value to be returned in case there is no
-      replication information available. Ignored for runtime.
-      Default: 0
-
-  Returns:
-    The replication ordinal of the current thread.
-  """
-  global _ORDINAL
-  if _ORDINAL is not None:
-    return _ORDINAL
-
-  return runtime.global_ordinal()
-
-
 def get_local_ordinal(defval=0):
   """Retrieves the replication local ordinal of the current thread.
 
@@ -179,7 +131,7 @@ def is_master_ordinal(local=True):
   Returns:
     A boolean indicating whether the current process is the master ordinal.
   """
-  ordinal = get_local_ordinal() if local else get_ordinal()
+  ordinal = get_local_ordinal() if local else runtime.global_ordinal()
   return ordinal == 0
 
 
@@ -252,7 +204,7 @@ def xla_replication_devices(local_devices):
   real_devices = xla_real_devices(local_devices)
   device_types = set()
   for device in real_devices:
-    xdev = parse_xla_device(device)
+    xdev = _utils.parse_xla_device(device)
     device_types.add(xdev[0])
   if len(device_types) != 1:
     # No replication if the device set spawns multiple device types.
@@ -260,7 +212,7 @@ def xla_replication_devices(local_devices):
         'Cannot replicate across different device types: devices={}/{}'.format(
             local_devices, real_devices))
   device_type = device_types.pop()
-  kind_devices = get_xla_supported_devices(devkind=device_type)
+  kind_devices = get_xla_supported_devices()
   if len(kind_devices) != len(local_devices):
     # Replication can only happen among all devices of one kind.
     raise RuntimeError(
@@ -269,13 +221,14 @@ def xla_replication_devices(local_devices):
   replication_devices = []
   for device in torch_xla._XLAC._xla_get_all_devices():
     # device is like 'CUDA:0'
-    xdev = parse_xla_device(device)
+    xdev = _utils.parse_xla_device(device)
     if not xdev:
       raise RuntimeError('Invalid device format: {}'.format(device))
     if xdev[0] == device_type:
       replication_devices.append(device)
   sorted_by_ordinal = sorted(
-      replication_devices, key=lambda device: parse_xla_device(device)[1])
+      replication_devices,
+      key=lambda device: _utils.parse_xla_device(device)[1])
   return sorted_by_ordinal
 
 
@@ -478,8 +431,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
   groups = groups or []
 
   # No-op if there is only one device
-  if xrt_world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE', bool,
-                                                False):
+  if runtime.world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE',
+                                                    bool, False):
     if isinstance(inputs, torch.Tensor):
       return inputs.clone()
     else:
@@ -490,8 +443,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
     if scale == 1.0 and groups == [] and pin_layout:
       # TODO(alanwaketan): Support groups.
       # Only c10d_functional version cc ops are traceable by Dynamo.
-      result = torch.ops.c10d_functional.all_reduce(inputs, reduce_type, "", [],
-                                                    0)
+      result = torch.ops._c10d_functional.all_reduce(inputs, reduce_type, "")
     else:
       result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, scale,
                                                groups, pin_layout)
@@ -531,9 +483,9 @@ def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
     dim = value.dim() + dim
   size = value.size(dim)
   padding = [0] * (2 * value.dim())
-  ordinal = get_ordinal()
+  ordinal = runtime.global_ordinal()
   if groups is None:
-    left, right = ordinal, xrt_world_size() - 1 - ordinal
+    left, right = ordinal, runtime.world_size() - 1 - ordinal
   else:
     ordinals = dict()
     for g in groups:
@@ -584,7 +536,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
       "Replica groups must have the same number of replicas/shards."
   else:
     # All replicas belong to a single group
-    shard_count = xrt_world_size()
+    shard_count = runtime.world_size()
 
   token, devctx = _get_all_reduce_token()
 
@@ -631,6 +583,110 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   else:
     raise TypeError("`value` needs to be a Tensor or a list of Tensors, but "
                     f"given {type(value)}.")
+
+
+class CoalescingBuckets(object):
+
+  def __init__(self, func, input_list, output_list=None, bucket_cap_mb=160):
+    if not isinstance(input_list, list) or any(
+        not isinstance(v, torch.Tensor) for v in input_list):
+      raise TypeError(
+          f"`input_list` needs to be a list of Tensors, but given {type(input_list)}."
+      )
+    if output_list != None:
+      if not isinstance(output_list, list) or any(
+          not isinstance(v, torch.Tensor) for v in output_list):
+        raise TypeError(
+            f"`output_list` needs to be a list of Tensors, but given {type(output_list)}."
+        )
+      if len(output_list) != len(input_list):
+        raise ValueError(
+            "`output_list` length doesn't match `input_list` length: "
+            f"{len(output_list)} vs {len(input_list)}.")
+    self._func = func
+    self._input_list = input_list
+    self._output_list = output_list
+    self._total = 0
+    self._tensor_bucket = []
+    self._output_bucket = [] if output_list else None
+    self._bucket_cap = bucket_cap_mb * 1024 * 1024
+    self._out_tensors = []
+
+  def flush(self):
+    if len(self._tensor_bucket) == 1:
+      # Use non-coalesced CCOp if its just one tensor
+      output = self._output_bucket[0] if self._output_bucket else None
+      self._out_tensors.append(self._func(self._tensor_bucket[0], output))
+    elif len(self._tensor_bucket):
+      self._out_tensors.extend(
+          self._func(self._tensor_bucket, self._output_bucket))
+    self._total = 0
+    self._tensor_bucket = []
+    self._output_bucket = [] if self._output_list else None
+
+  def add(self, tensor, idx):
+    self._total += tensor.numel() * tensor.element_size()
+    self._tensor_bucket.append(tensor)
+    if self._output_list != None:
+      self._output_bucket.append(self._output_list[idx])
+
+  def __call__(self):
+    for idx, tensor in enumerate(self._input_list):
+      tensor_bytes = tensor.numel() * tensor.element_size()
+
+      # Aim for target bucket_cap_mb: flush new tensor with bucket if bucket content
+      # is small (1/2 cap) but don't combine if combined total is over 2x cap
+      total_new = self._total + tensor_bytes
+      if tensor_bytes > self._bucket_cap and self._total < 0.5 * self._bucket_cap and total_new <= 2 * self._bucket_cap:
+        self.add(tensor, idx)
+        self.flush()
+      else:
+        # Bucketize till the total spills over
+        if total_new > self._bucket_cap:
+          self.flush()
+        self.add(tensor, idx)
+
+    # Flush the last remaining bucket
+    self.flush()
+
+    assert len(self._out_tensors) == len(self._input_list)
+
+    return self._out_tensors
+
+
+def all_gather_bucketized(input_list,
+                          dim=0,
+                          groups=None,
+                          output=None,
+                          pin_layout=False,
+                          bucket_cap_mb=160):
+  """Performs an all-gather operation along a given dimension, with bucketization.
+
+  Args:
+    See all_gather for the args: dim, groups, output, pin_layout
+    input_list: List of input tensors
+    bucket_cap_mb: Number of MegaBytes of the tensor bucket to fill before doing all-gather.
+
+  Returns:
+    A list of tensors each of which has, in the ``dim`` dimension, all the values from the
+    participating replicas.
+  """
+  # sanity checks
+  if pin_layout:
+    raise RuntimeError(
+        "For xm.all_gather_bucketized, pin_layout=True is not yet supported.")
+
+  def _all_gather_coalesced(_input_list, _output_list=None):
+    return all_gather(
+        value=_input_list,
+        dim=dim,
+        groups=groups,
+        output=_output_list,
+        pin_layout=pin_layout)
+
+  buckets = CoalescingBuckets(
+      _all_gather_coalesced, input_list, output, bucket_cap_mb=bucket_cap_mb)
+  return buckets()
 
 
 def all_to_all(value,
@@ -720,7 +776,8 @@ def collective_broadcast(tensors: List[torch.Tensor],
     # so each replica must have the same multiply op with the same parameters.
     for tensor in tensors:
       scale = torch.tensor(
-          1 if get_ordinal() == root_ordinal else 0, dtype=tensor.dtype)
+          1 if runtime.global_ordinal() == root_ordinal else 0,
+          dtype=tensor.dtype)
       # Transfer scale tensor as device data instead of constant 1 or 0.
       xscale = send_cpu_data_to_device(scale, tensor.device)
       tensor.mul_(xscale[0])
@@ -746,7 +803,7 @@ def send(value, channel_id):
 
 
 def recv(output, channel_id):
-  """Performs a XLA `Send()` operation on the input tensor.
+  """Performs a XLA `Recv()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#recv
 
@@ -846,6 +903,50 @@ def reduce_scatter(reduce_type,
                     f"given {type(input)}.")
 
 
+def reduce_scatter_bucketized(reduce_type,
+                              input_list,
+                              scale,
+                              scatter_dim,
+                              shard_count,
+                              groups=None,
+                              output=None,
+                              pin_layout=False,
+                              bucket_cap_mb=160):
+  """Performs a XLA `ReduceScatter()` operation on a list of tensors (bucketized).
+
+  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
+
+  Args:
+    see reduce_scatter for reduce_type, scale, scatter_dim, shard_count, groups, pin_layout
+    input_list: List of input tensors
+    output: Optional list of output torch.Tensor
+    bucket_cap_mb: Number of MegaBytes of the tensor bucket to fill before doing reduce-scatter.
+
+  Returns:
+    A list of `torch.Tensors` with all the values reduced across replicas. Each process
+    gets a shard split along the `scatter_dim`. All other dimensions are
+    the same as the input.
+  """
+
+  def _reduce_scatter_coalesced(_input_list, _output_list=None):
+    return reduce_scatter(
+        reduce_type=reduce_type,
+        input=_input_list,
+        scale=scale,
+        scatter_dim=scatter_dim,
+        shard_count=shard_count,
+        groups=groups,
+        output=_output_list,
+        pin_layout=pin_layout)
+
+  buckets = CoalescingBuckets(
+      _reduce_scatter_coalesced,
+      input_list,
+      output,
+      bucket_cap_mb=bucket_cap_mb)
+  return buckets()
+
+
 def add_step_closure(closure, args=(), run_async=False):
   """Adds a closure to the list of the ones to be run at the end of the step.
 
@@ -897,7 +998,7 @@ def _run_step_closures():
   return devctx
 
 
-def mark_step(wait=False):
+def mark_step(wait=False, reset_scope=True):
   if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
     print(
         'torch_xla.core.xla_model::mark_step\n',
@@ -906,7 +1007,8 @@ def mark_step(wait=False):
         flush=True)
   torch_xla._XLAC._xla_step_marker(
       torch_xla._XLAC._xla_get_default_device(), [],
-      wait=xu.getenv_as('XLA_SYNC_WAIT', bool, wait))
+      wait=xu.getenv_as('XLA_SYNC_WAIT', bool, wait),
+      reset_scope=reset_scope)
   # Only emit metrics from the first local device index, to avoid emitting the
   # same values from different threads.
   if is_master_ordinal():
@@ -974,6 +1076,41 @@ def wait_device_ops(devices=[]):
   torch_xla._XLAC._xla_wait_device_ops(devices=devices)
 
 
+def all_reduce_bucketized_gradients(gradients,
+                                    scale,
+                                    groups,
+                                    pin_layout,
+                                    bucket_cap_mb=0):
+  total = 0
+  tensor_bucket = []
+  bucket_cap = bucket_cap_mb * 1024 * 1024
+
+  for grad in gradients:
+    grad_bytes = grad.numel() * grad.element_size()
+
+    # Bucketize till the total spills over
+    total += grad_bytes
+    if total > bucket_cap and len(tensor_bucket) > 0:
+      all_reduce(
+          REDUCE_SUM,
+          tensor_bucket,
+          scale=scale,
+          groups=groups,
+          pin_layout=pin_layout)
+      total = grad_bytes
+      tensor_bucket = []
+    tensor_bucket.append(grad)
+
+  # Flush the last remaining bucket
+  if len(tensor_bucket):
+    all_reduce(
+        REDUCE_SUM,
+        tensor_bucket,
+        scale=scale,
+        groups=groups,
+        pin_layout=pin_layout)
+
+
 def reduce_gradients(optimizer, groups=None, pin_layout=True):
   """Reduces all the gradients handled by an optimizer.
 
@@ -988,15 +1125,28 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout when reducing gradients.
       See `xm.all_reduce` for details.
   """
-  count = xrt_world_size()
+  count = runtime.world_size()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    all_reduce(
-        REDUCE_SUM,
-        gradients,
-        scale=1.0 / count,
-        groups=groups,
-        pin_layout=pin_layout)
+    bucket_cap_mb = int(os.getenv('ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB', 0))
+    # Reverse the gradients list so that we start allreduce from the last layer
+    # onwards. This allows allreduce to trigger as soon as the bucket fills up and
+    # overlap with backward pass.
+    if bucket_cap_mb > 0:
+      gradients = reversed(gradients)
+      all_reduce_bucketized_gradients(
+          gradients,
+          scale=1.0 / count,
+          groups=groups,
+          pin_layout=pin_layout,
+          bucket_cap_mb=bucket_cap_mb)
+    else:
+      all_reduce(
+          REDUCE_SUM,
+          gradients,
+          scale=1.0 / count,
+          groups=groups,
+          pin_layout=pin_layout)
 
 
 def optimizer_step(optimizer,
@@ -1200,7 +1350,7 @@ def do_on_ordinals(target, data=(), ordinals=(0,)):
     In the ordinals that ran the `target` function, the function return value,
     otherwise `None`.
   """
-  running = get_ordinal() in ordinals
+  running = runtime.global_ordinal() in ordinals
   cpu_data = _maybe_convert_to_cpu(data, convert=running)
   if running:
     result = target(*cpu_data)
@@ -1263,16 +1413,45 @@ def get_rng_state(device=None):
   return torch_xla._XLAC._xla_get_rng_seed(str(device) if device else '')
 
 
-def get_memory_info(device):
-  """Retrieves the device memory information.
+@contextlib.contextmanager
+def fork_rng(device=None, enabled=True):
+  """
+  Forks the RNG, so that when you return, the RNG is reset to the state that it was previously in.
+  Args:
+    device (string, optional): The device where the RNG state needs to be set. If missing the default device seed will be set.
+    enabled (bool): if ``False``, the RNG is not forked.  This is a convenience argument for easily disabling the context manager without having to delete it and unindent your Python code under it.
+  """
+  if not enabled:
+    yield
+    return
+
+  if device is None:
+    device = torch_xla._XLAC._xla_get_default_device()
+  xla_rng_state = get_rng_state(device=device)
+
+  try:
+    yield
+  finally:
+    set_rng_state(xla_rng_state, device=device)
+
+
+class MemoryInfo(TypedDict):
+  bytes_used: str
+  bytes_limit: int
+
+
+def get_memory_info(device: Optional[torch.device] = None) -> MemoryInfo:
+  """Retrieves the device memory usage.
 
   Args:
-    device (string): The device whose memory information are requested.
+    device: Optional[torch.device] The device whose memory information are requested.
+    If not passed will use the default device.
 
   Returns:
-    A dictionary with `kb_free` (free memory in KB) and `kb_total` (total
-    memory in KB) keys.
+    MemoryInfo dict with memory usage for the given device.
   """
+  if device == None:
+    device = xla_device()
   return torch_xla._XLAC._xla_memory_info(str(device))
 
 

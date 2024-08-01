@@ -16,7 +16,7 @@ namespace {
 template <typename T>
 std::vector<T> GetValuesVectorWithOptional(
     absl::Span<const T> values,
-    absl::Span<const c10::optional<T>* const> opt_values) {
+    absl::Span<const std::optional<T>* const> opt_values) {
   std::vector<T> result(values.begin(), values.end());
   for (auto opt : opt_values) {
     if (*opt) {
@@ -192,7 +192,7 @@ xla::Shape AnyDimOutputShape(const torch::lazy::Value& input, int64_t dim,
 }
 
 xla::Shape ArgmaxOutputShape(const torch::lazy::Value& input,
-                             c10::optional<int64_t> dim, bool keepdim) {
+                             std::optional<int64_t> dim, bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     if (dim.has_value()) {
@@ -208,7 +208,7 @@ xla::Shape ArgmaxOutputShape(const torch::lazy::Value& input,
 }
 
 xla::Shape ArgminOutputShape(const torch::lazy::Value& input,
-                             c10::optional<int64_t> dim, bool keepdim) {
+                             std::optional<int64_t> dim, bool keepdim) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     if (dim.has_value()) {
@@ -295,7 +295,7 @@ xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
 
 xla::Shape BinaryCrossEntropyOutputShape(
     const torch::lazy::Value& input, const torch::lazy::Value& target,
-    const c10::optional<torch::lazy::Value>& weight, int64_t reduction) {
+    const std::optional<torch::lazy::Value>& weight, int64_t reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     absl::optional<xla::XlaOp> weight;
@@ -316,7 +316,7 @@ xla::Shape BinaryCrossEntropyOutputShape(
 xla::Shape BinaryCrossEntropyBackwardOutputShape(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
     const torch::lazy::Value& target,
-    const c10::optional<torch::lazy::Value>& weight, int64_t reduction) {
+    const std::optional<torch::lazy::Value>& weight, int64_t reduction) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     absl::optional<xla::XlaOp> weight;
@@ -371,8 +371,8 @@ xla::Shape CholeskyOutputShape(const torch::lazy::Value& input,
 
 xla::Shape ClampTensorOutputShape(
     const torch::lazy::Value& input,
-    const c10::optional<torch::lazy::Value>& min,
-    const c10::optional<torch::lazy::Value>& max) {
+    const std::optional<torch::lazy::Value>& min,
+    const std::optional<torch::lazy::Value>& max) {
   // This shape function works in a bit of an odd/hacky way.
   // If operands.size() > 1, operands[1] can be either min or
   // max since they are both optional values. But in this code,

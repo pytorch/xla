@@ -13,6 +13,7 @@ parser.add_argument('--max_diff_count', type=int, default=25)
 parser.add_argument('--verbosity', type=int, default=0)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
+from absl.testing import absltest, parameterized
 
 # Normal imports section starts here.
 import collections
@@ -28,10 +29,16 @@ import torch.autograd as ad
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.testing._internal.common_device_type import dtypes
+from torch.testing._internal.common_dtype import (
+    all_types_and_complex_and,
+    all_types_and,
+)
 import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
 import torch_xla.distributed.data_parallel as dp
+from torch_xla.distributed.fsdp import checkpoint_module
 from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
@@ -39,6 +46,7 @@ import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 import torch_xla.test.test_utils as xtu
+import torch_xla.utils.dlpack as xdlpack
 import torch_xla.utils.utils as xu
 import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
@@ -57,13 +65,36 @@ def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
 
-def _is_on_eager_debug_mode():
-  return xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', bool, defval=False)
-
-
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
-skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
+skipOnEagerDebug = unittest.skipIf(torch_xla.experimental.is_eager_mode(),
                                    'skip on eager debug mode')
+
+
+def _skipIfFunctionalization(value=True, reason=""):
+  verb = "is" if value else "is not"
+  reason = f" Reason: {reason}" if reason else ""
+  return unittest.skipIf(
+      XLA_DISABLE_FUNCTIONALIZATION is value,
+      f'Works only when functionalization {verb} disabled.{reason}.')
+
+
+def skipIfFunctionalizationEnabled(reason):
+  return _skipIfFunctionalization(value=False, reason=reason)
+
+
+def skipIfFunctionalizationDisabled(reason):
+  return _skipIfFunctionalization(value=True, reason=reason)
+
+
+def onlyOnCUDA(fn):
+  accelerator = os.environ.get("PJRT_DEVICE").lower()
+  return unittest.skipIf(accelerator != "cuda", "PJRT_DEVICE=CUDA required")(fn)
+
+
+def onlyIfXLAExperimentalContains(feat):
+  experimental = os.environ.get("XLA_EXPERIMENTAL", "").split(":")
+  return unittest.skipIf(feat not in experimental,
+                         f"XLA_EXPERIMENTAL={feat} required")
 
 
 def _gen_tensor(*args, **kwargs):
@@ -569,7 +600,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(x.device.type, 'xla')
 
   def test_randperm(self):
-    x = torch.randperm(3, device=xm.xla_device())
+    x = torch.randperm(3, device=xm.xla_device(), dtype=torch.int32)
     self.assertEqual(x.device.type, 'xla')
 
   def test_randn_like(self):
@@ -977,8 +1008,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   # TODO - upstream behavior has changed and results in expected DestroyXlaTensor
   # counter as of 11/13/2023. Re-enable after reviewing the change.
-  @unittest.skipIf(True or XLA_DISABLE_FUNCTIONALIZATION,
-                   'Metrics differ when functionalization is disabled.')
+  # @skipIfFunctionalizationDisabled("metrics differ")
+  @unittest.skip
   def test_set(self):
     met.clear_all()
 
@@ -996,8 +1027,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # shouldn't crash
     self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
-  @unittest.skipIf(XLA_DISABLE_FUNCTIONALIZATION,
-                   'Metrics differ when functionalization is disabled.')
+  @skipIfFunctionalizationDisabled("metrics differ")
   def test_replace_xla_tensor(self):
     met.clear_all()
 
@@ -1340,8 +1370,20 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         ), dtype=torch.int64)
     self.runAtenTest([token_type_ids, cat_ids], test_fn)
 
-  @unittest.skipIf(not XLA_DISABLE_FUNCTIONALIZATION,
-                   'When functionalization is enabled, views do not exist.')
+  def test_one_hot_no_fallback(self):
+
+    def test_fn(t):
+      met.clear_all()
+      res = F.one_hot(t, num_classes=5)
+      # make sure there is no graph break
+      assert 'aten::' not in met.short_metrics_report()
+      return res
+
+    t1 = torch.arange(0, 5) % 3
+
+    self.runAtenTest([t1], test_fn)
+
+  @skipIfFunctionalizationEnabled("views do not exist")
   def test_save_view_alias_check(self):
 
     class Nested(object):
@@ -1497,6 +1539,63 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([torch.arange(144, dtype=torch.int32)], test_fn)
 
+  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
+  def test_as_strided_with_gap(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (4, 4), (8, 1))
+
+    self.runAtenTest([torch.arange(28, dtype=torch.int32)], test_fn)
+
+  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
+  def test_as_strided_with_gap_no_unit_stride(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (4, 4), (8, 2))
+
+    self.runAtenTest([torch.arange(31, dtype=torch.int32)], test_fn)
+
+  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
+  def test_as_strided_with_overlap(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (4, 4), (2, 1))
+
+    self.runAtenTest([torch.arange(10, dtype=torch.int32)], test_fn)
+
+  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
+  def test_as_strided_with_overlap_and_gap(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (4, 4), (4, 2))
+
+    self.runAtenTest([torch.arange(19, dtype=torch.int32)], test_fn)
+
+  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
+  def test_as_strided_with_overlap_zero_stride(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, (4, 4), (0, 1))
+
+    self.runAtenTest([torch.arange(19, dtype=torch.int32)], test_fn)
+
+  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
+  def test_as_strided_with_gap_no_unit_stride(self):
+
+    def test_fn(r):
+      x = r.view(8, 4)
+      return torch.as_strided(r, (4, 4), (6, 2))
+
+    self.runAtenTest([torch.arange(32, dtype=torch.int32)], test_fn)
+
+  @skipIfFunctionalizationDisabled("arbitrary as_strided unsupported")
+  def test_as_strided_with_empty_args(self):
+
+    def test_fn(r):
+      return torch.as_strided(r, tuple(), tuple())
+
+    self.runAtenTest([torch.arange(32, dtype=torch.int32)], test_fn)
+
   def test_basic_bfloat16(self):
 
     def test_fn(s):
@@ -1587,10 +1686,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     y = torch.rand(5)
     self.assertEqual(x + y, y + x)
 
-  @unittest.skipIf(
-      os.environ.get('XLA_USE_EAGER_DEBUG_MODE'),
-      'Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.'
-  )
+  # Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.
+  @skipOnEagerDebug
   def test_pow_constant(self):
     t1 = torch.pow(torch.tensor([2.0, 3.0], device=xm.xla_device()), 5)
     hlo_text = torch_xla._XLAC._get_xla_tensors_text([t1])
@@ -1645,6 +1742,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       upper_bound = torch.sigmoid(x * (100.0))
       assert torch.all(lower_bound >= 0.0)
       assert torch.all(upper_bound <= 1.0)
+
+  def test_manual_seed(self):
+    device = torch_xla.device()
+    torch_xla.manual_seed(12345)
+    t1 = torch.randn(5, 5, device=device)
+    torch_xla.manual_seed(12345)
+    t2 = torch.randn(5, 5, device=device)
+    self.assertTrue(torch.allclose(t1.cpu(), t2.cpu()))
 
   def test_cached_addcdiv(self):
     xla_device = xm.xla_device()
@@ -1867,6 +1972,321 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(
         torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
 
+  def test_pow_dtype_promotion(self):
+
+    def test(dtype):
+
+      def foo(x):
+        return torch.pow(x, 3.0)
+
+      x = torch.arange(10).to(dtype)
+      r = foo(x)
+
+      device = xm.xla_device()
+      Xx = x.to(device)
+      Xr = foo(Xx)
+
+      self.assertEqual(r, Xr.cpu())
+
+    test_dtypes = [
+        torch.bfloat16,
+        torch.float16,
+        torch.float32,
+        torch.float64,
+        torch.cfloat,
+    ]
+
+    if not _is_on_tpu():
+      test_dtypes += [
+          torch.cdouble,
+      ]
+
+    for dtype in test_dtypes:
+      test(dtype)
+
+  def test_trilinear_interpolate(self):
+
+    def func(input_volume):
+      output_size = (32, 64, 64)
+      return F.interpolate(
+          input_volume, size=output_size, mode='trilinear', align_corners=False)
+
+    device = torch_xla.device()
+    input_volume = torch.randn(1, 3, 16, 32, 32).to(device)
+    met.clear_all()
+    self.runAtenTest((input_volume), func)
+    assert len(torch_xla._XLAC._get_executed_fallback_ops()) == 0
+
+  def test_gelu_backward_different_types(self):
+
+    def foo(grad, inp):
+      return torch.ops.aten.gelu_backward.default(grad, inp)
+
+    grad = torch.rand(10, 10, dtype=torch.bfloat16)
+    inp = torch.rand(10, 10)
+
+    Xgrad = grad.to(xm.xla_device())
+    Xinp = inp.to(xm.xla_device())
+
+    r = foo(grad, inp)
+    Xr = foo(Xgrad, Xinp)
+
+    self.assertEqual(r, Xr.cpu())
+
+  def test_clip_grad_norm_(self):
+
+    def foo(t):
+      torch.nn.utils.clip_grad_norm_(t, 1.0)
+
+    t = torch.rand(10, 10, requires_grad=True, dtype=torch.bfloat16)
+    t.retain_grad()
+    t.grad = torch.rand(10, 10, dtype=torch.bfloat16)
+    xt = t.to(xm.xla_device())
+    xt.grad = t.grad.to(xm.xla_device(), dtype=torch.bfloat16)
+
+    foo(t)
+    foo(xt)
+
+    self.assertEqual(xt.grad.dtype, torch.bfloat16)
+    self.assertEqual(t.grad, xt.grad.cpu())
+
+  def test_clip_grad_norm_zero(self):
+    t = torch.rand(10, 10, dtype=torch.bfloat16)
+    xt = t.to(xm.xla_device())
+    result = torch.nn.utils.clip_grad_norm_(xt, 1.0)
+    self.assertEqual(result.device.type, 'xla')
+    self.assertTrue(torch.allclose(result.cpu(), torch.tensor(0.)))
+
+  def test_stack_different_types(self):
+
+    def foo(t0, t1):
+      return torch.stack([t0, t1])
+
+    t0 = torch.rand(10, 10, dtype=torch.bfloat16)
+    t1 = torch.rand(10, 10)
+
+    Xt0 = t0.to(xm.xla_device())
+    Xt1 = t1.to(xm.xla_device())
+
+    r = foo(t0, t1)
+    Xr = foo(Xt0, Xt1)
+
+    self.assertEqual(r, Xr.cpu())
+
+  def test_index_zero_tensor_by_zero_tensor(self):
+
+    # Test if simple one-tensor indexing works.
+    # Should return a non-permuted tensor.
+    def f1(x, i):
+      return x[i]
+
+    # Test if scattered two-tensor indexing works.
+    # Should return a permuted tensor, with indexed dimensions first.
+    def f2(x, i0, i1):
+      return x[:, i0, :, i1]
+
+    cases = {
+        f1: [
+            ((0,), (0,)),
+            ((0, 10), (0, 5, 5)),
+            ((0, 3, 3), (5, 5, 0)),
+        ],
+        f2: [
+            ((10, 0, 10, 10), (5, 0, 5), (5, 1, 1)),
+            ((0, 0, 10, 0), (5, 5, 0), (5, 5, 1)),
+        ]
+    }
+
+    def make_tensor(shape):
+      return torch.rand(shape)
+
+    def make_index(shape):
+      return torch.randint(0, 100, shape, dtype=torch.long)
+
+    def test(f, xshape, ishapes):
+      x = make_tensor(xshape)
+      ilist = [make_index(s) for s in ishapes]
+
+      Xx = x.to(xm.xla_device())
+      Xilist = [i.to(xm.xla_device()) for i in ilist]
+
+      out = f(x, *ilist)
+      Xout = f(Xx, *Xilist)
+
+      self.assertEqual(out, Xout.cpu())
+
+    for xshape, ishape in cases[f1]:
+      test(f1, xshape, (ishape,))
+
+    for xshape, i0shape, i1shape in cases[f2]:
+      test(f2, xshape, (i0shape, i1shape))
+
+  def test_inplace_mul_scalar_different_dtype(self):
+    # This tests whether the returned output data-type agrees on PyTorch
+    # and XLA sides.
+    #
+    # Technical details: even though we were computing the common data-type
+    # inside PyTorch/XLA XLANativeFunctions::mul function, we were using it
+    # just for telling PyTorch what the output data-type would be, i.e. creating
+    # an IR node of that data-type). Meanwhile, in the XLA side of things,
+    # it would just promote the tensors using other data-type promotion rules.
+    #
+    # In summary, given the expressions below, the problem this test covers is:
+    #
+    #   >>> t = torch.rand(10, dtype=torch.half)
+    #   >>> s = torch.tensor(5, dtype=torch.double)
+    #   >>> out = t.mul_(s)
+    #
+    #   out.dtype is torch.float16, but its underlying XLA type (xla::Shape's
+    #   element_type) is F64
+    #
+    # See: https://github.com/pytorch/xla/issues/7084
+
+    def fn(inp, s):
+      return inp.mul_(s)
+
+    inp = torch.rand(10, dtype=torch.half)
+    s = torch.tensor(7, dtype=torch.double)
+
+    Xinp = inp.to(xm.xla_device())
+    Xs = s.to(xm.xla_device())
+
+    out = fn(inp, s)
+    Xout = fn(Xinp, Xs)
+
+    self.assertEqual(out, Xout.cpu())
+    self.assertEqual("f16", torch_xla._XLAC._get_xla_tensor_shape_type(Xout))
+
+  # We skip TPU for 2 reasons:
+  #   1. upsample_bilinear on f64 tensors doesn't work on TPUs
+  #   2. This issue only affects non-TPU and non-Neuron devices (i.e. there's
+  #      a short-circuit for both devices that don't go through the bug path)
+  @skipOnTpu
+  def test_upsample_bilinear_double(self):
+    # Originally, the upsample_bilinear implementation (in resize_ops.cpp)
+    # was copied from TF. The computation was done intentionally on F32 and
+    # not cast back[1]. However, that didn't reflect in the returned tensor.
+    # Basically, what would happen is:
+    #
+    # 1. A tensor of data-type other than F32 is created:
+    #    > a = torch.rand(..., dtype=torch.double)
+    #
+    # 2. Call upsample_bilinear on it
+    #    > r = torch.nn.functional.upsample_bilinear(a, scale_factor=2)
+    #
+    # 3. The result's data-type would show as torch.float64, but its inner
+    #    HLO representation would be actually F32.
+    #
+    #     - It would rarely surface as an error, since we do data-type
+    #       promotion at the HLO level.
+    #
+    #     - When this result is the argument of a new HLO function, XLA
+    #       would actually expect a F16 tensor, since its torch.Tensor
+    #       data-type "is" torch.float16. However, since the actual HLO
+    #       data-type is F32, XLA raises an error.
+    #
+    # See more details at [2].
+    #
+    # [1]: https://github.com/tensorflow/tensorflow/commit/f8b35e00afe09c8606bcb0441a51be8bd38168d2
+    # [2]: https://github.com/pytorch/xla/issues/7095
+
+    def foo(x, is_xla=False):
+      # Compute upsample_bilinear.
+      r = torch.nn.functional.upsample_bilinear(x, scale_factor=2)
+
+      if is_xla:
+        # Mark the end of the HLO graph.
+        xm.mark_step()
+
+      # Start a new HLO graph using the upsample_bilinear result as
+      # one of its arguments.
+      return r + 5
+
+    inp = torch.rand(1, 3, 10, 10, dtype=torch.double)
+    Xinp = inp.to(xm.xla_device())
+
+    out = foo(inp)
+    Xout = foo(Xinp, is_xla=True)
+
+    self.assertEqual(out, Xout.cpu())
+
+  def test_embedding_bag_backward_fallback(self):
+    # Tests whether EmbeddingBag backward function works and computes the expected results.
+    #
+    # EmbeddingBag has a 'sparse' flag which dictates what will be the layout of the grad
+    # returned by its backward function. Unfortunately, PyTorch/XLA doesn't support sparse
+    # tensors, yet. Therefore, as a work-around, we fallback to the dense backward function.
+    #
+    # This test tests whether we correctly compute the backward for sparse=True and
+    # sparse=False, making sure that we did not introduce any regressions.
+
+    # Run EmbeddingBag forward and backwards.
+    # Return the forward result + the computed weight grad.
+    def fn(indices, weight, **kwargs):
+      out = F.embedding_bag(indices, weight, **kwargs)
+      out.sum().backward()
+      return out, weight.grad
+
+    # Clone a tensor, and maybe move it to a different device.
+    def clone_and_maybe_move(tensor, device=None):
+      fresh = tensor
+      # Maybe move to the specified device.
+      if device is not None:
+        fresh = fresh.to(device)
+      # Clone if not cloned already by the previous device move.
+      if fresh.device == tensor.device and fresh.data_ptr() == tensor.data_ptr(
+      ):
+        fresh = tensor.clone()
+      # Make this tensor a leaf tensor by detaching and reseting its
+      # requires_grad property.
+      fresh = fresh.detach()
+      fresh.requires_grad_(tensor.requires_grad)
+      return fresh
+
+    EMBEDDINGS = 10
+    VECTOR_DIM = 5
+    N = 5
+
+    kwargs = {
+        "indices": torch.randint(0, EMBEDDINGS, (N,)),
+        "weight": torch.randn((EMBEDDINGS, VECTOR_DIM), requires_grad=True),
+        "offsets": torch.tensor([0, 3], dtype=torch.long),
+    }
+
+    # Test all combinations of sparse + mode.
+    for sparse, mode in itertools.product((False, True),
+                                          ("sum", "mean", "max")):
+      # According to nn.functional.embedding_bag PyTorch documentation, not supported.
+      if sparse and mode == "max":
+        continue
+
+      extra_kwargs = {
+          "mode": mode,
+          "sparse": sparse,
+      }
+
+      with self.subTest(sparse=sparse, mode=mode):
+        kwargs_ = {k: clone_and_maybe_move(v) for k, v in kwargs.items()}
+        xla_kwargs = {
+            k: clone_and_maybe_move(v, device=xm.xla_device())
+            for k, v in kwargs.items()
+        }
+
+        expected_out, expected_grad = fn(**kwargs_, **extra_kwargs)
+        actual_out, actual_grad = fn(**xla_kwargs, **extra_kwargs)
+
+        # PyTorch/XLA doesn't support sparse tensors.
+        # We explicitly fallback to the dense backward function whenever sparse=True.
+        # Therefore, we have to convert the expected grad to dense, so that we can
+        # compare the actual numbers.
+        if sparse:
+          self.assertTrue(expected_grad.is_sparse)
+          self.assertFalse(actual_grad.is_sparse)
+          expected_grad = expected_grad.to_dense()
+
+        self.assertEqual(actual_out, expected_out)
+        self.assertEqual(actual_grad, expected_grad)
+
 
 class MNISTComparator(nn.Module):
 
@@ -1934,16 +2354,13 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
     xm.mark_step()
     xm.wait_device_ops()
     self.assertTrue("ExecuteTime" in met.metric_names() or
-                    "ExecuteChainedTime" in met.metric_names())
+                    "EagerOpExecuteTime" in met.metric_names())
 
 
 class TestDebuggingUtil(test_utils.XlaTestCase):
 
+  @skipOnEagerDebug
   def test_get_xla_tensor_debug_info(self):
-    if xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', str, '1'):
-      # ignore this test for eager debug mode since it will
-      # mess up the IR.
-      return
     device = xm.xla_device()
     # test non xla tensor
     cpu_t1 = torch.randn(5)
@@ -2176,32 +2593,6 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertEqual(dt[0].device, xla_device)
     self.assertTrue(torch.all(torch.eq(dt[0].cpu(), t)))
 
-  def test_nms(self):
-    BOXES = (
-        (0, 0, 3, 2),
-        (3, 3, 11, 7),
-        (2, 2, 5, 7),
-        (7, 4, 15, 12),
-    )
-    SCORES = (0.9, 0.5, 0.95, 0.4)
-    SCORE_THRESHOLD = 0.1
-    IOU_THRESHOLD = 0.08
-
-    xla_device = xm.xla_device()
-    boxes = torch.tensor(BOXES, dtype=torch.float).to(xla_device)
-    scores = torch.tensor(SCORES, dtype=torch.float).to(xla_device)
-    score_threshold = torch.tensor(
-        SCORE_THRESHOLD, dtype=torch.float).to(xla_device)
-    iou_threshold = torch.tensor(
-        IOU_THRESHOLD, dtype=torch.float).to(xla_device)
-
-    selected_indices, num_valid = xf.nms(boxes, scores, score_threshold,
-                                         iou_threshold, len(BOXES))
-
-    self.assertEqual(selected_indices,
-                     torch.tensor([2, 0, 3, 1], dtype=torch.int32))
-    self.assertEqual(num_valid.item(), 3)
-
   def test_util_foreach_api(self):
 
     class ForTest(object):
@@ -2333,12 +2724,387 @@ class TestGeneric(test_utils.XlaTestCase):
     # Has a different execution path than other tensors.
     self._test_move_tensor_cuda_to_xla(torch.tensor(42))
 
+  def test_unsafe_buffer_pointer(self):
+    xla_device = xm.xla_device()
+    xla_tensor_0 = torch.tensor(42).to(xla_device)
+    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
+    xm.mark_step()
+    buf_ptr_0 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_0)
+    self.assertGreaterEqual(buf_ptr_0, 0)
+
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    xla_tensor_1 = torch.tensor(42, device=xm.xla_device())
+    buf_ptr_1 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_1)
+    self.assertGreaterEqual(buf_ptr_1, 0)
+
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    xla_tensor_2 = torch.ones((5, 5)).to(xla_device)
+    buf_ptr_2 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_2)
+    self.assertGreaterEqual(buf_ptr_2, 0)
+
+    xla_tensor_3 = torch.arange(5, device=xm.xla_device())
+    xm.mark_step()
+    # Without the `wait_device_ops()`, the pjrt buffer (pjrt_data->buffer) at https://github.com/pytorch/xla/blob/e3fc03314dab5f44e3ed9ccbba6c15fbca3285cd/torch_xla/csrc/runtime/pjrt_computation_client.cc#L467 will be nullptr.
+    xm.wait_device_ops()
+    buf_ptr_3 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_3)
+    self.assertGreaterEqual(buf_ptr_3, 0)
+
+
+class TestDLPack(parameterized.TestCase):
+
+  def _test_dlpack_capsule_conversion_helper(self, xla_tensor):
+    dlpt = xdlpack.to_dlpack(xla_tensor)  # dlpt1 has type PyCapsule
+    xla_tensor2 = xdlpack.from_dlpack(dlpt)
+
+    self.assertEqual(xla_tensor.device, xla_tensor2.device)
+    self.assertTrue(torch.allclose(xla_tensor.cpu(), xla_tensor2.cpu()))
+    self.assertRaisesRegex(RuntimeError,
+                           "DLTensor capsule can be consumed only once",
+                           lambda: xdlpack.from_dlpack(dlpt))
+
+    self.assertEqual(
+        torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor),
+        torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor2))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  @parameterized.parameters(*all_types_and(torch.half, torch.bfloat16))
+  def test_dlpack_roundtrip_tensor(self, dtype):
+    xla_device = xm.xla_device()
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    # xla_tensor_2 uses XLANativeFunctions::_to_copy
+    xla_tensor_2 = torch.arange(5, dtype=dtype).to(xla_device)
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_2)
+
+    # xla_tensor_3 uses arange_out IR node.
+    xla_tensor_3 = torch.arange(5, dtype=dtype, device=xm.xla_device())
+    xm.mark_step()
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_3)
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  @parameterized.parameters(*all_types_and_complex_and(torch.half,
+                                                       torch.bfloat16,
+                                                       torch.bool, torch.uint16,
+                                                       torch.uint32,
+                                                       torch.uint64))
+  def test_dlpack_roundtrip_scalar(self, dtype):
+    xla_device = xm.xla_device()
+    xla_tensor_0 = torch.tensor(42, dtype=dtype).to(xla_device)
+    # `mark_step` ensures xtensor->CurrentDataHandle() != nullptr
+    xm.mark_step()
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_0)
+
+    xla_tensor_1 = torch.tensor(42, dtype=dtype).to(xla_device)
+    # xtensor->CurrentDataHandle() == nullptr but xtensor->CurrentIrValue().node != nullptr and device_data != nullptr
+    self._test_dlpack_capsule_conversion_helper(xla_tensor_1)
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_roundtrip_bool(self):
+    xla_tensor = torch.ones(1, dtype=torch.bool).to(xm.xla_device())
+    self._test_dlpack_capsule_conversion_helper(xla_tensor)
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_pytorch_cuda_to_xla(self):
+    t1_cuda = torch.arange(5).cuda()
+    dlt1 = torch.utils.dlpack.to_dlpack(t1_cuda)
+    xla_t1 = xdlpack.from_dlpack(dlt1)
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
+    t1_cuda[0] = t1_cuda[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
+
+    t2_cuda = torch.tensor(5).cuda()
+    dlt2 = torch.utils.dlpack.to_dlpack(t2_cuda)
+    xla_t2 = xdlpack.from_dlpack(dlt2)
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
+    t2_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
+
+    cuda1 = torch.device('cuda:1')
+    t3_cuda = torch.tensor(5, device=cuda1)
+    dlt3 = torch.utils.dlpack.to_dlpack(t3_cuda)
+    xla_t3 = xdlpack.from_dlpack(dlt3)
+    self.assertEqual(xla_t3.device.type, 'xla')
+    self.assertEqual(
+        xla_t3.device.index,
+        t3_cuda.device.index,
+        msg='both value should 1. xla_t3.device should be xla:1.')
+    t3_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_pytorch_cuda_to_xla_protocol_conversion(self):
+    # Unlike the test_dlpack_pytorch_cuda_to_xla,
+    # torch_cuda_tensor has attribute __dlpack__ and __dlpack_device__.
+    # From cuda tensors to xla tensors, the synchronization is handdled implicitly.
+    t1_cuda = torch.arange(5).cuda()
+    xla_t1 = xdlpack.from_dlpack(t1_cuda)
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, t1_cuda.device.index)
+    t1_cuda[0] = t1_cuda[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), t1_cuda.cpu()))
+
+    t2_cuda = torch.tensor(5).cuda()
+    xla_t2 = xdlpack.from_dlpack(t2_cuda)
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, t2_cuda.device.index)
+    t2_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t2.cpu(), t2_cuda.cpu()))
+
+    cuda1 = torch.device('cuda:1')
+    t3_cuda = torch.tensor(5, device=cuda1)
+    xla_t3 = xdlpack.from_dlpack(t3_cuda)
+    self.assertEqual(xla_t3.device.type, 'xla')
+    self.assertEqual(
+        xla_t3.device.index,
+        t3_cuda.device.index,
+        msg='both value should 1. xla_t3.device should be xla:1.')
+    t3_cuda.fill_(6)
+    self.assertTrue(torch.allclose(xla_t3.cpu(), t3_cuda.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_xla_to_pytorch_cuda(self):
+    xla_t1 = torch.arange(5).to(xm.xla_device())
+    dlt1 = xdlpack.to_dlpack(xla_t1)
+    cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
+    self.assertEqual(cuda_t1.device.type, 'cuda')
+    self.assertEqual(cuda_t1.device.index, xla_t1.device.index)
+    cuda_t1[0] = cuda_t1[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), cuda_t1.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_non_default_layout(self):
+    cuda_t = torch.arange(25, device=torch.device('cuda')).reshape(5, 5)
+
+    t1 = cuda_t.t()
+    xla_t1 = xdlpack.from_dlpack(t1.__dlpack__())
+    self.assertEqual(xla_t1.device.type, 'xla')
+    self.assertEqual(xla_t1.device.index, t1.device.index)
+    self.assertTrue(torch.allclose(t1.cpu(), xla_t1.cpu()))
+
+    t2 = cuda_t[0]
+    xla_t2 = xdlpack.from_dlpack(t2.__dlpack__())
+    self.assertEqual(xla_t2.device.type, 'xla')
+    self.assertEqual(xla_t2.device.index, t2.device.index)
+    self.assertTrue(torch.allclose(t2.cpu(), xla_t2.cpu()))
+
+    t3 = cuda_t[:, 0]
+    self.assertRaisesRegex(
+        RuntimeError,
+        r"Only DLPack tensors with trivial \(compact\) striding are supported",
+        lambda: xdlpack.from_dlpack(t3.__dlpack__()))
+
+    t4 = cuda_t[1, :]
+    xla_t4 = xdlpack.from_dlpack(t4.__dlpack__())
+    self.assertEqual(xla_t4.device.type, 'xla')
+    self.assertEqual(xla_t4.device.index, t4.device.index)
+    self.assertTrue(torch.allclose(t4.cpu(), xla_t4.cpu()))
+
+    t5 = cuda_t[1]
+    xla_t5 = xdlpack.from_dlpack(t5.__dlpack__())
+    self.assertEqual(xla_t5.device.type, 'xla')
+    self.assertEqual(xla_t5.device.index, t5.device.index)
+    self.assertTrue(torch.allclose(t5.cpu(), xla_t5.cpu()))
+
+
+class SimpleModelWithDropout(torch.nn.Module):
+
+  def __init__(self):
+    super().__init__()
+    self.x = torch.nn.Linear(128, 128)
+    self.register_buffer("buffer", torch.zeros(64, 64))
+    self.dropout = torch.nn.Dropout(p=0.1)
+    self.to_save = []
+
+  def save_output(self, output):
+    self.to_save.append(output.detach().cpu())
+
+  def forward(self, inp):
+    x = self.x(inp)
+    output = self.dropout(x)
+    xm.add_step_closure(self.save_output, args=(output,), run_async=False)
+    return output
+
+
+class TestActivationCheckpoint(test_utils.XlaTestCase):
+
+  def test_dropout(self):
+    device = xm.xla_device()
+    model = SimpleModelWithDropout().to(device)
+    model = checkpoint_module(model)
+    _input = torch.randn(128, 128, requires_grad=True)
+    _input = _input.to(device)
+    output = model(_input)
+    output = torch.sum(output)
+    output.backward()
+    xm.mark_step()
+    same_output = torch.allclose(model.to_save[0], model.to_save[1])
+    self.assertTrue(same_output,
+                    f"in fwd {model.to_save[0]}, in bwd {model.to_save[1]}")
+
+  def test_opt_barrier(self):
+    device = xm.xla_device()
+    model = SimpleModelWithDropout().to(device)
+    model = checkpoint_module(model)
+    _input = torch.randn(128, 128, requires_grad=True)
+    _input = _input.to(device)
+    output = model(_input)
+    output = torch.sum(output)
+    output.backward()
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([model.x.weight.grad])
+    lines = hlo.splitlines()
+    opt_barrier = ""
+    for line in lines:
+      if "opt-barrier" in line:
+        opt_barrier = line
+        break
+
+    # Somehow the CPU/GPU CI will not have the opt-barrier.
+    if opt_barrier != "":
+      self.assertEqual(opt_barrier.count("f32[128,128]"), 6)
+      self.assertEqual(opt_barrier.count("f32[128]"), 2)
+      self.assertEqual(opt_barrier.count("f32[64,64]"), 2)
+
+
+# These tests were extracted and adapted from torchvision.
+# Source: vision/test/test_ops.py
+@onlyIfXLAExperimentalContains("nms")
+class TestNMS(test_utils.XlaTestCase):
+
+  def _reference_nms(self, boxes, scores, iou_threshold):
+    import torchvision
+    return torchvision.ops.nms(boxes.cpu(), scores.cpu(), iou_threshold)
+
+  def _nms(self, boxes, scores, iou_threshold):
+    import torchvision
+    device = xm.xla_device()
+    return torchvision.ops.nms(
+        boxes.to(device), scores.to(device), iou_threshold).cpu()
+
+  def _create_tensors_with_iou(self, N, iou_thresh):
+    # force last box to have a pre-defined iou with the first box
+    # let b0 be [x0, y0, x1, y1], and b1 be [x0, y0, x1 + d, y1],
+    # then, in order to satisfy ops.iou(b0, b1) == iou_thresh,
+    # we need to have d = (x1 - x0) * (1 - iou_thresh) / iou_thresh
+    # Adjust the threshold upward a bit with the intent of creating
+    # at least one box that exceeds (barely) the threshold and so
+    # should be suppressed.
+    boxes = torch.rand(N, 4) * 100
+    boxes[:, 2:] += boxes[:, :2]
+    boxes[-1, :] = boxes[0, :]
+    x0, y0, x1, y1 = boxes[-1].tolist()
+    iou_thresh += 1e-5
+    boxes[-1, 2] += (x1 - x0) * (1 - iou_thresh) / iou_thresh
+    scores = torch.rand(N)
+    return boxes, scores
+
+  @skipOnEagerDebug
+  def test_nms_ref(self):
+
+    def _test(iou, seed):
+      torch.random.manual_seed(seed)
+      err_msg = "NMS incompatible between CPU and reference implementation for IoU={}"
+      boxes, scores = self._create_tensors_with_iou(1000, iou)
+      keep_ref = self._reference_nms(boxes, scores, iou)
+      keep = self._nms(boxes, scores, iou)
+      self.assertEqual(keep, keep_ref, message=err_msg.format(iou))
+
+    for iou in (0.2, 0.5, 0.8):
+      for seed in range(10):
+        with self.subTest(iou=iou, seed=seed):
+          _test(iou, seed)
+
+  def test_nms_input_errors(self):
+    with self.assertRaisesRegex(RuntimeError, "boxes should be a 2D tensor."):
+      self._nms(torch.rand(4), torch.rand(3), 0.5)
+    with self.assertRaisesRegex(
+        RuntimeError, "boxes should be a 2D tensor of shape \[N, 4\]."):
+      self._nms(torch.rand(3, 5), torch.rand(3), 0.5)
+    with self.assertRaisesRegex(RuntimeError, "scores should be a 1D tensor."):
+      self._nms(torch.rand(3, 4), torch.rand(3, 2), 0.5)
+    with self.assertRaisesRegex(
+        RuntimeError,
+        "boxes and scores should have the same size for dimension 0."):
+      self._nms(torch.rand(3, 4), torch.rand(4), 0.5)
+
+  def test_legacy(self):
+    BOXES = (
+        (0, 0, 3, 2),
+        (3, 3, 11, 7),
+        (2, 2, 5, 7),
+        (7, 4, 15, 12),
+    )
+    SCORES = (0.9, 0.5, 0.95, 0.4)
+    IOU_THRESHOLD = 0.08
+
+    def fn(boxes, scores):
+      return self._reference_nms(boxes, scores, IOU_THRESHOLD)
+
+    boxes = torch.tensor(BOXES, dtype=torch.float)
+    scores = torch.tensor(SCORES, dtype=torch.float)
+    self.runAtenTest((boxes, scores), fn)
+
+
+class TestHelperFunction(test_utils.XlaTestCase):
+
+  def test_repeat_truncated(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 20
+    input = torch.randn(10).to(device)
+    repeats = torch.tensor([0, 1, 2, 0, 4, 0, 6, 7, 8, 9]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    expected = torch.repeat_interleave(input, repeats)[:total_repeat_length]
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
+  def test_repeat_extended(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 100
+    input = torch.randn(10).to(device)
+    repeats = torch.tensor([0, 5, 2, 0, 4, 9, 6, 7, 8, 0]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    base = torch.repeat_interleave(input, repeats)[:total_repeat_length]
+    # remaining space will be filled with last value in `input`.
+    expected = torch.cat(
+        (base,
+         torch.repeat_interleave(input[-1],
+                                 total_repeat_length - base.size()[0])))
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
+  def test_repeat_special(self):
+    from torch_xla.experimental.custom_kernel import repeat_with_fixed_output_size
+    met.clear_all()
+    device = torch_xla.device()
+    total_repeat_length = 135
+    num_groups = 8
+    input = torch.arange(num_groups, dtype=torch.int32).to(device)
+    repeats = torch.tensor([3, 6, 2, 14, 27, 47, 8, 28]).to(device)
+    res = repeat_with_fixed_output_size(input, repeats, total_repeat_length)
+    # make sure there is no graph break
+    assert 'aten::' not in met.short_metrics_report()
+    expected = torch.repeat_interleave(input, repeats)[:total_repeat_length]
+    self.assertTrue(torch.allclose(res.cpu(), expected.cpu()))
+
 
 if __name__ == '__main__':
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
+  torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
     print(met.metrics_report())

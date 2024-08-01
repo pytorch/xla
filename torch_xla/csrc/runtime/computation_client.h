@@ -27,6 +27,8 @@
 #include "xla/client/xla_computation.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/pjrt/pjrt_common.h"
 #include "xla/types.h"
 
 namespace torch_xla {
@@ -44,6 +46,7 @@ class XlaCoordinator;
 // ComputationClient.
 struct ClientExecuteOptions {
   bool explode_tuple{true};
+  bool eager_mode{false};
 };
 
 class ComputationClient {
@@ -191,6 +194,10 @@ class ComputationClient {
       return module->ToString();
     }
 
+    virtual const std::string get_memory_info() const {
+      XLA_ERROR() << "Unimplemented";
+    }
+
    private:
     xla::XlaComputation computation_;
     xla::ProgramShape program_shape_;
@@ -207,13 +214,14 @@ class ComputationClient {
   // of torch::lazy::Computation?
   struct CompileInstance {
     CompileInstance() = default;
-    CompileInstance(xla::XlaComputation computation,
-                    std::string compilation_device,
-                    std::vector<std::string> devices,
-                    const xla::Shape* output_shape,
-                    bool parameter_is_tupled_arguments = false,
-                    bool is_sharded = false,
-                    bool allow_spmd_sharding_propagation_to_output = true)
+    CompileInstance(
+        xla::XlaComputation computation, std::string compilation_device,
+        std::vector<std::string> devices, const xla::Shape* output_shape,
+        bool parameter_is_tupled_arguments = false, bool is_sharded = false,
+        bool allow_spmd_sharding_propagation_to_output = true,
+        bool use_auto_spmd_partitioning = false,
+        std::vector<int64_t> auto_spmd_mesh_shape = {},
+        std::vector<int64_t> auto_spmd_mesh_ids = {}, bool eager_mode = false)
         : computation(std::move(computation)),
           compilation_device(std::move(compilation_device)),
           devices(std::move(devices)),
@@ -221,7 +229,11 @@ class ComputationClient {
           parameter_is_tupled_arguments(parameter_is_tupled_arguments),
           is_sharded(is_sharded),
           allow_spmd_sharding_propagation_to_output(
-              allow_spmd_sharding_propagation_to_output) {}
+              allow_spmd_sharding_propagation_to_output),
+          use_auto_spmd_partitioning(use_auto_spmd_partitioning),
+          auto_spmd_mesh_shape(auto_spmd_mesh_shape),
+          auto_spmd_mesh_ids(auto_spmd_mesh_ids),
+          eager_mode(eager_mode) {}
 
     xla::XlaComputation computation;
     std::string compilation_device;
@@ -230,6 +242,10 @@ class ComputationClient {
     bool parameter_is_tupled_arguments;
     bool is_sharded;
     bool allow_spmd_sharding_propagation_to_output;
+    bool use_auto_spmd_partitioning;
+    std::vector<int64_t> auto_spmd_mesh_shape;
+    std::vector<int64_t> auto_spmd_mesh_ids;
+    bool eager_mode;
   };
 
   struct ExecuteComputationOptions : public ClientExecuteOptions {};
@@ -237,8 +253,8 @@ class ComputationClient {
   struct ExecuteReplicatedOptions : public ClientExecuteOptions {};
 
   struct MemoryInfo {
-    int64_t kb_free = 0;
-    int64_t kb_total = 0;
+    int64_t bytes_used = 0;
+    int64_t bytes_limit = 0;
   };
 
   virtual ~ComputationClient() {}
@@ -266,9 +282,18 @@ class ComputationClient {
   // structure will be empty if there is no sharding, like with PjRtData.
   virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
 
+  virtual std::string PjRtDeviceToString(
+      xla::PjRtDevice* const device) const = 0;
+
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
+
+  // Reshard and return data sharded by `sharding` spec. This is a no-op if the
+  // input sharding spec is identical to the target `sharding` sharding spec.
+  virtual std::vector<DataPtr> ReshardData(
+      absl::Span<const DataPtr> handles,
+      absl::Span<const xla::OpSharding> shardings) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
@@ -286,6 +311,11 @@ class ComputationClient {
   // python while holding the GIL can cause deadlocks!
   virtual std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) = 0;
+
+  virtual std::uintptr_t UnsafeBufferPointer(const DataPtr handle) = 0;
+
+  virtual std::shared_ptr<xla::PjRtBuffer> GetPjRtBuffer(
+      const DataPtr handle) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(
@@ -327,6 +357,13 @@ class ComputationClient {
 
   virtual torch_xla::DeviceType GetDeviceType() const = 0;
 
+  virtual xla::PjRtPlatformId GetPlatformID() const = 0;
+
+  virtual absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
+      int local_device_id) const = 0;
+
+  virtual std::intptr_t GetCudaStreamForDevice(int local_device_id) const = 0;
+
   virtual size_t GetNumDevices() const = 0;
 
   virtual std::vector<std::string> GetLocalDevices() const = 0;
@@ -341,7 +378,7 @@ class ComputationClient {
       std::variant<std::string, bool, int64_t, std::vector<int64_t>, float>;
 
   virtual const absl::flat_hash_map<
-      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
   GetDeviceAttributes(const std::string& device) = 0;
 
   virtual void SetReplicationDevices(
@@ -394,7 +431,9 @@ class ComputationClient {
   static metrics::Metric* TransferToDeviceTransformMetric();
   static metrics::Metric* TransferFromDeviceMetric();
   static metrics::Metric* CompileMetric();
+  static metrics::Metric* EagerCompileMetric();
   static metrics::Metric* ExecuteMetric();
+  static metrics::Metric* EagerExecuteMetric();
   static metrics::Metric* ExecuteReplicatedMetric();
   static metrics::Metric* ExecuteParallelMetric();
   static metrics::Metric* ExecuteChainedMetric();

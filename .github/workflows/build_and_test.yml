@@ -1,3 +1,4 @@
+name: Build and test
 on:
   pull_request:
     branches:
@@ -18,47 +19,94 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: "Build XLA"
-    uses: ./.github/workflows/_build.yml
+
+  get-torch-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      torch_commit: ${{ steps.commit.outputs.torch_commit }}
+    steps:
+      - id: commit
+        name: Get latest torch commit
+        run: |
+          echo "torch_commit=$(git ls-remote https://github.com/pytorch/pytorch.git HEAD | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+  build-torch-xla:
+    name: "Build PyTorch/XLA"
+    uses: ./.github/workflows/_build_torch_xla.yml
+    needs: get-torch-commit
     with:
-      ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
-      gcr-docker-image: gcr.io/tpu-pytorch/xla_base:dev-3.8_cuda_12.1
-      cuda: 1
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
+      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cpu:
+  build-torch-with-cuda:
+    name: "Build PyTorch with CUDA"
+    uses: ./.github/workflows/_build_torch_with_cuda.yml
+    needs: get-torch-commit
+    with:
+      # note that to build a torch wheel with CUDA enabled, we do not need a GPU runner.
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
+      runner: linux.24xlarge
+
+  build-cuda-plugin:
+    name: "Build XLA CUDA plugin"
+    uses: ./.github/workflows/_build_plugin.yml
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
+  test-python-cpu:
     name: "CPU tests"
     uses: ./.github/workflows/_test.yml
-    needs: build
+    needs: [build-torch-xla, get-torch-commit]
     with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
       timeout-minutes: 120
-      collect-coverage: ${{ github.event_name == 'push' && github.event.ref == 'refs/heads/master' }}
-      disable-xrt: 1
+      collect-coverage: false
+      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   test-cuda:
     name: "GPU tests"
     uses: ./.github/workflows/_test.yml
-    needs: build
+    needs: [build-torch-xla, build-cuda-plugin, get-torch-commit]
     with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
       runner: linux.8xlarge.nvidia.gpu
       timeout-minutes: 300
-      collect-coverage: false  # TODO(yeounoh) separate from CPU coverage metrics
-      disable-xrt: 1
+      collect-coverage: false
+      install-cuda-plugin: true
+      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  push-docs:
-    name: "Build & publish docs"
-    if: github.event_name == 'push' && (github.event.ref == 'refs/heads/master' || startsWith(github.event.ref, 'refs/tags/r'))
-    uses: ./.github/workflows/_docs.yml
-    needs: build
+  test-cuda-with-pytorch-cuda-enabled:
+    name: "GPU tests requiring torch CUDA"
+    uses: ./.github/workflows/_test_requiring_torch_cuda.yml
+    needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, get-torch-commit]
     with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+      runner: linux.8xlarge.nvidia.gpu
+      timeout-minutes: 300
+      collect-coverage: false
+      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
+
+  test-tpu:
+    name: "TPU tests"
+    uses: ./.github/workflows/_tpu_ci.yml
+    needs: build-torch-xla
+    # Only run this for HEAD and releases
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'tpuci')
+
+  push-docs:
+    name: "Build docs"
+    uses: ./.github/workflows/_docs.yml
+    needs: build-torch-xla
+    with:
+      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_tpuvm
     secrets:
       torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}

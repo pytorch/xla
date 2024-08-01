@@ -1,0 +1,33 @@
+name: TPU Integration Test
+on:
+  workflow_call:
+jobs:
+  tpu-test:
+    runs-on: v4-runner-set
+    steps:
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+      - name: Setup
+        uses: ./.actions/.github/workflows/setup
+        with:
+          torch-commit: ${{ inputs.torch-commit }}
+          wheels-artifact: torch-xla-wheels
+      - name: Install test dependencies
+        shell: bash
+        run: |
+          # TODO: Add these in setup.py
+          pip install fsspec
+          pip install rich
+          # Jax nightly is needed for pallas tests.
+          pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+          pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+      - name: Run Tests
+        env:
+          PJRT_DEVICE: TPU
+        run: |
+          cd pytorch/xla
+          test/tpu/run_tests.sh

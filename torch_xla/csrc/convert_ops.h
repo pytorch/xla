@@ -2,7 +2,8 @@
 #define XLA_TORCH_XLA_CSRC_CONVERT_OPS_H_
 
 #include <c10/core/ScalarType.h>
-#include <c10/util/Optional.h>
+
+#include <optional>
 
 #include "torch_xla/csrc/device.h"
 #include "xla/client/xla_builder.h"
@@ -24,7 +25,7 @@ xla::XlaOp ConvertToNumeric(xla::XlaOp op);
 // Cast the input to the given dtype. If dtype is null, no-op with the exception
 // of predicates, which are converted to 8-bit unsigned integers.
 xla::XlaOp CastToScalarType(xla::XlaOp input,
-                            c10::optional<at::ScalarType> dtype);
+                            std::optional<at::ScalarType> dtype);
 
 xla::XlaOp MaybeConvertTo(xla::XlaOp input, xla::PrimitiveType type);
 

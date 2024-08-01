@@ -105,7 +105,7 @@ torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
 }
 
 torch::lazy::NodePtr Logit(const torch::lazy::Value& input,
-                           c10::optional<double> eps) {
+                           std::optional<double> eps) {
   auto lower_fn = [eps](const XlaNode& node,
                         LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
@@ -526,8 +526,8 @@ torch::lazy::NodePtr BroadcastTensors(
 }
 
 torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
-                          const c10::optional<at::Scalar>& p,
-                          c10::optional<at::ScalarType> dtype,
+                          const std::optional<at::Scalar>& p,
+                          std::optional<at::ScalarType> dtype,
                           absl::Span<const int64_t> dims, bool keepdim) {
   torch::lazy::ScopePusher ir_scope(at::aten::norm.toQualString());
   auto dimensions = torch::lazy::ToVector<int64_t>(dims);
@@ -568,8 +568,8 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
 }
 
 torch::lazy::NodePtr Pdist_forward(const torch::lazy::Value& input,
-                                   const c10::optional<at::Scalar>& p,
-                                   c10::optional<at::ScalarType> dtype) {
+                                   const std::optional<at::Scalar>& p,
+                                   std::optional<at::ScalarType> dtype) {
   // pdist(x, p) is equal to norm(x[:, None]-x, dim=2, p) and we only take the
   // upper triangle without diagonal line.
   auto lower_fn = [=](const XlaNode& node,
@@ -593,11 +593,39 @@ torch::lazy::NodePtr Pdist_forward(const torch::lazy::Value& input,
       std::move(lower_fn), 1);
 }
 
+torch::lazy::NodePtr PixelShuffle(const torch::lazy::Value& input,
+                                  int64_t upscale_factor) {
+  auto lower_fn = [=](const XlaNode& node,
+                      LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildPixelShuffle(xla_input, upscale_factor), loctx);
+  };
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildPixelShuffle(operands[0], upscale_factor);
+  };
+  const xla::Shape& input_shape = GetXlaShape(input);
+  absl::Span<const int64_t> dimensions = input_shape.dimensions();
+  int64_t channels = dimensions[1];
+
+  if (channels % (upscale_factor * upscale_factor) != 0) {
+    XLA_ERROR() << "Number of channels must be divisible by the square of the "
+                   "upscale factor.";
+  }
+
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::pixel_shuffle), {input},
+      [&]() {
+        return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+      },
+      std::move(lower_fn), 1);
+}
+
 torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
                                       const at::Scalar& ord,
                                       std::vector<int64_t> dimensions,
                                       bool keepdim,
-                                      c10::optional<at::ScalarType> dtype) {
+                                      std::optional<at::ScalarType> dtype) {
   torch::lazy::ScopePusher ir_scope(at::aten::norm.toQualString());
   double ord_value = ord.to<double>();
   auto input_shape = GetXlaShape(input);
@@ -715,6 +743,20 @@ torch::lazy::NodePtr Remainder(const torch::lazy::Value& input,
                                     torch::lazy::MakeNode<Sign>(f) *
                                         torch::lazy::MakeNode<Sign>(divisor),
                                     ScalarOp(0, GetXlaShape(input)));
+}
+
+torch::lazy::NodePtr Div(const torch::lazy::Value& input,
+                         const torch::lazy::Value& divisor) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_divisor = loctx->GetOutputOp(node.operand(1));
+    return node.ReturnOp(BuildDiv(xla_input, xla_divisor), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::div), {input, divisor},
+                   XlaHelpers::GetPromotedBinaryOpShape(GetXlaShape(input),
+                                                        GetXlaShape(divisor)),
+                   std::move(lower_fn));
 }
 
 torch::lazy::NodePtr MaxUnary(const torch::lazy::Value& input) {

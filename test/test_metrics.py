@@ -9,6 +9,11 @@ import torch_xla.debug.metrics as met
 import unittest
 
 
+def XLAExperimentalContains(feat):
+  experimental = os.environ.get("XLA_EXPERIMENTAL", "").split(":")
+  return feat in experimental
+
+
 class MetricsTest(unittest.TestCase):
 
   def test_clear_counters(self):
@@ -46,6 +51,24 @@ class MetricsTest(unittest.TestCase):
     t2 = t1 + 100
     self.assertIn('LazyTracing', met.metric_names())
     self.assertGreater(met.metric_data('LazyTracing')[0], 1)
+
+  def test_eager_metrics(self):
+    with torch_xla.experimental.eager_mode_context(True):
+      xla_device = xm.xla_device()
+      met.clear_all()
+      t1 = torch.tensor(156, device=xla_device)
+      t2 = t1 + 100
+      xm.wait_device_ops()
+      self.assertIn('EagerOpCompileTime', met.metric_names())
+      # one for cosntant, one for add
+      self.assertEqual(met.metric_data('EagerOpCompileTime')[0], 2)
+      self.assertIn('EagerOpExecuteTime', met.metric_names())
+      # one for add
+      self.assertEqual(met.metric_data('EagerOpExecuteTime')[0], 2)
+      # mark_step should be a no-op
+      xm.mark_step()
+      self.assertNotIn('CompileTime', met.metric_names())
+      self.assertNotIn('ExecuteTime', met.metric_names())
 
   def test_short_metrics_report_default_list(self):
     xla_device = xm.xla_device()
@@ -192,6 +215,67 @@ class MetricsTest(unittest.TestCase):
     # Ensures that the metric does not measure the execution
     # of `ExecuteComputation`, but the actual async time.
     self.assertGreater(execute_time_ns, .5 * wall_time_ns)
+
+  def test_pybind_increment_counter(self):
+    met.clear_all()
+    xla_device = xm.xla_device()
+    t1 = torch.tensor(2077, device=xla_device)
+    self.assertEqual(met.counter_value('CreateXlaTensor'), 1)
+    torch_xla._XLAC._xla_increment_counter('CreateXlaTensor', 3)
+    self.assertEqual(met.counter_value('CreateXlaTensor'), 4)
+
+    # try increment a counter that does not exist
+    torch_xla._XLAC._xla_increment_counter('FakeCounter', 2)
+    self.assertEqual(met.counter_value('FakeCounter'), 2)
+
+  def test_get_fallback_ops(self):
+
+    def getAndAssertFallbackOpsLenEquals(count):
+      fallback_ops = met.executed_fallback_ops()
+      fallback_ops_number = len(fallback_ops)
+      self.assertEqual(
+          fallback_ops_number,
+          count,
+          msg=f"found {fallback_ops_number}: {fallback_ops}")
+      return fallback_ops
+
+    # Reset all metrics, and make sure we don't start with any fallback ops.
+    met.clear_all()
+    getAndAssertFallbackOpsLenEquals(0)
+
+    # Create N boxes in the format XYXY.
+    # This should not run any fallback ops.
+    N = 10
+    x = torch.rand(N, 1).to(xm.xla_device())
+    y = torch.rand(N, 1).to(xm.xla_device())
+    width = torch.rand(N, 1).to(xm.xla_device())
+    height = torch.rand(N, 1).to(xm.xla_device())
+    xys = torch.cat((x, x + width, y, y - height), dim=1)
+    getAndAssertFallbackOpsLenEquals(0)
+
+    # tensor.item() is a fallback operation.
+    xys[0, 0].item()
+    ops = getAndAssertFallbackOpsLenEquals(1)
+    self.assertEqual(ops[0], "aten::_local_scalar_dense")
+
+    # Reset all metrics, and make sure we also don't retrieve any
+    # fallback operations.
+    met.clear_all()
+    getAndAssertFallbackOpsLenEquals(0)
+
+    if not XLAExperimentalContains("nms"):
+      # Run torchvision operations as fallback.
+      import torchvision
+      scores = torch.rand(N).to(xm.xla_device())
+      # NMS doesn't have a PyTorch/XLA implementation without dynamic shapes.
+      torchvision.ops.nms(xys, scores, 0.5)
+      # remove_small_boxes is not implemented in C++. It calls other PyTorch
+      # operations. One of them, nonzero, is a fallback operation.
+      torchvision.ops.remove_small_boxes(
+          xys, torch.median(torch.stack((width, height))))
+      ops = getAndAssertFallbackOpsLenEquals(3)
+      self.assertEqual(
+          set(ops), {"aten::nonzero", "aten::median", "torchvision::nms"})
 
 
 if __name__ == '__main__':

@@ -185,9 +185,7 @@ xla::Shape MakeArrayShapeFromDimensions(
     return MakeShapeWithLayout(type, dimensions, dynamic_dimensions,
                                *layout_ptr);
   }
-
-  bool tpu_layout_env = runtime::sys_util::GetEnvBool("XLA_TPU_LAYOUT", true);
-  if (tpu_layout_env && dimensions.size() > 1 && CheckTpuDevice(hw_type)) {
+  if (dimensions.size() > 1 && CheckTpuDevice(hw_type)) {
     return MakeTpuShape(dimensions, dynamic_dimensions, type);
   }
   return MakeTorchTensorLayout(dimensions, dynamic_dimensions, type);

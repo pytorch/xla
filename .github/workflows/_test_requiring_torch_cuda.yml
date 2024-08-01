@@ -1,0 +1,110 @@
+name: xla-test-requiring-torch-cuda
+on:
+  workflow_call:
+    inputs:
+      dev-image:
+        required: true
+        type: string
+        description: Base image for builds
+      runner:
+        required: false
+        type: string
+        description: Runner type for the test
+        default: linux.12xlarge
+      collect-coverage:
+        required: false
+        type: boolean
+        description: Set to true to collect coverage information
+        default: false
+      timeout-minutes:
+        required: false
+        type: number
+        default: 30
+        description: |
+          Set the maximum (in minutes) how long the workflow should take to finish
+            timeout-minutes:
+      torch-commit:
+        required: true
+        type: string
+        description: torch-commit
+
+jobs:
+  test:
+    container:
+      image: ${{ inputs.dev-image }}
+      options: "--gpus all --shm-size 16g"
+    strategy:
+      matrix:
+        include:
+          - run_python_tests: 'python_tests'
+            runner: ${{ inputs.runner }}
+          - run_triton_tests: 'triton_tests'
+            runner: 'linux.g5.4xlarge.nvidia.gpu'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    env:
+      USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
+      BAZEL_JOBS: 16
+      BAZEL_REMOTE_CACHE: 1
+    steps:
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+      - name: Setup
+        uses: ./.actions/.github/workflows/setup
+        with:
+          torch-commit: ${{ inputs.torch-commit }}
+          cuda: true
+          wheels-artifact: torch-xla-wheels
+          cuda-plugin-artifact: cuda-plugin
+          cuda-torch-artifact: torch-with-cuda
+      - name: Check GPU
+        run: nvidia-smi
+      - name: Install wheels
+        shell: bash
+        run: |
+          pip install /tmp/wheels/*.whl
+          # TODO: Add these in setup.py
+          pip install fsspec
+          pip install rich
+
+          echo "Import check..."
+          python -c "import torch, torch_xla, torchvision"
+          echo "Import check done."
+          echo "Check if CUDA is available for PyTorch..."
+          python -c "import torch; assert torch.cuda.is_available()"
+          echo "CUDA is available for PyTorch."
+      - name: Checkout PyTorch Repo
+        uses: actions/checkout@v4
+        with:
+          repository: pytorch/pytorch
+          path: pytorch
+          ref: ${{ inputs.torch-commit }}
+      - name: Checkout PyTorch/XLA Repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
+      - name: Extra CI deps
+        shell: bash
+        run: |
+          set -x
+          pip install -U --pre jaxlib -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+          pip install -U --pre jax-cuda12-pjrt jax-cuda12-plugin -f https://storage.googleapis.com/jax-releases/jax_cuda_plugin_nightly_releases.html
+          pip install -U --pre jax -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
+          pip install --no-deps triton==2.3.0
+        if: ${{ matrix.run_triton_tests }}
+      - name: Python Tests
+        shell: bash
+        run: |
+          set -xue
+          PJRT_DEVICE=CUDA python pytorch/xla/test/test_operations.py -v
+          PJRT_DEVICE=CUDA python pytorch/xla/test/dynamo/test_dynamo.py -v
+        if: ${{ matrix.run_python_tests }}
+      - name: Triton Tests
+        shell: bash
+        run: |
+          PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.1/bin/ptxas python pytorch/xla/test/test_triton.py
+        if: ${{ matrix.run_triton_tests }}

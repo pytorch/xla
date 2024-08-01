@@ -1,0 +1,2 @@
+git+https://github.com/google/cloud-accelerator-diagnostics/#subdirectory=tpu_info
+grpcio>=1.64.1

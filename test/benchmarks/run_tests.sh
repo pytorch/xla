@@ -9,7 +9,7 @@ export PYTHONPATH=$PYTHONPATH:$CDIR/../../benchmarks/
 
 # Note [Keep Going]
 #
-# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CircleCI tests continue on error.
+# Set the `CONTINUE_ON_ERROR` flag to `true` to make the CI tests continue on error.
 # This will allow you to see all the failures on your PR, not stopping with the first
 # test failure like the default behavior.
 CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
@@ -39,10 +39,14 @@ function run_make_tests {
 }
 
 function run_python_tests {
-  python3 "$CDIR/test_experiment_runner.py"
-  python3 "$CDIR/test_benchmark_experiment.py"
-  python3 "$CDIR/test_benchmark_model.py"
-  python3 "$CDIR/test_result_analyzer.py"
+  # HACK: don't confuse local `torch_xla` folder with installed package
+  # Python 3.11 has the permanent fix: https://stackoverflow.com/a/73636559
+  pushd $CDIR
+  python3 "test_experiment_runner.py"
+  python3 "test_benchmark_experiment.py"
+  python3 "test_benchmark_model.py"
+  python3 "test_result_analyzer.py"
+  popd
 }
 
 function run_tests {

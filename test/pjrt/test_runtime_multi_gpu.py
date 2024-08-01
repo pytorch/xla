@@ -43,22 +43,18 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
-  @parameterized.named_parameters(('xla_model', xm.get_ordinal),
-                                  ('pjrt', xr.global_ordinal))
-  def test_global_ordinal(self, ordinal_func):
+  def test_global_ordinal(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = [i for i in range(num_devices)]
 
-    results = pjrt.run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(xr.global_ordinal)
     self.assertListEqual(sorted(results.values()), expected)
 
-  @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
-                                  ('pjrt', xr.local_ordinal))
-  def test_local_ordinal(self, ordinal_func):
+  def test_local_ordinal(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = [i for i in range(num_devices)]
 
-    results = pjrt.run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(xr.local_ordinal)
     self.assertListEqual(sorted(results.values()), expected)
 
   def test_global_device_count(self):
@@ -118,14 +114,14 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
       @staticmethod
       def forward(ctx, x):
-        ordinal = xm.get_ordinal()
+        ordinal = xr.global_ordinal()
         ctx.forward_ordinal = ordinal
         return x
 
       @staticmethod
       def backward(ctx, grad_output):
         results['forward_ordinal'] = ctx.forward_ordinal
-        results['backward_ordinal'] = xm.get_ordinal()
+        results['backward_ordinal'] = xr.global_ordinal()
         results['device'] = str(xm.xla_device())
         return grad_output
 
@@ -169,7 +165,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
   @staticmethod
   def _broadcast(sync):
-    torch.manual_seed(xm.get_ordinal())
+    torch.manual_seed(xr.global_ordinal())
     device = xm.xla_device()
     model = nn.Linear(5, 5).to(device)
     if sync:
@@ -193,7 +189,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
   @staticmethod
   def _all_gather(pin_layout):
     device = xm.xla_device()
-    ordinal = torch.tensor([xm.get_ordinal()], device=device)
+    ordinal = torch.tensor([xr.global_ordinal()], device=device)
     out = xm.all_gather(ordinal, pin_layout=pin_layout)
     xm.mark_step()
 
@@ -210,7 +206,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
   @staticmethod
   def _reduce_scatter(pin_layout):
     device = xm.xla_device()
-    world_size = xm.xrt_world_size()
+    world_size = xr.world_size()
     tensor = -torch.arange(world_size, dtype=torch.float32).to(device)
 
     out = xm.reduce_scatter(
@@ -236,12 +232,12 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
   @staticmethod
   def _all_to_all(pin_layout):
     device = xm.xla_device()
-    world_size = xm.xrt_world_size()
+    world_size = xr.world_size()
 
     tensor = torch.cat(
         [
             -torch.arange(world_size, dtype=torch.float32).view(-1, 1, 1),
-            torch.ones(world_size, 1, 1) * xm.get_ordinal(),
+            torch.ones(world_size, 1, 1) * xr.global_ordinal(),
         ],
         dim=1,
     ).to(device)

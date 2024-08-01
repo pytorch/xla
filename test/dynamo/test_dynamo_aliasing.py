@@ -4,7 +4,6 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
-import torch_xla.experimental.dynamo_set_buffer_donor
 from torch_xla.core.dynamo_bridge import alias_with_buffer_donor_config
 
 
@@ -124,6 +123,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
     self.assertEqual(met.counter_value('XlaSetBufferDonation'), 1)
     dummy_inplace_add_compiled(input)
     torch.allclose(input_cloned.cpu() + 1, input.cpu())
+    self.assertFalse(torch_xla._XLAC._get_buffer_donation(input))
 
   def test_manual_buffer_donation_for_non_inplce_op(self):
     device = xm.xla_device()

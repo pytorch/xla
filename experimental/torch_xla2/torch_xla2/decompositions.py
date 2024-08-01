@@ -1,6 +1,6 @@
 """This file contains some decompositons that are not available in torch stable.
 
-Most likely from Content of 
+Most likely from Content of
 https://github.com/pytorch/pytorch/blob/main/torch/_decomp/decompositions.py
 at main branch HEAD that we find useful here.
 
@@ -12,6 +12,7 @@ from typing import Any, Callable, List,  Tuple
 import torch
 from torch import Tensor
 import torch._decomp as decomp
+from torch._decomp import decompositions_for_rng
 from torch._decomp import register_decomposition
 import torch._prims_common as utils
 from torch._prims_common.wrappers import out_wrapper
@@ -25,9 +26,12 @@ __all__: List[str] = []
 
 aten = torch._ops.ops.aten
 
-@register_decomposition(aten.reflection_pad1d)
-@register_decomposition(aten.reflection_pad2d)
-@register_decomposition(aten.reflection_pad3d)
+def _try_register(op, impl):
+    try:
+        register_decomposition(op)(impl)
+    except:
+        pass
+
 @out_wrapper()
 def _reflection_pad(a: Tensor, padding: Tuple[int, ...]) -> Tensor:
     def idx(left, middle, right):
@@ -40,9 +44,10 @@ def _reflection_pad(a: Tensor, padding: Tuple[int, ...]) -> Tensor:
         idx,
     )
 
+_try_register(aten.reflection_pad1d, _reflection_pad)
+_try_register(aten.reflection_pad2d, _reflection_pad)
+_try_register(aten.reflection_pad3d, _reflection_pad)
 
-@register_decomposition(aten.replication_pad1d)
-@register_decomposition(aten.replication_pad3d)
 @out_wrapper()
 def _replication_pad(a: Tensor, padding: Tuple[int, ...]) -> Tensor:
     def idx(left, middle, right):
@@ -84,3 +89,36 @@ def _reflection_or_replication_pad(
     memory_format = utils.suggest_memory_format(result)
     result = result.contiguous(memory_format=memory_format)
     return result
+
+_try_register(aten.replication_pad1d, _replication_pad)
+_try_register(aten.replication_pad3d, _replication_pad)
+
+def bernoulli(self, *, generator=None):
+    return (torch.rand_like(self, dtype=torch.float32) < self).to(self.dtype)
+
+_try_register(aten.bernoulli.default, bernoulli)
+
+
+def rand_like(self, **kwargs):
+    dtype = kwargs.get('dtype')
+    return torch.rand(self.shape, dtype=dtype)
+
+_try_register(aten.bernoulli, bernoulli)
+_try_register(aten.rand_like, rand_like)
+
+EXTRA_DECOMP = decomp.get_decompositions([
+    torch.ops.aten.upsample_nearest2d,
+    torch.ops.aten._native_batch_norm_legit.no_stats,
+    torch.ops.aten._adaptive_avg_pool2d,
+    torch.ops.aten._adaptive_avg_pool3d,
+    torch.ops.aten.grid_sampler_2d,
+    torch.ops.aten.native_dropout,
+    torch.ops.aten.reflection_pad1d,
+    torch.ops.aten.reflection_pad2d,
+    torch.ops.aten.reflection_pad3d,
+    torch.ops.aten.replication_pad1d,
+    torch.ops.aten.replication_pad2d,
+    torch.ops.aten.replication_pad3d,
+    torch.ops.aten.bernoulli,
+    torch.ops.aten.rand_like,
+])

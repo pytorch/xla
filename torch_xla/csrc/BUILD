@@ -32,6 +32,7 @@ ptxla_cc_library(
     name = "tensor",
     srcs = [
         "aten_autograd_ops.cpp",
+        "aten_fallback.cpp",
         "aten_xla_bridge.cpp",
         "aten_xla_type.cpp",
         "autocast_mode.cpp",
@@ -42,12 +43,12 @@ ptxla_cc_library(
         "cross_replica_reduces.cpp",
         "data_ops.cpp",
         "debug_util.cpp",
+        "dl_convertor.cpp",
         "elementwise.cpp",
         "helpers.cpp",
         "ir_dump_util.cpp",
         "matrix.cpp",
         "nll_loss.cpp",
-        "nms_op.cpp",
         "pooling.cpp",
         "quant_util.cpp",
         "random.cpp",
@@ -67,12 +68,15 @@ ptxla_cc_library(
         "xla_lower_util.cpp",
         "xla_op_builder.cpp",
         "xla_sharding_util.cpp",
+        "xla_manual_registration.cpp",
         ":RegisterAutogradXLA.cpp",
         ":RegisterXLA.cpp",
         ":XLANativeFunctions.cpp",
     ] + glob(["ops/*.cpp"]),
     hdrs = [
         "aten_autograd_ops.h",
+        "aten_fallback.h",
+        "aten_cuda_functions.h",
         "aten_xla_bridge.h",
         "batch_norm.h",
         "convert_ops.h",
@@ -81,13 +85,13 @@ ptxla_cc_library(
         "cross_replica_reduces.h",
         "data_ops.h",
         "debug_util.h",
+        "dl_convertor.h",
         "elementwise.h",
         "generated_file_include.h",
         "helpers.h",
         "ir_dump_util.h",
         "matrix.h",
         "nll_loss.h",
-        "nms_op.h",
         "pooling.h",
         "quant_util.h",
         "random.h",
@@ -112,10 +116,10 @@ ptxla_cc_library(
         ":XLANativeFunctions.h",
     ] + glob(["ops/*.h"]),
     deps = [
-        ":aten_cpu_fallback",
         ":device",
         ":dtype",
         ":einsum_utilities",
+        ":function_call_tracker",
         ":ir",
         ":ir_builder",
         ":layout_manager",
@@ -211,18 +215,6 @@ cc_library(
 )
 
 ptxla_cc_library(
-    name = "aten_cpu_fallback",
-    srcs = ["aten_cpu_fallback.cpp"],
-    hdrs = ["aten_cpu_fallback.h"],
-    deps = [
-        ":function_call_tracker",
-        "//torch_xla/csrc/runtime:debug_macros",
-        "//torch_xla/csrc/runtime:metrics",
-        "//torch_xla/csrc/runtime:tf_logging",
-    ],
-)
-
-ptxla_cc_library(
     name = "function_call_tracker",
     srcs = ["function_call_tracker.cpp"],
     hdrs = ["function_call_tracker.h"],
@@ -268,6 +260,7 @@ ptxla_cc_library(
         ":tensor",
         ":version",
         "//torch_xla/csrc/runtime",
+        "//torch_xla/csrc/runtime:pjrt_computation_client",
         "//torch_xla/csrc/runtime:metrics",
         "//torch_xla/csrc/runtime:metrics_analysis",
         "//torch_xla/csrc/runtime:metrics_reader",
@@ -288,6 +281,10 @@ ptxla_cc_library(
         "@xla//xla/service:hlo_verifier",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
+        "@xla//xla/service:custom_call_target_registry",
+        "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
+        "@xla//xla/pjrt/c:pjrt_c_api_wrapper_impl",
+        "@xla//xla/pjrt/c:pjrt_c_api_gpu_extension_hdrs",
     ],
 )
 
@@ -340,5 +337,15 @@ ptxla_cc_library(
     deps = [
         "//torch_xla/csrc/runtime:computation_client",
         "@com_google_absl//absl/types:span",
+    ],
+)
+
+ptxla_cc_library(
+    name = "aten_cuda_functions",
+    srcs = ["aten_cuda_functions.cpp"],
+    hdrs = ["aten_cuda_functions.h"],
+    deps = [
+        "@local_config_python//:python_headers",
+        "@pybind11//:pybind11_embed",
     ],
 )

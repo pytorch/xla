@@ -112,23 +112,20 @@ std::shared_ptr<torch::lazy::Value> CreateToken(
 // order. RFC: https://github.com/pytorch/pytorch/issues/93173
 ////////////////////////////////////////////////////////////////////////////////////
 
-// tag is ignored as it's only used in PyTorch to provide backward compatibility
-// with the traditional process group API.
-at::Tensor all_reduce(const at::Tensor& self, c10::string_view reduceOp,
-                      c10::string_view /*tag*/, at::IntArrayRef /*ranks*/,
-                      int64_t /*group_size*/) {
+at::Tensor all_reduce(const at::Tensor& self, std::string reduceOp,
+                      std::string /*group_name*/) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto self_tensor = bridge::GetXlaTensor(self);
-  // TODO(alanwaketan): Use ranks and group_size to generate groups. Currently
-  // we just suse {} as a workaround. Scale is always 1.0 here, and we always
-  // pin layout.
+  // TODO(alanwaketan): Use group_name to generate groups. Currently we just
+  // use {} as a workaround. Scale is always 1.0 here, and we always pin
+  // layout.
   auto result = tensor_methods::all_reduce(self_tensor, GetReduceType(reduceOp),
                                            /*scale*/ 1.0,
                                            /*groups*/ {}, /*pin_layout*/ true);
   return bridge::AtenFromXlaTensor(result);
 }
 
-TORCH_LIBRARY_IMPL(c10d_functional, XLA, m) {
+TORCH_LIBRARY_IMPL(_c10d_functional, XLA, m) {
   m.impl("all_reduce", all_reduce);
 }
 
@@ -181,6 +178,27 @@ std::vector<xla::XlaOp> BuildAllReduce(
   result.push_back(
       MaybeConvertTo(chained_token, XlaHelpers::TypeOfXlaOp(token)));
   return result;
+}
+
+xla::XlaOp BuildAllReduce(AllReduceType reduce_type, xla::XlaOp input,
+                          double scale,
+                          const std::vector<std::vector<int64_t>>& groups) {
+  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  // Just a dummy channel handle, and it's required to set the
+  // use_global_device_ids which is requried for SPMD.
+  xla::ChannelHandle channel_handle;
+  channel_handle.set_handle(1);
+  channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+  auto reduce_result = xla::AllReduce(
+      input, GetReduceComutation(reduce_type, input_shape.element_type()),
+      std::move(reduce_groups), std::move(channel_handle), std::nullopt, true);
+  if (scale != 1.0) {
+    xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
+        scale, input_shape.element_type(), input.builder());
+    reduce_result = reduce_result * scaling_value;
+  }
+  return reduce_result;
 }
 
 AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
@@ -346,6 +364,30 @@ ReduceScatterResult BuildReduceScatter(
   }
 
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
+}
+
+xla::XlaOp BuildReduceScatter(AllReduceType reduce_type, xla::XlaOp input,
+                              double scale, int64_t scatter_dim,
+                              int64_t shard_count,
+                              const std::vector<std::vector<int64_t>>& groups) {
+  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  // Just a dummy channel handle, and it's required to set the
+  // use_global_device_ids which is requried for SPMD.
+  xla::ChannelHandle channel_handle;
+  channel_handle.set_handle(1);
+  channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+  xla::XlaOp reduce_result;
+  reduce_result = xla::ReduceScatter(
+      input, GetReduceComutation(reduce_type, input_shape.element_type()),
+      scatter_dim, shard_count, std::move(reduce_groups),
+      std::move(channel_handle), std::nullopt, true);
+  if (scale != 1.0) {
+    xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
+        scale, input_shape.element_type(), input.builder());
+    reduce_result = reduce_result * scaling_value;
+  }
+  return reduce_result;
 }
 
 ReduceScatterResultCoalesced BuildReduceScatterCoalesced(

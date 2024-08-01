@@ -6,6 +6,7 @@ Example usage:
 ```python3
 import torch
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP
 
 model = FSDP(my_module)
@@ -45,7 +46,7 @@ ckpt = {
     'shard_metadata': model.get_shard_metadata(),
     'optimizer': optimizer.state_dict(),
 }
-ckpt_path = f'/tmp/rank-{xm.get_ordinal()}-of-{xm.xrt_world_size()}.pth'
+ckpt_path = f'/tmp/rank-{xr.global_ordinal()}-of-{xr.world_size()}.pth'
 xm.save(ckpt, ckpt_path, master_only=False)
 ```
 * The checkpoint consolidation script can also be launched from the command line as follows.
@@ -61,7 +62,7 @@ The implementation of this class is largely inspired by and mostly follows the s
 ---
 
 ### Example training scripts on MNIST and ImageNet
-
+* Minimum example : [`examples/fsdp/train_resnet_fsdp_auto_wrap.py`](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_resnet_fsdp_auto_wrap.py)
 * MNIST: [`test/test_train_mp_mnist_fsdp_with_ckpt.py`](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py) (it also tests checkpoint consolidation)
 * ImageNet: [`test/test_train_mp_imagenet_fsdp.py`](https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py)
 

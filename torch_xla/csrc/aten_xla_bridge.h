@@ -40,7 +40,7 @@ torch_xla::XLATensorPtr GetXlaTensorOrCreateForWrappedNumber(
 XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
                                   const torch::lazy::BackendDevice& device);
 
-XLATensorPtr GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
+XLATensorPtr GetOrCreateXlaTensor(const std::optional<at::Tensor>& tensor,
                                   const torch::lazy::BackendDevice& device);
 
 std::vector<XLATensorPtr> GetOrCreateXlaTensors(
@@ -50,10 +50,10 @@ std::vector<XLATensorPtr> GetOrCreateXlaTensors(
 // Creates a vector of at::Tensor objects extracted from a list of XLA tensors.
 std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors);
 
-// Creates a vector of c10::optional<at::Tensor> objects extracted from a list
+// Creates a vector of std::optional<at::Tensor> objects extracted from a list
 // of optional XLA tensors.
-std::vector<c10::optional<at::Tensor>> XlaCreateOptTensorList(
-    const std::vector<c10::optional<at::Tensor>>& tensors);
+std::vector<std::optional<at::Tensor>> XlaCreateOptTensorList(
+    const std::vector<std::optional<at::Tensor>>& tensors);
 
 void XlaUpdateTensors(absl::Span<const at::Tensor> dest_xla_tensors,
                       absl::Span<const at::Tensor> source_cpu_tensors,
@@ -61,26 +61,26 @@ void XlaUpdateTensors(absl::Span<const at::Tensor> dest_xla_tensors,
 
 // Tries to extract the device out of the XLA tensor. Returns nullopt if the
 // input is not an XLA tensor.
-c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
+std::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const at::Tensor& tensor);
 
-c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
-    const c10::optional<at::Tensor>& tensor);
+std::optional<torch::lazy::BackendDevice> GetXlaDevice(
+    const std::optional<at::Tensor>& tensor);
 
-c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
+std::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const at::ITensorListRef& tensors);
 
-c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
+std::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const std::vector<at::Tensor>& tensors);
 
-c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
+std::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const at::TensorOptions& tensor_options);
 
-c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
+std::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const c10::Device& device);
 
-c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
-    const c10::optional<c10::Device>& device = c10::nullopt);
+std::optional<torch::lazy::BackendDevice> GetXlaDevice(
+    const std::optional<c10::Device>& device = std::nullopt);
 
 std::vector<torch::lazy::BackendDevice> GetBackendDevices();
 
@@ -112,23 +112,24 @@ at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
                            const at::TensorOptions& tensor_options);
 
 // Creates an ATen tensor with XLA type id from an XLATensorPtr.
-at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor);
+at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor,
+                             bool skip_functionalization = false);
 
 std::vector<at::Tensor> AtenFromXlaTensors(
     absl::Span<const XLATensorPtr> xla_tensors);
 
 // Creates an XLA tensor holding the data in tensor, on the given device.
 at::Tensor CreateXlaTensor(
-    at::Tensor tensor, const c10::optional<torch::lazy::BackendDevice>& device);
+    at::Tensor tensor, const std::optional<torch::lazy::BackendDevice>& device);
 
 // Given a vector of at::Tensor creates a vector of XLA tensors on the given
 // device.
 std::vector<at::Tensor> CreateXlaTensors(
     const std::vector<at::Tensor>& tensors,
-    const c10::optional<torch::lazy::BackendDevice>& device);
+    const std::optional<torch::lazy::BackendDevice>& device);
 
 template <typename T, typename... Args>
-c10::optional<torch::lazy::BackendDevice> GetXlaDevice(
+std::optional<torch::lazy::BackendDevice> GetXlaDevice(
     const T& tensor, const Args&... forward_tensors) {
   auto optional_device = GetXlaDevice(tensor);
   if (optional_device) {

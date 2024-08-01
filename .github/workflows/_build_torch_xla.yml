@@ -1,0 +1,60 @@
+name: build-cuda-plugin
+on:
+  workflow_call:
+    inputs:
+      dev-image:
+        required: true
+        type: string
+        description: Base image for builds
+      torch-commit:
+          required: true
+          type: string
+          description: torch-commit
+      runner:
+        required: false
+        type: string
+        description: Runner type for the test
+        default: linux.12xlarge
+
+    secrets:
+      gcloud-service-key:
+        required: true
+        description: Secret to access Bazel build cache
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    container:
+      image: ${{ inputs.dev-image }}
+    env:
+      GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
+      BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+      BAZEL_JOBS: 16
+      BUILD_CPP_TESTS: 1
+    steps:
+      # Need to check out local composite actions before using them
+      # https://github.com/orgs/community/discussions/11771
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+      - name: Setup
+        uses: ./.actions/.github/workflows/setup
+        with:
+          torch-commit: ${{ inputs.torch-commit }}
+      - name: Build
+        shell: bash
+        run: |
+          cd pytorch/xla/infra/ansible
+          ansible-playbook playbook.yaml -vvv -e "stage=build arch=amd64 accelerator=tpu src_root=${GITHUB_WORKSPACE} bundle_libtpu=0 build_cpp_tests=1 git_versioned_xla_build=1 cache_suffix=-ci" --skip-tags=fetch_srcs,install_deps
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: torch-xla-wheels
+          path: /dist/*.whl
+      - name: Upload CPP test binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-test-bin
+          path: /tmp/test/bin

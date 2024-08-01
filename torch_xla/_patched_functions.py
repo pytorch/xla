@@ -32,7 +32,8 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
   max_norm = float(max_norm)
   norm_type = float(norm_type)
   if len(parameters) == 0:
-    return torch.tensor(0.)
+    return torch.tensor(0.).to("xla")
+  dtype = parameters[0].grad.dtype
   device = parameters[0].grad.device
   if norm_type == inf:
     total_norm = max(p.grad.detach().abs().max() for p in parameters)
@@ -46,9 +47,11 @@ def clip_grad_norm_(parameters: _tensor_or_tensors,
         f'The norm of order {norm_type} for a gradient from `parameters` '
         'is non-finite, so it cannot be clipped. This error can be '
         'disabled with `error_if_nonfinite=False`')
-  clip_coef = torch.tensor(max_norm, device=device) / (total_norm + 1e-6)
+  clip_coef = torch.tensor(
+      max_norm, dtype=dtype, device=device) / (
+          total_norm + 1e-6)
   clip_value = torch.where(clip_coef < 1, clip_coef,
-                           torch.tensor(1., device=device))
+                           torch.tensor(1., dtype=dtype, device=device))
   for p in parameters:
     p.grad.detach().mul_(clip_value)
   return total_norm

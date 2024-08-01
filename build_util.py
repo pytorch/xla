@@ -36,10 +36,6 @@ def bazel_options_from_env() -> Iterable[str]:
     bazel_flags.append('--remote_default_exec_properties=cache-silo-key=%s' %
                        cache_silo_name)
 
-  if check_env_flag('BUILD_CPP_TESTS', default='0'):
-    bazel_flags.append('//test/cpp:all')
-    bazel_flags.append('//torch_xla/csrc/runtime:all')
-
   bazel_jobs = os.getenv('BAZEL_JOBS', default='')
   if bazel_jobs:
     bazel_flags.append('--jobs=%s' % bazel_jobs)

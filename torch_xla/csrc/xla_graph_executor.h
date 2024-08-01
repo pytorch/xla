@@ -24,7 +24,6 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
 #include "xla/client/xla_builder.h"
-#include "xla/status.h"
 #include "xla/types.h"
 
 namespace torch_xla {
@@ -80,12 +79,12 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
-      c10::optional<at::ScalarType> logical_element_type,
+      std::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
       SymIntElements size_elements,
-      c10::optional<at::ScalarType> logical_element_type,
+      std::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
 
   // Override to use our own DeviceContextArena.
@@ -134,7 +133,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // Marks an execution step, which allows the tensor framework to understand
   // the computation boundaries.
   // Override to use our own DeviceContextArena.
-  void MarkStep(const torch::lazy::BackendDevice& device) final;
+  void MarkStep(const torch::lazy::BackendDevice& device, bool reset_scope);
 
   // Waits for all the outstanding operations on all the supplied devices.
   // If devices is empty, the wait will happen for all local devices.
@@ -186,6 +185,18 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
                        const torch::lazy::BackendDevice& device);
+
+  void SetUseEagerMode(bool use_eager_mode) {
+    use_eager_mode_ = use_eager_mode;
+  }
+
+  bool UseEagerMode() { return use_eager_mode_; }
+
+  void SetAllowExecution(bool allow_execution) {
+    allow_execution_ = allow_execution;
+  }
+
+  bool AllowExecution() { return allow_execution_; }
 
  private:
   // This is just to group results from compile(). Since our computation is
@@ -339,13 +350,13 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec,
       bool warm_up_cache_only);
 
-  std::vector<std::pair<int64_t, int64_t>> BuildInputOutputAliases(
-      const std::vector<XLATensorPtr>& tensors,
-      absl::Span<const size_t> indices, LoweringContext* lowering_ctx);
+  std::vector<size_t> SetBufferDonors(const std::vector<XLATensorPtr>& tensors,
+                                      absl::Span<const size_t> indices,
+                                      LoweringContext* lowering_ctx);
 
-  std::vector<size_t> SetBufferDonors(LoweringContext* lowering_ctx);
+  std::vector<size_t> SetBufferDonorsFromUserConfig(
+      LoweringContext* lowering_ctx);
 
-  // We don't use upstream Compile to have BuildInputOutputAliases.
   // TODO(yeounoh) auto-sharding can change tensors shardings, which needs to be
   // accounted for in Dynamo integration.
   CompilationResult Compile(std::vector<XLATensorPtr>& tensors,
@@ -361,6 +372,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const SyncTensorsConfig& config, bool warm_up_cache_only = false);
 
   ComputationCache* computation_cache_;
+  bool use_eager_mode_ = false;
+  bool allow_execution_ = true;
 };
 
 }  // namespace torch_xla

@@ -1,8 +1,5 @@
-import unittest
-import jax
 import torch
-from torch._functorch.make_functional import make_functional_with_buffers
-from torch_xla2 import tensor, ops  # pylint: disable=unused-import
+from torch_xla2 import tensor  # pylint: disable=unused-import
 import torch_xla2
 
 from .. import test_base
@@ -33,7 +30,6 @@ class LlamaTest(test_base.TestCase):
 
     # NOTE: this API does NOT use torch export
     weights, jax_func = torch_xla2.extract_jax(m)
-
     print(jax_func(weights, sample_args))
 
   def test_can_run_exportable(self):

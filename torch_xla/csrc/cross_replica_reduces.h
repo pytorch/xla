@@ -65,6 +65,10 @@ std::vector<xla::XlaOp> BuildAllReduce(
     xla::XlaOp token, double scale,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
+xla::XlaOp BuildAllReduce(AllReduceType reduce_type, xla::XlaOp operand,
+                          double scale,
+                          const std::vector<std::vector<int64_t>>& groups);
+
 AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
                              int64_t split_dimension, int64_t concat_dimension,
                              int64_t split_count,
@@ -95,6 +99,11 @@ ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
     int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
+
+xla::XlaOp BuildReduceScatter(AllReduceType reduce_type, xla::XlaOp input,
+                              double scale, int64_t scatter_dim,
+                              int64_t shard_count,
+                              const std::vector<std::vector<int64_t>>& groups);
 
 ReduceScatterResultCoalesced BuildReduceScatterCoalesced(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> inputs,

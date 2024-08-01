@@ -5,13 +5,14 @@ import numpy as np
 import os
 import pandas as pd
 import time
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
 class ResultAnalyzer:
 
-  def __init__(self, args):
+  def __init__(self, args: argparse.Namespace):
     self._args = args
     self.timestamp = self._args.timestamp or time.time()
     self.output_dir = os.path.abspath(self._args.output_dirname)
@@ -55,6 +56,8 @@ class ResultAnalyzer:
         "xla": pd.Series(dtype="str"),
         "xla_flags": pd.Series(dtype="str"),
         "dynamo": pd.Series(dtype="str"),
+        "torch_xla2": pd.Series(dtype="str"),
+        "keep_model_data_on_cuda": pd.Series(dtype="bool"),
         "test": pd.Series(dtype="str"),
         "batch_size": pd.Series(dtype="int"),
         "repeat": pd.Series(dtype="int"),
@@ -102,7 +105,8 @@ class ResultAnalyzer:
     return d
 
   # TODO: handle error message properly (database length restriction)
-  def extract_metrics_jsonl(self, file):
+  # Do not use bool. This will mess up with the bigquery parsing.
+  def extract_metrics_jsonl(self, file: str):
     with open(file, mode="r", encoding="utf-8") as f:
       jsonlines = f.read().splitlines()
     runs = []
@@ -116,6 +120,12 @@ class ResultAnalyzer:
       xla_value = "None" if xla is None else xla
       dynamo = dataline["experiment"]["dynamo"]
       dynamo_value = "None" if dynamo is None else dynamo
+      torch_xla2 = dataline["experiment"]["torch_xla2"]
+      torch_xla2_value = "None" if torch_xla2 is None else torch_xla2
+      keep_model_data_on_cuda = dataline["experiment"][
+          "keep_model_data_on_cuda"]
+      keep_model_data_on_cuda_value = "None" if keep_model_data_on_cuda is None else str(
+          keep_model_data_on_cuda)
       test = dataline["experiment"]["test"]
       test_value = "None" if test is None else test
       outputs_file = dataline["experiment"].get("outputs_file", None)
@@ -135,6 +145,8 @@ class ResultAnalyzer:
               "accelerator_model": dataline["experiment"]["accelerator_model"],
               "xla": xla_value,
               "dynamo": dynamo_value,
+              "torch_xla2": torch_xla2_value,
+              "keep_model_data_on_cuda": keep_model_data_on_cuda_value,
               "test": test_value,
               "outputs_file": outputs_file_value
           }
@@ -158,7 +170,7 @@ class ResultAnalyzer:
 
     return runs
 
-  def extract_metrics_csv(self, file, metric_df):
+  def extract_metrics_csv(self, file: str, metric_df: Optional[pd.DataFrame]):
     with open(file, mode="r", encoding="utf-8") as f:
       jsonlines = f.read().splitlines()
 
@@ -167,20 +179,38 @@ class ResultAnalyzer:
       timestamp = dataline[
           "timestamp"] if "timestamp" in dataline else self.timestamp
       d = {
-          "timestamp": timestamp,
-          "suite_name": dataline["model"]["suite_name"],
-          "model_name": dataline["model"]["model_name"],
-          "accelerator": dataline["experiment"]["accelerator"],
-          "accelerator_model": dataline["experiment"]["accelerator_model"],
-          "xla": dataline["experiment"]["xla"],
-          "xla_flags": dataline["experiment"]["xla_flags"],
-          "dynamo": dataline["experiment"]["dynamo"],
-          "test": dataline["experiment"]["test"],
-          "batch_size": dataline["experiment"]["batch_size"],
-          "repeat": dataline["repeat"],
-          "iterations_per_run": dataline["iterations_per_run"],
-          "error_message": None,
-          "outputs_file": dataline["experiment"].get("outputs_file", ""),
+          "timestamp":
+              timestamp,
+          "suite_name":
+              dataline["model"]["suite_name"],
+          "model_name":
+              dataline["model"]["model_name"],
+          "accelerator":
+              dataline["experiment"]["accelerator"],
+          "accelerator_model":
+              dataline["experiment"]["accelerator_model"],
+          "xla":
+              dataline["experiment"]["xla"],
+          "xla_flags":
+              dataline["experiment"]["xla_flags"],
+          "dynamo":
+              dataline["experiment"]["dynamo"],
+          "torch_xla2":
+              dataline["experiment"]["torch_xla2"],
+          "keep_model_data_on_cuda":
+              dataline["experiment"]["keep_model_data_on_cuda"],
+          "test":
+              dataline["experiment"]["test"],
+          "batch_size":
+              dataline["experiment"]["batch_size"],
+          "repeat":
+              dataline["repeat"],
+          "iterations_per_run":
+              dataline["iterations_per_run"],
+          "error_message":
+              None,
+          "outputs_file":
+              dataline["experiment"].get("outputs_file", ""),
       }
 
       if "error" in dataline["metrics"] and not self._args.hide_errors:
@@ -196,7 +226,7 @@ class ResultAnalyzer:
 
     return metric_df
 
-  def export_metric_report(self, metric_df):
+  def export_metric_report(self, metric_df: pd.DataFrame):
     metric_df.to_csv(
         self.output_file, mode="w", encoding="utf-8", header=True, index=False)
 

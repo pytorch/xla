@@ -75,9 +75,6 @@ build:tpu --define=with_tpu_support=true
 test:tpu --local_test_jobs=1
 test:cuda --local_test_jobs=1
 
-# Exclude XRT from the build
-build:disable_xrt --define=disable_xrt=true
-
 #########################################################################
 # RBE config options below.
 # Flag to enable remote config

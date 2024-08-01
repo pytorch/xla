@@ -28,7 +28,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def test_xla_sharded_tensor(self):
@@ -38,8 +37,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                        device=xm.xla_device())
     xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
                             partition_spec)
-
-    # TODO(244003536) add more tests for XLAShardedTensror.
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
 
   def test_xla_sharded_tensor_repr(self):
@@ -715,9 +712,10 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     xst2 = xst1 + 5
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xst2.global_tensor])
     self.assertIn('%p1.3 = f32[1,8]{1,0} parameter(1), sharding', hlo)
-    # scalar 5 should be implicitly replicated, so the pre-optimization HLO
-    # shouldn't mark it with sharding.
-    self.assertNotIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
+    if torch_xla._XLAC._xla_get_auto_sharding():
+      # scalar 5 should be implicitly replicated, so the pre-optimization HLO
+      # shouldn't mark it with sharding.
+      self.assertNotIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
 
   def test_2d_tensor_3d_mesh(self):
     ct1 = torch.randn(16, 16, device='cpu')
@@ -1101,6 +1099,215 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh = xs.get_global_mesh()
 
     self.assertEqual(id(mesh), id(expected_mesh))
+
+  def test_mark_manual_sharding(self):
+    x = torch.zeros(3, 2).to(xm.xla_device())
+    with self.assertRaises(RuntimeError):
+      xt = xs._mark_manual_sharding(x)
+
+    xx = x + 1
+    xt = xs._mark_manual_sharding(xx)
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt.global_tensor])
+    self.assertIn(', sharding={manual}', hlo)
+    self.assertEqual(xt.sharding_type, xs.ShardingType.MANUAL)
+    self.assertEqual(xt.sharding_spec, "{manual}")
+
+    # It looks like XLA does't like only having manual sharding in the HLO.
+    # It needs to be paired with SPMDFullToShardShape/SPMDShardToFullShape.
+    # The following exception cannot be caught somehow.
+    # xt.global_tensor.cpu()
+
+  def test_spmd_full_to_shard_shape(self):
+    x = torch.zeros(8, 8).to(xm.xla_device())
+    with self.assertRaises(RuntimeError):
+      x = torch_xla._XLAC._spmd_full_to_shard_shape(x)
+
+    # Sharded shape
+    xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), (0, 1))
+    xx = torch_xla._XLAC._spmd_full_to_shard_shape(xt.global_tensor)
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
+    self.assertEqual(xx.shape, (8, 8 // self.n_devices))
+    self.assertIn(f'%custom-call.2 = f32[8,{8//self.n_devices}]{{1,0}}', hlo)
+    self.assertIn(
+        f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
+
+    # It looks like XLA does't like only having manual sharding in the HLO.
+    # It needs to be paired with SPMDFullToShardShape/SPMDShardToFullShape.
+    # The following exception cannot be caught somehow.
+    # xx.cpu()
+
+    # Replicated shape
+    x = torch.zeros(8, 4).to(xm.xla_device())
+    xt = xs.mark_sharding(x, self._get_mesh((self.n_devices, 1)), (None, None))
+    xx = torch_xla._XLAC._spmd_full_to_shard_shape(xt.global_tensor)
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
+    self.assertEqual(xx.shape, (8, 4))
+    self.assertIn(f'%custom-call.2 = f32[8,4]{{1,0}}', hlo)
+    self.assertIn(
+        f'custom_call_target="SPMDFullToShardShape", sharding={{manual}}', hlo)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{manual}")
+
+  def test_spmd_shard_to_full_shape(self):
+    x = torch.zeros(8, 8).to(xm.xla_device())
+    x += 1
+    # No sharding spec attached.
+    with self.assertRaises(RuntimeError):
+      x = torch_xla._XLAC._spmd_shard_to_full_shape(
+          x, torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED),
+          x.shape, x.dtype)
+
+    xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), (0, 1))
+    # Not manual sharding.
+    with self.assertRaises(RuntimeError):
+      x = torch_xla._XLAC._spmd_shard_to_full_shape(
+          xt.global_tensor,
+          torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED),
+          x.shape, x.dtype)
+
+    xs.clear_sharding(xt)
+    xt = xs._mark_manual_sharding(xt)
+    xx = torch_xla._XLAC._spmd_shard_to_full_shape(
+        xt.global_tensor,
+        torch_xla._XLAC.OpSharding([], [], [], xs.ShardingType.REPLICATED),
+        x.shape, x.dtype)
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xx])
+    self.assertEqual(xx.shape, x.shape)
+    self.assertIn('%custom-call.9 = f32[8,8]{1,0}', hlo)
+    self.assertIn(
+        'custom_call_target="SPMDShardToFullShape", sharding={replicated}', hlo)
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xx), "{replicated}")
+
+  def test_manual_sharding_e2e(self):
+    x = torch.zeros(8, 8).to(xm.xla_device())
+    mesh = self._get_mesh((1, self.n_devices))
+    partition_spec = (0, 1)
+    xt = xs.mark_sharding(x, mesh, partition_spec)
+
+    xx = torch_xla._XLAC._spmd_full_to_shard_shape(xt.global_tensor)
+    self.assertEqual(xx.shape, (8, 8 // self.n_devices))
+
+    xx = xx + 1
+    xxt = xs._mark_manual_sharding(xx)
+    xxx = torch_xla._XLAC._spmd_shard_to_full_shape(
+        xxt.global_tensor, mesh.get_op_sharding(partition_spec), x.shape,
+        x.dtype)
+    self.assertEqual(xxx.shape, (8, 8))
+
+    self.assertTrue(torch.allclose(x.cpu() + 1, xxx.cpu()))
+
+  def test_manual_sharding_api_e2e(self):
+    xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
+    x = torch.zeros(8, 8).to(xm.xla_device())
+    partition_spec = (0, 1)
+
+    xx = xs.enable_manual_sharding(x, partition_spec)
+    self.assertEqual(xx.shape, (8, 8 // self.n_devices))
+
+    xx = xx + 1
+    xxx = xs.disable_manual_sharding(xx, partition_spec, x.shape)
+    self.assertEqual(xxx.shape, (8, 8))
+    self.assertTrue(torch.allclose(x.cpu() + 1, xxx.cpu()))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "Only runs on TPUv4")
+  def test_spmd_reduce_scatter(self):
+    xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
+    x = torch.ones(8, 8).to(xm.xla_device())
+
+    # Reduce scatter
+    x = xs.enable_manual_sharding(x, (None, None)).global_tensor
+    x = torch_xla._XLAC._xla_spmd_reduce_scatter(xm.REDUCE_SUM, x, 1.0, 0,
+                                                 self.n_devices,
+                                                 [self.device_ids])
+    x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
+    self.assertIn(
+        f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{0}}, to_apply=%AddComputation.3",
+        hlo)
+
+    expected_x = torch.ones(8 // self.n_devices, 8) * self.n_devices
+    self.assertTrue(torch.allclose(x.cpu(), expected_x))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "Only runs on TPUv4")
+  def test_spmd_reduce_scatter_canonical_index(self):
+    xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
+    x = torch.ones(8, 8).to(xm.xla_device())
+
+    # Reduce scatter
+    x = xs.enable_manual_sharding(x, (None, None)).global_tensor
+    x = torch_xla._XLAC._xla_spmd_reduce_scatter(xm.REDUCE_SUM, x, 1.0, -1,
+                                                 self.n_devices,
+                                                 [self.device_ids])
+    x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
+    self.assertIn(
+        f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{1}}, to_apply=%AddComputation.3",
+        hlo)
+
+    expected_x = torch.ones(8, 8 // self.n_devices) * self.n_devices
+    self.assertTrue(torch.allclose(x.cpu(), expected_x))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "Only runs on TPUv4")
+  def test_spmd_all_reduce(self):
+    xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
+    x = torch.ones(8, 8).to(xm.xla_device())
+
+    # all reduce
+    x = xs.enable_manual_sharding(x, (None, None)).global_tensor
+    x = torch_xla._XLAC._xla_spmd_all_reduce(xm.REDUCE_SUM, x, 1.0,
+                                             [self.device_ids])
+    x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
+    self.assertIn(
+        f"all-reduce(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, to_apply=%AddComputation.3",
+        hlo)
+
+    expected_x = torch.ones(8, 8) * 4
+    self.assertTrue(torch.allclose(x.cpu(), expected_x))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "Only runs on TPUv4")
+  def test_spmd_all_reduce_scale(self):
+    xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
+    x = torch.ones(8, 8).to(xm.xla_device())
+
+    # all reduce
+    x = xs.enable_manual_sharding(x, (None, None)).global_tensor
+    x = torch_xla._XLAC._xla_spmd_all_reduce(xm.REDUCE_SUM, x, 0.25,
+                                             [self.device_ids])
+    x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
+    self.assertIn(
+        f"all-reduce(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, to_apply=%AddComputation.3",
+        hlo)
+
+    expected_x = torch.ones(8, 8)
+    self.assertTrue(torch.allclose(x.cpu(), expected_x))
+
+  def test_get_1d_mesh(self):
+    device = torch_xla.device()
+    mesh = xs.get_1d_mesh("data")
+    t1 = torch.randn(8, 8).to(device)
+    xt = xs.mark_sharding(t1, mesh, ("data", None))
+    shards = xt.local_shards
+    self.assertEqual(len(shards), self.n_devices)
+    self.assertEqual(mesh.mesh_shape, (xr.global_runtime_device_count(),))
+    self.assertEqual(mesh.axis_names, ("data",))
+
+    mesh_without_name = xs.get_1d_mesh()
+    self.assertEqual(mesh_without_name.mesh_shape,
+                     (xr.global_runtime_device_count(),))
 
 
 if __name__ == '__main__':

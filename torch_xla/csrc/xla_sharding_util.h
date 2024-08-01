@@ -80,11 +80,12 @@ class ShardingUtil {
   // based on the `sharding` spec. REPLICATED sharding should result in shards
   // identical to the input; OTHERS (tiled) sharding result in shards where
   // each data dimension is sharded across devices along the same dimension in
-  // the `tile_assignment`; the returned tensor shards vector is indexed by the
-  // device IDs. There is no data duplication. Shards are not padded in case the
-  // input tensor is not evenly partitionable, unless `padded` is set.
-  // The the returned tensors will be in 1:1 correspondence with the `devices`
-  // vector, so the `i`th result will belong on the `i`th device.
+  // the `tile_assignment`; the returned tensor shards vector is
+  // indexed by the device IDs. There is no data duplication. Shards are not
+  // padded in case the input tensor is not evenly partitionable, unless
+  // `padded` is set. The the returned tensors will be in 1:1 correspondence
+  // with the `devices` vector, so the `i`th result will belong on the `i`th
+  // device.
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
       const std::vector<std::string>& devices, bool padded = true);
@@ -121,6 +122,28 @@ class ShardingUtil {
 
   static void XlaMarkSharding(const at::Tensor& input,
                               xla::OpSharding sharding);
+
+  //////////////////////////// Auto-Sharding ////////////////////////////
+
+  // Construct a device mesh for auto-sharding pass. Returns a tuple of mesh
+  // shape and device ids vectors.
+  static std::vector<int64_t> GetAutoShardingMesh();
+  static std::vector<int64_t> GetAutoShardingMeshIds(
+      const xla::HloModuleProto& module);
+
+  // Reshard the parameters if the expected shardings mismatch. Resharding is
+  // expensive especially for those already sharded. The cost can easily be
+  // armotized over multiple steps, though, since the input sharding is
+  // propagated to the output for the subsequent runs. Sharded data transfer
+  // during resharding should be asynchronous. It is recommended to keep the
+  // input sharding on the input data as-is.
+  static void ReshardParameters(
+      const xla::HloModuleProto& module, std::vector<XLATensorPtr>* tensors,
+      std::vector<torch::lazy::BackendDataPtr>* parameters,
+      std::vector<const torch::lazy::Node*>* nodes);
+
+  static void SetAutoSharding();
+  static bool GetAutoSharding();
 
   //////////////////////////// Dynamo Integration ////////////////////////////
 

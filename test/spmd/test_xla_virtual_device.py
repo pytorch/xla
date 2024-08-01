@@ -17,7 +17,6 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def test_mark_sharding(self):

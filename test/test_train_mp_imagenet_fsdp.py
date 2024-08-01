@@ -100,13 +100,12 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
-import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
-import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
 import torch.distributed as dist
@@ -181,12 +180,11 @@ def train_imagenet():
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-        sample_count=train_dataset_len // FLAGS.batch_size //
-        xm.xrt_world_size())
+        sample_count=train_dataset_len // FLAGS.batch_size // xr.world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
-        sample_count=50000 // FLAGS.batch_size // xm.xrt_world_size())
+        sample_count=50000 // FLAGS.batch_size // xr.world_size())
   else:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -213,16 +211,16 @@ def train_imagenet():
         ]))
 
     train_sampler, test_sampler = None, None
-    if xm.xrt_world_size() > 1:
+    if xr.world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
+          num_replicas=xr.world_size(),
+          rank=xr.global_ordinal(),
           shuffle=True)
       test_sampler = torch.utils.data.distributed.DistributedSampler(
           test_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
+          num_replicas=xr.world_size(),
+          rank=xr.global_ordinal(),
           shuffle=False)
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -316,7 +314,7 @@ def train_imagenet():
       momentum=FLAGS.momentum,
       weight_decay=1e-4)
   num_training_steps_per_epoch = train_dataset_len // (
-      FLAGS.batch_size * xm.xrt_world_size())
+      FLAGS.batch_size * xr.world_size())
   lr_scheduler = schedulers.WarmupAndExponentialDecayScheduler(
       optimizer,
       num_steps_per_epoch=num_training_steps_per_epoch,
@@ -404,7 +402,6 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  if dist.is_torchelastic_launched():
-    _mp_fn(xu.getenv_as(xenv.LOCAL_RANK, int), FLAGS)
-  else:
-    xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  debug_single_process = FLAGS.num_cores == 1
+  torch_xla.launch(
+      _mp_fn, args=(FLAGS,), debug_single_process=debug_single_process)

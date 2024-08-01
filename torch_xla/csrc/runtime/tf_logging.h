@@ -3,8 +3,8 @@
 
 #include <sstream>
 
+#include "absl/base/log_severity.h"
 #include "tsl/platform/logging.h"
-#include "xla/status.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -23,11 +23,12 @@ namespace internal {
     return vmodule_activated;                                        \
   })(lvl, __FILE__))
 
-#define TF_VLOG(level)                   \
-  TF_PREDICT_TRUE(!TF_VLOG_IS_ON(level)) \
-  ? (void)0                              \
-  : ::tsl::internal::Voidifier() &       \
-          ::tsl::internal::LogMessage(__FILE__, __LINE__, ::tsl::INFO)
+#define TF_VLOG(level)                                    \
+  TF_PREDICT_TRUE(!TF_VLOG_IS_ON(level))                  \
+  ? (void)0                                               \
+  : ::tsl::internal::Voidifier() &                        \
+          ::tsl::internal::LogMessage(__FILE__, __LINE__, \
+                                      absl::LogSeverity::kInfo)
 
 struct ErrorSink : public std::basic_ostringstream<char> {};
 

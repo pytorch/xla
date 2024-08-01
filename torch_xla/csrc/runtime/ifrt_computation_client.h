@@ -16,6 +16,7 @@
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
+#include "xla/python/ifrt/hlo/hlo_program.h"
 #include "xla/python/pjrt_ifrt/pjrt_array.h"
 #include "xla/python/pjrt_ifrt/pjrt_client.h"
 #include "xla/python/pjrt_ifrt/xla_compiler.h"
@@ -45,8 +46,18 @@ class IfrtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
+  std::vector<DataPtr> ReshardData(
+      absl::Span<const DataPtr> handles,
+      absl::Span<const xla::OpSharding> shardings) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
+
+  std::uintptr_t UnsafeBufferPointer(const DataPtr handle) override;
+
+  std::shared_ptr<xla::PjRtBuffer> GetPjRtBuffer(const DataPtr handle) override;
 
   DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
@@ -76,6 +87,19 @@ class IfrtComputationClient : public ComputationClient {
         absl::AsciiStrToUpper(client_->platform_name()));
   };
 
+  xla::PjRtPlatformId GetPlatformID() const override {
+    return client_->platform_id();
+  }
+
+  absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
+      int local_device_id) const override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
+  std::intptr_t GetCudaStreamForDevice(int local_device_id) const override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
@@ -85,7 +109,7 @@ class IfrtComputationClient : public ComputationClient {
   int GetNumProcesses() const override;
 
   const absl::flat_hash_map<
-      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
   GetDeviceAttributes(const std::string& device) override;
 
   void SetReplicationDevices(
@@ -113,6 +137,10 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
+  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
   std::string SerializeComputation(const ComputationPtr computation) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
@@ -128,7 +156,7 @@ class IfrtComputationClient : public ComputationClient {
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
   // dense global ordinal.
   std::unordered_map<int, int> global_ordinals_;
-  std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
+  std::unordered_map<std::string, xla::ifrt::Device* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
   OperationManager operation_manager_;
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(

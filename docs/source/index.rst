@@ -1,19 +1,61 @@
+:github_url: https://github.com/pytorch/xla
+
+PyTorch/XLA documentation
+===================================
+PyTorch/XLA is a Python package that uses the XLA deep learning compiler to connect the PyTorch deep learning framework and Cloud TPUs.
+
+.. toctree::
+   :hidden:
+
+   self
+
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Docs
+
+   *
+
 .. mdinclude:: ../../API_GUIDE.md
 
 PyTorch/XLA API
 ==================================
+
+torch_xla
+----------------------------------
+.. automodule:: torch_xla
+.. autofunction:: device
+.. autofunction:: devices
+.. autofunction:: device_count
+.. autofunction:: sync
+.. autofunction:: compile
+.. autofunction:: manual_seed
+
+runtime
+----------------------------------
+.. automodule:: torch_xla.runtime
+.. autofunction:: device_type
+.. autofunction:: local_process_count
+.. autofunction:: local_device_count
+.. autofunction:: addressable_device_count
+.. autofunction:: global_device_count
+.. autofunction:: global_runtime_device_count
+.. autofunction:: world_size
+.. autofunction:: global_ordinal
+.. autofunction:: local_ordinal
+.. autofunction:: get_master_ip
+.. autofunction:: use_spmd
+.. autofunction:: is_spmd
+.. autofunction:: initialize_cache
+
 
 xla_model
 ----------------------------------
 
 .. automodule:: torch_xla.core.xla_model
 .. autofunction:: xla_device
-.. autofunction:: get_xla_supported_devices
 .. autofunction:: xla_device_hw
-.. autofunction:: get_ordinal
-.. autofunction:: get_local_ordinal
 .. autofunction:: is_master_ordinal
-.. autofunction:: xrt_world_size
 .. autofunction:: all_reduce
 .. autofunction:: all_gather
 .. autofunction:: all_to_all
@@ -22,18 +64,12 @@ xla_model
 .. autofunction:: optimizer_step
 .. autofunction:: save
 .. autofunction:: rendezvous
-.. autofunction:: do_on_ordinals
 .. autofunction:: mesh_reduce
 .. autofunction:: set_rng_state
 .. autofunction:: get_rng_state
 .. autofunction:: get_memory_info
 .. autofunction:: get_stablehlo
 .. autofunction:: get_stablehlo_bytecode
-
-.. automodule:: torch_xla.core.functions
-.. autofunction:: all_reduce
-.. autofunction:: all_gather
-.. autofunction:: nms
 
 distributed
 ----------------------------------
@@ -44,47 +80,30 @@ distributed
 
 .. automodule:: torch_xla.distributed.xla_multiprocessing
 .. autofunction:: spawn
-.. autoclass:: MpModelWrapper
-	       :members: to
-.. autoclass:: MpSerialExecutor
-	       :members: run
 
-utils
+spmd
+----------------------------------
+.. automodule:: torch_xla.distributed.spmd
+.. autofunction:: mark_sharding
+.. autofunction:: clear_sharding
+.. autofunction:: set_global_mesh
+.. autofunction:: get_global_mesh
+.. autofunction:: get_1d_mesh
+.. autoclass:: Mesh
+.. autoclass:: HybridMesh
+
+experimental
+----------------------------------
+.. automodule:: torch_xla.experimental
+.. autofunction:: eager_mode
+
+debug
 ----------------------------------
 
-.. automodule:: torch_xla.utils.metrics
+.. automodule:: torch_xla.debug.metrics
+.. autofunction:: metrics_report
+.. autofunction:: short_metrics_report
 .. autofunction:: counter_names
 .. autofunction:: counter_value
 .. autofunction:: metric_names
 .. autofunction:: metric_data
-.. autofunction:: metrics_report
-
-.. automodule:: torch_xla.utils.utils
-.. autoclass:: SampleGenerator
-.. autoclass:: DataWrapper
-
-.. automodule:: torch_xla.utils.serialization
-.. autofunction:: save
-.. autofunction:: load
-
-
-test
-----------------------------------
-
-.. automodule:: torch_xla.utils.test_utils
-.. autofunction:: mp_test
-.. autofunction:: write_to_summary
-.. autofunction:: close_summary_writer
-.. autofunction:: get_summary_writer
-.. autofunction:: print_training_update
-.. autofunction:: print_test_update
-
-.. mdinclude:: ../pytorch_xla_overview.md
-.. mdinclude:: ../../TROUBLESHOOTING.md
-.. mdinclude:: ../pjrt.md
-.. mdinclude:: ../dynamo.md
-.. mdinclude:: ../fsdp.md
-.. mdinclude:: ../ddp.md
-.. mdinclude:: ../gpu.md
-.. mdinclude:: ../spmd.md
-.. mdinclude:: ../fsdpv2.md

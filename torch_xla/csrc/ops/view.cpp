@@ -4,6 +4,7 @@
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "xla/shape_util.h"
 
 namespace torch_xla {
@@ -42,7 +43,13 @@ ViewOp::ViewOp(const torch::lazy::Value& input, xla::Shape output_shape)
 
 XlaOpVector ViewOp::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp output = BuildView(input, output_size_);
+  xla::XlaOp output;
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  if (!input_shape.is_unbounded_dynamic()) {
+    output = BuildView(input, output_size_);
+  } else {
+    output = BuildUnboundedDynamicView(input, input_shape, output_size_);
+  }
   return ReturnOp(output, loctx);
 }
 

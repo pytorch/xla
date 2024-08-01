@@ -16,11 +16,14 @@ import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.distributed.spmd as xs
 
+from torch.distributed.checkpoint._fsspec_filesystem import *
+from collections.abc import Iterable
+
 from torch.distributed.checkpoint.default_planner import (
     create_default_local_save_plan,
     create_default_global_save_plan,
 )
-from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner, CheckpointManager
+from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner, CheckpointManager, prime_optimizer
 from torch_xla.experimental.distributed_checkpoint._helpers import (
     _sharded_cpu_state_dict, _CpuShards, _is_sharded_tensor)
 
@@ -41,7 +44,6 @@ class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def _get_sharded_model(self, mesh_shape=None):
@@ -68,6 +70,33 @@ class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
         return False
     return True
 
+  def _assert_same_state_dict(self, sd1, sd2, keypath=""):
+    assert type(sd1) == type(
+        sd2), f"Different types in state_dict: {sd1} vs {sd2}"
+
+    if isinstance(sd1, torch.Tensor):
+      assert sd1.device == sd2.device, f"Tensors on different devices at {keypath}: {sd1} vs {sd2}"
+      if sd1.device == xm.xla_device():
+        sharding1 = torch_xla._XLAC._get_xla_sharding_spec(sd1)
+        sharding2 = torch_xla._XLAC._get_xla_sharding_spec(sd2)
+        assert sharding1 == sharding2, f"Different sharding on tensors at {keypath}: {sharding1} vs {sharding2}"
+      assert torch.equal(
+          sd1, sd2), f"Different tensors at {keypath}:\n{sd1} vs {sd2}"
+
+    elif isinstance(sd1, dict):
+      assert sd1.keys() == sd2.keys(
+      ), f"Different keys at {keypath}: {sd1} vs {sd2}"
+      for key in sd1:
+        self._assert_same_state_dict(
+            sd1[key], sd2[key], keypath=f'{keypath}.{key}')
+
+    elif isinstance(sd1, Iterable):
+      for ind, (a, b) in enumerate(zip(sd1, sd2)):
+        self._assert_same_state_dict(a, b, keypath=f'{keypath}[{ind}]')
+
+    else:
+      assert sd1 == sd2, f"Different value at {keypath}: {sd1} vs {sd2}"
+
 
 class EndToEndCheckpointTest(DistributedCheckpointTestBase):
 
@@ -76,8 +105,9 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
                         model_out,
                         save_planner=None,
                         load_planner=None,
+                        storage_writer_cls=dist_cp.FileSystemWriter,
+                        storage_reader_cls=dist_cp.FileSystemReader,
                         is_sharded_cpu_state_dict=False,
-                        no_dist=True,
                         chkpt_path=None):
     """
     Checkpoint model_in using the provided save_planner and load into model_out
@@ -91,24 +121,23 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
     if is_sharded_cpu_state_dict:
       model_in_state_dict = _sharded_cpu_state_dict(model_in_state_dict)
     model_out_state_dict = model_out.state_dict()
-    dist_cp.save_state_dict(
+    dist_cp.save(
         state_dict=model_in_state_dict,
-        storage_writer=dist_cp.FileSystemWriter(
+        storage_writer=storage_writer_cls(
             chkpt_path,
+            sync_files=False,
             per_thread_copy_ahead=0,
         ),
         planner=save_planner,
-        no_dist=no_dist,
     )
     # Load the checkpoint using the provided load planner
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
       self.assertFalse(torch.allclose(p1.cpu(), p2.cpu()))
 
-    dist_cp.load_state_dict(
+    dist_cp.load(
         state_dict=model_out_state_dict,
-        storage_reader=dist_cp.FileSystemReader(chkpt_path),
+        storage_reader=storage_reader_cls(chkpt_path),
         planner=load_planner,
-        no_dist=no_dist,
     )
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
       self.assertTrue(torch.allclose(p1.cpu(), p2.cpu()))
@@ -143,15 +172,42 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         save_planner=SPMDSavePlanner(),
         load_planner=SPMDLoadPlanner())
 
-  @unittest.skipUnless(
-      {'CHKPT_PATH', 'MASTER_ADDR', 'MASTER_PORT', 'RANK', 'WORLD_SIZE'
-      } <= os.environ.keys(),
-      'CHKPT_PATH and distributed config must be set for multihost checkpoint')
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
+                   "Multiple devices needed to change mesh")
+  def test_resharding_transpose_device_mesh(self):
+    dim = self.n_devices // 2
+    model1 = self._get_sharded_model(mesh_shape=(dim, self.n_devices // dim))
+    model2 = self._get_sharded_model(mesh_shape=(self.n_devices // dim, dim))
+    self._save_and_restore(
+        model1,
+        model2,
+        save_planner=SPMDSavePlanner(),
+        load_planner=SPMDLoadPlanner())
+
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
+                   "Multiple devices needed to change mesh")
+  def test_padded_tensor(self):
+    # Use a linear layer with shape not divisible by the number of devices.
+    model1 = torch.nn.Linear(127, 63).to('xla')
+    model2 = torch.nn.Linear(127, 63).to('xla')
+    mesh = xs.Mesh(range(self.n_devices), (self.n_devices,))
+    # Transpose the sharding to induce resharding in the restore path
+    xs.mark_sharding(model1.weight, mesh, (0, None))
+    xs.mark_sharding(model2.weight, mesh, (None, 0))
+    self._save_and_restore(
+        model1,
+        model2,
+        save_planner=SPMDSavePlanner(),
+        load_planner=SPMDLoadPlanner())
+
+  @unittest.skipUnless('CHKPT_PATH' in os.environ,
+                       'CHKPT_PATH must be set for multihost checkpoint')
   def test_multihost_checkpoint(self):
     torch.manual_seed(42)
 
-    # Initialize the default CPU process group from the environment.
-    dist.init_process_group()
+    # Initialize the default CPU process group.
+    import torch_xla.distributed.xla_backend
+    dist.init_process_group(backend='gloo', init_method='xla://')
 
     model1 = self._get_sharded_model(mesh_shape=(1, self.n_devices))
     model2 = self._get_sharded_model(mesh_shape=(self.n_devices, 1))
@@ -161,7 +217,8 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         model2,
         save_planner=SPMDSavePlanner(),
         load_planner=SPMDLoadPlanner(),
-        no_dist=False,
+        storage_writer_cls=FsspecWriter,
+        storage_reader_cls=FsspecReader,
         chkpt_path=os.environ['CHKPT_PATH'])
 
     # Destroy the CPU process group after the test
@@ -357,7 +414,7 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   def setUp(self):
     super().setUp()
-    # Initialize the a minimal process group
+    # Initialize a minimal process group
     dist.init_process_group(
         backend='gloo',
         init_method='tcp://localhost:8932',
@@ -563,6 +620,68 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
                              lambda x: True):
       self.assertTrue(chkpt_mgr.save(preemption_step, state_dict))
       self.assertTrue(chkpt_mgr.reached_preemption(step))
+
+
+@unittest.skipIf(xr.device_type() != 'TPU',
+                 'TPU required for worker IP discovery')
+class OptimizerCheckpointTest(DistributedCheckpointTestBase):
+
+  def setUp(self):
+    super().setUp()
+    # Initialize a minimal process group
+    dist.init_process_group(
+        backend='gloo',
+        init_method='tcp://localhost:8932',
+        world_size=1,
+        rank=0)
+
+  def tearDown(self):
+    super().tearDown()
+    # Destroy the CPU process group after the test
+    dist.destroy_process_group()
+
+  def _get_model_and_optimizer(self, optim_cls):
+    model = self._get_sharded_model()
+    optim = optim_cls(params=model.parameters())
+    return model, optim
+
+  def _run_train_step(self, model, optim):
+    torch.manual_seed(42)
+    model(torch.ones(10, 128).to('xla')).square().sum().backward()
+    optim.step()
+    xm.mark_step()
+
+  def _test_optimizer(self, tmpdir, optim_cls):
+    model, optim = self._get_model_and_optimizer(optim_cls)
+    self._run_train_step(model, optim)
+
+    # Take a checkpoint including the optimizer
+    chkpt_mgr = CheckpointManager(tmpdir, 1)
+    state_dict = {'model': model.state_dict(), 'optim': optim.state_dict()}
+    chkpt_mgr.save(0, state_dict, force=True)
+
+    # Load the checkpoint into a new model and optimizer
+    new_model, new_optim = self._get_model_and_optimizer(optim_cls)
+    prime_optimizer(new_optim)
+    new_state_dict = {
+        'model': new_model.state_dict(),
+        'optim': new_optim.state_dict()
+    }
+    chkpt_mgr.restore(0, new_state_dict)
+    self._assert_same_state_dict(state_dict, new_state_dict)
+
+    new_model.load_state_dict(new_state_dict['model'])
+    new_optim.load_state_dict(new_state_dict['optim'])
+    self._assert_same_state_dict(new_model.state_dict(), model.state_dict())
+    self._assert_same_state_dict(new_optim.state_dict(), optim.state_dict())
+
+  @run_with_tmpdir
+  def test_sgd(self, tmpdir):
+    self._test_optimizer(tmpdir, torch.optim.SGD)
+
+  @run_with_tmpdir
+  def test_adamw(self, tmpdir):
+    self._test_optimizer(tmpdir, torch.optim.AdamW)
 
 
 if __name__ == '__main__':

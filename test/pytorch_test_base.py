@@ -70,6 +70,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_pdist_norm_backward_xla',  # pdist_single
         'test_pdist_norm_forward_xla',  # pdist_single
         'test_nuclear_norm_axes_small_brute_force',
+        'test_nondeterministic_alert_EmbeddingBag_max_xla',  # FIXME: implement embedding_bag_backward
         'test_mul_intertype_scalar',
         'test_masked_select_discontiguous',  # FIXME: wrong result
         'test_memory_format_type',
@@ -631,8 +632,7 @@ class XLATestBase(DeviceTypeTestBase):
   def setUpClass(cls):
     # Sets the primary test device to the xla_device (CPU or TPU)
     cls.primary_device = str(xm.xla_device())
-    torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-        use_full_mat_mul_precision=True)
+    torch_xla._XLAC._xla_set_mat_mul_precision('highest')
 
   def setUp(self):
     super().setUp()

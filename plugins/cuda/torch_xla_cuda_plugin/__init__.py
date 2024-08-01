@@ -27,6 +27,9 @@ class CudaPlugin(plugins.DevicePlugin):
     # TODO: default to actual device count
     return xu.getenv_as('GPU_NUM_DEVICES', int, 1)
 
+  def configure_single_process(self):
+    pass
+
   def client_create_options(self) -> dict:
     local_process_rank, global_process_rank = self._get_process_rank()
     local_world_size, global_world_size = self._get_world_size()

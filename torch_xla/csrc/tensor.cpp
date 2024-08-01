@@ -50,6 +50,14 @@
 
 namespace torch_xla {
 
+namespace {
+bool CanApplySharding(const XLATensor::ShardingSpecPtr sharding) {
+  return !sharding ||
+         sharding->sharding.type() == xla::OpSharding::REPLICATED ||
+         sharding->sharding.type() == xla::OpSharding::UNKNOWN;
+}
+}  // namespace
+
 XLATensor::Data::~Data() { XLAGraphExecutor::Get()->UnregisterTensor(this); }
 
 XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
@@ -63,7 +71,7 @@ XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
 
 XLATensorPtr XLATensor::Create(
     torch::lazy::BackendDataPtr handle,
-    c10::optional<at::ScalarType> logical_element_type) {
+    std::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(handle), logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -72,20 +80,22 @@ XLATensorPtr XLATensor::Create(
 
 XLATensorPtr XLATensor::Create(
     torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-    c10::optional<at::ScalarType> logical_element_type) {
+    std::optional<at::ScalarType> logical_element_type,
+    bool delay_eager_executation) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
-  XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
-  if (UseEagerDebugMode()) {
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  graph_executor->RegisterTensor(xtensor->data());
+  if (graph_executor->UseEagerMode() && !delay_eager_executation) {
     std::vector<XLATensorPtr> xtensors({xtensor});
-    XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
+    graph_executor->ApplyEagerSync(xtensors);
   }
   return xtensor;
 }
 
 XLATensorPtr XLATensor::Create(
     std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
-    c10::optional<at::ScalarType> logical_element_type) {
+    std::optional<at::ScalarType> logical_element_type) {
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(view), device, logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -101,7 +111,7 @@ XLATensor::XLATensor(const at::Tensor& tensor,
     : XLATensor(std::make_shared<Data>(tensor, device)) {}
 
 XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
-                     c10::optional<at::ScalarType> logical_element_type)
+                     std::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(handle, handle->device(),
                                        logical_element_type)) {
   // if data is sharded we need to carry the sharding spec over.
@@ -115,7 +125,7 @@ XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
 
 XLATensor::XLATensor(torch::lazy::Value ir_value,
                      const torch::lazy::BackendDevice& device,
-                     c10::optional<at::ScalarType> logical_element_type)
+                     std::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(std::move(ir_value), device,
                                        logical_element_type)) {
   // Preserve sharding if a new tensor is created from a sharded IR node.
@@ -128,12 +138,11 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
       SetShardingSpec(sharding);
     }
   }
-  TryLimitGraphSize();
 }
 
 XLATensor::XLATensor(std::shared_ptr<View> view,
                      const torch::lazy::BackendDevice& device,
-                     c10::optional<at::ScalarType> logical_element_type)
+                     std::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(std::move(view), device,
                                        logical_element_type)) {}
 
@@ -163,7 +172,7 @@ at::ScalarType XLATensor::dtype() const {
              : MaybeUpcastToHostTorchType(shape().get().element_type());
 }
 
-c10::optional<at::ScalarType> XLATensor::dtype_optional() const {
+std::optional<at::ScalarType> XLATensor::dtype_optional() const {
   return data()->logical_element_type;
 }
 
@@ -206,8 +215,8 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
     torch::lazy::BackendDataPtr handle = CurrentDataHandle();
     if (handle != nullptr) {
       XLA_CHECK(handle->HasValue())
-          << "Trying to access XLA data while an async operation is in flight: "
-          << handle->shape();
+          << "Trying to access XLA data for tensor with ID " << GetUniqueId()
+          << " while an async operation is in flight: " << handle->shape();
       return handle;
     }
   }
@@ -241,18 +250,22 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding, bool overwrite) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
   // the same sharding already applied.
-  if (!sharding_spec() || overwrite ||
-      sharding_spec()->sharding.type() == xla::OpSharding::REPLICATED ||
-      sharding_spec()->sharding.type() == xla::OpSharding::UNKNOWN) {
+  ShardingSpecPtr current_sharding = sharding_spec();
+  if (!current_sharding || overwrite ||
+      current_sharding->sharding.type() == xla::OpSharding::REPLICATED ||
+      current_sharding->sharding.type() == xla::OpSharding::UNKNOWN) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
   } else {
+    // Tensor is already sharding annotated, check if it is UNKNOWN or
+    // the same sharding type.
     XLA_CHECK(ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
         << "Existing sharding annotation, "
-        << sharding_spec()->sharding.DebugString()
+        << current_sharding->sharding.DebugString()
         << ", must be cleared before applying a new one, "
         << sharding.sharding.DebugString();
   }
+  // Sync to the node.
   dynamic_cast<XlaNode*>(GetIrValue().node.get())
       ->SetSharding(sharding_spec()->sharding, GetIrValue().index);
 }
@@ -268,18 +281,31 @@ void XLATensor::ClearShardingSpec() {
 XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   ShardingSpecPtr sharding = data()->sharding;
   torch::lazy::Value ir_value = CurrentIrValue();
-  if (sharding && ir_value) {
-    // The copy of sharding annotation on the IR node should be the same.
+  if (ir_value) {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
-    if (xla_node->GetSharding(ir_value.index)) {
-      XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding, ShardingSpec{*xla_node->GetSharding(ir_value.index),
-                                  xla_node->xla_shape()}))
-          << "Sharding on tensor: "
-          << xla::HloSharding::FromProto(sharding->sharding)->ToString()
-          << ", sharding on IR: "
-          << xla::HloSharding::FromProto(*xla_node->GetSharding(ir_value.index))
-                 ->ToString();
+    const auto* new_op_sharding = xla_node->GetSharding(ir_value.index).get();
+    if (new_op_sharding &&
+        (new_op_sharding->type() != xla::OpSharding::UNKNOWN)) {
+      // Re-sync the sharding annotation from the node to the tensor if there is
+      // one attached to the node. A new sharding annotation is attached
+      // directly to the node, and gets synced to the tensor after this.
+      // If sharding is attached via SetShardingSpec, then it flows from the
+      // tensor to the node. If sharding is attached by the compiler pass, then
+      // it first gets attached to the graph node, and then synced to the tensor
+      // here.
+      if (!sharding ||
+          (sharding && !ShardingUtil::EqualOpShardings(*new_op_sharding,
+                                                       sharding->sharding))) {
+        TF_VLOG(5) << "Syncing node sharding (type=" << new_op_sharding->type()
+                   << ") to tensor (shape=" << xla_node->xla_shape().ToString()
+                   << ").";
+        data()->sharding = std::make_shared<ShardingSpec>(
+            *new_op_sharding, xla_node->xla_shape());
+      }
+    } else if (sharding) {
+      // There is a case where the sharding spec on the tensor is not
+      // propagated down to the node after a reset.
+      xla_node->SetSharding(sharding->sharding, ir_value.index);
     }
   }
   return sharding;
@@ -297,14 +323,15 @@ void XLATensor::SetXlaData(torch::lazy::BackendDataPtr handle, bool sync) {
   AssignIrValue(torch::lazy::Value());
   if (sync) {
     data()->view = nullptr;
-    data()->tensor_data = c10::nullopt;
+    data()->tensor_data = std::nullopt;
   }
   data()->is_cloned = false;
 }
 
-void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
+void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace,
+                           bool delay_eager_executation) {
   data()->handle = nullptr;
-  data()->tensor_data = c10::nullopt;
+  data()->tensor_data = std::nullopt;
   if (data()->view != nullptr && inplace) {
     // If we have an active view, SetIrValue() happens, and we are
     // within an in-place execution context, we need to update the view's
@@ -316,26 +343,30 @@ void XLATensor::SetIrValue(torch::lazy::Value ir_value, bool inplace) {
     data()->view = nullptr;
     data()->generation = 1;
     AssignIrValue(std::move(ir_value));
-    TryLimitGraphSize();
-  }
-  if (UseEagerDebugMode() && ShouldSyncIrNode()) {
-    std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
-    XLAGraphExecutor::Get()->ApplyEagerSync(xtensors);
   }
   data()->is_cloned = false;
+
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  // Update should also be triggered eagerly if configured
+  if (graph_executor->UseEagerMode() && !delay_eager_executation &&
+      ShouldSyncIrNode()) {
+    std::vector<XLATensorPtr> xtensors({c10::make_intrusive<XLATensor>(*this)});
+    graph_executor->ApplyEagerSync(xtensors);
+  }
 }
 
-void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
+void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value,
+                                  bool delay_eager_executation) {
   auto xla_shape = shape();
   if (xla_shape.get().element_type() != GetXlaShape(ir_value).element_type()) {
     ir_value =
         torch::lazy::MakeNode<Cast>(ir_value, xla_shape.get().element_type());
   }
-  SetIrValue(std::move(ir_value), /*inplace=*/true);
+  SetIrValue(std::move(ir_value), /*inplace=*/true, delay_eager_executation);
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  TF_VLOG(5) << "Assign IR value: "
+  TF_VLOG(6) << "Assign IR value: "
              << (ir_value ? ir_value->ToString() : "empty node");
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
@@ -358,10 +389,10 @@ torch::lazy::Value XLATensor::GetIrValue() const {
     AssignIrValue(CreateTensorNode(handle, /*read_only=*/false));
     return data()->ir_value;
   }
-  c10::optional<at::Tensor> tensor_data = CurrentTensorData();
+  std::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
   AssignIrValue(GetIrValueForTensor(*tensor_data, GetDevice()));
-  data()->tensor_data = c10::nullopt;
+  data()->tensor_data = std::nullopt;
   return data()->ir_value;
 }
 
@@ -372,9 +403,9 @@ torch::lazy::Value XLATensor::CurrentIrValue() const {
   return data()->ir_value;
 }
 
-c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
+std::optional<at::Tensor> XLATensor::CurrentTensorData() const {
   if (data()->view != nullptr && !data()->view->IsUpToDate()) {
-    return c10::nullopt;
+    return std::nullopt;
   }
   return data()->tensor_data;
 }
@@ -402,7 +433,7 @@ View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
   View::IrNode ir_value_updated = view->GetViewIrNode();
   if (ir_value_updated.updated) {
     data()->handle = nullptr;
-    data()->tensor_data = c10::nullopt;
+    data()->tensor_data = std::nullopt;
   }
   return ir_value_updated;
 }
@@ -467,7 +498,7 @@ XLATensorPtr XLATensor::CreateViewTensor(ViewInfo view_info) const {
 
 at::Tensor XLATensor::ToTensor(bool detached) {
   at::Tensor tensor;
-  c10::optional<at::Tensor> tensor_data = CurrentTensorData();
+  std::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
     XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
@@ -485,7 +516,7 @@ at::Tensor XLATensor::ToTensor(bool detached) {
           data()->view != nullptr) {
         // If we have other authoritive sources, just drop our reference and
         // transfer it to the caller.
-        data()->tensor_data = c10::nullopt;
+        data()->tensor_data = std::nullopt;
       } else {
         // Otherwise we need to make a copy to prevent the caller changing our
         // version.
@@ -505,7 +536,7 @@ void XLATensor::ShallowCopyTo(XLATensorPtr dest) const {
 }
 
 void XLATensor::SetScalarType(
-    c10::optional<at::ScalarType> logical_element_type) {
+    std::optional<at::ScalarType> logical_element_type) {
   data()->logical_element_type = logical_element_type;
 }
 
@@ -561,7 +592,7 @@ std::vector<XLATensorPtr> XLATensor::MakeOutputTensors(
       tensors.push_back(CreateFrom(torch::lazy::Value(node, i)));
     } else {
       tensors.push_back(CreateFrom(torch::lazy::Value(node, i),
-                                   /*logical_element_type=*/c10::nullopt));
+                                   /*logical_element_type=*/std::nullopt));
     }
   }
   return tensors;
@@ -575,7 +606,7 @@ XLATensorPtr XLATensor::CopyTensorToDevice(
 
 torch::lazy::Value XLATensor::MaybeCastIrValue(
     torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
-    c10::optional<at::ScalarType> logical_element_type) const {
+    std::optional<at::ScalarType> logical_element_type) const {
   if (!logical_element_type) {
     logical_element_type = dtype_optional();
   }
@@ -586,26 +617,32 @@ torch::lazy::Value XLATensor::MaybeCastIrValue(
   return ir_value;
 }
 
-XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value) const {
+XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
+                                   bool delay_eager_executation) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
-                              /*logical_element_type=*/c10::nullopt);
-  return Create(std::move(ir_value), GetDevice(), dtype_optional());
+                              /*logical_element_type=*/std::nullopt);
+  return Create(std::move(ir_value), GetDevice(), dtype_optional(),
+                delay_eager_executation);
 }
 
 XLATensorPtr XLATensor::CreateFrom(
     torch::lazy::Value ir_value,
-    c10::optional<at::ScalarType> logical_element_type_opt) const {
+    std::optional<at::ScalarType> logical_element_type_opt,
+    bool delay_eager_executation) const {
   ir_value = MaybeCastIrValue(std::move(ir_value), GetDevice(),
                               logical_element_type_opt);
-  return Create(std::move(ir_value), GetDevice(), logical_element_type_opt);
+  return Create(std::move(ir_value), GetDevice(), logical_element_type_opt,
+                delay_eager_executation);
 }
 
 XLATensorPtr XLATensor::CreateFrom(torch::lazy::Value ir_value,
                                    const torch::lazy::BackendDevice& device,
-                                   at::ScalarType logical_element_type) const {
+                                   at::ScalarType logical_element_type,
+                                   bool delay_eager_executation) const {
   ir_value =
       MaybeCastIrValue(std::move(ir_value), device, logical_element_type);
-  return Create(std::move(ir_value), device, logical_element_type);
+  return Create(std::move(ir_value), device, logical_element_type,
+                delay_eager_executation);
 }
 
 void XLATensor::ApplyPendingGraph() {
@@ -617,12 +654,6 @@ void XLATensor::ApplyPendingGraph() {
     XLAGraphExecutor::Get()->SyncTensorsGraph(&tensors, {}, /*wait=*/true,
                                               /*sync_xla_data=*/false);
   }
-}
-
-bool XLATensor::UseEagerDebugMode() {
-  static const bool use_eager_debug_mode =
-      runtime::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
-  return use_eager_debug_mode;
 }
 
 bool XLATensor::ShouldSyncIrNode() {
@@ -714,8 +745,12 @@ c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
+  auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
+  XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
+  XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
+  auto n_gt = torch::lazy::MakeNode<SizeGt>(node(), p_other->node());
+  return c10::make_intrusive<XLASymNodeImpl>(n_gt, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {

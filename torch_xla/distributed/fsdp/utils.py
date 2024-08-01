@@ -2,6 +2,7 @@ from types import MethodType
 
 import torch
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 from torch_xla.utils.checkpoint import checkpoint
 
 
@@ -48,7 +49,7 @@ def checkpoint_module(module):
 def dummy_all_gather(value, dim=0, groups=None):
   """A dummy op for debugging with the same output shape as all_gather"""
   repeat_num = [1] * value.dim()
-  repeat_num[dim] = xm.xrt_world_size()
+  repeat_num[dim] = xr.world_size()
   return value.repeat(tuple(repeat_num))
 
 

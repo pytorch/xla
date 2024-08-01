@@ -46,7 +46,7 @@ xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed);
 
 std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, xla::XlaOp seed,
                                            float probability,
-                                           c10::optional<bool> train);
+                                           std::optional<bool> train);
 
 xla::XlaOp BuildSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp output,
                                 xla::XlaOp scalar_1);
@@ -148,13 +148,23 @@ xla::XlaOp BuildAddcmul(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
 xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
                              bool use_hamming, bool use_chebyshev);
 
+xla::XlaOp BuildPixelShuffle(xla::XlaOp input, int64_t upscale_factor);
+
 xla::XlaOp BuildUpperTriangle(xla::XlaOp input);
 
-xla::XlaOp BuildCustomSharding(const xla::XlaOp& input);
+xla::XlaOp BuildCustomSharding(const xla::XlaOp& input, const std::string& type,
+                               const xla::Shape& output_shape);
 
-xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
-                              const xla::Shape& output_shape,
-                              const std::string& payload);
+std::vector<xla::XlaOp> BuildTpuCustomCall(
+    const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
+    const std::string& payload);
+
+xla::XlaOp BuildNms(xla::XlaOp boxes, xla::XlaOp scores,
+                    xla::XlaOp iou_threshold);
+
+std::vector<xla::XlaOp> BuildGpuCustomCall(
+    const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape,
+    const std::string& payload);
 
 }  // namespace torch_xla
 

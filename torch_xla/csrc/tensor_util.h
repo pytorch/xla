@@ -212,6 +212,9 @@ inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
   }
 }
 
+std::shared_ptr<runtime::ComputationClient::Data> get_data_handle(
+    const at::Tensor& input);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_

@@ -11,7 +11,7 @@ namespace torch_xla {
 class NativeDropout : public XlaNode {
  public:
   NativeDropout(const torch::lazy::Value& input, const torch::lazy::Value& seed,
-                float p, c10::optional<bool> train);
+                float p, std::optional<bool> train);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
@@ -19,7 +19,7 @@ class NativeDropout : public XlaNode {
 
  private:
   float p_;
-  c10::optional<bool> train_;
+  std::optional<bool> train_;
 };
 
 }  // namespace torch_xla

@@ -18,7 +18,6 @@ class SpmdGraphDumpTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def test_dump_with_output_sharding(self):

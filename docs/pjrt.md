@@ -61,16 +61,16 @@ Sample diff from XRT to PJRT:
  from torch.nn.parallel import DistributedDataParallel as DDP
  import torch.optim as optim
  import torch.distributed as dist
+ import torch_xla
  import torch_xla.core.xla_model as xm
  import torch_xla.distributed.parallel_loader as pl
  import torch_xla.distributed.xla_backend
- import torch_xla.distributed.xla_multiprocessing as xmp
 +import torch_xla.runtime as xr
 
 
  def _mp_fn(index):
    device = xm.xla_device()
--  dist.init_process_group('xla', rank=xm.get_ordinal(), world_size=xm.xrt_world_size())
+-  dist.init_process_group('xla', rank=xr.global_ordinal(), world_size=xr.world_size())
 +  dist.init_process_group('xla', init_method='xla://')
 
    torch.manual_seed(42)
@@ -105,7 +105,7 @@ Sample diff from XRT to PJRT:
 +  # Recommended: set PJRT_DEVICE to your local device type
 +  os.environ['PJRT_DEVICE'] = 'TPU'
 
-   xmp.spawn(_mp_fn)
+   torch_xla.launch(_mp_fn)
 ```
 
 ## Benefits
@@ -357,9 +357,9 @@ example:
 
 ```python
 import torch
+import torch_xla
 import torch.distributed as dist
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 from torch_xla.experimental import pjrt
 
 # Required for `xla://` init_method and `xla` backend
@@ -377,7 +377,7 @@ def _all_gather(index: int):
   print(output)
 
 if __name__ == '__main__':
-  xmp.spawn(_all_gather)
+  torch_xla.launch(_all_gather)
 ```
 
 Note: Although the `xla://` init_method is not required on TPU v4, it is still
@@ -404,7 +404,7 @@ compared to XRT, with an average improvement of over 35% on TPU v4-8. The
 benefits vary significantly by task and model type, ranging from 0% to 175%.
 The following chart shows the breakdown by task:
 
-![PJRT vs XRT](assets/torchbench_pjrt_vs_xrt.svg)
+![PJRT vs XRT](_static/img/torchbench_pjrt_vs_xrt.svg)
 
 ### New TPU runtime
 
@@ -423,7 +423,7 @@ In most cases, we expect performance to be similar between the two runtimes, but
 in some cases, the new runtime may be up to 30% faster. The following chart
 shows the breakdown by task:
 
-![TFRT vs StreamExecutor](assets/torchbench_tfrt_vs_se.svg)
+![TFRT vs StreamExecutor](_static/img/torchbench_tfrt_vs_se.svg)
 
 Note: the improvements shown in this chart are also included in the PJRT vs XRT
 comparison.

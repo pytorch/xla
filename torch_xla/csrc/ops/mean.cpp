@@ -15,7 +15,7 @@ namespace {
 
 xla::XlaOp LowerMean(xla::XlaOp input, const std::vector<int64_t>& dimensions,
                      bool keep_reduced_dimensions,
-                     const c10::optional<at::ScalarType>& dtype) {
+                     const std::optional<at::ScalarType>& dtype) {
   xla::XlaOp result = BuildMean(input, dimensions, keep_reduced_dimensions);
   return dtype ? xla::ConvertElementType(
                      result, MakeXlaPrimitiveType(*dtype, /*device=*/nullptr))
@@ -25,7 +25,7 @@ xla::XlaOp LowerMean(xla::XlaOp input, const std::vector<int64_t>& dimensions,
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const std::vector<int64_t>& dimensions,
                            bool keep_reduced_dimensions,
-                           const c10::optional<at::ScalarType>& dtype) {
+                           const std::optional<at::ScalarType>& dtype) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return LowerMean(operands[0], dimensions, keep_reduced_dimensions, dtype);
@@ -36,7 +36,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 }  // namespace
 
 Mean::Mean(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
-           bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
+           bool keep_reduced_dimensions, std::optional<at::ScalarType> dtype)
     : XlaNode(
           torch::lazy::OpKind(at::aten::mean), {input},
           [&]() {

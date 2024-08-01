@@ -9,7 +9,7 @@ variable "nightly_builds" {
       cuda_version   = optional(string, "11.8")
       python_version = optional(string, "3.8")
       arch           = optional(string, "amd64")
-      bundle_libtpu  = optional(string, "1")
+      bundle_libtpu  = optional(string, "0")
     })
   )
 
@@ -43,7 +43,7 @@ variable "versioned_builds" {
       python_version  = optional(string, "3.8")
       cuda_version    = optional(string, "11.8")
       arch            = optional(string, "amd64")
-      bundle_libtpu   = optional(string, "1")
+      bundle_libtpu   = optional(string, "0")
     })
   )
 

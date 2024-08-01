@@ -90,7 +90,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   at::Tensor MakeTensorFromComputationData(
       const torch::lazy::BackendDataPtr data,
-      c10::optional<at::ScalarType> logical_scalar_type) const override {
+      std::optional<at::ScalarType> logical_scalar_type) const override {
     // TODO(JackCaoG): handle the logical_scalar_type == nullptr case
     return XlaDataToTensors({data}, {*logical_scalar_type})[0];
   }

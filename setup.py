@@ -64,10 +64,10 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_date = '20240305'
+_date = '20240726'
 _libtpu_version = f'0.1.dev{_date}'
-_libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
-_jax_version = f'0.4.26.dev{_date}'
+_libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}+default-py3-none-any.whl'
+_jax_version = f'0.4.31.dev{_date}'
 
 
 def _get_build_mode():
@@ -90,7 +90,7 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.3.0')
+  version = os.getenv('TORCH_XLA_VERSION', '2.5.0')
   if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
       version += '+git' + xla_git_sha[:7]
@@ -223,6 +223,10 @@ class BuildBazelExtension(build_ext.build_ext):
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
 
+    build_cpp_tests = build_util.check_env_flag('BUILD_CPP_TESTS', default='0')
+    if build_cpp_tests:
+      bazel_argv.append('//:cpp_tests')
+
     import torch
     cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C,
                                               '_GLIBCXX_USE_CXX11_ABI', None)
@@ -282,6 +286,7 @@ setup(
     packages=find_packages(include=['torch_xla*']),
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
+        BazelExtension('//:_XLAC_cuda_functions.so'),
     ],
     install_requires=[
         'absl-py>=1.0.0',
@@ -298,15 +303,16 @@ setup(
         'console_scripts': [
             'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
         ],
-        'torch_xla.plugins': ['tpu = torch_xla._internal.tpu:TpuPlugin',],
+        'torch_xla.plugins': [
+            'tpu = torch_xla._internal.tpu:TpuPlugin',
+            'neuron = torch_xla._internal.neuron:NeuronPlugin',
+            'xpu = torch_xla._internal.xpu:XpuPlugin'
+        ],
     },
     extras_require={
         # On Cloud TPU VM install with:
         # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
         'tpu': [f'libtpu-nightly=={_libtpu_version}'],
-        # On nightly, install libtpu with `pip install torch_xla[tpuvm]`
-        # Remove from release branches since this is not allowed by PyPI.
-        'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
         'pallas': [f'jaxlib=={_jax_version}', f'jax=={_jax_version}'],
     },

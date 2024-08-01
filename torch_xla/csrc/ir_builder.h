@@ -38,8 +38,8 @@ struct XLAIrBuilder : torch::lazy::IrBuilder {
   }
   torch::lazy::NodePtr MakeCast(const torch::lazy::Value& input0,
                                 const at::ScalarType& dtype,
-                                const c10::optional<at::ScalarType>& stype =
-                                    c10::nullopt) const override {
+                                const std::optional<at::ScalarType>& stype =
+                                    std::nullopt) const override {
     return torch::lazy::MakeNode<Cast>(input0, dtype, stype);
   }
   torch::lazy::NodePtr MakeTensorList(

@@ -129,6 +129,5 @@ if __name__ == '__main__':
   args.benchs = benchs
 
   torch.set_default_dtype(torch.float32)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
+  torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   run_benchmarks(args)

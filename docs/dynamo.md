@@ -21,11 +21,6 @@ compiled_code = torch.compile(add, backend='openxla')
 print(compiled_code(torch.randn(10), torch.randn(10)))
 ```
 
-Currently there are two different backends, that eventually will be merged into a single 'openxla' backend:
-
-* `backend='openxla'` - Useful for training.
-* `backend='openxla_eval'` - Useful for inference.
-
 
 ### Inference
 Here is a small code example of running resnet18 with `torch.compile`
@@ -62,9 +57,6 @@ squeezenet1_1 | 2.29
 timm_vision_transformer | 3.52
 geomean | 3.04
 
-Note 
-1. User will likely see better inference performance by putting the inference execution in a `torch.no_grad` context. `openxla` is an `aot-autograd` backend of `torch.compile`; `aot-autograd` attempts to save some state for a potential backward pass. Setting `torch.no_grad` helps `aot-autograd` understand that it is being executed in an inference context.
-2. User can also use the `openxla_eval` backend directly without `torch.no_grad`, since `openxla_eval` is not an `aot-autograd` backend and only works for inference. 
 
 ### Training
 PyTorch/XLA also supports Dynamo for training, but it is  experimental and we are working with the PyTorch Compiler team to iterate on the implementation. Here is an example of training a resnet18 with `torch.compile`

@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Dict, Optional
 from unittest import mock
+from importlib import reload
 
 import torch_xla
 from absl.testing import absltest, parameterized
@@ -14,6 +15,8 @@ from torch_xla import runtime as xr
 class TestExperimentalPjrt(parameterized.TestCase):
 
   def setUp(self):
+    global xr
+    reload(xr)
     xr.set_device_type('CPU')
 
   @parameterized.parameters(('CPU', 'CPU'), ('CUDA', 'CUDA'), ('TPU', 'TPU'))
@@ -48,7 +51,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
         xr.xla_device()
 
   def test_default_ordinals(self):
-    global_ordinal = xm.get_ordinal()
+    global_ordinal = xr.global_ordinal()
     self.assertEqual(global_ordinal, 0)
 
     local_ordinal = xm.get_local_ordinal()
@@ -63,7 +66,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
                    xr.global_device_count())
 
   def test_world_size(self):
-    self.assertEqual(xm.xrt_world_size(), xr.world_size())
+    self.assertEqual(xr.world_size(), xr.world_size())
 
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):

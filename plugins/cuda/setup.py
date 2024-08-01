@@ -1,3 +1,4 @@
+import datetime
 import os
 import sys
 
@@ -10,4 +11,7 @@ import setuptools
 build_util.bazel_build('@xla//xla/pjrt/c:pjrt_c_api_gpu_plugin.so',
                        'torch_xla_cuda_plugin/lib', ['--config=cuda'])
 
-setuptools.setup()
+setuptools.setup(
+    # TODO: Use a common version file
+    version=os.getenv('TORCH_XLA_VERSION',
+                      f'2.5.0.dev{datetime.date.today().strftime("%Y%m%d")}'))

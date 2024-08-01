@@ -32,6 +32,7 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.nn.utils.rnn import PackedSequence
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
 
 from .xla_flatten_params_wrapper import XlaFlattenParamsWrapper
@@ -124,7 +125,7 @@ class XlaFullyShardedDataParallel(nn.Module):
               'shard_metadata': model.get_shard_metadata(),
               'optimizer': optimizer.state_dict(),
           }
-          ckpt_path = f'/tmp/rank-{xm.get_ordinal()}-of-{xm.xrt_world_size()}.pth'
+          ckpt_path = f'/tmp/rank-{xr.global_ordinal()}-of-{xr.world_size()}.pth'
           xm.save(ckpt, ckpt_path, master_only=False)
 
       When resuming training of an FSDP model from saved checkpoints, all
@@ -197,11 +198,11 @@ class XlaFullyShardedDataParallel(nn.Module):
       sharding_rank (int, Optional):
           The rank of this sharding instance. This must be specified if
           ``sharding_groups`` is provided. Otherwise it defaults to
-          ``xm.get_ordinal()``.
+          ``xr.global_ordinal()``.
       sharding_world_size (int, Optional):
           The world_size of this sharding instance. This must be specified if
           ``sharding_groups`` is provided. Otherwise it defaults to
-          ``xm.xrt_world_size()``.
+          ``xr.world_size()``.
       pin_layout_in_collective_ops (bool, Optional):
           if ``True``, then pin the layout in the collective ops (all_reduce,
           all_gather, and reduce_scatter) in FSDP. See `xm.all_reduce` for
@@ -448,6 +449,20 @@ class XlaFullyShardedDataParallel(nn.Module):
       self.optimization_barrier_op = lambda *args: None
     else:
       self.optimization_barrier_op = xm.optimization_barrier_
+
+    # Allow specifying groups for the sharding collective ops, useful for mixing
+    # FSDP data parallelism with model parallelism (e.g. Megatron)
+    self.sharding_groups = sharding_groups
+    if sharding_groups is None:
+      self.rank = xr.global_ordinal()
+      self.world_size = xr.world_size()
+    else:
+      if sharding_rank is None or sharding_world_size is None:
+        raise ValueError(
+            "sharding_rank and sharding_world_size must be provided when sharding_groups is specified"
+        )
+      self.rank = sharding_rank
+      self.world_size = sharding_world_size
 
     # Options for debugging
     # - set _debug_dummy_forward_pass=True to check for parameter-only memory consumption

@@ -1,0 +1,32 @@
+- name: Create /dist directory for exported wheels
+  ansible.builtin.file:
+    path: /dist
+    state: directory
+    mode: '0755'
+
+- name: Build PyTorch/XLA CUDA Plugin
+  ansible.builtin.command:
+    cmd: pip wheel -w /dist plugins/cuda -v
+    chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
+  environment: "{{ env_vars }}"
+  when: accelerator == "cuda"
+
+- name: Find CUDA plugin wheel pytorch/xla/dist
+  ansible.builtin.find:
+    path: "/dist"
+    pattern: "torch_xla_cuda_plugin*.whl"
+  when: accelerator == "cuda"
+  register: plugin_wheels
+
+- name: Install CUDA plugin wheels
+  ansible.builtin.pip:
+    name: "{{ plugin_wheels.files | map(attribute='path') }}"
+    state: "forcereinstall"
+  when: accelerator == "cuda"
+
+# TODO: Pass libtpu to next release stage somehow. This only runs during build
+- name: Install libtpu
+  ansible.builtin.pip:
+    name: torch_xla[tpu]
+    extra_args: -f https://storage.googleapis.com/libtpu-releases/index.html
+  when: accelerator == "tpuvm"

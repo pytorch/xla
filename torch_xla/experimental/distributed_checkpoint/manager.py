@@ -66,7 +66,10 @@ class CheckpointManager:
   >>> if tracked_steps:
   >>>   # Choose the highest step
   >>>   best_step = max(tracked_steps)
-  >>>   state_dict = {'model': model.state_dict()}
+  >>>   # Before restoring the checkpoint, the optimizer state must be primed
+  >>>   # to allow state to be loaded into it.
+  >>>   prime_optimizer(optim)
+  >>>   state_dict = {'model': model.state_dict(), 'optim': optim.state_dict()}
   >>>   chkpt_mgr.restore(best_step, state_dict)
   >>>   model.load_state_dict(state_dict['model'])
 
@@ -187,17 +190,18 @@ class CheckpointManager:
     return os.path.join(self.base_path, str(step))
 
   def _delete_chkpt_at_step(self, step):
-    path = self._get_path(step)
-    fs, raw_path = url_to_fs(path)
-    if fs.exists(raw_path):
-      fs.rm(raw_path, recursive=True)
+    if dist.get_rank(self.pg) == 0:
+      path = self._get_path(step)
+      fs, raw_path = url_to_fs(path)
+      if fs.exists(raw_path):
+        fs.rm(raw_path, recursive=True)
 
   def _release_oldest_checkpoints(self):
     """
     Delete oldest checkpoints until the number of tracked checkpoints is below
     self.max_to_keep. This operation is only execution on the rank 0 process.
     """
-    if dist.get_rank(self.pg) == 0 and self.max_to_keep > 0:
+    if self.max_to_keep > 0:
       while len(self._tracked_chkpts) > self.max_to_keep:
         oldest_chkpt = self._tracked_chkpts.popleft()
         self._delete_chkpt_at_step(oldest_chkpt.step)
@@ -218,7 +222,7 @@ class CheckpointManager:
       path = self._get_path(step)
       # Delete any existing checkpoint at the current step.
       self._delete_chkpt_at_step(step)
-      dist_cp.save_state_dict(
+      dist_cp.save(
           state_dict=state_dict,
           storage_writer=FsspecWriter(
               path,
@@ -244,7 +248,7 @@ class CheckpointManager:
     """
     preemption_detected = False
     if self.chkpt_on_preemption and self.reached_preemption(step):
-      logging.warn(
+      logging.warning(
           f"Preemption sync point reached at step {step}. Triggering a checkpoint."
       )
       preemption_detected = True
@@ -319,7 +323,7 @@ class CheckpointManager:
     tracked_steps = set(x.step for x in self._tracked_chkpts)
     assert step in tracked_steps, f'Cannot restore from untracked step {step}. Valid steps are: {tracked_steps}'
     path = self._get_path(step)
-    dist_cp.load_state_dict(
+    dist_cp.load(
         state_dict=state_dict,
         storage_reader=FsspecReader(path),
         planner=xc.SPMDLoadPlanner(),

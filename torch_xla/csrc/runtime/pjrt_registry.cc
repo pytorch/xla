@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/runtime/pjrt_registry.h"
 
+#include "absl/log/initialize.h"
+#include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/profiler.h"
@@ -20,8 +22,24 @@ namespace runtime {
 
 namespace {
 
+// Placeholder plugin for testing only. Does not implement multiprocessing or
+// configuration. Very likely will not work from Python code.
+class LibraryPlugin : public PjRtPlugin {
+ public:
+  std::string library_path() const override {
+    return sys_util::GetEnvString("PJRT_LIBRARY_PATH", "");
+  }
+
+  const std::unordered_map<std::string, xla::PjRtValueType>
+  client_create_options() const override {
+    return {};
+  }
+
+  bool requires_xla_coordinator() const override { return false; }
+};
+
 std::unordered_map<std::string, std::shared_ptr<const PjRtPlugin>>
-    pjrt_plugins_;
+    pjrt_plugins_ = {{"LIBRARY", std::make_shared<LibraryPlugin>()}};
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   auto allocator_config = xla::GpuAllocatorConfig{};
@@ -59,10 +77,14 @@ InitializePjRt(const std::string& device_type) {
   std::unique_ptr<xla::PjRtClient> client;
   std::unique_ptr<XlaCoordinator> coordinator;
 
-  if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false)) {
+  if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false) &&
+      device_type != "CPU") {
     std::shared_ptr<const PjRtPlugin> plugin = GetPjRtPlugin(device_type);
     if (plugin) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
+
+      // Init the absl logging to avoid the log spam.
+      absl::InitializeLog();
 
       std::shared_ptr<xla::KeyValueStoreInterface> kv_store = nullptr;
       if (plugin->requires_xla_coordinator()) {
@@ -110,12 +132,14 @@ InitializePjRt(const std::string& device_type) {
     client = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
   } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
+    // Init the absl logging to avoid the log spam.
+    absl::InitializeLog();
     // Prefer $TPU_LIBRARY_PATH if set
     auto tpu_library_path = sys_util::GetEnvString(
         env::kEnvTpuLibraryPath,
         sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
-    xla::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
+    absl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
     XLA_CHECK_OK(tpu_status);
     client = std::move(xla::GetCApiClient("TPU").value());
     const PJRT_Api* c_api =
@@ -133,6 +157,8 @@ InitializePjRt(const std::string& device_type) {
 
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size
+               << ", local_process_rank=" << local_process_rank
+               << ", local_world_size=" << local_world_size
                << ", spmd case=" << sys_util::GetEnvBool("XLA_USE_SPMD", false)
                << ", PJRT_LOCAL_PROCESS_RANK="
                << sys_util::GetEnvString(env::kEnvPjRtLocalRank, "")

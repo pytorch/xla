@@ -24,10 +24,12 @@
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
+#include "xla/python/ifrt/attribute_map.h"
 #include "xla/python/ifrt/compiler.h"
 #include "xla/python/ifrt/memory.h"
 #include "xla/python/ifrt/sharding.h"
 #include "xla/python/pjrt_ifrt/pjrt_array.h"
+#include "xla/python/pjrt_ifrt/pjrt_attribute_map_util.h"
 #include "xla/python/pjrt_ifrt/pjrt_client.h"
 #include "xla/python/pjrt_ifrt/xla_sharding.h"
 #include "xla/shape.h"
@@ -58,7 +60,24 @@ torch::lazy::hash_t hash_comp_env(
     xla::ifrt::Client* client,
     std::vector<xla::ifrt::Device*>& ordered_devices) {
   torch::lazy::hash_t hash = hash::HashXlaEnvVars();
-  auto topology_desc = client->GetTopologyForDevices(ordered_devices);
+  std::string platform_name(client->platform_name());
+  std::string platform_version(client->platform_version());
+  hash = torch::lazy::HashCombine(
+      hash, torch::lazy::StringHash(platform_name.c_str()));
+  // platform_version incorporates libtpu version and hardware type.
+  hash = torch::lazy::HashCombine(
+      hash, torch::lazy::StringHash(platform_version.c_str()));
+  // Include global devices in the hash, ensuring order is consistent.
+  xla::ifrt::DeviceList::Devices ifrt_devices;
+  for (auto& device : ordered_devices) {
+    std::string device_str(device->ToString());
+    hash = torch::lazy::HashCombine(
+        hash, torch::lazy::StringHash(device_str.c_str()));
+    ifrt_devices.push_back(device);
+  }
+
+  xla::ifrt::DeviceList device_list(std::move(ifrt_devices));
+  auto topology_desc = client->GetTopologyForDevices(device_list);
   if (topology_desc.ok()) {
     // Some backends support a topology description which provides a better
     // view of the specific compilation environment.
@@ -70,19 +89,6 @@ torch::lazy::hash_t hash_comp_env(
     }
     // If serialization fails, fallthrough to the manual approach.
   }
-  std::string platform_name(client->platform_name());
-  std::string platform_version(client->platform_version());
-  hash = torch::lazy::HashCombine(
-      hash, torch::lazy::StringHash(platform_name.c_str()));
-  // platform_version incorporates libtpu version and hardware type.
-  hash = torch::lazy::HashCombine(
-      hash, torch::lazy::StringHash(platform_version.c_str()));
-  // Include global devices in the hash, ensuring order is consistent.
-  for (auto& device : ordered_devices) {
-    std::string device_str(device->ToString());
-    hash = torch::lazy::HashCombine(
-        hash, torch::lazy::StringHash(device_str.c_str()));
-  }
   return hash;
 }
 
@@ -92,7 +98,7 @@ std::string IfrtComputationClient::IfrtDeviceToString(
     xla::ifrt::Device* const device) const {
   std::string platform =
       absl::AsciiStrToUpper(device->client()->platform_name());
-  int ordinal = global_ordinals_.at(device->id());
+  int ordinal = global_ordinals_.at(device->Id().value());
   std::string str = absl::StrFormat("%s:%d", platform, ordinal);
   return str;
 }
@@ -120,11 +126,12 @@ IfrtComputationClient::IfrtComputationClient() {
   // a device's global ordinal separately from its device ID. Order the
   // devices by increasing ID to assign global ordinals.
   std::vector<xla::ifrt::Device*> ordered_devices(client_->device_count());
-  std::partial_sort_copy(client_->devices().begin(), client_->devices().end(),
-                         ordered_devices.begin(), ordered_devices.end(),
-                         [](auto& a, auto& b) { return a->id() < b->id(); });
+  std::partial_sort_copy(
+      client_->devices().begin(), client_->devices().end(),
+      ordered_devices.begin(), ordered_devices.end(),
+      [](auto& a, auto& b) { return a->Id().value() < b->Id().value(); });
   for (auto* device : ordered_devices) {
-    global_ordinals_[device->id()] = global_ordinals_.size();
+    global_ordinals_[device->Id().value()] = global_ordinals_.size();
     std::string device_str = IfrtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
   }
@@ -392,6 +399,16 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   return *replicated_output;
 }
 
+std::uintptr_t IfrtComputationClient::UnsafeBufferPointer(
+    const DataPtr handle) {
+  XLA_ERROR() << __FUNCTION__ << " not implemented";
+}
+
+std::shared_ptr<xla::PjRtBuffer> IfrtComputationClient::GetPjRtBuffer(
+    const DataPtr handle) {
+  XLA_ERROR() << __FUNCTION__ << " not implemented";
+}
+
 std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromDeviceMetric());
@@ -470,7 +487,7 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
                                      &mlir_module);
     std::unique_ptr<xla::ifrt::LoadedExecutable> executable =
         ConsumeValue(client_->GetDefaultCompiler()->Compile(
-            std::make_unique<xla::ifrt::XlaProgram>(std::move(mlir_module)),
+            std::make_unique<xla::ifrt::HloProgram>(std::move(mlir_module)),
             std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options)));
     StableHloCompileCounter()->AddValue(1);
 
@@ -554,7 +571,7 @@ IfrtComputationClient::ExecuteReplicated(
           .value();
 
   result.status.OnReady(std::move([timed, op_tracker = std::move(op_tracker)](
-                                      xla::Status status) mutable {
+                                      absl::Status status) mutable {
     timed.reset();
     TF_VLOG(3)
         << "ExecuteReplicated returned_future->OnReady finished with status "
@@ -611,16 +628,17 @@ std::vector<std::string> IfrtComputationClient::GetAllDevices() const {
 int IfrtComputationClient::GetNumProcesses() const {
   int max_process_index = client_->process_index();
   for (auto* device : client_->devices()) {
-    max_process_index = std::max(max_process_index, device->process_index());
+    max_process_index = std::max(max_process_index, device->ProcessIndex());
   }
 
   return max_process_index + 1;
 };
 
 const absl::flat_hash_map<
-    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 IfrtComputationClient::GetDeviceAttributes(const std::string& device) {
-  return IfrtComputationClient::StringToIfrtDevice(device)->Attributes();
+  return xla::ifrt::ToPjRtAttributeMap(
+      IfrtComputationClient::StringToIfrtDevice(device)->Attributes());
 }
 
 void IfrtComputationClient::SetReplicationDevices(

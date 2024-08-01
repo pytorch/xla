@@ -10,11 +10,31 @@ import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
+import torch_xla._internal.utils as _utils
 import torch_xla._internal.tpu as tpu
 from torch_xla.experimental import plugins
+from torch_xla import runtime
 
 R = TypeVar('R')
 FN = TypeVar('FN')
+
+# Note [Dynamo WORLD_SIEZ and ORDINAL]
+# Belows are workaround to cache the ordinal and world_size such that
+# Dynamo won't do graph breaks when runtime.world_size() and runtime.global_ordinal() are called.
+_WORLD_SIZE = None
+_ORDINAL = None
+
+
+def _init_world_size_ordinal():
+  global _WORLD_SIZE, _ORDINAL
+
+  # Dynamo doesn't support XRT or multithreaded runtime. See Note [V3-8 Threading]
+  if not runtime.using_pjrt() or runtime.addressable_device_count() > 1:
+    return
+
+  if _WORLD_SIZE is None:
+    _WORLD_SIZE = runtime.world_size()
+    _ORDINAL = runtime.global_ordinal()
 
 
 def set_device_type(pjrt_device: str) -> None:
@@ -70,6 +90,7 @@ def device_type() -> Optional[str]:
   return pjrt_device.split('_')[0] if pjrt_device else pjrt_device
 
 
+@_utils.run_once
 def using_pjrt() -> bool:
   """Returns whether this process is using PjRt runtime.
 
@@ -147,9 +168,14 @@ def global_device_count() -> int:
 @requires_pjrt
 def world_size() -> int:
   """Returns the total number of processes participating in the job."""
+  global _WORLD_SIZE
+  if _WORLD_SIZE is not None:
+    return _WORLD_SIZE
   if torch_xla._XLAC._xla_get_replication_devices_count() == 0:
-    return 1
-  return global_device_count()
+    _WORLD_SIZE = 1
+  else:
+    _WORLD_SIZE = global_device_count()
+  return _WORLD_SIZE
 
 
 @requires_pjrt
@@ -174,6 +200,9 @@ def global_ordinal() -> int:
   Global ordinal is in range [0, global_device_count). Global ordinals are not
   guaranteed to have any predictable relationship to the TPU worker ID nor are
   they guaranteed to be contiguous on each host."""
+  global _ORDINAL
+  if _ORDINAL is not None:
+    return _ORDINAL
   return torch_xla._XLAC._xla_get_default_device_ordinal()
 
 
@@ -233,10 +262,11 @@ def addressable_runtime_device_count() -> int:
 
 
 # API to enable SPMD mode. This is a recommended way to enable SPMD.
-# TODO(yeounoh) this does not block users from using XLA_USE_SPMD flag, yet.
-# we will enforce `use_spmd()` once the flag is fully deprecated.
+# This forces SPMD mode if some tensors are already initialized on non-SPMD
+# devices. This means that those tensors would be replicated across the devices.
+# TODO(yeounoh) introduce SPMD configuration.
 @requires_pjrt
-def use_spmd():
+def use_spmd(auto: Optional[bool] = False):
   if os.environ.get("XLA_USE_SPMD") is not None:
     warnings.warn("XLA_USE_SPMD is being deprecated. "
                   "Use torch_xla.runtime.use_spmd() "
@@ -250,9 +280,13 @@ def use_spmd():
         "please set SPMD mode before initializting tensors "
         "(i.e., call use_spmd() in the beginning of the program).")
     torch_xla._XLAC._xla_force_spmd_device()
+    xm.wait_device_ops()
 
-  # TODO(yeounoh) replace this when we fully deprecate the flag.
+  # TODO(yeounoh) we can drop envvar in the future
   os.environ["XLA_USE_SPMD"] = "1"
+  if auto:
+    torch_xla._XLAC._xla_set_auto_sharding()
+    os.environ["XLA_AUTO_SPMD"] = "1"
 
 
 @requires_pjrt
