@@ -135,6 +135,7 @@ void PrepareToExit() {
     auto xla_device = GetDeviceOrCurrent("");
     SetAllReduceToken(xla_device, nullptr);
     XLAGraphExecutor::Get()->WaitDeviceOps({});
+    runtime::GetComputationClient()->WaitDeviceOps({});
   }
 }
 
