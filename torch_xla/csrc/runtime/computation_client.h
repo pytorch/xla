@@ -392,7 +392,7 @@ class ComputationClient {
 
   // Block until pass in devices' async operation are finished. If empty, all
   // the local devices will be waited for.
-  virtual void WaitDeviceOps(absl::Span<const std::string> devices) = 0;
+  virtual void WaitDeviceOps(absl::Span<const std::string> devices = {}) = 0;
 
   // Check whether the XlaCoordinator has been initialized.
   virtual bool CoordinatorInitialized() const = 0;

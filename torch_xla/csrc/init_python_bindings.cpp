@@ -126,6 +126,11 @@ torch::lazy::BackendDevice GetDeviceOrCurrent(const std::string& device_str) {
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
 }
 
+void WaitDeviceOps(absl::Span<const std::string> devices = {}) {
+  XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+  runtime::GetComputationClient()->WaitDeviceOps(devices);
+}
+
 void PrepareToExit() {
   runtime::ComputationClient* client =
       runtime::GetComputationClientIfInitialized();
@@ -1851,13 +1856,7 @@ void InitXlaModuleBindings(py::module m) {
       "_xla_wait_device_ops",
       [](const std::vector<std::string>& devices) {
         NoGilSection nogil;
-        XLAGraphExecutor::Get()->WaitDeviceOps(devices);
-        if (UseVirtualDevice()) {
-          std::vector<std::string> spmd_device = {"SPMD:0"};
-          runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
-        } else {
-          runtime::GetComputationClient()->WaitDeviceOps(devices);
-        }
+        WaitDeviceOps(devices);
       },
       py::arg("devices"));
   m.def("_get_executed_fallback_ops", []() { return GetFallbackOperations(); });
