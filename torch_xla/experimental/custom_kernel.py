@@ -200,7 +200,7 @@ class FlashAttention(torch.autograd.Function):
 
   @staticmethod
   def forward(ctx, q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale,
-              partition_spec, mesh):
+              ab, partition_spec, mesh):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
@@ -219,11 +219,14 @@ class FlashAttention(torch.autograd.Function):
     full_q = q
     full_k = k
     full_v = v
+    full_ab = ab
     if partition_spec is not None:
       ctx.full_shape = q.shape
       q = xs.enable_manual_sharding(q, partition_spec, mesh=mesh).global_tensor
       k = xs.enable_manual_sharding(k, partition_spec, mesh=mesh).global_tensor
       v = xs.enable_manual_sharding(v, partition_spec, mesh=mesh).global_tensor
+      if ab:
+        ab = xs.enable_manual_sharding(ab, partition_spec, mesh=mesh).global_tensor
 
     # It computes the shape and type of o, l, m.
     shapes = [q.shape]
@@ -249,7 +252,7 @@ class FlashAttention(torch.autograd.Function):
           q,
           k,
           v,
-          None,
+          ab,
           segment_ids,
           save_residuals,
           causal,
@@ -262,6 +265,8 @@ class FlashAttention(torch.autograd.Function):
           static_argnums=range(5, 13))
 
       args = [q, k, v]
+      if ab is not None:
+        args += [ab]
       if segment_ids is not None:
         args += [q_segment_ids, kv_segment_ids]
       o = torch_xla._XLAC._xla_tpu_custom_call(args, payload, shapes, dtypes)
@@ -286,14 +291,14 @@ class FlashAttention(torch.autograd.Function):
           m, partition_spec[0:3], ctx.full_shape[0:3], mesh=mesh).global_tensor
 
     ctx.save_for_backward(full_q, full_k, full_v, o, l, m, q_segment_ids,
-                          kv_segment_ids)
+                          kv_segment_ids, full_ab)
     return o
 
   @staticmethod
   def backward(ctx, grad_output):
     from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq, _flash_attention_bwd_dkv
 
-    q, k, v, o, l, m, q_segment_ids, kv_segment_ids = ctx.saved_tensors
+    q, k, v, o, l, m, q_segment_ids, kv_segment_ids, ab = ctx.saved_tensors
     causal = ctx.causal
     sm_scale = ctx.sm_scale
     partition_spec = ctx.partition_spec
@@ -326,6 +331,8 @@ class FlashAttention(torch.autograd.Function):
           grad_output, partition_spec, mesh=mesh).global_tensor
       expanded_grad_i = xs.enable_manual_sharding(
           expanded_grad_i, partition_spec, mesh=mesh).global_tensor
+      if ab:
+        ab = xs.enable_manual_sharding(ab, partition_spec, mesh=mesh).global_tensor
 
     if ctx.needs_input_grad[0]:
       payload, _ = trace_pallas(
@@ -333,7 +340,7 @@ class FlashAttention(torch.autograd.Function):
           q,
           k,
           v,
-          None,
+          ab,
           segment_ids,
           l,
           m,
@@ -368,7 +375,7 @@ class FlashAttention(torch.autograd.Function):
           q,
           k,
           v,
-          None,
+          ab,
           segment_ids,
           l,
           m,
@@ -426,11 +433,13 @@ def flash_attention(
     kv_segment_ids=None,  # [batch_size, kv_seq_len]
     sm_scale=1.0,
     *,
+    ab=None,  # [batch_size, num_heads, q_seq_len, kv_seq_len]
     partition_spec=None,
-    mesh=None):
+    mesh=None,
+    ):
   # TODO: support SPMD and Dynamo with segment_ids.
   return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
-                              sm_scale, partition_spec, mesh)
+                              sm_scale, ab, partition_spec, mesh)
 
 
 def paged_attention(q,

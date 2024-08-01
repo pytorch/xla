@@ -921,6 +921,65 @@ class PallasTest(unittest.TestCase):
     jax.config.update("jax_default_matmul_precision", "default")
 
 
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_wrapper_sm_scale(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    sm_scale = 0.7
+    o = flash_attention(q, k, v, False, None, None, sm_scale)
+
+    expected_o = self._attention(q * sm_scale, k, v)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_sm_scale_backward(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    sm_scale = 0.7
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = flash_attention(q, k, v, False, None, None, sm_scale)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = self._attention(q * sm_scale, k, v)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    # Hmm, the gradients are the same even the autograd graph seems different.
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
   torch.set_default_dtype(torch.float32)
