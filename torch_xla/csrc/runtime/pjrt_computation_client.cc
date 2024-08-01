@@ -999,8 +999,7 @@ void PjRtComputationClient::RegisterCustomCall(const std::string& fn_name,
                                                const std::string& platform) {
   if (platform != "CUDA") {
     XLA_ERROR() << "Custom call targets can only be registered for "
-                   "PJRT CUDA runtime."
-                << std::endl;
+                   "PJRT CUDA runtime.";
     return;
   }
 
@@ -1032,7 +1031,7 @@ void PjRtComputationClient::RegisterCustomCall(const std::string& fn_name,
   PJRT_Error* error =
       reinterpret_cast<const PJRT_Gpu_Custom_Call*>(next)->custom_call(&args);
   if (error) {
-    XLA_ERROR() << error->status << std::endl;
+    XLA_ERROR() << error->status;
   }
 }
 
