@@ -165,7 +165,7 @@ static at::Tensor to_cuda_tensor(const at::Tensor& tensor,
     TORCH_CHECK(info->common_device == tensor.device() && info->index == index,
                 "fallback supports only single XLA device.");
   } else {
-    info = c10::make_optional(DeviceInfo(tensor.device(), index));
+    info = std::make_optional(DeviceInfo(tensor.device(), index));
   }
 
   // Create the CUDA tensor.
