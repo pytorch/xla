@@ -134,8 +134,7 @@ void PrepareToExit() {
   if (client != nullptr) {
     auto xla_device = GetDeviceOrCurrent("");
     SetAllReduceToken(xla_device, nullptr);
-    XLAGraphExecutor::Get()->WaitDeviceOps({});
-    runtime::GetComputationClient()->WaitDeviceOps({});
+    WaitDeviceOps();
   }
 }
 
@@ -2625,25 +2624,23 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor, const std::function<void()>& callback) {
           XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
           XLA_CHECK(xtensor) << "The input is not an XLA tensor.";
+          // Wait for placeholder `Data`s to be assigned
           XLAGraphExecutor::Get()->WaitDeviceOps({});
+          std::shared_ptr<runtime::ComputationClient::Data> data;
           if (xtensor->CurrentDataHandle() != nullptr) {
-            std::shared_ptr<runtime::ComputationClient::Data> data =
-                std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-                    xtensor->CurrentDataHandle());
-            runtime::GetComputationClient()->OnReadyCallback(data, callback);
+            data = UnwrapXlaData(xtensor->CurrentDataHandle());
           } else if (xtensor->CurrentIrValue().node != nullptr) {
             DeviceData* device_data =
                 DeviceData::Cast(xtensor->CurrentIrValue().node.get());
             if (device_data != nullptr) {
-              torch::lazy::BackendDataPtr data = device_data->data();
-              runtime::GetComputationClient()->OnReadyCallback(
-                  UnwrapXlaData(data), callback);
+              data = UnwrapXlaData(device_data->data());
             } else {
               XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
                              "with IR that's not DeviceData";
             }
             XLA_ERROR() << "Could not get buffer for tensor";
           }
+          runtime::GetComputationClient()->OnReadyCallback(data, callback);
         });
 
   m.def("_unsafe_buffer_pointer",
