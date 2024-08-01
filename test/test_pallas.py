@@ -1023,6 +1023,68 @@ class PallasTest(unittest.TestCase):
     jax.config.update("jax_default_matmul_precision", "default")
 
 
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_splash_attention_wrapper(self):
+    from torch_xla.experimental.custom_kernel import splash_attention
+    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
+
+    seed = data.draw(seed_strategy())
+    key = random.key(seed)
+    k1, k2, k3 = random.split(key, 3)
+
+    q_seq_len, kv_seq_len, num_q_heads, num_kv_heads, head_dim, dtype = (
+        data.draw(mha_strategy())
+    )
+
+    # Avoid segment ids for rectangular matrices, as its hard to enforce
+    # valid masks (non-0 rows).
+    hp.assume(q_seq_len == kv_seq_len or not is_segmented)
+
+    q = random.uniform(k1, (num_q_heads, q_seq_len, head_dim), dtype=dtype)
+    if is_mqa:
+      k = random.uniform(k2, (kv_seq_len, head_dim), dtype=dtype)
+      v = random.uniform(k3, (kv_seq_len, head_dim), dtype=dtype)
+    else:
+      k = random.uniform(k2, (num_kv_heads, kv_seq_len, head_dim), dtype=dtype)
+      v = random.uniform(k3, (num_kv_heads, kv_seq_len, head_dim), dtype=dtype)
+
+    segment_ids = None
+    if is_segmented:
+      assert q_seq_len == kv_seq_len
+      segment_ids = data.draw(segment_ids_strategy(q_seq_len))
+
+    attn_logits_soft_cap = data.draw(attn_logits_soft_cap_strategy())
+    masks = data.draw(mha_mask_strategy(q_seq_len, kv_seq_len, num_q_heads))
+    mask = mask_lib.MultiHeadMask(tuple(m.get_mask() for m in masks))
+    block_sizes = data.draw(block_sizes_strategy(q_seq_len, kv_seq_len))
+
+    if is_mqa:
+      attn_ref = splash.make_masked_mqa_reference(mask)
+      attn = splash.make_splash_mqa_single_device(
+          mask,
+          block_sizes=block_sizes,
+          attn_logits_soft_cap=attn_logits_soft_cap,
+          interpret=self.INTERPRET,
+      )
+    else:
+      attn_ref = splash.make_masked_mha_reference(mask)
+      attn = splash.make_splash_mha_single_device(
+          mask,
+          block_sizes=block_sizes,
+          attn_logits_soft_cap=attn_logits_soft_cap,
+          interpret=self.INTERPRET,
+      )
+    o = attn(q, k, v, segment_ids)
+    o_ref = attn_ref(
+        q.astype(np.float32),
+        k.astype(np.float32),
+        v.astype(np.float32),
+        segment_ids,
+        attn_logits_soft_cap=attn_logits_soft_cap,
+    )
+    self._assert_allclose(o, o_ref, atol=3e-3, rtol=3e-3)
+
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
   torch.set_default_dtype(torch.float32)

@@ -512,6 +512,109 @@ def paged_attention(q,
   return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
 
 
+def _splash_attention_forward(
+    fwd_mask_info: mask_info_lib.MaskInfo,
+    q: jax.Array,
+    k: jax.Array,
+    v: jax.Array,
+    segment_ids: SegmentIds | None,
+    mask_value: float,
+    is_mqa: bool,
+    block_sizes: BlockSizes,
+    residual_checkpoint_name: str | None,
+    save_residuals: bool,
+    mask_function: MaskFunctionType | None,
+    attn_logits_soft_cap: float | None = None,
+    interpret: bool = False
+):
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  from jax.experimental.pallas.ops.tpu.splash_attention.splash_attention_kernel import _splash_attention_forward
+
+  # TODO add assertions here
+
+  payload, tensor_args = trace_pallas(
+    _splash_attention_forward,
+    fwd_mask_info,
+    q,
+    k,
+    v,
+    segment_ids,
+    mask_value,
+    is_mqa,
+    block_sizes,
+    residual_checkpoint_name,
+    save_residuals,
+    mask_function,
+    attn_logits_soft_cap,
+    interpret,
+    static_argnames=[
+        "is_mqa",
+        "block_sizes",
+        "save_residuals",
+        "mask_value",
+        "attn_logits_soft_cap",
+        "residual_checkpoint_name",
+        "mask_function",
+        "interpret",
+    ],
+  )
+
+  # TODO add shape updates and return outputs
+  output, _ = torch_xla._XLAC._xla_tpu_custom_call(
+      [
+        fwd_mask_info.data_next,
+        fwd_mask_info.block_mask,
+        fwd_mask_info.mask_next,
+        q if q_layout == QKVLayout.HEAD_DIM_MINOR else q.swapaxes(-1, -2),
+        k if k_layout == QKVLayout.HEAD_DIM_MINOR else k.swapaxes(-1, -2),
+        v if v_layout == QKVLayout.HEAD_DIM_MINOR else v.swapaxes(-1, -2),
+        q_segment_ids,
+        kv_segment_ids,
+        fwd_mask_info.partial_mask_blocks,
+        q_sequence,
+      ], payload, [q.shape, output_shape, output_shape],
+      [q_dtype_for_kernel_launch, torch.float32, torch.float32])
+  
+  return output
+
+
+from jax.experimental.pallas.ops.tpu.splash_attention import splash_attention_mask as mask_lib
+def splash_attention(
+    fwd_mask_info: mask_info_lib.MaskInfo,
+    q: jax.Array,
+    k: jax.Array,
+    v: jax.Array,
+    segment_ids: SegmentIds | None = None,
+    *,
+    is_mqa: bool,
+    block_sizes: BlockSizes | None,
+    save_residuals: bool,
+    mask_value: float,
+    attn_logits_soft_cap: float | None,
+    residual_checkpoint_name: str | None,
+    mask_function: MaskFunctionType | None,
+    interpret: bool,
+):
+  # TODO handle backward case
+  return _splash_attention_forward(
+      fwd_mask_info,
+      q,
+      k,
+      v,
+      segment_ids,
+      mask_value=mask_value,
+      is_mqa=is_mqa,
+      block_sizes=block_sizes,
+      residual_checkpoint_name=residual_checkpoint_name,
+      save_residuals=save_residuals,
+      mask_function=mask_function,
+      attn_logits_soft_cap=attn_logits_soft_cap,
+      interpret=interpret,
+  )
+
+
 def _calculate_num_tiles(x: int, tx: int) -> int:
   tiles, rem = divmod(x, tx)
   if rem:
