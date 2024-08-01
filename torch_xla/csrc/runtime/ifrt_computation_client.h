@@ -150,6 +150,11 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
+  void RegisterCustomCall(const std::string& fn_name, void* function_ptr,
+                          const std::string& platform) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  };
+
  private:
   std::shared_ptr<xla::ifrt::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;
