@@ -1037,10 +1037,8 @@ void PjRtComputationClient::OnReadyCallback(
     ComputationClient::DataPtr data, const std::function<void()>& callback) {
   auto pjrt_data = std::dynamic_pointer_cast<PjRtData>(data);
   XLA_CHECK(pjrt_data->buffer) << "received placeholder data as argument";
-  pjrt_data->buffer->GetReadyFuture().OnReady([callback](absl::Status unused) {
-    std::cout << unused << std::endl;
-    callback();
-  });
+  pjrt_data->buffer->GetReadyFuture().OnReady(
+      [callback](absl::Status unused) { callback(); });
 }
 
 }  // namespace runtime
