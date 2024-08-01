@@ -1027,8 +1027,8 @@ class PallasTest(unittest.TestCase):
                    "This test only works on TPUv4+.")
   def test_splash_attention_wrapper(self):
     from torch_xla.experimental.custom_kernel import splash_attention
-    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
-
+    
+    # TODO add these helper functions
     seed = data.draw(seed_strategy())
     key = random.key(seed)
     k1, k2, k3 = random.split(key, 3)
