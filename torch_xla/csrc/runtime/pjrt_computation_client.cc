@@ -1019,9 +1019,7 @@ void PjRtComputationClient::RegisterCustomCall(const std::string& fn_name,
              PJRT_Extension_Type::PJRT_Extension_Type_Gpu_Custom_Call) {
     next = next->next;
   }
-  if (next == nullptr) {
-    return;
-  }
+  XLA_CHECK(next) << "Custom call extension not found";
   PJRT_Gpu_Register_Custom_Call_Args args;
   args.struct_size = PJRT_Gpu_Register_Custom_Call_Args_STRUCT_SIZE;
   args.function_name = fn_name.c_str();
