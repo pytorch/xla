@@ -79,6 +79,11 @@ def _maybe_select_default_device():
 
 def device_type() -> Optional[str]:
   """Returns the current PjRt device type.
+
+  Selects a default device if none has been configured
+
+  Returns:
+    A string representation of the device.
   """
   pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
   return pjrt_device.split('_')[0] if pjrt_device else pjrt_device
@@ -212,11 +217,18 @@ def addressable_runtime_device_count() -> int:
   return torch_xla._XLAC._xla_num_runtime_devices()
 
 
-# API to enable SPMD mode. This is a recommended way to enable SPMD.
-# This forces SPMD mode if some tensors are already initialized on non-SPMD
-# devices. This means that those tensors would be replicated across the devices.
 # TODO(yeounoh) introduce SPMD configuration.
 def use_spmd(auto: Optional[bool] = False):
+  """API to enable SPMD mode. This is a recommended way to enable SPMD.
+
+  This forces SPMD mode if some tensors are already initialized on non-SPMD
+  devices. This means that those tensors would be replicated across the devices.
+
+  Args:
+    auto (bool): Whether to enable the auto-sharding. Read 
+      https://github.com/pytorch/xla/blob/master/docs/spmd_advanced.md#auto-sharding
+      for more detail
+  """
   if os.environ.get("XLA_USE_SPMD") is not None:
     warnings.warn("XLA_USE_SPMD is being deprecated. "
                   "Use torch_xla.runtime.use_spmd() "
@@ -249,7 +261,8 @@ def get_master_ip() -> str:
   """Retrieve the master worker IP for the runtime. This calls into
   backend-specific discovery APIs.
 
-  Returns master worker's IP address as a string."""
+  Returns:
+    master worker's IP address as a string."""
   if device_type() == 'TPU':
     return tpu.discover_master_worker_ip()
   raise RuntimeError(f'IP discovery not supported for device: {device_type()}')
@@ -260,8 +273,8 @@ def initialize_cache(path: str, readonly: bool = False):
   before any computations have been performed.
 
   Args:
-    path: The path at which to store the persistent cache.
-    readonly: Whether or not this worker should have write access to the cache.
+    path (str): The path at which to store the persistent cache.
+    readonly (bool): Whether or not this worker should have write access to the cache.
   """
   assert not torch_xla._XLAC._xla_computation_cache_is_initialized(
   ), "Computation cache has already been initialized"

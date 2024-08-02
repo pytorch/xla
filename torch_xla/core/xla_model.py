@@ -1017,13 +1017,13 @@ def mark_step(wait=False, reset_scope=True):
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
+# TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
+# dump as outputs. Need further investigation.
 def get_stablehlo(tensors=None) -> str:
   """Get StableHLO for the computation graph in string format.
 
   If `tensors` is not empty, the graph with `tensors` as outputs will be dump.
   If `tensors` is empty, the whole computation graph will be dump.
-  TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
-  dump as outputs. Need further investigation.
 
   For inference graph, it is recommended to pass the model outputs to `tensors`.
   For training graph, it is not straightforward to identify the "outputs". Using empty `tensors` is recommended.
@@ -1043,13 +1043,13 @@ def get_stablehlo(tensors=None) -> str:
       False).decode('utf-8')
 
 
+# TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
+# dump as outputs. Need further investigation.
 def get_stablehlo_bytecode(tensors=None) -> bytes:
   """Get StableHLO for the computation graph in bytecode format.
 
   If `tensors` is not empty, the graph with `tensors` as outputs will be dump.
   If `tensors` is empty, the whole computation graph will be dump.
-  TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
-  dump as outputs. Need further investigation.
 
   For inference graph, it is recommended to pass the model outputs to `tensors`.
   For training graph, it is not straightforward to identify the "outputs". Using empty `tensors` is recommended.
@@ -1154,7 +1154,7 @@ def optimizer_step(optimizer,
                    optimizer_args={},
                    groups=None,
                    pin_layout=True):
-  """Run the provided optimizer step and issue the XLA device step computation.
+  """Run the provided optimizer step and sync gradidents across all devices.
 
   Args:
     optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance whose
@@ -1177,6 +1177,11 @@ def optimizer_step(optimizer,
 
   Returns:
     The same value returned by the `optimizer.step()` call.
+
+  Example:
+
+    >>> import torch_xla.core.xla_model as xm
+    >>> xm.optimizer_step(self.optimizer)
   """
   reduce_gradients(optimizer, groups=groups, pin_layout=pin_layout)
   loss = optimizer.step(**optimizer_args)
@@ -1210,9 +1215,13 @@ def save(data, file_or_path, master_only=True, global_master=False):
       controls whether every host's master (if ``global_master`` is ``False``)
       saves the content, or only the global master (ordinal 0).
       Default: False
-    sync (bool, optional): Whether to synchronize all replicas after saving
-      tensors. If True, all replicas must call `xm.save` or the main process
-      will hang.
+
+  Example:
+
+    >>> import torch_xla.core.xla_model as xm
+    >>> xm.wait_device_ops() # wait for all pending operations to finish.
+    >>> xm.save(obj_to_save, path_to_save)
+    >>> xm.rendezvous('torch_xla.core.xla_model.save') # multi process context only
   """
   should_write_data = not master_only or is_master_ordinal(
       local=not global_master)
@@ -1328,6 +1337,11 @@ def rendezvous(tag, payload=b'', replicas=[]):
   Returns:
     The payloads exchanged by all the other cores, with the payload of core
     ordinal `i` at position `i` in the returned tuple.
+
+  Example:
+
+    >>> import torch_xla.core.xla_model as xm
+    >>> xm.rendezvous('example')
   """
   return xla_rendezvous(payload, replicas or None, tag=tag)
 
@@ -1373,6 +1387,12 @@ def mesh_reduce(tag, data, reduce_fn):
 
   Returns:
     The reduced value.
+
+  Example:
+
+    >>> import torch_xla.core.xla_model as xm
+    >>> import numpy as np
+    >>> accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
   """
   cpu_data = _maybe_convert_to_cpu(data)
   bio = io.BytesIO()
@@ -1449,6 +1469,11 @@ def get_memory_info(device: Optional[torch.device] = None) -> MemoryInfo:
 
   Returns:
     MemoryInfo dict with memory usage for the given device.
+
+  Example:
+
+    >>> xm.get_memory_info()
+    {'bytes_used': 290816, 'bytes_limit': 34088157184}
   """
   if device == None:
     device = xla_device()

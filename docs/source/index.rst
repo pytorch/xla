@@ -75,8 +75,7 @@ distributed
 ----------------------------------
 
 .. automodule:: torch_xla.distributed.parallel_loader
-.. autoclass:: ParallelLoader
-	       :members: per_device_loader
+.. autoclass:: MpDeviceLoader
 
 .. automodule:: torch_xla.distributed.xla_multiprocessing
 .. autofunction:: spawn
