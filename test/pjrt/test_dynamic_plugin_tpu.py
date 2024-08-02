@@ -1,8 +1,8 @@
 import concurrent.futures
 
 from absl.testing import absltest
+import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 from torch_xla.experimental import plugins
 import torch_xla.runtime as xr
 from torch_xla._internal import tpu
@@ -27,7 +27,7 @@ class TestDynamicTpuPlugin(absltest.TestCase):
       executor.submit(self._assert_tpus_exist).result()
 
   def test_spawn(self):
-    xmp.spawn(self._assert_tpus_exist)
+    torch_xla.launch(self._assert_tpus_exist)
 
 
 if __name__ == '__main__':

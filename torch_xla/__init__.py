@@ -243,7 +243,14 @@ if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS',
   plugins.use_dynamic_plugins()
   plugins.register_installed_plugins()
 
+if os.getenv('XLA_USE_EAGER_DEBUG_MODE', '0') == '1':
+  from .experimental import eager_mode
+  eager_mode(True)
+
 from .torch_xla import *
 
 # register all custom kenels and decomp by default
-from .core import custom_kernel, decomp_registration
+from ._internal import custom_kernel, decomp_registration, c10d_registration
+
+# select default PJRT_DEVICE before any execution
+runtime._maybe_select_default_device()

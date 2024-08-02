@@ -2035,9 +2035,9 @@ void max_out(XLATensorPtr& max, XLATensorPtr& max_values,
       torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank());
   torch::lazy::NodePtr node = torch::lazy::MakeNode<MaxInDim>(
       input->GetIrValue(), canonical_dim, keepdim);
-  max->SetIrValue(torch::lazy::Value(node, 0),
+  max->SetIrValue(torch::lazy::Value(node, 0), /*inplace=*/true,
                   /*delay_eager_executation=*/true);
-  max_values->SetIrValue(torch::lazy::Value(node, 1),
+  max_values->SetIrValue(torch::lazy::Value(node, 1), /*inplace=*/true,
                          /*delay_eager_executation=*/true);
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   if (graph_executor->UseEagerMode()) {
@@ -2143,9 +2143,9 @@ void min_out(XLATensorPtr& min, XLATensorPtr& min_indices,
       torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank());
   torch::lazy::NodePtr node = torch::lazy::MakeNode<MinInDim>(
       input->GetIrValue(), canonical_dim, keepdim);
-  min->SetIrValue(torch::lazy::Value(node, 0),
+  min->SetIrValue(torch::lazy::Value(node, 0), /*inplace=*/true,
                   /*delay_eager_executation=*/true);
-  min_indices->SetIrValue(torch::lazy::Value(node, 1),
+  min_indices->SetIrValue(torch::lazy::Value(node, 1), /*inplace=*/true,
                           /*delay_eager_executation=*/true);
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   if (graph_executor->UseEagerMode()) {
@@ -2296,13 +2296,13 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm(
       running_mean->SetIrValue(
           torch::lazy::MakeNode<LinearInterpolation>(
               mean->GetIrValue(), running_mean->GetIrValue(), momentum),
-          /*delay_eager_executation=*/true);
+          /*inplace=*/true, /*delay_eager_executation=*/true);
     }
     if (running_var) {
       running_var->SetIrValue(
           torch::lazy::MakeNode<LinearInterpolation>(
               torch::lazy::Value(node, 2), running_var->GetIrValue(), momentum),
-          /*delay_eager_executation=*/true);
+          /*inplace=*/true, /*delay_eager_executation=*/true);
     }
   } else {
     at::Tensor at_input = bridge::AtenFromXlaTensor(input);

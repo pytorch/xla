@@ -632,8 +632,7 @@ class XLATestBase(DeviceTypeTestBase):
   def setUpClass(cls):
     # Sets the primary test device to the xla_device (CPU or TPU)
     cls.primary_device = str(xm.xla_device())
-    torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-        use_full_mat_mul_precision=True)
+    torch_xla._XLAC._xla_set_mat_mul_precision('highest')
 
   def setUp(self):
     super().setUp()

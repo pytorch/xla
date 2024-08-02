@@ -116,8 +116,6 @@ void TestBackward(
 torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
                                          int64_t num_row, int64_t num_col);
 
-bool UsingPjRt();
-
 bool UsingTpu();
 
 }  // namespace cpp_test

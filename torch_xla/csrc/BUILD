@@ -32,7 +32,7 @@ ptxla_cc_library(
     name = "tensor",
     srcs = [
         "aten_autograd_ops.cpp",
-        "aten_cpu_fallback.cpp",
+        "aten_fallback.cpp",
         "aten_xla_bridge.cpp",
         "aten_xla_type.cpp",
         "autocast_mode.cpp",
@@ -75,7 +75,7 @@ ptxla_cc_library(
     ] + glob(["ops/*.cpp"]),
     hdrs = [
         "aten_autograd_ops.h",
-        "aten_cpu_fallback.h",
+        "aten_fallback.h",
         "aten_cuda_functions.h",
         "aten_xla_bridge.h",
         "batch_norm.h",

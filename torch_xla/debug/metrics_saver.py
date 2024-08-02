@@ -2,6 +2,7 @@ import os
 import sys
 import threading
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.debug.metrics as met
 
 _STEP_METRICS_FILE_LOCK = threading.Lock()
@@ -21,7 +22,7 @@ def _extract_metrics_file():
   metrics_file = os.environ.get('XLA_METRICS_FILE', None)
   if metrics_file is not None:
     ordinal = xm.get_local_ordinal(defval=-1)
-    if ordinal >= 0 and xm.xrt_world_size() > 1:
+    if ordinal >= 0 and xr.world_size() > 1:
       metrics_file = '{}.{}'.format(metrics_file, ordinal)
   return metrics_file
 

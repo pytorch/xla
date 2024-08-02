@@ -8,7 +8,7 @@ from functools import partial
 import torch
 import torchvision
 import torch.optim as optim
-import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel as FSDP, checkpoint_module
 from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
@@ -53,4 +53,4 @@ def _mp_fn(index):
 
 if __name__ == '__main__':
   print('consider using train_decoder_only_fsdp_v2.py instead to get better performance')
-  xmp.spawn(_mp_fn, args=())
+  torch_xla.launch(_mp_fn, args=())

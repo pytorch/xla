@@ -27,7 +27,7 @@ import test_utils
 
 
 def _is_on_tpu():
-  return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
+  return xr.device_type() == 'TPU'
 
 
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
@@ -333,8 +333,8 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
             rtol=1e-05,
             atol=1e-05))
 
-  def get_loader(self, device, sample_count):
-    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
+  def get_loader(self, device, sample_count, batch_size=4):
+    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=batch_size)
     loader = xu.SampleGenerator(
         data=(torch.randn(batch_size, 3, 224, 224, device=device),
               torch.zeros(batch_size, dtype=torch.int64, device=device)),
@@ -349,7 +349,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
   def test_resnet18(self, initialize_on_cuda):
     device = self._choose_proper_device(initialize_on_cuda)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
-    loader = self.get_loader(device, sample_count)
+    loader = self.get_loader(device, sample_count, batch_size=4)
     resnet18 = torchvision.models.resnet18()
     resnet18.eval()
     device_resnet18 = torchvision.models.resnet18()
@@ -360,8 +360,8 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     xm.mark_step()
     xm.wait_device_ops()
     met.clear_all()
+    dynamo_resnet18 = torch.compile(device_resnet18, backend='openxla')
     for data, _ in loader:
-      dynamo_resnet18 = torch.compile(device_resnet18, backend='openxla')
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(

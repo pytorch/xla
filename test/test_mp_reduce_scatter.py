@@ -1,12 +1,13 @@
 import sys
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.runtime as xr
 
 
 def _mp_fn(index):
   device = xm.xla_device()
-  world_size = xm.xrt_world_size()
+  world_size = xr.world_size()
   scale = 1 / world_size
   scatter_dim = 1
   shard_size = 2
@@ -176,4 +177,4 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=())
+  torch_xla.launch(_mp_fn, args=())

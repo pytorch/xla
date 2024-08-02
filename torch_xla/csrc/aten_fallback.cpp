@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/aten_cpu_fallback.h"
+#include "torch_xla/csrc/aten_fallback.h"
 
 #include <ATen/DLConvertor.h>
 #include <ATen/ops/_copy_from_and_resize.h>
@@ -15,10 +15,23 @@
 #include "torch_xla/csrc/function_call_tracker.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
+
+// List of operations that should be fallbacked to CPU instead of GPU.
+static std::unordered_set<std::string> _force_fallback_on_cpu{
+    // This operation is a simple memory access that transforms the given
+    // 1-element tensor into a Scalar.
+    //
+    // Although it makes sense to run this operation on CPU (since the
+    // output will get copied back to CPU anyway), this also fixes a
+    // particular issue with moco benchmark.
+    // More details: https://github.com/pytorch/xla/issues/7647
+    "aten::_local_scalar_dense",
+};
 
 // TODO(jwtan): Replace this with torch::lazy::Counter. We need
 // _fallback_counters to remain as torch_xla::runtime::metrics::Counter to
@@ -51,8 +64,39 @@ std::vector<std::string> GetFallbackOperations() {
 // Before each modified function below, we shall specify what has changed,
 // if there was any.
 
-bool UseCUDAFallback() {
-  return runtime::sys_util::GetEnvBool("XLA_FALLBACK_CUDA", false);
+// Decide whether to run OpenXLA fallback operations on CUDA.
+bool UseOpenXLAFallbackOnCUDA(const c10::OperatorHandle& op) {
+  // In order to run OpenXLA fallback operations on CUDA, the conditions below
+  // must be true:
+
+  //   1. XLA_FALLBACK_CPU environment variable is NOT set
+  bool dont_fallback_on_cpu =
+      !runtime::sys_util::GetEnvBool("XLA_FALLBACK_CPU", false);
+
+  //   2. The current ComputationClient DeviceType is CUDA. Basically, we don't
+  //      support running OpenXLA fallback operations on CUDA if the current
+  //      PyTorch/XLA DeviceType is not CUDA.
+  bool device_is_cuda =
+      runtime::GetComputationClient()->GetDeviceType().getType() ==
+      XlaDeviceType::CUDA;
+
+  //   3. PyTorch must have been compiled with CUDA support. Otherwise, our
+  //      phony implementation in aten_cuda_functions.cpp will return 0 for the
+  //      call below.
+  bool pytorch_device_is_not_zero = c10::cuda::device_count() > 0;
+
+  //   4. There is a kernel registered for the CUDA dispatch key, for this
+  //      operation.
+  bool has_cuda_kernel = op.hasKernelForDispatchKey(c10::DispatchKey::CUDA);
+
+  //   5. The operation is not in the set of operations that should be forcefuly
+  //      fallbacked on CPU.
+  bool dont_force_fallback_on_cpu =
+      _force_fallback_on_cpu.find(c10::toString(op.operator_name())) ==
+      _force_fallback_on_cpu.end();
+
+  return dont_fallback_on_cpu && device_is_cuda && pytorch_device_is_not_zero &&
+         has_cuda_kernel && dont_force_fallback_on_cpu;
 }
 
 struct DeviceInfo {
@@ -121,7 +165,7 @@ static at::Tensor to_cuda_tensor(const at::Tensor& tensor,
     TORCH_CHECK(info->common_device == tensor.device() && info->index == index,
                 "fallback supports only single XLA device.");
   } else {
-    info = c10::make_optional(DeviceInfo(tensor.device(), index));
+    info = std::make_optional(DeviceInfo(tensor.device(), index));
   }
 
   // Create the CUDA tensor.
@@ -403,7 +447,7 @@ void xla_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
     }
   }
 
-  if (UseCUDAFallback()) {
+  if (UseOpenXLAFallbackOnCUDA(op)) {
     cuda_fallback(op, stack, true);
   } else {
     // Call the actual boxed CPU fallback.

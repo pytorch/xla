@@ -15,10 +15,10 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import types
 import yaml
-from util import move_to_device, set_cwd, get_torchbench_test_name, find_near_file
+from util import cleanup, move_to_device, set_cwd, get_torchbench_test_name, find_near_file
 from benchmark_model import ModelLoader, BenchmarkModel
 from benchmark_experiment import BenchmarkExperiment
-from typing import Any, Dict, Sequence
+from typing import Any, Dict, Optional, Sequence, Set, Union
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +100,46 @@ NEED_LARGER_CACHE = {
 }
 
 
+class _Config:
+  """Helper class for easier access of the torchbench.yaml configuration.
+
+  This will wrap any mapping data-type, so that it's easier to access a
+  nested object. For example, instead of:
+
+  > config["skip"]["device"].get(benchmark_experiment.accelerator, {})
+
+  We can write:
+
+  > config().skip.device.get(benchmark_experiment.accelerator, {})
+  """
+
+  def __init__(self, inner: Dict[str, Any]) -> None:
+    self.inner = inner
+
+  def __getattr__(self, attr: str) -> Union["_Config", Set[str]]:
+    if attr not in self.inner:
+      raise AttributeError
+
+    value = self.inner[attr]
+
+    if isinstance(value, dict):
+      return _Config(value)
+
+    return value
+
+  def __contains__(self, item: str) -> bool:
+    return item in self.inner
+
+  def get(self, attr: str, default: Optional[Any] = None) -> Any:
+    if attr not in self.inner and default is None:
+      raise AttributeError
+    return self.inner.get(attr, default)
+
+
+# Parsed YAML configuration file.
+# Source @ PyTorch: benchmarks/dynamo/torchbench.yaml
 @functools.lru_cache(maxsize=1)
-def config_data():
+def config():
   """Retrieve the skip data in the PyTorch YAML file.
 
   Reads the YAML file in PyTorch's dynamo benchmarks directory, and transform
@@ -130,18 +168,7 @@ def config_data():
       return set(flatten(obj))
     return obj
 
-  return maybe_list_to_set(data)
-
-
-# List of models retrieved from the YAML configuration data.
-# File (inside PyTorch main repository): benchmarks/dynamo/torchbench.yaml
-DETECTRON2_MODELS = config_data()["detectron2_models"]
-
-FORCE_AMP_FOR_FP16_BF16_MODELS = config_data(
-)["dtype"]["force_amp_for_fp16_bf16_models"]
-
-FORCE_FP16_FOR_BF16_MODELS = config_data(
-)["dtype"]["force_fp16_for_bf16_models"]
+  return _Config(maybe_list_to_set(data))
 
 
 class TorchBenchModelLoader(ModelLoader):
@@ -185,25 +212,21 @@ class TorchBenchModelLoader(ModelLoader):
 
     return model_configs
 
-  @property
-  def skip(self):
-    return config_data()["skip"]
-
   def is_compatible(self, dummy_benchmark_model: BenchmarkModel,
                     benchmark_experiment: BenchmarkExperiment):
     name = dummy_benchmark_model.model_name
     test = get_torchbench_test_name(benchmark_experiment.test)
 
-    if name in self.skip["all"]:
+    if name in config().skip.all:
       return False
 
-    if name in self.skip["test"].get(test, {}):
+    if name in config().skip.test.get(test, {}):
       return False
 
-    if name in self.skip["device"].get(benchmark_experiment.accelerator, {}):
+    if name in config().skip.device.get(benchmark_experiment.accelerator, {}):
       return False
 
-    if name in self.skip["multiprocess"]:
+    if name in config().skip.multiprocess:
       # No support for multiprocess, yet. So, skip all benchmarks that
       # only work with it.
       return False
@@ -223,14 +246,6 @@ class TorchBenchModel(BenchmarkModel):
   def __init__(self, suite_name: str, model_name: str,
                benchmark_experiment: BenchmarkExperiment):
     super().__init__(suite_name, model_name, benchmark_experiment)
-
-  def _cleanup(self):
-    # Garbage-collect right now.
-    gc.collect()
-
-    # If we are using CUDA, clean-up its cache left-over.
-    if self.is_accelerator_cuda():
-      torch.cuda.empty_cache()
 
   def set_up(self):
     """Set up module, actual batch_size, example_inputs, and optimizer_class
@@ -264,7 +279,7 @@ class TorchBenchModel(BenchmarkModel):
       if self.is_accelerator_cuda() and not keep_model_data_on_cuda:
         self.module = self.module.to("cpu")
         self.example_inputs = move_to_device(self.example_inputs, "cpu")
-        self._cleanup()
+        cleanup(self.is_accelerator_cuda())
 
     # Torchbench has quite different setup for yolov3, so directly passing
     # the right example_inputs
@@ -273,7 +288,7 @@ class TorchBenchModel(BenchmarkModel):
                                         384, 512),)
 
     del benchmark
-    self._cleanup()
+    cleanup(self.is_accelerator_cuda())
 
   @functools.lru_cache(maxsize=1)
   def benchmark_cls(self):
@@ -288,14 +303,10 @@ class TorchBenchModel(BenchmarkModel):
         logger.warning(f"Unable to import {module_src}.")
     return None
 
-  @property
-  def batch_size(self):
-    return config_data()["batch_size"]
-
   def load_benchmark(self):
     cant_change_batch_size = (
         not getattr(self.benchmark_cls(), "ALLOW_CUSTOMIZE_BSIZE", True) or
-        self.model_name in config_data()["dont_change_batch_size"])
+        self.model_name in config().dont_change_batch_size)
 
     if cant_change_batch_size:
       self.benchmark_experiment.batch_size = None
@@ -303,11 +314,9 @@ class TorchBenchModel(BenchmarkModel):
     batch_size = self.benchmark_experiment.batch_size
 
     if batch_size is None:
-      if self.is_training() and self.model_name in self.batch_size["training"]:
-        batch_size = self.batch_size["training"][self.model_name]
-      elif self.is_inference(
-      ) and self.model_name in self.batch_size["inference"]:
-        batch_size = self.batch_size["inference"][self.model_name]
+      test = get_torchbench_test_name(self.benchmark_experiment.test)
+      if self.model_name in config().batch_size.get(test, {}):
+        batch_size = config().batch_size.get(test).get(self.model_name)
 
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
@@ -347,6 +356,10 @@ class TorchBenchModel(BenchmarkModel):
     return self.is_accelerator_tpu() or (self.model_name == "moco" and
                                          self.benchmark_experiment.xla)
 
+  def skip_verifier(self):
+    return self.model_name in (config().accuracy.skip.large_models |
+                               config().accuracy.skip.eager_not_deterministic)
+
   def is_inference(self):
     return self.benchmark_experiment.test == "eval"
 
@@ -354,17 +367,38 @@ class TorchBenchModel(BenchmarkModel):
     return self.benchmark_experiment.test == "train"
 
   def is_accelerator_cuda(self):
-    return self.benchmark_experiment.accelerator == "cuda"
+    return self.benchmark_experiment.is_cuda()
 
   def is_accelerator_tpu(self):
     return self.benchmark_experiment.accelerator == "tpu"
 
   def use_amp(self):
-    return self.is_training(
-    ) or self.model_name in FORCE_AMP_FOR_FP16_BF16_MODELS
+    return self.is_training() or self.model_name in config(
+    ).dtype.force_amp_for_fp16_bf16_models
 
   def use_fp16(self):
-    return self.is_inference() and self.model_name in FORCE_FP16_FOR_BF16_MODELS
+    return self.is_inference() and self.model_name in config(
+    ).dtype.force_fp16_for_bf16_models
+
+  def tolerance(self):
+    # Logic taken from: PyTorch
+    # Source: benchmarks/dynamo/torchbench.py
+    if self.is_inference():
+      return 1e-2
+
+    if self.is_accelerator_cuda():
+      if self.model_name in config().tolerance.higher:
+        return 1e-3
+      if self.model_name in config().tolerance.even_higher:
+        return 8 * 1e-2
+      return 1e-3
+
+    return super().tolerance()
+
+  def use_cosine_similarity(self):
+    # Logic taken from: PyTorch
+    # Source: benchmarks/dynamo/torchbench.py
+    return self.model_name in config().tolerance.cosine
 
   def conversion_dtype(self):
     if self.is_training() or self.use_amp():
@@ -425,9 +459,9 @@ class TorchBenchModel(BenchmarkModel):
     raise NotImplementedError("Don't know how to reduce", type(pred))
 
   def train(self, inputs: Sequence[Any], collect_full_output: bool = False):
-    if self.model_name in DETECTRON2_MODELS:
+    if self.model_name in config().detectron2_models:
       from detectron2.utils.events import EventStorage
       with EventStorage():
-        super().train(inputs, collect_full_output=collect_full_output)
+        return super().train(inputs, collect_full_output=collect_full_output)
     else:
-      super().train(inputs, collect_full_output=collect_full_output)
+      return super().train(inputs, collect_full_output=collect_full_output)

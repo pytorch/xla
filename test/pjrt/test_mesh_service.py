@@ -11,7 +11,7 @@ class PjRtMeshServiceTest(parameterized.TestCase):
 
   @staticmethod
   def _rendezvous_static_size():
-    payload = b'message %d' % xm.get_ordinal()
+    payload = b'message %d' % xr.global_ordinal()
     return xm.rendezvous("test rendezvous", payload)
 
   def test_rendezvous_static_size(self):
@@ -22,7 +22,7 @@ class PjRtMeshServiceTest(parameterized.TestCase):
 
   @staticmethod
   def _rendezvous_dynamic_size():
-    payload = b'message' * xm.get_ordinal()
+    payload = b'message' * xr.global_ordinal()
     return xm.rendezvous("test rendezvous", payload)
 
   def test_rendezvous_dynamic_size(self):
@@ -71,7 +71,7 @@ class PjRtMeshServiceTest(parameterized.TestCase):
 
   @staticmethod
   def _mesh_reduce():
-    return xm.mesh_reduce('test mesh reduce', xm.get_ordinal(), sum)
+    return xm.mesh_reduce('test mesh reduce', xr.global_ordinal(), sum)
 
   def test_mesh_reduce(self):
     results = pjrt.run_multiprocess(self._mesh_reduce)

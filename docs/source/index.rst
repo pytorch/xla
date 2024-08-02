@@ -28,7 +28,7 @@ torch_xla
 .. autofunction:: devices
 .. autofunction:: device_count
 .. autofunction:: sync
-.. autofunction:: step
+.. autofunction:: compile
 .. autofunction:: manual_seed
 
 runtime
@@ -75,8 +75,7 @@ distributed
 ----------------------------------
 
 .. automodule:: torch_xla.distributed.parallel_loader
-.. autoclass:: ParallelLoader
-	       :members: per_device_loader
+.. autoclass:: MpDeviceLoader
 
 .. automodule:: torch_xla.distributed.xla_multiprocessing
 .. autofunction:: spawn
@@ -96,7 +95,6 @@ experimental
 ----------------------------------
 .. automodule:: torch_xla.experimental
 .. autofunction:: eager_mode
-.. autofunction:: compile
 
 debug
 ----------------------------------

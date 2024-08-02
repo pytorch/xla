@@ -22,7 +22,8 @@ device](../API_GUIDE.md#running-on-a-single-xla-device).
 1. Import xla specific distributed packages:
 
 ```
-import torch_xla.core.xla_model as xm
+import torch_xla
+import torch_xla.runtime as xr
 import torch_xla.distributed.xla_backend
 ```
 
@@ -35,8 +36,8 @@ dist.init_process_group("xla", rank=rank, world_size=world_size)
 3. Use xla specific APIs to get rank and world\_size if you need to.
 
 ```
-new_rank = xm.get_ordinal()
-world_size = xm.xrt_world_size()
+new_rank = xr.global_ordinal()
+world_size = xr.world_size()
 ```
 
 4. Pass `gradient_as_bucket_view=True` to the DDP wrapper.
@@ -48,7 +49,7 @@ ddp_model = DDP(model, gradient_as_bucket_view=True)
 5. Finally launch your model with xla specific launcher.
 
 ```
-xmp.spawn(demo_fn)
+torch_xla.launch(demo_fn)
 ```
 
 Here we have put everything together (the example is actually taken from the
@@ -68,9 +69,10 @@ import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 # additional imports for xla
+import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.distributed.xla_backend
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -94,9 +96,9 @@ class ToyModel(nn.Module):
 
 def demo_basic(rank):
     # xla specific APIs to get rank, world_size.
-    new_rank = xm.get_ordinal()
+    new_rank = xr.global_ordinal()
     assert new_rank == rank
-    world_size = xm.xrt_world_size()
+    world_size = xr.world_size()
 
     print(f"Running basic DDP example on rank {rank}.")
     setup(rank, world_size)
@@ -123,7 +125,7 @@ def demo_basic(rank):
 
 def run_demo(demo_fn):
     # xla specific launcher
-    xmp.spawn(demo_fn)
+    torch_xla.launch(demo_fn)
 
 if __name__ == "__main__":
     run_demo(demo_basic)

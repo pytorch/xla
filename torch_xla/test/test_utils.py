@@ -5,7 +5,7 @@ import sys
 import time
 import unittest
 
-import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.debug.metrics as met
 import torch_xla.debug.metrics_compare_utils as mcu
 import torch_xla.utils.utils as xu
@@ -41,7 +41,7 @@ def mp_test(func):
 
 
 def _get_device_spec(device):
-  ordinal = xm.get_ordinal(defval=-1)
+  ordinal = xr.global_ordinal()
   return str(device) if ordinal < 0 else '{}/{}'.format(device, ordinal)
 
 

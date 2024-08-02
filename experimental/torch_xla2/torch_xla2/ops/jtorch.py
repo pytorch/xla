@@ -153,3 +153,7 @@ def _corrcoef(x):
   if x.dtype.name == "int64":
     return jnp.corrcoef(x).astype(jnp.float32)
   return jnp.corrcoef(x)
+
+@register_function(torch.sparse.mm, is_jax_function=False)
+def _sparse_mm(mat1, mat2, reduce='sum'):
+  return torch.mm(mat1, mat2)

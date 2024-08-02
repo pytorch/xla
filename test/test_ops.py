@@ -498,30 +498,21 @@ class TestOpInfo(TestCase):
     ]
     samples_to_run = min(MAX_SAMPLES_TO_RUN, len(sample_inputs))
 
-    # Test CPU and CUDA fallbacks.
-    for xla_fallback_cuda in ("0", "1"):
-      # Skip testing fallback on CUDA if PyTorch wasn't compiled with CUDA support.
-      if not torch.cuda.is_available() and xla_fallback_cuda == "1":
-        continue
+    for i in range(samples_to_run):
+      sample_input = sample_inputs[i]
 
-      os.environ[xenv.XLA_FALLBACK_CUDA] = xla_fallback_cuda
+      # Clear all metrics.
+      # This should also clear the fallbacks.
+      met.clear_all()
 
-      with self.subTest(XLA_FALLBACK_CUDA=xla_fallback_cuda):
-        for i in range(samples_to_run):
-          sample_input = sample_inputs[i]
+      # Run and check the results.
+      self.compare_with_eager_reference(op, sample_input)
 
-          # Clear all metrics.
-          # This should also clear the fallbacks.
-          met.clear_all()
+      # Check whether the fallback operations run correspond to
+      # the expected set of fallbacks.
+      actual_fallbacks = set(met.executed_fallback_ops())
 
-          # Run and check the results.
-          self.compare_with_eager_reference(op, sample_input)
-
-          # Check whether the fallback operations run correspond to
-          # the expected set of fallbacks.
-          actual_fallbacks = set(met.executed_fallback_ops())
-
-          self.assertEqual(actual_fallbacks, expected_fallbacks)
+      self.assertEqual(actual_fallbacks, expected_fallbacks)
 
 
 instantiate_device_type_tests(TestOpInfo, globals())

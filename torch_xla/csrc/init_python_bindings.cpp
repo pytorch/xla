@@ -34,7 +34,7 @@
 #include "pybind11/stl_bind.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
-#include "torch_xla/csrc/aten_cpu_fallback.h"
+#include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/dl_convertor.h"
@@ -124,6 +124,11 @@ torch::lazy::BackendDevice GetDeviceOrCurrent(const std::string& device_str) {
     return bridge::GetCurrentDevice();
   }
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+}
+
+void WaitDeviceOps(absl::Span<const std::string> devices = {}) {
+  XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+  runtime::GetComputationClient()->WaitDeviceOps(devices);
 }
 
 void PrepareToExit() {
@@ -800,10 +805,6 @@ void MapXlaEnvVarsToLazy() {
       runtime::sys_util::GetEnvInt("XLA_METRICS_SAMPLES", 1024);
   FLAGS_torch_lazy_metrics_percentiles = runtime::sys_util::GetEnvString(
       "XLA_METRICS_PERCENTILES", "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99");
-  FLAGS_torch_lazy_trim_graph_check_frequency =
-      runtime::sys_util::GetEnvInt("XLA_TRIM_GRAPH_CHECK_FREQUENCY", 5000);
-  FLAGS_torch_lazy_trim_graph_size =
-      runtime::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
 }
 
 at::Tensor MarkTensor(const at::Tensor& input, const std::string& info) {
@@ -1855,13 +1856,7 @@ void InitXlaModuleBindings(py::module m) {
       "_xla_wait_device_ops",
       [](const std::vector<std::string>& devices) {
         NoGilSection nogil;
-        XLAGraphExecutor::Get()->WaitDeviceOps(devices);
-        if (UseVirtualDevice()) {
-          std::vector<std::string> spmd_device = {"SPMD:0"};
-          runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
-        } else {
-          runtime::GetComputationClient()->WaitDeviceOps(devices);
-        }
+        WaitDeviceOps(devices);
       },
       py::arg("devices"));
   m.def("_get_executed_fallback_ops", []() { return GetFallbackOperations(); });
@@ -1943,14 +1938,11 @@ void InitXlaModuleBindings(py::module m) {
       py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def("_xla_memory_info",
         [](const std::string& device) { return GetMemoryInfo(device); });
-  m.def(
-      "_xla_set_use_full_mat_mul_precision",
-      [](bool use_full_mat_mul_precision) {
-        XlaHelpers::set_mat_mul_precision(use_full_mat_mul_precision
-                                              ? xla::PrecisionConfig::HIGHEST
-                                              : xla::PrecisionConfig::DEFAULT);
-      },
-      py::arg("use_full_mat_mul_precision") = true);
+  m.def("_xla_set_mat_mul_precision", [](const std::string& mat_mul_precision) {
+    xla::PrecisionConfig::Precision precision =
+        ConsumeValue(xla::StringToPrecision(mat_mul_precision));
+    XlaHelpers::set_mat_mul_precision(precision);
+  });
 
   py::class_<xla::XlaBuilder, op_builder::BuilderPtr>(m, "XlaBuilder");
   py::class_<op_builder::Op, op_builder::OpPtr>(m, "XlaOp");
@@ -2448,6 +2440,11 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_use_eager_mode",
         []() { return XLAGraphExecutor::Get()->UseEagerMode(); });
+  m.def("_set_allow_execution", [](bool allow_execution) {
+    XLAGraphExecutor::Get()->SetAllowExecution(allow_execution);
+  });
+  m.def("_get_allow_execution",
+        []() { return XLAGraphExecutor::Get()->AllowExecution(); });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);

@@ -437,12 +437,6 @@ torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
   return nonzero_node;
 }
 
-bool UsingPjRt() {
-  static bool using_pjrt =
-      !torch_xla::runtime::sys_util::GetEnvString("PJRT_DEVICE", "").empty();
-  return using_pjrt;
-}
-
 bool UsingTpu() {
   static bool using_tpu =
       absl::StartsWith(

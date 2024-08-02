@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Dict, Optional
 from unittest import mock
+from importlib import reload
 
 import torch_xla
 from absl.testing import absltest, parameterized
@@ -41,14 +42,8 @@ class TestExperimentalPjrt(parameterized.TestCase):
             torch_xla._XLAC, '_xla_runtime_is_initialized', return_value=True):
       xr.set_device_type('CPU')
 
-  def test_requires_pjrt(self):
-    with mock.patch.dict(
-        os.environ, {'PJRT_SELECT_DEFAULT_DEVICE': '0'}, clear=True):
-      with self.assertRaises(NotImplementedError):
-        xr.xla_device()
-
   def test_default_ordinals(self):
-    global_ordinal = xm.get_ordinal()
+    global_ordinal = xr.global_ordinal()
     self.assertEqual(global_ordinal, 0)
 
     local_ordinal = xm.get_local_ordinal()
@@ -61,9 +56,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def test_num_global_devices(self):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
                    xr.global_device_count())
-
-  def test_world_size(self):
-    self.assertEqual(xm.xrt_world_size(), xr.world_size())
 
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
@@ -84,21 +76,19 @@ class TestExperimentalPjrt(parameterized.TestCase):
       'GPU_NUM_DEVICES': '4'
   }, True))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
-    with mock.patch.dict(os.environ, env_vars, clear=True):
-      # Print a warningif we had to select a default runtime
-      if 'PJRT_DEVICE' not in os.environ and expect_using_pjrt:
-        logs_context = self.assertLogs(level=logging.WARNING)
-      else:
+    # Prevent flag checking during reinitialization of PJRT backend.
+    # Without the patch, the test will be impacted by other tests when torch_xla reloads.
+    with mock.patch(
+        'torch_xla._XLAC._xla_runtime_is_initialized', return_value=False):
+      with mock.patch.dict(os.environ, env_vars, clear=True):
+        # We need to reload the torch_xla module because clear=True will clear all os.environ.
+        global torch_xla
+        reload(torch_xla)
         logs_context = contextlib.nullcontext()
-
-      with logs_context:
-        # Configure default device
-        xr.using_pjrt()
-
-      if expect_using_pjrt:
-        self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])
-      else:
-        self.assertIsNone(xr.device_type())
+        if expect_using_pjrt:
+          self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])
+        else:
+          self.assertIsNone(xr.device_type())
 
   def test_host_index(self):
     self.assertEqual(xr.host_index(), 0)

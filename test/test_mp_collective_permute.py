@@ -1,15 +1,15 @@
 import sys
 import torch
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 def _mp_fn(index):
   device = xm.xla_device()
   if xm.xla_device_hw(device) == 'TPU':
-    world_size = xm.xrt_world_size()
-    ordinal = xm.get_ordinal()
+    world_size = xr.world_size()
+    ordinal = xr.global_ordinal()
     value = torch.tensor([ordinal] * 100, dtype=torch.int32, device=device)
     pairs = []
     for i in range(1, world_size):
@@ -31,4 +31,4 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=())
+  torch_xla.launch(_mp_fn, args=())

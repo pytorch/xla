@@ -1,5 +1,6 @@
 import torch
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
 
 
@@ -57,8 +58,8 @@ class AllGather(torch.autograd.Function):
   @staticmethod
   def forward(ctx, input, dim):
     ctx.dim = dim
-    ctx.ordinal = xm.get_ordinal()
-    ctx.world_size = xm.xrt_world_size()
+    ctx.ordinal = xr.global_ordinal()
+    ctx.world_size = xr.world_size()
     return xm.all_gather(input, dim=dim)
 
   @staticmethod
@@ -100,11 +101,11 @@ def distributed_mm(w, x, split=1):
   Returns:
     The result of the distributed matrix multiplication operation.
   """
-  ordinal = xm.get_ordinal()
+  ordinal = xr.global_ordinal()
   # w = N x Ko
   # WG = Ko * WORLD_SIZE
   # x = WG x M
-  assert x.size(0) // xm.xrt_world_size() == w.size(1)
+  assert x.size(0) // xr.world_size() == w.size(1)
   splits = []
   if split != 1:
     size = x.size(1)
@@ -155,7 +156,7 @@ class SyncBatchNorm(torch.nn.Module):
       local_mean = torch.mean(batch, dim=reduce_dims)
       local_sqr_mean = torch.mean(batch * batch, dim=reduce_dims)
 
-      scale = 1.0 / xm.xrt_world_size()
+      scale = 1.0 / xr.world_size()
       mean = AllReduceSumLayer.apply(local_mean) * scale
       sqr_mean = AllReduceSumLayer.apply(local_sqr_mean) * scale
       var = sqr_mean - mean.pow(2)

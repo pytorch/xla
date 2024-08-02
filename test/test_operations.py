@@ -65,12 +65,8 @@ def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
 
-def _is_on_eager_debug_mode():
-  return xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', bool, defval=False)
-
-
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
-skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
+skipOnEagerDebug = unittest.skipIf(torch_xla.experimental.is_eager_mode(),
                                    'skip on eager debug mode')
 
 
@@ -604,7 +600,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(x.device.type, 'xla')
 
   def test_randperm(self):
-    x = torch.randperm(3, device=xm.xla_device())
+    x = torch.randperm(3, device=xm.xla_device(), dtype=torch.int32)
     self.assertEqual(x.device.type, 'xla')
 
   def test_randn_like(self):
@@ -1663,9 +1659,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         t += torch.tensor(i, dtype=torch.float, device=t.device)
       return t
 
-    # This test is for PjRT only
-    if xr.using_pjrt():
-      self.runAtenTest([torch.tensor(20.0)], test_fn)
+    self.runAtenTest([torch.tensor(20.0)], test_fn)
 
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
@@ -1690,10 +1684,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     y = torch.rand(5)
     self.assertEqual(x + y, y + x)
 
-  @unittest.skipIf(
-      os.environ.get('XLA_USE_EAGER_DEBUG_MODE'),
-      'Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.'
-  )
+  # Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.
+  @skipOnEagerDebug
   def test_pow_constant(self):
     t1 = torch.pow(torch.tensor([2.0, 3.0], device=xm.xla_device()), 5)
     hlo_text = torch_xla._XLAC._get_xla_tensors_text([t1])
@@ -2360,16 +2352,13 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
     xm.mark_step()
     xm.wait_device_ops()
     self.assertTrue("ExecuteTime" in met.metric_names() or
-                    "ExecuteChainedTime" in met.metric_names())
+                    "EagerOpExecuteTime" in met.metric_names())
 
 
 class TestDebuggingUtil(test_utils.XlaTestCase):
 
+  @skipOnEagerDebug
   def test_get_xla_tensor_debug_info(self):
-    if xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', str, '1'):
-      # ignore this test for eager debug mode since it will
-      # mess up the IR.
-      return
     device = xm.xla_device()
     # test non xla tensor
     cpu_t1 = torch.randn(5)
@@ -2711,6 +2700,18 @@ class TestGeneric(test_utils.XlaTestCase):
     former_a = small_a.as_strided(size, (5, 1), 0)
 
     self.assertEqual(a, former_a)
+
+  @skipOnEagerDebug
+  def test_sync_wait(self):
+    xm.wait_device_ops()
+    met.clear_all()
+    device = torch_xla.device()
+    input = torch.randn(1024, 1024, device=device)
+    res = input @ input @ input
+
+    torch_xla.sync(wait=True)
+    # ExecuteTime will show up after the async device execution finished.
+    self.assertIn('ExecuteTime', met.metric_names())
 
   def _test_move_tensor_cuda_to_xla(self, cpu_tensor):
     # Assumes CPU-XLA data movement works.
@@ -3113,8 +3114,7 @@ class TestHelperFunction(test_utils.XlaTestCase):
 if __name__ == '__main__':
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
+  torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
     print(met.metrics_report())

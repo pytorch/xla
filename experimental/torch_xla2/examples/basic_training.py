@@ -13,8 +13,7 @@ import torchvision.transforms as transforms
 import torch_xla2.tensor
 
 
-xla_env = torch_xla2.tensor.Environment()
-mode = xla_env.mode()
+xla_env = torch_xla2.default_env()
 
 # PyTorch TensorBoard support
 from torch.utils.tensorboard import SummaryWriter

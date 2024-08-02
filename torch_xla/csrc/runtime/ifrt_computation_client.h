@@ -117,7 +117,7 @@ class IfrtComputationClient : public ComputationClient {
 
   std::shared_ptr<std::vector<std::string>> GetReplicationDevices() override;
 
-  void WaitDeviceOps(absl::Span<const std::string> devices) override;
+  void WaitDeviceOps(absl::Span<const std::string> devices = {}) override;
 
   std::map<std::string, Metric> GetMetrics() const override;
 

@@ -6,7 +6,6 @@ import torch_xla.core.xla_model as xm
 import torch_xla.core.functions as xf
 from torch_xla import runtime as xr
 import torch_xla.debug.metrics as met
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 ATOL: float = 1e-4
 RTOL: float = 7e-2
@@ -22,11 +21,11 @@ def run_step(model: torch.nn.Module, batch: torch.Tensor) -> torch.Tensor:
     xm.optimizer_step(optimizer)
   else:
     # Scale as we scale within xm.optimizer_step()
-    loss = loss / xm.xrt_world_size()
+    loss = loss / xr.world_size()
     loss.backward()
     optimizer.step()
-    split_size = batch.shape[0] // xm.xrt_world_size()
-    result = result.split(split_size, dim=0)[xm.get_ordinal()]
+    split_size = batch.shape[0] // xr.world_size()
+    result = result.split(split_size, dim=0)[xr.global_ordinal()]
 
   return result
 
@@ -45,7 +44,7 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     torch.manual_seed(1)
     bsz = 32
     length = 64
-    t_global = torch.rand((xm.xrt_world_size() * bsz, length))
+    t_global = torch.rand((xr.world_size() * bsz, length))
 
     # XLA SyncBatchNorm
     device = xm.xla_device()
@@ -70,7 +69,7 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     bsz = 64
     features = 20
     length = 128
-    t_global = torch.rand((xm.xrt_world_size() * bsz, features, length))
+    t_global = torch.rand((xr.world_size() * bsz, features, length))
 
     # XLA SyncBatchNorm
     device = xm.xla_device()
@@ -95,7 +94,7 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     bsz = 8
     features = 10
     h, w = 64, 64
-    t_global = torch.rand((xm.xrt_world_size() * bsz, features, h, w))
+    t_global = torch.rand((xr.world_size() * bsz, features, h, w))
 
     # XLA SyncBatchNorm
     device = xm.xla_device()
@@ -120,7 +119,7 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     bsz = 16
     features = 32
     d, h, w = 16, 32, 32
-    t_global = torch.rand((xm.xrt_world_size() * bsz, features, d, h, w))
+    t_global = torch.rand((xr.world_size() * bsz, features, d, h, w))
 
     # XLA SyncBatchNorm
     device = xm.xla_device()
@@ -140,16 +139,16 @@ class TestMpSyncBatchNorm(parameterized.TestCase):
     xm.master_print('sync_bn3d_test ok')
 
   def test_sync_bn1d_no_channel(self):
-    xmp.spawn(self._sync_bn1d_no_channel, args=())
+    torch_xla.launch(self._sync_bn1d_no_channel, args=())
 
   def test_sync_bn1d_multi_channel(self):
-    xmp.spawn(self._sync_bn1d_multi_channel, args=())
+    torch_xla.launch(self._sync_bn1d_multi_channel, args=())
 
   def test_sync_bn2d(self):
-    xmp.spawn(self._sync_bn2d, args=())
+    torch_xla.launch(self._sync_bn2d, args=())
 
   def test_sync_bn3d(self):
-    xmp.spawn(self._sync_bn3d, args=())
+    torch_xla.launch(self._sync_bn3d, args=())
 
 
 if __name__ == '__main__':
