@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git225ec7b )
+                  master (2.5.0+gitd29b761 )
                 </div>
               
             
@@ -427,7 +427,7 @@
 <span class="sd">              [4, 5],</span>
 <span class="sd">              [6, 7]])</span>
 <span class="sd">    &gt;&gt;&gt; mesh.shape()</span>
-<span class="sd">    &gt;&gt;&gt; OrderedDict([(&#39;x&#39;, 4), (&#39;y&#39;, 2)])</span>
+<span class="sd">    OrderedDict([(&#39;x&#39;, 4), (&#39;y&#39;, 2)])</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="n">device_ids</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
@@ -562,9 +562,9 @@
 <span class="sd">    &gt;&gt;&gt; import torch_xla.distributed.spmd as xs</span>
 <span class="sd">    &gt;&gt;&gt; mesh = xs.get_1d_mesh(&quot;data&quot;)</span>
 <span class="sd">    &gt;&gt;&gt; print(mesh.mesh_shape)</span>
-<span class="sd">    &gt;&gt;&gt; (4,)</span>
+<span class="sd">    (4,)</span>
 <span class="sd">    &gt;&gt;&gt; print(mesh.axis_names)</span>
-<span class="sd">    &gt;&gt;&gt; (&#39;data&#39;,)</span>
+<span class="sd">    (&#39;data&#39;,)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
   <span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,)</span>
@@ -965,21 +965,18 @@
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Annotates the tensor provided with XLA partition spec. Internally,</span>
 <span class="sd">    it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.</span>
+
 <span class="sd">    Args:</span>
 <span class="sd">        t (Union[torch.Tensor, XLAShardedTensor]): input tensor to be annotated with partition_spec.</span>
 
 <span class="sd">        mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.</span>
 
 <span class="sd">        partition_spec (Tuple[Tuple, int, str, None]): A tuple of device_mesh dimension index or</span>
-<span class="sd">          `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.</span>
-<span class="sd">          This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).</span>
-<span class="sd">          When a tuple is specified, the corresponding input tensor axis will be sharded along all</span>
-<span class="sd">          logical axes in the tuple. Note that the order the mesh axes are specified in the tuple</span>
-<span class="sd">          will impact the resulting sharding.</span>
-<span class="sd">        For example, we can shard an 8x10 tensor 4-way row-wise, and replicate column-wise.</span>
-<span class="sd">        &gt;&gt; input = torch.randn(8, 10)</span>
-<span class="sd">        &gt;&gt; mesh_shape = (4, 2)</span>
-<span class="sd">        &gt;&gt; partition_spec = (0, None)</span>
+<span class="sd">            `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.</span>
+<span class="sd">            This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).</span>
+<span class="sd">            When a tuple is specified, the corresponding input tensor axis will be sharded along all</span>
+<span class="sd">            logical axes in the tuple. Note that the order the mesh axes are specified in the tuple</span>
+<span class="sd">            will impact the resulting sharding.</span>
 
 <span class="sd">        dynamo_custom_op (bool): if set to True, it calls the dynamo custom op variant of mark_sharding</span>
 <span class="sd">          to make itself recognizeable and traceable by dynamo.</span>
@@ -992,12 +989,10 @@
 <span class="sd">      &gt;&gt;&gt; num_devices = xr.global_runtime_device_count()</span>
 <span class="sd">      &gt;&gt;&gt; device_ids = np.array(range(num_devices))</span>
 <span class="sd">      &gt;&gt;&gt; mesh = Mesh(device_ids, mesh_shape, (&#39;x&#39;, &#39;y&#39;))</span>
-<span class="sd">      &gt;&gt;&gt; # 4-way data parallel</span>
 <span class="sd">      &gt;&gt;&gt; input = torch.randn(8, 32).to(xm.xla_device())</span>
-<span class="sd">      &gt;&gt;&gt; xs.mark_sharding(input, mesh, (0, None))</span>
-<span class="sd">      &gt;&gt;&gt; # 2-way model parallel</span>
+<span class="sd">      &gt;&gt;&gt; xs.mark_sharding(input, mesh, (0, None)) # 4-way data parallel</span>
 <span class="sd">      &gt;&gt;&gt; linear = nn.Linear(32, 10).to(xm.xla_device())</span>
-<span class="sd">      &gt;&gt;&gt; xs.mark_sharding(linear.weight, mesh, (None, 1))</span>
+<span class="sd">      &gt;&gt;&gt; xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
   <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;This requires XLA supported device(s).&quot;</span>

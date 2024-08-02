@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git225ec7b )
+                  master (2.5.0+gitd29b761 )
                 </div>
               
             
@@ -1403,13 +1403,13 @@
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
 
+<span class="c1"># TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be</span>
+<span class="c1"># dump as outputs. Need further investigation.</span>
 <div class="viewcode-block" id="get_stablehlo"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_stablehlo">[docs]</a><span class="k">def</span> <span class="nf">get_stablehlo</span><span class="p">(</span><span class="n">tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Get StableHLO for the computation graph in string format.</span>
 
 <span class="sd">  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.</span>
 <span class="sd">  If `tensors` is empty, the whole computation graph will be dump.</span>
-<span class="sd">  TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be</span>
-<span class="sd">  dump as outputs. Need further investigation.</span>
 
 <span class="sd">  For inference graph, it is recommended to pass the model outputs to `tensors`.</span>
 <span class="sd">  For training graph, it is not straightforward to identify the &quot;outputs&quot;. Using empty `tensors` is recommended.</span>
@@ -1429,13 +1429,13 @@
       <span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span></div>
 
 
+<span class="c1"># TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be</span>
+<span class="c1"># dump as outputs. Need further investigation.</span>
 <div class="viewcode-block" id="get_stablehlo_bytecode"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_stablehlo_bytecode">[docs]</a><span class="k">def</span> <span class="nf">get_stablehlo_bytecode</span><span class="p">(</span><span class="n">tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Get StableHLO for the computation graph in bytecode format.</span>
 
 <span class="sd">  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.</span>
 <span class="sd">  If `tensors` is empty, the whole computation graph will be dump.</span>
-<span class="sd">  TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be</span>
-<span class="sd">  dump as outputs. Need further investigation.</span>
 
 <span class="sd">  For inference graph, it is recommended to pass the model outputs to `tensors`.</span>
 <span class="sd">  For training graph, it is not straightforward to identify the &quot;outputs&quot;. Using empty `tensors` is recommended.</span>
@@ -1540,7 +1540,7 @@
                    <span class="n">optimizer_args</span><span class="o">=</span><span class="p">{},</span>
                    <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                    <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-<span class="w">  </span><span class="sd">&quot;&quot;&quot;Run the provided optimizer step and issue the XLA device step computation.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Run the provided optimizer step and sync gradidents across all devices.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance whose</span>
@@ -1563,6 +1563,11 @@
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The same value returned by the `optimizer.step()` call.</span>
+
+<span class="sd">  Example:</span>
+
+<span class="sd">    &gt;&gt;&gt; import torch_xla.core.xla_model as xm</span>
+<span class="sd">    &gt;&gt;&gt; xm.optimizer_step(self.optimizer)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
   <span class="n">loss</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="o">**</span><span class="n">optimizer_args</span><span class="p">)</span>
@@ -1596,9 +1601,13 @@
 <span class="sd">      controls whether every host&#39;s master (if ``global_master`` is ``False``)</span>
 <span class="sd">      saves the content, or only the global master (ordinal 0).</span>
 <span class="sd">      Default: False</span>
-<span class="sd">    sync (bool, optional): Whether to synchronize all replicas after saving</span>
-<span class="sd">      tensors. If True, all replicas must call `xm.save` or the main process</span>
-<span class="sd">      will hang.</span>
+
+<span class="sd">  Example:</span>
+
+<span class="sd">    &gt;&gt;&gt; import torch_xla.core.xla_model as xm</span>
+<span class="sd">    &gt;&gt;&gt; xm.wait_device_ops() # wait for all pending operations to finish.</span>
+<span class="sd">    &gt;&gt;&gt; xm.save(obj_to_save, path_to_save)</span>
+<span class="sd">    &gt;&gt;&gt; xm.rendezvous(&#39;torch_xla.core.xla_model.save&#39;) # multi process context only</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">should_write_data</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">master_only</span> <span class="ow">or</span> <span class="n">is_master_ordinal</span><span class="p">(</span>
       <span class="n">local</span><span class="o">=</span><span class="ow">not</span> <span class="n">global_master</span><span class="p">)</span>
@@ -1714,6 +1723,11 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The payloads exchanged by all the other cores, with the payload of core</span>
 <span class="sd">    ordinal `i` at position `i` in the returned tuple.</span>
+
+<span class="sd">  Example:</span>
+
+<span class="sd">    &gt;&gt;&gt; import torch_xla.core.xla_model as xm</span>
+<span class="sd">    &gt;&gt;&gt; xm.rendezvous(&#39;example&#39;)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">xla_rendezvous</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="n">tag</span><span class="p">)</span></div>
 
@@ -1759,6 +1773,12 @@
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The reduced value.</span>
+
+<span class="sd">  Example:</span>
+
+<span class="sd">    &gt;&gt;&gt; import torch_xla.core.xla_model as xm</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; accuracy = xm.mesh_reduce(&#39;test_accuracy&#39;, accuracy, np.mean)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">cpu_data</span> <span class="o">=</span> <span class="n">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
   <span class="n">bio</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
@@ -1835,6 +1855,11 @@
 
 <span class="sd">  Returns:</span>
 <span class="sd">    MemoryInfo dict with memory usage for the given device.</span>
+
+<span class="sd">  Example:</span>
+
+<span class="sd">    &gt;&gt;&gt; xm.get_memory_info()</span>
+<span class="sd">    {&#39;bytes_used&#39;: 290816, &#39;bytes_limit&#39;: 34088157184}</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">device</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">xla_device</span><span class="p">()</span>

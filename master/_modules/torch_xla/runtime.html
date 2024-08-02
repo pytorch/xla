@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git225ec7b )
+                  master (2.5.0+gitd29b761 )
                 </div>
               
             
@@ -465,6 +465,11 @@
 
 <div class="viewcode-block" id="device_type"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.device_type">[docs]</a><span class="k">def</span> <span class="nf">device_type</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the current PjRt device type.</span>
+
+<span class="sd">  Selects a default device if none has been configured</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A string representation of the device.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">pjrt_device</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">PJRT_DEVICE</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">pjrt_device</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">pjrt_device</span> <span class="k">else</span> <span class="n">pjrt_device</span></div>
@@ -598,11 +603,18 @@
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_num_runtime_devices</span><span class="p">()</span>
 
 
-<span class="c1"># API to enable SPMD mode. This is a recommended way to enable SPMD.</span>
-<span class="c1"># This forces SPMD mode if some tensors are already initialized on non-SPMD</span>
-<span class="c1"># devices. This means that those tensors would be replicated across the devices.</span>
 <span class="c1"># TODO(yeounoh) introduce SPMD configuration.</span>
 <div class="viewcode-block" id="use_spmd"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.use_spmd">[docs]</a><span class="k">def</span> <span class="nf">use_spmd</span><span class="p">(</span><span class="n">auto</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;API to enable SPMD mode. This is a recommended way to enable SPMD.</span>
+
+<span class="sd">  This forces SPMD mode if some tensors are already initialized on non-SPMD</span>
+<span class="sd">  devices. This means that those tensors would be replicated across the devices.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    auto (bool): Whether to enable the auto-sharding. Read </span>
+<span class="sd">      https://github.com/pytorch/xla/blob/master/docs/spmd_advanced.md#auto-sharding</span>
+<span class="sd">      for more detail</span>
+<span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;XLA_USE_SPMD&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;XLA_USE_SPMD is being deprecated. &quot;</span>
                   <span class="s2">&quot;Use torch_xla.runtime.use_spmd() &quot;</span>
@@ -635,7 +647,8 @@
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieve the master worker IP for the runtime. This calls into</span>
 <span class="sd">  backend-specific discovery APIs.</span>
 
-<span class="sd">  Returns master worker&#39;s IP address as a string.&quot;&quot;&quot;</span>
+<span class="sd">  Returns:</span>
+<span class="sd">    master worker&#39;s IP address as a string.&quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">device_type</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">tpu</span><span class="o">.</span><span class="n">discover_master_worker_ip</span><span class="p">()</span>
   <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;IP discovery not supported for device: </span><span class="si">{</span><span class="n">device_type</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
@@ -646,8 +659,8 @@
 <span class="sd">  before any computations have been performed.</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    path: The path at which to store the persistent cache.</span>
-<span class="sd">    readonly: Whether or not this worker should have write access to the cache.</span>
+<span class="sd">    path (str): The path at which to store the persistent cache.</span>
+<span class="sd">    readonly (bool): Whether or not this worker should have write access to the cache.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">assert</span> <span class="ow">not</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_computation_cache_is_initialized</span><span class="p">(</span>
   <span class="p">),</span> <span class="s2">&quot;Computation cache has already been initialized&quot;</span>
