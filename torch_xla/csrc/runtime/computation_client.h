@@ -405,6 +405,10 @@ class ComputationClient {
   // Return the XlaCoordinator for the runtime.
   virtual XlaCoordinator& GetCoordinator() = 0;
 
+  virtual void RegisterCustomCall(const std::string& fn_name,
+                                  void* function_ptr,
+                                  const std::string& platform) = 0;
+
   // Utility API around the vector based Compile() API to compile a single
   // computation.
   ComputationPtr Compile(xla::XlaComputation computation,

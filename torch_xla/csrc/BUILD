@@ -281,10 +281,6 @@ ptxla_cc_library(
         "@xla//xla/service:hlo_verifier",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
-        "@xla//xla/service:custom_call_target_registry",
-        "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
-        "@xla//xla/pjrt/c:pjrt_c_api_wrapper_impl",
-        "@xla//xla/pjrt/c:pjrt_c_api_gpu_extension_hdrs",
     ],
 )
 

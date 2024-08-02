@@ -153,7 +153,8 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<std::string> PjRtDevicesToString(
       absl::Span<xla::PjRtDevice* const> devices) const;
 
-  const PJRT_Api* GetPjRtCApiIfAvailable() const;
+  void RegisterCustomCall(const std::string& fn_name, void* function_ptr,
+                          const std::string& platform) override;
 
  private:
   std::unique_ptr<xla::PjRtClient> client_;
