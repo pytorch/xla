@@ -135,9 +135,12 @@ def compile(f: Optional[Callable] = None,
     saved_current_graph_name = torch_xla._XLAC._get_current_graph_name()
     torch_xla._XLAC._set_use_eager_mode(False)
     if name != None:
-      torch_xla._XLAC._set_current_graph_name(name)
+      torch_xla._XLAC._set_current_graph_name(name + '_clear_pending')
     # Clear pending operations
     _clear_pending_ops_before_compile()
+
+    if name != None:
+      torch_xla._XLAC._set_current_graph_name(name)
 
     # if full_graph sets to true execution can not happen before the sync below
     torch_xla._XLAC._set_allow_execution(not full_graph)
