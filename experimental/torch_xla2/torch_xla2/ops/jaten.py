@@ -2282,6 +2282,17 @@ def _aten_dim(self):
   return len(self.shape)
 
 
+@op(torch.ops.aten.copysign)
+def _aten_copysign(input, other, *, out=None):
+  result = jnp.copysign(input, other)
+  # torch.copysign(x, y) returns float32 for integer x and y,
+  # regardless of their exact integer dtype, whereas jax.copysign returns
+  # float64 when one or both of them is int64.
+  if jnp.issubdtype(input.dtype, jnp.integer) and jnp.issubdtype(
+    other.dtype, jnp.integer
+  ):
+    result = result.astype(jnp.float32)
+  return result
 @op(torch.ops.aten.i0)
 @op_base.promote_int_input
 def _aten_i0(self):
