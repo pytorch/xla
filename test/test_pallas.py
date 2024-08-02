@@ -27,10 +27,10 @@ class PallasTest(unittest.TestCase):
   # therefore we use != instead of ==.
   def _make_attention_mask_from_segment_ids(self, q_segment_ids,
                                             kv_segment_ids):
-    return q_segment_ids.view(q_segment_ids.shape[0], 1,
-                              q_segment_ids.shape[1], 1) != kv_segment_ids.view(
-                                  kv_segment_ids.shape[0], 1, 1,
-                                  kv_segment_ids.shape[1])
+    return q_segment_ids.view(q_segment_ids.shape[0], 1, q_segment_ids.shape[1],
+                              1) != kv_segment_ids.view(kv_segment_ids.shape[0],
+                                                        1, 1,
+                                                        kv_segment_ids.shape[1])
 
   def _attention(self, q, k, v, *, attn_mask=None, ab=None):
     attn_weight = q @ k.transpose(-2, -1)
@@ -1027,15 +1027,14 @@ class PallasTest(unittest.TestCase):
                    "This test only works on TPUv4+.")
   def test_splash_attention_wrapper(self):
     from torch_xla.experimental.custom_kernel import splash_attention
-    
+
     # TODO add these helper functions
     seed = data.draw(seed_strategy())
     key = random.key(seed)
     k1, k2, k3 = random.split(key, 3)
 
     q_seq_len, kv_seq_len, num_q_heads, num_kv_heads, head_dim, dtype = (
-        data.draw(mha_strategy())
-    )
+        data.draw(mha_strategy()))
 
     # Avoid segment ids for rectangular matrices, as its hard to enforce
     # valid masks (non-0 rows).
@@ -1084,6 +1083,7 @@ class PallasTest(unittest.TestCase):
         attn_logits_soft_cap=attn_logits_soft_cap,
     )
     self._assert_allclose(o, o_ref, atol=3e-3, rtol=3e-3)
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
