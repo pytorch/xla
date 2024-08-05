@@ -116,6 +116,12 @@ std::string DebugUtil::GetTensorsGraphInfo(
     }
   }
   std::stringstream ss;
+
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  if (graph_executor->CurrentGraphName() != "") {
+    ss << "Graph Name: " << graph_executor->CurrentGraphName() << "\n";
+  }
+
   std::vector<torch::lazy::SourceLocation> frames =
       torch::lazy::GetPythonFrames();
   ss << "TensorsGraphInfo:\n";
@@ -266,12 +272,13 @@ void DebugUtil::analyze_graph_execution_python_frame(
   constexpr std::string_view unexpected_execution_prefix =
       "Unexpected Execution Analysis: ";
 
-  bool unexpected_execution = !XLAGraphExecutor::Get()->AllowExecution();
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  bool unexpected_execution = !graph_executor->AllowExecution();
 
   if (unexpected_execution) {
     // if unexpected_execution happens we want to alywas print
     // debugg message on master process
-  } else if (XLAGraphExecutor::Get()->UseEagerMode() &&
+  } else if (graph_executor->UseEagerMode() &&
              source != GraphAnalysisSource::DynamoExecution) {
     // don't output analysis for eager mode execution/compilation
     return;
@@ -355,6 +362,10 @@ void DebugUtil::analyze_graph_execution_python_frame(
   }
 
   ss << debug_output_prefix << "Graph Info: \n";
+  if (graph_executor->CurrentGraphName() != "") {
+    ss << debug_output_prefix
+       << "  Graph Name: " << graph_executor->CurrentGraphName() << "\n";
+  }
   ss << debug_output_prefix
      << "  Graph Hash: " << torch::lazy::HashToString(graph_hash) << "\n";
   ss << debug_output_prefix

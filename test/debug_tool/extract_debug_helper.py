@@ -1,4 +1,5 @@
 import os
+import re
 from typing import NamedTuple
 
 
@@ -23,6 +24,7 @@ def extract_compilation_cause(lines):
 
 
 class GraphInfo(NamedTuple):
+  name: str
   hash: str
   num_input: int
   num_output: int
@@ -38,14 +40,24 @@ class PostCompilationInfo(NamedTuple):
 
 def extract_graph_infos(lines):
   infos = []
+  graph_name = ""
   for i in range(len(lines)):
     if 'Graph Info' in lines[i].decode():
-      hash = lines[i + 1].decode().split('Graph Hash: ')[1].strip()
-      num_input = lines[i +
-                        2].decode().split('Number of Graph Inputs:')[1].strip()
-      num_output = lines[i + 3].decode().split(
-          'Number of Graph Outputs:')[1].strip()
-      infos.append(GraphInfo(hash, int(num_input), int(num_output)))
+      i += 1
+      if 'Graph Name' in lines[i].decode():
+        graph_name = re.search(r"\s* Analysis:\s*Graph Name:\s*(.+)",
+                               lines[i].decode()).group(1)
+        i += 1
+      hash = re.search(r"\s* Analysis:\s*Graph Hash:\s*(.+)",
+                       lines[i].decode()).group(1)
+      i += 1
+      num_input = re.search(r"\s* Analysis:\s*Number of Graph Inputs:\s*(.+)",
+                            lines[i].decode()).group(1)
+      i += 1
+      num_output = re.search(r"\s* Analysis:\s*Number of Graph Outputs:\s*(.+)",
+                             lines[i].decode()).group(1)
+      i += 1
+      infos.append(GraphInfo(graph_name, hash, int(num_input), int(num_output)))
 
   return infos
 

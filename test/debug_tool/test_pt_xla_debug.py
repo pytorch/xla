@@ -193,9 +193,49 @@ class PtXLADebugTest(unittest.TestCase):
     if self.debug_level > 1:
       # one graph info from compilation, one from execution, hash should match
       self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+      # 1 compile, 1 execution to clear pending graph before doing real compile
+      self.assertEqual(graph_infos[0].name, 'toy_program_clear_pending')
+      self.assertEqual(graph_infos[1].name, 'toy_program_clear_pending')
+      # 1 compile, 1 execution to clear pending graph for real program
+      self.assertEqual(graph_infos[2].name, 'toy_program')
+      self.assertEqual(graph_infos[3].name, 'toy_program')
+    else:
+      self.assertEqual(graph_infos[0].name, 'toy_program_clear_pending')
+      self.assertEqual(graph_infos[1].name, 'toy_program')
+
     # this graph has one input(random seed) and one output(t1)
     self.assertEqual(graph_infos[0].num_input, 1)
     self.assertEqual(graph_infos[0].num_output, 1)
+    open(self.debug_file_name, 'w').close()
+
+  def test_torch_xla_compile_custom_name(self):
+    device = xm.xla_device()
+    t1 = torch.randn(18, 4, device=device)
+
+    def toy_program2(t1):
+      return torch.logsumexp(t1 * t1, 1)
+
+    compiled = torch_xla.compile(toy_program2, name="custom_name")
+    res = compiled(t1)
+    with open(self.debug_file_name, 'rb') as f:
+      lines = f.readlines()
+      executation_causes = extract_execution_cause(lines)
+      compilation_causes = extract_compilation_cause(lines)
+      graph_infos = extract_graph_infos(lines)
+
+    if self.debug_level > 1:
+      # one graph info from compilation, one from execution, hash should match
+      self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+      # 1 compile, 1 execution to clear pending graph before doing real compile
+      self.assertEqual(graph_infos[0].name, 'custom_name_clear_pending')
+      self.assertEqual(graph_infos[1].name, 'custom_name_clear_pending')
+      # 1 compile, 1 execution to clear pending graph for real program
+      self.assertEqual(graph_infos[2].name, 'custom_name')
+      self.assertEqual(graph_infos[3].name, 'custom_name')
+    else:
+      self.assertEqual(graph_infos[0].name, 'custom_name_clear_pending')
+      self.assertEqual(graph_infos[1].name, 'custom_name')
+
     open(self.debug_file_name, 'w').close()
 
   def test_parallel_loader(self):
