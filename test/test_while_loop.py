@@ -96,12 +96,12 @@ class WhileLoopTest(unittest.TestCase):
     torch.set_grad_enabled(False)
 
     # TODO(@manfei): enable weights[0] != weights[1] and bias[0] != bias[1], now test pass with weights[0] == weights[1] and bias[0]==bias[1]
-    weights = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
-                            [[5.1, 6.2], [7.3, 8.4]]],
+    weights = torch.tensor([[[5.1, 6.2], [7.3, 8.4]], [[1.0, 2.0], [3.0, 4.0]],
+                            [[1.0, 2.0], [3.0, 4.0]]],
                            device=device)
 
-    bias = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
-                         [[16.1, 17.2], [18.3, 19.4]]],
+    bias = torch.tensor([[[16.0, 17.0], [0.0, 0.0]], [[1.0, 2.0], [0.0, 0.0]],
+                         [[1.0, 2.0], [0.0, 0.0]]],
                         device=device)
 
     def cond_fn(iteri, weights, bias, x):
@@ -109,7 +109,7 @@ class WhileLoopTest(unittest.TestCase):
 
     def body_fn(iteri, weights, bias, x):
       local_wieght_value = x[0]
-      local_bias_value = x[1]
+      local_bias_value = x[1][0]
       x_val = x[2]
       local_linear = torch.nn.Linear(2, 2)
       local_linear.weight = torch.nn.parameter.Parameter(
@@ -118,10 +118,10 @@ class WhileLoopTest(unittest.TestCase):
           data=local_bias_value, requires_grad=False)
       next_iteri = iteri - 1
       next_x = torch.stack(
-          (weights[next_iteri], bias[next_iteri], local_linear(x_val)))
+          (weights[-next_iteri-1], bias[-next_iteri-1], local_linear(x_val)))
       return next_iteri, weights, bias, next_x
 
-    inputs = torch.stack((weights[2], bias[2],
+    inputs = torch.stack((weights[0], bias[0],
                           torch.tensor([[1.0, 1.0], [1.0, 1.0]],
                                        dtype=torch.float32,
                                        device=device)))
@@ -135,7 +135,7 @@ class WhileLoopTest(unittest.TestCase):
     expected = inputs
     while (iteri >= 0):
       weight_value = expected[0]
-      bias_value = expected[1]
+      bias_value = expected[1][0]
       x = expected[2]
       local_linear_2 = torch.nn.Linear(2, 2)
       local_linear_2.weight = torch.nn.parameter.Parameter(
@@ -143,7 +143,7 @@ class WhileLoopTest(unittest.TestCase):
       local_linear_2.bias = torch.nn.parameter.Parameter(
           data=bias_value, requires_grad=False)
       iteri = iteri - 1
-      expected = torch.stack((weights[iteri], bias[iteri], local_linear_2(x)))
+      expected = torch.stack((weights[-iteri-1], bias[-iteri-1], local_linear_2(x)))
     print("final expected: ", expected)
 
     self.assertTrue(torch.all(torch.eq(res[2], expected[2])))
