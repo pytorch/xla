@@ -122,7 +122,7 @@ class WhileLoopTest(unittest.TestCase):
       return next_iteri, weights, bias, next_x
 
     inputs = torch.stack((weights[0], bias[0],
-                          torch.tensor([[1.0, 1.0], [1.0, 1.0]],
+                          torch.tensor([[1.0, 2.0], [3.0, 4.0]],
                                        dtype=torch.float32,
                                        device=device)))
     print("inputs: ", inputs)  # needed to enable func catch stacked inputs
