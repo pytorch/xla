@@ -21,6 +21,9 @@ class TestExperimentalCallback(absltest.TestCase):
 
     def cb(tensor):
       self.assertIs(c, tensor)
+      # TODO: check that result is both assigned and completed
+      self.assertNotIn("Data Handle: None",
+                       torch_xla._XLAC._get_xla_tensor_debug_info(tensor))
       event.set()
 
     callback.on_ready_callback(c, cb)
