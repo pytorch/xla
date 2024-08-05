@@ -26,7 +26,7 @@ OptimizationBarrier::OptimizationBarrier(const torch::lazy::OpList& inputs)
 
 torch::lazy::NodePtr OptimizationBarrier::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<OptimizationBarrier>(operands);
+  return torch_xla::MakeNode<OptimizationBarrier>(operands);
 }
 
 XlaOpVector OptimizationBarrier::Lower(LoweringContext* loctx) const {

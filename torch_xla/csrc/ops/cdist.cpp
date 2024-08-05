@@ -36,9 +36,9 @@ CdistForward::CdistForward(const torch::lazy::Value& x1,
       use_chebyshev_(use_chebyshev) {}
 
 torch::lazy::NodePtr CdistForward::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CdistForward>(operands.at(0), operands.at(1),
-                                             operands.at(2), use_hamming_,
-                                             use_chebyshev_);
+  return torch_xla::MakeNode<CdistForward>(operands.at(0), operands.at(1),
+                                           operands.at(2), use_hamming_,
+                                           use_chebyshev_);
 }
 
 XlaOpVector CdistForward::Lower(LoweringContext* loctx) const {

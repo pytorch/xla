@@ -515,7 +515,7 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d(
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   XLA_CHECK(common_device);
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3d>(
+  torch::lazy::NodePtr node = torch_xla::MakeNode<AdaptiveAvgPool3d>(
       bridge::GetXlaTensor(self)->GetIrValue(),
       std::vector<int64_t>(output_size.begin(), output_size.end()));
   return torch_xla::bridge::AtenFromXlaTensor(
@@ -537,7 +537,7 @@ at::Tensor XLANativeFunctions::_adaptive_avg_pool3d_backward(
   }
   auto common_device = torch_xla::bridge::GetXlaDevice(grad_output, self);
   XLA_CHECK(common_device);
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<AdaptiveAvgPool3dBackward>(
+  torch::lazy::NodePtr node = torch_xla::MakeNode<AdaptiveAvgPool3dBackward>(
       bridge::GetXlaTensor(grad_output)->GetIrValue(),
       bridge::GetXlaTensor(self)->GetIrValue());
 
@@ -1005,7 +1005,7 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
   }
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
   return bridge::AtenFromXlaTensor(
-      base_->CreateFrom(torch::lazy::MakeNode<AsStridedViewUpdate>(
+      base_->CreateFrom(torch_xla::MakeNode<AsStridedViewUpdate>(
           base_->GetIrValue(), mutated_view_->GetIrValue(),
           torch::lazy::ToVector<int64_t>(base_->shape().get().dimensions()),
           xstride, storage_offset.value_or(0))));
@@ -1017,8 +1017,8 @@ at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
   auto common_device = torch_xla::bridge::GetXlaDevice(self, other);
   XLA_CHECK(common_device);
   torch::lazy::NodePtr node =
-      torch::lazy::MakeNode<Atan2>(bridge::GetXlaTensor(self)->GetIrValue(),
-                                   bridge::GetXlaTensor(other)->GetIrValue());
+      torch_xla::MakeNode<Atan2>(bridge::GetXlaTensor(self)->GetIrValue(),
+                                 bridge::GetXlaTensor(other)->GetIrValue());
 
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(node), *common_device));
@@ -1364,7 +1364,7 @@ at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base,
   int64_t canonical_dim2 =
       torch::lazy::GetCanonicalDimensionIndex(dim2, base_rank);
   return bridge::AtenFromXlaTensor(
-      base_->CreateFrom(torch::lazy::MakeNode<DiagonalViewUpdate>(
+      base_->CreateFrom(torch_xla::MakeNode<DiagonalViewUpdate>(
           base_->GetIrValue(), mutated_view_->GetIrValue(), offset,
           canonical_dim1, canonical_dim2)));
 }
@@ -1881,7 +1881,7 @@ at::Tensor XLANativeFunctions::leaky_relu_backward(
   auto node_negative_slope =
       torch::lazy::LazyGraphExecutor::Get()->GetIrValueForScalarFromCodegen(
           negative_slope, *common_device);
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<LeakyReluBackward>(
+  torch::lazy::NodePtr node = torch_xla::MakeNode<LeakyReluBackward>(
       bridge::GetXlaTensor(grad_output)->GetIrValue(),
       bridge::GetXlaTensor(self)->GetIrValue(), node_negative_slope,
       self_is_result);
@@ -1942,7 +1942,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::linalg_inv_ex(
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   TORCH_INTERNAL_ASSERT(common_device);
   torch::lazy::NodePtr node =
-      torch::lazy::MakeNode<Inverse>(bridge::GetXlaTensor(self)->GetIrValue());
+      torch_xla::MakeNode<Inverse>(bridge::GetXlaTensor(self)->GetIrValue());
   auto result = torch_xla::XLATensor::Create(std::move(node), *common_device);
   auto info = tensor_methods::full_like(result, 0, result->GetDevice(),
                                         at::ScalarType::Int);
@@ -3192,7 +3192,7 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
   xla::Shape narrow_shape = base_tensor_shape;
   narrow_shape.set_dimensions(dim, 1);
   torch::lazy::NodePtr mutated_view_tensor_reshaped_node =
-      torch::lazy::MakeNode<ViewOp>(
+      torch_xla::MakeNode<ViewOp>(
           mutated_view_tensor->GetIrValue(),
           torch::lazy::ToVector<int64_t>(narrow_shape.dimensions()));
 
@@ -3201,7 +3201,7 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
       runtime::util::ToVector<int64_t>(base_tensor_shape.get().dimensions()),
       dim, index);
   return bridge::AtenFromXlaTensor(
-      base_tensor->CreateFrom(torch::lazy::MakeNode<UpdateSlice>(
+      base_tensor->CreateFrom(torch_xla::MakeNode<UpdateSlice>(
           base_tensor->GetIrValue(), mutated_view_tensor_reshaped_node,
           indices)));
 }
@@ -3266,7 +3266,7 @@ at::Tensor XLANativeFunctions::slice_scatter(
   step = std::min(step, end_val - start_val);
 
   return bridge::AtenFromXlaTensor(
-      base_->CreateFrom(torch::lazy::MakeNode<Unselect>(
+      base_->CreateFrom(torch_xla::MakeNode<Unselect>(
           base_->GetIrValue(), mutated_view_->GetIrValue(), dim, start_val,
           end_val, step)));
 }

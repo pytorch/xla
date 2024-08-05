@@ -51,8 +51,8 @@ Mean::Mean(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr Mean::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Mean>(operands.at(0), dimensions_,
-                                     keep_reduced_dimensions_, dtype_);
+  return torch_xla::MakeNode<Mean>(operands.at(0), dimensions_,
+                                   keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Mean::Lower(LoweringContext* loctx) const {

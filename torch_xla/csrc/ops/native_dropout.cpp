@@ -25,8 +25,8 @@ NativeDropout::NativeDropout(const torch::lazy::Value& input,
       train_(train) {}
 
 torch::lazy::NodePtr NativeDropout::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<NativeDropout>(operands.at(0), operands.at(1),
-                                              p_, train_);
+  return torch_xla::MakeNode<NativeDropout>(operands.at(0), operands.at(1), p_,
+                                            train_);
 }
 
 XlaOpVector NativeDropout::Lower(LoweringContext* loctx) const {

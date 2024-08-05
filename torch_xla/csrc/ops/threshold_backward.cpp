@@ -15,8 +15,8 @@ ThresholdBackward::ThresholdBackward(const torch::lazy::Value& grad_output,
 
 torch::lazy::NodePtr ThresholdBackward::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<ThresholdBackward>(operands.at(0),
-                                                  operands.at(1), threshold_);
+  return torch_xla::MakeNode<ThresholdBackward>(operands.at(0), operands.at(1),
+                                                threshold_);
 }
 
 XlaOpVector ThresholdBackward::Lower(LoweringContext* loctx) const {

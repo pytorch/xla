@@ -14,7 +14,7 @@ MarkTensor::MarkTensor(const torch::lazy::Value& input, const std::string& info)
       info_(info) {}
 
 torch::lazy::NodePtr MarkTensor::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<MarkTensor>(operands.at(0), info_);
+  return torch_xla::MakeNode<MarkTensor>(operands.at(0), info_);
 }
 
 XlaOpVector MarkTensor::Lower(LoweringContext* loctx) const {

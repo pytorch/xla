@@ -33,8 +33,8 @@ UpdateSlice::UpdateSlice(const torch::lazy::Value& input,
       base_indices_(base_indices.begin(), base_indices.end()) {}
 
 torch::lazy::NodePtr UpdateSlice::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<UpdateSlice>(operands.at(0), operands.at(1),
-                                            base_indices_);
+  return torch_xla::MakeNode<UpdateSlice>(operands.at(0), operands.at(1),
+                                          base_indices_);
 }
 
 XlaOpVector UpdateSlice::Lower(LoweringContext* loctx) const {

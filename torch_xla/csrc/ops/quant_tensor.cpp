@@ -28,9 +28,9 @@ QuantizeTensor::QuantizeTensor(const torch::lazy::Value& input,
       zero_point_(zero_point) {}
 
 torch::lazy::NodePtr QuantizeTensor::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<QuantizeTensor>(operands.at(0), scale_,
-                                               zero_point_, quant_min_,
-                                               quant_max_, dtype_, axis_);
+  return torch_xla::MakeNode<QuantizeTensor>(operands.at(0), scale_,
+                                             zero_point_, quant_min_,
+                                             quant_max_, dtype_, axis_);
 }
 
 XlaOpVector QuantizeTensor::Lower(LoweringContext* loctx) const {

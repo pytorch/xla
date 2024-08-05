@@ -32,7 +32,7 @@ Stack::Stack(c10::ArrayRef<torch::lazy::Value> values, int64_t dim)
       dim_(dim) {}
 
 torch::lazy::NodePtr Stack::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Stack>(operands, dim_);
+  return torch_xla::MakeNode<Stack>(operands, dim_);
 }
 
 XlaOpVector Stack::Lower(LoweringContext* loctx) const {

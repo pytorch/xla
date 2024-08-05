@@ -13,8 +13,8 @@ Put::Put(const torch::lazy::Value& input, const torch::lazy::Value& index,
       accumulate_(accumulate) {}
 
 torch::lazy::NodePtr Put::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Put>(operands.at(0), operands.at(1),
-                                    operands.at(2), accumulate_);
+  return torch_xla::MakeNode<Put>(operands.at(0), operands.at(1),
+                                  operands.at(2), accumulate_);
 }
 
 XlaOpVector Put::Lower(LoweringContext* loctx) const {

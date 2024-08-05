@@ -23,7 +23,7 @@ CastInt4::CastInt4(const torch::lazy::Value& weight,
       int4_vals_(int4_vals) {}
 
 torch::lazy::NodePtr CastInt4::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CastInt4>(operands.at(0), int4_vals_);
+  return torch_xla::MakeNode<CastInt4>(operands.at(0), int4_vals_);
 }
 
 XlaOpVector CastInt4::Lower(LoweringContext* loctx) const {

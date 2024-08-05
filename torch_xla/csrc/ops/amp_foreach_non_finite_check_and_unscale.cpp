@@ -47,7 +47,7 @@ torch::lazy::NodePtr AmpForachNonFiniteCheckAndUnscale::Clone(
   std::vector<torch::lazy::Value> operand_list(operands.begin(),
                                                operands.end() - 2);
   size_t sz = operand_list.size();
-  return torch::lazy::MakeNode<AmpForachNonFiniteCheckAndUnscale>(
+  return torch_xla::MakeNode<AmpForachNonFiniteCheckAndUnscale>(
       operand_list, operands[sz], operands[sz + 1]);
 }
 

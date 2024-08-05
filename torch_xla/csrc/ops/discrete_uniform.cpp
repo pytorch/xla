@@ -18,8 +18,8 @@ DiscreteUniform::DiscreteUniform(const torch::lazy::Value& from,
 
 torch::lazy::NodePtr DiscreteUniform::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),
-                                                operands.at(2), xla_shape());
+  return torch_xla::MakeNode<DiscreteUniform>(operands.at(0), operands.at(1),
+                                              operands.at(2), xla_shape());
 }
 
 XlaOpVector DiscreteUniform::Lower(LoweringContext* loctx) const {

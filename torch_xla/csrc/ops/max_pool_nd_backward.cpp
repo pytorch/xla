@@ -61,7 +61,7 @@ MaxPoolNdBackward::MaxPoolNdBackward(
 
 torch::lazy::NodePtr MaxPoolNdBackward::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<MaxPoolNdBackward>(
+  return torch_xla::MakeNode<MaxPoolNdBackward>(
       operands.at(0), operands.at(1), spatial_dim_count_, kernel_size_, stride_,
       padding_, ceil_mode_);
 }

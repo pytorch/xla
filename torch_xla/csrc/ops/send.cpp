@@ -35,8 +35,7 @@ Send::Send(const torch::lazy::Value& input, const torch::lazy::Value& token,
       channel_id_(channel_id) {}
 
 torch::lazy::NodePtr Send::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Send>(operands.at(0), operands.at(1),
-                                     channel_id_);
+  return torch_xla::MakeNode<Send>(operands.at(0), operands.at(1), channel_id_);
 }
 
 XlaOpVector Send::Lower(LoweringContext* loctx) const {

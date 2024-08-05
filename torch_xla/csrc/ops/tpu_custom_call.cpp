@@ -15,7 +15,7 @@ TpuCustomCall::TpuCustomCall(torch::lazy::OpList inputs,
       payload_(payload) {}
 
 torch::lazy::NodePtr TpuCustomCall::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<TpuCustomCall>(operands, xla_shape(), payload_);
+  return torch_xla::MakeNode<TpuCustomCall>(operands, xla_shape(), payload_);
 }
 
 XlaOpVector TpuCustomCall::Lower(LoweringContext* loctx) const {

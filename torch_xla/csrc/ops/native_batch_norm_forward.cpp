@@ -69,7 +69,7 @@ NativeBatchNormForward::NativeBatchNormForward(
 
 torch::lazy::NodePtr NativeBatchNormForward::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<NativeBatchNormForward>(
+  return torch_xla::MakeNode<NativeBatchNormForward>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), training_, eps_);
 }

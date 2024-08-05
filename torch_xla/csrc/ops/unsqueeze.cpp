@@ -22,7 +22,7 @@ Unsqueeze::Unsqueeze(const torch::lazy::Value& input, int dim)
       dim_(dim) {}
 
 torch::lazy::NodePtr Unsqueeze::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Unsqueeze>(operands.at(0), dim_);
+  return torch_xla::MakeNode<Unsqueeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Unsqueeze::Lower(LoweringContext* loctx) const {

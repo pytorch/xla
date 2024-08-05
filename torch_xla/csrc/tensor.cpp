@@ -360,7 +360,7 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value,
   auto xla_shape = shape();
   if (xla_shape.get().element_type() != GetXlaShape(ir_value).element_type()) {
     ir_value =
-        torch::lazy::MakeNode<Cast>(ir_value, xla_shape.get().element_type());
+        torch_xla::MakeNode<Cast>(ir_value, xla_shape.get().element_type());
   }
   SetIrValue(std::move(ir_value), /*inplace=*/true, delay_eager_executation);
 }
@@ -612,7 +612,7 @@ torch::lazy::Value XLATensor::MaybeCastIrValue(
   }
   if (logical_element_type &&
       RequiresRawTypeCasting(*logical_element_type, &device)) {
-    ir_value = torch::lazy::MakeNode<Cast>(ir_value, *logical_element_type);
+    ir_value = torch_xla::MakeNode<Cast>(ir_value, *logical_element_type);
   }
   return ir_value;
 }
@@ -673,7 +673,7 @@ c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
-  auto n_add = torch::lazy::MakeNode<SizeAdd>(node(), p_other->node());
+  auto n_add = torch_xla::MakeNode<SizeAdd>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_add, PyType::INT);
 }
 
@@ -685,7 +685,7 @@ c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   torch::lazy::NodePtr n_sub =
-      torch::lazy::MakeNode<SizeSub>(node(), p_other->node());
+      torch_xla::MakeNode<SizeSub>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_sub, PyType::INT);
 }
 
@@ -693,8 +693,7 @@ c10::SymNode XLASymNodeImpl::mul(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
-  auto n_mul =
-      torch::lazy::MakeNode<torch_xla::SizeMul>(node(), p_other->node());
+  auto n_mul = torch_xla::MakeNode<torch_xla::SizeMul>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_mul, PyType::INT);
 }
 
@@ -712,7 +711,7 @@ c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
-  auto n_div = torch::lazy::MakeNode<SizeDiv>(node(), p_other->node());
+  auto n_div = torch_xla::MakeNode<SizeDiv>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_div, PyType::INT);
 }
 
@@ -723,7 +722,7 @@ c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   torch::lazy::NodePtr n_mod =
-      torch::lazy::MakeNode<SizeMod>(node(), p_other->node());
+      torch_xla::MakeNode<SizeMod>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_mod, PyType::INT);
 }
 
@@ -731,7 +730,7 @@ c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
-  auto n_eq = torch::lazy::MakeNode<SizeEq>(node(), p_other->node());
+  auto n_eq = torch_xla::MakeNode<SizeEq>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_eq, PyType::BOOL);
 }
 
@@ -740,7 +739,7 @@ c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
-  auto n_ne = torch::lazy::MakeNode<SizeNe>(node(), p_other->node());
+  auto n_ne = torch_xla::MakeNode<SizeNe>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_ne, PyType::BOOL);
 }
 
@@ -749,7 +748,7 @@ c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
-  auto n_gt = torch::lazy::MakeNode<SizeGt>(node(), p_other->node());
+  auto n_gt = torch_xla::MakeNode<SizeGt>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_gt, PyType::BOOL);
 }
 
@@ -758,7 +757,7 @@ c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
-  auto n_lt = torch::lazy::MakeNode<SizeLt>(node(), p_other->node());
+  auto n_lt = torch_xla::MakeNode<SizeLt>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_lt, PyType::BOOL);
 }
 
@@ -772,7 +771,7 @@ c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other) {
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
-  auto n_ge = torch::lazy::MakeNode<SizeGe>(node(), p_other->node());
+  auto n_ge = torch_xla::MakeNode<SizeGe>(node(), p_other->node());
   return c10::make_intrusive<XLASymNodeImpl>(n_ge, PyType::BOOL);
 }
 
@@ -806,20 +805,20 @@ c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
 c10::SymNode XLASymNodeImpl::sym_or(const c10::SymNode& other) {
   auto a =
       guard_bool(__FILE__, __LINE__) || other->guard_bool(__FILE__, __LINE__);
-  auto cnst = torch::lazy::MakeNode<SizeConstant>(a);
+  auto cnst = torch_xla::MakeNode<SizeConstant>(a);
   return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::sym_and(const c10::SymNode& other) {
   auto a =
       guard_bool(__FILE__, __LINE__) && other->guard_bool(__FILE__, __LINE__);
-  auto cnst = torch::lazy::MakeNode<SizeConstant>(a);
+  auto cnst = torch_xla::MakeNode<SizeConstant>(a);
   return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::sym_not() {
   auto a = !guard_bool(__FILE__, __LINE__);
-  auto cnst = torch::lazy::MakeNode<SizeConstant>(a);
+  auto cnst = torch_xla::MakeNode<SizeConstant>(a);
   return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::BOOL);
 }
 
@@ -855,7 +854,7 @@ c10::SymNode XLASymNodeImpl::is_channels_last_strides_3d(
 // them to error only if poked.
 c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
     at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
-  auto error_node = torch::lazy::MakeNode<SizeError>();
+  auto error_node = torch_xla::MakeNode<SizeError>();
   return c10::make_intrusive<XLASymNodeImpl>(error_node, PyType::BOOL);
 }
 
@@ -870,7 +869,7 @@ c10::SymNode XLASymNodeImpl::sym_float() {
 }
 
 c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
-  auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
+  auto cnst = torch_xla::MakeNode<SizeConstant>(num);
   return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::INT);
 }
 
@@ -880,7 +879,7 @@ c10::SymNode XLASymNodeImpl::wrap_float(double num) {
 }
 
 c10::SymNode XLASymNodeImpl::wrap_bool(bool num) {
-  auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
+  auto cnst = torch_xla::MakeNode<SizeConstant>(num);
   return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::BOOL);
 }
 

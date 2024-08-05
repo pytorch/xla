@@ -27,7 +27,7 @@ Expand::Expand(const torch::lazy::Value& input, std::vector<int64_t> size)
       size_(std::move(size)) {}
 
 torch::lazy::NodePtr Expand::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Expand>(operands.at(0), size_);
+  return torch_xla::MakeNode<Expand>(operands.at(0), size_);
 }
 
 XlaOpVector Expand::Lower(LoweringContext* loctx) const {

@@ -2063,7 +2063,7 @@ void InitXlaModuleBindings(py::module m) {
     auto shard_shape = xla::ShapeUtil::MakeShape(
         MakeXlaPrimitiveType(xtensor->dtype(), &(xtensor->GetDevice())),
         ShardingUtil::GetShardShape(sharding_spec));
-    auto output = xtensor->CreateFrom(torch::lazy::MakeNode<CustomSharding>(
+    auto output = xtensor->CreateFrom(torch_xla::MakeNode<CustomSharding>(
         xtensor->GetIrValue(), shard_shape,
         CustomSharding::Type::kSPMDFullToShardShape));
     output->SetShardingSpec(XLATensor::ShardingSpec(
@@ -2086,7 +2086,7 @@ void InitXlaModuleBindings(py::module m) {
                 reinterpret_cast<THPDtype*>(output_dtype.ptr())->scalar_type,
                 &(xtensor->GetDevice())),
             output_shape);
-        auto output = xtensor->CreateFrom(torch::lazy::MakeNode<CustomSharding>(
+        auto output = xtensor->CreateFrom(torch_xla::MakeNode<CustomSharding>(
             xtensor->GetIrValue(), full_shape,
             CustomSharding::Type::kSPMDShardToFullShape));
         output->SetShardingSpec(XLATensor::ShardingSpec(sharding, full_shape));

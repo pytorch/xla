@@ -21,8 +21,8 @@ Select::Select(const torch::lazy::Value& input, int64_t dim, int64_t start,
       stride_(stride) {}
 
 torch::lazy::NodePtr Select::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Select>(operands.at(0), dim_, start_, end_,
-                                       stride_);
+  return torch_xla::MakeNode<Select>(operands.at(0), dim_, start_, end_,
+                                     stride_);
 }
 
 XlaOpVector Select::Lower(LoweringContext* loctx) const {

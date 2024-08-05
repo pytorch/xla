@@ -21,9 +21,9 @@ CustomCall::CustomCall(torch::lazy::OpList inputs,
       api_version_(api_version) {}
 
 torch::lazy::NodePtr CustomCall::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CustomCall>(operands, call_target_,
-                                           this->xla_shape(), has_side_effect_,
-                                           backend_config_, api_version_);
+  return torch_xla::MakeNode<CustomCall>(operands, call_target_,
+                                         this->xla_shape(), has_side_effect_,
+                                         backend_config_, api_version_);
 }
 
 XlaOpVector CustomCall::Lower(LoweringContext* loctx) const {

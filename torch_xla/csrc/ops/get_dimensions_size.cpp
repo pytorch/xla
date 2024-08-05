@@ -19,7 +19,7 @@ GetDimensionsSize::GetDimensionsSize(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr GetDimensionsSize::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<GetDimensionsSize>(operands.at(0), dimensions_);
+  return torch_xla::MakeNode<GetDimensionsSize>(operands.at(0), dimensions_);
 }
 
 XlaOpVector GetDimensionsSize::Lower(LoweringContext* loctx) const {

@@ -46,7 +46,7 @@ DynamicExpand::DynamicExpand(const torch::lazy::Value& input,
       target_index_(target_index) {}
 
 torch::lazy::NodePtr DynamicExpand::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<DynamicExpand>(
+  return torch_xla::MakeNode<DynamicExpand>(
       operands.at(0), size_, operands.at(1), src_index_, target_index_);
 }
 

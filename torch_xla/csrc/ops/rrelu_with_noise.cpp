@@ -22,8 +22,8 @@ RreluWithNoise::RreluWithNoise(const torch::lazy::Value& input,
       training_(training) {}
 
 torch::lazy::NodePtr RreluWithNoise::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<RreluWithNoise>(operands.at(0), operands.at(1),
-                                               lower_, upper_, training_);
+  return torch_xla::MakeNode<RreluWithNoise>(operands.at(0), operands.at(1),
+                                             lower_, upper_, training_);
 }
 
 XlaOpVector RreluWithNoise::Lower(LoweringContext* loctx) const {

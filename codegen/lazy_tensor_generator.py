@@ -86,7 +86,7 @@ class GenXlaLazyNativeFuncDefinition(GenLazyNativeFuncDefinition):
     return f"""torch::lazy::NodePtr node = torch::lazy::ReuseNode<{schema.node_name}>({node_ctor_input_str});
       if (!node) {{
           {self.shape_inference(func, schema)}
-          node = torch::lazy::MakeNode<{schema.node_name}>({node_ctor_input_str});
+          node = torch_xla::MakeNode<{schema.node_name}>({node_ctor_input_str});
           CacheNode(node);
       }}
       """

@@ -28,7 +28,7 @@ std::string Scalar::ToString() const {
 }
 
 torch::lazy::NodePtr Scalar::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Scalar>(value_, xla_shape());
+  return torch_xla::MakeNode<Scalar>(value_, xla_shape());
 }
 
 XlaOpVector Scalar::Lower(LoweringContext* loctx) const {

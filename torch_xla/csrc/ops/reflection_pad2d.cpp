@@ -29,7 +29,7 @@ ReflectionPad2d::ReflectionPad2d(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr ReflectionPad2d::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<ReflectionPad2d>(operands.at(0), padding_);
+  return torch_xla::MakeNode<ReflectionPad2d>(operands.at(0), padding_);
 }
 
 XlaOpVector ReflectionPad2d::Lower(LoweringContext* loctx) const {

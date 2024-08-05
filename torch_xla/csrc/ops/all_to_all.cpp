@@ -47,9 +47,9 @@ AllToAll::AllToAll(const torch::lazy::Value& input,
       pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr AllToAll::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<AllToAll>(operands.at(0), operands.at(1),
-                                         split_dimension_, concat_dimension_,
-                                         split_count_, groups_, pin_layout_);
+  return torch_xla::MakeNode<AllToAll>(operands.at(0), operands.at(1),
+                                       split_dimension_, concat_dimension_,
+                                       split_count_, groups_, pin_layout_);
 }
 
 XlaOpVector AllToAll::Lower(LoweringContext* loctx) const {

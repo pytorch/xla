@@ -88,7 +88,7 @@ at::Tensor XLANativeFunctions::abs(const at::Tensor & self) {
 
   torch::lazy::NodePtr node = torch::lazy::ReuseNode<Abs>(lazy_self->GetIrValue());
   if (!node) {
-    node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue());
+    node = torch_xla::MakeNode<Abs>(lazy_self->GetIrValue());
     CacheNode(node);
   }
 
@@ -107,7 +107,7 @@ Describing the generated code line by line:
 ```
   torch::lazy::NodePtr node = torch::lazy::ReuseNode<Abs>(lazy_self->GetIrValue());
   if (!node) {
-    node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue());
+    node = torch_xla::MakeNode<Abs>(lazy_self->GetIrValue());
     CacheNode(node);
   }
 ```
@@ -191,7 +191,7 @@ Sometimes other IRNode uses the 'IRNode' you migrated. In this case you need to 
 to
 ```
   torch::lazy::NodePtr exp =
-      Pow(torch::lazy::MakeNode<Abs>(input, std::vector<torch::lazy::Shape>()),
+      Pow(torch_xla::MakeNode<Abs>(input, std::vector<torch::lazy::Shape>()),
           norm_exp);
 ```
 

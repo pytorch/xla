@@ -20,7 +20,7 @@ UpsampleNearest::UpsampleNearest(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr UpsampleNearest::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<UpsampleNearest>(operands.at(0), output_size_);
+  return torch_xla::MakeNode<UpsampleNearest>(operands.at(0), output_size_);
 }
 
 XlaOpVector UpsampleNearest::Lower(LoweringContext* loctx) const {

@@ -23,7 +23,7 @@ CountNonzero::CountNonzero(const torch::lazy::Value& input,
       dims_(dims) {}
 
 torch::lazy::NodePtr CountNonzero::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CountNonzero>(operands.at(0), dims_);
+  return torch_xla::MakeNode<CountNonzero>(operands.at(0), dims_);
 }
 
 XlaOpVector CountNonzero::Lower(LoweringContext* loctx) const {

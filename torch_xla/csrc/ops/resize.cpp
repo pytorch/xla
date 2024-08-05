@@ -23,7 +23,7 @@ Resize::Resize(const torch::lazy::Value& input, std::vector<int64_t> size)
       size_(std::move(size)) {}
 
 torch::lazy::NodePtr Resize::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Resize>(operands.at(0), size_);
+  return torch_xla::MakeNode<Resize>(operands.at(0), size_);
 }
 
 XlaOpVector Resize::Lower(LoweringContext* loctx) const {

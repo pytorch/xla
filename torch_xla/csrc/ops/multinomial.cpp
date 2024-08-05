@@ -32,8 +32,8 @@ Multinomial::Multinomial(const torch::lazy::Value& input,
       replacement_(replacement) {}
 
 torch::lazy::NodePtr Multinomial::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Multinomial>(operands.at(0), operands.at(1),
-                                            num_samples_, replacement_);
+  return torch_xla::MakeNode<Multinomial>(operands.at(0), operands.at(1),
+                                          num_samples_, replacement_);
 }
 
 XlaOpVector Multinomial::Lower(LoweringContext* loctx) const {

@@ -31,7 +31,7 @@ AdaptiveMaxPool2d::AdaptiveMaxPool2d(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr AdaptiveMaxPool2d::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
+  return torch_xla::MakeNode<AdaptiveMaxPool2d>(operands.at(0), output_size_);
 }
 
 XlaOpVector AdaptiveMaxPool2d::Lower(LoweringContext* loctx) const {

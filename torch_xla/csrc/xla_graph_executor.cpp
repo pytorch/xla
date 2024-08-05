@@ -70,7 +70,7 @@ torch::lazy::Value IrValueFromScalar(const at::Scalar& value,
                                      const torch::lazy::BackendDevice& device) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
   torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
-  return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
+  return torch_xla::MakeNode<DeviceData>(std::move(device_data));
 }
 
 bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
@@ -183,7 +183,7 @@ XLAGraphExecutor::DeviceContextArena::GetBaseSeedData(
   at::Tensor tensor = at::scalar_tensor(MakeIntScalar(devctx->seed),
                                         at::TensorOptions(kSeedType));
   torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
-  devctx->seed_ir_value = torch::lazy::MakeNode<DeviceData>(device_data);
+  devctx->seed_ir_value = torch_xla::MakeNode<DeviceData>(device_data);
   devctx->running_seed = devctx->seed;
   return torch_xla::DeviceData::Cast(devctx->seed_ir_value.node.get())->data();
 }
@@ -236,7 +236,7 @@ torch::lazy::Value XLAGraphExecutor::DeviceContextArena::IrValueFromScalar(
     const torch::lazy::BackendDevice& device) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
   torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
-  return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
+  return torch_xla::MakeNode<DeviceData>(std::move(device_data));
 }
 
 XLAGraphExecutor::Async::Async(
@@ -276,7 +276,7 @@ torch::lazy::Value XLAGraphExecutor::GetDeviceDataIrValue(
   data->SetInfo(
       std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
           /*tensor_id=*/-1, /*read_only=*/true));
-  return torch::lazy::MakeNode<DeviceData>(std::move(data));
+  return torch_xla::MakeNode<DeviceData>(std::move(data));
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
@@ -300,7 +300,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const torch::lazy::BackendDevice& device) {
   torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
   if (!dimensions.empty()) {
-    ir_value = torch::lazy::MakeNode<Expand>(
+    ir_value = torch_xla::MakeNode<Expand>(
         ir_value, torch::lazy::ToVector<int64_t>(dimensions));
   }
   return ir_value;
@@ -311,7 +311,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     c10::SymIntArrayRef sym_size, const torch::lazy::BackendDevice& device) {
   torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
   SymIntElements size_elements = SymIntElements(sym_size);
-  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
+  return torch_xla::MakeNode<ExpandSymInt>(ir_value, size_elements);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
@@ -343,7 +343,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
           : shape.element_type();
   torch::lazy::Value ir_value =
       GetIrValueForScalar(value, primitive_type, device);
-  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
+  return torch_xla::MakeNode<ExpandSymInt>(ir_value, size_elements);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetRngSeed(

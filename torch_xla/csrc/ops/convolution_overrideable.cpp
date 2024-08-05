@@ -78,10 +78,10 @@ ConvolutionOverrideable::ConvolutionOverrideable(
 torch::lazy::NodePtr ConvolutionOverrideable::Clone(
     torch::lazy::OpList operands) const {
   return operands.size() == 3
-             ? torch::lazy::MakeNode<ConvolutionOverrideable>(
+             ? torch_xla::MakeNode<ConvolutionOverrideable>(
                    operands.at(0), operands.at(1), operands.at(2), stride_,
                    padding_, dilation_, transposed_, output_padding_, groups_)
-             : torch::lazy::MakeNode<ConvolutionOverrideable>(
+             : torch_xla::MakeNode<ConvolutionOverrideable>(
                    operands.at(0), operands.at(1), stride_, padding_, dilation_,
                    transposed_, output_padding_, groups_);
 }

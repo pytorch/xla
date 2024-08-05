@@ -28,7 +28,7 @@ ReplicationPad::ReplicationPad(const torch::lazy::Value& input,
       padding_(std::move(padding)) {}
 
 torch::lazy::NodePtr ReplicationPad::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<ReplicationPad>(operands.at(0), padding_);
+  return torch_xla::MakeNode<ReplicationPad>(operands.at(0), padding_);
 }
 
 XlaOpVector ReplicationPad::Lower(LoweringContext* loctx) const {
