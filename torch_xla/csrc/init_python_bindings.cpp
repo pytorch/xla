@@ -27,6 +27,7 @@
 #include "pybind11/attr.h"
 #include "pybind11/cast.h"
 #include "pybind11/detail/common.h"
+#include "pybind11/functional.h"
 #include "pybind11/numpy.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
@@ -133,7 +134,7 @@ void PrepareToExit() {
   if (client != nullptr) {
     auto xla_device = GetDeviceOrCurrent("");
     SetAllReduceToken(xla_device, nullptr);
-    XLAGraphExecutor::Get()->WaitDeviceOps({});
+    WaitDeviceOps();
   }
 }
 
@@ -2619,6 +2620,29 @@ void InitXlaModuleBindings(py::module m) {
     return false;
   });
 
+  m.def("_on_ready_callback",
+        [](const at::Tensor& tensor, const std::function<void()>& callback) {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+          XLA_CHECK(xtensor) << "The input is not an XLA tensor.";
+          // Wait for placeholder `Data`s to be assigned
+          XLAGraphExecutor::Get()->WaitDeviceOps({});
+          std::shared_ptr<runtime::ComputationClient::Data> data;
+          if (xtensor->CurrentDataHandle() != nullptr) {
+            data = UnwrapXlaData(xtensor->CurrentDataHandle());
+          } else if (xtensor->CurrentIrValue().node != nullptr) {
+            DeviceData* device_data =
+                DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+            if (device_data != nullptr) {
+              data = UnwrapXlaData(device_data->data());
+            } else {
+              XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
+                             "with IR that's not DeviceData";
+            }
+            XLA_ERROR() << "Could not get buffer for tensor";
+          }
+          runtime::GetComputationClient()->OnReadyCallback(data, callback);
+        });
+
   m.def("_unsafe_buffer_pointer",
         [](const at::Tensor& input) -> std::uintptr_t {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
@@ -2646,9 +2670,9 @@ void InitXlaModuleBindings(py::module m) {
 
   // from an XLA tensor to a PyCapsule.
   // When consuming the PyCapsule, we should synchronize
-  // (waits for all kernels in all streams on a CUDA device to complete) if the
-  // current stream is different from the ext_data's stream. Otherwise, we may
-  // risk of getting incorrect results.
+  // (waits for all kernels in all streams on a CUDA device to complete) if
+  // the current stream is different from the ext_data's stream. Otherwise, we
+  // may risk of getting incorrect results.
   m.def("_to_dlpack", [](const at::Tensor& input) -> py::handle {
     DLManagedTensor* dlMTensor;
     {
@@ -2660,9 +2684,9 @@ void InitXlaModuleBindings(py::module m) {
 
   // from a dlpack PyCapsule to an XLA tensor
   // If ext_data is the result of an CUDA computation, we should synchronize
-  // (waits for all kernels in all streams on a CUDA device to complete) if the
-  // current stream is different from the ext_data's stream. Otherwise, we may
-  // risk of getting incorrect results. Or you can use torch_xla's
+  // (waits for all kernels in all streams on a CUDA device to complete) if
+  // the current stream is different from the ext_data's stream. Otherwise, we
+  // may risk of getting incorrect results. Or you can use torch_xla's
   // from_dlpack(cuda_tensor) and it will handle the synchronization for you.
   m.def("_from_dlpack", [](py::handle ext_data) -> at::Tensor {
     return tensor_fromDLPack(ext_data.ptr());

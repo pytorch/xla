@@ -156,6 +156,9 @@ class PjRtComputationClient : public ComputationClient {
   void RegisterCustomCall(const std::string& fn_name, void* function_ptr,
                           const std::string& platform) override;
 
+  void OnReadyCallback(DataPtr data,
+                       const std::function<void()>& callback) override;
+
  private:
   std::unique_ptr<xla::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;

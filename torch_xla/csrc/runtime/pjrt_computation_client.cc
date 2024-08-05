@@ -1033,5 +1033,22 @@ void PjRtComputationClient::RegisterCustomCall(const std::string& fn_name,
   }
 }
 
+void PjRtComputationClient::OnReadyCallback(
+    ComputationClient::DataPtr data, const std::function<void()>& callback) {
+  std::shared_ptr<xla::PjRtBuffer> buffer;
+  if (auto pjrt_data = std::dynamic_pointer_cast<PjRtData>(data)) {
+    buffer = pjrt_data->buffer;
+  } else if (auto sharded_data =
+                 std::dynamic_pointer_cast<PjRtShardedData>(data)) {
+    XLA_CHECK(sharded_data->shards.size()) << "sharded data has no shards";
+    buffer = sharded_data->shards[0]->buffer;
+  } else {
+    XLA_ERROR() << "received invalid data pointer";
+  }
+  XLA_CHECK(buffer) << "received placeholder data as argument";
+  buffer->GetReadyFuture().OnReady(
+      [callback](absl::Status unused) { callback(); });
+}
+
 }  // namespace runtime
 }  // namespace torch_xla
