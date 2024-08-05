@@ -117,8 +117,8 @@ class WhileLoopTest(unittest.TestCase):
       local_linear.bias = torch.nn.parameter.Parameter(
           data=local_bias_value, requires_grad=False)
       next_iteri = iteri - 1
-      next_x = torch.stack(
-          (weights[-next_iteri-1], bias[-next_iteri-1], local_linear(x_val)))
+      next_x = torch.stack((weights[-next_iteri-1], bias[-next_iteri-1],
+                            local_linear(x_val)))
       return next_iteri, weights, bias, next_x
 
     inputs = torch.stack((weights[0], bias[0],
@@ -143,7 +143,8 @@ class WhileLoopTest(unittest.TestCase):
       local_linear_2.bias = torch.nn.parameter.Parameter(
           data=bias_value, requires_grad=False)
       iteri = iteri - 1
-      expected = torch.stack((weights[-iteri-1], bias[-iteri-1], local_linear_2(x)))
+      expected = torch.stack(
+          (weights[-iteri-1], bias[-iteri-1], local_linear_2(x)))
     print("final expected: ", expected)
 
     self.assertTrue(torch.all(torch.eq(res[2], expected[2])))
