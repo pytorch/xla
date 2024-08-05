@@ -6,7 +6,7 @@ import torch
 import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
-from torch_xla.experimental.fori_loop import fori_loop
+from torch_xla.experimental.fori_loop import fori_loop, _xla_while_loop_wrapper
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
@@ -14,6 +14,7 @@ import torch_xla.utils.utils as xu
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+# import numpy as np
 
 
 def _fake_while_loop(cond_fn, body_fn, operands):
@@ -21,6 +22,11 @@ def _fake_while_loop(cond_fn, body_fn, operands):
   while cond_fn(*operands):
     operands = body_fn(*operands)
   return operands
+
+# def extend_bias_to_support_concatenate_arrays(bias, weights):
+#   # check weights and bias has the same layer number
+#   if size(weights) != size(bias):
+#     print("weights and bias has not the same size!")
 
 
 class WhileLoopTest(unittest.TestCase):
@@ -90,6 +96,160 @@ class WhileLoopTest(unittest.TestCase):
         iteri, l_in_0)
 
     self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
+
+  def test_while_loop_simple_linear_outside_loop_change_weight_bias(self):
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    # TODO(@manfei): enable weights[0] != weights[1] and bias[0] != bias[1], now test pass with weights[0] == weights[1] and bias[0]==bias[1]
+    weights = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
+                            [[5.1, 6.2], [7.3, 8.4]]],
+                           device=device)
+
+    # bias = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
+    #                      [[16.1, 17.2], [18.3, 19.4]]],
+    #                     device=device)
+    original_bias = torch.tensor([[[1.0, 2.0],], [[1.0, 2.0],], [[16.1, 17.2],]], device=device)
+    # bias = np.pad(original_bias, ((0, 0), (0, 1), (0, 0)), mode='constant') # pad bias for support concatenate arrays
+    bias = torch.nn.functional.pad(original_bias, (0, 0, 0, 1), mode='constant')
+    print("bias", bias)
+    print("bias", bias)
+    # bias = torch.tensor([[1.0, 2.0], [1.0, 2.0], [16.1, 17.2]], device=device)
+
+    # iteri = torch.tensor(0, dtype=torch.int32, device=device)
+
+    def cond_fn(iteri, weights, bias, x):
+      return iteri >= 0
+      # return iteri <= torch.tensor(2, dtype=torch.int32, device=device)
+
+    def body_fn(iteri, weights, bias, x):
+      local_wieght_value = x[0]
+      local_bias_value = x[1][0]
+      x_val = x[2]
+      local_linear = torch.nn.Linear(2, 2)
+      local_linear.weight = torch.nn.parameter.Parameter(
+          data=local_wieght_value, requires_grad=False)
+      local_linear.bias = torch.nn.parameter.Parameter(
+          data=local_bias_value, requires_grad=False)
+      next_iteri = iteri - 1
+      # next_iteri = iteri + 1
+      # add_dim_bias = (bias[-next_iteri]).unsqueeze(0) 
+      # next_bias = torch.nn.functional.pad(add_dim_bias, (0, 0, 0, 1), mode='constant', value=0)
+      next_x = torch.stack(
+          (weights[-next_iteri-1], bias[-next_iteri-1], local_linear(x_val)))
+      return next_iteri, weights, bias, next_x
+
+    # inputs = torch.stack((weights[2], bias[2],
+    #                       torch.tensor([[1.0, 1.0], [1.0, 1.0]],
+    #                                    dtype=torch.float32,
+    #                                    device=device)))
+    inputs = torch.stack((weights[0], bias[0],
+                          torch.tensor([[1.0, 1.0], [1.0, 1.0]],
+                                       dtype=torch.float32,
+                                       device=device)))
+    print("inputs: ", inputs)  # needed to enable func catch stacked inputs
+    iteri = torch.tensor(2, dtype=torch.int32, device=device)
+    # iteri = torch.tensor(0, dtype=torch.int32, device=device)
+    _, _, _, res = _xla_while_loop_wrapper(
+        cond_fn, body_fn, (iteri, weights, bias, inputs), (),
+        fake_tensor=False)  # need point out weight/bias in cond/body
+    print("res: ", res)
+
+    expected = inputs
+    while (iteri >= 0):
+    # while (iteri <= 2):
+      weight_value = expected[0]
+      bias_value = expected[1][0]
+      x = expected[2]
+      local_linear_2 = torch.nn.Linear(2, 2)
+      local_linear_2.weight = torch.nn.parameter.Parameter(
+          data=weight_value, requires_grad=False)
+      local_linear_2.bias = torch.nn.parameter.Parameter(
+          data=bias_value, requires_grad=False)
+      iteri = iteri - 1
+      # iteri = iteri + 1
+      expected = torch.stack((weights[-iteri-1], bias[-iteri-1], local_linear_2(x)))
+    print("final expected: ", expected)
+
+    self.assertTrue(torch.all(torch.eq(res[2], expected[2])))
+
+  def test_while_loop_simple_linear_inside_loop_change_weight_bias(self):
+    device = xm.xla_device()
+    torch.set_grad_enabled(False)
+
+    class SimpleLinear(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(2, 2)
+
+        self.weights = torch.tensor(
+            [[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
+             [[5.1, 6.2], [7.3, 8.4]]],
+            device=device)
+
+        self.bias = torch.tensor(
+            [[[1.0, 2.0], [3.0, 4.0]], [[1.0, 2.0], [3.0, 4.0]],
+             [[16.1, 17.2], [18.3, 19.4]]],
+            device=device)
+
+      def forward(self, iteri, x):
+
+        def cond_fn(iteri, weights, bias, x):
+          return iteri >= 0
+
+        def body_fn(iteri, weights, bias, x):
+          local_wieght_value = x[0]
+          local_bias_value = x[1]
+          x_val = x[2]
+          local_linear = torch.nn.Linear(2, 2)
+          local_linear.weight = torch.nn.parameter.Parameter(
+              data=local_wieght_value, requires_grad=False)
+          local_linear.bias = torch.nn.parameter.Parameter(
+              data=local_bias_value, requires_grad=False)
+          next_iteri = iteri - 1
+          next_x = torch.stack(
+              (weights[next_iteri], bias[next_iteri], local_linear(x_val)))
+          return next_iteri, weights, bias, next_x
+
+        return _xla_while_loop_wrapper(
+            cond_fn,
+            body_fn, (iteri, self.weights, self.bias, x), (),
+            fake_tensor=False)
+
+      def forward_compare(self, iteri, x):
+        while (iteri >= 0):
+          weight_value = x[0]
+          bias_value = x[1]
+          x_val = x[2]
+          local_linear_2 = torch.nn.Linear(2, 2)
+          local_linear_2.weight = torch.nn.parameter.Parameter(
+              data=weight_value, requires_grad=False)
+          local_linear_2.bias = torch.nn.parameter.Parameter(
+              data=bias_value, requires_grad=False)
+          iteri = iteri - 1
+          x = torch.stack(
+              (self.weights[iteri], self.bias[iteri], local_linear_2(x_val)))
+        return iteri, x
+
+    linear_model = SimpleLinear()
+    linear_model.to(device)
+    inputs = torch.stack((linear_model.weights[2], linear_model.bias[2],
+                          torch.tensor([[1.0, 1.0], [1.0, 1.0]],
+                                       dtype=torch.float32,
+                                       device=device)))
+    print("inputs: ", inputs)
+    iteri = torch.tensor(2, dtype=torch.int32, device=device)
+    iter_value, _, _, res = linear_model(iteri, inputs)
+    print("res: ", res)
+
+    # === expected result after 2 iteration to be compared ===
+    test_value = inputs
+    _, test_value = linear_model.forward_compare(iteri, test_value)
+    expected = test_value
+    print("expected: ", expected)
+
+    self.assertTrue(torch.all(torch.eq(res[2], expected[2])))
 
   # ====== fori_loop ======
   @unittest.skip("Fori_loop is not supported now due to unstable result.")
