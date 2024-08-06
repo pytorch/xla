@@ -135,12 +135,13 @@ if __name__ == '__main__':
 ```
 
 There are three differences between this multi-device snippet and the previous
-single device snippet. Let's go over then one by one.
+single device snippet. Let's go over them one by one.
 
 - `torch_xla.launch()`
-  - Creates the processes that each run an XLA device.
-  - This function is a wrapper of multithreading spawn to allow user run the script with torchrun command line also. Each process will only be able to access the device assigned to the current process. For example on a TPU v4-8, there will be 4 processes being spawn up and each process will own a TPU device.
-  - Note that if you print the `xm.xla_device()` on each process you will see `xla:0` on all devices. This is because each process can only see one device. This does not mean multi-process is not functioning. The only execution is with PJRT runtime on TPU v2 and TPU v3 since there will be `#devices/2` processes and each process will have 2 threads(check this [doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpus-v2v3-vs-v4) for more details).
+  - Creates multiple processes that each control an XLA device.
+  - This function is a wrapper for spawning processes that also supports scripts being run through `torchrun` from the command line.
+  - Each process will only be able to access the device assigned to the current process. For example on a TPU v4-8, there will be 4 processes spawned and each process will own one TPU device.
+  - Note that if you print the `xm.xla_device()` on each process you will see the corresponding devices all referred to as `xla:0`. This is because each process can only see one device each. This does not mean multi-processing is not functioning. (The only exception is with PJRT runtime on TPU v2 and TPU v3, where each process has 2 threads that each control a device. See this [doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpus-v2v3-vs-v4) for more details.)
 - `MpDeviceLoader`
   - Loads the training data onto each device.
   - `MpDeviceLoader` can wrap on a torch dataloader. It can preload the data to the device and overlap the dataloading with device execution to improve the performance.
