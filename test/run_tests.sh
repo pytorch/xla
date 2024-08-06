@@ -184,6 +184,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/dynamo/test_graph_input_matcher.py"
   run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_test "$CDIR/test_data_type.py"
+  run_test "$CDIR/test_fp8.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"

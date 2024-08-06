@@ -9,6 +9,8 @@ at::ScalarType TorchTypeFromXlaType(xla::PrimitiveType xla_type) {
   switch (xla_type) {
     case xla::PrimitiveType::BF16:
       return at::ScalarType::BFloat16;
+    case xla::PrimitiveType::F8E5M2:
+      return at::ScalarType::Float8_e5m2;
     case xla::PrimitiveType::F16:
       return at::ScalarType::Half;
     case xla::PrimitiveType::F32:
@@ -49,6 +51,8 @@ xla::PrimitiveType XlaTypeFromTorchType(at::ScalarType scalar_type) {
       return xla::PrimitiveType::BF16;
     case at::ScalarType::Half:
       return xla::PrimitiveType::F16;
+    case at::ScalarType::Float8_e5m2:
+      return xla::PrimitiveType::F8E5M2;
     case at::ScalarType::Bool:
       return xla::PrimitiveType::PRED;
     case at::ScalarType::Byte:
