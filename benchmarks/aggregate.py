@@ -98,7 +98,7 @@ def get_backend_name(dynamo: str, xla: str) -> str:
   if dynamo == 'inductor':
     return 'inductor'
   if xla == 'PJRT':
-    assert dynamo == 'openxla' or dynamo == 'openxla_eval' or dynamo == None
+    assert dynamo == 'openxla' or dynamo == None
     xla_name = dynamo
     tracer = 'dynamo'
     if not dynamo:
@@ -706,7 +706,7 @@ def parse_args(args=None):
   args.exclude = args.exclude or [r"^$"]
   if not args.backends:
     if args.test == 'inference':
-      args.backends = ['inductor', 'openxla+dynamo', 'openxla_eval+dynamo']
+      args.backends = ['inductor', 'openxla+dynamo']
     else:
       args.backends = ['inductor', 'openxla+dynamo']
   for backend in args.backends:

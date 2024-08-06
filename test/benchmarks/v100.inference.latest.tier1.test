@@ -1,3 +1,3 @@
 # ARGS: --filter-by-tier=1
-# Workload,Speedup(Inductor/Oldest Inductor),StdDev,ModelName(Inductor),Speedup(XLA+Dynamo/Oldest Inductor),StdDev,ModelName(XLA+Dynamo),Speedup(XLA_Eval+Dynamo/Oldest Inductor),StdDev,ModelName(XLA_Eval+Dynamo)
-0,1.51952596,0.06679279,BERT_pytorch,1.56880282,0.06895882,BERT_pytorch,1.36859903,0.06015859,BERT_pytorch
+# Workload,Speedup(Inductor/Oldest Inductor),StdDev,ModelName(Inductor),Speedup(XLA+Dynamo/Oldest Inductor),StdDev,ModelName(XLA+Dynamo)
+0,1.51952596,0.06679279,BERT_pytorch,1.56880282,0.06895882,BERT_pytorch
