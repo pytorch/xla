@@ -279,6 +279,8 @@ def _aten_div(x, y, rounding_mode=""):
 
 @op(torch.ops.aten.div_, is_jax_function=False)
 def _aten_div_(x, y, rounding_mode=""):
+  if isinstance(y, float):
+    y = torch.tensor(y)
   x._elem = _aten_div(x._elem, y._elem, rounding_mode)
   return x
 
@@ -2967,3 +2969,13 @@ def _aten_flatten(x, start_dim=0, end_dim=-1):
 @op(torch.ops.aten.new_empty_strided)
 def _new_empty_strided(self, size, stride, **kwargs):
   return jnp.empty(size)
+
+
+@op(torch.ops.aten._unsafe_index_put, is_jax_function=False)
+def _aten_unsafe_index_put(self, indices, values, accumulate=False):
+  return self.index_put_(indices, values, accumulate)
+
+
+@op(torch.ops.aten.conj_physical)
+def _aten_conj_physical(self):
+  return jnp.conjugate(self)
