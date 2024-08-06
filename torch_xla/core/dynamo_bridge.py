@@ -717,49 +717,8 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     return extract_compiled_graph_helper(xla_model, xla_args)
 
 
-def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
-  if _args_on_cuda(xla_args):
-    xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
-
-  # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
-  # value reference before actually computing it.
-  for a in xla_args:
-    if isinstance(a, torch.Tensor) and torch._is_functional_tensor(a):
-      torch._functionalize_sync(a)
-
-  # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids.
-  # Don't reset the scope as we might be under some profiler trace scope.
-  xm.mark_step(reset_scope=False)
-
-  # Find tensor constructor nodes that create CPU tensors, and make
-  # them create XLA tensors, where possible, instead. i.e. replace the
-  # device=CPU keyword-argument of tensor constructor nodes by XLA.
-  XLAConstructorMoverPass()(xla_model.graph)
-
-  # If a model's `forward` function has an in-place op that acts on its `self.tensor`, the
-  # `self.tensor` is not included as a part of the `xla_args` and does not get materialized.
-  # This explicitly fetches the `self.tensor`s if they exist.
-  self_args = []
-  for name, buffer in xla_model.named_buffers():
-    if "self" in name:
-      self_args.append(buffer)
-
-  all_xla_args = list(xla_args) + self_args
-  all_xla_args_tensor_only = [
-      xla_arg for xla_arg in all_xla_args if isinstance(xla_arg, torch.Tensor)
-  ]
-
-  for xla_arg in xla_args:
-    if isinstance(xla_arg, torch.Tensor) and xla_arg.device.type != 'xla':
-      warnings.warn(
-          "Found tensor with shape " + str(xla_arg.size()) + " on " +
-          str(xla_arg.device) +
-          ". Please move all tensors to xla device to execute on XLA device.")
-
-  if len(all_xla_args) != len(all_xla_args_tensor_only):
-    xla_model.xla_args = xla_args
-    return extract_internal(xla_model)
-
+def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
+                                        all_xla_args_tensor_only):
   # below logic will try to partition the fx graph based on the fallback ops.
   cloned_args = [
       torch.clone(xla_arg) if isinstance(xla_arg, torch.Tensor) else xla_arg
@@ -824,3 +783,53 @@ def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
   partitioned_graph.recompile()
 
   return partitioned_graph
+
+
+def extract_compiled_graph_helper(xla_model: torch.fx.GraphModule, xla_args):
+  if _args_on_cuda(xla_args):
+    xla_args = tuple(_maybe_move_tensors_to_device(xla_args, xm.xla_device()))
+
+  # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
+  # value reference before actually computing it.
+  for a in xla_args:
+    if isinstance(a, torch.Tensor) and torch._is_functional_tensor(a):
+      torch._functionalize_sync(a)
+
+  # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids.
+  # Don't reset the scope as we might be under some profiler trace scope.
+  xm.mark_step(reset_scope=False)
+
+  # Find tensor constructor nodes that create CPU tensors, and make
+  # them create XLA tensors, where possible, instead. i.e. replace the
+  # device=CPU keyword-argument of tensor constructor nodes by XLA.
+  XLAConstructorMoverPass()(xla_model.graph)
+
+  # If a model's `forward` function has an in-place op that acts on its `self.tensor`, the
+  # `self.tensor` is not included as a part of the `xla_args` and does not get materialized.
+  # This explicitly fetches the `self.tensor`s if they exist.
+  self_args = []
+  for name, buffer in xla_model.named_buffers():
+    if "self" in name:
+      self_args.append(buffer)
+
+  all_xla_args = list(xla_args) + self_args
+  all_xla_args_tensor_only = [
+      xla_arg for xla_arg in all_xla_args if isinstance(xla_arg, torch.Tensor)
+  ]
+
+  for xla_arg in xla_args:
+    if isinstance(xla_arg, torch.Tensor) and xla_arg.device.type != 'xla':
+      warnings.warn(
+          "Found tensor with shape " + str(xla_arg.size()) + " on " +
+          str(xla_arg.device) +
+          ". Please move all tensors to xla device to execute on XLA device.")
+
+  # when there are symints in the `xla_args`, don't run partitioner since it will
+  # separate the symints in to a spearate graph and mess up the caching.
+  if len(all_xla_args) != len(all_xla_args_tensor_only):
+    xla_model.xla_args = xla_args
+    return extract_internal(xla_model)
+  else:
+    return partition_fx_graph_for_cpu_fallback(xla_model, xla_args,
+                                               all_xla_args,
+                                               all_xla_args_tensor_only)

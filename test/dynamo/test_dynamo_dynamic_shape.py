@@ -236,7 +236,7 @@ class DynamoDynamicShapeBasicTest(unittest.TestCase):
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
-  def test_dynamic_shape_symint_as_return(self):
+  def test_dynamic_decoder(self):
     device = torch_xla.device()
     config = DecoderOnlyConfig()
     config.num_hidden_layers = 2
