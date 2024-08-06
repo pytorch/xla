@@ -23,7 +23,7 @@ class ExperimentLoader:
         "accelerator": ["cpu", "cuda", "tpu"],
         "xla": [None, "PJRT", "XRT"],
         "xla_flags": [None],
-        "dynamo": [None, "inductor", "openxla_eval", "openxla"],
+        "dynamo": [None, "inductor", "openxla"],
         "torch_xla2": [None],  # options only apply to torch_xla2
         "test": ["eval", "train"],
         "keep_model_data_on_cuda": [False],
@@ -95,9 +95,6 @@ class ExperimentLoader:
     # Check dynamo backend-specifics constraints.
     if cfg_dynamo == "inductor":
       if cfg_accelerator == "tpu" or cfg_xla is not None:
-        return False
-    elif cfg_dynamo == "openxla_eval":
-      if cfg_xla is None or cfg_test != "eval":
         return False
     elif cfg_dynamo == "openxla":
       if cfg_xla is None:

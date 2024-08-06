@@ -153,7 +153,7 @@ cd pytorch
 python xla/benchmarks/experiment_runner.py \
        --test=eval --test=train \
        --xla=PJRT \
-       --dynamo=None --dynamo=openxla --dynamo=openxla_eval \
+       --dynamo=None --dynamo=openxla \
        --suite-name=torchbench --accelerator=cuda \
        --output-dirname=${WORKSPACE_RESULTS_DIR:?} \
        --repeat=${REPEAT:?} --print-subprocess \
@@ -187,7 +187,7 @@ if [[ ${ENABLE_PROFILING?} ]]; then
   COMMON_TITLE_PREFIX="[Profiling ON] "
 fi
 
-INFERENCE_BACKENDS_CMD='--backends inductor openxla+dynamo openxla_eval+dynamo openxla+lazytensor'
+INFERENCE_BACKENDS_CMD='--backends inductor openxla+dynamo openxla+lazytensor'
 TRAINING_BACKENDS_CMD='--backends inductor openxla+dynamo openxla+lazytensor'
 
 # Skip result files coming from one-off runs.

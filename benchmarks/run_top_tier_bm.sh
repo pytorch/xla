@@ -8,7 +8,7 @@ OUT_PATH=xla/benchmarks/bm_results/$DATE
 mkdir -p $OUT_PATH
 
 python xla/benchmarks/experiment_runner.py \
-    --dynamo=inductor --dynamo=openxla_eval --dynamo=openxla \
+    --dynamo=inductor --dynamo=openxla \
     --xla=None --xla=PJRT \
     --test=eval --test=train \
     --filter-by-tier=1 --filter-by-tier=2 --filter-by-tier=3 \

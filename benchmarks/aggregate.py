@@ -30,7 +30,6 @@ Datapoint = namedtuple('Datapoint', 'avg, std')
 _title_map = {
     'eager': 'Eager',
     'inductor': 'Inductor',
-    'openxla_eval+dynamo': 'XLA_Eval+Dynamo',
     'openxla+dynamo': 'XLA+Dynamo',
     'openxla+lazytensor': 'XLA+LazyTensor',
 }

@@ -779,7 +779,7 @@ def parse_args(args=None):
   )
   parser.add_argument(
       "--dynamo",
-      choices=["None", "inductor", "openxla_eval", "openxla"],
+      choices=["None", "inductor", "openxla"],
       action="append",
       help="Specify an xla option to use.",
   )
