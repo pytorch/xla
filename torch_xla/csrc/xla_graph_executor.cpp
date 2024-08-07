@@ -410,9 +410,6 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
       SyncTensorsGraphInternal(tensors, devices, config, warm_up_cache_only);
   if (wait && async != nullptr && !warm_up_cache_only) {
     async->mwait.Wait();
-    // async->mwait.Wait() will block until the async computation thread to
-    // return but the real device execution might not finish.
-    runtime::GetComputationClient()->WaitDeviceOps(devices);
   }
 }
 
