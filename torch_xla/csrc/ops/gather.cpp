@@ -32,7 +32,7 @@ Gather::Gather(const torch::lazy::Value& input, int64_t dim,
       dim_(dim) {}
 
 torch::lazy::NodePtr Gather::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Gather>(operands.at(0), dim_, operands.at(1));
+  return torch_xla::MakeNode<Gather>(operands.at(0), dim_, operands.at(1));
 }
 
 XlaOpVector Gather::Lower(LoweringContext* loctx) const {

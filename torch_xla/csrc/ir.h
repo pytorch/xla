@@ -35,6 +35,12 @@ template <typename T>
 using OutputMap =
     std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;
 
+template <typename T, typename... Args>
+torch::lazy::NodePtr MakeNode(Args&&... args) {
+  torch::lazy::NodePtr res = std::make_shared<T>(std::forward<Args>(args)...);
+  return res;
+}
+
 // A node in the graph. Nodes for operations which requires extra data to be
 // stored for lowering, should inherit from this class and add operation
 // specific member there. For example, a constant might create a new

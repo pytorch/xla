@@ -22,7 +22,7 @@ UserComputation::UserComputation(
 
 torch::lazy::NodePtr UserComputation::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<UserComputation>(op(), operands, computation_);
+  return torch_xla::MakeNode<UserComputation>(op(), operands, computation_);
 }
 
 XlaOpVector UserComputation::Lower(LoweringContext* loctx) const {

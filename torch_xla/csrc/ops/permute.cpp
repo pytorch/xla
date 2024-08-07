@@ -28,7 +28,7 @@ Permute::Permute(const torch::lazy::Value& input, std::vector<int64_t> dims)
       dims_(std::move(dims)) {}
 
 torch::lazy::NodePtr Permute::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Permute>(operands.at(0), dims_);
+  return torch_xla::MakeNode<Permute>(operands.at(0), dims_);
 }
 
 XlaOpVector Permute::Lower(LoweringContext* loctx) const {

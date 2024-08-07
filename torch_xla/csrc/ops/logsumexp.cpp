@@ -37,8 +37,8 @@ Logsumexp::Logsumexp(const torch::lazy::Value& input,
       keep_reduced_dimensions_(keep_reduced_dimensions) {}
 
 torch::lazy::NodePtr Logsumexp::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Logsumexp>(operands.at(0), dimensions_,
-                                          keep_reduced_dimensions_);
+  return torch_xla::MakeNode<Logsumexp>(operands.at(0), dimensions_,
+                                        keep_reduced_dimensions_);
 }
 
 XlaOpVector Logsumexp::Lower(LoweringContext* loctx) const {

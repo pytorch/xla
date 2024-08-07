@@ -50,8 +50,8 @@ Sum::Sum(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr Sum::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Sum>(operands.at(0), dimensions_,
-                                    keep_reduced_dimensions_, dtype_);
+  return torch_xla::MakeNode<Sum>(operands.at(0), dimensions_,
+                                  keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Sum::Lower(LoweringContext* loctx) const {

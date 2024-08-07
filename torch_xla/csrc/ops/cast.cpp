@@ -44,8 +44,8 @@ Cast::Cast(const torch::lazy::Value& input, at::ScalarType dtype,
       stype_(stype) {}
 
 torch::lazy::NodePtr Cast::Clone(torch::lazy::OpList operands) const {
-  return dtype_ ? torch::lazy::MakeNode<Cast>(operands.at(0), *dtype_, stype_)
-                : torch::lazy::MakeNode<Cast>(operands.at(0), type_);
+  return dtype_ ? torch_xla::MakeNode<Cast>(operands.at(0), *dtype_, stype_)
+                : torch_xla::MakeNode<Cast>(operands.at(0), type_);
 }
 
 XlaOpVector Cast::Lower(LoweringContext* loctx) const {

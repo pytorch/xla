@@ -35,7 +35,7 @@ Squeeze::Squeeze(const torch::lazy::Value& input, int dim)
       dim_(dim) {}
 
 torch::lazy::NodePtr Squeeze::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Squeeze>(operands.at(0), dim_);
+  return torch_xla::MakeNode<Squeeze>(operands.at(0), dim_);
 }
 
 XlaOpVector Squeeze::Lower(LoweringContext* loctx) const {

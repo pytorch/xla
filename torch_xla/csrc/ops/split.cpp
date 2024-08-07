@@ -33,7 +33,7 @@ Split::Split(const torch::lazy::Value& input, std::vector<int64_t> split_sizes,
       dim_(dim) {}
 
 torch::lazy::NodePtr Split::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Split>(operands.at(0), split_sizes_, dim_);
+  return torch_xla::MakeNode<Split>(operands.at(0), split_sizes_, dim_);
 }
 
 XlaOpVector Split::Lower(LoweringContext* loctx) const {

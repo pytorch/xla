@@ -47,7 +47,7 @@ QR::QR(const torch::lazy::Value& input, bool some)
       some_(some) {}
 
 torch::lazy::NodePtr QR::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<QR>(operands.at(0), some_);
+  return torch_xla::MakeNode<QR>(operands.at(0), some_);
 }
 
 XlaOpVector QR::Lower(LoweringContext* loctx) const {

@@ -35,7 +35,7 @@ SgdOptimizerStep::SgdOptimizerStep(
 
 torch::lazy::NodePtr SgdOptimizerStep::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<SgdOptimizerStep>(
+  return torch_xla::MakeNode<SgdOptimizerStep>(
       operands.at(0), operands.at(1), operands.at(2), operands.at(3),
       operands.at(4), operands.at(5), operands.at(6), operands.at(7),
       operands.at(8), use_weight_decay_, use_momentum_, use_nesterov_);

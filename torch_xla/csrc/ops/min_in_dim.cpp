@@ -29,7 +29,7 @@ MinInDim::MinInDim(const torch::lazy::Value& input, int64_t dim, bool keepdim)
       keepdim_(keepdim) {}
 
 torch::lazy::NodePtr MinInDim::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<MinInDim>(operands.at(0), dim_, keepdim_);
+  return torch_xla::MakeNode<MinInDim>(operands.at(0), dim_, keepdim_);
 }
 
 XlaOpVector MinInDim::Lower(LoweringContext* loctx) const {

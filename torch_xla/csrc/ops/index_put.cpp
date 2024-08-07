@@ -22,8 +22,8 @@ std::string IndexPut::ToString() const {
 }
 
 torch::lazy::NodePtr IndexPut::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<IndexPut>(
-      operands.at(0), operands.at(1), start_dim_, operands.at(2), accumulate_);
+  return torch_xla::MakeNode<IndexPut>(operands.at(0), operands.at(1),
+                                       start_dim_, operands.at(2), accumulate_);
 }
 
 XlaOpVector IndexPut::Lower(LoweringContext* loctx) const {

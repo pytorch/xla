@@ -34,8 +34,8 @@ MseLoss::MseLoss(const torch::lazy::Value& input,
       reduction_(reduction) {}
 
 torch::lazy::NodePtr MseLoss::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<MseLoss>(operands.at(0), operands.at(1),
-                                        reduction_);
+  return torch_xla::MakeNode<MseLoss>(operands.at(0), operands.at(1),
+                                      reduction_);
 }
 
 XlaOpVector MseLoss::Lower(LoweringContext* loctx) const {

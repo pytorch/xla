@@ -26,7 +26,7 @@ xla::Shape NodeOutputShape(const torch::lazy::OpList& operands,
 }  // namespace
 
 torch::lazy::NodePtr Einsum::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Einsum>(operands, equation_);
+  return torch_xla::MakeNode<Einsum>(operands, equation_);
 }
 
 Einsum::Einsum(const torch::lazy::OpList& operands, const std::string equation)

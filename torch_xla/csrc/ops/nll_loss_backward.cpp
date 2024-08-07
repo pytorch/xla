@@ -69,7 +69,7 @@ torch::lazy::NodePtr NllLossBackward::Clone(
     weight = operands.at(3);
     total_weight = operands.at(4);
   }
-  return torch::lazy::MakeNode<NllLossBackward>(
+  return torch_xla::MakeNode<NllLossBackward>(
       operands.at(0), operands.at(1), operands.at(2), weight, total_weight,
       reduction_, ignore_index_);
 }

@@ -29,8 +29,7 @@ IndexSelect::IndexSelect(const torch::lazy::Value& input, int64_t dim,
       dim_(dim) {}
 
 torch::lazy::NodePtr IndexSelect::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<IndexSelect>(operands.at(0), dim_,
-                                            operands.at(1));
+  return torch_xla::MakeNode<IndexSelect>(operands.at(0), dim_, operands.at(1));
 }
 
 XlaOpVector IndexSelect::Lower(LoweringContext* loctx) const {

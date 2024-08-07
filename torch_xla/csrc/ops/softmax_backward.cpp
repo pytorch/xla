@@ -16,8 +16,8 @@ SoftmaxBackward::SoftmaxBackward(const torch::lazy::Value& grad_output,
 
 torch::lazy::NodePtr SoftmaxBackward::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<SoftmaxBackward>(operands.at(0), operands.at(1),
-                                                dim_);
+  return torch_xla::MakeNode<SoftmaxBackward>(operands.at(0), operands.at(1),
+                                              dim_);
 }
 
 XlaOpVector SoftmaxBackward::Lower(LoweringContext* loctx) const {

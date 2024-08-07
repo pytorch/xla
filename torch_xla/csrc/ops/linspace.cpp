@@ -20,8 +20,7 @@ Linspace::Linspace(const torch::lazy::Value& start,
       steps_(steps) {}
 
 torch::lazy::NodePtr Linspace::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Linspace>(operands.at(0), operands.at(1),
-                                         steps_);
+  return torch_xla::MakeNode<Linspace>(operands.at(0), operands.at(1), steps_);
 }
 
 XlaOpVector Linspace::Lower(LoweringContext* loctx) const {

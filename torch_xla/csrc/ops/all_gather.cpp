@@ -80,14 +80,14 @@ AllGatherCoalesced::AllGatherCoalesced(c10::ArrayRef<torch::lazy::Value> inputs,
       pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr AllGather::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_,
-                                          shard_count_, groups_, pin_layout_);
+  return torch_xla::MakeNode<AllGather>(operands.at(0), operands.at(1), dim_,
+                                        shard_count_, groups_, pin_layout_);
 }
 
 torch::lazy::NodePtr AllGatherCoalesced::Clone(
     torch::lazy::OpList operands) const {
   std::vector<torch::lazy::Value> inputs(operands.begin(), operands.end() - 1);
-  return torch::lazy::MakeNode<AllGatherCoalesced>(
+  return torch_xla::MakeNode<AllGatherCoalesced>(
       inputs, operands.back(), dim_, shard_count_, groups_, pin_layout_);
 }
 

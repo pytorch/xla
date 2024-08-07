@@ -28,7 +28,7 @@ MaskedSelect::MaskedSelect(const torch::lazy::Value& input,
               /*num_outputs=*/2) {}
 
 torch::lazy::NodePtr MaskedSelect::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
+  return torch_xla::MakeNode<MaskedSelect>(operands.at(0), operands.at(1));
 }
 
 XlaOpVector MaskedSelect::Lower(LoweringContext* loctx) const {

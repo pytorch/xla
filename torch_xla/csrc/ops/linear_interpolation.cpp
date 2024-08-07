@@ -15,8 +15,8 @@ LinearInterpolation::LinearInterpolation(const torch::lazy::Value& value,
 
 torch::lazy::NodePtr LinearInterpolation::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<LinearInterpolation>(operands.at(0),
-                                                    operands.at(1), alpha_);
+  return torch_xla::MakeNode<LinearInterpolation>(operands.at(0),
+                                                  operands.at(1), alpha_);
 }
 
 XlaOpVector LinearInterpolation::Lower(LoweringContext* loctx) const {

@@ -58,8 +58,8 @@ TEST_F(IrTest, TestSelectUnselect) {
 
     torch::lazy::Value v_a = GetTensorIrValue(a, device);
     torch::lazy::Value v_s =
-        torch::lazy::MakeNode<Select>(v_a, /*dim=*/1, /*start=*/3,
-                                      /*end=*/14, /*stride=*/3);
+        torch_xla::MakeNode<Select>(v_a, /*dim=*/1, /*start=*/3,
+                                    /*end=*/14, /*stride=*/3);
 
     auto results = ExecuteAndFetch({v_s}, device);
     at::Tensor b =
@@ -70,8 +70,8 @@ TEST_F(IrTest, TestSelectUnselect) {
     at::Tensor z = at::zeros_like(b);
     torch::lazy::Value v_z = GetTensorIrValue(z, device);
     torch::lazy::Value v_u =
-        torch::lazy::MakeNode<Unselect>(v_a, v_z, /*dim=*/1, /*start=*/3,
-                                        /*end=*/14, /*stride=*/3);
+        torch_xla::MakeNode<Unselect>(v_a, v_z, /*dim=*/1, /*start=*/3,
+                                      /*end=*/14, /*stride=*/3);
     results = ExecuteAndFetch({v_u}, device);
     // Fetch back the zeros.
     at::Tensor d = results.front().cpu().slice(/*dim=*/1, /*start=*/3,
@@ -107,9 +107,9 @@ TEST_F(IrTest, TestSizeNode) {
   torch::lazy::NodePtr scalar_node =
       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {3, 4}));
   torch::lazy::NodePtr size_node_0 =
-      torch::lazy::MakeNode<SizeNode>(scalar_node, 0);
+      torch_xla::MakeNode<SizeNode>(scalar_node, 0);
   torch::lazy::NodePtr size_node_1 =
-      torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
+      torch_xla::MakeNode<SizeNode>(scalar_node, 1);
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_0 =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_0);
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_1 =
@@ -141,10 +141,10 @@ TEST_F(IrTest, TestSizeNodeDynamic) {
       CreateNonZeroNode2d(num_non_zero_element, num_row, num_col);
 
   torch::lazy::NodePtr size_node_nonzero_0 =
-      torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
+      torch_xla::MakeNode<SizeNode>(nonzero_node, 0);
   EXPECT_EQ(size_node_nonzero_0->ToString(), "aten::size");
   torch::lazy::NodePtr size_node_nonzero_1 =
-      torch::lazy::MakeNode<SizeNode>(nonzero_node, 1);
+      torch_xla::MakeNode<SizeNode>(nonzero_node, 1);
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_0 =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(
           size_node_nonzero_0);
@@ -167,11 +167,11 @@ TEST_F(IrTest, TestSizeAddNode) {
   torch::lazy::NodePtr scalar_node =
       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {3, 4}));
   torch::lazy::NodePtr size_node_0 =
-      torch::lazy::MakeNode<SizeNode>(scalar_node, 0);
+      torch_xla::MakeNode<SizeNode>(scalar_node, 0);
   torch::lazy::NodePtr size_node_1 =
-      torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
+      torch_xla::MakeNode<SizeNode>(scalar_node, 1);
   torch::lazy::NodePtr size_node_add =
-      torch::lazy::MakeNode<SizeAdd>(size_node_0, size_node_1);
+      torch_xla::MakeNode<SizeAdd>(size_node_0, size_node_1);
   EXPECT_EQ(size_node_add->ToString(), "aten::size_add");
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_add =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_add);
@@ -196,14 +196,14 @@ TEST_F(IrTest, TestSizeAddNodeDynamicOnSameTensor) {
 
   // static value = 100, dynamic value = 1
   torch::lazy::NodePtr size_node_nonzero_0 =
-      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 0);
+      torch_xla::MakeNode<SizeNode>(node_with_dynamism, 0);
   // static value = 2, dynamic value = 2
   torch::lazy::NodePtr size_node_nonzero_1 =
-      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 1);
+      torch_xla::MakeNode<SizeNode>(node_with_dynamism, 1);
 
-  torch::lazy::NodePtr node_add = torch::lazy::MakeNode<SizeAdd>(
-      torch::lazy::Value(size_node_nonzero_0, 0),
-      torch::lazy::Value(size_node_nonzero_1, 0));
+  torch::lazy::NodePtr node_add =
+      torch_xla::MakeNode<SizeAdd>(torch::lazy::Value(size_node_nonzero_0, 0),
+                                   torch::lazy::Value(size_node_nonzero_1, 0));
 
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_add =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(node_add);
@@ -226,14 +226,14 @@ TEST_F(IrTest, TestSizeAddNodeDynamicOnDifferentTensor) {
 
   // static value = 100, dynamic value = 1
   torch::lazy::NodePtr size_node_nonzero_0 =
-      torch::lazy::MakeNode<SizeNode>(node_with_dynamism_0, 0);
+      torch_xla::MakeNode<SizeNode>(node_with_dynamism_0, 0);
   // static value = 100, dynamic value = 1
   torch::lazy::NodePtr size_node_nonzero_1 =
-      torch::lazy::MakeNode<SizeNode>(node_with_dynamism_1, 0);
+      torch_xla::MakeNode<SizeNode>(node_with_dynamism_1, 0);
 
-  torch::lazy::NodePtr node_add = torch::lazy::MakeNode<SizeAdd>(
-      torch::lazy::Value(size_node_nonzero_0, 0),
-      torch::lazy::Value(size_node_nonzero_1, 0));
+  torch::lazy::NodePtr node_add =
+      torch_xla::MakeNode<SizeAdd>(torch::lazy::Value(size_node_nonzero_0, 0),
+                                   torch::lazy::Value(size_node_nonzero_1, 0));
 
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_add =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(node_add);
@@ -245,11 +245,11 @@ TEST_F(IrTest, TestSizeMulNode) {
   torch::lazy::NodePtr scalar_node =
       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {3, 4}));
   torch::lazy::NodePtr size_node_0 =
-      torch::lazy::MakeNode<SizeNode>(scalar_node, 0);
+      torch_xla::MakeNode<SizeNode>(scalar_node, 0);
   torch::lazy::NodePtr size_node_1 =
-      torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
+      torch_xla::MakeNode<SizeNode>(scalar_node, 1);
   torch::lazy::NodePtr size_node_mul =
-      torch::lazy::MakeNode<SizeMul>(size_node_0, size_node_1);
+      torch_xla::MakeNode<SizeMul>(size_node_0, size_node_1);
   EXPECT_EQ(size_node_mul->ToString(), "aten::size_mul");
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_mul =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_mul);
@@ -274,14 +274,14 @@ TEST_F(IrTest, TestSizeMulNodeDynamic) {
 
   // static value = 100, dynamic value = 1
   torch::lazy::NodePtr size_node_nonzero_0 =
-      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 0);
+      torch_xla::MakeNode<SizeNode>(node_with_dynamism, 0);
   // static value = 2, dynamic value = 2
   torch::lazy::NodePtr size_node_nonzero_1 =
-      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 1);
+      torch_xla::MakeNode<SizeNode>(node_with_dynamism, 1);
 
-  torch::lazy::NodePtr node_mul = torch::lazy::MakeNode<SizeMul>(
-      torch::lazy::Value(size_node_nonzero_0, 0),
-      torch::lazy::Value(size_node_nonzero_1, 0));
+  torch::lazy::NodePtr node_mul =
+      torch_xla::MakeNode<SizeMul>(torch::lazy::Value(size_node_nonzero_0, 0),
+                                   torch::lazy::Value(size_node_nonzero_1, 0));
 
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_mul =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(node_mul);
@@ -293,11 +293,11 @@ TEST_F(IrTest, TestSizeDivNode) {
   torch::lazy::NodePtr scalar_node =
       ScalarOp(1.0, xla::ShapeUtil::MakeShape(xla::F32, {12, 5}));
   torch::lazy::NodePtr size_node_0 =
-      torch::lazy::MakeNode<SizeNode>(scalar_node, 0);
+      torch_xla::MakeNode<SizeNode>(scalar_node, 0);
   torch::lazy::NodePtr size_node_1 =
-      torch::lazy::MakeNode<SizeNode>(scalar_node, 1);
+      torch_xla::MakeNode<SizeNode>(scalar_node, 1);
   torch::lazy::NodePtr size_node_div =
-      torch::lazy::MakeNode<SizeDiv>(size_node_0, size_node_1);
+      torch_xla::MakeNode<SizeDiv>(size_node_0, size_node_1);
   EXPECT_EQ(size_node_div->ToString(), "aten::size_div");
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_div =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node_div);
@@ -322,14 +322,14 @@ TEST_F(IrTest, TestSizeDivNodeDynamic) {
 
   // static value = 100, dynamic value = 1
   torch::lazy::NodePtr size_node_nonzero_0 =
-      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 0);
+      torch_xla::MakeNode<SizeNode>(node_with_dynamism, 0);
   // static value = 2, dynamic value = 2
   torch::lazy::NodePtr size_node_nonzero_1 =
-      torch::lazy::MakeNode<SizeNode>(node_with_dynamism, 1);
+      torch_xla::MakeNode<SizeNode>(node_with_dynamism, 1);
 
-  torch::lazy::NodePtr node_div = torch::lazy::MakeNode<SizeDiv>(
-      torch::lazy::Value(size_node_nonzero_0, 0),
-      torch::lazy::Value(size_node_nonzero_1, 0));
+  torch::lazy::NodePtr node_div =
+      torch_xla::MakeNode<SizeDiv>(torch::lazy::Value(size_node_nonzero_0, 0),
+                                   torch::lazy::Value(size_node_nonzero_1, 0));
 
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_div =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(node_div);
@@ -342,19 +342,19 @@ TEST_F(IrTest, TestSizeDivNodeDynamicByZero) {
       torch::lazy::Value(ScalarOp(0.0, xla::F32), 0);
   std::vector<int64_t> target_size = {2, 2};
   torch::lazy::Value node = torch::lazy::Value(
-      torch::lazy::MakeNode<Expand>(scalar_value, target_size));
-  torch::lazy::NodePtr nonzero_node = torch::lazy::MakeNode<NonZero>(node);
+      torch_xla::MakeNode<Expand>(scalar_value, target_size));
+  torch::lazy::NodePtr nonzero_node = torch_xla::MakeNode<NonZero>(node);
 
   // static value = 4, dynamic value = 0
   torch::lazy::NodePtr size_node_nonzero_0 =
-      torch::lazy::MakeNode<SizeNode>(nonzero_node, 0);
+      torch_xla::MakeNode<SizeNode>(nonzero_node, 0);
   // static value = 2, dynamic value = 2
   torch::lazy::NodePtr size_node_nonzero_1 =
-      torch::lazy::MakeNode<SizeNode>(nonzero_node, 1);
+      torch_xla::MakeNode<SizeNode>(nonzero_node, 1);
 
-  torch::lazy::NodePtr node_div = torch::lazy::MakeNode<SizeDiv>(
-      torch::lazy::Value(size_node_nonzero_1, 0),
-      torch::lazy::Value(size_node_nonzero_0, 0));
+  torch::lazy::NodePtr node_div =
+      torch_xla::MakeNode<SizeDiv>(torch::lazy::Value(size_node_nonzero_1, 0),
+                                   torch::lazy::Value(size_node_nonzero_0, 0));
   std::shared_ptr<torch::lazy::DimensionNode> dim_node_div =
       std::dynamic_pointer_cast<torch::lazy::DimensionNode>(node_div);
 

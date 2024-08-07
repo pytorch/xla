@@ -54,9 +54,9 @@ AllReduce::AllReduce(AllReduceType reduce_type, torch::lazy::Value operand,
 torch::lazy::NodePtr AllReduce::Clone(torch::lazy::OpList operands) const {
   std::vector<torch::lazy::Value> operand_list(operands.begin(),
                                                operands.end() - 1);
-  return torch::lazy::MakeNode<AllReduce>(reduce_type_, operand_list,
-                                          operands.back(), scale_, groups_,
-                                          pin_layout_);
+  return torch_xla::MakeNode<AllReduce>(reduce_type_, operand_list,
+                                        operands.back(), scale_, groups_,
+                                        pin_layout_);
 }
 
 XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {

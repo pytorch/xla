@@ -22,7 +22,7 @@ UpsampleNearestBackward::UpsampleNearestBackward(
 
 torch::lazy::NodePtr UpsampleNearestBackward::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<UpsampleNearestBackward>(
+  return torch_xla::MakeNode<UpsampleNearestBackward>(
       operands.at(0), output_size_, input_size_);
 }
 

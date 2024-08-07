@@ -24,7 +24,7 @@ UpsampleBilinearBackward::UpsampleBilinearBackward(
 
 torch::lazy::NodePtr UpsampleBilinearBackward::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<UpsampleBilinearBackward>(
+  return torch_xla::MakeNode<UpsampleBilinearBackward>(
       operands.at(0), output_size_, input_size_, align_corners_);
 }
 

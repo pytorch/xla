@@ -22,25 +22,25 @@ namespace torch_xla {
 struct XLAIrBuilder : torch::lazy::IrBuilder {
   torch::lazy::NodePtr MakeDeviceData(
       const std::shared_ptr<torch::lazy::BackendData>& data) const override {
-    return torch::lazy::MakeNode<DeviceData>(data);
+    return torch_xla::MakeNode<DeviceData>(data);
   }
 
   torch::lazy::NodePtr MakeScalar(const at::Scalar& value,
                                   const at::ScalarType& type) const override {
-    return torch::lazy::MakeNode<Scalar>(
+    return torch_xla::MakeNode<Scalar>(
         value, MakeXlaPrimitiveType(type, bridge::GetDefaultDevice()));
   }
   torch::lazy::NodePtr MakeExpand(const torch::lazy::Value& input0,
                                   const std::vector<int64_t>& size,
                                   const bool& is_scalar_expand) const override {
     // TODO(JackCaoG): handle is_scalar_expand
-    return torch::lazy::MakeNode<Expand>(input0, size);
+    return torch_xla::MakeNode<Expand>(input0, size);
   }
   torch::lazy::NodePtr MakeCast(const torch::lazy::Value& input0,
                                 const at::ScalarType& dtype,
                                 const std::optional<at::ScalarType>& stype =
                                     std::nullopt) const override {
-    return torch::lazy::MakeNode<Cast>(input0, dtype, stype);
+    return torch_xla::MakeNode<Cast>(input0, dtype, stype);
   }
   torch::lazy::NodePtr MakeTensorList(
       const torch::lazy::OpList& inputs) const override {
@@ -55,26 +55,26 @@ struct XLAIrBuilder : torch::lazy::IrBuilder {
       const torch::lazy::hash_t& hash_seed =
           static_cast<uint32_t>(0x5a2d296e9)) const override {
     // TODO(JackCaoG): ltc generic op does not take lowering function
-    // return torch::lazy::MakeNode<Generic>(
+    // return torch_xla::MakeNode<Generic>(
     //     op, operands, MakeXlaShapeFromLazyShape(shape,
     //     *bridge::GetDefaultDevice()), num_outputs, hash_seed);
   }
 
   torch::lazy::NodePtr MakeSizeNode(const torch::lazy::Value& input,
                                     size_t dim) const override {
-    return torch::lazy::MakeNode<SizeNode>(input, dim);
+    return torch_xla::MakeNode<SizeNode>(input, dim);
   }
   torch::lazy::NodePtr MakeSizeAdd(const torch::lazy::Value& a,
                                    const torch::lazy::Value& b) const override {
-    return torch::lazy::MakeNode<SizeAdd>(a, b);
+    return torch_xla::MakeNode<SizeAdd>(a, b);
   }
   torch::lazy::NodePtr MakeSizeMul(const torch::lazy::Value& a,
                                    const torch::lazy::Value& b) const override {
-    return torch::lazy::MakeNode<SizeMul>(a, b);
+    return torch_xla::MakeNode<SizeMul>(a, b);
   }
   torch::lazy::NodePtr MakeSizeDiv(const torch::lazy::Value& a,
                                    const torch::lazy::Value& b) const override {
-    return torch::lazy::MakeNode<SizeDiv>(a, b);
+    return torch_xla::MakeNode<SizeDiv>(a, b);
   }
 };
 
