@@ -513,7 +513,6 @@ def paged_attention(q,
 
 
 def _splash_attention_forward(
-    # TODO MaskInfo is flattened below to allow Dynamo to trace it in a custom op. Is this ok?
     # fwd_mask_info: mask_info_lib.MaskInfo,
     mask_info_data_next: torch.Tensor | None,
     mask_info_mask_next: torch.Tensor | None,
@@ -529,22 +528,23 @@ def _splash_attention_forward(
     is_mqa: bool,
     # TODO do we want to accept custom block_sizes as a parameter?
     # block_sizes: BlockSizes,
-    residual_checkpoint_name: str | None,
-    save_residuals: bool,
+    residual_checkpoint_name: str | None = None,
+    save_residuals: bool = False,
     # TODO mask_function is a custom callable type. How can we allow Dynamo to trace it?
-    # mask_function: MaskFunctionType | None,
+    mask_function: Callable | None = None,
     attn_logits_soft_cap: float | None = None,
     interpret: bool = False):
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
-  from jax.experimental.pallas.ops.tpu.splash_attention.splash_attention_kernel import BlockSizes, SegmentIds, from_head_minor, _splash_attention_forward
+  from jax.experimental.pallas.ops.tpu.splash_attention.splash_attention_kernel import BlockSizes, SegmentIds, QKVLayout, _splash_attention_forward
   from jax.experimental.pallas.ops.tpu.splash_attention import splash_attention_mask_info as mask_info_lib
 
   # Define  default values
   block_sizes = BlockSizes.get_default(
   )  # Should we define and optimize block sizes?
   num_lanes = 128  # From https://github.com/google/jax/blob/main/jax/experimental/pallas/ops/tpu/splash_attention/splash_attention_kernel.py#L38
+  num_sublanes = 8
 
   # TODO For mask_info and segment_ids below, do we need the actual values or will the shape suffice?
   mask_info = mask_info_lib.MaskInfo(
@@ -620,106 +620,29 @@ def _splash_attention_forward(
     if segment_ids.kv.shape != (kv_seq_len,):
       raise ValueError("Invalid shape for kv segment_ids: "
                        f"{segment_ids.kv.shape}. Expected: {(kv_seq_len,)}")
-
-  q_layout = block_sizes.q_layout
-
-  def q_index_map(h, i, j, data_next_ref, block_mask_ref, mask_next_ref=None):
-    del j, data_next_ref, mask_next_ref, block_mask_ref
-    return from_head_minor((h, i, 0), q_layout)
-
-  def out_index_map(h, i, j, data_next_ref, block_mask_ref, mask_next_ref=None):
-    del j, data_next_ref, mask_next_ref, block_mask_ref
-    return h, i, 0
-
-  k_layout = block_sizes.k_layout
-
-  def k_index_map(h, i, j, data_next_ref, block_mask_ref, mask_next_ref=None):
-    next_j, *_ = _next_nonzero(h, i, j, data_next_ref, block_mask_ref,
-                               mask_next_ref)
-    prefix = () if is_mqa else (_div(h, q_heads_per_kv_head),)
-    return from_head_minor((*prefix, next_j, 0), k_layout)
-
-  v_layout = block_sizes.v_layout
-
-  def v_index_map(h, i, j, data_next_ref, block_mask_ref, mask_next_ref=None):
-    next_j, *_ = _next_nonzero(h, i, j, data_next_ref, block_mask_ref,
-                               mask_next_ref)
-    prefix = () if is_mqa else (_div(h, q_heads_per_kv_head),)
-    return from_head_minor((*prefix, next_j, 0), v_layout)
-
-  def mask_index_map(h,
-                     i,
-                     j,
-                     data_next_ref,
-                     block_mask_ref,
-                     mask_next_ref=None):
-    _, next_m, *_ = _next_nonzero(h, i, j, data_next_ref, block_mask_ref,
-                                  mask_next_ref)
-    return next_m, 0, 0
-
-  def q_segment_ids_index_map(h, i, j, *_):
-    del h, j  # Unused.
-    return i, 0
-
-  def kv_segment_ids_index_map(h,
-                               i,
-                               j,
-                               data_next_ref,
-                               block_mask_ref,
-                               mask_next_ref=None):
-    next_j, *_ = _next_nonzero(h, i, j, data_next_ref, block_mask_ref,
-                               mask_next_ref)
-    return 0, next_j
-
-  # Convert the logical shape from head-minor to sequence-minor.
-  in_specs = [
-      pl.BlockSpec(
-          from_head_minor((None, bq, head_dim), q_layout), q_index_map),
-      pl.BlockSpec(
-          from_head_minor((bkv, head_dim) if is_mqa else (None, bkv, head_dim),
-                          k_layout),
-          k_index_map,
-      ),
-      pl.BlockSpec(
-          from_head_minor((bkv, head_dim) if is_mqa else (None, bkv, head_dim),
-                          v_layout),
-          v_index_map,
-      ),
-  ]
-  if segment_ids is not None:
-    in_specs += [
-        pl.BlockSpec((bq, NUM_LANES), q_segment_ids_index_map),
-        pl.BlockSpec((NUM_SUBLANES, bkv), kv_segment_ids_index_map),
-    ]
-    q_segment_ids = jax.lax.broadcast_in_dim(segment_ids.q,
-                                             (q_seq_len, NUM_LANES), (0,))
-    kv_segment_ids = jax.lax.broadcast_in_dim(segment_ids.kv,
-                                              (NUM_SUBLANES, kv_seq_len), (1,))
+    # q_segment_ids = jax.lax.broadcast_in_dim(
+    #     segment_ids.q, (q_seq_len, NUM_LANES), (0,)
+    # )
+    q_segment_ids = q_segment_ids.unsqueeze(1).expand(q_seq_len, num_lanes)
+    # kv_segment_ids = jax.lax.broadcast_in_dim(
+    #     segment_ids.kv, (NUM_SUBLANES, kv_seq_len), (1,)
+    # )
+    kv_segment_ids = kv_segment_ids.unsqueeze(0).expand(num_sublanes,
+                                                        kv_seq_len)
   else:
-    in_specs += [None, None]
     q_segment_ids = kv_segment_ids = None
 
-  if fwd_mask_info.partial_mask_blocks is not None:
-    in_specs.append(pl.BlockSpec((None, bq, bkv), mask_index_map))
-  else:
-    in_specs.append(None)
-
-  assert (fwd_mask_info.partial_mask_blocks is None or
-          fwd_mask_info.q_sequence is None)
-
-  if fwd_mask_info.q_sequence is not None:
-    q_sequence = jax.lax.broadcast_in_dim(fwd_mask_info.q_sequence,
-                                          (q_seq_len, NUM_LANES), (0,))
-    in_specs.append(pl.BlockSpec((bq, NUM_LANES), q_segment_ids_index_map))
+  if mask_info_q_sequence is not None:
+    # q_sequence = jax.lax.broadcast_in_dim(
+    #     fwd_mask_info.q_sequence, (q_seq_len, NUM_LANES), (0,)
+    # )
+    q_sequence = mask_info_q_sequence.unsqueeze(1).expand(q_seq_len, num_lanes)
   else:
     q_sequence = None
-    in_specs.append(None)
-
-  num_scalar_prefetch = 3
 
   payload, tensor_args = trace_pallas(
       _splash_attention_forward,
-      fwd_mask_info,
+      mask_info,
       q,
       k,
       v,
@@ -730,8 +653,8 @@ def _splash_attention_forward(
       residual_checkpoint_name,
       save_residuals,
       mask_function,
-      attn_logits_soft_cap,
-      interpret,
+      attn_logits_soft_cap=attn_logits_soft_cap,
+      interpret=interpret,
       static_argnames=[
           "is_mqa",
           "block_sizes",
@@ -744,26 +667,41 @@ def _splash_attention_forward(
       ],
   )
 
-  # TODO add shape updates and return outputs
-  output, _ = torch_xla._XLAC._xla_tpu_custom_call(
-      [
-          fwd_mask_info.data_next,
-          fwd_mask_info.block_mask,
-          fwd_mask_info.mask_next,
-          q if q_layout == QKVLayout.HEAD_DIM_MINOR else q.swapaxes(-1, -2),
-          k if k_layout == QKVLayout.HEAD_DIM_MINOR else k.swapaxes(-1, -2),
-          v if v_layout == QKVLayout.HEAD_DIM_MINOR else v.swapaxes(-1, -2),
-          q_segment_ids,
-          kv_segment_ids,
-          fwd_mask_info.partial_mask_blocks,
-          q_sequence,
-      ], payload, [q.shape, output_shape, output_shape],
-      [q_dtype_for_kernel_launch, torch.float32, torch.float32])
+  q_layout = block_sizes.q_layout
+  k_layout = block_sizes.k_layout
+  v_layout = block_sizes.v_layout
 
-  return output
+  out_shapes = [
+      # jax.ShapeDtypeStruct((bq, NUM_LANES), jnp.float32),  # m_scratch
+      torch.Size([bq, num_lanes]),
+      # jax.ShapeDtypeStruct((bq, NUM_LANES), jnp.float32),  # l_scratch
+      torch.Size([bq, num_lanes]),
+      # jax.ShapeDtypeStruct((bq, head_dim), jnp.float32),  # o_scratch
+      torch.Size([bq, head_dim]),
+      # jax.ShapeDtypeStruct((num_q_heads, q_seq_len, head_dim), q.dtype),
+      torch.Size([num_q_heads, q_seq_len, head_dim]),
+  ]
+
+  out_d_types = [torch.float32, torch.float32, torch.float32, q.dtype]
+
+  _, _, _, out, logsumexp = torch_xla._XLAC._xla_tpu_custom_call([
+      mask_info.data_next,
+      mask_info.block_mask,
+      mask_info.mask_next,
+      q if q_layout == QKVLayout.HEAD_DIM_MINOR else q.transpose(-1, -2),
+      k if k_layout == QKVLayout.HEAD_DIM_MINOR else k.transpose(-1, -2),
+      v if v_layout == QKVLayout.HEAD_DIM_MINOR else v.transpose(-1, -2),
+      q_segment_ids,
+      kv_segment_ids,
+      mask_info.partial_mask_blocks,
+      q_sequence,
+  ], payload, out_shapes, out_d_types)
+
+  return out
 
 
 def splash_attention(
+    # fwd_mask_info: mask_info_lib.MaskInfo,
     mask_info_data_next: torch.Tensor | None,
     mask_info_mask_next: torch.Tensor | None,
     mask_info_block_mask: torch.Tensor | None,
@@ -772,30 +710,38 @@ def splash_attention(
     q: torch.Tensor,
     k: torch.Tensor,
     v: torch.Tensor,
-    q_segment_ids,  # [q_seq_len]
-    kv_segment_ids,  # [kv_seq_len]
+    q_segment_ids: torch.Tensor | None,  # [q_seq_len]
+    kv_segment_ids: torch.Tensor | None,  # [kv_seq_len]
     mask_value: float,
     is_mqa: bool,
-    residual_checkpoint_name: str | None,
-    save_residuals: bool,
+    # TODO do we want to accept custom block_sizes as a parameter?
+    # block_sizes: BlockSizes,
+    residual_checkpoint_name: str | None = None,
+    save_residuals: bool = False,
     # TODO mask_function is a custom callable type. How can we allow Dynamo to trace it?
-    # mask_function: MaskFunctionType | None,
+    mask_function: Callable | None = None,
     attn_logits_soft_cap: float | None = None,
     interpret: bool = False):
-  # TODO handle backward case
+  # TODO handle backward
   return _splash_attention_forward(
-      fwd_mask_info,
+      # fwd_mask_info: mask_info_lib.MaskInfo,
+      mask_info_data_next,
+      mask_info_mask_next,
+      mask_info_block_mask,
+      mask_info_partial_mask_blocks,
+      mask_info_q_sequence,
       q,
       k,
       v,
-      segment_ids,
-      mask_value=mask_value,
-      is_mqa=is_mqa,
-      block_sizes=block_sizes,
+      q_segment_ids,  # [q_seq_len]
+      kv_segment_ids,  # [kv_seq_len]
+      mask_value,
+      is_mqa,
+      # block_sizes: BlockSizes,
       residual_checkpoint_name=residual_checkpoint_name,
       save_residuals=save_residuals,
       mask_function=mask_function,
-      attn_logits_soft_cap=attn_logits_soft_cap,
+      attn_logits_soft_cap=mask_function,
       interpret=interpret,
   )
 

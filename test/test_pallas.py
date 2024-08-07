@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Callable
 import unittest
 
 import torch
@@ -1027,62 +1028,63 @@ class PallasTest(unittest.TestCase):
                    "This test only works on TPUv4+.")
   def test_splash_attention_wrapper(self):
     from torch_xla.experimental.custom_kernel import splash_attention
+    from jax.experimental.pallas.ops.tpu.splash_attention.splash_attention_kernel import BlockSizes, SegmentIds, QKVLayout, _splash_attention_forward
+    from jax.experimental.pallas.ops.tpu.splash_attention import splash_attention_mask_info as mask_info_lib
 
-    # TODO add these helper functions
-    seed = data.draw(seed_strategy())
-    key = random.key(seed)
-    k1, k2, k3 = random.split(key, 3)
+    # Example input data for unit test
+    num_q_heads = 2
+    q_seq_len = 16
+    kv_seq_len = 16
+    head_dim = 64
+    block_q = 4
+    block_kv = 4
+    block_kv_compute = 2
 
-    q_seq_len, kv_seq_len, num_q_heads, num_kv_heads, head_dim, dtype = (
-        data.draw(mha_strategy()))
-
-    # Avoid segment ids for rectangular matrices, as its hard to enforce
-    # valid masks (non-0 rows).
-    hp.assume(q_seq_len == kv_seq_len or not is_segmented)
-
-    q = random.uniform(k1, (num_q_heads, q_seq_len, head_dim), dtype=dtype)
-    if is_mqa:
-      k = random.uniform(k2, (kv_seq_len, head_dim), dtype=dtype)
-      v = random.uniform(k3, (kv_seq_len, head_dim), dtype=dtype)
-    else:
-      k = random.uniform(k2, (num_kv_heads, kv_seq_len, head_dim), dtype=dtype)
-      v = random.uniform(k3, (num_kv_heads, kv_seq_len, head_dim), dtype=dtype)
-
-    segment_ids = None
-    if is_segmented:
-      assert q_seq_len == kv_seq_len
-      segment_ids = data.draw(segment_ids_strategy(q_seq_len))
-
-    attn_logits_soft_cap = data.draw(attn_logits_soft_cap_strategy())
-    masks = data.draw(mha_mask_strategy(q_seq_len, kv_seq_len, num_q_heads))
-    mask = mask_lib.MultiHeadMask(tuple(m.get_mask() for m in masks))
-    block_sizes = data.draw(block_sizes_strategy(q_seq_len, kv_seq_len))
-
-    if is_mqa:
-      attn_ref = splash.make_masked_mqa_reference(mask)
-      attn = splash.make_splash_mqa_single_device(
-          mask,
-          block_sizes=block_sizes,
-          attn_logits_soft_cap=attn_logits_soft_cap,
-          interpret=self.INTERPRET,
-      )
-    else:
-      attn_ref = splash.make_masked_mha_reference(mask)
-      attn = splash.make_splash_mha_single_device(
-          mask,
-          block_sizes=block_sizes,
-          attn_logits_soft_cap=attn_logits_soft_cap,
-          interpret=self.INTERPRET,
-      )
-    o = attn(q, k, v, segment_ids)
-    o_ref = attn_ref(
-        q.astype(np.float32),
-        k.astype(np.float32),
-        v.astype(np.float32),
-        segment_ids,
-        attn_logits_soft_cap=attn_logits_soft_cap,
+    fwd_mask_info: mask_info_lib.MaskInfo = mask_info_lib.MaskInfo(
+        q_sequence=torch.randint(0, 2, (q_seq_len,)),
+        data_next=torch.randn(num_q_heads, q_seq_len, kv_seq_len),
+        block_mask=torch.randint(0, 2, (num_q_heads, q_seq_len, kv_seq_len)),
+        mask_next=torch.randint(0, 2, (num_q_heads, q_seq_len, kv_seq_len)),
+        partial_mask_blocks=torch.randint(0, 2,
+                                          (num_q_heads, q_seq_len, kv_seq_len)),
     )
-    self._assert_allclose(o, o_ref, atol=3e-3, rtol=3e-3)
+
+    q_xla = torch.randn(num_q_heads, q_seq_len, head_dim).to("xla")
+    k_xla = torch.randn(num_q_heads, q_seq_len, head_dim).to("xla")
+    v_xla = torch.randn(num_q_heads, q_seq_len, head_dim).to("xla")
+    segment_ids: SegmentIds | None = None
+    mask_value: float = -0.7 * float(torch.finfo(torch.float32).max)
+    is_mqa: bool = False
+    block_sizes: BlockSizes = None
+    residual_checkpoint_name: str | None = None
+    save_residuals: bool = False
+    mask_function: Callable | None = None
+    attn_logits_soft_cap: float | None = None
+    interpret: bool = False
+
+    output = splash_attention(
+        mask_info_data_next,
+        mask_info_mask_next,
+        mask_info_block_mask,
+        mask_info_partial_mask_blocks,
+        mask_info_q_sequence,
+        q_xla,
+        k_xla,
+        v_xla,
+        q_segment_ids,  # [q_seq_len]
+        kv_segment_ids,  # [kv_seq_len]
+        mask_value,
+        is_mqa,
+    )
+
+    jax_output = _splash_attention_forward(fwd_mask_info, q_jax, k_jax, v_jax,
+                                           segment_ids, mask_value, is_mqa,
+                                           block_sizes,
+                                           residual_checkpoint_name,
+                                           save_residuals, mask_function,
+                                           attn_logits_soft_cap, interpret)
+
+    self._assert_allclose(output, jax_output, atol=3e-3, rtol=3e-3)
 
 
 if __name__ == '__main__':
