@@ -178,6 +178,10 @@ def debug_accuracy(func, args, kwargs, current_output):
   flattened_expected_out, _ = torch_pytree.tree_flatten(expected_out)
 
   for ex, real in zip(flattened_expected_out, flattened_current_out):
+    print("ex: ", ex)
+    print("ex dtype: ", ex.dtype)
+    print("real: ", real)
+    print("real dtype: ", real.dtype)
     if ex.dtype != real.dtype:
       ex = ex.to(real.dtype)
     try:

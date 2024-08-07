@@ -467,12 +467,20 @@ def run_export_and_compare(testcase,
   rtol = 1e-5
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
+    # print("res: ", res)
+    # print("res dtype: ", res.dtype)
+    # print("func: ", func)
     with testcase.subTest("torch_xla2_eval"):
       input2, args2, kwargs2 = testcase.env.to_xla((
         sample_input.input, sample_input.args, sample_input.kwargs))
       with testcase.env:
         res2 = func(input2, *args2, **kwargs2)
+      # print("input2: ", input2)
+      # print("args2: ", args2)
+      # print("kwargs2: ", kwargs2)
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
+      # print("res2: ", res2)
+      # print("res2 dtype: ", res2.dtype)
       with testcase.subTest("torch_xla2_diff:" + str(atol)):
         if ignore_indices and isinstance(res, tuple) and len(res) == 2:
           diff_output(
@@ -507,6 +515,7 @@ class TestOpInfo(TestCase):
   def test_reference_eager(self, device, dtype, op):
     sample_inputs = op.sample_inputs(device, dtype)
     for sample_input in sample_inputs:
+      # print("sample_input: ", sample_input)
       t = sample_input.input
       if isinstance(t, torch.Tensor) and t.is_sparse:
         continue
