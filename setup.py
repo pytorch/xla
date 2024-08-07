@@ -290,7 +290,7 @@ setup(
     ],
     install_requires=[
         'absl-py>=1.0.0',
-        'cloud-tpu-client>=0.10.0',
+        'numpy',
         'pyyaml',
         # importlib.metadata backport required for PJRT plugin discovery prior
         # to Python 3.10
