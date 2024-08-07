@@ -35,9 +35,38 @@ template <typename T>
 using OutputMap =
     std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;
 
+class DynamicShapeDetector {
+ public:
+  static DynamicShapeDetector* Get();
+
+  void SetSessionName(std::string name);
+  void EndSession();
+  void AddNodeInfo(torch::lazy::hash_t hash, std::string node_str);
+
+ private:
+  std::unordered_map<std::string,
+                     std::vector<std::pair<torch::lazy::hash_t, std::string>>>
+      name_to_nodes_info_;
+  std::vector<std::pair<torch::lazy::hash_t, std::string>>* current_node_infos_;
+  std::string current_session_name_ = "";
+  size_t current_node_index_ = 0;
+  bool insert_mode_ = true;
+};
+
+static void DetectDynamicShape2(torch::lazy::NodePtr node) {
+  DynamicShapeDetector* detector = DynamicShapeDetector::Get();
+  // don't add leaf nodes
+  std::unordered_set<std::string> unwanted_nodes = {"xla::device_data",
+                                                    "prim::Constant"};
+  if (unwanted_nodes.find(node->op().ToString()) == unwanted_nodes.end()) {
+    detector->AddNodeInfo(node->hash(), node->ToString());
+  }
+}
+
 template <typename T, typename... Args>
 torch::lazy::NodePtr MakeNode(Args&&... args) {
   torch::lazy::NodePtr res = std::make_shared<T>(std::forward<Args>(args)...);
+  DetectDynamicShape2(res);
   return res;
 }
 
