@@ -31,6 +31,21 @@ class DistributedDataParallel(torch.nn.Module):
     module.load_state_dict(replicated_state, assign=True)
     self._module = module
 
+  def shard_input(self, inp):
+    per_process_batch_size = inp.shape[0] # assumes batch dim is 0
+    per_replica_batch_size = per_process_batch_size // jax.local_device_count()
+    per_replica_batches = torch.chunk(inp, jax.local_device_count())
+    global_batch_size = per_replica_batch_size * jax.device_count()
+    global_batch_shape = ((global_batch_size,) + inp.shape[1:])
+
+    sharding = NamedSharding(self._mesh, P('batch'))
+    return jax.make_array_from_single_device_arrays(
+        global_batch_shape,
+        NamedSharding(self._mesh, P('batch')),
+        arrays=[jax.device_put(batch.numpy(), device)
+            for batch, device
+            in zip(per_replica_batches, sharding.addressable_devices)])
+
   def forward(self, *args):
     return self._module(*args)
 
@@ -99,19 +114,21 @@ env = torch_xla2.default_env()
 def main():
   dist.init_process_group(backend='gloo')
   # TODO: merge into backend
-  os.environ['TPU_VISIBLE_CHIPS'] = os.environ['LOCAL_RANK']
-  os.environ['TPU_PROCESS_BOUNDS'] = '1,1,1' if dist.get_world_size() == 1 else '2,2,1'
-  os.environ['TPU_CHIPS_PER_PROCESS_BOUNDS'] = '1,1,1'
-  ports = [str(p) for p in range(8476, 8480)]
-  os.environ['TPU_PROCESS_ADDRESSES'] = ','.join(f'localhost:{port}' for port in ports)
-  os.environ['TPU_PROCESS_PORT'] = ports[int(os.environ['LOCAL_RANK'])]
-  os.environ['CLOUD_TPU_TASK_ID'] = os.environ['RANK']
+  # os.environ['TPU_VISIBLE_CHIPS'] = os.environ['LOCAL_RANK']
+  # os.environ['TPU_PROCESS_BOUNDS'] = '1,1,1' if dist.get_world_size() == 1 else '2,2,1'
+  # os.environ['TPU_CHIPS_PER_PROCESS_BOUNDS'] = '1,1,1'
+  # ports = [str(p) for p in range(8476, 8480)]
+  # os.environ['TPU_PROCESS_ADDRESSES'] = ','.join(f'localhost:{port}' for port in ports)
+  # os.environ['TPU_PROCESS_PORT'] = ports[int(os.environ['LOCAL_RANK'])]
+  # os.environ['CLOUD_TPU_TASK_ID'] = os.environ['RANK']
 
   # Create distributed data loader
   torch.manual_seed(0)
   dataset = SortDataset('train')
   sampler = torch.utils.data.distributed.DistributedSampler(dataset, dist.get_world_size(), dist.get_rank(), shuffle=False)
-  dataloader = torch.utils.data.DataLoader(dataset, batch_size=2, sampler=sampler, drop_last=True)
+  per_device_batch_size = 2
+  batch_size = jax.local_device_count() * per_device_batch_size
+  dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=sampler, drop_last=True)
 
   # Create model and wrap with DDP
   from mingpt.model import GPT
@@ -130,20 +147,8 @@ def main():
   # Training loop
   for epoch in range(3):
     print('epoch', epoch)
-    for data, target in tqdm(dataloader):
-      data_shape, target_shape = data.numpy().shape, target.numpy().shape
-      global_data_batch_shape = ((dataloader.batch_size * jax.process_count(),) + data_shape[1:])
-      jax_data = jax.make_array_from_single_device_arrays(
-        global_data_batch_shape,
-        NamedSharding(jax_model._mesh, P('batch')),
-        [jax.device_put(data.numpy(), jax.local_devices()[0])])
-      global_target_batch_shape = ((dataloader.batch_size * jax.process_count(),) + target_shape[1:])
-      jax_target = jax.make_array_from_single_device_arrays(
-        global_target_batch_shape,
-        NamedSharding(jax_model._mesh, P('batch')),
-        [jax.device_put(target.numpy(), jax.local_devices()[0])])
-
-      jax_data, jax_target = env.j2t_iso(jax_data), env.j2t_iso(jax_target)
+    for data, target in tqdm(dataloader, unit='ex', unit_scale=batch_size):
+      jax_data, jax_target = env.j2t_iso((jax_model.shard_input(data), jax_model.shard_input(target)))
       jax_optimizer.zero_grad()
       jax_output, jax_loss = jax_model(jax_data, jax_target)
       # jax_loss = loss_fn(jax_output, jax_target)
