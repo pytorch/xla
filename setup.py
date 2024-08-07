@@ -343,7 +343,7 @@ setup(
     ],
     install_requires=[
         'absl-py>=1.0.0',
-        'cloud-tpu-client>=0.10.0',
+        'numpy',
         'pyyaml',
     ],
     package_data={
