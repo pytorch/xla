@@ -2,6 +2,7 @@ import sys
 import collections
 import contextlib
 import functools
+import uuid
 from typing import Any, Callable, List, Optional, Tuple
 
 import torch
@@ -85,7 +86,8 @@ def step():
 
 def compile(f: Optional[Callable] = None,
             full_graph: Optional[bool] = False,
-            name: Optional[str] = None):
+            name: Optional[str] = None,
+            detect_dynamic_shape = False,):
   """
   Optimizes given model/function using torch_xla's LazyTensor tracing mode.
   PyTorch/XLA will trace the given function with given inputs and then generate
@@ -125,6 +127,8 @@ def compile(f: Optional[Callable] = None,
     elif hasattr(f, '__str__'):
       name = f.__str__()
 
+  current_id = uuid.uuid4().__str__()
+
   def _clear_pending_ops_before_compile():
     sync()
 
@@ -145,10 +149,15 @@ def compile(f: Optional[Callable] = None,
     # if full_graph sets to true execution can not happen before the sync below
     torch_xla._XLAC._set_allow_execution(not full_graph)
 
+    if detect_dynamic_shape:
+      torch_xla._XLAC._start_ds_detector_session(current_id)
+
     try:
       yield
     finally:
       torch_xla._XLAC._set_allow_execution(saved_allow_execution)
+      if detect_dynamic_shape:
+        torch_xla._XLAC._end_ds_detector_session()
       # Collect the traced graph after running the target function and
       # execute the graph.
       sync()
