@@ -131,6 +131,7 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
           sys.exit(f'JSONL record does not contain key {k}. JSONL: {r}')
         for kk in fields[k]:
           if kk not in r[k]:
+            print("lllllll: ", k)
             sys.exit(f'JSONL record does not contain key {k}.{kk}. JSONL: {r}')
 
       # Read in what we need.

@@ -1,5 +1,4 @@
-# ARGS: --backends inductor openxla+dynamo openxla+lazytensor --
-# ModelName,Speedup(Inductor/Oldest Inductor),StdDev,Speedup(XLA+Dynamo/Oldest Inductor),StdDev,Speedup(XLA+LazyTensor/Oldest Inductor),StdDev
-Background_Matting,1.2957024,0.0,0.77297688,0.0,0.41071322,0.0
-BERT_pytorch,1.51952596,0.06679279,1.56880282,0.06015859,,
-GEOMEAN,1.40315838,0.03083885,1.10120312,0.02420242,0.41071322,0.0
+# ModelName,Speedup(Inductor/Oldest Inductor),StdDev,Speedup(XLA+Dynamo/Oldest Inductor),StdDev
+Background_Matting,1.2957024,0.0,0.77297688,0.0
+BERT_pytorch,1.51952596,0.06679279,1.56880282,0.06895882
+GEOMEAN,1.40315838,0.03083885,1.10120312,0.02420242
