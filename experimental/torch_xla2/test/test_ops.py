@@ -373,8 +373,6 @@ skiplist = {
     "nn.functional.hardshrink",
     "nn.functional.hardsigmoid",
     "nn.functional.hardswish",
-    "nn.functional.hardtanh",
-    "nn.functional.huber_loss",
     "nn.functional.smooth_l1_loss",
     "nn.functional.soft_margin_loss",
     "nn.functional.softplus",
