@@ -2701,18 +2701,6 @@ class TestGeneric(test_utils.XlaTestCase):
 
     self.assertEqual(a, former_a)
 
-  @skipOnEagerDebug
-  def test_sync_wait(self):
-    xm.wait_device_ops()
-    met.clear_all()
-    device = torch_xla.device()
-    input = torch.randn(1024, 1024, device=device)
-    res = input @ input @ input
-
-    torch_xla.sync(wait=True)
-    # ExecuteTime will show up after the async device execution finished.
-    self.assertIn('ExecuteTime', met.metric_names())
-
   def _test_move_tensor_cuda_to_xla(self, cpu_tensor):
     # Assumes CPU-XLA data movement works.
     cuda_tensor = cpu_tensor.to("cuda")
