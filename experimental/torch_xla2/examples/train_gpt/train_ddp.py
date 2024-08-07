@@ -121,14 +121,16 @@ def main():
   # os.environ['TPU_PROCESS_ADDRESSES'] = ','.join(f'localhost:{port}' for port in ports)
   # os.environ['TPU_PROCESS_PORT'] = ports[int(os.environ['LOCAL_RANK'])]
   # os.environ['CLOUD_TPU_TASK_ID'] = os.environ['RANK']
+  print(jax.device_count(), 'devices')
 
   # Create distributed data loader
   torch.manual_seed(0)
   dataset = SortDataset('train')
   sampler = torch.utils.data.distributed.DistributedSampler(dataset, dist.get_world_size(), dist.get_rank(), shuffle=False)
   per_device_batch_size = 2
-  batch_size = jax.local_device_count() * per_device_batch_size
-  dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=sampler, drop_last=True)
+  local_batch_size = jax.local_device_count() * per_device_batch_size
+  global_batch_size = jax.device_count() * per_device_batch_size
+  dataloader = torch.utils.data.DataLoader(dataset, batch_size=local_batch_size, sampler=sampler, drop_last=True)
 
   # Create model and wrap with DDP
   from mingpt.model import GPT
@@ -147,7 +149,7 @@ def main():
   # Training loop
   for epoch in range(3):
     print('epoch', epoch)
-    for data, target in tqdm(dataloader, unit='ex', unit_scale=batch_size):
+    for data, target in tqdm(dataloader, unit='ex', unit_scale=global_batch_size):
       jax_data, jax_target = env.j2t_iso((jax_model.shard_input(data), jax_model.shard_input(target)))
       jax_optimizer.zero_grad()
       jax_output, jax_loss = jax_model(jax_data, jax_target)
