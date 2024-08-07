@@ -53,8 +53,7 @@ def main():
   for dtype in dtypes:
     for inductor_matmul, xla_matmul in zip(
         get_matmuls(device='cuda', dtype=dtype, backend='inductor'),
-        get_matmuls(
-            device=xm.xla_device(), dtype=dtype, backend='openxla_eval')):
+        get_matmuls(device=xm.xla_device(), dtype=dtype, backend='openxla')):
       ind_lhs_shape, ind_rhs_shape, ind_fn = inductor_matmul
       xla_lhs_shape, xla_rhs_shape, xla_fn = xla_matmul
       assert ind_lhs_shape == xla_lhs_shape, f"Expect matmul shapes to match for benchmarking. Mismatch lhs: {ind_lhs_shape}, rhs: {xla_rhs_shape}"

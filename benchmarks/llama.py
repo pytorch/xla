@@ -136,7 +136,7 @@ def run_benchmarks(args, llama_dir: str, results_dir: str,
       os.remove(params_json)
     os.symlink(f'{size}.json', params_json)
     model_name = f"llama2.{size}"
-    for dynamo in [None, 'inductor', 'openxla', 'openxla_eval']:
+    for dynamo in [None, 'inductor', 'openxla']:
       backend = dynamo if dynamo else 'lazytensor'
       xla = None if dynamo == 'inductor' else 'PJRT'
       summary = f"{model_name} eval {backend} batch {args.batch_size}"

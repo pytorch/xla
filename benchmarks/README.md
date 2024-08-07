@@ -104,7 +104,7 @@ works only for inference now.
 cd pytorch
 PJRT_DEVICE=CUDA python3 new_xla/benchmarks/experiment_runner.py \
     --xla=PJRT \
-    --dynamo=openxla_eval \
+    --dynamo=openxla \
     --test=eval \
     --filter=BERT_pytorch$ \
     --suite-name=torchbench \

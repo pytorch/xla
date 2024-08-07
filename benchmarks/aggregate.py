@@ -30,7 +30,6 @@ Datapoint = namedtuple('Datapoint', 'avg, std')
 _title_map = {
     'eager': 'Eager',
     'inductor': 'Inductor',
-    'openxla_eval+dynamo': 'XLA_Eval+Dynamo',
     'openxla+dynamo': 'XLA+Dynamo',
     'openxla+lazytensor': 'XLA+LazyTensor',
 }
@@ -99,7 +98,7 @@ def get_backend_name(dynamo: str, xla: str) -> str:
   if dynamo == 'inductor':
     return 'inductor'
   if xla == 'PJRT':
-    assert dynamo == 'openxla' or dynamo == 'openxla_eval' or dynamo == None
+    assert dynamo == 'openxla' or dynamo == None
     xla_name = dynamo
     tracer = 'dynamo'
     if not dynamo:
@@ -132,6 +131,7 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
           sys.exit(f'JSONL record does not contain key {k}. JSONL: {r}')
         for kk in fields[k]:
           if kk not in r[k]:
+            print("lllllll: ", k)
             sys.exit(f'JSONL record does not contain key {k}.{kk}. JSONL: {r}')
 
       # Read in what we need.
@@ -707,7 +707,7 @@ def parse_args(args=None):
   args.exclude = args.exclude or [r"^$"]
   if not args.backends:
     if args.test == 'inference':
-      args.backends = ['inductor', 'openxla+dynamo', 'openxla_eval+dynamo']
+      args.backends = ['inductor', 'openxla+dynamo']
     else:
       args.backends = ['inductor', 'openxla+dynamo']
   for backend in args.backends:
