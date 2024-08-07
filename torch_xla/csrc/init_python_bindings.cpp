@@ -1764,6 +1764,12 @@ void InitXlaModuleBindings(py::module m) {
       [](const std::string& device) { return GetRngSeed(device); },
       py::arg("device") = "");
   m.def(
+      "_xla_set_virtual_topology",
+      [](std::string& topology) {
+        torch_xla::runtime::SetVirtualTopology(topology);
+      },
+      py::arg("topology") = "");
+  m.def(
       "_xla_set_should_alias_with_buffer_donor_config",
       [](bool should_alias, const std::string& device_str) {
         torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
