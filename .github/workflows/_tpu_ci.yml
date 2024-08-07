@@ -29,5 +29,6 @@ jobs:
         env:
           PJRT_DEVICE: TPU
         run: |
+          sudo chmod 777 /tmp/tpu_logs
           cd pytorch/xla
           test/tpu/run_tests.sh
