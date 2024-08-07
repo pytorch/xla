@@ -43,6 +43,67 @@ torch::lazy::hash_t GetOperandHashes(const torch::lazy::OpList& operands,
 
 }  // namespace
 
+DynamicShapeDetector* DynamicShapeDetector::Get() {
+  static DynamicShapeDetector ds_detector = DynamicShapeDetector();
+  return &ds_detector;
+}
+
+void DynamicShapeDetector::SetSessionName(std::string name) {
+  XLA_CHECK_EQ(current_session_name_, "");
+  current_session_name_ = name;
+  if (name_to_nodes_info_.find(current_session_name_) !=
+      name_to_nodes_info_.end()) {
+    // session name already existed, the goal of this session is to check
+    // whether the IR generated is the same as last one
+    insert_mode_ = false;
+  } else {
+    insert_mode_ = true;
+    name_to_nodes_info_[current_session_name_] = {};
+  }
+  current_node_infos_ = &name_to_nodes_info_[current_session_name_];
+}
+
+void DynamicShapeDetector::EndSession() {
+  current_session_name_ = "";
+  current_node_index_ = 0;
+  current_node_infos_ = nullptr;
+}
+
+void DynamicShapeDetector::AddNodeInfo(torch::lazy::hash_t hash,
+                                       std::string node_str) {
+  if (current_node_infos_ == nullptr) {
+    return;
+  }
+  if (insert_mode_) {
+    current_node_infos_->push_back(std::make_pair(hash, node_str));
+    std::cout << "hash = "
+              << torch::lazy::HashToString(current_node_infos_->back().first)
+              << " " << current_node_infos_->back().second << "\n";
+  } else {
+    if (current_node_infos_->size() <= current_node_index_) {
+      XLA_ERROR() << "\n*******************************************************"
+                     "*********************\n"
+                  << "Current graph's IR exceed previous one\n"
+                  << "*********************************************************"
+                     "*******************\n";
+    } else if ((*current_node_infos_)[current_node_index_].first != hash) {
+      XLA_ERROR() << "\n*******************************************************"
+                     "*********************\n"
+                  << "Node Hash mismatch\n"
+                  << "expecting: \n"
+                  << (*current_node_infos_)[current_node_index_].second << "\n"
+                  << "got: \n"
+                  << node_str << "\n"
+                  << "*********************************************************"
+                     "*******************\n";
+    } else {
+      std::cout << "there is a match for "
+                << (*current_node_infos_)[current_node_index_].second << "\n";
+    }
+    current_node_index_++;
+  }
+}
+
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  std::vector<torch::lazy::Shape>&& shapes, xla::Shape xla_shape,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
