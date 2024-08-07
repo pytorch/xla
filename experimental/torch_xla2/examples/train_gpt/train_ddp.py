@@ -100,7 +100,7 @@ def main():
   dist.init_process_group(backend='gloo')
   # TODO: merge into backend
   os.environ['TPU_VISIBLE_CHIPS'] = os.environ['LOCAL_RANK']
-  os.environ['TPU_PROCESS_BOUNDS'] = '1,1,1'
+  os.environ['TPU_PROCESS_BOUNDS'] = '1,1,1' if dist.get_world_size() == 1 else '2,2,1'
   os.environ['TPU_CHIPS_PER_PROCESS_BOUNDS'] = '1,1,1'
   ports = [str(p) for p in range(8476, 8480)]
   os.environ['TPU_PROCESS_ADDRESSES'] = ','.join(f'localhost:{port}' for port in ports)
@@ -119,8 +119,7 @@ def main():
   model_config.model_type = 'gpt-nano'
   model_config.vocab_size = dataset.get_vocab_size()
   model_config.block_size = dataset.get_block_size()
-  with env: # TODO: DDP should handle moving parameters
-    model = GPT(model_config)
+  model = GPT(model_config)
   # cpu_model = DDP_orig(copy.deepcopy(model))
   jax_model = DistributedDataParallel(model)
 
@@ -146,10 +145,7 @@ def main():
 
       jax_data, jax_target = env.j2t_iso(jax_data), env.j2t_iso(jax_target)
       jax_optimizer.zero_grad()
-      # HACK: Forward pass creates some tensors. Dispatch them to JAX with env
-      # until we can use a real device key
-      with env:
-        jax_output, jax_loss = jax_model(jax_data, jax_target)
+      jax_output, jax_loss = jax_model(jax_data, jax_target)
       # jax_loss = loss_fn(jax_output, jax_target)
       jax_loss.backward()
       torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
