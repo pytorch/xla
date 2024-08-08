@@ -286,6 +286,10 @@ class ExperimentRunner:
       reset_rng_state(experiment)
       model = self.model_loader.load_model(model_config, experiment)
 
+      # real batch_size can be updated after load_model, need to update
+      # so the config can be reflected in the report.
+      experiment_config['batch_size'] = experiment.batch_size
+
       # Repeat the experiment and accumulate metrics.
       with model.pick_grad():
         for repeat_iteration in range(self._args.repeat):
