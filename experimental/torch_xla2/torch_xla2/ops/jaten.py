@@ -1571,6 +1571,7 @@ def _aten_any(self, dim=None, keepdim=False):
 @op(torch.ops.aten.arange.start_step)
 @op(torch.ops.aten.arange.start)
 @op(torch.ops.aten.arange.default)
+@op_base.convert_dtype()
 def _aten_arange(
   start,
   end=None,
@@ -1582,14 +1583,6 @@ def _aten_arange(
   device=None,
   pin_memory=False,
 ):
-  if dtype:
-    dtype = mappings.t2j_dtype(dtype)
-  if start and dtype:
-    start = jax.lax.convert_element_type(start, dtype)
-  if end and dtype:
-    end = jax.lax.convert_element_type(end, dtype)
-  if step and dtype:
-    step = jax.lax.convert_element_type(step, dtype)
   return jnp.arange(
     start,
     end,
