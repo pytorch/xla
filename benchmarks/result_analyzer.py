@@ -157,7 +157,8 @@ class ResultAnalyzer:
 
       if "error" not in dataline["metrics"]:
         d["dimensions"]["run_status"] = "success"
-        d["metrics"] = self.get_calculated_metrics(d["metrics"], dataline)
+        if len(dataline["metrics"]) > 0:
+          d["metrics"] = self.get_calculated_metrics(d["metrics"], dataline)
       else:
         d["dimensions"]["run_status"] = "failure"
         d["metrics"]["median_total_time"] = -1
@@ -216,7 +217,7 @@ class ResultAnalyzer:
       if "error" in dataline["metrics"] and not self._args.hide_errors:
         d["error_message"] = dataline["metrics"]["error"]
 
-      if "error" not in dataline["metrics"]:
+      if len(dataline["metrics"]) > 0 and "error" not in dataline["metrics"]:
         d = self.get_calculated_metrics(d, dataline)
 
       new_row = pd.Series(d)
