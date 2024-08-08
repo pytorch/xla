@@ -56,6 +56,16 @@ class KVCache(torch.nn.Module):
     return updated_k, updated_v
 
 
+class AsModule(torch.nn.Module):
+
+  def __init__(self, f):
+    super().__init__()
+    self.f = f
+
+  def forward(self, *args, **kwargs):
+    return self.f(*args, **kwargs)
+
+
 class XlaMarkPatternTest(unittest.TestCase):
 
   def run_func_get_stablehlo(self, f, input_args):
@@ -63,7 +73,9 @@ class XlaMarkPatternTest(unittest.TestCase):
     device = xm.xla_device()
     input_args = pytree.tree_map_only(torch.Tensor,
                                       lambda x: x.to(device=device), input_args)
-    out = f(*input_args)
+    exported = torch.export.export(AsModule(f), input_args)
+    exported = exported.run_decompositions()
+    out = exported.module()(*input_args)
     if isinstance(out, tuple):
       out = list(out)
     else:
