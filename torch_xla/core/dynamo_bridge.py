@@ -724,7 +724,8 @@ class MaybeReconstructOutputs:
       handler = make_output_handler(info, self.metadata, trace_joint=False)
       print(f"[MaybeReconstructOutputs] {info.output_type=}")
       if (
-          info.output_type in (
+          is_xla_tensor(o)
+          and info.output_type in (
             OutputType.alias_of_input,
             OutputType.alias_of_intermediate,
             OutputType.alias_of_intermediate_save_as_output,
