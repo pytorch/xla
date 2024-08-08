@@ -143,6 +143,8 @@ xla::PrimitiveType XlaTypeFromTensorType(
       return xla::PrimitiveType::C64;
     case at::ScalarType::ComplexDouble:
       return xla::PrimitiveType::C128;
+    case at::ScalarType::Float8_e4m3fn:
+      return xla::PrimitiveType::F8E4M3FN;
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
@@ -1105,6 +1107,8 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
       return at::ScalarType::ComplexFloat;
     case xla::PrimitiveType::C128:
       return at::ScalarType::ComplexDouble;
+    case xla::PrimitiveType::F8E4M3FN:
+      return at::ScalarType::Float8_e4m3fn;
     default:
       XLA_ERROR() << "XLA type not supported: " << xla_type;
   }
@@ -1136,6 +1140,8 @@ xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type) {
       return xla::PrimitiveType::C64;
     case at::ScalarType::ComplexDouble:
       return xla::PrimitiveType::C128;
+    case at::ScalarType::Float8_e4m3fn:
+      return xla::PrimitiveType::F8E4M3FN;
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
@@ -1212,6 +1218,8 @@ xla::PrimitiveType MakeXlaPrimitiveType(
       return GetDevicePrimitiveType(xla::PrimitiveType::C64, device);
     case at::ScalarType::ComplexDouble:
       return GetDevicePrimitiveType(xla::PrimitiveType::C128, device);
+    case at::ScalarType::Float8_e4m3fn:
+      return GetDevicePrimitiveType(xla::PrimitiveType::F8E4M3FN, device);
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
