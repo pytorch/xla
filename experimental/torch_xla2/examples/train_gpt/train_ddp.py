@@ -17,6 +17,7 @@ from jax.sharding import NamedSharding
 from jax.sharding import Mesh, PartitionSpec as P
 from jax.experimental import mesh_utils
 import torch.utils._pytree as torch_pytree
+from torch_xla2 import interop
 from tqdm import tqdm
 
 class DistributedDataParallel(torch.nn.Module):
@@ -127,7 +128,7 @@ def main():
   torch.manual_seed(0)
   dataset = SortDataset('train')
   sampler = torch.utils.data.distributed.DistributedSampler(dataset, dist.get_world_size(), dist.get_rank(), shuffle=False)
-  per_device_batch_size = 2
+  per_device_batch_size = 128
   local_batch_size = jax.local_device_count() * per_device_batch_size
   global_batch_size = jax.device_count() * per_device_batch_size
   dataloader = torch.utils.data.DataLoader(dataset, batch_size=local_batch_size, sampler=sampler, drop_last=True)
@@ -146,17 +147,26 @@ def main():
   # cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1)
   jax_optimizer = optim.SGD(jax_model.parameters(), lr=1)
 
+  @interop.jax_jit
+  def step_fn(data, target):
+    jax_optimizer.zero_grad()
+    jax_output, jax_loss = jax_model(jax_data, jax_target)
+    jax_loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+    jax_optimizer.step()
+
   # Training loop
   for epoch in range(3):
     print('epoch', epoch)
     for data, target in tqdm(dataloader, unit='ex', unit_scale=global_batch_size):
       jax_data, jax_target = env.j2t_iso((jax_model.shard_input(data), jax_model.shard_input(target)))
-      jax_optimizer.zero_grad()
-      jax_output, jax_loss = jax_model(jax_data, jax_target)
-      # jax_loss = loss_fn(jax_output, jax_target)
-      jax_loss.backward()
-      torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-      jax_optimizer.step()
+      step_fn(jax_data, jax_target)
+      # jax_optimizer.zero_grad()
+      # jax_output, jax_loss = jax_model(jax_data, jax_target)
+      # # jax_loss = loss_fn(jax_output, jax_target)
+      # jax_loss.backward()
+      # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+      # jax_optimizer.step()
 
       # cpu_optimizer.zero_grad()
       # cpu_output, cpu_loss = cpu_model(data)
