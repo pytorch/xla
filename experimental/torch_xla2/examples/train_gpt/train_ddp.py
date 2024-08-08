@@ -1,6 +1,7 @@
 import logging
 import pickle
 import jax
+import numpy as np
 import torch
 import torch.utils.data
 import torch.utils.data.distributed
@@ -43,6 +44,9 @@ class DistributedDataParallel(torch.nn.Module):
         arrays=[jax.device_put(batch.numpy(), device)
             for batch, device
             in zip(per_replica_batches, sharding.addressable_devices)])
+
+  def replicate_input(self, inp):
+    return env.j2t_iso(jax.device_put(inp._elem, NamedSharding(self._mesh, P())))
 
   def forward(self, *args):
     return self._module(*args)
@@ -113,6 +117,7 @@ def main():
   dist.init_process_group(backend='gloo')
   print(jax.device_count(), 'devices')
 
+  torch.manual_seed(0)
   # Create distributed data loader
   dataset = SortDataset('train')
   sampler = torch.utils.data.distributed.DistributedSampler(dataset, dist.get_world_size(), dist.get_rank(), shuffle=False)
@@ -134,11 +139,15 @@ def main():
   jax_model = DistributedDataParallel(create_model())
   cpu_model = DDP_orig(create_model())
 
+  for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
+    np.testing.assert_allclose(jp.detach().numpy(), cp.detach().numpy())
+
   # Define loss and optimizer
   cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=3e-4)
   jax_optimizer = optim.SGD(jax_model.parameters(), lr=3e-4)
 
-  @interop.jax_jit
+  # TODO: JIT doesn't work
+  # @interop.jax_jit
   def step_fn(data, target):
     jax_optimizer.zero_grad()
     jax_output, jax_loss = jax_model(jax_data, jax_target)
@@ -146,8 +155,11 @@ def main():
     torch.nn.utils.clip_grad_norm_(jax_model.parameters(), 1.0)
     jax_optimizer.step()
 
+  iters = 20000
+  epochs = iters // global_batch_size + 1
+
   # Training loop
-  for epoch in range(3):
+  for epoch in range(epochs):
     print('epoch', epoch)
     for data, target in tqdm(dataloader, unit='ex', unit_scale=global_batch_size):
       jax_data, jax_target = env.j2t_iso((jax_model.shard_input(data), jax_model.shard_input(target)))
@@ -159,7 +171,24 @@ def main():
       cpu_optimizer.step()
 
       for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
+        # TODO: this isn't actually checking values
         torch.testing.assert_close(jp, cp, check_device=False)
+        # TODO: this fails
+        # np.testing.assert_allclose(jp.detach().numpy(), cp.detach().numpy(), rtol=1.3e-6, atol=1e-5)
+
+  input_cpu = torch.tensor([[0, 0, 2, 1, 0, 1]], dtype=torch.long)
+  input_jax = env.to_xla(input_cpu)
+
+  with torch.no_grad():
+    cat_jax = jax_model._module.generate(jax_model.replicate_input(input_jax), input_jax[0].nelement(), do_sample=False)
+    cat_cpu = cpu_model.module.generate(input_cpu, input_jax[0].nelement(), do_sample=False)
+
+  sol_candidate_jax = cat_jax[:, input_jax.nelement():]
+  sol_candidate_cpu = cat_cpu[:, input_cpu.nelement():]
+  print('input sequence  :', input_cpu.tolist())
+  print('predicted sorted (JAX):', sol_candidate_jax.numpy())
+  print('predicted sorted (CPU):', sol_candidate_cpu.numpy())
+
 
 if __name__ == '__main__':
   main()
