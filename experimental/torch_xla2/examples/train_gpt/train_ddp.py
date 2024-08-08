@@ -1,13 +1,10 @@
-import copy
 import logging
-import os
 import pickle
 import jax
 import torch
 import torch.utils.data
 import torch.utils.data.distributed
 import torch.distributed._functional_collectives
-import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP_orig
 import torch.distributed as dist
 import torch.optim as optim
@@ -114,18 +111,9 @@ env = torch_xla2.default_env()
 
 def main():
   dist.init_process_group(backend='gloo')
-  # TODO: merge into backend
-  # os.environ['TPU_VISIBLE_CHIPS'] = os.environ['LOCAL_RANK']
-  # os.environ['TPU_PROCESS_BOUNDS'] = '1,1,1' if dist.get_world_size() == 1 else '2,2,1'
-  # os.environ['TPU_CHIPS_PER_PROCESS_BOUNDS'] = '1,1,1'
-  # ports = [str(p) for p in range(8476, 8480)]
-  # os.environ['TPU_PROCESS_ADDRESSES'] = ','.join(f'localhost:{port}' for port in ports)
-  # os.environ['TPU_PROCESS_PORT'] = ports[int(os.environ['LOCAL_RANK'])]
-  # os.environ['CLOUD_TPU_TASK_ID'] = os.environ['RANK']
   print(jax.device_count(), 'devices')
 
   # Create distributed data loader
-  torch.manual_seed(0)
   dataset = SortDataset('train')
   sampler = torch.utils.data.distributed.DistributedSampler(dataset, dist.get_world_size(), dist.get_rank(), shuffle=False)
   per_device_batch_size = 128
@@ -135,16 +123,19 @@ def main():
 
   # Create model and wrap with DDP
   from mingpt.model import GPT
-  model_config = GPT.get_default_config()
-  model_config.model_type = 'gpt-nano'
-  model_config.vocab_size = dataset.get_vocab_size()
-  model_config.block_size = dataset.get_block_size()
-  model = GPT(model_config)
-  # cpu_model = DDP_orig(copy.deepcopy(model))
-  jax_model = DistributedDataParallel(model)
+  def create_model():
+    torch.manual_seed(0)
+    model_config = GPT.get_default_config()
+    model_config.model_type = 'gpt-nano'
+    model_config.vocab_size = dataset.get_vocab_size()
+    model_config.block_size = dataset.get_block_size()
+    return GPT(model_config)
+
+  jax_model = DistributedDataParallel(create_model())
+  cpu_model = DDP_orig(create_model())
 
   # Define loss and optimizer
-  # cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1)
+  cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1)
   jax_optimizer = optim.SGD(jax_model.parameters(), lr=1)
 
   @interop.jax_jit
@@ -152,7 +143,7 @@ def main():
     jax_optimizer.zero_grad()
     jax_output, jax_loss = jax_model(jax_data, jax_target)
     jax_loss.backward()
-    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+    torch.nn.utils.clip_grad_norm_(jax_model.parameters(), 1.0)
     jax_optimizer.step()
 
   # Training loop
@@ -161,21 +152,14 @@ def main():
     for data, target in tqdm(dataloader, unit='ex', unit_scale=global_batch_size):
       jax_data, jax_target = env.j2t_iso((jax_model.shard_input(data), jax_model.shard_input(target)))
       step_fn(jax_data, jax_target)
-      # jax_optimizer.zero_grad()
-      # jax_output, jax_loss = jax_model(jax_data, jax_target)
-      # # jax_loss = loss_fn(jax_output, jax_target)
-      # jax_loss.backward()
-      # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-      # jax_optimizer.step()
 
-      # cpu_optimizer.zero_grad()
-      # cpu_output, cpu_loss = cpu_model(data)
-      # cpu_loss = loss_fn(cpu_output, target)
-      # cpu_loss.backward()
-      # cpu_optimizer.step()
+      cpu_optimizer.zero_grad()
+      cpu_output, cpu_loss = cpu_model(data, target)
+      cpu_loss.backward()
+      cpu_optimizer.step()
 
-      # for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
-      #  torch.testing.assert_close(jp, cp, check_device=False)
+      for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
+        torch.testing.assert_close(jp, cp, check_device=False)
 
 if __name__ == '__main__':
   main()
