@@ -742,18 +742,27 @@ class MaybeReconstructOutputs:
           info.functional_tensor.tensor,
         )
       else:
+        if info.output_type in (
+            OutputType.alias_of_input,
+            OutputType.alias_of_intermediate,
+            OutputType.alias_of_intermediate_save_as_output,
+            OutputType.alias_of_intermediate_base_is_user_output,
+        ):
+          print(f"[MaybeReconstructOutputs] {is_xla_tensor(o)=}")
+          print(f"[MaybeReconstructOutputs] {info.functional_tensor=}")
+          print(f"[MaybeReconstructOutputs] {enable_skip_handler=}")
         print("[MaybeReconstructOutputs] Running handler...")
         return handler(args, outputs, o)
 
     return [maybe_skip_handler(o, info) for o, info in zip(outputs, self.metadata.output_info)]
 
 
-def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args, tracing_context: TracingContext):
+def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args, metadata: ViewAndMutationMeta):
   torch_xla._XLAC._xla_increment_counter('DynamoExtractCompiledGraph', 1)
 
   with torch_xla.experimental.eager_mode_context(False):
     g = extract_compiled_graph_helper(xla_model, xla_args)
-    return MaybeReconstructOutputs(g, tracing_context.fw_metadata)
+    return MaybeReconstructOutputs(g, metadata)
 
 
 def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
