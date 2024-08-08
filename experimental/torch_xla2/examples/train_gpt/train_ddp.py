@@ -135,8 +135,8 @@ def main():
   cpu_model = DDP_orig(create_model())
 
   # Define loss and optimizer
-  cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1)
-  jax_optimizer = optim.SGD(jax_model.parameters(), lr=1)
+  cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=3e-4)
+  jax_optimizer = optim.SGD(jax_model.parameters(), lr=3e-4)
 
   @interop.jax_jit
   def step_fn(data, target):
