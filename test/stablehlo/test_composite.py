@@ -74,14 +74,14 @@ class XlaMarkPatternTest(unittest.TestCase):
     input_args = pytree.tree_map_only(torch.Tensor,
                                       lambda x: x.to(device=device), input_args)
     exported = torch.export.export(AsModule(f), input_args)
-    exported = exported.run_decompositions()
+    exported = stablehlo._run_decompositions(exported)
     out = exported.module()(*input_args)
     if isinstance(out, tuple):
       out = list(out)
     else:
       out = [out]
-    stablehlo = xm.get_stablehlo(out)
-    return stablehlo
+    shlo = xm.get_stablehlo(out)
+    return shlo
 
   def export_func(self, f, args, saved_model_path=None):
     exported = torch.export.export(f, args)
