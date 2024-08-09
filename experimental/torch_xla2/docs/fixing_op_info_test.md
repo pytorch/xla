@@ -43,8 +43,7 @@ For errors you might get after running test, there are two kind:
 - Target op failure
   - error shows related to target op, such as `No lowering found for 'aten::addbmm'`, please follow instruction like [Fix Target op failure](https://github.com/pytorch/xla/blob/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-target-op-failure)
 - Other op failure
-  - error shows related to other op, such as `No lowering found for 'aten::_sin'` after you remove `addbmm` from skiplist, this means `addbmm` is decomposed by ops like `_sin`, please follow instruction like [Fix Other op failure](https://github.com/pytorch/xla/blob/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-other-op-failure)
-  (`addbmm` is not decomposed of `_sin`, here use it as an example for understanding; `trapezoid` is a decomposed example)
+  - error shows related to other op, such as `Operator with name aten::searchsorted.Tensor has no lowering` after you remove `isin` from skiplist, this means `isin` is decomposed by ops like `searchsorted`, please follow instruction like [Fix Other op failure](https://github.com/pytorch/xla/blob/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-other-op-failure)
 
 #### Fix Target op failure
 Error gotten:
@@ -69,22 +68,17 @@ For illustration purposes, let's implement this op in Jax.
 (NOTE: this doesn't stop us from upstreaming a decomposition later if we want)
 
 #### Fix Other op failure
-Error gotten related to other ops like `_sin` after you removed `addbmm` from skiplist, this means `addbmm` is decomposed by ops like `_sin`:
-```
-...
-E         RuntimeError: ('No lowering found for aten::_sin')
-...
-```
-or there are failed tests related to other ops like `_sin`:
+Error gotten related to other ops like `searchsorted` after you removed `isin` from skiplist, this means `isin` is decomposed by ops like `searchsorted`:
 ```
 ======================================================================
-FAIL: test_reference_eager__sin_kaiser_cpu_float32 (__main__.TestOpInfoCPU) [torch_xla2_diff:0.001]
+ERROR: test_reference_eager_isin_cpu_int64 (__main__.TestOpInfoCPU) [torch_xla2_eval]
 ----------------------------------------------------------------------
 Traceback (most recent call last):
 ...
+torch_xla2.tensor.OperatorNotFound: Operator with name aten::searchsorted.Tensor has no lowering
 ```
 Please try to fix it by following these steps:
-  1. confirm your target op `addbmm` is decomposed of `_sin` by running this code to print each sub ops:
+  1. confirm your target op `isin` is decomposed of `searchsorted` by running this code to print each sub ops:
   ```
   import torch
   import torch_xla2
@@ -94,13 +88,10 @@ Please try to fix it by following these steps:
   env.config.debug_accuracy_for_each_op = True
 
   with env:
-    M = torch.randn(3, 5)
-    batch1 = torch.randn(10, 3, 4)
-    batch2 = torch.randn(10, 4, 5)
-    print(torch.addbmm(M, batch1, batch2))
+    print(torch.isin(torch.tensor([[1, 2], [3, 4]]), torch.tensor([2, 3])))
   ```
   2. (optional) Debug by modify [debug_accuracy()](https://github.com/pytorch/xla/blob/c26b19ebdefccd3a4300763e1085724d3d4cd3d0/experimental/torch_xla2/torch_xla2/tensor.py#L171C1-L194C14) to check `res`(from jax) and `expected_res`(from torch)'s value and dtype/type.
-  3. you might need to debug/modify implementation of `_sin` to support `abbdmm` by using step 2.
+  3. you might need to debug/modify implementation of `searchsorted` to support `isin` by using step 2.
 
 ### First Impl
 
