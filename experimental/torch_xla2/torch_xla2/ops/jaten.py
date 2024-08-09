@@ -1828,7 +1828,10 @@ def _aten_glu(x, dim=-1):
 
 # aten.hardtanh
 @op(torch.ops.aten.hardtanh)
-def _aten_hardtanh(input, min_val=-1.0, max_val=1.0, inplace=False):
+def _aten_hardtanh(input, min_val=-1, max_val=1, inplace=False):
+  if input.dtype == np.int64 and isinstance(max_val, float) and isinstance(min_val, float):
+    min_val = int(min_val)
+    max_val = int(max_val)
   return jnp.clip(input, min_val, max_val)
 
 
