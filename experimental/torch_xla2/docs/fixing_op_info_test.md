@@ -39,10 +39,18 @@ index 72a39ae85..2a156cbce 100644
 ```
 
 ### Run test to see what failure
+For errors you might get after running test, there are two kind:
+- Target op failure
+  - error shows related to target op, such as `No lowering found for 'aten::addbmm'`, please follow instruction like [Fix Target op failure]()
+- Other op failure
+  - error shows related to other op, such as `No lowering found for 'aten::_sin'` after you remove `addbmm` from skiplist, this means `addbmm` is decomposed by ops like `_sin`, please follow instruction like [Fix Other op failure]()
 
+##### Fix Target op failure
 Error gotten:
 
 ```
+(base) hanq-macbookpro:torch_xla2 hanq$ PJRT_DEVICE=TPU python test/test_ops.py 
+...
 E         RuntimeError: ('No lowering found for\n\nTo execute this test, run the following from the base repo dir:\n     python test/test_ops.py -k test_reference_eager_addbmm_cpu_int64\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0', 'aten::addbmm')
 ```
 
@@ -58,6 +66,10 @@ so other projects can benefit from it.
 For illustration purposes, let's implement this op in Jax. 
 
 (NOTE: this doesn't stop us from upstreaming a decomposition later if we want)
+
+##### Fix Other op failure
+Error gotten related to other ops like `_sin` after you removed `addbmm` from skiplist, this means `addbmm` is decomposed by ops like `_sin`:
+- 1. confirm your target op `addbmm`
 
 ### First Impl
 
