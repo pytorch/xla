@@ -68,7 +68,7 @@ For illustration purposes, let's implement this op in Jax.
 (NOTE: this doesn't stop us from upstreaming a decomposition later if we want)
 
 #### Fix Decomposed op failure
-For situation that no implemention found in `experimental/torch_xla2/torch_xla2/ops/jaten.py`, but error shows target op(trapezoid) has been implemented somewhere:
+For situation that no target op(`trapezoid`) implemention found in `experimental/torch_xla2/torch_xla2/ops/jaten.py`, but error shows target op(`trapezoid`) has been implemented somewhere:
 ```
 ======================================================================
 FAIL: test_reference_eager_trapezoid_cpu_int64 (__main__.TestOpInfoCPU) [torch_xla2_diff:0.001]
