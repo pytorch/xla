@@ -41,7 +41,7 @@ index 72a39ae85..2a156cbce 100644
 ### Run test to see what failure
 For errors you might get after running test, there are two kind:
 - Target op failure
-  - error shows related to target op, such as `No lowering found for 'aten::addbmm'`, please follow instruction like [Fix Target op failure](https://github.com/pytorch/xla/edit/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-target-op-failure)
+  - error shows related to target op, such as `No lowering found for 'aten::addbmm'`, please follow instruction like [Fix Target op failure](https://github.com/pytorch/xla/blob/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-target-op-failure)
 - Other op failure
   - error shows related to other op, such as `No lowering found for 'aten::_sin'` after you remove `addbmm` from skiplist, this means `addbmm` is decomposed by ops like `_sin`, please follow instruction like [Fix Other op failure](https://github.com/pytorch/xla/edit/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-other-op-failure)
 
