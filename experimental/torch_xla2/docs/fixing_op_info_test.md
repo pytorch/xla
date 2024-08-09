@@ -44,6 +44,7 @@ For errors you might get after running test, there are two kind:
   - error shows related to target op, such as `No lowering found for 'aten::addbmm'`, please follow instruction like [Fix Target op failure](https://github.com/pytorch/xla/blob/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-target-op-failure)
 - Other op failure
   - error shows related to other op, such as `No lowering found for 'aten::_sin'` after you remove `addbmm` from skiplist, this means `addbmm` is decomposed by ops like `_sin`, please follow instruction like [Fix Other op failure](https://github.com/pytorch/xla/blob/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-other-op-failure)
+  (`addbmm` is not decomposed of `_sin`, here use it as an example for understanding; `trapezoid` is a decomposed example)
 
 #### Fix Target op failure
 Error gotten:
@@ -83,8 +84,7 @@ Traceback (most recent call last):
 ...
 ```
 Please try to fix it by following these steps:
-  1. confirm your target op `addbmm` is decomposed of `_sin` by running this code:
-  (`addbmm` is not decomposed of `_sin`, here use it as an example for understanding; `trapezoid` is a decomposed example)
+  1. confirm your target op `addbmm` is decomposed of `_sin` by running this code to print each sub ops:
   ```
   import torch
   import torch_xla2
@@ -99,8 +99,7 @@ Please try to fix it by following these steps:
     batch2 = torch.randn(10, 4, 5)
     print(torch.addbmm(M, batch1, batch2))
   ```
-  this code would print each sub ops
-  2. (optional) Debug by mlodify [debug_accuracy()](https://github.com/pytorch/xla/blob/c26b19ebdefccd3a4300763e1085724d3d4cd3d0/experimental/torch_xla2/torch_xla2/tensor.py#L171C1-L194C14) to check res(from jax) and expected_res(from torch)'s value and dtype/type.
+  2. (optional) Debug by modify [debug_accuracy()](https://github.com/pytorch/xla/blob/c26b19ebdefccd3a4300763e1085724d3d4cd3d0/experimental/torch_xla2/torch_xla2/tensor.py#L171C1-L194C14) to check `res`(from jax) and `expected_res`(from torch)'s value and dtype/type.
   3. you might need to debug/modify implementation of `_sin` to support `abbdmm` by using step 2.
 
 ### First Impl
