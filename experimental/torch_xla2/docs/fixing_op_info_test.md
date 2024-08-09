@@ -49,7 +49,7 @@ For errors you might get after running test, there are two kind:
 Error gotten:
 
 ```
-(base) hanq-macbookpro:torch_xla2 hanq$ PJRT_DEVICE=TPU python test/test_ops.py 
+(base) hanq-macbookpro:torch_xla2 hanq$ python test/test_ops.py 
 ...
 E         RuntimeError: ('No lowering found for\n\nTo execute this test, run the following from the base repo dir:\n     python test/test_ops.py -k test_reference_eager_addbmm_cpu_int64\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0', 'aten::addbmm')
 ```
