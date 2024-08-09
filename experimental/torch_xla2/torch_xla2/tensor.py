@@ -104,8 +104,8 @@ class XLATensor2(torch.Tensor):
     # return torch.reshape(self, new_shape)
 
   def __setitem__(self, key, val):
-    key = unwrap(key)
-    self._elem = self._elem.at[key].set(val._elem)
+    key, val = self._env.t2j_iso((key, val))
+    self._elem = self._elem.at[key].set(val)
 
   def type_as(self, other):
     self._elem = self._elem.astype(other._elem.dtype)
