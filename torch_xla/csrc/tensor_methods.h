@@ -833,6 +833,12 @@ XLATensorPtr rsub(
 
 void copy_(XLATensorPtr& input, XLATensorPtr& src);
 
+
+XLATensorPtr _scaled_mm(const XLATensorPtr& self, const XLATensorPtr& mat2,
+                        const XLATensorPtr& scale_a, const XLATensorPtr& scale_b,
+                        const XLATensorPtr& bias, const XLATensorPtr& scale_result,
+                        std::optional<at::ScalarType> out_dtype);
+
 XLATensorPtr scatter(const XLATensorPtr& input, int64_t dim,
                      const XLATensorPtr& index, const XLATensorPtr& src);
 XLATensorPtr scatter(const XLATensorPtr& input, int64_t dim,

@@ -2916,6 +2916,16 @@ void copy_(XLATensorPtr& input, XLATensorPtr& src) {
   }
 }
 
+XLATensorPtr _scaled_mm(const XLATensorPtr& self, const XLATensorPtr& mat2,
+                        const XLATensorPtr& scale_a, const XLATensorPtr& scale_b,
+                        const XLATensorPtr& bias, const XLATensorPtr& scale_result,
+                        std::optional<at::ScalarType> out_dtype) {
+  torch::lazy::Value bias_value =
+      GetIrValueOrDefault(bias, 0, xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, {}), self->GetDevice());
+  return self->CreateFrom(AddMatMulOp(
+      self->GetIrValue(), mat2->GetIrValue(), bias_value));
+}
+
 XLATensorPtr scatter(const XLATensorPtr& input, int64_t dim,
                      const XLATensorPtr& index, const XLATensorPtr& src) {
   return input->CreateFrom(torch::lazy::MakeNode<Scatter>(

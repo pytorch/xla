@@ -3113,6 +3113,23 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
   }
 }
 
+at::Tensor XLANativeFunctions::_scaled_mm(
+    const at::Tensor& self, const at::Tensor& mat2,
+    const at::Tensor& scale_a, const at::Tensor& scale_b,
+    const std::optional<at::Tensor>& bias,
+    const std::optional<at::Tensor>& scale_result,
+    std::optional<at::ScalarType> out_dtype, bool use_fast_accum) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  const torch::lazy::BackendDevice& device =
+    bridge::GetXlaTensor(self)->GetDevice();
+  return bridge::AtenFromXlaTensor(tensor_methods::_scaled_mm(
+      bridge::GetXlaTensor(self), bridge::GetXlaTensor(mat2),
+      bridge::GetXlaTensor(scale_a), bridge::GetXlaTensor(scale_b),
+      bridge::GetOrCreateXlaTensor(bias, device),
+      bridge::GetOrCreateXlaTensor(scale_result, device),
+      out_dtype));
+}
+
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Tensor& index,
                                        const at::Tensor& src) {

@@ -304,6 +304,7 @@ supported:
   - rrelu_with_noise_backward
   - rsub.Scalar
   - rsub.Tensor
+  - _scaled_mm
   - scatter.reduce
   - scatter.src
   - scatter.value
