@@ -1,5 +1,6 @@
 """Torch ops implemented using jax."""
 
+import functools
 import sys
 from typing import Optional, Sequence
 
@@ -9,6 +10,7 @@ from jax import numpy as jnp
 import numpy as np
 import torch
 import torch.distributed._functional_collectives
+from torch_xla2 import interop
 from torch_xla2.ops import ops_registry
 from torch_xla2.ops import op_base, mappings
 
@@ -53,6 +55,18 @@ def op(*aten, **kwargs):
   def inner(func):
     for a in aten:
       ops_registry.register_torch_dispatch_op(a, func, **kwargs)
+
+      match type(a):
+        case torch._ops.OpOverloadPacket:
+          opname = a.default.name() if 'default' in a.overloads() else a._qualified_op_name
+        case torch._ops.OpOverload:
+          opname = a.name()
+        case _:
+          raise RuntimeError(f'oops {a}')
+
+      torchfunc = functools.partial(interop.call_jax, func)
+      # HACK: to_copy is where we make the initial conversion from CPU tensor to JAX tensor
+      torch.library.impl(opname, 'privateuseone')(torchfunc if a != torch.ops.aten._to_copy else func)
     return func
 
   return inner
@@ -78,14 +92,13 @@ def _aten_add(x, y, *, alpha=1):
   return x + y * alpha
 
 
-@op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
+@op(torch.ops.aten.copy_, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
   x._elem = y._elem
   return x
 
 
 @op(torch.ops.aten.clone)
-@op(torch.ops.aten.clone.default)
 def _aten_clone(x, memory_format=None):
   return x
 
@@ -394,10 +407,21 @@ def _aten_dot(x, y):
 
 @op(torch.ops.aten._to_copy)
 def _aten__to_copy(self, **kwargs):
+  # HACK: should we wrap every function to do this?
+  import torch_xla2
+  if type(self) is torch.Tensor:
+    return torch_xla2.default_env().j2t_iso(mappings.t2j(self))
+    # return torch_xla2.tensor.XLATensor2(mappings.t2j(self))
   dtype = mappings.t2j_dtype(kwargs["dtype"])
   if dtype != self.dtype:
     return self.astype(dtype)
   return jnp.copy(self)
+
+# TODO: not clear what this function should actually do
+# https://github.com/pytorch/pytorch/blob/d96c80649f301129219469d8b4353e52edab3b78/aten/src/ATen/native/native_functions.yaml#L7933-L7940
+@op(torch.ops.aten.lift_fresh)
+def _aten_lift_fresh(self):
+  return self
 
 
 @op(torch.ops.aten.empty)
@@ -432,7 +456,6 @@ def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
 
 
 @op(torch.ops.aten.empty_permuted)
-@op(torch.ops.aten.empty_permuted.default)
 @op_base.convert_dtype()
 def _aten_empty_permuted(sizes, physical_layout, dtype=None, **kwargs):
   # Ignore the physical layout,
@@ -441,7 +464,6 @@ def _aten_empty_permuted(sizes, physical_layout, dtype=None, **kwargs):
 
 
 @op(torch.ops.aten.empty_strided)
-@op(torch.ops.aten.empty_strided.default)
 @op_base.convert_dtype()
 def _aten_empty_strided(sizes, stride, dtype=None, **kwargs):
   # Ignore stride, since JAX and torch tensor doesn't share the same memory.
@@ -507,7 +529,6 @@ def permute(t, dims):
 
 @op(torch.ops.aten.unsqueeze)
 @op(torch.ops.aten.unsqueeze_copy)
-@op(torch.ops.aten.unsqueeze.default)
 def _aten_unsqueeze(self, dim):
   if dim < 0:
     dim += self.ndim + 1
@@ -1817,7 +1838,6 @@ def _aten_ge(self, other):
 
 
 @op(torch.ops.aten.glu)
-@op(torch.ops.aten.glu.default)
 def _aten_glu(x, dim=-1):
   return jax.nn.glu(x, dim)
 
