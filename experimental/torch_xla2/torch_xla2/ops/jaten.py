@@ -23,6 +23,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.add_: torch.ops.aten.add,
   torch.ops.aten.sub_: torch.ops.aten.sub,
   torch.ops.aten.mul_: torch.ops.aten.mul,
+  torch.ops.aten.div_: torch.ops.aten.div,
   torch.ops.aten.pow_: torch.ops.aten.pow,
   torch.ops.aten.lt_: torch.ops.aten.lt,
   torch.ops.aten.le_: torch.ops.aten.le,
@@ -34,6 +35,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.relu_: torch.ops.aten.relu,
   torch.ops.aten.normal_: torch.ops.aten.normal,
   torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
+  torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
 }
 
 
@@ -275,12 +277,6 @@ def _aten_div(x, y, rounding_mode=""):
   if res_dtype:
     res = res.astype(res_dtype)
   return res
-
-
-@op(torch.ops.aten.div_, is_jax_function=False)
-def _aten_div_(x, y, rounding_mode=""):
-  x._elem = _aten_div(x._elem, y._elem, rounding_mode)
-  return x
 
 
 @op(torch.ops.aten.true_divide)
@@ -2218,6 +2214,19 @@ def _randn(
   if dtype is not None:
     res = res.astype(dtype)
   return res
+
+@op(torch.ops.aten.bernoulli.p, needs_env=True)
+def _bernoulli(
+  self,
+  p = 0.5,
+  *,
+  generator=None,
+  env=None,
+):
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.uniform(key, self.shape) < p
+  return res
+
 
 
 @op(torch.ops.aten.randn_like, needs_env=True)

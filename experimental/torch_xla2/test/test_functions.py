@@ -34,6 +34,19 @@ class TestTorchFunctions(parameterized.TestCase):
       t2 = self.env.to_xla(t)
       # assert no exceptions
 
+  def test_brackets(self):
+    with self.env:
+      a = torch.randn((2,3))
+      a[1] = 9
+      self.assertEqual(a[1, 0].item(), 9)
+
+  def test_bernoulli_inplace(self):
+    with self.env:
+      a = torch.randn((2,3))
+      a.bernoulli_(0.4)
+
+
+
 
 if __name__ == '__main__':
   absltest.main()

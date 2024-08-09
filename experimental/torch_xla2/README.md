@@ -199,7 +199,7 @@ def model_func(param, inputs):
 Now, we can apply `jax_jit`
 
 ```python
-from torch_xla2.extra import jax_jit
+from torch_xla2.interop import jax_jit
 model_func_jitted = jax_jit(model_func)
 print(model_func_jitted(new_state_dict, inputs))
 ```

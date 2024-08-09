@@ -103,6 +103,16 @@ def rand_like(self, **kwargs):
     dtype = kwargs.get('dtype')
     return torch.rand(self.shape, dtype=dtype)
 
+def channel_shuffle(self, groups):
+    batchsize, channels, height, width = self.shape
+    channels_per_group = channels // groups
+    self = self.reshape(batchsize, groups, channels_per_group, height, width)
+    self = self.transpose(1, 2)
+    self = self.reshape(batchsize, channels, height, width)
+    return self
+
+_try_register(aten.channel_shuffle, channel_shuffle)
+
 _try_register(aten.bernoulli, bernoulli)
 _try_register(aten.rand_like, rand_like)
 
@@ -121,4 +131,6 @@ EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten.replication_pad3d,
     torch.ops.aten.bernoulli,
     torch.ops.aten.rand_like,
+    torch.ops.aten._batch_norm_with_update,
+    torch.ops.aten.channel_shuffle,
 ])
