@@ -723,7 +723,6 @@ class MaybeReconstructOutputs:
 
     def maybe_skip_handler(o: torch.Tensor, info: OutputAliasInfo) -> torch.Tensor:
       handler = make_output_handler(info, self.metadata, trace_joint=False)
-      print(f"[MaybeReconstructOutputs] {info.output_type=}")
       if (
           is_xla_tensor(o)
           and info.output_type in (
@@ -736,7 +735,6 @@ class MaybeReconstructOutputs:
           and info.functional_tensor is not None
           and enable_skip_handler
       ):
-        print("[MaybeReconstructOutputs] Skipping handler...")
         return torch_xla._XLAC._fresh_functional_tensor_from(
           o,
           handler.base(args, outputs),
@@ -749,10 +747,6 @@ class MaybeReconstructOutputs:
             OutputType.alias_of_intermediate_save_as_output,
             OutputType.alias_of_intermediate_base_is_user_output,
         ):
-          print(f"[MaybeReconstructOutputs] {is_xla_tensor(o)=}")
-          print(f"[MaybeReconstructOutputs] {info.functional_tensor=}")
-          print(f"[MaybeReconstructOutputs] {enable_skip_handler=}")
-        print("[MaybeReconstructOutputs] Running handler...")
         return handler(args, outputs, o)
 
     # AOTAutograd outputs are composed of, in order:

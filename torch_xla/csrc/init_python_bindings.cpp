@@ -2677,6 +2677,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_fresh_functional_tensor_from",
         [](const at::Tensor& value, const at::Tensor& storage_source,
            const at::Tensor& view_metas_source) {
+          TORCH_LAZY_COUNTER("fresh_functional_tensor_from", 1);
           XLA_CHECK(at::functionalization::impl::isFunctionalTensor(value));
           at::Tensor unwrapped = torch::lazy::maybe_unwrap_functional(value);
           at::FunctionalTensorWrapper* storage_source_ =
