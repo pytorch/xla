@@ -17,6 +17,7 @@ from torch.fx.passes.utils.fuser_utils import topo_sort
 from torch.utils import _pytree as pytree
 from torch._functorch._aot_autograd.schemas import ViewAndMutationMeta, OutputAliasInfo, OutputType
 from torch._functorch._aot_autograd.runtime_wrappers import make_output_handler
+from torch._functorch._aot_autograd.utils import normalize_as_list
 from torch._guards import TracingContext
 from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
 
@@ -718,7 +719,7 @@ class MaybeReconstructOutputs:
     self.metadata = metadata
 
   def __call__(self, *args):
-    outputs = self.graph(*args)
+    outputs = normalize_as_list(self.graph(*args))
 
     def maybe_skip_handler(o: torch.Tensor, info: OutputAliasInfo) -> torch.Tensor:
       handler = make_output_handler(info, self.metadata, trace_joint=False)
@@ -754,7 +755,31 @@ class MaybeReconstructOutputs:
         print("[MaybeReconstructOutputs] Running handler...")
         return handler(args, outputs, o)
 
-    return [maybe_skip_handler(o, info) for o, info in zip(outputs, self.metadata.output_info)]
+    # AOTAutograd outputs are composed of, in order:
+    #   1. Tokens
+    #   2. Mutated inputs
+    #   3. Actual outputs
+    #   4. Intermediate bases
+    #
+    # However, we only have output aliasing information, e.g. OutputAliasInfo, for (3).
+    # Therefore, we must run the handlers only for (3), and combine them appropriately.
+    num_tokens = len(self.metadata.tokens)
+    num_mutations_to_apply = self.metadata.num_mutated_inp_runtime_indices
+    num_intermediate_bases = self.metadata.num_intermediate_bases
+    num_prefix_outputs_without_handlers = num_tokens + num_mutations_to_apply
+
+    # Filter (1) and (2).
+    outputs_with_handlers = outputs[num_prefix_outputs_without_handlers:]
+    # Filter (4), and call the handlers on the outputs.
+    handled_outputs = [maybe_skip_handler(o, info) for o, info in zip(outputs_with_handlers, self.metadata.output_info)]
+
+    # Combine (1), (2) and the possibly modified (3).
+    combined_outputs = outputs[:num_prefix_outputs_without_handlers] + handled_outputs
+    # Combine the above with (4), if any.
+    if num_intermediate_bases > 0:
+      combined_outputs = combined_outputs + outputs[-num_intermediate_bases:]
+
+    return combined_outputs
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args, metadata: ViewAndMutationMeta):
