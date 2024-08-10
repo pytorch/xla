@@ -741,12 +741,6 @@ class MaybeReconstructOutputs:
           info.functional_tensor.tensor,
         )
       else:
-        if info.output_type in (
-            OutputType.alias_of_input,
-            OutputType.alias_of_intermediate,
-            OutputType.alias_of_intermediate_save_as_output,
-            OutputType.alias_of_intermediate_base_is_user_output,
-        ):
         return handler(args, outputs, o)
 
     # AOTAutograd outputs are composed of, in order:
