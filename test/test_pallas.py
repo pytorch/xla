@@ -32,12 +32,14 @@ class PallasTest(unittest.TestCase):
                                   kv_segment_ids.shape[0], 1, 1,
                                   kv_segment_ids.shape[1])
 
-  def _attention(self, q, k, v, *, attn_mask=None):
+  def _attention(self, q, k, v, *, attn_mask=None, ab=None):
     attn_weight = q @ k.transpose(-2, -1)
     if attn_mask is not None:
       # Masked out the unrelevant parts.
       attn_weight = attn_weight.masked_fill(attn_mask,
                                             torch.finfo(attn_weight.dtype).min)
+    if ab is not None:
+      attn_weight = attn_weight + ab
     attn_weight = nn.functional.softmax(attn_weight, dim=-1)
     attn_output = attn_weight @ v
     return attn_output
@@ -923,17 +925,19 @@ class PallasTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
-  def test_flash_attention_wrapper_sm_scale(self):
+  def test_flash_attention_wrapper_ab(self):
     jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
     q = torch.randn(3, 2, 128, 4).to("xla")
     k = torch.randn(3, 2, 128, 4).to("xla")
     v = torch.randn(3, 2, 128, 4).to("xla")
-    sm_scale = 0.7
-    o = flash_attention(q, k, v, False, None, None, sm_scale)
+    mask = (torch.rand(3, 2, 128, 128) > 0.5).to("xla")
+    ab = torch.ones(3, 2, 128, 128).to("xla")
+    ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
+    o = flash_attention(q, k, v, ab=ab)
 
-    expected_o = self._attention(q * sm_scale, k, v)
+    expected_o = self._attention(q, k, v, ab=ab)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
     jax.config.update("jax_default_matmul_precision", "default")
 
