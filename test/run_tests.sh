@@ -150,6 +150,7 @@ function run_xla_op_tests {
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
   run_test "$CDIR/test_zero1.py"
+  run_test "$CDIR/test_fp8.py"
   run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test "$CDIR/dynamo/test_dynamo.py"
   run_test "$CDIR/dynamo/test_bridge.py"
