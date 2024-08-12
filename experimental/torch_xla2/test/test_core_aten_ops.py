@@ -1815,6 +1815,15 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index_select, args, kwargs)
+    
+  def test_aten_index_select_int32_index(self):
+    args = (
+        torch.randint(0, 10, (2, 10)).to(torch.int32),
+        1,
+        torch.randint(0, 10, (2,)).to(torch.int32),
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.index_select, args, kwargs)
 
   def test_aten_index_Tensor_0(self):
     args = (
