@@ -1,3 +1,4 @@
+import functools
 import logging
 import pickle
 import jax
@@ -48,6 +49,24 @@ class DistributedDataParallel(torch.nn.Module):
 
   def replicate_input(self, inp):
     return env.j2t_iso(jax.device_put(inp._elem, NamedSharding(self._mesh, P())))
+
+  def jit_step(self, func):
+
+    @functools.wraps(func)
+    def inner(*args):
+      jax_states = self.state_dict()
+
+      @interop.jax_jit
+      def _jit_fn(states, args):
+        self.load_state_dict(states)
+        outputs = func(*args)
+        return self.state_dict(), outputs
+
+      new_states, outputs = _jit_fn(jax_states, args)
+      self.load_state_dict(new_states)
+      return outputs
+
+    return inner
 
   def forward(self, *args):
     return self._module(*args)
@@ -147,8 +166,23 @@ def main():
   cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=3e-4)
   jax_optimizer = optim.SGD(jax_model.parameters(), lr=3e-4)
 
-  # TODO: JIT doesn't work
-  # @interop.jax_jit
+  # def step_fn(jax_data, jax_target):
+  #   @interop.jax_jit
+  #   def _step_fn(states, jax_data, jax_target):
+  #     # jax_model.load_state_dict(states)
+  #     jax_optimizer.zero_grad()
+  #     jax_output, jax_loss = jax_model(jax_data, jax_target)
+  #     jax_loss.backward()
+  #     torch.nn.utils.clip_grad_norm_(jax_model.parameters(), 1.0)
+  #     jax_optimizer.step()
+
+  #     return jax_model.state_dict(), jax_output, jax_loss
+
+  #   jax_states, jax_output, jax_loss = _step_fn(jax_model.state_dict(), jax_data, jax_target)
+  #   jax_model.load_state_dict(jax_states)
+  #   return jax_output, jax_loss
+
+  @jax_model.jit_step
   def step_fn(jax_data, jax_target):
     jax_optimizer.zero_grad()
     jax_output, jax_loss = jax_model(jax_data, jax_target)
@@ -166,10 +200,10 @@ def main():
       jax_data, jax_target = env.j2t_iso((jax_model.shard_input(data), jax_model.shard_input(target)))
       step_fn(jax_data, jax_target)
 
-      cpu_optimizer.zero_grad()
-      cpu_output, cpu_loss = cpu_model(data, target)
-      cpu_loss.backward()
-      cpu_optimizer.step()
+      # cpu_optimizer.zero_grad()
+      # cpu_output, cpu_loss = cpu_model(data, target)
+      # cpu_loss.backward()
+      # cpu_optimizer.step()
 
   # TODO: this fails
   # for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
