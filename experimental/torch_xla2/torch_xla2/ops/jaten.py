@@ -841,19 +841,20 @@ def _aten_max_pool2d_with_indices(
     init_val = -(1 << 31)
   init_val = jnp.array(init_val).astype(inputs.dtype)
 
-  indices, y = jax.lax.reduce_window(
-    (indices, inputs), (0, init_val), reduce_fn, dims, strides, padding
+  # Separate maxpool result and indices into two reduce_window ops. Since 
+  # the indices tensor is usually unused in inference, separating the two 
+  # can help DCE computations for argmax.
+  y = jax.lax.reduce_window(
+      inputs, init_val, jax.lax.max, dims, strides, padding
+  )
+  indices, _ = jax.lax.reduce_window(
+      (indices, inputs), (0, init_val), reduce_fn, dims, strides, padding
   )
   if is_single_input:
     indices = jnp.squeeze(indices, axis=0)
     y = jnp.squeeze(y, axis=0)
+    
   return y, indices
-
-  batch_result = pool(
-    inputs, -jnp.inf, jax.lax.max, kernel_size, strides, padding
-  )
-  indices = pool(inputs, 0, jnp.argmax, kernel_size, strides, padding)
-  return batch_result, indices
 
 
 # TODO add more ops
