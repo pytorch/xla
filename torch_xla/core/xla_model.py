@@ -12,6 +12,7 @@ import torch
 import torch.distributed._functional_collectives
 from torch.library import Library
 import torch.nn.functional as F
+import torch.optim as optim
 import torch_xla
 from torch_xla import runtime
 import torch_xla.core.xla_env_vars as xenv
@@ -389,7 +390,7 @@ def check_view_sharing(obj):
   xu.for_each_instance(obj, lambda x: type(x) == torch.Tensor, check_object)
 
 
-def _fetch_gradients(optimizer: torch.Optimizer) -> List[torch.Tensor]:
+def _fetch_gradients(optimizer: optim.Optimizer) -> List[torch.Tensor]:
   gradients = []
   for param_group in optimizer.__getstate__()['param_groups']:
     for group, params in param_group.items():
@@ -1148,7 +1149,7 @@ def all_reduce_bucketized_gradients(gradients: List[torch.Tensor],
         pin_layout=pin_layout)
 
 
-def reduce_gradients(optimizer: torch.Optimizer,
+def reduce_gradients(optimizer: optim.Optimizer,
                      groups: Optional[List[List[int]]] = None,
                      pin_layout: bool = True):
   """Reduces all the gradients handled by an optimizer.
@@ -1188,7 +1189,7 @@ def reduce_gradients(optimizer: torch.Optimizer,
           pin_layout=pin_layout)
 
 
-def optimizer_step(optimizer: torch.Optimizer,
+def optimizer_step(optimizer: optim.Optimizer,
                    barrier: bool = False,
                    optimizer_args: Dict = {},
                    groups: Optional[List[List[int]]] = None,
