@@ -1684,9 +1684,9 @@ def _aten_lift_fresh_copy(x):
   return jnp.copy(x)
 
 
-@op(torch.ops.aten.copy, is_jax_function=False)
+@op(torch.ops.aten.copy)
 def _aten_copy(self, src):
-  return self.copy_(src)
+  return jnp.broadcast_to(src, self.shape).astype(self.dtype)
 
 
 @op(torch.ops.aten._cdist_forward)
