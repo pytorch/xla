@@ -55,7 +55,7 @@ class DeviceContext(object):
 
 
 def _get_device_context(
-    device: Optinal[Union[str, torch.device]] = None) -> DeviceContext:
+    device: Optional[Union[str, torch.device]] = None) -> DeviceContext:
   if device is None:
     device = torch_xla._XLAC._xla_get_default_device()
   else:
@@ -72,7 +72,7 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
   return tensor.device.type == 'xla'
 
 
-def get_xla_supported_devices(devkind: Optinal[str] = None,
+def get_xla_supported_devices(devkind: Optional[str] = None,
                               max_devices: Optional[int] = None) -> List[str]:
   """Returns a list of supported devices of a given kind.
 
@@ -141,7 +141,7 @@ def master_print(*args: Tuple[Any, ...],
     print(*args, file=fd, flush=flush)
 
 
-def xla_device(n: Optinal[int] = None,
+def xla_device(n: Optional[int] = None,
                devkind: Optional[str] = None) -> torch.device:
   """Returns a given instance of an XLA device.
 
@@ -410,7 +410,7 @@ def all_reduce(
     reduce_type: str,
     inputs: Union[torch.Tensor, List[torch.Tensor]],
     scale: float = 1.0,
-    groups: Optinal[List[List[int]]] = None,
+    groups: Optional[List[List[int]]] = None,
     pin_layout: bool = True) -> Union[torch.Tensor, List[torch.Tensor]]:
   """Performs an inplace reduce operation on the input tensor(s).
 
@@ -1115,7 +1115,7 @@ def wait_device_ops(devices: List[str] = []):
 
 def all_reduce_bucketized_gradients(gradients: List[torch.Tensor],
                                     scale: float,
-                                    groups: Optinal[List[List[int]]],
+                                    groups: Optional[List[List[int]]],
                                     pin_layout: bool,
                                     bucket_cap_mb: int = 0):
   total = 0
