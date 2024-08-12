@@ -41,6 +41,18 @@ class InputOutputAliasesTest(unittest.TestCase):
     torch.allclose(t1 - 1, t1_cloned)
     self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
 
+  def test_aliasing_across_custom_inplace(self):
+    xla_device = xm.xla_device()
+    met.clear_all()
+    t1 = torch.randn(4, 5).to(xla_device)
+    t1 *= t1
+    xm.mark_step()
+    self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
+    xm.optimization_barrier_([t1])
+    t1 *= 100
+    xm.mark_step()
+    self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
+
   def test_aliasing_across_mark_step(self):
     xla_device = xm.xla_device()
     met.clear_all()

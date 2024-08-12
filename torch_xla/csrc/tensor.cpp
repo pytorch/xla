@@ -387,6 +387,10 @@ torch::lazy::Value XLATensor::GetIrValue() const {
     // which wants the XLA data will still find it, w/out having to fetch it
     // via a computation client from-server call.
     AssignIrValue(CreateTensorNode(handle, /*read_only=*/false));
+    // CreateTensorNode will set the data info of the tensor to the current
+    // unique_id. Here the alias id needs to be updated so that input output
+    // alias can correctly work on the xla's custom inplace operation.
+    data()->alias_id = GetUniqueId();
     return data()->ir_value;
   }
   std::optional<at::Tensor> tensor_data = CurrentTensorData();
