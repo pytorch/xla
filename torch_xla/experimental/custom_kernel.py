@@ -305,7 +305,7 @@ class FlashAttention(torch.autograd.Function):
     mesh = ctx.mesh
     full_shape = ctx.full_shape
     segment_ids = ctx.segment_ids
-    grad_q = grad_k = grad_v = None
+    grad_q = grad_k = grad_v = grad_ab = None
 
     grad_i = torch.sum(
         o.to(torch.float32) * grad_output.to(torch.float32),
@@ -363,11 +363,25 @@ class FlashAttention(torch.autograd.Function):
           ])
 
       args = [q, k, v]
+      if ab is not None:
+        args += [ab]
       if segment_ids is not None:
         args += [q_segment_ids, kv_segment_ids]
       args += [expanded_l, expanded_m, grad_output, expanded_grad_i]
-      grad_q = torch_xla._XLAC._xla_tpu_custom_call(args, payload, [q.shape],
-                                                    [q.dtype])[0]
+
+      print("1")
+
+      inputs = [q]
+      if ctx.needs_input_grad[-1]:
+        inputs += [ab]
+      grads = torch_xla._XLAC._xla_tpu_custom_call(args, payload, [i.shape for i in inputs],
+                                                    [i.dtype for i in inputs])
+      if ctx.needs_input_grad[0]:
+        grad_q = grads[0]
+      if ctx.needs_input_grad[-1]:
+        grad_ab = grads[1]
+
+    print("2")
 
     if ctx.needs_input_grad[1] or ctx.needs_input_grad[2]:
       payload, _ = trace_pallas(
@@ -400,17 +414,17 @@ class FlashAttention(torch.autograd.Function):
               "sm_scale", "causal", "mask_value", "debug"
           ])
 
-      args = [q, k, v]
-      if segment_ids is not None:
-        args += [q_segment_ids, kv_segment_ids]
-      args += [expanded_l, expanded_m, grad_output, expanded_grad_i]
       grads = torch_xla._XLAC._xla_tpu_custom_call(args, payload,
                                                    [k.shape, v.shape],
                                                    [k.dtype, v.dtype])
+      print("3")
+
     if ctx.needs_input_grad[1]:
       grad_k = grads[0]
     if ctx.needs_input_grad[2]:
       grad_v = grads[1]
+
+    print("4")
 
     # SPMD integration
     if partition_spec is not None:
@@ -421,7 +435,7 @@ class FlashAttention(torch.autograd.Function):
       grad_v = xs.disable_manual_sharding(
           grad_v, partition_spec, full_shape, mesh=mesh).global_tensor
 
-    return grad_q, grad_k, grad_v, None, None, None, None, None, None
+    return grad_q, grad_k, grad_v, None, None, None, None, None, None, None
 
 
 def flash_attention(
