@@ -18,6 +18,7 @@ import torch.utils._pytree as torch_pytree
 from torch_xla2 import interop
 from tqdm import tqdm
 
+
 class DistributedDataParallel(torch.nn.Module):
   def __init__(self, module: torch.nn.Module, **kwargs):
     if kwargs:
@@ -25,7 +26,7 @@ class DistributedDataParallel(torch.nn.Module):
 
     super().__init__()
     self._mesh = Mesh(mesh_utils.create_device_mesh((jax.device_count(),)), axis_names=('batch',))
-    replicated_state = torch_pytree.tree_map_only(torch.Tensor, lambda t: env.j2t_iso(jax.device_put(t.numpy(), NamedSharding(self._mesh, P()))), module.state_dict())
+    replicated_state = torch_pytree.tree_map_only(torch.Tensor, lambda t: env.j2t_iso(jax.device_put(env.to_xla(t)._elem, NamedSharding(self._mesh, P()))), module.state_dict())
     # TODO: broadcast
     module.load_state_dict(replicated_state, assign=True)
     self._module = module
@@ -41,7 +42,7 @@ class DistributedDataParallel(torch.nn.Module):
     return jax.make_array_from_single_device_arrays(
         global_batch_shape,
         NamedSharding(self._mesh, P('batch')),
-        arrays=[jax.device_put(batch.numpy(), device)
+        arrays=[jax.device_put(env.to_xla(batch)._elem, device)
             for batch, device
             in zip(per_replica_batches, sharding.addressable_devices)])
 
@@ -148,7 +149,7 @@ def main():
 
   # TODO: JIT doesn't work
   # @interop.jax_jit
-  def step_fn(data, target):
+  def step_fn(jax_data, jax_target):
     jax_optimizer.zero_grad()
     jax_output, jax_loss = jax_model(jax_data, jax_target)
     jax_loss.backward()
@@ -170,11 +171,9 @@ def main():
       cpu_loss.backward()
       cpu_optimizer.step()
 
-      for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
-        # TODO: this isn't actually checking values
-        torch.testing.assert_close(jp, cp, check_device=False)
-        # TODO: this fails
-        # np.testing.assert_allclose(jp.detach().numpy(), cp.detach().numpy(), rtol=1.3e-6, atol=1e-5)
+  # TODO: this fails
+  # for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
+  #   np.testing.assert_allclose(jp.detach().numpy(), cp.detach().numpy(), rtol=1.3e-6, atol=1e-5)
 
   input_cpu = torch.tensor([[0, 0, 2, 1, 0, 1]], dtype=torch.long)
   input_jax = env.to_xla(input_cpu)
