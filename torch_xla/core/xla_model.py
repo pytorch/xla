@@ -756,7 +756,7 @@ def all_to_all(value: torch.Tensor,
 
 
 def collective_permute(value: torch.Tensor,
-                       pairs: List[List[int, int]]) -> torch.Tensor:
+                       pairs: List[List[int]]) -> torch.Tensor:
   """Performs a XLA `CollectivePermute()` operation on the input tensor.
 
   WARNING: This function is not very reliable, may produce wrong results under
