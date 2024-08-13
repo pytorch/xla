@@ -136,7 +136,7 @@ class DistributedDataParallel(torch.nn.Module):
 
   Splits inputs along batch dimension (assumed to be 0) across all devices in
   JAX runtime, including remote devices. Each process should load a distinct
-  shard of the input data using e.g. DistributedSampler. Each processes shard
+  shard of the input data using e.g. DistributedSampler. Each process' shard
   is then further split among the addressable devices (e.g. local TPU chips)
   by `shard_input`.
 
