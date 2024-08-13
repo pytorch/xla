@@ -401,7 +401,7 @@ def _fetch_gradients(optimizer: optim.Optimizer) -> List[torch.Tensor]:
   return gradients
 
 
-def _get_all_reduce_token() -> Tuple[torch._C._lazy.Value, DeviceContext]:
+def _get_all_reduce_token() -> Tuple[Any, DeviceContext]:
   devctx = _get_device_context()
   token = torch_xla._XLAC._get_all_reduce_token(devctx.device)
   return token, devctx
