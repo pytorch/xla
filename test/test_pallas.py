@@ -922,7 +922,6 @@ class PallasTest(unittest.TestCase):
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
     jax.config.update("jax_default_matmul_precision", "default")
 
-
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_ab(self):

@@ -199,8 +199,8 @@ class FlashAttention(torch.autograd.Function):
     return segment_ids, q_segment_ids, kv_segment_ids
 
   @staticmethod
-  def forward(ctx, q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale,
-              ab, partition_spec, mesh):
+  def forward(ctx, q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale, ab,
+              partition_spec, mesh):
     # Import JAX within the function such that we don't need to call the jax_import_guard()
     # in the global scope which could cause problems for xmp.spawn.
     jax_import_guard()
@@ -226,7 +226,8 @@ class FlashAttention(torch.autograd.Function):
       k = xs.enable_manual_sharding(k, partition_spec, mesh=mesh).global_tensor
       v = xs.enable_manual_sharding(v, partition_spec, mesh=mesh).global_tensor
       if ab:
-        ab = xs.enable_manual_sharding(ab, partition_spec, mesh=mesh).global_tensor
+        ab = xs.enable_manual_sharding(
+            ab, partition_spec, mesh=mesh).global_tensor
 
     # It computes the shape and type of o, l, m.
     shapes = [q.shape]
@@ -332,7 +333,8 @@ class FlashAttention(torch.autograd.Function):
       expanded_grad_i = xs.enable_manual_sharding(
           expanded_grad_i, partition_spec, mesh=mesh).global_tensor
       if ab:
-        ab = xs.enable_manual_sharding(ab, partition_spec, mesh=mesh).global_tensor
+        ab = xs.enable_manual_sharding(
+            ab, partition_spec, mesh=mesh).global_tensor
 
     if ctx.needs_input_grad[0]:
       payload, _ = trace_pallas(
@@ -372,8 +374,9 @@ class FlashAttention(torch.autograd.Function):
       outputs = [q]
       if ab is not None:
         outputs += [ab]
-      grads = torch_xla._XLAC._xla_tpu_custom_call(args, payload, [i.shape for i in outputs],
-                                                    [i.dtype for i in outputs])
+      grads = torch_xla._XLAC._xla_tpu_custom_call(args, payload,
+                                                   [i.shape for i in outputs],
+                                                   [i.dtype for i in outputs])
       if ctx.needs_input_grad[0]:
         grad_q = grads[0]
       if ctx.needs_input_grad[-3]:
@@ -443,7 +446,7 @@ def flash_attention(
     ab=None,  # [batch_size, num_heads, q_seq_len, kv_seq_len]
     partition_spec=None,
     mesh=None,
-    ):
+):
   # TODO: support SPMD and Dynamo with segment_ids.
   return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
                               sm_scale, ab, partition_spec, mesh)
