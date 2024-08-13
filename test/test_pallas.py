@@ -951,8 +951,8 @@ class PallasTest(unittest.TestCase):
     q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
     k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
     v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    mask = (torch.rand(3, 2, 128, 128) > 0.5).to("xla")
-    ab = torch.ones(3, 2, 128, 128).to("xla")
+    mask = (torch.rand(4, 2, 128, 128) > 0.5).to("xla")
+    ab = torch.ones(4, 2, 128, 128).to("xla")
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
     q.retain_grad()
     k.retain_grad()
@@ -960,28 +960,25 @@ class PallasTest(unittest.TestCase):
 
     o = flash_attention(q, k, v, ab=ab)
     loss = o.sum()
-    print("okay")
     loss.backward()
-    print("okay")
-    # xm.mark_step()
-    print("okay")
+    xm.mark_step()
 
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
 
-    # q.grad = None
-    # k.grad = None
-    # v.grad = None
+    q.grad = None
+    k.grad = None
+    v.grad = None
 
-    # o = self._attention(q, k, v, ab=ab)
-    # loss = o.sum()
-    # loss.backward()
-    # xm.mark_step()
+    o = self._attention(q, k, v, ab=ab)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
 
-    # for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
-    #   self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
-    # jax.config.update("jax_default_matmul_precision", "default")
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
 
 
 if __name__ == '__main__':
