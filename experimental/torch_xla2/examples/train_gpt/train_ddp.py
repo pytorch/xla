@@ -1,7 +1,7 @@
 """Example using `minGPT` with DistributedDataParallel on both CPU and JAX.
 
 Example command (single host):
-OMP_NUM_THREADS=64 RANK=0 LOCAL_RANK=0 WORLD_SIZE=1 MASTER_ADDR=localhost MASTER_PORT=12355 python xla/experimental/torch_xla2/examples/train_g
+OMP_NUM_THREADS=16 RANK=0 LOCAL_RANK=0 WORLD_SIZE=1 MASTER_ADDR=localhost MASTER_PORT=12355 python xla/experimental/torch_xla2/examples/train_g
 pt/train_ddp.py
 """
 
@@ -15,6 +15,7 @@ import torch.distributed as dist
 import torch.optim as optim
 import torch_xla2
 from tqdm import tqdm
+from mingpt.model import GPT
 
 
 # Dataset copied from `minGPT` demo:
@@ -86,7 +87,6 @@ def main():
   )
 
   # Create model and wrap with DDP
-  from mingpt.model import GPT
   def create_model():
     torch.manual_seed(0)
     model_config = GPT.get_default_config()
@@ -100,12 +100,14 @@ def main():
   )
   cpu_model = torch.nn.parallel.DistributedDataParallel(create_model())
 
+  # Check that models initialized to same parameters
   for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
     np.testing.assert_allclose(jp.detach().numpy(), cp.detach().numpy())
 
   cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=3e-4)
   jax_optimizer = optim.SGD(jax_model.parameters(), lr=3e-4)
 
+  # Contents of `step_fn` can be inlined if using eager
   # TODO: JIT is slow
   # @jax_model.jit_step
   def step_fn(jax_data, jax_target):
@@ -143,15 +145,17 @@ def main():
     print("jax loss", jax_loss.item())
     print("cpu loss", cpu_loss.item())
 
-  input_cpu = torch.tensor([[0, 0, 2, 1, 0, 1]], dtype=torch.long)
-  input_jax = env.to_xla(input_cpu)
-
   with torch.no_grad():
-    cat_jax = jax_model._module.generate(
-      jax_model.replicate_input(input_jax),
-      input_jax[0].nelement(),
-      do_sample=False,
-    )
+    with env:
+      input_jax = torch.tensor([[0, 0, 2, 1, 0, 1]], dtype=torch.long)
+      # TODO: need to access underlying module for methods
+      cat_jax = jax_model._module.generate(
+        jax_model.replicate_input(input_jax),
+        input_jax[0].nelement(),
+        do_sample=False,
+      )
+
+    input_cpu = torch.tensor([[0, 0, 2, 1, 0, 1]], dtype=torch.long)
     cat_cpu = cpu_model.module.generate(
       input_cpu, input_jax[0].nelement(), do_sample=False
     )

@@ -132,6 +132,26 @@ dist.register_rendezvous_handler("jax", jax_rendezvous_handler)
 
 
 class DistributedDataParallel(torch.nn.Module):
+  """Re-implementation of DistributedDataParallel using JAX SPMD.
+
+  Splits inputs along batch dimension (assumed to be 0) across all devices in
+  JAX runtime, including remote devices. Each process should load a distinct
+  shard of the input data using e.g. DistributedSampler. Each processes shard
+  is then further split among the addressable devices (e.g. local TPU chips)
+  by `shard_input`.
+
+  Note: since parameters are replicated across addressable devices, inputs
+  must also be SPMD sharded using `shard_input` or `replicate_input`.
+
+  Example usage:
+
+  ```
+  jax_model = torch_xla2.distributed.DistributedDataParallel(create_model())
+  for data, dataloader:
+    jax_data = jax_model.shard_input(data)
+    jax_output = jax_model(jax_data)
+  ```
+  """
   def __init__(
     self,
     module: torch.nn.Module,
@@ -202,4 +222,5 @@ class DistributedDataParallel(torch.nn.Module):
     return inner
 
   def forward(self, *args):
-    return self._module(*args)
+    with self._env:
+      return self._module(*args)
