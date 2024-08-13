@@ -182,13 +182,15 @@ def main():
   #   jax_model.load_state_dict(jax_states)
   #   return jax_output, jax_loss
 
-  @jax_model.jit_step
+  # @jax_model.jit_step
   def step_fn(jax_data, jax_target):
     jax_optimizer.zero_grad()
     jax_output, jax_loss = jax_model(jax_data, jax_target)
     jax_loss.backward()
     torch.nn.utils.clip_grad_norm_(jax_model.parameters(), 1.0)
     jax_optimizer.step()
+
+    return jax_output, jax_loss
 
   iters = 20000
   epochs = iters // global_batch_size + 1
@@ -198,12 +200,13 @@ def main():
     print('epoch', epoch)
     for data, target in tqdm(dataloader, unit='ex', unit_scale=global_batch_size):
       jax_data, jax_target = env.j2t_iso((jax_model.shard_input(data), jax_model.shard_input(target)))
-      step_fn(jax_data, jax_target)
+      jax_output, jax_loss = step_fn(jax_data, jax_target)
 
-      # cpu_optimizer.zero_grad()
-      # cpu_output, cpu_loss = cpu_model(data, target)
-      # cpu_loss.backward()
-      # cpu_optimizer.step()
+      cpu_optimizer.zero_grad()
+      cpu_output, cpu_loss = cpu_model(data, target)
+      cpu_loss.backward()
+      torch.nn.utils.clip_grad_norm_(cpu_model.parameters(), 1.0)
+      cpu_optimizer.step()
 
   # TODO: this fails
   # for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):

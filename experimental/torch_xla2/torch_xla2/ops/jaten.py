@@ -23,7 +23,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.add_: torch.ops.aten.add,
   torch.ops.aten.sub_: torch.ops.aten.sub,
   torch.ops.aten.mul_: torch.ops.aten.mul,
-  torch.ops.aten.div_: torch.ops.aten.div,
+  # torch.ops.aten.div_: torch.ops.aten.div,
   torch.ops.aten.pow_: torch.ops.aten.pow,
   torch.ops.aten.lt_: torch.ops.aten.lt,
   torch.ops.aten.le_: torch.ops.aten.le,
