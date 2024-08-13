@@ -195,6 +195,7 @@ function run_xla_op_tests1 {
 function run_xla_op_tests2 {
   run_test "$CDIR/pjrt/test_dtypes.py"
   run_test "$CDIR/test_while_loop.py"
+  run_test "$CDIR/test_scan.py"
   run_test "$CDIR/test_autocast.py"
   run_test "$CDIR/eager/test_eager.py"
   run_test "$CDIR/eager/test_eager_with_xla_compile.py"
