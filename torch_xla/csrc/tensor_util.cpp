@@ -230,7 +230,6 @@ template <>
 struct NeedCast<tsl::float8_e5m2> {
   static constexpr bool value = true;
 };
-
 template <>
 struct NeedCast<at::Float8_e5m2> {
   static constexpr bool value = true;
