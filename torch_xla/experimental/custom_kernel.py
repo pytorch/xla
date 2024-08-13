@@ -376,7 +376,7 @@ class FlashAttention(torch.autograd.Function):
                                                     [i.dtype for i in outputs])
       if ctx.needs_input_grad[0]:
         grad_q = grads[0]
-      if ctx.needs_input_grad[-1]:
+      if ctx.needs_input_grad[-3]:
         grad_ab = grads[1]
 
     if ctx.needs_input_grad[1] or ctx.needs_input_grad[2]:

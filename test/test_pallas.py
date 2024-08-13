@@ -943,7 +943,7 @@ class PallasTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
-  def test_flash_attention_ab_backward(self):
+  def test_flash_attention_ab_backward_1(self):
     jax.config.update("jax_default_matmul_precision", "highest")
     from torch_xla.experimental.custom_kernel import flash_attention
 
@@ -977,6 +977,49 @@ class PallasTest(unittest.TestCase):
     xm.mark_step()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_ab_backward_2(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    mask = (torch.rand(4, 2, 128, 128) > 0.5).to("xla")
+    ab = torch.ones(4, 2, 128, 128).to("xla")
+    ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
+    ab.requires_grad = True
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+    ab.retain_grad()
+
+    o = flash_attention(q, k, v, ab=ab)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
+    ab_grad = ab.grad
+
+    q.grad = None
+    k.grad = None
+    v.grad = None
+    ab.grad = None
+
+    o = self._attention(q, k, v, ab=ab)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad), (ab, ab_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
     jax.config.update("jax_default_matmul_precision", "default")
 
