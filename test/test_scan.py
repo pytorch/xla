@@ -5,7 +5,7 @@ import torch
 from torch_xla.experimental.scan import scan
 from torch.utils._pytree import tree_map, tree_flatten, tree_iter
 
-from test.test_utils import XlaTestCase
+from test_utils import XlaTestCase
 
 
 def _loopy_scan(fn, init, xs):
