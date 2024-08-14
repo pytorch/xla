@@ -116,7 +116,7 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
   elif runtime.device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
   elif runtime.device_type() == 'NEURON':
-    neuron.initialize_env(local_rank)
+    neuron.initialize_env(local_rank, local_world_size)
 
   devices = xm.get_xla_supported_devices()
   xm.set_replication(xm.xla_device(), devices)
