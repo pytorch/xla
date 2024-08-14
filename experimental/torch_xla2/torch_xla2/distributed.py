@@ -15,6 +15,7 @@ import os
 from typing import List, Optional, Union
 
 import jax
+import numpy as np
 import torch
 import torch.distributed as dist
 import torch.distributed._functional_collectives
@@ -129,6 +130,25 @@ def jax_rendezvous_handler(
 
 
 dist.register_rendezvous_handler("jax", jax_rendezvous_handler)
+
+
+def spawn(f, args=(), env: Optional[torch_xla2.tensor.Environment] = None):
+  """Wrap `f` in a JAX `pmap` with the axis name `torch_dist` defined.
+  `f` is expected to take the replica index as a positional argument, similar
+  to `torch.multiprocessing.spawn`.
+  Note: `spawn` does not actually create parallel processes.
+  """
+  env = env or torch_xla2.default_env()
+
+  def jax_wrapper(index, jax_args):
+    index, args = env.j2t_iso([index, jax_args])
+    torch_outputs = f(index, *args)
+    return env.t2j_iso(torch_outputs)
+
+  jax_outputs = jax.pmap(jax_wrapper, axis_name="torch_dist")(
+    np.arange(jax.device_count()), env.t2j_iso(args)
+  )
+  return env.j2t_iso(jax_outputs)
 
 
 class DistributedDataParallel(torch.nn.Module):
