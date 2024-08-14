@@ -1575,6 +1575,12 @@ def _aten_arange(
   device=None,
   pin_memory=False,
 ):
+  if start and dtype:
+    start = jnp.astype(start, dtype)
+  if end and dtype:
+    end = jnp.astype(end, dtype)
+  if step and dtype:
+    step = jnp.astype(step, dtype)
   return jnp.arange(
     start,
     end,
