@@ -1577,11 +1577,11 @@ def _aten_arange(
   if dtype:
     dtype = mappings.t2j_dtype(dtype)
   if start and dtype:
-    start = start.astype(dtype) # np.ndarray.astype(start, dtype)
+    start = ((np.array([start, ])).astype(dtype))[0] # np.ndarray.astype(start, dtype)
   if end and dtype:
-    end = end.astype(dtype) # np.ndarray.astype(end, dtype)
+    end = ((np.array([end, ])).astype(dtype))[0] # np.ndarray.astype(end, dtype)
   if step and dtype:
-    step = step.astype(dtype) # np.ndarray.astype(step, dtype)
+    step = ((np.array([step, ])).astype(dtype))[0] # np.ndarray.astype(step, dtype)
   return jnp.arange(
     start,
     end,
