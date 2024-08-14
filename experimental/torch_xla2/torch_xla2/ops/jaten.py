@@ -1563,7 +1563,7 @@ def _aten_any(self, dim=None, keepdim=False):
 @op(torch.ops.aten.arange.start_step)
 @op(torch.ops.aten.arange.start)
 @op(torch.ops.aten.arange.default)
-@op_base.convert_dtype()
+@op_base.convert_dtype(use_default_dtype=False)
 def _aten_arange(
   start,
   end=None,
