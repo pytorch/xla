@@ -30,7 +30,7 @@ class NeuronPlugin(plugins.DevicePlugin):
     return os.environ.get("NEURON_LIBRARY_PATH", "libneuronpjrt.so")
 
   def configure_multiprocess(self, local_rank, local_world_size):
-    initialize_env(local_rank)
+    initialize_env(local_rank, local_world_size)
 
   def physical_chip_count(self):
     return num_local_processes()
