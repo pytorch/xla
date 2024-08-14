@@ -5,6 +5,8 @@ from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
 from torch_xla2 import distributed  # noqa: F401
 
+__version__ = "0.0.1"
+VERSION = __version__
 
 __all__ = [
   'default_env',
