@@ -108,8 +108,7 @@ def main():
   jax_optimizer = optim.SGD(jax_model.parameters(), lr=3e-4)
 
   # Contents of `step_fn` can be inlined if using eager
-  # TODO: JIT is slow
-  # @jax_model.jit_step
+  @jax_model.jit_step
   def step_fn(jax_data, jax_target):
     jax_optimizer.zero_grad()
     jax_output, jax_loss = jax_model(jax_data, jax_target)

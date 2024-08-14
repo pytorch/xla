@@ -225,16 +225,15 @@ class DistributedDataParallel(torch.nn.Module):
     )
 
   def jit_step(self, func):
+    @interop.jax_jit
+    def _jit_fn(states, args):
+      self.load_state_dict(states)
+      outputs = func(*args)
+      return self.state_dict(), outputs
+
     @functools.wraps(func)
     def inner(*args):
       jax_states = self.state_dict()
-
-      @interop.jax_jit
-      def _jit_fn(states, args):
-        self.load_state_dict(states)
-        outputs = func(*args)
-        return self.state_dict(), outputs
-
       new_states, outputs = _jit_fn(jax_states, args)
       self.load_state_dict(new_states)
       return outputs
