@@ -1082,7 +1082,7 @@ class PallasTest(unittest.TestCase):
         v=v.to("xla"),
         q_segment_ids=q_segment_ids.to("xla"),
         kv_segment_ids=kv_segment_ids.to("xla"),
-        mask_value=mask_value.to("xla"),
+        mask_value=mask_value,
         is_mqa=is_mqa,
         residual_checkpoint_name=residual_checkpoint_name,
         save_residuals=save_residuals,
