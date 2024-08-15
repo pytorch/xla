@@ -334,8 +334,6 @@ skiplist = {
     "dot",
     "dsplit",
     "dstack",
-    "einsum",
-    "erf",
     "exp",
     "expm1",
     "fft.fftshift",
