@@ -5,8 +5,6 @@ This document describes how to use torch export + torch xla to export to
 [StableHLO](https://github.com/openxla/stablehlo) format.
 
 ## How to use:
-
-
 from torch.export import export
 from torch_xla.stablehlo import exported_program_to_stablehlo
 import torch_xla.core.xla_model as xm
