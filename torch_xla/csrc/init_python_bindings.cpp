@@ -229,6 +229,59 @@ std::vector<at::Tensor> XlaCustomCall(
       bridge::GetXlaTensors(inputs), payload, output_shapes, dtypes));
 }
 
+std::vector<std::vector<int>> ExtractXlaDotGeneralDimVectors(
+    const py::tuple& dimension_numbers) {
+  // Expect Python arg `dimension_numbers` to be
+  // (([lhs_contract_dim0,...], [rhs_contract_dim0,...]), ([lhs_batch_dim0,...],
+  // [rhs_batch_dim0,...]))
+  std::vector<std::vector<int>> dim_vectors;
+  XLA_CHECK_EQ(dimension_numbers.size(), 2)
+      << "dimension_numbers must be a tuple of 2 elements";
+  for (int i = 0; i < 2; ++i) {
+    XLA_CHECK(py::isinstance<py::tuple>(dimension_numbers[i]))
+        << "_xla_dot_general: Dimension_numbers[" << i << "] must be a tuple";
+    py::tuple cast_tuple = py::cast<py::tuple>(dimension_numbers[i]);
+    XLA_CHECK(cast_tuple.size() == 0 || cast_tuple.size() == 2)
+        << "_xla_dot_general: Contracting/batch dims must be speficied for "
+           "both lhs and rhs or neither";
+    if (cast_tuple.size() == 0) {
+      // Empty tuple means no contracting/batch dims
+      dim_vectors.push_back({});
+      dim_vectors.push_back({});
+    } else {
+      for (const auto& dim_list : cast_tuple) {
+        XLA_CHECK(py::isinstance<py::list>(dim_list))
+            << "_xla_dot_general: lhs/rhs contracting/batch dims must be a "
+               "list";
+        const py::list& dim_list_casted = py::cast<py::list>(dim_list);
+        std::vector<int> dim_vector;
+        for (const auto& item : dim_list_casted) {
+          XLA_CHECK(py::isinstance<py::int_>(item))
+              << "_xla_dot_general: lhs/rhs contracting/batch dims must be a "
+                 "list of integers";
+          dim_vector.push_back(py::cast<int>(item));
+        }
+        dim_vectors.push_back(dim_vector);
+      }
+    }
+  }
+  return dim_vectors;
+}
+
+at::Tensor XlaDotGeneral(const at::Tensor& lhs, const at::Tensor& rhs,
+                         const std::vector<std::vector<int>>& dim_vectors,
+                         std::optional<py::object> preferred_element_type) {
+  std::optional<at::ScalarType> at_preferred_element_type;
+  if (preferred_element_type.has_value()) {
+    at_preferred_element_type =
+        reinterpret_cast<THPDtype*>(preferred_element_type.value().ptr())
+            ->scalar_type;
+  }
+  return bridge::AtenFromXlaTensor(tensor_methods::xla_dot_general(
+      bridge::GetXlaTensor(lhs), bridge::GetXlaTensor(rhs), dim_vectors,
+      at_preferred_element_type));
+}
+
 std::vector<std::pair<int64_t, int64_t>> CreateSourceTargetPairs(
     const py::list& pairs) {
   std::vector<std::pair<int64_t, int64_t>> source_target_pairs;
@@ -1444,6 +1497,26 @@ void InitXlaModuleBindings(py::module m) {
                                              std::move(replica_groups));
     return bridge::AtenFromXlaTensor(std::move(result));
   });
+  m.def(
+      "_xla_dot_general",
+      [](const at::Tensor& lhs, const at::Tensor& rhs,
+         py::tuple dimension_numbers,
+         std::optional<std::string>& precision_config,
+         std::optional<py::object>& preferred_element_type) -> at::Tensor {
+        // Python binding for xla::DotGeneral
+        // https://openxla.org/xla/operation_semantics#dotgeneral
+        std::vector<std::vector<int>> dim_vectors =
+            ExtractXlaDotGeneralDimVectors(dimension_numbers);
+        XLA_CHECK(!precision_config.has_value())
+            << "_xla_dot_general: precision_config is not supported yet, "
+               "default precision setting will be applied.";
+        at::Tensor result =
+            XlaDotGeneral(lhs, rhs, dim_vectors, preferred_element_type);
+        return result;
+      },
+      py::arg("lhs"), py::arg("rhs"), py::arg("dimension_numbers"),
+      py::arg("precision_config") = py::none(),
+      py::arg("preferred_element_type") = py::none());
   m.def("_xla_cast_int4",
         [](const at::Tensor& weight,
            const std::vector<int>& int4_weight_values) -> at::Tensor {

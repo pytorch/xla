@@ -39,6 +39,7 @@ extern const OpKindWrapper xla_custom_call;
 extern const OpKindWrapper xla_device_data;
 extern const OpKindWrapper xla_dequantize_tensor;
 extern const OpKindWrapper xla_diagonal_view_update;
+extern const OpKindWrapper xla_dot_general;
 extern const OpKindWrapper xla_dynamic_expand;
 extern const OpKindWrapper xla_dynamic_view;
 extern const OpKindWrapper xla_einsum_backward;

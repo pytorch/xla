@@ -384,6 +384,11 @@ XLATensorPtr div(
     std::optional<at::ScalarType> logical_element_type = std::nullopt);
 XLATensorPtr div(const XLATensorPtr& input, const at::Scalar& other);
 
+XLATensorPtr xla_dot_general(
+    const XLATensorPtr& lhs, const XLATensorPtr& rhs,
+    const std::vector<std::vector<int>>& dim_vectors,
+    std::optional<at::ScalarType> preferred_element_type);
+
 // A generalized contraction between tensors of arbitrary dimension defined by
 // the given equation and applied to the input tensors.
 XLATensorPtr einsum(const std::string& equation,
