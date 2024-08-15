@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla._internal.utils as _utils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 
@@ -29,18 +30,18 @@ class Mesh:
         of the `devices` argument. Its length should match the rank of `devices`.
 
   Example:
-  —------------------------------
-  mesh_shape = (4, 2)
-  num_devices = len(xm.get_xla_supported_devices())
-  device_ids = np.array(range(num_devices))
-  mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
-  mesh.get_logical_mesh()
-  >> array([[0, 1],
-            [2, 3],
-            [4, 5],
-            [6, 7]])
-  mesh.shape()
-  >> OrderedDict([('x', 4), ('y', 2)])
+
+    >>> mesh_shape = (4, 2)
+    >>> num_devices = len(xm.get_xla_supported_devices())
+    >>> device_ids = np.array(range(num_devices))
+    >>> mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+    >>> mesh.get_logical_mesh()
+    >>> array([[0, 1],
+              [2, 3],
+              [4, 5],
+              [6, 7]])
+    >>> mesh.shape()
+    OrderedDict([('x', 4), ('y', 2)])
   """
 
   device_ids: np.ndarray
@@ -127,13 +128,65 @@ _GLOBAL_MESH: Mesh = None
 
 
 def set_global_mesh(mesh: Mesh):
+  """
+  Set the global mesh that can be used for the current process.
+
+  Args:
+    mesh: (Mesh) Mesh object that will be the global mesh.
+
+  Example:
+
+    >>> import torch_xla.distributed.spmd as xs
+    >>> mesh = xs.get_1d_mesh("data")
+    >>> xs.set_global_mesh(mesh)
+  """
   global _GLOBAL_MESH
   _GLOBAL_MESH = mesh
 
 
-def get_global_mesh():
+def get_global_mesh() -> Optional[Mesh]:
+  """
+  Get the global mesh for the current process.
+
+  Returns:
+    mesh: (Optional[Mesh]) Mesh object if global mesh is set, otherwise return None.
+
+  Example:
+
+    >>> import torch_xla.distributed.spmd as xs
+    >>> xs.get_global_mesh()
+  """
   global _GLOBAL_MESH
   return _GLOBAL_MESH
+
+
+def get_1d_mesh(axis_name: Optional[str] = None) -> Mesh:
+  """
+  Helper function to return the mesh with all devices in one dimension.
+
+  Args:
+    axis_name: (Optional[str]) optional string to represent the axis name of the mesh
+
+  Returns:
+    Mesh: Mesh object
+
+  Example:
+
+    >>> # This example is assuming 1 TPU v4-8
+    >>> import torch_xla.distributed.spmd as xs
+    >>> mesh = xs.get_1d_mesh("data")
+    >>> print(mesh.mesh_shape)
+    (4,)
+    >>> print(mesh.axis_names)
+    ('data',)
+  """
+  num_devices = xr.global_runtime_device_count()
+  mesh_shape = (num_devices,)
+  device_ids = np.array(range(num_devices))
+  if axis_name == None:
+    return Mesh(device_ids, mesh_shape)
+  else:
+    return Mesh(device_ids, mesh_shape, (axis_name,))
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
@@ -148,13 +201,13 @@ class HybridMesh(Mesh):
     dcn_mesh_shape: shape of logical mesh for outer connected devices.
 
   Example:
-    # This example is assuming 2 slices of v4-8.
-    ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)
-    dcn_mesh_shape = (2, 1, 1)
 
-    mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, ('data','fsdp','tensor'))
-    print(mesh.shape())
-    >> OrderedDict([('data', 2), ('fsdp', 4), ('tensor', 1)])
+    >>> # This example is assuming 2 slices of v4-8.
+    >>> ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)
+    >>> dcn_mesh_shape = (2, 1, 1)
+    >>> mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, ('data','fsdp','tensor'))
+    >>> print(mesh.shape())
+    >>> >> OrderedDict([('data', 2), ('fsdp', 4), ('tensor', 1)])
   """
   ici_mesh_shape: Tuple[int, ...]
   dcn_mesh_shape: Tuple[int, ...]
@@ -170,7 +223,7 @@ class HybridMesh(Mesh):
     mesh_shape = tuple([x * y for x, y in zip(ici_mesh_shape, dcn_mesh_shape)])
     self.device_attributes = xr.global_runtime_device_attributes()
     self.device_attributes.sort(
-        key=lambda attr: xm.parse_xla_device(attr['name'])[1])
+        key=lambda attr: _utils.parse_xla_device(attr['name'])[1])
 
     if 'slice_index' in self.device_attributes[0] and np.prod(
         dcn_mesh_shape) == 1:
@@ -268,7 +321,7 @@ class HybridMesh(Mesh):
         indices = itertools.combinations(
             range(len(assignable_physical_mesh)), num_axes)
         for c_axes, c_indices in zip(axes, indices):
-          if np.product(c_axes) == logical_axis_size:
+          if np.prod(c_axes) == logical_axis_size:
             assignment[logical_axis_index] = c_indices
             # Zero the assigned physical axes.
             assignable_physical_mesh = [
@@ -520,47 +573,40 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   return wrap_as_sharded_tensor(t)
 
 
-@xr.requires_pjrt
-def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
-                  mesh: Mesh,
-                  partition_spec: Tuple[Union[Tuple, int, str, None]],
-                  use_dynamo_custom_op: bool = False) -> XLAShardedTensor:
+def mark_sharding(
+    t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
+    partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
+
     Args:
         t (Union[torch.Tensor, XLAShardedTensor]): input tensor to be annotated with partition_spec.
 
         mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.
 
         partition_spec (Tuple[Tuple, int, str, None]): A tuple of device_mesh dimension index or
-          `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.
-          This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
-          When a tuple is specified, the corresponding input tensor axis will be sharded along all
-          logical axes in the tuple. Note that the order the mesh axes are specified in the tuple
-          will impact the resulting sharding.
-        For example, we can shard an 8x10 tensor 4-way row-wise, and replicate column-wise.
-        >> input = torch.randn(8, 10)
-        >> mesh_shape = (4, 2)
-        >> partition_spec = (0, None)
+            `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.
+            This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
+            When a tuple is specified, the corresponding input tensor axis will be sharded along all
+            logical axes in the tuple. Note that the order the mesh axes are specified in the tuple
+            will impact the resulting sharding.
 
         dynamo_custom_op (bool): if set to True, it calls the dynamo custom op variant of mark_sharding
           to make itself recognizeable and traceable by dynamo.
 
-    Examples
-    —------------------------------
-    mesh_shape = (4, 2)
-    num_devices = xr.global_runtime_device_count()
-    device_ids = np.array(range(num_devices))
-    mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+    Example:
 
-    # 4-way data parallel
-    input = torch.randn(8, 32).to(xm.xla_device())
-    xs.mark_sharding(input, mesh, (0, None))
-
-    # 2-way model parallel
-    linear = nn.Linear(32, 10).to(xm.xla_device())
-    xs.mark_sharding(linear.weight, mesh, (None, 1))
+      >>> import torch_xla.runtime as xr
+      >>> import torch_xla.distributed.spmd as xs
+      >>> mesh_shape = (4, 2)
+      >>> num_devices = xr.global_runtime_device_count()
+      >>> device_ids = np.array(range(num_devices))
+      >>> mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+      >>> input = torch.randn(8, 32).to(xm.xla_device())
+      >>> xs.mark_sharding(input, mesh, (0, None)) # 4-way data parallel
+      >>> linear = nn.Linear(32, 10).to(xm.xla_device())
+      >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
   num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
@@ -573,20 +619,32 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  if use_dynamo_custom_op:
-    # Allows Dynamo to capture mark_sharding op
-    annotate_func = torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op
-    annotate_func(
-        unwrap_sharded_tensor(t), *mesh._get_op_sharding_args(partition_spec))
-  else:
-    op_sharding = mesh.get_op_sharding(partition_spec)
-    annotate_func = torch_xla._XLAC._xla_mark_sharding
-    annotate_func(unwrap_sharded_tensor(t), op_sharding)
+  op_sharding = mesh.get_op_sharding(partition_spec)
+  annotate_func = torch_xla._XLAC._xla_mark_sharding
+  annotate_func(unwrap_sharded_tensor(t), op_sharding)
   return wrap_as_sharded_tensor(t)
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
-  """Clear sharding annotation from the input tensor and return a `cpu` casted tensor."""
+  """
+  Clear sharding annotation from the input tensor and return a `cpu` casted tensor. This
+  is a in place operation but will also return the same torch.Tensor back.
+
+  Args:
+    t (Union[torch.Tensor, XLAShardedTensor]): Tensor that we want to clear the sharding
+
+  Return:
+    t (torch.Tensor): tensor that without sharding.
+
+  Example:
+
+    >>> import torch_xla.distributed.spmd as xs
+    >>> torch_xla.runtime.use_spmd()
+    >>> t1 = torch.randn(8,8).to(torch_xla.device())
+    >>> mesh = xs.get_1d_mesh()
+    >>> xs.mark_sharding(t1, mesh, (0, None))
+    >>> xs.clear_sharding(t1)
+  """
   torch_xla._XLAC._xla_clear_sharding(unwrap_sharded_tensor(t))
   if isinstance(t, XLAShardedTensor):
     return t.global_tensor
@@ -631,7 +689,6 @@ class ShardingSpec:
   _replication_groups: List[int] = field(init=False)
   _sharding_type: ShardingType = field(init=False)
 
-  @xr.requires_pjrt
   def __post_init__(self):
     mesh = self.mesh
     partition_spec = _translate_named_partition_spec(mesh, self.partition_spec)

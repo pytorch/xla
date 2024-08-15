@@ -33,8 +33,8 @@ CollectivePermute::CollectivePermute(
 
 torch::lazy::NodePtr CollectivePermute::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CollectivePermute>(
-      operands.at(0), operands.at(1), source_target_pairs_);
+  return torch_xla::MakeNode<CollectivePermute>(operands.at(0), operands.at(1),
+                                                source_target_pairs_);
 }
 
 XlaOpVector CollectivePermute::Lower(LoweringContext* loctx) const {

@@ -216,6 +216,14 @@ variables:
         - Compiler cache size for the op by op executor.
       type: int
       default_value: 2048
+    XLA_USE_DUMMY_STORE:
+      description:
+        - If set to true, and user skips store based barrier by
+          setting TORCH_DIST_INIT_BARRIER=0, the `pjrt_rendezvous_handler`
+          will create a DummyStore to replace TCPStore to save open file
+          descriptors.
+      type: bool
+      default_value: false
   device_variables:
     TPU_NUM_DEVICES:
       description:
@@ -394,3 +402,8 @@ variables:
           your code.
       type: bool
       default_value: false
+    XLA_FALLBACK_CPU:
+      description:
+        - Forces CPU OpenXLA fallback. By default, PyTorch/XLA will run any operation
+          that doesn't have a lowering using PyTorch CUDA as fallback. Setting this
+          flag will force PyTorch/XLA to use PyTorch CPU as fallback.

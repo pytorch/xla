@@ -4,7 +4,6 @@ import tempfile
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 def _create_state_dict(device):
@@ -64,4 +63,4 @@ def _mp_fn(index, temp_file):
 
 if __name__ == '__main__':
   temp_file = _get_temp_file()
-  xmp.spawn(_mp_fn, args=(temp_file,))
+  torch_xla.launch(_mp_fn, args=(temp_file,))

@@ -1,6 +1,6 @@
 """This file contains some decompositons that are not available in torch stable.
 
-Most likely from Content of 
+Most likely from Content of
 https://github.com/pytorch/pytorch/blob/main/torch/_decomp/decompositions.py
 at main branch HEAD that we find useful here.
 
@@ -12,6 +12,7 @@ from typing import Any, Callable, List,  Tuple
 import torch
 from torch import Tensor
 import torch._decomp as decomp
+from torch._decomp import decompositions_for_rng
 from torch._decomp import register_decomposition
 import torch._prims_common as utils
 from torch._prims_common.wrappers import out_wrapper
@@ -28,7 +29,7 @@ aten = torch._ops.ops.aten
 def _try_register(op, impl):
     try:
         register_decomposition(op)(impl)
-    except: 
+    except:
         pass
 
 @out_wrapper()
@@ -92,6 +93,29 @@ def _reflection_or_replication_pad(
 _try_register(aten.replication_pad1d, _replication_pad)
 _try_register(aten.replication_pad3d, _replication_pad)
 
+def bernoulli(self, *, generator=None):
+    return (torch.rand_like(self, dtype=torch.float32) < self).to(self.dtype)
+
+_try_register(aten.bernoulli.default, bernoulli)
+
+
+def rand_like(self, **kwargs):
+    dtype = kwargs.get('dtype')
+    return torch.rand(self.shape, dtype=dtype)
+
+def channel_shuffle(self, groups):
+    batchsize, channels, height, width = self.shape
+    channels_per_group = channels // groups
+    self = self.reshape(batchsize, groups, channels_per_group, height, width)
+    self = self.transpose(1, 2)
+    self = self.reshape(batchsize, channels, height, width)
+    return self
+
+_try_register(aten.channel_shuffle, channel_shuffle)
+
+_try_register(aten.bernoulli, bernoulli)
+_try_register(aten.rand_like, rand_like)
+
 EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten.upsample_nearest2d,
     torch.ops.aten._native_batch_norm_legit.no_stats,
@@ -105,6 +129,8 @@ EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten.replication_pad1d,
     torch.ops.aten.replication_pad2d,
     torch.ops.aten.replication_pad3d,
+    torch.ops.aten.bernoulli,
+    torch.ops.aten.rand_like,
+    torch.ops.aten._batch_norm_with_update,
+    torch.ops.aten.channel_shuffle,
 ])
-
-EXTRA_DECOMP[torch.ops.aten.uniform] = torch.ops.aten.rand

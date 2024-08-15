@@ -186,13 +186,20 @@ class ParallelLoader(object):
 class MpDeviceLoader(object):
   """Wraps an existing PyTorch DataLoader with background data upload.
 
-  This class should only be using with multi-processing data parallelism.
+  This class should only be using with multi-processing data parallelism. It will wrap
+  the dataloader passed in with ParallelLoader and return the per_device_loader for the
+  current device.
 
   Args:
     loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be
       wrapped.
     device (`torch.device`...): The device where the data has to be sent.
     kwargs: Named arguments for the `ParallelLoader` constructor.
+
+  Example:
+
+    >>> device = torch_xla.device()
+    >>> train_device_loader = MpDeviceLoader(train_loader, device)
   """
 
   def __init__(self, loader, device, **kwargs):

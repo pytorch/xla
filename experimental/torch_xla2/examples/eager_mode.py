@@ -38,4 +38,11 @@ def model_func(param, inputs):
 
 print(model_func(m.state_dict(), inputs))
 
+print('---=====')
+with xla_env:
+  m2 = MyModel()
+  inputs = (torch.randn(3, 3, 28, 28), )
+  print(m2(*inputs))
+
+
 

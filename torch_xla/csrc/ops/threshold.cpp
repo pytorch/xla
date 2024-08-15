@@ -14,7 +14,7 @@ Threshold::Threshold(const torch::lazy::Value& input, float threshold,
       value_(value) {}
 
 torch::lazy::NodePtr Threshold::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Threshold>(operands.at(0), threshold_, value_);
+  return torch_xla::MakeNode<Threshold>(operands.at(0), threshold_, value_);
 }
 
 XlaOpVector Threshold::Lower(LoweringContext* loctx) const {

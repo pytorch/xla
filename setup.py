@@ -64,10 +64,10 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_date = '20240605'
+_date = '20240801'
 _libtpu_version = f'0.1.dev{_date}'
-_libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
-_jax_version = f'0.4.29.dev{_date}'
+_libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}+nightly-py3-none-any.whl'
+_jax_version = f'0.4.32.dev{_date}'
 
 
 def _get_build_mode():
@@ -90,7 +90,7 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.4.0')
+  version = os.getenv('TORCH_XLA_VERSION', '2.5.0')
   if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
       version += '+git' + xla_git_sha[:7]
@@ -286,10 +286,11 @@ setup(
     packages=find_packages(include=['torch_xla*']),
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
+        BazelExtension('//:_XLAC_cuda_functions.so'),
     ],
     install_requires=[
         'absl-py>=1.0.0',
-        'cloud-tpu-client>=0.10.0',
+        'numpy',
         'pyyaml',
         # importlib.metadata backport required for PJRT plugin discovery prior
         # to Python 3.10
@@ -312,9 +313,6 @@ setup(
         # On Cloud TPU VM install with:
         # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
         'tpu': [f'libtpu-nightly=={_libtpu_version}'],
-        # On nightly, install libtpu with `pip install torch_xla[tpuvm]`
-        # Remove from release branches since this is not allowed by PyPI.
-        'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
         'pallas': [f'jaxlib=={_jax_version}', f'jax=={_jax_version}'],
     },

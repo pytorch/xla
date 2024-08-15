@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/convolution_helper.h"
 
+#include "absl/status/status.h"
 #include "tsl/platform/errors.h"
 #include "tsl/platform/tensor_float_32_utils.h"
 #include "xla/client/xla_builder.h"
@@ -39,7 +40,7 @@ std::string ToString(TensorFormat format) {
 
 // Performs some basic checks on ConvOpAttrs that are true for all kinds of
 // XLA convolutions (as currently implemented).
-xla::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
+absl::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
   const int num_dims = attrs.num_spatial_dims + 2;
   const int attrs_strides_size = attrs.strides.size();
   if (attrs_strides_size != num_dims) {
@@ -94,7 +95,7 @@ xla::Shape GroupedFilterShapeForDepthwiseConvolution(
 // This part of helpers are origionally from
 // https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/framework/kernel_shape_util.cc
 
-xla::Status GetWindowedOutputSizeVerboseV2(
+absl::Status GetWindowedOutputSizeVerboseV2(
     int64_t input_size, int64_t filter_size, int64_t dilation_rate,
     int64_t stride, Padding padding_type, int64_t* output_size,
     int64_t* padding_before, int64_t* padding_after) {

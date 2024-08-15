@@ -44,9 +44,9 @@ DynamicView::DynamicView(const torch::lazy::Value& input,
       complete_output_shape_(NodeOutputShape(input, size)) {}
 
 torch::lazy::NodePtr DynamicView::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<DynamicView>(operands.at(0), size_,
-                                            operands.at(1), src_index_,
-                                            target_index_, mul_scaler_);
+  return torch_xla::MakeNode<DynamicView>(operands.at(0), size_, operands.at(1),
+                                          src_index_, target_index_,
+                                          mul_scaler_);
 }
 
 XlaOpVector DynamicView::Lower(LoweringContext* loctx) const {

@@ -93,48 +93,58 @@ class MegabloxTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm(self):
     met.clear_all()
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update('jax_default_matmul_precision', "highest")
+    gmm_funcs = [
+        gmm, torch.ops.xla.gmm,
+        torch.compile(torch.ops.xla.gmm, backend="openxla")
+    ]
 
     self._init_test_cases()
-    for test_case in self.tests_cases:
-      num_groups = test_case['num_groups']
-      k = test_case['k']
-      m = test_case['m']
-      n = test_case['n']
-      lhs_dtype = rhs_dtype = test_case['dtype']
+    for gmm_func in gmm_funcs:
+      for test_case in self.tests_cases:
+        num_groups = test_case['num_groups']
+        k = test_case['k']
+        m = test_case['m']
+        n = test_case['n']
+        lhs_dtype = rhs_dtype = test_case['dtype']
 
-      lhs = torch.rand(m, k, dtype=lhs_dtype)
-      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+        lhs = torch.rand(m, k, dtype=lhs_dtype)
+        rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+        ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
-      out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
-      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+        out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+        self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update('jax_default_matmul_precision', "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm_bf16(self):
     met.clear_all()
 
+    gmm_funcs = [
+        gmm, torch.ops.xla.gmm,
+        torch.compile(torch.ops.xla.gmm, backend="openxla")
+    ]
     self._init_test_cases()
-    for test_case in self.tests_cases:
-      num_groups = test_case['num_groups']
-      k = test_case['k']
-      m = test_case['m']
-      n = test_case['n']
-      lhs_dtype = rhs_dtype = torch.bfloat16
+    for gmm_func in gmm_funcs:
+      for test_case in self.tests_cases:
+        num_groups = test_case['num_groups']
+        k = test_case['k']
+        m = test_case['m']
+        n = test_case['n']
+        lhs_dtype = rhs_dtype = torch.bfloat16
 
-      lhs = torch.rand(m, k, dtype=lhs_dtype)
-      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+        lhs = torch.rand(m, k, dtype=lhs_dtype)
+        rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+        ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
-      out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+        out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
 
-      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+        self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure gmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
@@ -300,7 +310,7 @@ class MegabloxTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tgmm(self):
     met.clear_all()
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update('jax_default_matmul_precision', "highest")
 
     self._init_test_cases()
     for test_case in self.tests_cases:
@@ -320,7 +330,7 @@ class MegabloxTest(unittest.TestCase):
 
     # Make sure tgmm doesn't fallback.
     self.assertNotIn("aten::", met.short_metrics_report())
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update('jax_default_matmul_precision', "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tgmm_bf16(self):
@@ -455,7 +465,6 @@ if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
+  torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

@@ -56,8 +56,8 @@ Prod::Prod(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr Prod::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Prod>(operands.at(0), dimensions_,
-                                     keep_reduced_dimensions_, dtype_);
+  return torch_xla::MakeNode<Prod>(operands.at(0), dimensions_,
+                                   keep_reduced_dimensions_, dtype_);
 }
 
 XlaOpVector Prod::Lower(LoweringContext* loctx) const {

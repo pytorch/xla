@@ -43,8 +43,8 @@ MseLossBackward::MseLossBackward(const torch::lazy::Value& grad_output,
 
 torch::lazy::NodePtr MseLossBackward::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
-                                                operands.at(2), reduction_);
+  return torch_xla::MakeNode<MseLossBackward>(operands.at(0), operands.at(1),
+                                              operands.at(2), reduction_);
 }
 
 XlaOpVector MseLossBackward::Lower(LoweringContext* loctx) const {

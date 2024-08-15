@@ -13,8 +13,8 @@ Exponential::Exponential(const torch::lazy::Value& lambda,
               std::move(shape)) {}
 
 torch::lazy::NodePtr Exponential::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Exponential>(operands.at(0), operands.at(1),
-                                            xla_shape());
+  return torch_xla::MakeNode<Exponential>(operands.at(0), operands.at(1),
+                                          xla_shape());
 }
 
 XlaOpVector Exponential::Lower(LoweringContext* loctx) const {

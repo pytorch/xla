@@ -23,16 +23,17 @@ jobs:
     env:
       _GLIBCXX_USE_CXX11_ABI: 0
     steps:
-      # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
-      - name: Clean up workspace
-        run: |
-          ls -la
-          rm -rvf ${GITHUB_WORKSPACE}/*
-      - name: Setup CUDA environment
-        shell: bash
-        run: |
-          echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+      - name: Setup
+        uses: ./.actions/.github/workflows/setup
+        with:
+          torch-commit: ${{ inputs.torch-commit }}
+          cuda: true
       - name: Checkout PyTorch Repo
         uses: actions/checkout@v4
         with:
@@ -40,11 +41,11 @@ jobs:
           path: pytorch
           ref: ${{ inputs.torch-commit }}
           submodules: recursive
-      - name: Build
+      - name: Build PyTorch with CUDA enabled
         shell: bash
         run: |
           cd pytorch
-          TORCH_CUDA_ARCH_LIST="5.2;8.6" USE_CUDA=1 python setup.py bdist_wheel
+          TORCH_CUDA_ARCH_LIST="5.2;8.6" USE_CUDA=1 MAX_JOBS="$(nproc --ignore=4)" python setup.py bdist_wheel
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:

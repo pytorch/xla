@@ -13,8 +13,8 @@ Normal::Normal(const torch::lazy::Value& mean, const torch::lazy::Value& std,
               GetXlaShape(mean)) {}
 
 torch::lazy::NodePtr Normal::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Normal>(operands.at(0), operands.at(1),
-                                       operands.at(2));
+  return torch_xla::MakeNode<Normal>(operands.at(0), operands.at(1),
+                                     operands.at(2));
 }
 
 XlaOpVector Normal::Lower(LoweringContext* loctx) const {

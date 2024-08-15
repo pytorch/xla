@@ -20,8 +20,8 @@ Unselect::Unselect(const torch::lazy::Value& target,
       stride_(stride) {}
 
 torch::lazy::NodePtr Unselect::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_,
-                                         start_, end_, stride_);
+  return torch_xla::MakeNode<Unselect>(operands.at(0), operands.at(1), dim_,
+                                       start_, end_, stride_);
 }
 
 XlaOpVector Unselect::Lower(LoweringContext* loctx) const {

@@ -53,7 +53,7 @@ SymEig::SymEig(const torch::lazy::Value& input, bool eigenvectors, bool lower)
       lower_(lower) {}
 
 torch::lazy::NodePtr SymEig::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
+  return torch_xla::MakeNode<SymEig>(operands.at(0), eigenvectors_, lower_);
 }
 
 XlaOpVector SymEig::Lower(LoweringContext* loctx) const {

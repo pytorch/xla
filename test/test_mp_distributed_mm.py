@@ -1,18 +1,17 @@
 import sys
 import torch
 import torch_xla
+from torch_xla import runtime as xr
 import torch_xla.core.functions as xf
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 
 def _mp_fn(index):
   device = xm.xla_device()
 
   if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
-    world_size = xm.xrt_world_size()
-    torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-        use_full_mat_mul_precision=True)
+    world_size = xr.world_size()
+    torch_xla._XLAC._xla_set_mat_mul_precision('highest')
     torch.manual_seed(11)
     xm.set_rng_state(11)
 
@@ -40,4 +39,4 @@ def _mp_fn(index):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, nprocs=None)
+  torch_xla.launch(_mp_fn)

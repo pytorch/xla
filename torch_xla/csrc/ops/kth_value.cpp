@@ -30,7 +30,7 @@ KthValue::KthValue(const torch::lazy::Value& input, int64_t k, int64_t dim,
       keepdim_(keepdim) {}
 
 torch::lazy::NodePtr KthValue::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
+  return torch_xla::MakeNode<KthValue>(operands.at(0), k_, dim_, keepdim_);
 }
 
 XlaOpVector KthValue::Lower(LoweringContext* loctx) const {

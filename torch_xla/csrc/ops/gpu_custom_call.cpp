@@ -15,7 +15,7 @@ GpuCustomCall::GpuCustomCall(torch::lazy::OpList inputs,
       payload_(payload) {}
 
 torch::lazy::NodePtr GpuCustomCall::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<GpuCustomCall>(operands, xla_shape(), payload_);
+  return torch_xla::MakeNode<GpuCustomCall>(operands, xla_shape(), payload_);
 }
 
 XlaOpVector GpuCustomCall::Lower(LoweringContext* loctx) const {

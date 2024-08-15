@@ -111,9 +111,9 @@ PyTorch/XLA makes it easy to accelerate training by running on multiple XLA
 devices. The following snippet shows how:
 
 ```python
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 def _mp_fn(index):
   device = xm.xla_device()
@@ -131,15 +131,15 @@ def _mp_fn(index):
     xm.optimizer_step(optimizer)
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=())
+  torch_xla.launch(_mp_fn, args=())
 ```
 
 There are three differences between this multi-device snippet and the previous
 single device snippet. Let's go over then one by one.
 
-- `xmp.spawn()`
+- `torch_xla.launch()`
   - Creates the processes that each run an XLA device.
-  - Each process will only be able to access the device assigned to the current process. For example on a TPU v4-8, there will be 4 processes being spawn up and each process will own a TPU device.
+  - This function is a wrapper of multithreading spawn to allow user run the script with torchrun command line also. Each process will only be able to access the device assigned to the current process. For example on a TPU v4-8, there will be 4 processes being spawn up and each process will own a TPU device.
   - Note that if you print the `xm.xla_device()` on each process you will see `xla:0` on all devices. This is because each process can only see one device. This does not mean multi-process is not functioning. The only execution is with PJRT runtime on TPU v2 and TPU v3 since there will be `#devices/2` processes and each process will have 2 threads(check this [doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpus-v2v3-vs-v4) for more details).
 - `MpDeviceLoader`
   - Loads the training data onto each device.
@@ -153,7 +153,7 @@ The model definition, optimizer definition and training loop remain the same.
 
 > **NOTE:** It is important to note that, when using multi-processing, the user can start
 retrieving and accessing XLA devices only from within the target function of
-`xmp.spawn()` (or any function which has `xmp.spawn()` as parent in the call
+`torch_xla.launch()` (or any function which has `torch_xla.launch()` as parent in the call
 stack).
 
 See the
@@ -206,28 +206,6 @@ constructs the graphs, sends them to XLA devices, and synchronizes when
 copying data between an XLA device and the CPU. Inserting a barrier when
 taking an optimizer step explicitly synchronizes the CPU and the XLA device. For
 more information about our lazy tensor design, you can read [this paper](https://arxiv.org/pdf/2102.13267.pdf).
-
-### XLA Tensors and bFloat16
-
-PyTorch/XLA can use the
-[bfloat16](https://en.wikipedia.org/wiki/Bfloat16_floating-point_format)
-datatype when running on TPUs. In fact, PyTorch/XLA handles float types
-(`torch.float` and `torch.double`) differently on TPUs. This behavior is
-controlled by the `XLA_USE_BF16` and `XLA_DOWNCAST_BF16` environment variable:
-
-- By default both `torch.float` and `torch.double` are
-`torch.float` on TPUs.
-- If `XLA_USE_BF16` is set, then `torch.float` and `torch.double` are both
-`bfloat16` on TPUs.
-- If `XLA_DOWNCAST_BF16` is set, then `torch.float` is `bfloat16` on TPUs and `torch.double` is `float32` on TPUs.
-- If a PyTorch tensor has `torch.bfloat16` data type, this will be directly
-mapped to the TPU `bfloat16` (XLA `BF16` primitive type).
-
-Developers should note that *XLA tensors on TPUs will always report their PyTorch datatype* regardless of
-the actual datatype they're using. This conversion is automatic and opaque.
-If an XLA tensor on a TPU is moved back to the CPU it will be converted
-from its actual datatype to its PyTorch datatype. Depending on how your code operates, this conversion triggered by
-the type of processing unit can be important.
 
 ### Memory Layout
 

@@ -1,4 +1,4 @@
-Quantized Operations for XLA device (Experimental feature)
+# Quantized Operations for XLA device (Experimental feature)
 --------------------------
 
 This document outlines how to utilize quantized operations to enable quantization on XLA devices.
@@ -99,12 +99,12 @@ orig_model.linear = q_linear
 
 | Weight Quantization Type | Activation Quantization Type | Dtype | Supported |
 |---|---|---|---|
-| per-channel | N/A | W8A16 | Yes |
-| per-channel | N/A | W4A16 | Yes |
+| per-channel (sym/asym) | N/A | W8A16 | Yes |
+| per-channel  (sym/asym) | N/A | W4A16 | Yes |
 | per-channel | per-token | W8A8 | No |
 | per-channel | per-token | W4A8 | No |
-| blockwise | N/A | W8A16 | No |
-| blockwise | N/A | W4A16 | No |
+| blockwise (sym/asym) | N/A | W8A16 | Yes |
+| blockwise (sym/asym) | N/A | W4A16 | Yes |
 | blockwise | per-token | W8A8 | No |
 | blockwise | per-token | W4A8 | No |
 

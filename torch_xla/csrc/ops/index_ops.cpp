@@ -273,7 +273,7 @@ torch::lazy::Value EnsureRank1(const torch::lazy::Value& index) {
   const XlaNode* casted = dynamic_cast<const XlaNode*>(index.node.get());
   XLA_CHECK_LE(casted->xla_shape().rank(), 1);
   return casted->xla_shape().rank() == 0
-             ? torch::lazy::MakeNode<Expand>(index, std::vector<int64_t>{1})
+             ? torch_xla::MakeNode<Expand>(index, std::vector<int64_t>{1})
              : index;
 }
 
@@ -337,8 +337,8 @@ XLATensorPtr IndexByTensors(const XLATensorPtr& base,
   XLATensorPtr indices_nd =
       tensor_methods::stack(canonical_indices, indices_rank);
   return XLATensor::Create(
-      torch::lazy::MakeNode<IndexGet>(base->GetIrValue(),
-                                      indices_nd->GetIrValue(), start_dim),
+      torch_xla::MakeNode<IndexGet>(base->GetIrValue(),
+                                    indices_nd->GetIrValue(), start_dim),
       base->GetDevice(), base->dtype());
 }
 
@@ -355,10 +355,10 @@ torch::lazy::Value IndexPutByTensors(
   // single scatter.
   XLATensorPtr indices_nd =
       tensor_methods::stack(canonical_indices, indices_rank);
-  return torch::lazy::MakeNode<Permute>(
-      torch::lazy::MakeNode<IndexPut>(base->GetIrValue(),
-                                      indices_nd->GetIrValue(), start_dim,
-                                      values->GetIrValue(), accumulate),
+  return torch_xla::MakeNode<Permute>(
+      torch_xla::MakeNode<IndexPut>(base->GetIrValue(),
+                                    indices_nd->GetIrValue(), start_dim,
+                                    values->GetIrValue(), accumulate),
       torch::lazy::ToVector<int64_t>(result_permutation));
 }
 

@@ -5,13 +5,14 @@ import numpy as np
 import os
 import pandas as pd
 import time
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
 class ResultAnalyzer:
 
-  def __init__(self, args):
+  def __init__(self, args: argparse.Namespace):
     self._args = args
     self.timestamp = self._args.timestamp or time.time()
     self.output_dir = os.path.abspath(self._args.output_dirname)
@@ -105,7 +106,7 @@ class ResultAnalyzer:
 
   # TODO: handle error message properly (database length restriction)
   # Do not use bool. This will mess up with the bigquery parsing.
-  def extract_metrics_jsonl(self, file):
+  def extract_metrics_jsonl(self, file: str):
     with open(file, mode="r", encoding="utf-8") as f:
       jsonlines = f.read().splitlines()
     runs = []
@@ -156,7 +157,8 @@ class ResultAnalyzer:
 
       if "error" not in dataline["metrics"]:
         d["dimensions"]["run_status"] = "success"
-        d["metrics"] = self.get_calculated_metrics(d["metrics"], dataline)
+        if len(dataline["metrics"]) > 0:
+          d["metrics"] = self.get_calculated_metrics(d["metrics"], dataline)
       else:
         d["dimensions"]["run_status"] = "failure"
         d["metrics"]["median_total_time"] = -1
@@ -169,7 +171,7 @@ class ResultAnalyzer:
 
     return runs
 
-  def extract_metrics_csv(self, file, metric_df):
+  def extract_metrics_csv(self, file: str, metric_df: Optional[pd.DataFrame]):
     with open(file, mode="r", encoding="utf-8") as f:
       jsonlines = f.read().splitlines()
 
@@ -215,7 +217,7 @@ class ResultAnalyzer:
       if "error" in dataline["metrics"] and not self._args.hide_errors:
         d["error_message"] = dataline["metrics"]["error"]
 
-      if "error" not in dataline["metrics"]:
+      if len(dataline["metrics"]) > 0 and "error" not in dataline["metrics"]:
         d = self.get_calculated_metrics(d, dataline)
 
       new_row = pd.Series(d)
@@ -225,7 +227,7 @@ class ResultAnalyzer:
 
     return metric_df
 
-  def export_metric_report(self, metric_df):
+  def export_metric_report(self, metric_df: pd.DataFrame):
     metric_df.to_csv(
         self.output_file, mode="w", encoding="utf-8", header=True, index=False)
 

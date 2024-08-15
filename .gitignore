@@ -23,7 +23,7 @@ torch_xla/csrc/version.cpp
 /docs/src/*
 
 # Local terraform state
-.terraform*
+.terraform
 
 
 # Build system temporary files

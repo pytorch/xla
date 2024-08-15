@@ -1,15 +1,15 @@
+import sys
 import contextlib
 from typing import Optional
 import jax
-from jax import dlpack as jaxdl
 import jax.numpy as jnp
 import numpy
 import torch
+import torch.distributed._functional_collectives
 import torch.func
 import torch.utils._mode_utils as mode_utils
 import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
-import torch.utils.dlpack as torchdl
 
 from torch_xla2 import config
 from torch_xla2.ops import mappings
@@ -43,6 +43,17 @@ def t2j_dtype(dtype):
 
 def j2t_dtype(dtype):
   return mappings.j2t_dtype(dtype)
+
+
+@contextlib.contextmanager
+def log_nested(env, message):
+  if env.config.debug_print_each_op:
+    print((' ' * log_nested.level) + message, file=sys.stderr)
+  log_nested.level += 1
+  yield
+  log_nested.level -= 1
+
+log_nested.level = 0
 
 
 class XLATensor2(torch.Tensor):
@@ -93,8 +104,8 @@ class XLATensor2(torch.Tensor):
     # return torch.reshape(self, new_shape)
 
   def __setitem__(self, key, val):
-    key = unwrap(key)
-    self._elem = self._elem.at[key].set(val._elem)
+    key, val = self._env.t2j_iso((key, val))
+    self._elem = self._elem.at[key].set(val)
 
   def type_as(self, other):
     self._elem = self._elem.astype(other._elem.dtype)
@@ -127,18 +138,12 @@ class XLATensor2(torch.Tensor):
   def torch(self) -> torch.Tensor:
     return j2t(self.jax())
 
-  def to(self, *args, **kwargs):
-    if len(args) == 1:
-      if isinstance(args[0], torch.dtype):
-        return XLATensor2(self._elem.astype(t2j_dtype(args[0])), self._env)
-    if 'dtype' in kwargs:
-      dtype = kwargs['dtype']
-      return XLATensor2(self._elem.astype(t2j_dtype(dtype)), self._env)
-    return self
-
   @property
   def dtype(self):
     return j2t_dtype(self._elem.dtype)
+
+  def dim(self):
+    return self.ndim
 
 
 
@@ -162,15 +167,11 @@ class SliceView(XLATensor2):
     self._orig_tensor._elem = self._orig_tensor.at[slice].set(new_content)
 
 
-_DEBUG_ACCURACY = False
-
 
 def debug_accuracy(func, args, kwargs, current_output):
-  if not _DEBUG_ACCURACY:
-    return True
-
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
       torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output))
+
   expected_out = func(*args_torch, **kwargs_torch)
 
   flattened_current_out, _ = torch_pytree.tree_flatten(out_torch)
@@ -180,7 +181,7 @@ def debug_accuracy(func, args, kwargs, current_output):
     if ex.dtype != real.dtype:
       ex = ex.to(real.dtype)
     try:
-      if (_DEBUG_ACCURACY and isinstance(ex, torch.Tensor) and
+      if (isinstance(ex, torch.Tensor) and
           not torch.allclose(ex, real, atol=1e-3, equal_nan=True)):
         import pdb
 
@@ -204,9 +205,11 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
                          types,
                          args=(),
                          kwargs=None) -> torch.Tensor:
-    try:
-      return self.env.dispatch(func, types, args, kwargs)
-    except OperatorNotFound:
+    with log_nested(self.env, f'FUNCTION: {_name_of_func(func)}'):
+      try:
+        return self.env.dispatch(func, types, args, kwargs)
+      except OperatorNotFound:
+        pass
       return func(*args, **(kwargs or {}))
 
 
@@ -216,12 +219,13 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
     self.env = env
 
   def __torch_dispatch__(self, func, types, args=(), kwargs=None):
-    if isinstance(func, torch._ops.OpOverloadPacket):
-      with self:
+    with log_nested(self.env, f'DISPATCH: {_name_of_func(func)}'):
+      if isinstance(func, torch._ops.OpOverloadPacket):
+        with self:
+          return func(*args, **kwargs)
+      if func.namespace not in ('aten', '_c10d_functional'):
         return func(*args, **kwargs)
-    if func.namespace != 'aten':
-      return func(*args, **kwargs)
-    return self.env.dispatch(func, types, args, kwargs)
+      return self.env.dispatch(func, types, args, kwargs)
 
 def _name_of_func(func):
   if hasattr(func, 'name'):
@@ -257,7 +261,7 @@ class Environment(contextlib.ContextDecorator):
         self.config = configuration or config.Configuration()
 
     def load_ops(self):
-      from torch_xla2.ops import jaten, jtorch, ops_registry
+      from torch_xla2.ops import jaten, jtorch, jc10d, ops_registry
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
 
@@ -283,8 +287,16 @@ class Environment(contextlib.ContextDecorator):
       return jax.random.key(next_key)
 
     def dispatch(self, func, types, args, kwargs):
+
+      kwargs = kwargs or {}
+
+      # If the func don't act on XLATensor2, and is not a tensor constructor,
+      # We should skip and let torch handle it.
+      tensor_args = [t for t in args if isinstance(t, torch.Tensor)]
+      if tensor_args and all(not isinstance(t, XLATensor2) for t in tensor_args):
+        return func(*args, **kwargs)
+
       with jax.named_scope(_name_of_func(func)):
-        kwargs = kwargs or {}
         op = self._ops.get(func)
 
         if op is None and isinstance(func, torch._ops.OpOverloadPacket):
@@ -297,8 +309,18 @@ class Environment(contextlib.ContextDecorator):
           raise OperatorNotFound(
             f'Operator with name {_name_of_func(func)} has no lowering')
 
-        if op.is_jax_function:
-          args, kwargs = self.t2j_iso((args, kwargs))
+        old_args, old_kwargs = args, kwargs
+        args, kwargs = torch_pytree.tree_map_only(
+            torch.distributed._functional_collectives.AsyncCollectiveTensor,
+            torch.distributed._functional_collectives.wait_tensor,
+            (args, kwargs))
+        try:
+          if op.is_jax_function:
+            args, kwargs = self.t2j_iso((args, kwargs))
+        except AssertionError:
+          if self.config.debug_mixed_tensor:
+            import pdb; pdb.set_trace()
+
 
         if op.needs_env:
           kwargs['env'] = self
@@ -309,8 +331,8 @@ class Environment(contextlib.ContextDecorator):
         if op.is_jax_function:
           res = self.j2t_iso(res)
 
-        #if self.config.debug_accuracy_for_each_op:
-        #  debug_accuracy(func, args, kwargs, res)
+        if self.config.debug_accuracy_for_each_op:
+          debug_accuracy(func, old_args, old_kwargs, res)
         return res
 
     def __enter__(self):
@@ -326,6 +348,9 @@ class Environment(contextlib.ContextDecorator):
       if isinstance(val, torch.nn.Module):
         state_dict = self.to_xla(val.state_dict())
         val.load_state_dict(state_dict, assign=True)
+        # Non-persistent buffers are not in state_dict
+        for b_name, buffer in val.named_buffers():
+          setattr(val, b_name, self.to_xla(buffer))
         return val
       if isinstance(val, XLATensor2):
         return val
@@ -342,7 +367,9 @@ class Environment(contextlib.ContextDecorator):
 
     def t2j_iso(self, torchtensors):
       def to_jax(x):
-        assert isinstance(x, XLATensor2)
+        if isinstance(x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
+          x = x.wait()
+        assert isinstance(x, XLATensor2), f'Expect a XLATensor2 but got {type(x)}; usually this means there is a mixed math between XLATensor and torch.Tensor'
         return x.jax()
       return torch_pytree.tree_map_only(torch.Tensor, to_jax, torchtensors)
 

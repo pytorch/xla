@@ -109,24 +109,61 @@ print(m(inputs))
 This model `m` contains 2 parts: the weights that is stored inside of the model
 and it's submodules (`nn.Linear`).
 
-To execute this model with `torch_xla2`; we need to move the tensors involved in compute
-to `XLA` devices. This can be accomplished with `torch_xla2.tensor.move_to_device`.
+To execute this model with `torch_xla2`; we need construct and run the model
+under an `environment` that captures pytorch ops and swaps them with TPU equivalent.
 
-We need move both the weights and the input to xla devices:
+To create this environment: use
 
 ```python
 import torch_xla2
-from torch.utils import _pytree as pytree
-from torch_xla2.tensor import move_to_device
 
-inputs = move_to_device(inputs)
-new_state_dict = pytree.tree_map_only(torch.Tensor, move_to_device, m.state_dict())
-m.load_state_dict(new_state_dict, assign=True)
-
-res = m(inputs)
-
-print(type(res))  # outputs XLATensor2
+env = torch_xla2.default_env() 
 ```
+Then, execute the instiation of the model, as well as evaluation of model, 
+using `env` as a context manager:
+
+```python
+with env:
+  inputs = torch.randn(3, 3, 28, 28)
+  m = MyModel()
+  res = m(inputs)
+  print(type(res))  # outputs XLATensor2
+```
+
+## What is happening behind the scene:
+
+When a torch op is executed inside of `env` context manager, we can swap out the 
+implementation of that op with a version that runs on TPU. 
+When a model's constructor runs, it will call some tensor constructor, such as
+`torch.rand`, `torch.ones` or `torch.zeros` etc to create its weights. Those
+ops are captured by `env` too and placed directly on TPU.
+
+See more at [how_it_works](docs/how_it_works.md) and [ops registry](docs/ops_registry.md).
+
+### What if I created model outside of `env`.
+
+So if you have
+
+```
+m = MyModel()
+```
+outside of env, then regular torch ops will run when creating this model.
+Then presumably the model's weights will be on CPU (as instances of `torch.Tensor`).
+
+To move this model into XLA device, one can use `env.to_xla()` function.
+
+i.e.
+```
+m2 = env.to_xla(m)
+inputs = env.to_xla(inputs)
+
+with env:
+  res = m2(inputs)
+```
+
+NOTE that we also need to move inputs to xla using `.to_xla`. 
+`to_xla` works with all pytrees of `torch.Tensor`.
+
 
 ### Executing with jax.jit
 
@@ -162,7 +199,9 @@ def model_func(param, inputs):
 Now, we can apply `jax_jit`
 
 ```python
-from torch_xla2.extra import jax_jit
+from torch_xla2.interop import jax_jit
 model_func_jitted = jax_jit(model_func)
 print(model_func_jitted(new_state_dict, inputs))
 ```
+
+See more examples at [eager_mode.py](examples/eager_mode.py) and the (examples folder)[examples/]

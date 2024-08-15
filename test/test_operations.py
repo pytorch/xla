@@ -65,12 +65,8 @@ def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
 
-def _is_on_eager_debug_mode():
-  return xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', bool, defval=False)
-
-
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
-skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
+skipOnEagerDebug = unittest.skipIf(torch_xla.experimental.is_eager_mode(),
                                    'skip on eager debug mode')
 
 
@@ -604,7 +600,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(x.device.type, 'xla')
 
   def test_randperm(self):
-    x = torch.randperm(3, device=xm.xla_device())
+    x = torch.randperm(3, device=xm.xla_device(), dtype=torch.int32)
     self.assertEqual(x.device.type, 'xla')
 
   def test_randn_like(self):
@@ -1663,9 +1659,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         t += torch.tensor(i, dtype=torch.float, device=t.device)
       return t
 
-    # This test is for PjRT only
-    if xr.using_pjrt():
-      self.runAtenTest([torch.tensor(20.0)], test_fn)
+    self.runAtenTest([torch.tensor(20.0)], test_fn)
 
   def test_view_and_copy_(self):
     xla_device = xm.xla_device()
@@ -1690,10 +1684,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     y = torch.rand(5)
     self.assertEqual(x + y, y + x)
 
-  @unittest.skipIf(
-      os.environ.get('XLA_USE_EAGER_DEBUG_MODE'),
-      'Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.'
-  )
+  # Since in eager mode the tensor would be materialized and hence _get_xla_tensors_text would not show the prim::Constant node.
+  @skipOnEagerDebug
   def test_pow_constant(self):
     t1 = torch.pow(torch.tensor([2.0, 3.0], device=xm.xla_device()), 5)
     hlo_text = torch_xla._XLAC._get_xla_tensors_text([t1])
@@ -1748,6 +1740,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       upper_bound = torch.sigmoid(x * (100.0))
       assert torch.all(lower_bound >= 0.0)
       assert torch.all(upper_bound <= 1.0)
+
+  def test_manual_seed(self):
+    device = torch_xla.device()
+    torch_xla.manual_seed(12345)
+    t1 = torch.randn(5, 5, device=device)
+    torch_xla.manual_seed(12345)
+    t2 = torch.randn(5, 5, device=device)
+    self.assertTrue(torch.allclose(t1.cpu(), t2.cpu()))
 
   def test_cached_addcdiv(self):
     xla_device = xm.xla_device()
@@ -2002,6 +2002,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for dtype in test_dtypes:
       test(dtype)
 
+  def test_trilinear_interpolate(self):
+
+    def func(input_volume):
+      output_size = (32, 64, 64)
+      return F.interpolate(
+          input_volume, size=output_size, mode='trilinear', align_corners=False)
+
+    device = torch_xla.device()
+    input_volume = torch.randn(1, 3, 16, 32, 32).to(device)
+    met.clear_all()
+    self.runAtenTest((input_volume), func)
+    assert len(torch_xla._XLAC._get_executed_fallback_ops()) == 0
+
   def test_gelu_backward_different_types(self):
 
     def foo(grad, inp):
@@ -2034,6 +2047,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.assertEqual(xt.grad.dtype, torch.bfloat16)
     self.assertEqual(t.grad, xt.grad.cpu())
+
+  def test_clip_grad_norm_zero(self):
+    t = torch.rand(10, 10, dtype=torch.bfloat16)
+    xt = t.to(xm.xla_device())
+    result = torch.nn.utils.clip_grad_norm_(xt, 1.0)
+    self.assertEqual(result.device.type, 'xla')
+    self.assertTrue(torch.allclose(result.cpu(), torch.tensor(0.)))
 
   def test_stack_different_types(self):
 
@@ -2188,6 +2208,83 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.assertEqual(out, Xout.cpu())
 
+  def test_embedding_bag_backward_fallback(self):
+    # Tests whether EmbeddingBag backward function works and computes the expected results.
+    #
+    # EmbeddingBag has a 'sparse' flag which dictates what will be the layout of the grad
+    # returned by its backward function. Unfortunately, PyTorch/XLA doesn't support sparse
+    # tensors, yet. Therefore, as a work-around, we fallback to the dense backward function.
+    #
+    # This test tests whether we correctly compute the backward for sparse=True and
+    # sparse=False, making sure that we did not introduce any regressions.
+
+    # Run EmbeddingBag forward and backwards.
+    # Return the forward result + the computed weight grad.
+    def fn(indices, weight, **kwargs):
+      out = F.embedding_bag(indices, weight, **kwargs)
+      out.sum().backward()
+      return out, weight.grad
+
+    # Clone a tensor, and maybe move it to a different device.
+    def clone_and_maybe_move(tensor, device=None):
+      fresh = tensor
+      # Maybe move to the specified device.
+      if device is not None:
+        fresh = fresh.to(device)
+      # Clone if not cloned already by the previous device move.
+      if fresh.device == tensor.device and fresh.data_ptr() == tensor.data_ptr(
+      ):
+        fresh = tensor.clone()
+      # Make this tensor a leaf tensor by detaching and reseting its
+      # requires_grad property.
+      fresh = fresh.detach()
+      fresh.requires_grad_(tensor.requires_grad)
+      return fresh
+
+    EMBEDDINGS = 10
+    VECTOR_DIM = 5
+    N = 5
+
+    kwargs = {
+        "indices": torch.randint(0, EMBEDDINGS, (N,)),
+        "weight": torch.randn((EMBEDDINGS, VECTOR_DIM), requires_grad=True),
+        "offsets": torch.tensor([0, 3], dtype=torch.long),
+    }
+
+    # Test all combinations of sparse + mode.
+    for sparse, mode in itertools.product((False, True),
+                                          ("sum", "mean", "max")):
+      # According to nn.functional.embedding_bag PyTorch documentation, not supported.
+      if sparse and mode == "max":
+        continue
+
+      extra_kwargs = {
+          "mode": mode,
+          "sparse": sparse,
+      }
+
+      with self.subTest(sparse=sparse, mode=mode):
+        kwargs_ = {k: clone_and_maybe_move(v) for k, v in kwargs.items()}
+        xla_kwargs = {
+            k: clone_and_maybe_move(v, device=xm.xla_device())
+            for k, v in kwargs.items()
+        }
+
+        expected_out, expected_grad = fn(**kwargs_, **extra_kwargs)
+        actual_out, actual_grad = fn(**xla_kwargs, **extra_kwargs)
+
+        # PyTorch/XLA doesn't support sparse tensors.
+        # We explicitly fallback to the dense backward function whenever sparse=True.
+        # Therefore, we have to convert the expected grad to dense, so that we can
+        # compare the actual numbers.
+        if sparse:
+          self.assertTrue(expected_grad.is_sparse)
+          self.assertFalse(actual_grad.is_sparse)
+          expected_grad = expected_grad.to_dense()
+
+        self.assertEqual(actual_out, expected_out)
+        self.assertEqual(actual_grad, expected_grad)
+
 
 class MNISTComparator(nn.Module):
 
@@ -2255,16 +2352,13 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
     xm.mark_step()
     xm.wait_device_ops()
     self.assertTrue("ExecuteTime" in met.metric_names() or
-                    "ExecuteChainedTime" in met.metric_names())
+                    "EagerOpExecuteTime" in met.metric_names())
 
 
 class TestDebuggingUtil(test_utils.XlaTestCase):
 
+  @skipOnEagerDebug
   def test_get_xla_tensor_debug_info(self):
-    if xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', str, '1'):
-      # ignore this test for eager debug mode since it will
-      # mess up the IR.
-      return
     device = xm.xla_device()
     # test non xla tensor
     cpu_t1 = torch.randn(5)
@@ -3008,8 +3102,7 @@ class TestHelperFunction(test_utils.XlaTestCase):
 if __name__ == '__main__':
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
+  torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
     print(met.metrics_report())

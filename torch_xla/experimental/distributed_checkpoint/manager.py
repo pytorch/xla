@@ -190,17 +190,18 @@ class CheckpointManager:
     return os.path.join(self.base_path, str(step))
 
   def _delete_chkpt_at_step(self, step):
-    path = self._get_path(step)
-    fs, raw_path = url_to_fs(path)
-    if fs.exists(raw_path):
-      fs.rm(raw_path, recursive=True)
+    if dist.get_rank(self.pg) == 0:
+      path = self._get_path(step)
+      fs, raw_path = url_to_fs(path)
+      if fs.exists(raw_path):
+        fs.rm(raw_path, recursive=True)
 
   def _release_oldest_checkpoints(self):
     """
     Delete oldest checkpoints until the number of tracked checkpoints is below
     self.max_to_keep. This operation is only execution on the rank 0 process.
     """
-    if dist.get_rank(self.pg) == 0 and self.max_to_keep > 0:
+    if self.max_to_keep > 0:
       while len(self._tracked_chkpts) > self.max_to_keep:
         oldest_chkpt = self._tracked_chkpts.popleft()
         self._delete_chkpt_at_step(oldest_chkpt.step)

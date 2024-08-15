@@ -24,10 +24,12 @@
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
+#include "xla/python/ifrt/attribute_map.h"
 #include "xla/python/ifrt/compiler.h"
 #include "xla/python/ifrt/memory.h"
 #include "xla/python/ifrt/sharding.h"
 #include "xla/python/pjrt_ifrt/pjrt_array.h"
+#include "xla/python/pjrt_ifrt/pjrt_attribute_map_util.h"
 #include "xla/python/pjrt_ifrt/pjrt_client.h"
 #include "xla/python/pjrt_ifrt/xla_sharding.h"
 #include "xla/shape.h"
@@ -569,7 +571,7 @@ IfrtComputationClient::ExecuteReplicated(
           .value();
 
   result.status.OnReady(std::move([timed, op_tracker = std::move(op_tracker)](
-                                      xla::Status status) mutable {
+                                      absl::Status status) mutable {
     timed.reset();
     TF_VLOG(3)
         << "ExecuteReplicated returned_future->OnReady finished with status "
@@ -633,9 +635,10 @@ int IfrtComputationClient::GetNumProcesses() const {
 };
 
 const absl::flat_hash_map<
-    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 IfrtComputationClient::GetDeviceAttributes(const std::string& device) {
-  return IfrtComputationClient::StringToIfrtDevice(device)->Attributes();
+  return xla::ifrt::ToPjRtAttributeMap(
+      IfrtComputationClient::StringToIfrtDevice(device)->Attributes());
 }
 
 void IfrtComputationClient::SetReplicationDevices(

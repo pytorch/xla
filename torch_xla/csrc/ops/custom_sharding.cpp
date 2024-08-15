@@ -27,8 +27,8 @@ CustomSharding::CustomSharding(const torch::lazy::Value& input,
       output_shape(output_shape) {}
 
 torch::lazy::NodePtr CustomSharding::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CustomSharding>(operands.at(0), output_shape,
-                                               type);
+  return torch_xla::MakeNode<CustomSharding>(operands.at(0), output_shape,
+                                             type);
 }
 
 XlaOpVector CustomSharding::Lower(LoweringContext* loctx) const {

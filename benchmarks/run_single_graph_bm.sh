@@ -8,7 +8,7 @@ OUT_PATH=xla/benchmarks/bm_results/single_graph/$DATE
 mkdir -p $OUT_PATH
 
 python new_xla/benchmarks/experiment_runner.py \
-    --dynamo=inductor --dynamo=openxla_eval --dynamo=openxla \
+    --dynamo=inductor --dynamo=openxla \
     --xla=None --xla=PJRT \
     --test=eval \
     --filter-by-single-graph \

@@ -36,8 +36,8 @@ TopK::TopK(const torch::lazy::Value& input, int64_t k, int64_t dim,
       stable_(stable) {}
 
 torch::lazy::NodePtr TopK::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<TopK>(operands.at(0), k_, dim_, largest_,
-                                     sorted_, stable_);
+  return torch_xla::MakeNode<TopK>(operands.at(0), k_, dim_, largest_, sorted_,
+                                   stable_);
 }
 
 XlaOpVector TopK::Lower(LoweringContext* loctx) const {

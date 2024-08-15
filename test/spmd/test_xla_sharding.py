@@ -1213,7 +1213,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(xxx.shape, (8, 8))
     self.assertTrue(torch.allclose(x.cpu() + 1, xxx.cpu()))
 
-  @unittest.skipIf(xr.device_type() != 'TPU', "Skip non-TPU device")
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "Only runs on TPUv4")
   def test_spmd_reduce_scatter(self):
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
     x = torch.ones(8, 8).to(xm.xla_device())
@@ -1230,10 +1231,11 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{0}}, to_apply=%AddComputation.3",
         hlo)
 
-    expected_x = torch.ones(2, 8) * 4
+    expected_x = torch.ones(8 // self.n_devices, 8) * self.n_devices
     self.assertTrue(torch.allclose(x.cpu(), expected_x))
 
-  @unittest.skipIf(xr.device_type() != 'TPU', "Skip non-TPU device")
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "Only runs on TPUv4")
   def test_spmd_reduce_scatter_canonical_index(self):
     xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
     x = torch.ones(8, 8).to(xm.xla_device())
@@ -1250,8 +1252,62 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f"reduce-scatter(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, dimensions={{1}}, to_apply=%AddComputation.3",
         hlo)
 
-    expected_x = torch.ones(8, 2) * 4
+    expected_x = torch.ones(8, 8 // self.n_devices) * self.n_devices
     self.assertTrue(torch.allclose(x.cpu(), expected_x))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "Only runs on TPUv4")
+  def test_spmd_all_reduce(self):
+    xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
+    x = torch.ones(8, 8).to(xm.xla_device())
+
+    # all reduce
+    x = xs.enable_manual_sharding(x, (None, None)).global_tensor
+    x = torch_xla._XLAC._xla_spmd_all_reduce(xm.REDUCE_SUM, x, 1.0,
+                                             [self.device_ids])
+    x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
+    self.assertIn(
+        f"all-reduce(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, to_apply=%AddComputation.3",
+        hlo)
+
+    expected_x = torch.ones(8, 8) * 4
+    self.assertTrue(torch.allclose(x.cpu(), expected_x))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "Only runs on TPUv4")
+  def test_spmd_all_reduce_scale(self):
+    xs.set_global_mesh(self._get_mesh((1, self.n_devices)))
+    x = torch.ones(8, 8).to(xm.xla_device())
+
+    # all reduce
+    x = xs.enable_manual_sharding(x, (None, None)).global_tensor
+    x = torch_xla._XLAC._xla_spmd_all_reduce(xm.REDUCE_SUM, x, 0.25,
+                                             [self.device_ids])
+    x = xs.disable_manual_sharding(x, (None, None), x.shape).global_tensor
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([x])
+    self.assertIn(
+        f"all-reduce(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, to_apply=%AddComputation.3",
+        hlo)
+
+    expected_x = torch.ones(8, 8)
+    self.assertTrue(torch.allclose(x.cpu(), expected_x))
+
+  def test_get_1d_mesh(self):
+    device = torch_xla.device()
+    mesh = xs.get_1d_mesh("data")
+    t1 = torch.randn(8, 8).to(device)
+    xt = xs.mark_sharding(t1, mesh, ("data", None))
+    shards = xt.local_shards
+    self.assertEqual(len(shards), self.n_devices)
+    self.assertEqual(mesh.mesh_shape, (xr.global_runtime_device_count(),))
+    self.assertEqual(mesh.axis_names, ("data",))
+
+    mesh_without_name = xs.get_1d_mesh()
+    self.assertEqual(mesh_without_name.mesh_shape,
+                     (xr.global_runtime_device_count(),))
 
 
 if __name__ == '__main__':

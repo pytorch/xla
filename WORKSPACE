@@ -50,7 +50,7 @@ new_local_repository(
 #    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
 
-xla_hash = 'b604c8d87df842002a7a8de79a434026329fbcb2'
+xla_hash = '336c9a99eeebb04a4ad9a8e6ce3b8d96e5ecd5e7'
 
 http_archive(
     name = "xla",
@@ -60,9 +60,7 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-        "//openxla_patches:cache_urls.diff",
         "//openxla_patches:gpu_race_condition.diff",
-        "//openxla_patches:f16_abi_clang.diff",
     ],
     strip_prefix = "xla-" + xla_hash,
     urls = [

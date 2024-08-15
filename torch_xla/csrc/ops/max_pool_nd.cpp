@@ -58,9 +58,9 @@ MaxPoolNd::MaxPoolNd(const torch::lazy::Value& input, int64_t spatial_dim_count,
       ceil_mode_(ceil_mode) {}
 
 torch::lazy::NodePtr MaxPoolNd::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_,
-                                          kernel_size_, stride_, padding_,
-                                          ceil_mode_);
+  return torch_xla::MakeNode<MaxPoolNd>(operands.at(0), spatial_dim_count_,
+                                        kernel_size_, stride_, padding_,
+                                        ceil_mode_);
 }
 
 XlaOpVector MaxPoolNd::Lower(LoweringContext* loctx) const {

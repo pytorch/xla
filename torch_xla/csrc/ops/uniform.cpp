@@ -15,8 +15,8 @@ Uniform::Uniform(const torch::lazy::Value& from, const torch::lazy::Value& to,
               /*num_outputs=*/1, torch::lazy::Hash(rng_shape)) {}
 
 torch::lazy::NodePtr Uniform::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Uniform>(operands.at(0), operands.at(1),
-                                        operands.at(2), xla_shape());
+  return torch_xla::MakeNode<Uniform>(operands.at(0), operands.at(1),
+                                      operands.at(2), xla_shape());
 }
 
 XlaOpVector Uniform::Lower(LoweringContext* loctx) const {

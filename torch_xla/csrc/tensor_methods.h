@@ -20,6 +20,9 @@ void all_reduce(const std::vector<XLATensorPtr>& inputs,
                 AllReduceType reduce_type, double scale,
                 std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
+XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
+                        double scale, std::vector<std::vector<int64_t>> groups);
+
 std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     AllReduceType reduce_type, double scale, int64_t scatter_dim,
@@ -856,6 +859,9 @@ XLATensorPtr sigmoid_backward(const XLATensorPtr& grad_output,
 
 XLATensorPtr slice(const XLATensorPtr& input, int64_t dim, int64_t start,
                    int64_t end, int64_t step);
+
+std::tuple<XLATensorPtr, XLATensorPtr> eigh(const XLATensorPtr& input,
+                                            c10::string_view uplo);
 
 std::tuple<XLATensorPtr, XLATensorPtr> slogdet(const XLATensorPtr& input);
 

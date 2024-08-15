@@ -31,7 +31,7 @@ class PallasTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_spmd_data_parallel(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update('jax_default_matmul_precision', "highest")
     n_devices = xr.global_runtime_device_count()
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
@@ -46,12 +46,12 @@ class PallasTest(unittest.TestCase):
 
     expected_o = self._attention(q, k, v)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update('jax_default_matmul_precision', "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_backward_spmd_data_parallel(self):
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.HIGHEST)
+    jax.config.update('jax_default_matmul_precision', "highest")
     n_devices = xr.global_runtime_device_count()
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
@@ -96,15 +96,14 @@ class PallasTest(unittest.TestCase):
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
-    jax.config.update('jax_default_matmul_precision', jax.lax.Precision.DEFAULT)
+    jax.config.update('jax_default_matmul_precision', "default")
 
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
   torch.set_default_dtype(torch.float32)
   torch.manual_seed(42)
-  torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
-      use_full_mat_mul_precision=True)
+  torch_xla._XLAC._xla_set_mat_mul_precision('highest')
   xr.use_spmd()
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

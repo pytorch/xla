@@ -92,6 +92,8 @@ cc_library(
         "@xla//xla/pjrt/distributed",
         "@xla//xla/python/ifrt",
         "@xla//xla/python/pjrt_ifrt",
+        "@xla//xla/python/pjrt_ifrt:pjrt_attribute_map_util",
+        "@xla//xla/python/ifrt:attribute_map",
     ],
 )
 
@@ -126,9 +128,12 @@ cc_library(
         "@xla//xla:shape_util",
         "@xla//xla/client:xla_computation",
         "@xla//xla/pjrt:pjrt_client",
+        "@xla//xla/pjrt/c:pjrt_c_api_gpu_extension_hdrs",
         "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
+        "@xla//xla/pjrt/c:pjrt_c_api_wrapper_impl",
         "@xla//xla/pjrt:pjrt_c_api_client",
         "@xla//xla/pjrt/distributed",
+        "@xla//xla/service:custom_call_target_registry",
     ],
 )
 
@@ -377,6 +382,7 @@ cc_library(
     deps = [
         "@xla//xla:statusor",
         "@xla//xla/service:platform_util",
+        "@com_google_absl//absl/base:log_severity",
     ],
 )
 

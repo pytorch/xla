@@ -70,7 +70,7 @@ torch::lazy::Value IrValueFromScalar(const at::Scalar& value,
                                      const torch::lazy::BackendDevice& device) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
   torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
-  return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
+  return torch_xla::MakeNode<DeviceData>(std::move(device_data));
 }
 
 bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
@@ -149,17 +149,29 @@ torch::lazy::Value XLAGraphExecutor::DeviceContextArena::GetRngSeed(
     devctx->seed_ir_value =
         IrValueFromScalar(MakeIntScalar(devctx->seed), kSeedType, device);
   }
-  // Keep the running seed as scalar as well, so we can return it directly
-  // without executing graphs.
-  devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
   // Compose new seeds from the root seed, to avoid creating too many XLA
   // computation parameters which might overflow the TPU capacity.
   torch::lazy::Value k = ScalarOp(MakeIntScalar(kSeedMul),
                                   MakeXlaPrimitiveType(kSeedType, &device));
   torch::lazy::Value b = ScalarOp(MakeIntScalar(kSeedAdd),
                                   MakeXlaPrimitiveType(kSeedType, &device));
-  devctx->seed_ir_value = b + k * devctx->seed_ir_value;
-  return devctx->seed_ir_value;
+  if (XLAGraphExecutor::Get()->UseEagerMode()) {
+    // In eager mode we want to make sure that `seed_ir_value` is always just
+    // a device data instead a long sequence of pending IR.
+    torch::lazy::Value seed_to_return = devctx->seed_ir_value;
+    devctx->seed = kSeedAdd + kSeedMul * devctx->seed;
+    devctx->running_seed = devctx->seed;
+    // reset the `seed_ir_value`. Next time `seed_ir_value` will be generated
+    // based on devctx->seed.
+    devctx->seed_ir_value = torch::lazy::Value();
+    return seed_to_return;
+  } else {
+    // Keep the running seed as scalar as well, so we can return it directly
+    // without executing graphs.
+    devctx->running_seed = kSeedAdd + kSeedMul * devctx->running_seed;
+    devctx->seed_ir_value = b + k * devctx->seed_ir_value;
+    return devctx->seed_ir_value;
+  }
 }
 
 torch::lazy::BackendDataPtr
@@ -171,7 +183,7 @@ XLAGraphExecutor::DeviceContextArena::GetBaseSeedData(
   at::Tensor tensor = at::scalar_tensor(MakeIntScalar(devctx->seed),
                                         at::TensorOptions(kSeedType));
   torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
-  devctx->seed_ir_value = torch::lazy::MakeNode<DeviceData>(device_data);
+  devctx->seed_ir_value = torch_xla::MakeNode<DeviceData>(device_data);
   devctx->running_seed = devctx->seed;
   return torch_xla::DeviceData::Cast(devctx->seed_ir_value.node.get())->data();
 }
@@ -224,7 +236,7 @@ torch::lazy::Value XLAGraphExecutor::DeviceContextArena::IrValueFromScalar(
     const torch::lazy::BackendDevice& device) {
   at::Tensor tensor = at::scalar_tensor(value, at::TensorOptions(scalar_type));
   torch::lazy::BackendDataPtr device_data = TensorToXlaData(tensor, device);
-  return torch::lazy::MakeNode<DeviceData>(std::move(device_data));
+  return torch_xla::MakeNode<DeviceData>(std::move(device_data));
 }
 
 XLAGraphExecutor::Async::Async(
@@ -264,7 +276,7 @@ torch::lazy::Value XLAGraphExecutor::GetDeviceDataIrValue(
   data->SetInfo(
       std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
           /*tensor_id=*/-1, /*read_only=*/true));
-  return torch::lazy::MakeNode<DeviceData>(std::move(data));
+  return torch_xla::MakeNode<DeviceData>(std::move(data));
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
@@ -288,7 +300,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const torch::lazy::BackendDevice& device) {
   torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
   if (!dimensions.empty()) {
-    ir_value = torch::lazy::MakeNode<Expand>(
+    ir_value = torch_xla::MakeNode<Expand>(
         ir_value, torch::lazy::ToVector<int64_t>(dimensions));
   }
   return ir_value;
@@ -299,7 +311,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     c10::SymIntArrayRef sym_size, const torch::lazy::BackendDevice& device) {
   torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
   SymIntElements size_elements = SymIntElements(sym_size);
-  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
+  return torch_xla::MakeNode<ExpandSymInt>(ir_value, size_elements);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
@@ -331,7 +343,7 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
           : shape.element_type();
   torch::lazy::Value ir_value =
       GetIrValueForScalar(value, primitive_type, device);
-  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
+  return torch_xla::MakeNode<ExpandSymInt>(ir_value, size_elements);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetRngSeed(
@@ -1026,15 +1038,6 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
         runtime::GetComputationClient()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape));
 
-    // If current IR is a device data, executing the graph will generate a new
-    // Data with the same value. In this case we want to inherit the buffer
-    // donation option from the old Data.
-    auto device_data = torch_xla::DeviceData::Cast(ir_value.node.get());
-    if (device_data && device_data->get_buffer_donation()) {
-      std::dynamic_pointer_cast<runtime::ComputationClient::Data>(handle)
-          ->set_should_donate_buffer(true);
-    }
-
     tensor_data_vec.push_back(handle);
     if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());
@@ -1303,8 +1306,9 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   static const size_t parameter_wrapping_threadshold =
       runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
   static const bool use_autosharding = ShardingUtil::GetAutoSharding();
-  LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
-                               po_data->post_order,
+  std::string graph_name =
+      (CurrentGraphName() != "") ? CurrentGraphName() : "SyncTensorsGraph";
+  LoweringContext lowering_ctx(graph_name, coll.device, po_data->post_order,
                                std::move(po_data->emission_map));
   for (auto ir_value : ir_values) {
     xla::XlaOp root = lowering_ctx.GetOutputOp(
@@ -1366,8 +1370,16 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     TF_VLOG(3) << "Wrapping graph with " << program_shape.parameters_size()
                << " parameters. Threadshold = "
                << parameter_wrapping_threadshold;
-    computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-        computation, program_shape.parameters(), buffer_donor_indices));
+
+    // trying to get all op shardings
+    std::vector<xla::HloSharding> param_shardings;
+    if (is_sharded) {
+      param_shardings = XlaHelpers::ExtractInputShardings(computation);
+    }
+
+    computation = ConsumeValue(
+        XlaHelpers::WrapXlaComputation(computation, program_shape.parameters(),
+                                       param_shardings, buffer_donor_indices));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
   xla::Shape shape = MakeShapeWithDeviceLayout(

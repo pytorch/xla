@@ -57,7 +57,7 @@ ConvolutionBackwardOverrideable::ConvolutionBackwardOverrideable(
 
 torch::lazy::NodePtr ConvolutionBackwardOverrideable::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<ConvolutionBackwardOverrideable>(
+  return torch_xla::MakeNode<ConvolutionBackwardOverrideable>(
       operands.at(0), operands.at(1), operands.at(2), stride_, padding_,
       dilation_, transposed_, output_padding_, groups_);
 }

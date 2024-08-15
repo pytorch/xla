@@ -92,13 +92,12 @@ class ExperimentRunnerTest(expecttest.TestCase):
       self.assertIn(expected, child.stderr)
 
   @absltest.skipUnless(xr.device_type() in {'CUDA'}, 'Needs CUDA accelerator')
-  def test_dummy_openxla_eval_train_cuda(self):
+  def test_dummy_openxla_train_cuda(self):
     child = subprocess.run([
         "python",
         EXPERIMENT_RUNNER_PY,
         "--dynamo=inductor",
         "--dynamo=openxla",
-        "--dynamo=openxla_eval",
         "--xla=PJRT",
         "--xla=None",
         "--test=eval",
@@ -111,9 +110,8 @@ class ExperimentRunnerTest(expecttest.TestCase):
                            capture_output=True,
                            text=True)
     expected_in_stderr = [
-        "Number of selected experiment configs: 5",
+        "Number of selected experiment configs: 4",
         "Number of selected model configs: 1",
-        "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla_eval\", \"torch_xla2\": null, \"test\": \"eval\", \"keep_model_data_on_cuda\": false}",
         "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla\", \"torch_xla2\": null, \"test\": \"train\", \"keep_model_data_on_cuda\": false}",
         "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla\", \"torch_xla2\": null, \"test\": \"eval\", \"keep_model_data_on_cuda\": false}",
         "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": null, \"xla_flags\": null, \"dynamo\": \"inductor\", \"torch_xla2\": null, \"test\": \"eval\", \"keep_model_data_on_cuda\": false}",
@@ -137,11 +135,10 @@ class ExperimentRunnerTest(expecttest.TestCase):
                            capture_output=True,
                            text=True)
     expected_in_stderr = [
-        "Number of selected experiment configs: 9",
+        "Number of selected experiment configs: 8",
         "Number of selected model configs: 1",
         "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": null, \"torch_xla2\": null, \"test\": \"eval\", \"keep_model_data_on_cuda\": false}",
         "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": null, \"torch_xla2\": null, \"test\": \"train\", \"keep_model_data_on_cuda\": false}",
-        "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla_eval\", \"torch_xla2\": null, \"test\": \"eval\", \"keep_model_data_on_cuda\": false}",
         "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla\", \"torch_xla2\": null, \"test\": \"eval\", \"keep_model_data_on_cuda\": false}",
         "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla\", \"torch_xla2\": null, \"test\": \"train\", \"keep_model_data_on_cuda\": false}",
         "--model-config={\"model_name\": \"dummy\"} --experiment-config={\"accelerator\": \"cuda\", \"xla\": null, \"xla_flags\": null, \"dynamo\": null, \"torch_xla2\": null, \"test\": \"eval\", \"keep_model_data_on_cuda\": false}",

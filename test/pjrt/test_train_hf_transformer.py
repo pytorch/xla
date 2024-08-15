@@ -5,10 +5,11 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, get_
 import torch
 from torch.optim import AdamW
 import evaluate
+import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
-import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 
 MODEL_OPTS = {'--short_data': {'action': 'store_true',}}
@@ -33,8 +34,8 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
 
   train_sampler = torch.utils.data.distributed.DistributedSampler(
       train_dataset,
-      num_replicas=xm.xrt_world_size(),
-      rank=xm.get_ordinal(),
+      num_replicas=xr.world_size(),
+      rank=xr.global_ordinal(),
       shuffle=True)
 
   # Use thread safe random number generator with a consistent seed
@@ -138,7 +139,7 @@ if __name__ == '__main__':
   tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-cased")
   # Load dataset once and share it with each process
   train_dataset, test_dataset = get_dataset(tokenizer, flags)
-  xmp.spawn(
+  torch_xla.launch(
       finetune, args=(
           train_dataset,
           test_dataset,

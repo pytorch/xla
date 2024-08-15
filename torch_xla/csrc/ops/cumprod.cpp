@@ -48,7 +48,7 @@ CumProd::CumProd(const torch::lazy::Value& input, int64_t dim,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr CumProd::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CumProd>(operands.at(0), dim_, dtype_);
+  return torch_xla::MakeNode<CumProd>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector CumProd::Lower(LoweringContext* loctx) const {

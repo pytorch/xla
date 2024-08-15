@@ -36,6 +36,7 @@ resource "google_container_node_pool" "arc_v4_cpu_nodes" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/devstorage.read_only",
     ]
   }
 
@@ -60,6 +61,7 @@ resource "google_container_node_pool" "arc_v4_tpu_nodes" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/devstorage.read_only",
     ]
     machine_type = "ct4p-hightpu-4t"
   }
@@ -72,6 +74,7 @@ resource "google_container_node_pool" "arc_v4_tpu_nodes" {
 resource "helm_release" "arc" {
   name             = "actions-runner-controller"
   chart            = "oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller"
+  version          = "0.9.3"
   namespace        = var.arc_namespace
   create_namespace = true
 }
@@ -82,6 +85,7 @@ resource "helm_release" "arc_runner_set" {
     helm_release.arc
   ]
   chart            = "oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set"
+  version          = "0.9.3"
   namespace        = var.runner_namespace
   create_namespace = true
 

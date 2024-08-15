@@ -5,19 +5,17 @@ jobs:
   tpu-test:
     runs-on: v4-runner-set
     steps:
-      - name: Checkout repo
+      - name: Checkout actions
         uses: actions/checkout@v4
         with:
-          path: pytorch/xla
-      - name: Fetch wheels
-        uses: actions/download-artifact@v4
+          sparse-checkout: |
+            .github/workflows/setup
+          path: .actions
+      - name: Setup
+        uses: ./.actions/.github/workflows/setup
         with:
-          name: torch-xla-wheels
-          path: /tmp/wheels/
-      - name: Install wheels
-        shell: bash
-        run: |
-          pip install /tmp/wheels/*.whl
+          torch-commit: ${{ inputs.torch-commit }}
+          wheels-artifact: torch-xla-wheels
       - name: Install test dependencies
         shell: bash
         run: |
@@ -30,6 +28,7 @@ jobs:
       - name: Run Tests
         env:
           PJRT_DEVICE: TPU
+          TPU_LOG_DIR: tpu_logs
         run: |
           cd pytorch/xla
           test/tpu/run_tests.sh

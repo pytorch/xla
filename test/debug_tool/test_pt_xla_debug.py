@@ -30,16 +30,15 @@ class PtXLADebugTest(unittest.TestCase):
     open(cls.debug_file_name, 'w').close()
 
   def test_eager_mark_step(self):
-    torch_xla.experimental.eager_mode(True)
-    device = xm.xla_device()
-    t1 = torch.randn(5, 9, device=device)
-    xm.mark_step()
-    with open(self.debug_file_name, 'rb') as f:
-      lines = f.readlines()
-    # We expect PT_XLA_BUDEG not to output anything under the eager mode
-    self.assertEqual(len(lines), 0)
-    torch_xla.experimental.eager_mode(False)
-    open(self.debug_file_name, 'w').close()
+    with torch_xla.experimental.eager_mode_context(True):
+      device = xm.xla_device()
+      t1 = torch.randn(5, 9, device=device)
+      xm.mark_step()
+      with open(self.debug_file_name, 'rb') as f:
+        lines = f.readlines()
+      # We expect PT_XLA_BUDEG not to output anything under the eager mode
+      self.assertEqual(len(lines), 0)
+      open(self.debug_file_name, 'w').close()
 
   def test_user_mark_step(self):
     device = xm.xla_device()
@@ -158,6 +157,84 @@ class PtXLADebugTest(unittest.TestCase):
       # this graph has two input(t1, 100) and one output
       self.assertEqual(graph_infos[1].num_input, 2)
       self.assertEqual(graph_infos[1].num_output, 1)
+
+    open(self.debug_file_name, 'w').close()
+
+  def test_torch_xla_compile(self):
+    device = xm.xla_device()
+    t1 = torch.randn(12, 4, device=device)
+
+    def toy_program(t1):
+      return torch.logsumexp(t1, 1)
+
+    compiled = torch_xla.compile(toy_program)
+    res = compiled(t1)
+    with open(self.debug_file_name, 'rb') as f:
+      lines = f.readlines()
+      executation_causes = extract_execution_cause(lines)
+      compilation_causes = extract_compilation_cause(lines)
+      graph_infos = extract_graph_infos(lines)
+
+    if self.debug_level > 1:
+      self.assertEqual(len(executation_causes), 2)
+      self.assertIn(
+          'torch_xla.compile clear the pending graph prior calling the target function',
+          executation_causes[0])
+      self.assertIn('torch_xla.compile\n', executation_causes[1])
+    else:
+      self.assertEqual(len(executation_causes), 0)
+
+    self.assertEqual(len(compilation_causes), 2)
+    self.assertIn(
+        'torch_xla.compile clear the pending graph prior calling the target function',
+        compilation_causes[0])
+    self.assertIn('torch_xla.compile\n', compilation_causes[1])
+
+    if self.debug_level > 1:
+      # one graph info from compilation, one from execution, hash should match
+      self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+      # 1 compile, 1 execution to clear pending graph before doing real compile
+      self.assertEqual(graph_infos[0].name, 'toy_program_clear_pending')
+      self.assertEqual(graph_infos[1].name, 'toy_program_clear_pending')
+      # 1 compile, 1 execution to clear pending graph for real program
+      self.assertEqual(graph_infos[2].name, 'toy_program')
+      self.assertEqual(graph_infos[3].name, 'toy_program')
+    else:
+      self.assertEqual(graph_infos[0].name, 'toy_program_clear_pending')
+      self.assertEqual(graph_infos[1].name, 'toy_program')
+
+    # this graph has one input(random seed) and one output(t1)
+    self.assertEqual(graph_infos[0].num_input, 1)
+    self.assertEqual(graph_infos[0].num_output, 1)
+    open(self.debug_file_name, 'w').close()
+
+  def test_torch_xla_compile_custom_name(self):
+    device = xm.xla_device()
+    t1 = torch.randn(18, 4, device=device)
+
+    def toy_program2(t1):
+      return torch.logsumexp(t1 * t1, 1)
+
+    compiled = torch_xla.compile(toy_program2, name="custom_name")
+    res = compiled(t1)
+    with open(self.debug_file_name, 'rb') as f:
+      lines = f.readlines()
+      executation_causes = extract_execution_cause(lines)
+      compilation_causes = extract_compilation_cause(lines)
+      graph_infos = extract_graph_infos(lines)
+
+    if self.debug_level > 1:
+      # one graph info from compilation, one from execution, hash should match
+      self.assertEqual(graph_infos[0].hash, graph_infos[1].hash)
+      # 1 compile, 1 execution to clear pending graph before doing real compile
+      self.assertEqual(graph_infos[0].name, 'custom_name_clear_pending')
+      self.assertEqual(graph_infos[1].name, 'custom_name_clear_pending')
+      # 1 compile, 1 execution to clear pending graph for real program
+      self.assertEqual(graph_infos[2].name, 'custom_name')
+      self.assertEqual(graph_infos[3].name, 'custom_name')
+    else:
+      self.assertEqual(graph_infos[0].name, 'custom_name_clear_pending')
+      self.assertEqual(graph_infos[1].name, 'custom_name')
 
     open(self.debug_file_name, 'w').close()
 

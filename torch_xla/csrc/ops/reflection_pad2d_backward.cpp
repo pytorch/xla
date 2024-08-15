@@ -33,8 +33,8 @@ ReflectionPad2dBackward::ReflectionPad2dBackward(
 
 torch::lazy::NodePtr ReflectionPad2dBackward::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<ReflectionPad2dBackward>(
-      operands.at(0), operands.at(1), padding_);
+  return torch_xla::MakeNode<ReflectionPad2dBackward>(operands.at(0),
+                                                      operands.at(1), padding_);
 }
 
 XlaOpVector ReflectionPad2dBackward::Lower(LoweringContext* loctx) const {

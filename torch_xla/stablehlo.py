@@ -8,9 +8,10 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple
 
 import numpy as np
 import torch
+from torch.fx import subgraph_rewriter
 import torch_xla
 import torch_xla.experimental.quantized
-from torch._decomp import get_decompositions
+from torch._decomp import get_decompositions, core_aten_decompositions
 from torch._export.serde.serialize import GraphModuleSerializer
 from torch.fx import _pytree as fx_pytree
 from torch.utils import _pytree as pytree
@@ -318,12 +319,19 @@ def _extract_input_args(exported_model, options):
 _extra_decompositions = get_decompositions([torch.ops.aten.grid_sampler_2d])
 
 
+def _run_decompositions(exported_model):
+  decomp_table = core_aten_decompositions()
+  decomp_table.update(_extra_decompositions)
+  decomp_table[torch.ops.aten._safe_softmax.default] = torch.softmax
+  exported_model = exported_model.run_decompositions(decomp_table)
+  return exported_model
+
+
 def _exported_program_to_stablehlo_bundle(exported_model,
                                           options) -> StableHLOModelBundle:
+  exported_model = _run_decompositions(exported_model)
   if options is None:
     options = StableHLOExportOptions()
-  exported_model = exported_model.run_decompositions()
-  exported_model = exported_model.run_decompositions(_extra_decompositions)
   if exported_program_has_symbolic_input_shape(exported_model):
     process_exported_program_with_symbolic_input(exported_model)
   args, kwargs = exported_model.example_inputs

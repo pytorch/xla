@@ -8,8 +8,8 @@ import threading
 from absl.testing import absltest
 import torch
 import torch_xla.core.xla_model as xm
-import torch_xla.experimental.pjrt as pjrt
 import torch_xla.debug.profiler as xp
+import torch_xla.runtime as xr
 
 
 @contextlib.contextmanager
@@ -31,8 +31,6 @@ def _profile(logdir: str, port: int = 9012):
 class TestPjRtProfiler(absltest.TestCase):
 
   def setUp(self):
-    assert xr.using_pjrt()
-
     # HACK: ensure libtpu is loaded if using TPU
     xm.xla_device()
 

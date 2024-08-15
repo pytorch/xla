@@ -27,7 +27,7 @@ NonZero::NonZero(const torch::lazy::Value& input)
               /*num_outputs=*/2) {}
 
 torch::lazy::NodePtr NonZero::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<NonZero>(operands.at(0));
+  return torch_xla::MakeNode<NonZero>(operands.at(0));
 }
 
 XlaOpVector NonZero::Lower(LoweringContext* loctx) const {

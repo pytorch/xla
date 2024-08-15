@@ -27,6 +27,7 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
         type_name_(type_name) {}
 
   std::string toString() const override;
+  XlaDeviceType getType() const;
 
  private:
   std::string type_name_;

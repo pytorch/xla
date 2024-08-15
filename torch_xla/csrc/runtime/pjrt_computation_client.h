@@ -127,7 +127,7 @@ class PjRtComputationClient : public ComputationClient {
   int GetNumProcesses() const override;
 
   const absl::flat_hash_map<
-      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
   GetDeviceAttributes(const std::string& device) override;
 
   void SetReplicationDevices(
@@ -135,7 +135,7 @@ class PjRtComputationClient : public ComputationClient {
 
   std::shared_ptr<std::vector<std::string>> GetReplicationDevices() override;
 
-  void WaitDeviceOps(absl::Span<const std::string> devices) override;
+  void WaitDeviceOps(absl::Span<const std::string> devices = {}) override;
 
   std::map<std::string, Metric> GetMetrics() const override;
 
@@ -153,7 +153,11 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<std::string> PjRtDevicesToString(
       absl::Span<xla::PjRtDevice* const> devices) const;
 
-  const PJRT_Api* GetPjRtCApiIfAvailable() const;
+  void RegisterCustomCall(const std::string& fn_name, void* function_ptr,
+                          const std::string& platform) override;
+
+  void OnReadyCallback(DataPtr data,
+                       const std::function<void()>& callback) override;
 
  private:
   std::unique_ptr<xla::PjRtClient> client_;

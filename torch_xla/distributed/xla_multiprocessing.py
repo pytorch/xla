@@ -3,7 +3,6 @@ from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
 
 
-@xr.requires_pjrt
 def spawn(fn,
           args=(),
           nprocs=None,
@@ -55,7 +54,7 @@ class MpModelWrapper(object):
       model = WRAPPED_MODEL.to(device)
       ...
 
-    xmp.spawn(_mp_fn, ..., start_method='fork')
+    torch_xla.launch(_mp_fn, ..., start_method='fork')
 
   This method has two advantages. First it uses only one copy of the memory
   pages to host the original model weights, and second it serializes the move
@@ -102,7 +101,7 @@ class MpSerialExecutor(object):
       dataset = SERIAL_EXEC.run(lambda: load_dataset('/tmp/mnist-data'))
       ...
 
-    xmp.spawn(_mp_fn, ...)
+    torch_xla.launch(_mp_fn, ...)
   """
 
   def __init__(self):

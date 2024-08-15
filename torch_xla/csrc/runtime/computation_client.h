@@ -378,7 +378,7 @@ class ComputationClient {
       std::variant<std::string, bool, int64_t, std::vector<int64_t>, float>;
 
   virtual const absl::flat_hash_map<
-      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
   GetDeviceAttributes(const std::string& device) = 0;
 
   virtual void SetReplicationDevices(
@@ -392,7 +392,7 @@ class ComputationClient {
 
   // Block until pass in devices' async operation are finished. If empty, all
   // the local devices will be waited for.
-  virtual void WaitDeviceOps(absl::Span<const std::string> devices) = 0;
+  virtual void WaitDeviceOps(absl::Span<const std::string> devices = {}) = 0;
 
   // Check whether the XlaCoordinator has been initialized.
   virtual bool CoordinatorInitialized() const = 0;
@@ -404,6 +404,14 @@ class ComputationClient {
 
   // Return the XlaCoordinator for the runtime.
   virtual XlaCoordinator& GetCoordinator() = 0;
+
+  virtual void RegisterCustomCall(const std::string& fn_name,
+                                  void* function_ptr,
+                                  const std::string& platform) = 0;
+
+  // Installs a callback to be called when the buffer backing `data` is ready.
+  virtual void OnReadyCallback(DataPtr data,
+                               const std::function<void()>& callback) = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.

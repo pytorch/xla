@@ -35,51 +35,29 @@ def _tensor(data, *, dtype=None, **kwargs):
       data, dtype=dtype or mappings.t2j_dtype(torch.get_default_dtype()))
 
 
-@register_function(torch.ones)
-@op_base.convert_dtype()
-def _ones(*size: int, dtype=None, **kwargs):
-  return jnp.ones(size, dtype)
-
-
-@register_function(torch.zeros)
-@op_base.convert_dtype()
-def _zeros(*size: int, dtype=None, **kwargs):
-  return jnp.zeros(size, dtype)
-
-
-@register_function(torch.eye)
-@op_base.convert_dtype()
-def _eye(n: int, m: Optional[int] = None, *, dtype=None, **kwargs):
-  return jnp.eye(n, m, dtype=dtype)
-
-
-@register_function(torch.full)
-@op_base.convert_dtype()
-def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
-  # TODO: handle torch.Size
-  return jnp.full(size, fill_value, dtype=dtype)
-
-
 @register_function(torch.allclose)
 def _aten_allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
   return jnp.allclose(input, other, rtol, atol, equal_nan)
 
+
 @register_function(torch.angle)
 def _torch_angle(input):
+  if input.dtype.name == 'int64':
+    input = input.astype(jnp.dtype('float32'))
   return jnp.angle(input)
 
 
 @register_function(torch.argsort)
 def _torch_argsort(input, dim=-1, descending=False, stable=False):
   expanded = False
-  if input == 0:
+  if input.ndim == 0:
     # for self of rank 0:
     # torch.any(x, 0), torch.any(x, -1) works;
     # torch.any(x, 1) throws out of bounds, so it's
     # behavior is the same as a jnp array of rank 1
     expanded = True
     input = jnp.expand_dims(input, 0)
-  res = jnp.argsort(input, axis=dim, descending=descending, 
+  res = jnp.argsort(input, axis=dim, descending=descending,
                      stable=stable)
   if expanded:
     res = res.squeeze()
@@ -92,7 +70,7 @@ def _einsum(equation, *operands):
 
 
 def _sdpa_reference(
-   query, key, value, attn_mask=None, 
+   query, key, value, attn_mask=None,
    dropout_p=0.0, is_causal=False, scale=None) -> torch.Tensor:
     L, S = query.size(-2), key.size(-2)
     scale_factor = 1 / np.sqrt(query.size(-1)) if scale is None else scale
@@ -139,19 +117,19 @@ def _tpu_flash_attention(query, key, value, env):
 
   if env.config.shmap_flash_attention:
     wrap_flash_attention = shard_map(
-      wrap_flash_attention, 
-      mesh=env._mesh, 
+      wrap_flash_attention,
+      mesh=env._mesh,
       in_specs=(fsdp_partition, fsdp_partition, fsdp_partition),
       out_specs=fsdp_partition ,
       check_rep=False,
     )
   #return flash_attn_mapped(query, key, value)
   return wrap_flash_attention(query, key, value)
-  
+
 
 @register_function(torch.nn.functional.scaled_dot_product_attention, is_jax_function=False, needs_env=True)
 def scaled_dot_product_attention(
-   query, key, value, attn_mask=None, 
+   query, key, value, attn_mask=None,
    dropout_p=0.0, is_causal=False, scale=None, env=None) -> torch.Tensor:
 
    if env.config.use_tpu_flash_attention:
@@ -169,3 +147,13 @@ def getitem(self, indexes):
   elif isinstance(indexes, list):
     indexes = tuple(indexes)
   return self[indexes]
+
+@register_function(torch.corrcoef)
+def _corrcoef(x):
+  if x.dtype.name == "int64":
+    return jnp.corrcoef(x).astype(jnp.float32)
+  return jnp.corrcoef(x)
+
+@register_function(torch.sparse.mm, is_jax_function=False)
+def _sparse_mm(mat1, mat2, reduce='sum'):
+  return torch.mm(mat1, mat2)

@@ -6,7 +6,7 @@ PyTorch and PyTorch/XLA use CI to lint, build, and test each PR that is submitte
 
 ### Pinning PyTorch PR in PyTorch/XLA PR
 
-Sometimes a PyTorch/XLA PR needs to be pinned to a specific PyTorch PR to test new featurues, fix breaking changes, etc. Since PyTorch/XLA CI pulls from PyTorch master by default, we need to manually provided a PyTorch pin. In a PyTorch/XLA PR, PyTorch an be manually pinned by creating a `.torch_pin` file at the root of the repository. The `.torch_pin` should have the corresponding PyTorch PR number prefixed by "#". Take a look at [example here](https://github.com/pytorch/xla/pull/3792/commits/40f41fb98b0f2386d287eeac0bae86e873d4a9d8). Before the PyTorch/XLA PR gets merged, the `.torch_pin` must be deleted.
+Sometimes a PyTorch/XLA PR needs to be pinned to a specific PyTorch PR to test new featurues, fix breaking changes, etc. Since PyTorch/XLA CI pulls from PyTorch master by default, we need to manually provided a PyTorch pin. In a PyTorch/XLA PR, PyTorch an be manually pinned by creating a `.torch_pin` file at the root of the repository. The `.torch_pin` should have the corresponding PyTorch PR number prefixed by "#". Take a look at [example here](https://github.com/pytorch/xla/pull/7313). Before the PyTorch/XLA PR gets merged, the `.torch_pin` must be deleted.
 
 ### Coodinating merges for breaking PyTorch PRs
 

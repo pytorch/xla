@@ -39,15 +39,33 @@ AllReduce::AllReduce(AllReduceType reduce_type,
       groups_(std::move(groups)),
       pin_layout_(pin_layout) {}
 
+AllReduce::AllReduce(AllReduceType reduce_type, torch::lazy::Value operand,
+                     double scale, std::vector<std::vector<int64_t>> groups)
+    : XlaNode(xla_cross_replica_sum, {operand}, GetXlaShape(operand),
+              /*num_outputs=*/1,
+              torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
+                                 groups)),
+      reduce_type_(reduce_type),
+      scale_(scale),
+      groups_(std::move(groups)),
+      pin_layout_(false),
+      has_token_(false) {}
+
 torch::lazy::NodePtr AllReduce::Clone(torch::lazy::OpList operands) const {
   std::vector<torch::lazy::Value> operand_list(operands.begin(),
                                                operands.end() - 1);
-  return torch::lazy::MakeNode<AllReduce>(reduce_type_, operand_list,
-                                          operands.back(), scale_, groups_,
-                                          pin_layout_);
+  return torch_xla::MakeNode<AllReduce>(reduce_type_, operand_list,
+                                        operands.back(), scale_, groups_,
+                                        pin_layout_);
 }
 
 XlaOpVector AllReduce::Lower(LoweringContext* loctx) const {
+  if (!has_token_) {
+    auto result = BuildAllReduce(
+        reduce_type_, loctx->GetOutputOp(operands()[0]), scale_, groups_);
+    return ReturnOp(result, loctx);
+  }
+
   auto& operand_list = operands();
   std::vector<xla::XlaOp> inputs;
   inputs.reserve(operand_list.size());

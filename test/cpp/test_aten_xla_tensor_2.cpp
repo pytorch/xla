@@ -511,6 +511,48 @@ TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDimsKeepDtype) {
                        cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestLinalgEigh) {
+  // Hardcode the test input to avoid numerical instability from randomness,
+  // which is a problem in eigenvalue decomposition.
+  auto complex64 = [](float real, float imag) {
+    return c10::complex<float>{real, imag};
+  };
+  torch::Tensor input = torch::tensor({
+      {complex64(1, 0), complex64(2, -7), complex64(4, -8)},
+      {complex64(2, 7), complex64(3, 0), complex64(5, -9)},
+      {complex64(4, 8), complex64(5, 9), complex64(6, 0)},
+  });
+  for (c10::string_view uplo : {"U", "L"}) {
+    auto [eigenvalues, eigenvectors] = torch::linalg_eigh(input, uplo);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      auto [xla_eigenvalues, xla_eigenvectors] = torch::linalg_eigh(xla_input);
+      AllClose(eigenvalues, xla_eigenvalues);
+      // The eigenvectors of a symmetric matrix are not unique, nor are they
+      // continuous with respect to A. Due to this lack of uniqueness, different
+      // hardware and software may compute different eigenvectors. Therefore we
+      // instead verify that the decomposition follows the mathematical
+      // definition.
+      torch::Tensor input_reconstructed = torch::mm(
+          torch::mm(
+              eigenvectors,
+              torch::diag(eigenvalues).toType(c10::ScalarType::ComplexFloat)),
+          eigenvectors.t().conj());
+      auto xla_eigenvalues_cpu = ToCpuTensor(xla_eigenvalues);
+      auto xla_eigenvectors_cpu = ToCpuTensor(xla_eigenvectors);
+      torch::Tensor xla_input_reconstructed =
+          torch::mm(torch::mm(xla_eigenvectors_cpu,
+                              torch::diag(xla_eigenvalues_cpu)
+                                  .toType(c10::ScalarType::ComplexFloat)),
+                    xla_eigenvectors_cpu.t().conj());
+      AllClose(input_reconstructed, input);
+      AllClose(xla_input_reconstructed, input);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_linalg_eigh", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestQR) {
   static const int dims[] = {4, 7};
   for (auto m : dims) {

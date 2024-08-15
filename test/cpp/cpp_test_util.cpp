@@ -262,7 +262,7 @@ std::string GetTensorHloGraph(at::Tensor tensor) {
 torch::lazy::Value GetTensorIrValue(const at::Tensor& tensor,
                                     const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDataPtr data = TensorToXlaData(tensor, device);
-  return torch::lazy::MakeNode<DeviceData>(std::move(data));
+  return torch_xla::MakeNode<DeviceData>(std::move(data));
 }
 
 std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
@@ -415,7 +415,7 @@ torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
       torch::lazy::Value(ScalarOp(1.0, xla::F32), 0);
   std::vector<int64_t> target_size = {num_row, num_col};
   torch::lazy::NodePtr expand_node =
-      torch::lazy::MakeNode<Expand>(scalar_value, target_size);
+      torch_xla::MakeNode<Expand>(scalar_value, target_size);
   torch::lazy::Value expand_value = torch::lazy::Value(expand_node, 0);
   int64_t count = 0;
   int64_t i = 0;
@@ -424,7 +424,7 @@ torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
   while (count++ < num_non_zero_element) {
     std::vector<int64_t> base_indices = {i, j++};
     // Use Slice to do element update
-    torch::lazy::NodePtr slice_node = torch::lazy::MakeNode<UpdateSlice>(
+    torch::lazy::NodePtr slice_node = torch_xla::MakeNode<UpdateSlice>(
         slice_value, scalar_value_1, base_indices);
     slice_value = torch::lazy::Value(slice_node, 0);
     if (j == num_col) {
@@ -432,15 +432,8 @@ torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
       i++;
     }
   }
-  torch::lazy::NodePtr nonzero_node =
-      torch::lazy::MakeNode<NonZero>(slice_value);
+  torch::lazy::NodePtr nonzero_node = torch_xla::MakeNode<NonZero>(slice_value);
   return nonzero_node;
-}
-
-bool UsingPjRt() {
-  static bool using_pjrt =
-      !torch_xla::runtime::sys_util::GetEnvString("PJRT_DEVICE", "").empty();
-  return using_pjrt;
 }
 
 bool UsingTpu() {

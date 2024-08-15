@@ -1,3 +1,21 @@
+:github_url: https://github.com/pytorch/xla
+
+PyTorch/XLA documentation
+===================================
+PyTorch/XLA is a Python package that uses the XLA deep learning compiler to connect the PyTorch deep learning framework and Cloud TPUs.
+
+.. toctree::
+   :hidden:
+
+   self
+
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Docs
+
+   *
+
 .. mdinclude:: ../../API_GUIDE.md
 
 PyTorch/XLA API
@@ -10,7 +28,8 @@ torch_xla
 .. autofunction:: devices
 .. autofunction:: device_count
 .. autofunction:: sync
-.. autofunction:: step
+.. autofunction:: compile
+.. autofunction:: manual_seed
 
 runtime
 ----------------------------------
@@ -56,8 +75,7 @@ distributed
 ----------------------------------
 
 .. automodule:: torch_xla.distributed.parallel_loader
-.. autoclass:: ParallelLoader
-	       :members: per_device_loader
+.. autoclass:: MpDeviceLoader
 
 .. automodule:: torch_xla.distributed.xla_multiprocessing
 .. autofunction:: spawn
@@ -69,9 +87,9 @@ spmd
 .. autofunction:: clear_sharding
 .. autofunction:: set_global_mesh
 .. autofunction:: get_global_mesh
+.. autofunction:: get_1d_mesh
 .. autoclass:: Mesh
 .. autoclass:: HybridMesh
-.. autoclass:: ShardingSpec
 
 experimental
 ----------------------------------
@@ -88,13 +106,3 @@ debug
 .. autofunction:: counter_value
 .. autofunction:: metric_names
 .. autofunction:: metric_data
-
-.. mdinclude:: ../pytorch_xla_overview.md
-.. mdinclude:: ../../TROUBLESHOOTING.md
-.. mdinclude:: ../pjrt.md
-.. mdinclude:: ../dynamo.md
-.. mdinclude:: ../fsdp.md
-.. mdinclude:: ../ddp.md
-.. mdinclude:: ../gpu.md
-.. mdinclude:: ../spmd.md
-.. mdinclude:: ../fsdpv2.md

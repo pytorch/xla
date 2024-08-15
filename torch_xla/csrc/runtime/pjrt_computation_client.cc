@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "absl/strings/ascii.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
@@ -25,10 +26,14 @@
 #include "xla/client/xla_computation.h"
 #include "xla/layout_util.h"
 #include "xla/literal.h"
+#include "xla/pjrt/c/pjrt_c_api_gpu_extension.h"
+#include "xla/pjrt/c/pjrt_c_api_wrapper_impl.h"
+#include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
 #include "xla/protobuf_util.h"
+#include "xla/service/custom_call_target_registry.h"
 #include "xla/shape.h"
 
 using xla::internal::XlaBuilderFriend;
@@ -316,7 +321,7 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
   XLA_CHECK(dst_device->IsAddressable()) << dst << "is not addressable.";
 
   // Returns error if the buffer is already on `dst_device`.
-  xla::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
+  absl::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
       pjrt_data->buffer->CopyToDevice(dst_device);
   if (!status_or.ok()) {
     return data;
@@ -472,7 +477,7 @@ std::uintptr_t PjRtComputationClient::UnsafeBufferPointer(
   XLA_CHECK(pjrt_data) << "handle must be PjRtData, got " << handle->ToString();
   XLA_CHECK(pjrt_data->buffer != nullptr)
       << "PjRt buffer is null in " << __FUNCTION__;
-  xla::StatusOr<std::uintptr_t> ptr =
+  absl::StatusOr<std::uintptr_t> ptr =
       client_->UnsafeBufferPointer(pjrt_data->buffer.get());
   XLA_CHECK(ptr.ok());
   return ptr.value();
@@ -632,8 +637,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       TF_VLOG(3) << "memory usage is not availiable";
     }
 
-    const auto& hlo_modules =
-        ConsumeValueNoStackDump(executable->GetHloModules());
+    const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
@@ -719,7 +723,8 @@ PjRtComputationClient::ExecuteComputation(
     const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
 
     XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
-        << pjrt_device->DebugString() << " vs "
+        << "The device currently being used : " << pjrt_device->DebugString()
+        << " is different from the device where the buffer resides: "
         << pjrt_data->buffer->device()->DebugString();
     buffers.push_back(pjrt_data->buffer.get());
   }
@@ -744,7 +749,7 @@ PjRtComputationClient::ExecuteComputation(
           .value();
 
   returned_future->OnReady(std::move(
-      [timed, op_tracker = std::move(op_tracker)](xla::Status unused) mutable {
+      [timed, op_tracker = std::move(op_tracker)](absl::Status unused) mutable {
         timed.reset();
         TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
       }));
@@ -850,7 +855,7 @@ PjRtComputationClient::ExecuteReplicated(
 
     (*returned_futures)[0].OnReady(
         std::move([timed, op_tracker = std::move(op_tracker)](
-                      xla::Status unused) mutable {
+                      absl::Status unused) mutable {
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
         }));
@@ -937,7 +942,7 @@ int PjRtComputationClient::GetNumProcesses() const {
 };
 
 const absl::flat_hash_map<
-    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 PjRtComputationClient::GetDeviceAttributes(const std::string& device) {
   return PjRtComputationClient::StringToPjRtDevice(device)->Attributes();
 }
@@ -963,8 +968,11 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
 void PjRtComputationClient::WaitDeviceOps(
     absl::Span<const std::string> devices) {
   TF_VLOG(3) << "Waiting for " << absl::StrJoin(devices, ", ");
-  operation_manager_.WaitForDevices(devices.empty() ? GetLocalDevices()
-                                                    : devices);
+  operation_manager_.WaitForDevices(
+      devices.empty()
+          ? (UseVirtualDevice() ? std::vector<std::string>({spmd_device_str})
+                                : GetLocalDevices())
+          : devices);
 }
 
 std::map<std::string, Metric> PjRtComputationClient::GetMetrics() const {
@@ -986,13 +994,60 @@ ComputationClient::MemoryInfo PjRtComputationClient::GetMemoryInfo(
   };
 }
 
-const PJRT_Api* PjRtComputationClient::GetPjRtCApiIfAvailable() const {
-  // dynamic_cast will return a nullptr if the client is not PjRtCApiClient.
-  auto* c_api_client = dynamic_cast<xla::PjRtCApiClient*>(client_.get());
-  if (c_api_client) {
-    return c_api_client->pjrt_c_api();
+void PjRtComputationClient::RegisterCustomCall(const std::string& fn_name,
+                                               void* function_ptr,
+                                               const std::string& platform) {
+  if (platform != "CUDA") {
+    XLA_ERROR() << "Custom call targets can only be registered for "
+                   "PJRT CUDA runtime.";
+    return;
   }
-  return nullptr;
+
+  auto* c_api_client = dynamic_cast<xla::PjRtCApiClient*>(client_.get());
+  if (!c_api_client) {
+    XLA_REGISTER_CUSTOM_CALL_TARGET_WITH_SYM(fn_name, function_ptr, platform);
+    return;
+  }
+  const PJRT_Api* pjrt_api = c_api_client->pjrt_c_api();
+
+  // See openxla reference:
+  // https://github.com/openxla/xla/blob/b604c8d87df842002a7a8de79a434026329fbcb2/xla/pjrt/c/pjrt_c_api_gpu_test.cc#L414
+  const PJRT_Extension_Base* next =
+      reinterpret_cast<const PJRT_Extension_Base*>(pjrt_api->extension_start);
+  while (next != nullptr &&
+         next->type !=
+             PJRT_Extension_Type::PJRT_Extension_Type_Gpu_Custom_Call) {
+    next = next->next;
+  }
+  XLA_CHECK(next) << "Custom call extension not found";
+  PJRT_Gpu_Register_Custom_Call_Args args;
+  args.struct_size = PJRT_Gpu_Register_Custom_Call_Args_STRUCT_SIZE;
+  args.function_name = fn_name.c_str();
+  args.function_name_size = fn_name.size();
+  args.api_version = 0;
+  args.custom_call_function = function_ptr;
+  PJRT_Error* error =
+      reinterpret_cast<const PJRT_Gpu_Custom_Call*>(next)->custom_call(&args);
+  if (error) {
+    XLA_ERROR() << error->status;
+  }
+}
+
+void PjRtComputationClient::OnReadyCallback(
+    ComputationClient::DataPtr data, const std::function<void()>& callback) {
+  std::shared_ptr<xla::PjRtBuffer> buffer;
+  if (auto pjrt_data = std::dynamic_pointer_cast<PjRtData>(data)) {
+    buffer = pjrt_data->buffer;
+  } else if (auto sharded_data =
+                 std::dynamic_pointer_cast<PjRtShardedData>(data)) {
+    XLA_CHECK(sharded_data->shards.size()) << "sharded data has no shards";
+    buffer = sharded_data->shards[0]->buffer;
+  } else {
+    XLA_ERROR() << "received invalid data pointer";
+  }
+  XLA_CHECK(buffer) << "received placeholder data as argument";
+  buffer->GetReadyFuture().OnReady(
+      [callback](absl::Status unused) { callback(); });
 }
 
 }  // namespace runtime

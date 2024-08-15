@@ -129,7 +129,7 @@ ReduceScatterCoalesced::ReduceScatterCoalesced(
       pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr ReduceScatter::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<ReduceScatter>(
+  return torch_xla::MakeNode<ReduceScatter>(
       reduce_type_, operands.at(0), operands.at(1), scale_, scatter_dim_,
       shard_count_, groups_, pin_layout_);
 }
@@ -137,7 +137,7 @@ torch::lazy::NodePtr ReduceScatter::Clone(torch::lazy::OpList operands) const {
 torch::lazy::NodePtr ReduceScatterCoalesced::Clone(
     torch::lazy::OpList operands) const {
   std::vector<torch::lazy::Value> inputs(operands.begin(), operands.end() - 1);
-  return torch::lazy::MakeNode<ReduceScatterCoalesced>(
+  return torch_xla::MakeNode<ReduceScatterCoalesced>(
       reduce_type_, inputs, operands.back(), scale_, scatter_dim_, shard_count_,
       groups_, pin_layout_);
 }

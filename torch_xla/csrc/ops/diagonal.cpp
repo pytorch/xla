@@ -22,7 +22,7 @@ Diagonal::Diagonal(const torch::lazy::Value& input, int64_t offset,
       dim2_(dim2) {}
 
 torch::lazy::NodePtr Diagonal::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Diagonal>(operands.at(0), offset_, dim1_, dim2_);
+  return torch_xla::MakeNode<Diagonal>(operands.at(0), offset_, dim1_, dim2_);
 }
 
 XlaOpVector Diagonal::Lower(LoweringContext* loctx) const {

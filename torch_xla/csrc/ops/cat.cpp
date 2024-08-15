@@ -34,7 +34,7 @@ Cat::Cat(c10::ArrayRef<torch::lazy::Value> values, int64_t dim,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr Cat::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Cat>(operands, dim_, dtype_);
+  return torch_xla::MakeNode<Cat>(operands, dim_, dtype_);
 }
 
 XlaOpVector Cat::Lower(LoweringContext* loctx) const {

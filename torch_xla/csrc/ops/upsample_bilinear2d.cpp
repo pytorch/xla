@@ -22,8 +22,8 @@ UpsampleBilinear::UpsampleBilinear(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr UpsampleBilinear::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
-                                                 align_corners_);
+  return torch_xla::MakeNode<UpsampleBilinear>(operands.at(0), output_size_,
+                                               align_corners_);
 }
 
 XlaOpVector UpsampleBilinear::Lower(LoweringContext* loctx) const {

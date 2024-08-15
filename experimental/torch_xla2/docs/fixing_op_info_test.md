@@ -39,10 +39,18 @@ index 72a39ae85..2a156cbce 100644
 ```
 
 ### Run test to see what failure
+For errors you might get after running test, there are two kind:
+- Target op failure
+  - error shows related to target op, such as `No lowering found for 'aten::addbmm'`, please follow instruction like [Fix Target op failure](https://github.com/pytorch/xla/blob/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-target-op-failure)
+- Decomposed op failure
+  - no implementation found for target ops, but error is not `no lowering`, error shows target op has been implemented somewhere; for sitution like this, please follow instruction like [Fix Decomposed op failure](https://github.com/pytorch/xla/blob/ManfeiBai-patch-99/experimental/torch_xla2/docs/fixing_op_info_test.md#fix-other-op-failure)
 
+#### Fix Target op failure
 Error gotten:
 
 ```
+(base) hanq-macbookpro:torch_xla2 hanq$ python test/test_ops.py 
+...
 E         RuntimeError: ('No lowering found for\n\nTo execute this test, run the following from the base repo dir:\n     python test/test_ops.py -k test_reference_eager_addbmm_cpu_int64\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0', 'aten::addbmm')
 ```
 
@@ -58,6 +66,41 @@ so other projects can benefit from it.
 For illustration purposes, let's implement this op in Jax. 
 
 (NOTE: this doesn't stop us from upstreaming a decomposition later if we want)
+
+#### Fix Decomposed op failure
+For situation that no target op(`trapezoid`) implemention found in `experimental/torch_xla2/torch_xla2/ops/jaten.py`, but error shows target op(`trapezoid`) has been implemented somewhere:
+```
+======================================================================
+FAIL: test_reference_eager_trapezoid_cpu_int64 (__main__.TestOpInfoCPU) [torch_xla2_diff:0.001]
+----------------------------------------------------------------------
+...
+AssertionError: The values for attribute 'dtype' do not match: torch.float64 != torch.float32.
+```
+Please try to fix it by following these steps:
+  1. confirm your target op `trapezoid` is decomposed by running this code to print each sub ops:
+  ```
+  import torch
+  import torch_xla2
+
+  env = torch_xla2.default_env()
+  env.config.debug_print_each_op = True
+  env.config.debug_accuracy_for_each_op = True
+
+  with env:
+    y = torch.tensor([1, 5, 10])
+    print(torch.trapezoid(y))
+  ```
+  2. (optional) Debug by modify [debug_accuracy()](https://github.com/pytorch/xla/blob/c26b19ebdefccd3a4300763e1085724d3d4cd3d0/experimental/torch_xla2/torch_xla2/tensor.py#L171C1-L194C14) to check `res`(from jax) and `expected_res`(from torch)'s value and dtype/type.
+  3. you might need to debug/modify/add implementation of sub ops(found in step1) to support `trapezoid` by using step 2, like:
+  ```
+  @op(torch.ops.aten.mul.Tensor, torch.ops.aten.mul.Scalar)
+  def _aten_mul(x, y):
+    new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+    res = x * y
+    if isinstance(x, float) or isinstance(y, float):
+      res = res.astype(new_dtype)
+    return res
+  ```
 
 ### First Impl
 

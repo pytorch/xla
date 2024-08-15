@@ -1,8 +1,8 @@
 from absl.testing import absltest, parameterized
 import os
 import sys
+import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_multiprocessing as xmp
 
 # Setup import folders.
 xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -30,10 +30,10 @@ class TestXrtDistributedDataParallel(parameterized.TestCase):
         init_method="xla://", use_large_net=use_large_net, debug=debug)
 
   def test_ddp_correctness(self):
-    xmp.spawn(self._ddp_correctness, args=(False, FLAGS.debug))
+    torch_xla.launch(self._ddp_correctness, args=(False, FLAGS.debug))
 
   def test_ddp_correctness_large_net(self):
-    xmp.spawn(self._ddp_correctness, args=(True, FLAGS.debug))
+    torch_xla.launch(self._ddp_correctness, args=(True, FLAGS.debug))
 
 
 if __name__ == "__main__":

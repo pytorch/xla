@@ -18,18 +18,6 @@ class TestTorchFunctions(parameterized.TestCase):
       ('tensor_empty', lambda: torch.tensor([],)),
       ('tensor_dtype', lambda: torch.tensor([[0.11111, 0.222222, 0.3333333]],
                                             dtype=torch.float64)),
-      ('ones_2d', lambda: torch.ones(2, 3)),
-      ('ones_1d', lambda: torch.ones(5)),
-      ('ones_1d_dtype', lambda: torch.ones(5, dtype=torch.float16)),
-      ('zeros_2d', lambda: torch.zeros(2, 3)),
-      ('zeros_1d', lambda: torch.zeros(5)),
-      ('zeros_1d_dtype', lambda: torch.zeros(5, dtype=torch.complex64)),
-      ('eye_3x3', lambda: torch.eye(3)),
-      ('eye_4x2', lambda: torch.eye(4, 2)),
-      ('eye_4x2_dtype', lambda: torch.eye(4, 2, dtype=torch.float16)),
-      ('full_2d', lambda: torch.full((2, 3), 3.141592)),
-      ('full_2d_dtype', lambda: torch.full(
-          (2, 3), 3.141592, dtype=torch.float16)),
   )
   def test_tensor_constructor(self, func: Callable[[], torch.Tensor]):
     expected = func()
@@ -39,6 +27,25 @@ class TestTorchFunctions(parameterized.TestCase):
       self.assertIsInstance(actual, torch_xla2.tensor.XLATensor2)
 
     torch.testing.assert_close(torch_xla2.tensor.j2t(actual._elem), expected)
+
+  def test_dont_capture_conversion(self):
+    t = torch.tensor([1,2,3])
+    with self.env:
+      t2 = self.env.to_xla(t)
+      # assert no exceptions
+
+  def test_brackets(self):
+    with self.env:
+      a = torch.randn((2,3))
+      a[1] = 9
+      self.assertEqual(a[1, 0].item(), 9)
+
+  def test_bernoulli_inplace(self):
+    with self.env:
+      a = torch.randn((2,3))
+      a.bernoulli_(0.4)
+
+
 
 
 if __name__ == '__main__':

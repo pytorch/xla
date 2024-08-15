@@ -47,8 +47,7 @@ torch::lazy::NodePtr EinsumBackward::Clone(torch::lazy::OpList operands) const {
     inputs.push_back(operands.at(i));
   }
 
-  return torch::lazy::MakeNode<EinsumBackward>(operands.at(0), inputs,
-                                               equation_);
+  return torch_xla::MakeNode<EinsumBackward>(operands.at(0), inputs, equation_);
 }
 
 EinsumBackward::EinsumBackward(const torch::lazy::Value& grad_output,

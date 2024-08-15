@@ -43,7 +43,7 @@ ConstantPadNd::ConstantPadNd(const torch::lazy::Value& input,
       value_(value) {}
 
 torch::lazy::NodePtr ConstantPadNd::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
+  return torch_xla::MakeNode<ConstantPadNd>(operands.at(0), pad_, value_);
 }
 
 XlaOpVector ConstantPadNd::Lower(LoweringContext* loctx) const {

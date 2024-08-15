@@ -52,7 +52,7 @@ When you work on your first few codegens, we generally recommend you to start wi
 ```
   if (!IsSupportedAdaptivePool(XlaHelpers::I64List(self.sizes()),
                                output_size_list, /*pool_dim=*/3)) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self, output_size);
+    return at::native::call_fallback_fn<&xla_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self, output_size);
   }
 ```
 2. Results in dynamic shape as these ops are WIP and may evolve over time. At some future point, we may bring the ops into codegen.
@@ -88,7 +88,7 @@ at::Tensor XLANativeFunctions::abs(const at::Tensor & self) {
 
   torch::lazy::NodePtr node = torch::lazy::ReuseNode<Abs>(lazy_self->GetIrValue());
   if (!node) {
-    node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue());
+    node = torch_xla::MakeNode<Abs>(lazy_self->GetIrValue());
     CacheNode(node);
   }
 
@@ -107,7 +107,7 @@ Describing the generated code line by line:
 ```
   torch::lazy::NodePtr node = torch::lazy::ReuseNode<Abs>(lazy_self->GetIrValue());
   if (!node) {
-    node = torch::lazy::MakeNode<Abs>(lazy_self->GetIrValue());
+    node = torch_xla::MakeNode<Abs>(lazy_self->GetIrValue());
     CacheNode(node);
   }
 ```
@@ -191,7 +191,7 @@ Sometimes other IRNode uses the 'IRNode' you migrated. In this case you need to 
 to
 ```
   torch::lazy::NodePtr exp =
-      Pow(torch::lazy::MakeNode<Abs>(input, std::vector<torch::lazy::Shape>()),
+      Pow(torch_xla::MakeNode<Abs>(input, std::vector<torch::lazy::Shape>()),
           norm_exp);
 ```
 

@@ -39,7 +39,7 @@ Softmax::Softmax(const torch::lazy::Value& input, int64_t dim,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr Softmax::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Softmax>(operands.at(0), dim_, dtype_);
+  return torch_xla::MakeNode<Softmax>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector Softmax::Lower(LoweringContext* loctx) const {

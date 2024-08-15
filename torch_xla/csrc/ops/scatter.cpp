@@ -14,8 +14,8 @@ Scatter::Scatter(const torch::lazy::Value& input,
       dim_(dim) {}
 
 torch::lazy::NodePtr Scatter::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Scatter>(operands.at(0), operands.at(1),
-                                        operands.at(2), dim_);
+  return torch_xla::MakeNode<Scatter>(operands.at(0), operands.at(1),
+                                      operands.at(2), dim_);
 }
 
 XlaOpVector Scatter::Lower(LoweringContext* loctx) const {

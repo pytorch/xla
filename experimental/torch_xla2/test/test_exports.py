@@ -2,8 +2,9 @@ import unittest
 import torch
 import torch.nn.functional as F
 import jax
-import jax.experimental.export
+import jax.export
 import torch_xla2
+import torch_xla2.export
 from torch_xla2 import tensor
 from torch_xla2.ops import mappings
 
@@ -107,7 +108,8 @@ class ExportTest(unittest.TestCase):
       torch.long          : "i64",
       # NO_MAPPING        : "ui4"
       torch.uint8         : "ui8",
-      torch.uint16        : "ui16",
+      # NOTE(qihqi): torch export for uint16 seems broken at torch 2.4
+      # torch.uint16        : "ui16",
       torch.uint32        : "ui32",
       torch.uint64        : "ui64",
       # NO_MAPPING        : "f8E4M3B11FNUZ"
@@ -127,7 +129,7 @@ class ExportTest(unittest.TestCase):
     }
 
     model = TensorConstant()
-    for torch_dtype in mappings.TORCH_DTYPE_TO_JAX.keys():
+    for torch_dtype in DTYPE_TO_MLIR_STR.keys():
       if torch_dtype == None:
         ## TODO: Figure out what the None mapping should be, seems like:
         ##   torch.tensor(dtype=None) maps to f32

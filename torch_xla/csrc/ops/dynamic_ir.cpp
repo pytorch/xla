@@ -45,7 +45,7 @@ int64_t SizeNode::getDynamicValue() const {
     return runtime_size_;
   }
   torch::lazy::NodePtr cloned =
-      torch::lazy::MakeNode<SizeNode>(operands_[0], dim_);
+      torch_xla::MakeNode<SizeNode>(operands_[0], dim_);
   // Wrap the IR of SizeNode into a dummy tensor and execute/fetch the value
   // of this tensor. GetTensors will return a cpu at::Tensor so we can just
   // extract the value of it.

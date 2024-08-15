@@ -70,10 +70,16 @@ source ~/.bashrc
 ```
 
 ### Wheel
+
+> **_NOTE:_**  The wheel file is compatible only with x86_64 linux based architecutre. To check the architecture of your linux system, execute the following command:
+> ```
+>uname -a
+> ```
+
 ```
-pip3 install torch==2.3.0
+pip3 install torch==2.4.0
 # GPU whl for python 3.10 + cuda 12.1
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.3.0-cp310-cp310-manylinux_2_28_x86_64.whl
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.4.0-cp310-cp310-manylinux_2_28_x86_64.whl
 ```
 Wheels for other Python version and CUDA version can be found [here](https://github.com/pytorch/xla?tab=readme-ov-file#available-docker-images-and-wheels).
 
@@ -152,6 +158,7 @@ Make sure `PATH` and `LD_LIBRARY_PATH` environment variables account for cuda. S
 git clone https://github.com/pytorch/pytorch.git
 cd pytorch
 USE_CUDA=1 python setup.py install
+USE_CUDA=1 python setup.py bdist_wheel # Required for hermetic Python in PyTorch/XLA build setup.
 
 git clone https://github.com/pytorch/xla.git
 cd xla

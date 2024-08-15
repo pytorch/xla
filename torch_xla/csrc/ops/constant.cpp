@@ -27,7 +27,7 @@ std::string Constant::ToString() const {
 }
 
 torch::lazy::NodePtr Constant::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<Constant>(value_.Clone());
+  return torch_xla::MakeNode<Constant>(value_.Clone());
 }
 
 XlaOpVector Constant::Lower(LoweringContext* loctx) const {

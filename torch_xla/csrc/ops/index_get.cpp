@@ -37,8 +37,8 @@ std::string IndexGet::ToString() const {
 }
 
 torch::lazy::NodePtr IndexGet::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<IndexGet>(operands.at(0), operands.at(1),
-                                         start_dim_);
+  return torch_xla::MakeNode<IndexGet>(operands.at(0), operands.at(1),
+                                       start_dim_);
 }
 
 XlaOpVector IndexGet::Lower(LoweringContext* loctx) const {

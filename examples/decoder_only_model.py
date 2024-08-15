@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch import nn
 
 
+# the default config is intentionally kept low to make it runable on a sigle tpu v2-8 core.
 @dataclass
 class DecoderOnlyConfig:
   hidden_size: int = 1024

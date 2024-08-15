@@ -184,11 +184,11 @@ def extract_avals(exported):
       symbol_name = str(sym)
       constraints = _build_symbolic_constraints(symbol_name, constraint)
       if sym.is_symbol:
-        symbolic_shape = jax.experimental.export.symbolic_shape(symbol_name, constraints=constraints)
+        symbolic_shape = jax.export.symbolic_shape(symbol_name, constraints=constraints)
       else:
         assert len(sym.free_symbols) > 0
         scope = free_symbols[str(list(sym.free_symbols)[0])].scope
-        symbolic_shape = jax.experimental.export.symbolic_shape(symbol_name, scope=scope)
+        symbolic_shape = jax.export.symbolic_shape(symbol_name, scope=scope)
       assert len(symbolic_shape) == 1
       return symbolic_shape[0]
 
@@ -226,5 +226,5 @@ def exported_program_to_stablehlo(exported_program):
   """
   weights, func = exported_program_to_jax(exported_program)
   jax_avals = extract_avals(exported_program)
-  jax_export = jax.experimental.export.export(func)(weights, (jax_avals,))
+  jax_export = jax.export.export(jax.jit(func))(weights, (jax_avals,))
   return jax_export

@@ -20,9 +20,9 @@ ScatterReduce::ScatterReduce(const torch::lazy::Value& input,
       dim_(dim) {}
 
 torch::lazy::NodePtr ScatterReduce::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<ScatterReduce>(operands.at(0), operands.at(1),
-                                              operands.at(2), reduce_,
-                                              include_self_, dim_);
+  return torch_xla::MakeNode<ScatterReduce>(operands.at(0), operands.at(1),
+                                            operands.at(2), reduce_,
+                                            include_self_, dim_);
 }
 
 XlaOpVector ScatterReduce::Lower(LoweringContext* loctx) const {

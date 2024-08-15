@@ -1,7 +1,7 @@
 #include <ATen/ATen.h>
 #include <torch/library.h>
 
-#include "torch_xla/csrc/aten_cpu_fallback.h"
+#include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/ops/nms.h"
@@ -25,7 +25,7 @@ at::Tensor nms_kernel(const at::Tensor& boxes, const at::Tensor& scores,
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
 
   if (!DebugUtil::ExperimentEnabled("nms")) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback, NmsOp>::call(
+    return at::native::call_fallback_fn<&xla_fallback, NmsOp>::call(
         boxes, scores, iou_threshold);
   }
 

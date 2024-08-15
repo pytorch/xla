@@ -47,7 +47,7 @@ CumSum::CumSum(const torch::lazy::Value& input, int64_t dim,
       dtype_(dtype) {}
 
 torch::lazy::NodePtr CumSum::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CumSum>(operands.at(0), dim_, dtype_);
+  return torch_xla::MakeNode<CumSum>(operands.at(0), dim_, dtype_);
 }
 
 XlaOpVector CumSum::Lower(LoweringContext* loctx) const {

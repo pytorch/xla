@@ -5,7 +5,7 @@
 #include <ATen/native/CPUFallback.h>
 #include <c10/core/impl/PythonDispatcherTLS.h>
 
-#include "torch_xla/csrc/aten_cpu_fallback.h"
+#include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_methods.h"
@@ -77,12 +77,11 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     auto results = at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(max_pool2d_with_indices)>::call(self,
-                                                                   kernel_size,
-                                                                   stride,
-                                                                   padding,
-                                                                   dilation,
-                                                                   ceil_mode);
+        &xla_fallback, ATEN_OP(max_pool2d_with_indices)>::call(self,
+                                                               kernel_size,
+                                                               stride, padding,
+                                                               dilation,
+                                                               ceil_mode);
     ctx->save_for_backward({self, std::get<1>(results)});
     return std::get<0>(results);
   }
@@ -132,7 +131,7 @@ torch::autograd::variable_list MaxPool2dAutogradFunction::backward(
   if (IsNonTrivialDilation(dilation)) {
     auto indices = saved[1];
     grad = at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(max_pool2d_with_indices_backward)>::call(grad_output[0], self,
                                                          kernel_size, stride,
                                                          padding, dilation,
@@ -181,12 +180,11 @@ torch::Tensor MaxPool3dAutogradFunction::forward(
   // Lowering when ceil_mode or dilation is set not supported yet.
   if (IsNonTrivialDilation(dilation)) {
     auto results = at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(max_pool3d_with_indices)>::call(self,
-                                                                   kernel_size,
-                                                                   stride,
-                                                                   padding,
-                                                                   dilation,
-                                                                   ceil_mode);
+        &xla_fallback, ATEN_OP(max_pool3d_with_indices)>::call(self,
+                                                               kernel_size,
+                                                               stride, padding,
+                                                               dilation,
+                                                               ceil_mode);
     ctx->save_for_backward({self, std::get<1>(results)});
     return std::get<0>(results);
   }
@@ -213,7 +211,7 @@ torch::autograd::variable_list MaxPool3dAutogradFunction::backward(
   if (IsNonTrivialDilation(dilation)) {
     auto indices = saved[1];
     grad = at::native::call_fallback_fn<
-        &xla_cpu_fallback,
+        &xla_fallback,
         ATEN_OP(max_pool3d_with_indices_backward)>::call(grad_output[0], self,
                                                          kernel_size, stride,
                                                          padding, dilation,
