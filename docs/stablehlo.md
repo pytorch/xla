@@ -1,7 +1,8 @@
-# Torch Export to StableHLO (Prototype feature)
-This document describes how to use Torch export with Torch XLA to export models to StableHLO format.
+Torch Export to StableHLO
+--------------------------
 
-NOTE: This feature is currently classified as a prototype and its API specifics may change in future releases.
+This document describes how to use torch export + torch xla to export to 
+[StableHLO](https://github.com/openxla/stablehlo) format.
 
 ## How to use:
 
