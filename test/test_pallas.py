@@ -32,12 +32,14 @@ class PallasTest(unittest.TestCase):
                                   kv_segment_ids.shape[0], 1, 1,
                                   kv_segment_ids.shape[1])
 
-  def _attention(self, q, k, v, *, attn_mask=None):
+  def _attention(self, q, k, v, *, attn_mask=None, ab=None):
     attn_weight = q @ k.transpose(-2, -1)
     if attn_mask is not None:
       # Masked out the unrelevant parts.
       attn_weight = attn_weight.masked_fill(attn_mask,
                                             torch.finfo(attn_weight.dtype).min)
+    if ab is not None:
+      attn_weight = attn_weight + ab
     attn_weight = nn.functional.softmax(attn_weight, dim=-1)
     attn_output = attn_weight @ v
     return attn_output
@@ -917,6 +919,106 @@ class PallasTest(unittest.TestCase):
 
     # Hmm, the gradients are the same even the autograd graph seems different.
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_ab(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(3, 2, 128, 4).to("xla")
+    k = torch.randn(3, 2, 128, 4).to("xla")
+    v = torch.randn(3, 2, 128, 4).to("xla")
+    mask = (torch.rand(3, 2, 128, 128) > 0.5).to("xla")
+    ab = torch.ones(3, 2, 128, 128).to("xla")
+    ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
+    o = flash_attention(q, k, v, ab=ab)
+
+    expected_o = self._attention(q, k, v, ab=ab)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_ab_backward_1(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    mask = (torch.rand(4, 2, 128, 128) > 0.5).to("xla")
+    ab = torch.ones(4, 2, 128, 128).to("xla")
+    ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+
+    o = flash_attention(q, k, v, ab=ab)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
+
+    q.grad = None
+    k.grad = None
+    v.grad = None
+
+    o = self._attention(q, k, v, ab=ab)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
+      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+    jax.config.update("jax_default_matmul_precision", "default")
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  def test_flash_attention_ab_backward_2(self):
+    jax.config.update("jax_default_matmul_precision", "highest")
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    torch.manual_seed(42)
+    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    mask = (torch.rand(4, 2, 128, 128) > 0.5).to("xla")
+    ab = torch.ones(4, 2, 128, 128).to("xla")
+    ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min)
+    ab.requires_grad = True
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
+    ab.retain_grad()
+
+    o = flash_attention(q, k, v, ab=ab)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    q_grad = q.grad
+    k_grad = k.grad
+    v_grad = v.grad
+    ab_grad = ab.grad
+
+    q.grad = None
+    k.grad = None
+    v.grad = None
+    ab.grad = None
+
+    o = self._attention(q, k, v, ab=ab)
+    loss = o.sum()
+    loss.backward()
+    xm.mark_step()
+
+    for i in [(q, q_grad), (k, k_grad), (v, v_grad), (ab, ab_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
     jax.config.update("jax_default_matmul_precision", "default")
 

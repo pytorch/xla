@@ -124,7 +124,7 @@ def _aten_mean(x, dim=None, keepdim=False):
 
 
 def _torch_binary_scalar_type(scalar, tensor):
-  if "float" in str(tensor.dtype):
+  if "float" in str(tensor.dtype) or "complex" in str(tensor.dtype):
     return tensor.dtype
 
   if isinstance(scalar, int):
@@ -230,10 +230,23 @@ def _aten_softmax(x, dim, halftofloat):
 def _is_int(x):
   if isinstance(x, int):
     return True
-  if isinstance(x, jax.Array) and x.dtype.name.startswith('int'):
+  if isinstance(x, jax.Array) and (x.dtype.name.startswith('int') or x.dtype.name.startswith('uint')):
     return True
   return False
 
+def highest_precision_int_dtype(tensor1, tensor2):
+  if isinstance(tensor1, int):
+    return tensor2.dtype
+  if isinstance(tensor2, int):
+    return tensor1.dtype
+
+  dtype_hierarchy = {
+      'uint8': 8, 'int8': 8,
+      'uint16': 16, 'int16': 16,
+      'uint32': 32, 'int32': 32,
+      'uint64': 64, 'int64': 64,
+  }
+  return max(tensor1.dtype, tensor2.dtype, key=lambda dtype: dtype_hierarchy[str(dtype)])
 
 @op(torch.ops.aten.pow)
 def _aten_pow(x, y):
@@ -242,9 +255,14 @@ def _aten_pow(x, y):
     y = float(y)
   if _is_int(x) and _is_int(y_orig):
     # Do the math in float then cast
-    return jnp.astype(
-      jnp.power(jnp.astype(x, jnp.dtype('float')), y), x.dtype)
-  return jnp.power(x, y)
+    res = jnp.power(jnp.astype(x, jnp.dtype('float')), y)
+    return res.astype(highest_precision_int_dtype(x, y_orig))
+  res = jnp.power(x, y)
+  if isinstance(x, float):
+    return res.astype(_torch_binary_scalar_type(x, y_orig))
+  if isinstance(y_orig, float):
+    return res.astype(_torch_binary_scalar_type(y_orig, x))
+  return res
 
 
 @op(torch.ops.aten.view_as_complex)
@@ -3038,3 +3056,8 @@ def _aten_unsafe_index_put(self, indices, values, accumulate=False):
 @op(torch.ops.aten.conj_physical)
 def _aten_conj_physical(self):
   return jnp.conjugate(self)
+
+
+@op(torch.ops.aten.log_sigmoid)
+def _aten_log_sigmoid(x):
+  return jax.nn.log_sigmoid(x)
