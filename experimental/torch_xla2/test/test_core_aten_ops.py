@@ -1061,6 +1061,21 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.convolution, args, kwargs)
+    
+  def test_aten_copy_0(self):
+    args = (torch.randn((10, 10)).to(torch.float32), torch.randn((10, 10)).to(torch.float32))
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.copy, args, kwargs)
+    
+  def test_aten_copy_broadcast(self):
+    args = (torch.randn((10, 10)).to(torch.float32), torch.tensor(1.0, dtype=torch.float32))
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.copy, args, kwargs)
+    
+  def test_aten_copy_cast_dtype(self):
+    args = (torch.randn((10, 10)).to(torch.float32), torch.randn((10, 10)).to(torch.int64))
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.copy, args, kwargs)
 
   def test_aten_cos_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
