@@ -9,17 +9,24 @@ This name is defined by our mirror implementation of `spawn`.
 """
 
 import datetime
+import functools
+import logging
 import os
 from typing import List, Optional, Union
 
 import jax
+import numpy as np
 import torch
 import torch.distributed as dist
 import torch.distributed._functional_collectives
 from torch._C._distributed_c10d import ProcessGroup  # type: ignore
 import torch.distributed
 import torch_xla2
-import numpy as np
+from jax.sharding import NamedSharding
+from jax.sharding import Mesh, PartitionSpec as P
+from jax.experimental import mesh_utils
+import torch.utils._pytree as torch_pytree
+from torch_xla2 import interop
 
 
 class ProcessGroupJax(ProcessGroup):
@@ -125,13 +132,10 @@ def jax_rendezvous_handler(
 dist.register_rendezvous_handler("jax", jax_rendezvous_handler)
 
 
-# TODO(wcromar): types
 def spawn(f, args=(), env: Optional[torch_xla2.tensor.Environment] = None):
   """Wrap `f` in a JAX `pmap` with the axis name `torch_dist` defined.
-
   `f` is expected to take the replica index as a positional argument, similar
   to `torch.multiprocessing.spawn`.
-
   Note: `spawn` does not actually create parallel processes.
   """
   env = env or torch_xla2.default_env()
@@ -145,3 +149,97 @@ def spawn(f, args=(), env: Optional[torch_xla2.tensor.Environment] = None):
     np.arange(jax.device_count()), env.t2j_iso(args)
   )
   return env.j2t_iso(jax_outputs)
+
+
+class DistributedDataParallel(torch.nn.Module):
+  """Re-implementation of DistributedDataParallel using JAX SPMD.
+
+  Splits inputs along batch dimension (assumed to be 0) across all devices in
+  JAX runtime, including remote devices. Each process should load a distinct
+  shard of the input data using e.g. DistributedSampler. Each process' shard
+  is then further split among the addressable devices (e.g. local TPU chips)
+  by `shard_input`.
+
+  Note: since parameters are replicated across addressable devices, inputs
+  must also be SPMD sharded using `shard_input` or `replicate_input`.
+
+  Example usage:
+
+  ```
+  jax_model = torch_xla2.distributed.DistributedDataParallel(create_model())
+  for data, dataloader:
+    jax_data = jax_model.shard_input(data)
+    jax_output = jax_model(jax_data)
+  ```
+  """
+  def __init__(
+    self,
+    module: torch.nn.Module,
+    env: Optional[torch_xla2.tensor.Environment] = None,
+    **kwargs,
+  ):
+    if kwargs:
+      logging.warning(f"Unsupported kwargs {kwargs}")
+
+    super().__init__()
+    self._env = env or torch_xla2.default_env()
+    self._mesh = Mesh(
+      mesh_utils.create_device_mesh((jax.device_count(),)),
+      axis_names=("batch",),
+    )
+    replicated_state = torch_pytree.tree_map_only(
+      torch.Tensor,
+      lambda t: self._env.j2t_iso(
+        jax.device_put(
+          self._env.to_xla(t)._elem, NamedSharding(self._mesh, P())
+        )
+      ),
+      module.state_dict(),
+    )
+    # TODO: broadcast
+    module.load_state_dict(replicated_state, assign=True)
+    self._module = module
+
+  def shard_input(self, inp):
+    per_process_batch_size = inp.shape[0]  # assumes batch dim is 0
+    per_replica_batch_size = per_process_batch_size // jax.local_device_count()
+    per_replica_batches = torch.chunk(inp, jax.local_device_count())
+    global_batch_size = per_replica_batch_size * jax.device_count()
+    global_batch_shape = (global_batch_size,) + inp.shape[1:]
+
+    sharding = NamedSharding(self._mesh, P("batch"))
+    return jax.make_array_from_single_device_arrays(
+      global_batch_shape,
+      NamedSharding(self._mesh, P("batch")),
+      arrays=[
+        jax.device_put(self._env.to_xla(batch)._elem, device)
+        for batch, device in zip(
+          per_replica_batches, sharding.addressable_devices
+        )
+      ],
+    )
+
+  def replicate_input(self, inp):
+    return self._env.j2t_iso(
+      jax.device_put(inp._elem, NamedSharding(self._mesh, P()))
+    )
+
+  def jit_step(self, func):
+    @interop.jax_jit
+    def _jit_fn(states, args):
+      self.load_state_dict(states)
+      outputs = func(*args)
+      return self.state_dict(), outputs
+
+    @functools.wraps(func)
+    def inner(*args):
+      jax_states = self.state_dict()
+      new_states, outputs = _jit_fn(jax_states, args)
+      self.load_state_dict(new_states)
+      return outputs
+
+    return inner
+
+  def forward(self, *args):
+    with self._env:
+      return self._module(*args)

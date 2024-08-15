@@ -240,7 +240,7 @@ def highest_precision_int_dtype(tensor1, tensor2):
   if isinstance(tensor2, int):
     return tensor1.dtype
 
-  dtype_hierarchy = { 
+  dtype_hierarchy = {
       'uint8': 8, 'int8': 8,
       'uint16': 16, 'int16': 16,
       'uint32': 32, 'int32': 32,
@@ -1581,6 +1581,7 @@ def _aten_any(self, dim=None, keepdim=False):
 @op(torch.ops.aten.arange.start_step)
 @op(torch.ops.aten.arange.start)
 @op(torch.ops.aten.arange.default)
+@op_base.convert_dtype(use_default_dtype=False)
 def _aten_arange(
   start,
   end=None,
@@ -1592,18 +1593,10 @@ def _aten_arange(
   device=None,
   pin_memory=False,
 ):
-  if dtype:
-    dtype = mappings.t2j_dtype(dtype)
-  if start and dtype:
-    start = jax.lax.convert_element_type(start, dtype)
-  if end and dtype:
-    end = jax.lax.convert_element_type(end, dtype)
-  if step and dtype:
-    step = jax.lax.convert_element_type(step, dtype)
   return jnp.arange(
-    start,
-    end,
-    step,
+    op_base.maybe_convert_constant_dtype(start, dtype),
+    op_base.maybe_convert_constant_dtype(end, dtype),
+    op_base.maybe_convert_constant_dtype(step, dtype),
     dtype=dtype,
   )
 
@@ -3048,6 +3041,22 @@ def _aten_flatten(x, start_dim=0, end_dim=-1):
 
   new_shape = (*shape[:start_dim], -1, *shape[end_dim + 1:])
   return jnp.reshape(x, new_shape)
+
+
+@op(torch.ops.aten.new_empty_strided)
+def _new_empty_strided(self, size, stride, **kwargs):
+  return jnp.empty(size)
+
+
+@op(torch.ops.aten._unsafe_index_put, is_jax_function=False)
+def _aten_unsafe_index_put(self, indices, values, accumulate=False):
+  return self.index_put_(indices, values, accumulate)
+
+
+@op(torch.ops.aten.conj_physical)
+def _aten_conj_physical(self):
+  return jnp.conjugate(self)
+
 
 @op(torch.ops.aten.log_sigmoid)
 def _aten_log_sigmoid(x):

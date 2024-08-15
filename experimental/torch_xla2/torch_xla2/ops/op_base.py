@@ -1,6 +1,7 @@
 import functools
 import jax
 import jax.numpy as jnp
+import numpy as np
 import torch
 from torch_xla2.ops import mappings
 from torch_xla2 import types
@@ -55,6 +56,20 @@ def convert_dtype(use_default_dtype: bool = True):
     return wrapper
 
   return decorator
+
+
+def maybe_convert_constant_dtype(val: Optional[types.JaxValue], dtype: Optional[jnp.dtype]):
+  """Optionally converts scalar constant's dtype using `numpy`
+
+  Use in cases where you require a constant and can't handle a traced array.
+  """
+  if val and dtype:
+    if isinstance(val, jax.Array):
+      return maybe_convert_constant_dtype(val.item(), dtype)
+
+    return np.array(val, dtype)
+
+  return val
 
 
 def promote_int_input(f: Callable[Concatenate[jax.Array, P], types.JaxValue]):
