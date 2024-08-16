@@ -328,7 +328,6 @@ skiplist = {
     "deg2rad",
     "diagonal",
     "dot",
-    "exp",
     "expm1",
     "fft.fftshift",
     "fft.ifftshift",
