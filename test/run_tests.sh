@@ -219,6 +219,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/stablehlo/test_unbounded_dynamism.py"
   run_test "$CDIR/quantized_ops/test_quantized_matmul.py"
+  run_test "$CDIR/quantized_ops/test_dot_general.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"

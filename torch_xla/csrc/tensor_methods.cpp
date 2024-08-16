@@ -47,6 +47,7 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/discrete_uniform.h"
+#include "torch_xla/csrc/ops/dot_general.h"
 #include "torch_xla/csrc/ops/dynamic_expand.h"
 #include "torch_xla/csrc/ops/dynamic_view.h"
 #include "torch_xla/csrc/ops/eigh.h"
@@ -1414,6 +1415,39 @@ XLATensorPtr div(const XLATensorPtr& input, const at::Scalar& other) {
   return input->CreateFrom(
       torch_xla::MakeNode<Cast>(Div(input_value, other_value), scalar_type),
       scalar_type);
+}
+
+XLATensorPtr xla_dot_general(
+    const XLATensorPtr& lhs, const XLATensorPtr& rhs,
+    const std::vector<std::vector<int>>& dim_vectors,
+    std::optional<at::ScalarType> preferred_element_type) {
+  std::vector<std::vector<int>> canonical_dim_vectors = dim_vectors;
+  std::vector<int>& lhs_contract_dims = canonical_dim_vectors[0];
+  std::vector<int>& rhs_contract_dims = canonical_dim_vectors[1];
+  std::vector<int>& lhs_batch_dims = canonical_dim_vectors[2];
+  std::vector<int>& rhs_batch_dims = canonical_dim_vectors[3];
+  int64_t lhs_rank = lhs->shape().get().rank();
+  int64_t rhs_rank = rhs->shape().get().rank();
+  std::transform(lhs_contract_dims.begin(), lhs_contract_dims.end(),
+                 lhs_contract_dims.begin(), [lhs_rank](int x) {
+                   return torch::lazy::GetCanonicalDimensionIndex(x, lhs_rank);
+                 });
+  std::transform(lhs_batch_dims.begin(), lhs_batch_dims.end(),
+                 lhs_batch_dims.begin(), [lhs_rank](int x) {
+                   return torch::lazy::GetCanonicalDimensionIndex(x, lhs_rank);
+                 });
+  std::transform(rhs_contract_dims.begin(), rhs_contract_dims.end(),
+                 rhs_contract_dims.begin(), [rhs_rank](int x) {
+                   return torch::lazy::GetCanonicalDimensionIndex(x, rhs_rank);
+                 });
+  std::transform(rhs_batch_dims.begin(), rhs_batch_dims.end(),
+                 rhs_batch_dims.begin(), [rhs_rank](int x) {
+                   return torch::lazy::GetCanonicalDimensionIndex(x, rhs_rank);
+                 });
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<DotGeneral>(
+      lhs->GetIrValue(), rhs->GetIrValue(), canonical_dim_vectors,
+      preferred_element_type);
+  return lhs->CreateFrom(node, preferred_element_type);
 }
 
 XLATensorPtr einsum(const std::string& equation,
