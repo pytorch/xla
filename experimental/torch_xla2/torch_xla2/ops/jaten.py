@@ -1,4 +1,3 @@
-"""Torch ops implemented using jax."""
 
 import sys
 from typing import Optional, Sequence
@@ -1759,7 +1758,9 @@ def _aten_erf(x):
 # aten.exp
 @op(torch.ops.aten.exp)
 def _aten_exp(input):
-  return jnp.exp(input)
+  res = jnp.exp(input)
+  new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+  return res.astype(new_dtype)
 
 
 # aten.expm1
