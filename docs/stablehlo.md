@@ -40,7 +40,7 @@ output2 = stablehlo_program(*sample_input_xla)
 # Compare outputs between original and StableHLO-backed models
 print(torch.allclose(output, output2.cpu(), atol=1e-5))
 
-# Saving StableHLO bytecodes to disk
+# Display StableHLO bytecode
 One can save StableHLO to disk with:
 
 stablehlo_program.save('/tmp/stablehlo_dir')
