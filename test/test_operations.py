@@ -2704,6 +2704,8 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertEqual(xdata.batch_sizes.device, torch.device('cpu'))
     self.assertEqual(xdata.data.device, xla_device)
 
+  @skipIfFunctionalizationDisabled(
+      "https://github.com/pytorch/xla/pull/7864#issuecomment-2294034008")
   def test_as_strided_input_larger(self):
     size = (5, 5)
     device = xm.xla_device()
