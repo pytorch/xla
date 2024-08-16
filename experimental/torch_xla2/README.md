@@ -39,7 +39,7 @@ Otherwise create a new environment from the command line.
 
 ```bash
 # Option 1: venv
-python -m venv create my_venv
+python -m venv my_venv
 source my_venv/bin/activate
 
 # Option 2: conda
