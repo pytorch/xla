@@ -1,5 +1,6 @@
 import re
 import unittest
+from absl.testing import parameterized
 
 import torch
 import torch_xla
@@ -75,7 +76,8 @@ class M(torch.nn.Module):
   def replace_with_xla_quantized_matmul(self,
                                         n_bit=8,
                                         block_size=-1,
-                                        is_symmetric=True):
+                                        is_symmetric=True,
+                                        quantize_activation=False):
     assert isinstance(self.linear, torch.nn.Linear)
     w_int, scaler, zero_point = self.weight_quantization_rtn(
         self.linear,
@@ -89,7 +91,8 @@ class M(torch.nn.Module):
         self.linear.out_features,
         block_size=block_size,
         int4_weight=use_int4_weight,
-        is_symmetric=is_symmetric)
+        is_symmetric=is_symmetric,
+        quantize_activation=quantize_activation)
     q_linear.load_quantized_weight(w_int, scaler, zero_point=zero_point)
     self.linear = q_linear
 
@@ -98,20 +101,22 @@ class M(torch.nn.Module):
     return self.linear(x)
 
 
-class QuantizedTest(unittest.TestCase):
+class QuantizedTest(parameterized.TestCase):
 
   def _calc_cosine_dist(self, x, y):
     x = x.flatten().to(torch.float32)
     y = y.flatten().to(torch.float32)
     return (torch.dot(x, y) / (x.norm() * y.norm())).item()
 
-  def test_q_linear_module_per_channel(self):
+  @parameterized.parameters([False, True])
+  def test_q_linear_module_per_channel(self, quantize_activation):
 
     with torch.no_grad():
       m = M(5, 8)
       x = torch.randn(3, 5)
       out_fp = m(x)
-      m.replace_with_xla_quantized_matmul()
+      m.replace_with_xla_quantized_matmul(
+          quantize_activation=quantize_activation)
       out_quant = m(x)
 
       m = m.to(device)
@@ -120,13 +125,15 @@ class QuantizedTest(unittest.TestCase):
       self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.01))
       self.assertTrue(torch.allclose(out_quant_xla.cpu(), out_quant))
 
-  def test_q_linear_module_dynamo(self):
+  @parameterized.parameters([False, True])
+  def test_q_linear_module_dynamo(self, quantize_activation):
 
     with torch.no_grad():
       m = M(5, 8)
       x = torch.randn(3, 5)
       out_fp = m(x)
-      m.replace_with_xla_quantized_matmul()
+      m.replace_with_xla_quantized_matmul(
+          quantize_activation=quantize_activation)
       out_quant = m(x)
       m = m.to(device)
       m_dynamo = torch.compile(m, backend="openxla")
@@ -134,15 +141,20 @@ class QuantizedTest(unittest.TestCase):
       self.assertTrue(torch.allclose(out_fp, out_quant, atol=0.02))
       self.assertTrue(torch.allclose(out_quant_dynamo.cpu(), out_quant))
 
-  def test_q_linear_hlo(self):
+  @parameterized.parameters([False, True])
+  def test_q_linear_hlo(self, quantize_activation):
     with torch.no_grad():
       x = torch.randn((3, 5), dtype=torch.bfloat16).to(device)
       w_int = torch.randint(-128, 127, (8, 5), dtype=torch.int8).to(device)
       scaler = torch.randn((8,), dtype=torch.bfloat16).to(device)
 
-      output = torch.ops.xla.quantized_matmul(x, w_int, scaler)
+      output = torch.ops.xla.quantized_matmul(
+          x, w_int, scaler, quantize_activation=quantize_activation)
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
-      self.assertTrue(re.search(r'bf16.*dot.*bf16.*s8', hlo) is not None)
+      if quantize_activation:
+        self.assertTrue(re.search(r's32.*dot.*s8.*s8', hlo) is not None)
+      else:
+        self.assertTrue(re.search(r'bf16.*dot.*bf16.*s8', hlo) is not None)
 
   def test_int4_per_channel_matmul(self):
     weight = torch.randint(-8, 7, (4, 2)).to(torch.int8)
@@ -230,14 +242,18 @@ class QuantizedTest(unittest.TestCase):
           self.assertGreater(
               self._calc_cosine_dist(out_quant_xla.cpu(), out_quant), 0.999999)
 
-  def test_asymmetric_per_channel(self):
+  @parameterized.parameters([False, True])
+  def test_asymmetric_per_channel(self, quantize_activation):
     for n_bit in [4, 8]:
       with self.subTest(n_bit=n_bit):
         m = M(6, 8)
         x = torch.randn(3, 6)
         out_fp = m(x)
         m.replace_with_xla_quantized_matmul(
-            n_bit=n_bit, block_size=-1, is_symmetric=False)
+            n_bit=n_bit,
+            block_size=-1,
+            is_symmetric=False,
+            quantize_activation=quantize_activation)
         out_quant = m(x)
         self.assertGreater(self._calc_cosine_dist(out_fp, out_quant), 0.99)
 

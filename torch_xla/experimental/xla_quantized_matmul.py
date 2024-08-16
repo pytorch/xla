@@ -53,13 +53,35 @@ def _check_blockwise_quant_weight_dtype_shapes(input_dim, output_dim,
             f"got {zero_point.shape}, weight shape {w_shape}.")
 
 
+def _quantize_tensor(x: torch.Tensor, n_bits: int = 8, dim: int = -1):
+  """
+  Quantizes a tensor to a lower bit representation.
+
+  Args:
+    x (torch.Tensor): The input tensor to be quantized.
+    n_bits (int, optional): The number of bits to represent the quantized tensor. Defaults to 8.
+    dim (int, optional): The dimension along which to compute the maximum value for scaling. Defaults to -1.
+
+  Returns:
+    torch.Tensor: The quantized tensor. (In int8 container)
+    torch.Tensor: The scaling factor used for quantization. (Same dtype as x)
+  """
+  max_val = torch.amax(torch.abs(x), dim=dim, keepdim=True)
+  int_min = -2**(n_bits - 1)
+  int_max = 2**(n_bits - 1) - 1
+  scale = max_val / int_max
+  x_int = torch.clamp(torch.round(x / scale), int_min, int_max).to(torch.int8)
+  return x_int, scale.to(x.dtype)
+
+
 @impl(XLA_LIB, "quantized_matmul", "XLA")
 def quantized_matmul_xla(x: torch.Tensor,
                          w: torch.Tensor,
                          scaler: torch.Tensor,
                          zero_point: torch.Tensor = None,
                          block_size: int = -1,
-                         int4_weight: bool = False):
+                         int4_weight: bool = False,
+                         quantize_activation: bool = False):
   """Quantized Matrix Multiply op on XLA devices.
 
   Args:
@@ -84,9 +106,17 @@ def quantized_matmul_xla(x: torch.Tensor,
     # Per-channel quant.
     _check_per_channel_quant_weight_dtype_shapes(x.shape[-1], scaler.shape[0],
                                                  w, scaler, zero_point)
-    out = F.linear(x, w) * scaler
+    if quantize_activation:
+      x, x_scale = _quantize_tensor(x)
+      out = torch_xla._XLAC._xla_dot_general(
+          x, w, (([-1], [-1]), ()), preferred_element_type=torch.int32)
+    else:
+      out = F.linear(x, w)
+    out = out * scaler
   else:
     # Blockwise quant.
+    assert quantize_activation == False, (
+        "Blockwise quantization does not support activation quantization.")
     _check_blockwise_quant_weight_dtype_shapes(x.shape[-1], w.shape[-1],
                                                block_size, w, scaler,
                                                zero_point)
@@ -102,6 +132,8 @@ def quantized_matmul_xla(x: torch.Tensor,
       zp_out = x.sum(dim=-1)
       zp_out = torch.matmul(zp_out, zero_point)
     out -= zp_out
+  if quantize_activation:
+    out = out * x_scale
   return out
 
 
@@ -111,15 +143,25 @@ def quantized_matmul(x: torch.Tensor,
                      scaler: torch.Tensor,
                      zero_point: torch.Tensor = None,
                      block_size: int = -1,
-                     int4_weight: bool = False):
+                     int4_weight: bool = False,
+                     quantize_activation: bool = False):
   if block_size == -1:
     # Per-channel quant.
     _check_per_channel_quant_weight_dtype_shapes(x.shape[-1], scaler.shape[0],
                                                  w, scaler, zero_point)
     w = w.to(x.dtype)
-    out = torch.mul(F.linear(x, w), scaler)
+    if quantize_activation:
+      x, x_scale = _quantize_tensor(x)
+      # Upcast to torch.int32 to make sure the mamtul output is int32.
+      # Otherwise it will be int8 which causes overflow.
+      x = x.to(torch.int32)
+      w = w.to(torch.int32)
+    out = F.linear(x, w)
+    out = out * scaler
   else:
     # Blockwise quant.
+    assert quantize_activation == False, (
+        "Blockwise quantization does not support activation quantization.")
     _check_blockwise_quant_weight_dtype_shapes(x.shape[-1], w.shape[-1],
                                                block_size, w, scaler,
                                                zero_point)
@@ -137,6 +179,8 @@ def quantized_matmul(x: torch.Tensor,
       zp_out = x.sum(dim=-1)
       zp_out = torch.matmul(zp_out, zero_point)
     out -= zp_out
+  if quantize_activation:
+    out = out * x_scale
   return out
 
 
@@ -147,13 +191,15 @@ class XlaQuantizedLinear(torch.nn.Module):
                output_dim,
                is_symmetric: bool = False,
                block_size: int = -1,
-               int4_weight: bool = False):
+               int4_weight: bool = False,
+               quantize_activation: bool = False):
     super().__init__()
     self.input_dim = input_dim
     self.output_dim = output_dim
     self.is_symmetric = is_symmetric
     self.block_size = block_size
     self.int4_weight = int4_weight
+    self.quantize_activation = quantize_activation
     self.register_buffer('weight',
                          torch.zeros(output_dim, input_dim).to(torch.int8))
     self.register_buffer('weight_scaler', torch.zeros(output_dim))
@@ -194,4 +240,5 @@ class XlaQuantizedLinear(torch.nn.Module):
         self.weight_scaler,
         self.zero_point,
         block_size=self.block_size,
-        int4_weight=self.int4_weight)
+        int4_weight=self.int4_weight,
+        quantize_activation=self.quantize_activation)
