@@ -1760,9 +1760,8 @@ def _aten_erf(x):
 def _aten_exp(input):
   res = jnp.exp(input)
   new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
-  # op_base.maybe_convert_constant_dtype(res, new_dtype)
-  if input.dtype == jax.numpy.int64:
-    res = res.astype(new_dtype)
+  # if input.dtype == jax.numpy.int64:
+  #   res = res.astype(new_dtype)
   return res
 
 
