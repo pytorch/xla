@@ -66,9 +66,8 @@ def _torch_argsort(input, dim=-1, descending=False, stable=False):
 @register_function(torch.einsum)
 def _einsum(equation, *operands):
   def get_params(*a):
-    if len(a) != 1:
-        raise ValueError("Expected a single tuple as input")
-
+    # if len(a) != 1:
+    #     raise ValueError("Expected a single tuple as input")
     inner_list = a[0]
     if len(inner_list) == 1:
         A = inner_list # [0]
