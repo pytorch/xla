@@ -33,7 +33,7 @@ python3 test/torch_distributed/test_torch_distributed_all_gather_xla_backend.py
 python3 test/torch_distributed/test_torch_distributed_all_reduce_xla_backend.py
 python3 test/torch_distributed/test_torch_distributed_multi_all_reduce_xla_backend.py
 python3 test/torch_distributed/test_torch_distributed_reduce_scatter_xla_backend.py
-python3 test/quantized_ops/test_dot_general.py"
+python3 test/quantized_ops/test_dot_general.py
 
 # run examples, each test should takes <2 minutes
 python3 examples/data_parallel/train_resnet_spmd_data_parallel.py
