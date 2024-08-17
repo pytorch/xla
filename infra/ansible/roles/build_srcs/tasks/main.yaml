@@ -79,7 +79,7 @@
     mv /tmp/staging-wheels/* /dist/
     popd
 
-    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-\1+nightly$(date -u +%Y%m%d)-cp/" *.whl
+    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-\1+nightly+$(date -u +%Y%m%d)-cp/" *.whl
   args:
     executable: /bin/bash
     chdir: "{{ item.dir }}"
