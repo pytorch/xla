@@ -1006,6 +1006,19 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
+  def test_multi_view(self):
+
+    def func(x):
+      a1, b1 = x.chunk(2)
+      a2, b2 = x[0:1], x[1:2]
+      a3, b3 = x[0].unsqueeze(0), x[1].unsqueeze(0)
+      a4, b4 = x[0, None], x[1, None]
+      return a1.squeeze(), b1.squeeze(), a2.squeeze(), b2.squeeze(), a3.squeeze(
+      ), b3.squeeze(), a4.squeeze(), b4.squeeze()
+
+    x = torch.randn(size=[2])
+    self.runAtenTest(x, func)
+
   # TODO - upstream behavior has changed and results in expected DestroyXlaTensor
   # counter as of 11/13/2023. Re-enable after reviewing the change.
   # @skipIfFunctionalizationDisabled("metrics differ")
@@ -2691,6 +2704,8 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertEqual(xdata.batch_sizes.device, torch.device('cpu'))
     self.assertEqual(xdata.data.device, xla_device)
 
+  @skipIfFunctionalizationDisabled(
+      "https://github.com/pytorch/xla/pull/7864#issuecomment-2294034008")
   def test_as_strided_input_larger(self):
     size = (5, 5)
     device = xm.xla_device()
