@@ -313,7 +313,7 @@ skiplist = {
     "cartesian_prod",
     "cdouble",
     "ceil",
-    "chalf", # RuntimeError: Attempting to convert unknown type: torch.complex32 to torch type,
+    "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
     "expm1",
     "fft.fftshift",
     "fft.ifftshift",
