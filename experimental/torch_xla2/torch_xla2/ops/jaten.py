@@ -1771,7 +1771,7 @@ def _aten_expm1(input):
 # aten.fill
 @op(torch.ops.aten.fill)
 @op(torch.ops.aten.full_like)
-def _aten_fill(x, value, dtype=None, pin_memory=None, memory_format=None):
+def _aten_fill(x, value, dtype=None, pin_memory=None, memory_format=None, device=None):
   if dtype is None:
     dtype = x.dtype
   else:
