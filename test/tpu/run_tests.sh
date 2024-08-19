@@ -45,8 +45,7 @@ python3 examples/train_resnet_amp.py
 # Egaer tests will take more HBM, only run them on TPU v4 CI
 TPU_VERSION=$(python -c "import sys; sys.path.remove(''); import torch_xla; print(torch_xla._internal.tpu.version())")
 if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
-    # TODO(JackCaoG): fix this
-    # python3 test/dynamo/test_traceable_collectives.py
+    python3 test/dynamo/test_traceable_collectives.py
     python3 examples/data_parallel/train_resnet_xla_ddp.py
     python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py
     python3 examples/eager/train_decoder_only_eager.py
