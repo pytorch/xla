@@ -68,7 +68,7 @@ def _einsum(equation, *operands):
   def get_params(*a):
     inner_list = a[0]
     if len(inner_list) == 1:
-        A = inner_list # [0]
+        A = inner_list
         return A
     elif len(inner_list) == 2:
         A, B = inner_list
