@@ -75,11 +75,13 @@
   ansible.builtin.shell: |
     pushd /tmp/staging-wheels
     cp {{ item.dir }}/*.whl .
-    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-\1+nightly-cp/" *.whl
+    # First rename to add '.dev'
+    rename -v "s/^{{ item.prefix }}-(.*?)(\+.*?)-cp/{{ item.prefix }}-\1.dev-cp/" *.whl
     mv /tmp/staging-wheels/* /dist/
     popd
 
-    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-\1+nightly+$(date -u +%Y%m%d)-cp/" *.whl
+    # Second rename to append the date in YYYYMMDD format
+    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-\1.dev$(date -u +%Y%m%d)-cp/" *.whl
   args:
     executable: /bin/bash
     chdir: "{{ item.dir }}"
