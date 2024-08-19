@@ -1759,7 +1759,11 @@ def _aten_erf(x):
 # aten.exp
 @op(torch.ops.aten.exp)
 def _aten_exp(input):
-  return jnp.exp(input)
+  res = jnp.exp(input)
+  new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+  if input.dtype == jax.numpy.int64:
+    res = res.astype(new_dtype)
+  return res
 
 
 # aten.expm1

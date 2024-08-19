@@ -65,8 +65,19 @@ def _torch_argsort(input, dim=-1, descending=False, stable=False):
 
 @register_function(torch.einsum)
 def _einsum(equation, *operands):
+  def get_params(*a):
+    inner_list = a[0]
+    if len(inner_list) == 1:
+        A = inner_list
+        return A
+    elif len(inner_list) == 2:
+        A, B = inner_list
+        return A, B
+    else:
+        return operands
   assert isinstance(equation, str), 'Only accept str equation'
-  return jnp.einsum(equation, *operands)
+  filtered_operands = get_params(*operands)
+  return jnp.einsum(equation, *filtered_operands)
 
 
 def _sdpa_reference(
