@@ -2348,6 +2348,31 @@ def _aten_randint(
     res = res.astype(dtype)
   return res
 
+@op(torch.ops.aten.randint_like, torch.ops.aten.randint.generator, needs_env=True)
+@op_base.convert_dtype(use_default_dtype=False)
+def _aten_randint_like(
+  input,
+  *args,
+  generator=None,
+  dtype=None,
+  env=None,
+  **kwargs,
+):
+  if len(args) == 2:
+    low, high = args
+  elif len(args) == 1:
+    high = args[0]
+    low = 0
+  else:
+    raise AssertionError(f'Expected at 1 or 2 args for Aten::randint_like, got {len(args)}')
+
+  shape = input.shape
+  dtype = dtype or input.dtype
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.randint(key, shape, low, high)
+  if dtype is not None:
+    res = res.astype(dtype)
+  return res
 
 @op(torch.ops.aten.dim, is_jax_function=False)
 def _aten_dim(self):
