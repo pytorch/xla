@@ -66,8 +66,6 @@ def _torch_argsort(input, dim=-1, descending=False, stable=False):
 @register_function(torch.einsum)
 def _einsum(equation, *operands):
   def get_params(*a):
-    # if len(a) != 1:
-    #     raise ValueError("Expected a single tuple as input")
     inner_list = a[0]
     if len(inner_list) == 1:
         A = inner_list # [0]
@@ -78,7 +76,7 @@ def _einsum(equation, *operands):
     else:
         A, B, *rest = inner_list
         print("WARNING: Due to length of operands are larger than 2, please connect with contributors for further support") 
-        return A, B, get_params(rest)
+        return operands
   assert isinstance(equation, str), 'Only accept str equation'
   filtered_operands = get_params(*operands)
   return jnp.einsum(equation, *filtered_operands)
