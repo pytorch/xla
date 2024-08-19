@@ -288,7 +288,7 @@ class ExperimentRunner:
 
       # real batch_size can be updated after load_model, need to update
       # so the config can be reflected in the report.
-      experiment_config['batch_size'] = experiment.batch_size
+      experiment_dict['batch_size'] = experiment.batch_size
 
       # Repeat the experiment and accumulate metrics.
       with model.pick_grad():
