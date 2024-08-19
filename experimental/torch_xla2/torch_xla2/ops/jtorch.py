@@ -74,8 +74,6 @@ def _einsum(equation, *operands):
         A, B = inner_list
         return A, B
     else:
-        A, B, *rest = inner_list
-        print("WARNING: Due to length of operands are larger than 2, please connect with contributors for further support") 
         return operands
   assert isinstance(equation, str), 'Only accept str equation'
   filtered_operands = get_params(*operands)
