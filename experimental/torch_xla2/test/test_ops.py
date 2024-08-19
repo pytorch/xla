@@ -314,7 +314,6 @@ skiplist = {
     "cdouble",
     "ceil",
     "chalf", # RuntimeError: Attempting to convert unknown type: torch.complex32 to torch type,
-    "einsum", # FAILED test/moe/moe_test.py::TestMoe::test_moe_layer - jax.errors.TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float32[128]
     "expm1",
     "fft.fftshift",
     "fft.ifftshift",
