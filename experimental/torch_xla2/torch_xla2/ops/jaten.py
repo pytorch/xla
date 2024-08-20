@@ -655,7 +655,7 @@ def _aten_squeeze_dim(self, dim):
     dim = [dim]
 
   # Check if the specified dimension has size 1
-  if all([self.shape[d] != 1 for d in dim]):
+  if (len(self.shape) == 0) or all([self.shape[d] != 1 for d in dim]):
     return self
 
   # Use slicing to remove the dimension if it is 1

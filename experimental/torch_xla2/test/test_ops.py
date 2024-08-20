@@ -274,7 +274,6 @@ skiplist = {
     "special.scaled_modified_bessel_k1",
     "special.spherical_bessel_j0",
     "special.zeta",
-    "squeeze",
     "stft",
     "sub",
     "svd",
