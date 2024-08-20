@@ -44,7 +44,6 @@ skiplist = {
     "equal",
     "erfc",
     "erfinv",
-    "exp2",
     "expand",
     "exponential",
     "fft.fft2",
