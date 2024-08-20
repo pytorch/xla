@@ -2544,15 +2544,16 @@ class RegisterXLAKeyTest(test_utils.XlaTestCase):
     self.assertEqual(met.counter_value("RegisterXLAFunctions"), 1)
 
 
-# Only fails in CI https://github.com/pytorch/xla/pull/5431
-@unittest.skip
+@unittest.skipIf(
+    os.environ.get('XLA_USE_EAGER_DEBUG_MODE'),
+    "Skipping test under XLA_USE_EAGER_DEBUG_MODE because `result` will not \
+      reference a graph due to eager evaluation.")
 class TestLoweringContext(test_utils.XlaTestCase):
 
   def test_api(self):
     device = xm.xla_device()
-    a = torch.rand(10, device=device)
-    b = torch.rand(10, device=device)
-    xm.mark_step()
+    a = torch.tensor([1.0, 2.0, 3.0], device=device)
+    b = torch.tensor([4.0, 5.0, 6.0], device=device)
 
     result = a + b
 
