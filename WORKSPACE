@@ -79,8 +79,8 @@ http_archive(
 #    or
 # b) by commenting out the http_archive above and uncommenting the following:
 # local_repository(
-#     name = "xla",
-#     path = "../../xla",
+#    name = "xla",
+#    path = "/path/to/openxla",
 # )
 
 # Initialize hermetic Python
