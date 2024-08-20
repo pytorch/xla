@@ -2486,8 +2486,14 @@ XLATensorPtr norm(const XLATensorPtr& input, const std::optional<at::Scalar>& p,
   if (!dtype) {
     dtype = input->dtype_optional();
   }
-  return input->CreateFrom(
-      Norm(input->GetIrValue(), p, dtype, canonical_dims, keepdim));
+  auto out = Norm(input->GetIrValue(), p, dtype, canonical_dims, keepdim);
+  if (dtype.has_value()) {
+    // The returned tensor is actually of type `dtype`. Therefore, it should not
+    // inherit the data-type from the input, when creating the XLATensor.
+    return input->CreateFrom(out, dtype);
+  } else {
+    return input->CreateFrom(out);
+  }
 }
 
 XLATensorPtr normal(double mean, const XLATensorPtr& std) {

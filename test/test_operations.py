@@ -2298,6 +2298,26 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         self.assertEqual(actual_out, expected_out)
         self.assertEqual(actual_grad, expected_grad)
 
+  def test_amp_norm_append_dtype(self):
+    # Tests whether the returned tensor is actually of the specified dtype.
+    #
+    # The operation norm.ScalarOpt_dim_dtype is actually called when using AMPl. It
+    # is redirected from norm.ScalarOpt_dim by appending kFloat data-type as its last
+    # argument.
+
+    def foo(x: torch.Tensor) -> torch.Tensor:
+      return torch.ops.aten.norm.ScalarOpt_dim_dtype(
+          x, p=2, dim=1, keepdim=True, dtype=torch.float32)
+
+    input = torch.rand((10, 10), dtype=torch.float16)
+    out = foo(input)
+
+    in_xla = input.to(xm.xla_device())
+    out_xla = foo(in_xla)
+
+    self.assertEqual(out.dtype, out_xla.dtype)
+    self.assertEqual(out.cpu(), out_xla.cpu(), prec=1e-4)
+
 
 class MNISTComparator(nn.Module):
 

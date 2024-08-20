@@ -1759,7 +1759,11 @@ def _aten_erf(x):
 # aten.exp
 @op(torch.ops.aten.exp)
 def _aten_exp(input):
-  return jnp.exp(input)
+  res = jnp.exp(input)
+  new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+  if input.dtype == jax.numpy.int64:
+    res = res.astype(new_dtype)
+  return res
 
 
 # aten.expm1
@@ -1771,7 +1775,7 @@ def _aten_expm1(input):
 # aten.fill
 @op(torch.ops.aten.fill)
 @op(torch.ops.aten.full_like)
-def _aten_fill(x, value, dtype=None, pin_memory=None, memory_format=None):
+def _aten_fill(x, value, dtype=None, pin_memory=None, memory_format=None, device=None):
   if dtype is None:
     dtype = x.dtype
   else:
@@ -2348,6 +2352,31 @@ def _aten_randint(
     res = res.astype(dtype)
   return res
 
+@op(torch.ops.aten.randint_like, torch.ops.aten.randint.generator, needs_env=True)
+@op_base.convert_dtype(use_default_dtype=False)
+def _aten_randint_like(
+  input,
+  *args,
+  generator=None,
+  dtype=None,
+  env=None,
+  **kwargs,
+):
+  if len(args) == 2:
+    low, high = args
+  elif len(args) == 1:
+    high = args[0]
+    low = 0
+  else:
+    raise AssertionError(f'Expected at 1 or 2 args for Aten::randint_like, got {len(args)}')
+
+  shape = input.shape
+  dtype = dtype or input.dtype
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.randint(key, shape, low, high)
+  if dtype is not None:
+    res = res.astype(dtype)
+  return res
 
 @op(torch.ops.aten.dim, is_jax_function=False)
 def _aten_dim(self):
@@ -3065,3 +3094,19 @@ def _aten_conj_physical(self):
 @op(torch.ops.aten.log_sigmoid)
 def _aten_log_sigmoid(x):
   return jax.nn.log_sigmoid(x)
+
+# torch.qr
+@op(torch.ops.aten.qr)
+def _aten_qr(input, *args, **kwargs):
+  jax_mode = "reduced"
+  # torch bool param 'simple=True' corresponds to jax 'reduced' mode,
+  # and simple=False corresponds to jax 'complete' mode.
+  if kwargs.get("simple") is False:
+    jax_mode = "complete"
+  return jax.numpy.linalg.qr(input, mode=jax_mode)
+
+# torch.linalg.qr
+@op(torch.ops.aten.linalg_qr)
+def _aten_linalg_qr(input, *args, **kwargs):
+  mode = kwargs.get("mode", "reduced")
+  return jax.numpy.linalg.qr(input, mode=mode)
