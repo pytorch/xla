@@ -76,12 +76,12 @@
     pushd /tmp/staging-wheels
     cp {{ item.dir }}/*.whl .
     # First rename to add '.dev'
-    rename -v "s/^{{ item.prefix }}-(.*?)(\+.*?)-cp/{{ item.prefix }}-\1.dev-cp/" *.whl
+    rename -v "'s/^{{ item.prefix }}-(.*?)(\+.*?)(-cp.*$)/{{ item.prefix }}-$1.dev$3/'" *.whl
     mv /tmp/staging-wheels/* /dist/
     popd
 
     # Second rename to append the date in YYYYMMDD format
-    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-\1.dev$(date -u +%Y%m%d)-cp/" *.whl
+    rename -v "s/^{{ item.prefix }}-(.*?)(\+.*?)(-cp.*$)/{{ item.prefix }}-\1.dev$(date -u +%Y%m%d)\3/" *.whl
   args:
     executable: /bin/bash
     chdir: "{{ item.dir }}"
