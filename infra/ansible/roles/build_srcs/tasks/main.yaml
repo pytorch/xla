@@ -75,13 +75,24 @@
   ansible.builtin.shell: |
     pushd /tmp/staging-wheels
     cp {{ item.dir }}/*.whl .
-    # First rename to add '.dev'
-    rename -v "s/^{{ item.prefix }}-(.*?)(\+.*?)-cp/{{ item.prefix }}-\1.dev-cp/" *.whl
+
+    # rename file name like torch_xla-2.5.0+gitac7fd44-cp310-cp310-linux_x86_64.whl into
+    # torch_xla-2.5.0.dev-cp310-cp310-linux_x86_64.whl
+    # Basically the filename is split into 5 groups to concatenate:
+    # group 1: prefix stop at first -: `torch_xla` or `torch`;
+    # group 2: anything after first - before next + or -: `2.5.0`;
+    # group 3 (can be empty): any thing after + before next -: `+gitac7fd44`;
+    # group 4 (can be empty): group 3 without +: `gitac7fd441`; 
+    # group 5: anything from next - to the end: `cp310-cp310-linux_x86_64.whl`.
+    rename -v "s/^(.*?)\-(.*?)(\+([^ -]+))?\-(.+)/\1-\2.dev-\5/" *.whl
+
     mv /tmp/staging-wheels/* /dist/
     popd
 
-    # Second rename to append the date in YYYYMMDD format
-    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-\1.dev$(date -u +%Y%m%d)-cp/" *.whl
+    # rename to append the date in YYYYMMDD format
+    # E.g., rename file name like torch_xla-2.5.0+gitac7fd44-cp310-cp310-linux_x86_64.whl into
+    # torch_xla-2.5.0.dev20240819-cp310-cp310-linux_x86_64.whl
+    rename -v "s/^(.*?)\-(.*?)(\+([^ -]+))?\-(.+)/\1-\2.dev$(date -u +%Y%m%d)-\5/" *.whl
   args:
     executable: /bin/bash
     chdir: "{{ item.dir }}"
