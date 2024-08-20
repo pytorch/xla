@@ -75,32 +75,40 @@ class GraphInputMatcher:
         None if tensor_id in xla_args_tensor_id else xla_value for tensor_id,
         xla_value in zip(graph_input_tensor_ids, graph_input_xla_values)
     ]
+    self.seed_info_id = torch_xla._XLAC._get_seed_info_id()
+    self.arg_idxs = []
+    for tensor_id in self.graph_input_tensor_ids:
+      self.arg_idxs.append(self.tensor_id_to_arg_idx.get(tensor_id, None))
 
   # get the real graph input tensors
   def __call__(self, args):
-    real_input = []
-    for tensor_id, traced_xla_value in zip(self.graph_input_tensor_ids,
-                                           self.graph_input_xla_values):
-      arg_idx = self.tensor_id_to_arg_idx.get(tensor_id, None)
-      # Instead of use trace time base seed, use the runtime
-      # base seed here.
-      if tensor_id == torch_xla._XLAC._get_seed_info_id():
-        str_device = str(traced_xla_value.device)
-        inp = torch_xla._XLAC._get_base_seed_as_tensor(str_device)
-        # update random seed here to avoid random operations always return
-        # the same result. The seed update logic is the same as `mark_step` in
-        # https://github.com/pytorch/pytorch/blob/6af6b8f728426fb7551630e28148c0017fa501bc/torch/csrc/lazy/core/lazy_graph_executor.cpp#L144C18-L144C51
-        # Note: don't do `inp.item()` here since it will trigger a transferFromDevice
-        xm.set_rng_state(
-            (1012031 + torch_xla._XLAC._xla_get_rng_seed() * 7012063) %
-            18446744073709551615, str_device)
-      elif arg_idx is None:
-        assert traced_xla_value is not None, "Traced Tensor cannot be None."
-        inp = traced_xla_value
+    real_input = [None] * len(self.graph_input_tensor_ids)
+    current_index = 0
+    for tensor_id, traced_xla_value, arg_idx in zip(self.graph_input_tensor_ids,
+                                                    self.graph_input_xla_values,
+                                                    self.arg_idxs):
+      if arg_idx is None:
+        # Instead of use trace time base seed, use the runtime
+        # base seed here.
+        if tensor_id == self.seed_info_id:
+          str_device = str(traced_xla_value.device)
+          inp = torch_xla._XLAC._get_base_seed_as_tensor(str_device)
+          # update random seed here to avoid random operations always return
+          # the same result. The seed update logic is the same as `mark_step` in
+          # https://github.com/pytorch/pytorch/blob/6af6b8f728426fb7551630e28148c0017fa501bc/torch/csrc/lazy/core/lazy_graph_executor.cpp#L144C18-L144C51
+          # Note: don't do `inp.item()` here since it will trigger a transferFromDevice
+          xm.set_rng_state(
+              (1012031 + torch_xla._XLAC._xla_get_rng_seed() * 7012063) %
+              18446744073709551615, str_device)
+        else:
+          assert traced_xla_value is not None, "Traced Tensor cannot be None."
+          inp = traced_xla_value
       else:
         assert traced_xla_value is None, "Graph input tensor should not be cached."
         inp = args[arg_idx]
-      real_input.append(inp)
+      real_input[current_index] = inp
+      current_index += 1
+    assert current_index == len(self.graph_input_tensor_ids)
     return real_input
 
 
