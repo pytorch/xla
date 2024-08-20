@@ -17,7 +17,6 @@ if not torch.cuda.is_available() or torch.version.hip:
   # Then, restore the original flags.
   sys.setdlopenflags(flags)
 
-
 import _XLAC
 from ._internal import tpu
 from .version import __version__
