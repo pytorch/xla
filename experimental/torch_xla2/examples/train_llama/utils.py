@@ -262,8 +262,8 @@ class JaxTrainer:
         start = time.perf_counter()
         lowered = step.lower(
             jax_params, jax_buffers, opt_state, 
-            (jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32')), 
-             jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'))),
+            (jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32')), 
+             jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32'))),
             0
         )
         # print(lowered.as_text())
