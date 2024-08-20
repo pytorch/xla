@@ -1208,6 +1208,10 @@ def _aten_scatter_add(input, dim, index, src):
 def _aten_sign(x):
   return jnp.sign(x)
 
+# aten.signbit
+@op(torch.ops.aten.signbit)
+def _aten_signbit(x):
+  return jnp.signbit(x)
 
 # aten.sigmoid
 @op(torch.ops.aten.sigmoid)
