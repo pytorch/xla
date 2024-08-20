@@ -54,12 +54,18 @@ class DynamRandomOpTest(unittest.TestCase):
     return torch.randn(5, 5, device=a.device) + a
 
   def test_random_op_different_result_each_run(self):
+    xm.wait_device_ops()
+    met.clear_all()
     dynamo_random_op = torch.compile(
         self.random_op, backend="openxla", fullgraph=True)
     t = torch.randn(5, 5).to(xm.xla_device())
     dynamo_res_1 = dynamo_random_op(t)
     dynamo_res_2 = dynamo_random_op(t)
     dynamo_res_3 = dynamo_random_op(t)
+    # retriving/updating rng seed in the breidge should not cause transferToServer
+    self.assertNotIn("TransferFromDeviceTime", met.metric_names())
+    # updating rng seed will result in transferToServer
+    self.assertIn("TransferToDeviceTime", met.metric_names())
     self.assertFalse(torch.allclose(dynamo_res_1, dynamo_res_2))
     self.assertFalse(torch.allclose(dynamo_res_2, dynamo_res_3))
 

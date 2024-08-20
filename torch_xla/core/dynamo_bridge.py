@@ -90,8 +90,10 @@ class GraphInputMatcher:
         # update random seed here to avoid random operations always return
         # the same result. The seed update logic is the same as `mark_step` in
         # https://github.com/pytorch/pytorch/blob/6af6b8f728426fb7551630e28148c0017fa501bc/torch/csrc/lazy/core/lazy_graph_executor.cpp#L144C18-L144C51
+        # Note: don't do `inp.item()` here since it will trigger a transferFromDevice
         xm.set_rng_state(
-            (1012031 + inp.item() * 7012063) % 18446744073709551615, str_device)
+            (1012031 + torch_xla._XLAC._xla_get_rng_seed() * 7012063) %
+            18446744073709551615, str_device)
       elif arg_idx is None:
         assert traced_xla_value is not None, "Traced Tensor cannot be None."
         inp = traced_xla_value
