@@ -225,7 +225,6 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
         self._all_gather_into_tensor, use_dynamo=use_dynamo)
     w = xr.world_size()
     expected = torch.arange(w, dtype=torch.float)
-    expected = torch.tensor([0, 1, 2, 3], dtype=torch.float)
     for index, val in results.items():
       torch.allclose(val, expected)
 
