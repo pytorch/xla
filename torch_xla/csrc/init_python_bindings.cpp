@@ -298,6 +298,7 @@ void AllReduceInPlace(const std::string& reduce_type,
                       const std::vector<at::Tensor>& tensors, double scale,
                       const std::vector<std::vector<int64_t>>& replica_groups,
                       bool pin_layout) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/true);
   tensor_methods::all_reduce(xtensors, GetReduceType(reduce_type), scale,
@@ -308,6 +309,7 @@ at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
                      double scale,
                      const std::vector<std::vector<int64_t>>& replica_groups,
                      bool pin_layout) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto result = tensor_methods::all_reduce(bridge::GetXlaTensor(input),
                                            GetReduceType(reduce_type), scale,
                                            replica_groups, pin_layout);
@@ -430,6 +432,7 @@ std::shared_ptr<torch::lazy::Value> ReduceScatterCoalescedOut(
 at::Tensor AllGather(const at::Tensor& input, int64_t dim, int64_t shard_count,
                      const std::vector<std::vector<int64_t>>& replica_groups,
                      bool pin_layout) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto result =
       tensor_methods::all_gather(bridge::GetXlaTensor(input), dim, shard_count,
                                  replica_groups, pin_layout);
@@ -441,6 +444,7 @@ std::shared_ptr<torch::lazy::Value> AllGatherOut(
     const std::shared_ptr<torch::lazy::Value>& token, int64_t dim,
     int64_t shard_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr out = bridge::GetXlaTensor(output);
   torch::lazy::Value new_token;
   new_token = tensor_methods::all_gather_out(out, bridge::GetXlaTensor(input),

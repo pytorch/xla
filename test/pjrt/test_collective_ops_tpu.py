@@ -1,13 +1,19 @@
 import numpy as np
+from typing import List
 import torch
 import torch.nn as nn
+import torch.distributed as dist
 from absl.testing import absltest, parameterized
+from unittest import mock
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
+import torch_xla.debug.metrics as met
 from torch_xla._internal import pjrt, tpu
 
 
-class TestCollectiveOpsTpu(parameterized.TestCase):
+# Test for collective ops from xla_model
+class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _broadcast(sync):
@@ -130,6 +136,98 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [[[-ordinal] * world_size,
                                              list(range(world_size))]])
+
+
+# Test for collective ops from torch.distributed
+class TestDistCollectiveOpsTpu(parameterized.TestCase):
+
+  # TODO(zpcore): fix the openxla dynamo issue for dist.all_reduce
+  @staticmethod
+  def my_compiler(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
+    return gm.forward
+
+  @staticmethod
+  def _all_reduce(use_dynamo: bool):
+    met.clear_all()
+
+    def _dynamo_func_wrapper(input):
+      dist.all_reduce(input, dist.ReduceOp.SUM)
+      return input
+
+    dist.init_process_group("xla", init_method='xla://')
+    device = xm.xla_device()
+    if xm.xla_device_hw(device) not in ('TPU', 'CUDA', 'NEURON'):
+      print(f'skip this test for hw {xm.xla_device_hw(device)}')
+      return
+    ordinal = torch.tensor([xr.global_ordinal()],
+                           dtype=torch.float,
+                           device=device)
+    input = ordinal
+    if not use_dynamo:
+      dist.all_reduce(input)
+      xm.mark_step()
+      assert 'xla::AllReduceInPlace' in met.counter_names(
+      ) or 'xla::AllReduce' in met.counter_names()
+    else:
+      compiled_collective = torch.compile(
+          _dynamo_func_wrapper, backend=TestDistCollectiveOpsTpu.my_compiler)
+      compiled_collective(input)
+      torch_xla.sync()
+      assert 'xla::all_reduce' in met.counter_names()
+    return input.cpu()
+
+  @staticmethod
+  def _all_gather_into_tensor(use_dynamo: bool):
+    met.clear_all()
+
+    def _dynamo_func_wrapper(input):
+      output_tensor = torch.empty((1, xr.world_size()), device=device)
+      dist.all_gather_into_tensor(output_tensor, input, None)
+      return output_tensor
+
+    dist.init_process_group("xla", init_method='xla://')
+    device = xm.xla_device()
+    if xm.xla_device_hw(device) not in ('TPU', 'CUDA', 'NEURON'):
+      print(f'skip this test for hw {xm.xla_device_hw(device)}')
+      return
+    ordinal = torch.tensor([xr.global_ordinal()],
+                           dtype=torch.float,
+                           device=device)
+    input = ordinal
+
+    if not use_dynamo:
+      output_tensor = torch.empty((1, xr.world_size()), device=device)
+      dist.all_gather_into_tensor(output_tensor, input, None)
+      xm.mark_step()
+      assert 'xla::AllGather' in met.counter_names(
+      ) or 'xla::AllGatherOut' in met.counter_names()
+    else:
+      compiled_collective = torch.compile(
+          _dynamo_func_wrapper, backend='openxla')
+      output_tensor = compiled_collective(input)
+      torch_xla.sync()
+      assert 'xla::all_gather_into_tensor' in met.counter_names()
+    return output_tensor.cpu()
+
+  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
+  @mock.patch.object(xr, 'world_size', return_value=tpu.num_local_processes())
+  def test_all_reduce(self, use_dynamo, mock_world_size):
+    results = pjrt.run_multiprocess(self._all_reduce, use_dynamo=use_dynamo)
+    w = xr.world_size()
+    expected = torch.tensor([(w - 1) * w / 2], dtype=torch.float)
+    for index, val in results.items():
+      torch.allclose(val, expected)
+
+  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
+  @mock.patch.object(xr, 'world_size', return_value=tpu.num_local_processes())
+  def test_all_gather_into_tensor(self, use_dynamo, mock_world_size):
+    results = pjrt.run_multiprocess(
+        self._all_gather_into_tensor, use_dynamo=use_dynamo)
+    w = xr.world_size()
+    expected = torch.arange(w, dtype=torch.float)
+    expected = torch.tensor([0, 1, 2, 3], dtype=torch.float)
+    for index, val in results.items():
+      torch.allclose(val, expected)
 
 
 if __name__ == '__main__':

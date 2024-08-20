@@ -39,6 +39,7 @@ _DEVICE_CONTEXTS_LOCK = threading.Lock()
 XLA_LIB = Library("xla", "DEF")
 
 from . import xla_model as this_module
+
 xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size,
                             'xrt_world_size() will be removed in release 2.6.')
 get_ordinal = deprecated(
@@ -464,7 +465,6 @@ def all_reduce(
     torch_xla._XLAC._xla_all_reduce_inplace(reduce_type, inputs, scale, groups,
                                             pin_layout)
     results = inputs
-
   return results[0] if isinstance(inputs, torch.Tensor) else results
 
 

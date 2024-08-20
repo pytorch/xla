@@ -46,6 +46,17 @@ class ProcessGroupXla(ProcessGroup):
   def getBackendName(self):
     return 'xla'
 
+
+  # pytorch's progress group is unable to retrive the group size from python level. It should 
+  # already been support in C++ level: https://github.com/pytorch/pytorch/blob/7b1988f9222f3dec5cc2012afce84218199748ae/torch/csrc/distributed/c10d/ProcessGroup.cpp#L148-L152
+  # For now we manually set the group name property as a temporary solution.
+  def _set_group_name(self, name: str) -> None:
+    self._group_name = name
+
+  @property
+  def group_name(self):
+    return self._group_name
+
   def _get_reduce_type(self, reduce_op):
     if reduce_op == dist.ReduceOp.SUM:
       return xm.REDUCE_SUM
@@ -70,6 +81,10 @@ class ProcessGroupXla(ProcessGroup):
     # TODO(hjm-aws): implement all_reduce_options.timeout.
     xm.all_reduce(reduce_type, tensors, groups=self._mesh, pin_layout=False)
     return _ret_work(tensors)
+
+  # method for dist.all_gather_into_tensor under eager mode.
+  def _allgather_base(self, output_tensor, input_tensor, opts):
+    return self.allgather(output_tensor, input_tensor, opts)
 
   def allgather(self, output_tensors_list, input_tensors, opts=None):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
