@@ -54,11 +54,10 @@ class GPTLightningModule(lightning.LightningModule):
 
 
 from jax.experimental import mesh_utils
-num_of_partitions = 4
 P = jax.sharding.PartitionSpec
 mesh = jax.sharding.Mesh(
-    mesh_utils.create_device_mesh((num_of_partitions, )),
-    axis_names=("fsdp", ),
+    mesh_utils.create_device_mesh(utils.num_partitions),
+    axis_names=utils.global_axis,
 )
 
 class GPTOutline(torch.nn.Module):
@@ -126,8 +125,8 @@ class GPTFori:
             one_layer = shard_map.shard_map(
                 one_layer,
                 mesh=mesh,
-                in_specs=(P('fsdp'), P('fsdp')),
-                out_specs=(P('fsdp'), P()),
+                in_specs=(P(*utils.global_axis), P(*utils.global_axis)),
+                out_specs=(P(*utils.global_axis), P()),
                 check_rep=False
             )
         
