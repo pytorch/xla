@@ -7,7 +7,7 @@ import warnings
 
 import torch
 
-if not torch.cuda.is_available():
+if not torch.cuda.is_available() or torch.version.hip:
   # Load _XLAC_cuda_functions to RTLD_GLOBAL, so that it can be used by _XLAC.
   flags = sys.getdlopenflags()
   sys.setdlopenflags(flags | os.RTLD_NOW | os.RTLD_GLOBAL)
@@ -16,6 +16,7 @@ if not torch.cuda.is_available():
 
   # Then, restore the original flags.
   sys.setdlopenflags(flags)
+
 
 import _XLAC
 from ._internal import tpu
