@@ -257,8 +257,6 @@ skiplist = {
     "scatter",
     "scatter_reduce",
     "searchsorted",
-    "select_scatter",
-    "signbit",
     "softmax",
     "sort",
     "special.airy_ai",
