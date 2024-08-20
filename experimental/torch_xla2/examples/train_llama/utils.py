@@ -55,6 +55,16 @@ def sharded_device_put(tensor, sharding):
         return jax.device_put(tensor, sharding)
 
     shape = tensor.shape
+    if shape[0] == 1:
+        #hotfix weight.shape ~= (1, 6144, 4096) during num_layers == 1 case
+        #NOTE: maybe 'addressable_devices_indices_map' should ignore empty dimensions (dimension size == 1)
+        mesh = jax.sharding.Mesh(
+            mesh_utils.create_device_mesh(num_partitions),
+            axis_names=global_axis,
+        )
+        
+        sharding = jax.sharding.NamedSharding(mesh, P(None, *(global_axis[len(shape)-1:0:-1])))
+        
     x_split = [jax.device_put(tensor[i], device) for device, i in sharding.addressable_devices_indices_map(shape).items()]
     return jax.make_array_from_single_device_arrays(shape, sharding, x_split)
 
@@ -154,8 +164,8 @@ class JaxTrainer:
         start = time.perf_counter()
         lowered = step.lower(
             jax_params, opt_state, 
-            (jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32')), 
-             jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32'))),
+            (jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding), 
+             jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding)),
         )
         # print(lowered.as_text())
         print('program size:', len(lowered.as_text()) / 1e6, 'm chars')
@@ -274,8 +284,8 @@ class JaxTrainer:
         start = time.perf_counter()
         lowered = step.lower(
             jax_params, jax_buffers, opt_state, 
-            (jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32')), 
-             jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'))),
+            (jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding), 
+             jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding)),
             0
         )
         # print(lowered.as_text())
