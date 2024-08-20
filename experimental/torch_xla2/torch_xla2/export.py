@@ -7,7 +7,7 @@ from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
 from torch_xla2.ops import ops_registry
 import jax
-import jax.numpy as jnp
+import jax.export
 import sympy
 
 

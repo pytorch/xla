@@ -1,6 +1,7 @@
-import unittest
 import torch
 import torch_xla2
+import torch_xla2.export
+from . import test_base
 
 class AddOne(torch.nn.Module):
 
@@ -18,7 +19,7 @@ class ConcatAddModel(torch.nn.Module):
     a = torch.concat([a, a], dim=0)
     return a + b
 
-class SymbolicShapeTest(unittest.TestCase):
+class SymbolicShapeTest(test_base.TestCase):
   """Test possible symbolic shape computations that upstream torch export can
   emit. Seems to be currently limited to a few binary math operations where one
   operand is a symbolic variable/expr and the other is a constant integer.
@@ -89,3 +90,6 @@ class SymbolicShapeTest(unittest.TestCase):
     self.assertRegex(module_str, r"shape_assertion.*s[0-9]+ <= 10")
     self.assertRegex(module_str, r"shape_assertion.*2\*s[0-9]+")
 
+
+if __name__ == "__main__":
+  test_base.main()

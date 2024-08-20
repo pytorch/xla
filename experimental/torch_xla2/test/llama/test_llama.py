@@ -1,6 +1,7 @@
 import torch
 from torch_xla2 import tensor  # pylint: disable=unused-import
 import torch_xla2
+import torch_xla2.export
 
 from .. import test_base
 from . import llama_model
