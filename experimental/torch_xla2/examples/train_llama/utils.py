@@ -1,3 +1,4 @@
+from typing import Tuple
 import time
 import torch_xla2
 from torch_xla2.interop import jax_view, torch_view, JittableModule
@@ -15,6 +16,10 @@ P = jax.sharding.PartitionSpec
 
 SEQLEN = 8192
 BATCH = 8
+global_axis: Tuple[str, str] = ('devices', 'fsdp')
+num_global_devices = jax.device_count()
+num_local_devices = jax.local_device_count()
+num_partitions = (num_global_devices//num_local_devices, num_local_devices)
 #SEQLEN = 512
 
 import torch
@@ -42,6 +47,16 @@ def group_data(dataloader, block_size):
             labels = []
 
 
+def sharded_device_put(tensor, sharding):
+    if isinstance(tensor, tuple):
+        return tuple(sharded_device_put(t, sharding) for t in tensor)
+
+    if num_global_devices == num_local_devices:
+        return jax.device_put(tensor, sharding)
+
+    shape = tensor.shape
+    x_split = [jax.device_put(tensor[i], device) for device, i in sharding.addressable_devices_indices_map(shape).items()]
+    return jax.make_array_from_single_device_arrays(shape, sharding, x_split)
 
 
 class FSDPv2(torch.nn.Module):
@@ -49,13 +64,11 @@ class FSDPv2(torch.nn.Module):
     def __init__(self, mod):
         super().__init__()
         self.mod = mod
-
-        num_of_partitions = jax.device_count()
         self.mesh = jax.sharding.Mesh(
-            mesh_utils.create_device_mesh((num_of_partitions, )),
-            axis_names=("fsdp", ),
+            mesh_utils.create_device_mesh(num_partitions),
+            axis_names=global_axis,
         )
-        self.sharding = jax.sharding.NamedSharding(self.mesh, P("fsdp"))
+        self.sharding = jax.sharding.NamedSharding(self.mesh, P(*global_axis))
 
     def forward(self, *args):
         args = list(args)
@@ -81,13 +94,12 @@ class JaxTrainer:
 
     def __init__(self, use_fori):
         self.use_fori = use_fori
-        num_of_partitions = jax.device_count()
         self.mesh = jax.sharding.Mesh(
-            mesh_utils.create_device_mesh((num_of_partitions, )),
-            axis_names=("fsdp", ),
+            mesh_utils.create_device_mesh(num_partitions),
+            axis_names=global_axis,
         )
-        self.x_sharding = jax.sharding.NamedSharding(self.mesh, P("fsdp"))
-        self.y_sharding = jax.sharding.NamedSharding(self.mesh, P(None, "fsdp"))
+        self.x_sharding = jax.sharding.NamedSharding(self.mesh, P(global_axis))
+        self.y_sharding = jax.sharding.NamedSharding(self.mesh, P(*global_axis))
         self.replicated = jax.sharding.NamedSharding(self.mesh, P())
 
     def torch_opt_to_jax_opt(self, torch_opt):
@@ -160,7 +172,7 @@ class JaxTrainer:
         print('start training')
         min_loop_time = 10000
         for i, item in enumerate(group_data(data_loader, SEQLEN)):
-            inputs, labels = jax.device_put(jax_view(xla_env.to_xla(item)), 
+            inputs, labels = sharded_device_put(jax_view(xla_env.to_xla(item)), 
                                             self.x_sharding)
             print('INPUT shape', inputs.shape)
 
@@ -183,7 +195,7 @@ class JaxTrainer:
             sharding = self.x_sharding
         def move_one_tensor(x):
             jval = torch_xla2.tensor.t2j(x)
-            return jax.device_put(jval, sharding)
+            return sharded_device_put(jval, sharding)
 
         if isinstance(state_dict, torch.Tensor):
             return move_one_tensor(state_dict)
@@ -281,7 +293,7 @@ class JaxTrainer:
         print('start training')
         min_loop_time = 10000
         for i, item in enumerate(group_data(data_loader, SEQLEN)):
-            inputs, labels = jax.device_put(jax_view(xla_env.to_xla(item)), 
+            inputs, labels = sharded_device_put(jax_view(xla_env.to_xla(item)), 
                                             self.x_sharding)
             print('INPUT shape', inputs.shape)
 
