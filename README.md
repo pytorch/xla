@@ -167,8 +167,6 @@ GPU and nightly builds are available in our public GCS bucket.
 <details>
 
 <summary> Use nightly build before 08/13/2024</summary>
-#### Before 08/13/2024
-
 You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. Here is an example:
 
 ```
