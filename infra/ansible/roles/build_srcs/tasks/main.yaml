@@ -75,7 +75,9 @@
   ansible.builtin.shell: |
     pushd /tmp/staging-wheels
     cp {{ item.dir }}/*.whl .
-    # First rename to add '.dev'
+    # rename file name like torch_xla-2.5.0+gitac7fd44-cp310-cp310-linux_x86_64.whl into torch_xla-2.5.0.dev-cp310-cp310-linux_x86_64.whl
+    # The filename is split into three groups: 
+    # group 1: `2.5.0`, group 2: `+git0e35022+nightly`, group 3: `-cp310-cp310-linux_x86_64.whl`
     rename -v 's/^{{ item.prefix }}-(.*?)(\+.*?)(-cp.*$)/{{ item.prefix }}-\1.dev\3/' *.whl
     mv /tmp/staging-wheels/* /dist/
     popd
