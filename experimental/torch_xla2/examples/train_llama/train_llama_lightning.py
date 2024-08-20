@@ -12,10 +12,8 @@ from jax.experimental import shard_map
 import torch.nn.functional
 import torch_xla2.interop
 
-#from . import utils
-#from . import model as editted_model 
-import utils
-import model as editted_model
+from . import utils
+from . import model as editted_model 
 import os
 
 def _setup_default_env():
