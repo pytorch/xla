@@ -299,7 +299,7 @@ DISABLED_TORCH_TESTS_ANY = {
         # torch.autograd.gradcheck.GradcheckError: Jacobian mismatch for output 0 with respect to input 0
         'test_GRU_grad_and_gradgrad_xla_float64',  # grad check failure
         'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
-        'test_upsamplingNearest3d_correctness_memory_format0_isize_10_osize_15_xla', # check fail in tsl env.cc
+        'test_upsamplingNearest3d_correctness_memory_format0_isize_10_osize_15_xla',  # check fail in tsl env.cc
     },
 
     # test/nn/test_dropout.py
@@ -619,8 +619,8 @@ class XLATestBase(DeviceTypeTestBase):
             setattr(cls, dtype_test_name, disallowed_test)
           if not skipped:
             xla_dtypes.append(
-                dtype_combination
-                if len(dtype_combination) > 1 else dtype_combination[0])
+                dtype_combination if len(dtype_combination) >
+                1 else dtype_combination[0])
         if len(xla_dtypes) != 0:
           test.dtypes[cls.device_type] = xla_dtypes
           super().instantiate_test(name, test, generic_cls=generic_cls)
