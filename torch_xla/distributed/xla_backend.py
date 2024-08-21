@@ -46,7 +46,7 @@ class ProcessGroupXla(ProcessGroup):
   def getBackendName(self):
     return 'xla'
 
-  # pytorch's progress group is unable to retrive the group size from python level. It should
+  # pytorch's process group is unable to retrive the group size from python level. It should
   # already been support in C++ level: https://github.com/pytorch/pytorch/blob/7b1988f9222f3dec5cc2012afce84218199748ae/torch/csrc/distributed/c10d/ProcessGroup.cpp#L148-L152
   # For now we manually set the group name property as a temporary solution.
   def _set_group_name(self, name: str) -> None:
