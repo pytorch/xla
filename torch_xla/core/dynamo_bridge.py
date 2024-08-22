@@ -10,6 +10,7 @@ import time
 from typing import Any, Dict, List, Set, Tuple, Union
 from numbers import Number
 from contextlib import contextmanager
+from collections import deque
 
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
@@ -183,7 +184,7 @@ def _maybe_move_tensors_to_device(tensors: tuple,
 
 
 def _split_xla_args_tensor_sym_constant(args):
-  tensors = []
+  tensors = deque(maxlen=len(args))
   constants = []
   for arg in args:
     if isinstance(arg, torch.Tensor):
@@ -193,7 +194,7 @@ def _split_xla_args_tensor_sym_constant(args):
     else:
       assert False, "argument to the xla dynamo bridge should be either a number or tensor"
 
-  return tuple(tensors), tuple(constants)
+  return tensors, tuple(constants)
 
 
 class Deduper:
