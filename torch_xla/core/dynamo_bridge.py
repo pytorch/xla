@@ -529,14 +529,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
   def optimized_mod(*args: tuple):
     nonlocal xla_model
-    nonlocal xla_args_sharding_spec
-    nonlocal args_and_out
-    nonlocal graph_hash
-    nonlocal arg_index_to_need_update_index
-    nonlocal none_remover
-    nonlocal graph_input_matcher
-    nonlocal special_return_handler
-    nonlocal xla_args_need_update
     nonlocal skip_checking_input_sharding_threashold
     nonlocal sym_constants_to_graph_vars
 
