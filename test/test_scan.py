@@ -23,8 +23,7 @@ def _loopy_scan(fn, init, xs):
 
 class ScanTest(XlaTestCase):
 
-  def __init__(self, methodName: str = "runTest") -> None:
-    super().__init__(methodName)
+  def setUp(self):
     self.device = torch_xla.device()
 
   def compare_pytree(self, expected_pytree, actual_pytree):
