@@ -233,28 +233,28 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     return pytree.tree_map(lambda x: x.cpu(), output)
 
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
-  @mock.patch.object(xr, 'world_size', return_value=tpu.num_local_processes())
-  def test_all_reduce(self, use_dynamo, mock_world_size):
+  def test_all_reduce(self, use_dynamo):
     results = pjrt.run_multiprocess(self._all_reduce, use_dynamo=use_dynamo)
-    expected = torch.tensor([sum(range(xr.world_size()))], dtype=torch.float)
+    expected = torch.tensor([sum(range(tpu.num_expected_global_devices()))],
+                            dtype=torch.float)
     for index, val in results.items():
       torch.testing.assert_close(val, expected)
 
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
-  @mock.patch.object(xr, 'world_size', return_value=tpu.num_local_processes())
-  def test_all_gather_into_tensor(self, use_dynamo, mock_world_size):
+  def test_all_gather_into_tensor(self, use_dynamo):
     results = pjrt.run_multiprocess(
         self._all_gather_into_tensor, use_dynamo=use_dynamo)
-    expected = torch.arange(xr.world_size(), dtype=torch.float).unsqueeze(0)
+    expected = torch.arange(
+        tpu.num_expected_global_devices(), dtype=torch.float).unsqueeze(0)
     for index, val in results.items():
       torch.testing.assert_close(val, expected)
 
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
-  @mock.patch.object(xr, 'world_size', return_value=tpu.num_local_processes())
-  def test_all_gather(self, use_dynamo, mock_world_size):
+  def test_all_gather(self, use_dynamo):
     results = pjrt.run_multiprocess(self._all_gather, use_dynamo=use_dynamo)
     expected = [
-        torch.tensor([i], dtype=torch.float) for i in range(xr.world_size())
+        torch.tensor([i], dtype=torch.float)
+        for i in range(tpu.num_expected_global_devices())
     ]
     for index, val in results.items():
       torch.testing.assert_close(val, expected)
