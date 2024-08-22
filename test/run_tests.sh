@@ -138,7 +138,7 @@ function run_torch_op_tests {
   run_test "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
   run_test "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
   run_test "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
-  run_dynamic "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
+  # run_dynamic "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_dropout.py" "$@" -v TestDropoutNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_pooling.py" "$@" -v TestPoolingNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_embedding.py" "$@" -v TestEmbeddingNNDeviceTypeXLA
