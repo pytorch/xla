@@ -10,6 +10,7 @@ import time
 from typing import Any, Dict, List, Set, Tuple, Union
 from numbers import Number
 from contextlib import contextmanager
+from collections import deque
 
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
@@ -183,7 +184,7 @@ def _maybe_move_tensors_to_device(tensors: tuple,
 
 
 def _split_xla_args_tensor_sym_constant(args):
-  tensors = []
+  tensors = deque(maxlen=len(args))
   constants = []
   for arg in args:
     if isinstance(arg, torch.Tensor):
@@ -193,7 +194,7 @@ def _split_xla_args_tensor_sym_constant(args):
     else:
       assert False, "argument to the xla dynamo bridge should be either a number or tensor"
 
-  return tuple(tensors), tuple(constants)
+  return tensors, tuple(constants)
 
 
 class Deduper:
@@ -528,14 +529,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
   def optimized_mod(*args: tuple):
     nonlocal xla_model
-    nonlocal xla_args_sharding_spec
-    nonlocal args_and_out
-    nonlocal graph_hash
-    nonlocal arg_index_to_need_update_index
-    nonlocal none_remover
-    nonlocal graph_input_matcher
-    nonlocal special_return_handler
-    nonlocal xla_args_need_update
     nonlocal skip_checking_input_sharding_threashold
     nonlocal sym_constants_to_graph_vars
 
@@ -595,13 +588,11 @@ def extract_internal(xla_model: torch.fx.GraphModule):
         else:
           skip_checking_input_sharding_threashold -= 1
 
-    enter_ts = time.time()
     if len(args_and_out) == 0:
       return ()
 
     # graph input should be tensor only
     graph_input = graph_input_matcher(xla_args_tensor_only)
-    start_ts = time.time()
     res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
     res = special_return_handler.addDumbReturn(xla_args_tensor_only, res)
 
