@@ -48,6 +48,7 @@ class TrainResNetBase():
     loss = self.loss_fn(output, target)
     loss.backward()
     self.run_optimizer()
+    return loss
 
   def train_loop_fn(self, loader, epoch):
     tracker = xm.RateTracker()
