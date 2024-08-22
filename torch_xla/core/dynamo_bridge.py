@@ -596,13 +596,11 @@ def extract_internal(xla_model: torch.fx.GraphModule):
         else:
           skip_checking_input_sharding_threashold -= 1
 
-    enter_ts = time.time()
     if len(args_and_out) == 0:
       return ()
 
     # graph input should be tensor only
     graph_input = graph_input_matcher(xla_args_tensor_only)
-    start_ts = time.time()
     res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
     res = special_return_handler.addDumbReturn(xla_args_tensor_only, res)
 
