@@ -6,6 +6,7 @@
 #include <torch/csrc/lazy/core/ir_util.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -51,6 +52,11 @@ class LoweringContext : public torch::lazy::LoweringContext {
   xla::XlaOp GetParameter(
       const std::shared_ptr<torch::lazy::BackendData>& data,
       const std::unordered_set<uint32_t>& dynamic_dims = {});
+
+  // If a parameter associated with data has already been declared, returns its
+  // ID. Otherwise, returns `std::nullopt`.
+  std::optional<size_t> GetParameterId(
+      const std::shared_ptr<torch::lazy::BackendData>& data) const;
 
   // Retrieves the vector holding all the tensors associated with the parameter
   // instructions which have been created.

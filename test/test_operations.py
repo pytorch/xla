@@ -21,6 +21,7 @@ import copy
 import itertools
 import math
 from numbers import Number
+from functools import reduce
 import numpy
 import random
 import re
@@ -2639,14 +2640,39 @@ class TestLoweringContext(test_utils.XlaTestCase):
 
     result = a + b
 
-    ctx = torch_xla._XLAC.lowering.LoweringContext()
+    ctx = torch_xla._XLAC.lowering.LoweringContext("MyCustomName")
     ctx.build([result])
     hlo = ctx.hlo()
     hlo_text = ctx.hlo_text()
-    self.assertTrue('opcode: "parameter"' in hlo_text)
-    self.assertTrue('opcode: "add"' in hlo_text)
+    self.assertIn('MyCustomName', hlo_text)
+    self.assertIn('opcode: "parameter"', hlo_text)
+    self.assertIn('opcode: "parameter"', hlo_text)
+    self.assertIn('opcode: "add"', hlo_text)
     mapping = ctx.parameter_id_tensor_mapping()
     self.assertEqual(len(mapping), 2)
+
+  def test_get_parameters_scalar(self):
+    """Scalar tensors parameters may be shared in the HLO graph if their
+    numerical values are equal. `parameter_id_tensor_mapping` needs to handle
+    that appropriately.
+    """
+
+    device = torch_xla.device()
+    tensors = []
+    for i in range(10):
+      # Add three copies of the same value.
+      tensors.append(torch.tensor(i, device=device))
+      tensors.append(torch.tensor(i, device=device))
+      tensors.append(torch.tensor(i, device=device))
+    result = reduce(lambda a, b: a + b, tensors)
+    ctx = torch_xla._XLAC.lowering.LoweringContext()
+    ctx.build([result])
+    mapping = ctx.parameter_id_tensor_mapping()
+
+    import json
+    hlo_json = json.loads(ctx.hlo_json())
+    num_parameters = len(hlo_json["hostProgramShape"]["parameters"])
+    self.assertEqual(len(mapping), num_parameters)
 
 
 class TestGeneric(test_utils.XlaTestCase):

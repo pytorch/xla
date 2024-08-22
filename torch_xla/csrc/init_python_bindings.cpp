@@ -978,10 +978,14 @@ void BuildProfilerSubmodule(py::module* m) {
 
 class PyLoweringContext {
  public:
-  PyLoweringContext() : PyLoweringContext(bridge::GetCurrentDevice()) {}
+  PyLoweringContext()
+      : PyLoweringContext("PyLoweringContext", bridge::GetCurrentDevice()) {}
 
-  PyLoweringContext(torch::lazy::BackendDevice device)
-      : lowering_ctx("PyLoweringContext", device) {}
+  PyLoweringContext(const std::string& name)
+      : PyLoweringContext(name, bridge::GetCurrentDevice()) {}
+
+  PyLoweringContext(const std::string& name, torch::lazy::BackendDevice device)
+      : lowering_ctx(name, device) {}
 
   // Builds a HLO graph given a set of output tensors.
   void Build(std::vector<at::Tensor> tensors) {
@@ -1069,7 +1073,6 @@ class PyLoweringContext {
   // etc.)
   std::unordered_map<int64_t, at::Tensor> GetParameterIdTensorMapping() {
     // Find parameters in the lowering
-    const std::vector<size_t>& param_ids = lowering_ctx.GetParameterSequence();
     const std::vector<torch::lazy::BackendDataPtr>& device_data =
         lowering_ctx.GetParametersData();
 
@@ -1086,7 +1089,9 @@ class PyLoweringContext {
       at::ScalarType dtype =
           MaybeUpcastToHostTorchType(literal.shape().element_type());
       at::Tensor input = MakeTensorFromXlaLiteral(literal, dtype);
-      results[param_ids[i]] = input;
+      std::optional param_id = lowering_ctx.GetParameterId(device_data[i]);
+      XLA_CHECK(param_id.has_value());
+      results[param_id.value()] = input;
     }
     return results;
   }
@@ -1109,12 +1114,13 @@ class PyLoweringContext {
     torch::lazy::BackendData::Handle handle = data->GetHandle();
 
     // Linearly search parameters and compare opaque handles
-    const std::vector<size_t>& param_ids = lowering_ctx.GetParameterSequence();
     const std::vector<torch::lazy::BackendDataPtr>& device_data =
         lowering_ctx.GetParametersData();
     for (int i = 0; i < device_data.size(); ++i) {
       if (device_data[i]->GetHandle() == handle) {
-        return param_ids[i];
+        std::optional param_id = lowering_ctx.GetParameterId(device_data[i]);
+        XLA_CHECK(param_id.has_value());
+        return param_id.value();
       }
     }
     return -1;
@@ -1186,7 +1192,8 @@ void BuildLoweringContextSubmodule(py::module* m) {
   py::class_<PyLoweringContext, std::unique_ptr<PyLoweringContext>>
       lowering_context_class(lowering, "LoweringContext", py::module_local());
 
-  lowering_context_class.def(py::init<>())
+  lowering_context_class.def(py::init())
+      .def(py::init<std::string>())
       .def("build", &PyLoweringContext::Build)
       .def("buildforiloop", &PyLoweringContext::BuildForiLoop)
       .def("hlo", &PyLoweringContext::GetHlo)
