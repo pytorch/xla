@@ -22,9 +22,10 @@ jobs:
 
       - name: Get JAX version for specified date
         run: |
-          JAX_VERSION=$(curl -s https://storage.googleapis.com/jax-releases/jax_releases.json | jq -r '.[] | select(.released_on == "${{ env.CURRENT_DATE }}") | .version')
+          version_line=$(curl -s https://raw.githubusercontent.com/google/jax/main/jax/version.py | sed -n '24p')
+          JAX_VERSION=$(echo "$version_line" | grep -oP '(?<=")[0-9.]+(?=")')
           if [ -z "$JAX_VERSION" ]; then
-            echo "No JAX release found for ${{ env.CURRENT_DATE }}. Skipping update."
+            echo "No JAX release found for ${{ env.CURRENT_DATE }}. Skipping update jax version in automatically status."
             exit 0
           fi
           echo "JAX_VERSION=$JAX_VERSION" >> $GITHUB_ENV
