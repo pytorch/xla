@@ -151,7 +151,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _all_reduce(use_dynamo: bool):
     met.clear_all()
 
-    def _dist_all_reduce(input):
+    def callable(input):
       dist.all_reduce(input, dist.ReduceOp.SUM)
       return input
 
@@ -163,8 +163,8 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     input = ordinal
 
     f = torch.compile(
-        _dist_all_reduce, backend=TestDistCollectiveOpsTpu.my_compiler
-    ) if use_dynamo else _dist_all_reduce
+        callable, backend=TestDistCollectiveOpsTpu.my_compiler
+    ) if use_dynamo else callable
     f(input)
     torch_xla.sync()
     if not use_dynamo:
@@ -178,7 +178,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _all_gather_into_tensor(use_dynamo: bool):
     met.clear_all()
 
-    def _dist_all_gather_into_tensor(output, input):
+    def callable(output, input):
       dist.all_gather_into_tensor(output_tensor, input, None)
       return output_tensor
 
@@ -190,9 +190,8 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     input = ordinal
     output_tensor = torch.empty((1, xr.world_size()), device=device)
     f = torch.compile(
-        _dist_all_gather_into_tensor,
-        backend=TestDistCollectiveOpsTpu.my_compiler
-    ) if use_dynamo else _dist_all_gather_into_tensor
+        callable, backend=TestDistCollectiveOpsTpu.my_compiler
+    ) if use_dynamo else callable
     f(output_tensor, input)
     torch_xla.sync()
     if not use_dynamo:
@@ -206,7 +205,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   def _all_gather(use_dynamo: bool):
     met.clear_all()
 
-    def _dist_allgather(input):
+    def callable(input):
       output_tensor = [
           torch.tensor([0], dtype=torch.float) for _ in range(xr.world_size())
       ]
@@ -220,8 +219,8 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
                            device=device)
     input = ordinal
     f = torch.compile(
-        _dist_allgather, backend=TestDistCollectiveOpsTpu.my_compiler
-    ) if use_dynamo else _dist_allgather
+        callable, backend=TestDistCollectiveOpsTpu.my_compiler
+    ) if use_dynamo else callable
     output = f(input)
     torch_xla.sync()
     if not use_dynamo:
