@@ -142,11 +142,6 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 # Test for collective ops from torch.distributed
 class TestDistCollectiveOpsTpu(parameterized.TestCase):
 
-  # TODO(zpcore): fix the openxla dynamo issue for dist.all_reduce, dist.all_gather
-  @staticmethod
-  def my_compiler(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
-    return gm.forward
-
   @staticmethod
   def _all_reduce(use_dynamo: bool):
     met.clear_all()
@@ -157,10 +152,9 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
 
     dist.init_process_group("xla", init_method='xla://')
     device = xm.xla_device()
-    ordinal = torch.tensor([xr.global_ordinal()],
-                           dtype=torch.float,
-                           device=device)
-    input = ordinal
+    input = torch.tensor([xr.global_ordinal()],
+                         dtype=torch.float,
+                         device=device)
 
     f = torch.compile(
         callable, backend=TestDistCollectiveOpsTpu.my_compiler
@@ -184,14 +178,11 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
 
     dist.init_process_group("xla", init_method='xla://')
     device = xm.xla_device()
-    ordinal = torch.tensor([xr.global_ordinal()],
-                           dtype=torch.float,
-                           device=device)
-    input = ordinal
+    input = torch.tensor([xr.global_ordinal()],
+                         dtype=torch.float,
+                         device=device)
     output_tensor = torch.empty((1, xr.world_size()), device=device)
-    f = torch.compile(
-        callable, backend=TestDistCollectiveOpsTpu.my_compiler
-    ) if use_dynamo else callable
+    f = torch.compile(callable, backend='openxla') if use_dynamo else callable
     f(output_tensor, input)
     torch_xla.sync()
     if not use_dynamo:
@@ -204,23 +195,22 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
   @staticmethod
   def _all_gather(use_dynamo: bool):
     met.clear_all()
+    dist.init_process_group("xla", init_method='xla://')
+    device = xm.xla_device()
 
     def callable(input):
       output_tensor = [
-          torch.tensor([0], dtype=torch.float) for _ in range(xr.world_size())
+          torch.tensor([0], dtype=torch.float).to(device)
+          for _ in range(xr.world_size())
       ]
       dist.all_gather(output_tensor, input, None)
       return output_tensor
 
-    dist.init_process_group("xla", init_method='xla://')
-    device = xm.xla_device()
-    ordinal = torch.tensor([xr.global_ordinal()],
-                           dtype=torch.float,
-                           device=device)
-    input = ordinal
-    f = torch.compile(
-        callable, backend=TestDistCollectiveOpsTpu.my_compiler
-    ) if use_dynamo else callable
+    input = torch.tensor([xr.global_ordinal()],
+                         dtype=torch.float,
+                         device=device)
+
+    f = torch.compile(callable, backend='openxla') if use_dynamo else callable
     output = f(input)
     torch_xla.sync()
     if not use_dynamo:
