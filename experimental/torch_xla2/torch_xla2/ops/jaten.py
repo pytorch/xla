@@ -109,16 +109,9 @@ def _aten_select(x, dim, indexes):
 @op(torch.ops.aten.index_select)
 @op(torch.ops.aten.select_copy)
 def _aten_index_select(x, dim, index):
-  if isinstance(index, jax.Array):
-    index = index.astype(jnp.int64)
-
-  dims = []
-  for i in range(len(x.shape)):
-    if i == dim:
-      dims.append(index)
-    else:
-      dims.append(slice(None, None, None))
-  return x[tuple(dims)]
+  if x.shape == ():
+    return x
+  return jnp.take(x, index, dim)
 
 
 @op(torch.ops.aten.mean)
