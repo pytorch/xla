@@ -2869,6 +2869,21 @@ void InitXlaModuleBindings(py::module m) {
     SetAllReduceToken(xla_device, nullptr);
   });
 
+  m.def(
+      "_unique_id_for_ir_and_data",
+      [](const at::Tensor& tensor) -> std::string {
+        XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+        if (xtensor->CurrentIrValue()) {
+          torch::lazy::Value value = xtensor->CurrentIrValue();
+          return std::to_string((uintptr_t)value.node.get()) + ", " +
+                 std::to_string(value.index);
+        } else if (xtensor->CurrentDataHandle()) {
+          return std::to_string((uintptr_t)xtensor->CurrentDataHandle().get());
+        } else {
+          return std::to_string((uintptr_t)xtensor.get());
+        }
+      });
+
   m.def("_run_cached_graph",
         [](const std::string& hash_str,
            const std::vector<at::IValue>& graph_inputs)

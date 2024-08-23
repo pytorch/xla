@@ -99,6 +99,19 @@ class DynamoLTCInteractionTest(unittest.TestCase):
       xm.wait_device_ops()
       self.assertEqual(current_execute_time, met.metric_data('ExecuteTime')[0])
 
+  def test_copy_op(self):
+
+    def copy_a_to_b(a):
+      res = a.cos()
+      copy = torch.ops.aten.copy.default(a, res)
+      return copy
+
+    device = torch_xla.device()
+    compiled_copy = torch.compile(copy_a_to_b, backend="openxla")
+    a = torch.randn(2, 9).to(device)
+    res = compiled_copy(a)
+    self.assertTrue(torch.allclose(res, a))
+
 
 class DynamoProfilerTest(unittest.TestCase):
 
