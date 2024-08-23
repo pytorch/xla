@@ -59,17 +59,4 @@ jobs:
           body: "This PR contains the weekly OpenXLA-pin update at commit: (HEAD commit: ${{ env.HEAD_COMMIT }}), with libtpu version at ${{ env.CURRENT_DATE }}."
           labels: tpuci
 
-      - name: Add TPUCI label
-        uses: actions/github-script@v6
-        if: ${{ github.event_name == 'schedule' }}  # Only label scheduled PRs
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.issues.addLabels({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ['tpuci']
-            })
-
 
