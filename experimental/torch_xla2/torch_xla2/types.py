@@ -1,8 +1,13 @@
-from typing import TypeAlias, Callable, ParamSpec, Any, Union
+from typing import Callable, Any, Union
 import torch
 import jax
 import jax.numpy as jnp
+import sys
 
+if sys.version_info < (3, 10):
+  from typing_extensions import ParamSpec, TypeAlias
+else:
+  from typing import ParamSpec, TypeAlias
 
 P = ParamSpec('P')
 
