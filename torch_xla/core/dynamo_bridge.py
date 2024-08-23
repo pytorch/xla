@@ -208,7 +208,10 @@ class Deduper:
     deduped_ids = dict()
     deduped_list = []
     for item in origlist:
-      item_id = id(item)
+      if isinstance(item, torch.Tensor):
+        item_id = torch_xla._XLAC._unique_id_for_ir_and_data(item)
+      else:
+        item_id = id(item)
       if item_id not in deduped_ids:
         deduped_ids[item_id] = len(deduped_ids)
         deduped_list.append(item)
