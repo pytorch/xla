@@ -5,7 +5,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 from torch import nn
 from torch.utils._pytree import tree_map_only
-from torch_xla.core.dynamo_bridge import GraphInputMatcher
+from torch_xla._dynamo.dynamo_bridge import GraphInputMatcher
 
 
 class M(nn.Module):
