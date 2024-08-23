@@ -18,8 +18,11 @@ def num_local_processes() -> int:
   return num_processes
 
 
-def initialize_env(local_rank):
+def initialize_env(local_rank, local_world_size):
   os.environ["NEURON_PJRT_PROCESS_INDEX"] = str(local_rank)
+  assert (
+      local_rank < local_world_size
+  ), "ERROR in initialize_env: PJRT_LOCAL_PROCESS_RANK is not less than PJRT_LOCAL_PROCESS_COUNT"
   os.environ["NEURON_RT_VISIBLE_CORES"] = str(local_rank)
 
 
@@ -29,7 +32,7 @@ class NeuronPlugin(plugins.DevicePlugin):
     return os.environ.get("NEURON_LIBRARY_PATH", "libneuronpjrt.so")
 
   def configure_multiprocess(self, local_rank, local_world_size):
-    initialize_env(local_rank)
+    initialize_env(local_rank, local_world_size)
 
   def physical_chip_count(self):
     return num_local_processes()
