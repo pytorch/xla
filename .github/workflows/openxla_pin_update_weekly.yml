@@ -22,6 +22,8 @@ jobs:
 
       - name: Get JAX version for specified date
         run: |
+          # Here catch jax dev version with hard-code format, where _version is defined ever changes, this will break. 
+          # Contributors who help to update OpenXLA-pin update please check line number here if the JAX version doesn't update.
           version_line=$(curl -s https://raw.githubusercontent.com/google/jax/main/jax/version.py | sed -n '24p')
           JAX_VERSION=$(echo "$version_line" | grep -oP '(?<=")[0-9.]+(?=")')
           if [ -z "$JAX_VERSION" ]; then
@@ -35,8 +37,6 @@ jobs:
           sed -i "s/_date =.*/_date = '${{ env.CURRENT_DATE }}'/" setup.py
           sed -i "s/_jax_version =.*/_jax_version = f'${{ env.JAX_VERSION }}.dev${{ env.CURRENT_DATE }}'/" setup.py
           git add setup.py
-          # git commit -m "Weekly update setup.py to (${{ env.CURRENT_DATE }})"
-          # git push origin HEAD
 
       - name: Fetch HEAD commit from OpenXLA github repo
         run: |
@@ -44,9 +44,9 @@ jobs:
 
       - name: Update OpenXLA commit in WORKSPACE
         run: |
-          sed -i "s/xla_hash =.*/xla_hash = '${{ env.GITHUB_ENV }}'/" WORKSPACE
+          sed -i "s/xla_hash =.*/xla_hash = '${{ env.HEAD_COMMIT }}'/" WORKSPACE
           git add WORKSPACE
-          git commit -m "Weekly update WORKSPACE with (${{ env.GITHUB_ENV }})"
+          git commit -m "Weekly update WORKSPACE with (${{ env.HEAD_COMMIT }})"
           git push origin HEAD
 
       - name: Create Pull Request
@@ -57,6 +57,7 @@ jobs:
           base: main
           title: "Weekly Code Update - ${{ env.CURRENT_DATE }}"
           body: "This PR contains the weekly OpenXLA-pin update at commit: (HEAD commit: ${{ env.HEAD_COMMIT }}), with libtpu version at ${{ env.CURRENT_DATE }}."
+          labels: tpuci
 
       - name: Add TPUCI label
         uses: actions/github-script@v6
