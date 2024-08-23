@@ -5,8 +5,14 @@ import numpy as np
 import torch
 from torch_xla2.ops import mappings
 from torch_xla2 import types
+import sys
 
-from typing import Callable, Concatenate, Optional, ParamSpec
+if sys.version_info < (3, 10):
+  from typing_extensions import ParamSpec, Concatenate
+else:
+  from typing import ParamSpec, Concatenate
+
+from typing import Callable, Optional
 
 
 class InplaceOp:

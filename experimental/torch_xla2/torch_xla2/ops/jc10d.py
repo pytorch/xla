@@ -21,17 +21,17 @@ def _c10d_all_gather(input, group_size: int, group_name: str):
 
 @op(torch.ops._c10d_functional.all_reduce)
 def _c10d_all_reduce(self, reduceOp: str, group_name: str):
-  match reduceOp:
-    case "sum":
-      res = jax.lax.psum(self, axis_name="torch_dist")
-    case "avg":
-      res = jax.lax.pmean(self, axis_name="torch_dist")
-    case "min":
-      res = jax.lax.pmin(self, axis_name="torch_dist")
-    case "max":
-      res = jax.lax.pmax(self, axis_name="torch_dist")
-    case _:
-      raise RuntimeError(f"Reduce op {reduceOp} not implemented")
+  
+  if reduceOp == "sum":
+    res = jax.lax.psum(self, axis_name="torch_dist")
+  elif reduceOp == "avg":
+    res = jax.lax.pmean(self, axis_name="torch_dist")
+  elif reduceOp == "min":
+    res = jax.lax.pmin(self, axis_name="torch_dist")
+  elif reduceOp == "max":
+    res = jax.lax.pmax(self, axis_name="torch_dist")
+  else:
+    raise RuntimeError(f"Reduce op {reduceOp} not implemented")
   return res
 
 
