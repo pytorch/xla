@@ -217,6 +217,7 @@ torch._dynamo.config.automatic_dynamic_shapes = False
 import torch._functorch.config
 
 torch._functorch.config.view_replay_for_aliased_outputs = True
+torch._functorch.config.skip_view_reconstruction = True
 
 import importlib.metadata
 import warnings

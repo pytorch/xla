@@ -9,6 +9,7 @@
 #include <torch/csrc/lazy/core/config.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 #include <torch/csrc/lazy/core/lazy_graph_executor.h>
+#include <torch/csrc/lazy/core/tensor_util.h>
 
 #include <cstring>
 #include <fstream>
@@ -2744,6 +2745,22 @@ void InitXlaModuleBindings(py::module m) {
           }
           XLA_ERROR() << "Could not get the buffer pointer for XLATensor "
                          "without a data handle or an IR.";
+        });
+
+  m.def("_fresh_functional_tensor_from",
+        [](const at::Tensor& value, const at::Tensor& storage_source,
+           const at::Tensor& view_metas_source) {
+          TORCH_LAZY_COUNTER("fresh_functional_tensor_from", 1);
+          XLA_CHECK(at::functionalization::impl::isFunctionalTensor(value));
+          at::Tensor unwrapped = torch::lazy::maybe_unwrap_functional(value);
+          at::FunctionalTensorWrapper* storage_source_ =
+              at::functionalization::impl::unsafeGetFunctionalWrapper(
+                  storage_source);
+          at::FunctionalTensorWrapper* view_metas_source_ =
+              at::functionalization::impl::unsafeGetFunctionalWrapper(
+                  view_metas_source);
+          return at::detail::make_tensor<at::FunctionalTensorWrapper>(
+              unwrapped, storage_source_, view_metas_source_);
         });
 
   // from an XLA tensor to a PyCapsule.
