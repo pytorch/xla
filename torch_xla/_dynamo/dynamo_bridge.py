@@ -20,6 +20,7 @@ import torch._inductor
 from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
 
 from torch.utils import _pytree as pytree
+from torch_xla._dynamo import config
 
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -558,18 +559,19 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     if is_cuda_args:
       args = _maybe_move_tensors_to_device(args, xm.xla_device())
 
-    # mark_step needs to be blocking since we want to access args's XLADatas
-    # and they can't be placeholder.
-    input_tensors_to_sync = [
-        xla_args_tensor_only[i] for i, x in enumerate(
-            torch_xla._XLAC._check_tensor_need_materialization(
-                xla_args_tensor_only)) if x
-    ]
+    if not config.skip_input_data_check:
+      # mark_step needs to be blocking since we want to access args's XLADatas
+      # and they can't be placeholder.
+      input_tensors_to_sync = [
+          xla_args_tensor_only[i] for i, x in enumerate(
+              torch_xla._XLAC._check_tensor_need_materialization(
+                  xla_args_tensor_only)) if x
+      ]
 
-    if len(input_tensors_to_sync) > 0:
-      torch_xla._XLAC._xla_increment_counter('DynamoSyncInputExecuteTime', 1)
-      torch_xla._XLAC._xla_sync_multi(
-          input_tensors_to_sync, devices=[], wait=True, sync_xla_data=True)
+      if len(input_tensors_to_sync) > 0:
+        torch_xla._XLAC._xla_increment_counter('DynamoSyncInputExecuteTime', 1)
+        torch_xla._XLAC._xla_sync_multi(
+            input_tensors_to_sync, devices=[], wait=True, sync_xla_data=True)
 
     # If input sharding has changed from the previous program, dynamo current can
     # not detect this. It will mistakenly believe the program is the same. We need

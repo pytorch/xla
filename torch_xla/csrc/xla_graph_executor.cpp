@@ -802,6 +802,13 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     for (auto& ivalue : graph_inputs) {
       torch::lazy::BackendDataPtr dataptr;
       if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
+        bool is_non_data_ir =
+            xla_tensor_ptr->CurrentIrValue().node != nullptr &&
+            (torch_xla::DeviceData::Cast(
+                 xla_tensor_ptr->CurrentIrValue().node.get()) == nullptr);
+        XLA_CHECK(!is_non_data_ir)
+            << "input data to dynamo graph can not be a pending ir, please set "
+               "`torch_xla._dynamo.config.skip_input_data_check` to False";
         dataptr = xla_tensor_ptr->GetXlaData();
       } else {
         XLA_CHECK(device.type() != (int8_t)XlaDeviceType::SPMD)
