@@ -170,7 +170,7 @@ class ParallelLoader(object):
         break
       batch.append(item)
     return batch
-  
+
   def send_cpu_data_to_device(self, batches, device):
     """Move batch to device.
 
@@ -195,11 +195,14 @@ class ParallelLoader(object):
             missing_keys.append(key)
             continue
           # xla_tensor is a list of tensors.
-          xla_tensor = xm.send_cpu_data_to_device(tensor, device, self._input_sharding[key])
+          xla_tensor = xm.send_cpu_data_to_device(tensor, device,
+                                                  self._input_sharding[key])
           xla_batch[key] = xla_tensor[0]
         if len(missing_keys) != 0:
           # Returning exception as raisng in the dataloading thread doesn't surface the problem in the main thread.
-          return [KeyError(f"Keys: {missing_keys} are missing from input_sharding.")]
+          return [
+              KeyError(f"Keys: {missing_keys} are missing from input_sharding.")
+          ]
         result.append(xla_batch)
     else:
       result = xm.send_cpu_data_to_device(batches, device, self._input_sharding)
