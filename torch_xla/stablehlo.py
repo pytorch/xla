@@ -15,7 +15,7 @@ from torch._decomp import get_decompositions, core_aten_decompositions
 from torch._export.serde.serialize import GraphModuleSerializer
 from torch.fx import _pytree as fx_pytree
 from torch.utils import _pytree as pytree
-from torch_xla.core import dynamo_bridge
+from torch_xla._dynamo import dynamo_bridge
 from torch_xla.core import xla_model as xm
 from torch_xla.debug import metrics
 from torch_xla.experimental.stablehlo_custom_call import (
