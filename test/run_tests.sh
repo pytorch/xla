@@ -182,6 +182,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/dynamo/test_bridge.py"
   run_test "$CDIR/dynamo/test_num_output.py"
   run_test "$CDIR/dynamo/test_graph_input_matcher.py"
+    run_test "$CDIR/dynamo/test_dynamo_config.py"
   run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_test "$CDIR/test_data_type.py"
   run_test "$CDIR/test_fp8.py"
