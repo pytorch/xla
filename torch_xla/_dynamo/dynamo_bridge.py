@@ -559,7 +559,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     if is_cuda_args:
       args = _maybe_move_tensors_to_device(args, xm.xla_device())
 
-
     if not config.skip_input_data_check:
       # mark_step needs to be blocking since we want to access args's XLADatas
       # and they can't be placeholder.
