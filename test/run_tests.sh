@@ -297,6 +297,7 @@ function run_mp_op_tests {
   run_test "$CDIR/test_mp_all_gather.py"
   run_test "$CDIR/test_mp_reduce_scatter.py"
   run_test "$CDIR/test_zero1.py"
+  run_test "$CDIR/test_mp_input_sharding.py"
   run_test "$CDIR/test_mp_distributed_mm.py"
   run_test "$CDIR/test_mp_save.py"
   run_test "$CDIR/test_mp_mesh_reduce.py"
