@@ -60,7 +60,7 @@ def device_count() -> int:
 
 def sync(wait: bool = False):
   """Launches all pending graph operations.
-  
+
   Args:
     wait (bool): whether to block the current process until the execution finished.
 
@@ -150,14 +150,14 @@ def compile(f: Optional[Callable] = None,
     torch_xla._XLAC._set_allow_execution(not full_graph)
 
     if detect_dynamic_shape:
-      torch_xla._XLAC._start_ds_detector_session(current_id)
+      torch_xla._XLAC._dynamic_shape_detector_start_session(current_id)
 
     try:
       yield
     finally:
       torch_xla._XLAC._set_allow_execution(saved_allow_execution)
       if detect_dynamic_shape:
-        torch_xla._XLAC._end_ds_detector_session()
+        torch_xla._XLAC._dynamic_shape_detector_end_session()
       # Collect the traced graph after running the target function and
       # execute the graph.
       sync()
