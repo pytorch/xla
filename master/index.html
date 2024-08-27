@@ -266,7 +266,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gitc58680c )
+                  master (2.5.0+git17a4ef5 )
                 </div>
               
             
@@ -703,6 +703,17 @@ any computations are executed. Initialization is done through the
 <code class="docutils literal notranslate"><span class="pre">readonly</span></code> parameter can be used to control whether the worker will be able to
 write to the cache, which can be useful when a shared cache mount is used for
 an SPMD workload.</p>
+<p>If you want to use  persistent compilation cache in the multi process training(with <code class="docutils literal notranslate"><span class="pre">torch_xla.launch</span></code> or <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code>), you should use the different path for different process.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">_mp_fn</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+  <span class="c1"># cache init needs to happens inside the mp_fn.</span>
+  <span class="n">xr</span><span class="o">.</span><span class="n">initialize_cache</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;/tmp/xla_cache_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">readonly</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+  <span class="o">....</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">_mp_fn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>If you don’t have the access to the <code class="docutils literal notranslate"><span class="pre">index</span></code>, you can use <code class="docutils literal notranslate"><span class="pre">xr.global_ordinal()</span></code>. Check out the runnable example in <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_xla_ddp.py">here</a>.</p>
 </div>
 <div class="section" id="further-reading">
 <h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this heading">¶</a></h2>
@@ -1612,7 +1623,7 @@ requirements.</p>
 <dt class="sig sig-object py" id="torch_xla.experimental.eager_mode">
 <span class="sig-prename descclassname"><span class="pre">torch_xla.experimental.</span></span><span class="sig-name descname"><span class="pre">eager_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/experimental/eager.html#eager_mode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#torch_xla.experimental.eager_mode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Configure torch_xla’s default executation mode.</p>
-<p>Under eager mode only functions that was <a href="#id5"><span class="problematic" id="id6">`</span></a>torch_xla.compile`d will be
+<p>Under eager mode only functions that was <a href="#id6"><span class="problematic" id="id7">`</span></a>torch_xla.compile`d will be
 traced and compiled. Other torch ops will be executed eagerly.</p>
 </dd></dl>
 
