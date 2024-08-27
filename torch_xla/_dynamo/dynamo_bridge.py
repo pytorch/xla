@@ -536,7 +536,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal skip_checking_input_sharding_threashold
     nonlocal sym_constants_to_graph_vars
 
-    xla_model.xla_args = args
     # See [Note: Dynamo real-time input-shape cache look-up] above.
     xla_args_tensor_only, sym_constants = _split_xla_args_tensor_sym_constant(
         args)
@@ -546,6 +545,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
        special_return_handler,
        xla_args_need_update) = sym_constants_to_graph_vars[sym_constants]
     else:
+      xla_model.xla_args = args
       (xla_args_sharding_spec, args_and_out, graph_hash,
        arg_index_to_need_update_index, none_remover, graph_input_matcher,
        special_return_handler, xla_args_need_update) = extract_graph_helper(
