@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git98a9372 )
+                  master (2.5.0+gitf9a706e )
                 </div>
               
             
@@ -425,6 +425,7 @@
 <span class="n">XLA_LIB</span> <span class="o">=</span> <span class="n">Library</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="s2">&quot;DEF&quot;</span><span class="p">)</span>
 
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">xla_model</span> <span class="k">as</span> <span class="n">this_module</span>
+
 <span class="n">xrt_world_size</span> <span class="o">=</span> <span class="n">deprecated</span><span class="p">(</span><span class="n">this_module</span><span class="p">,</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">,</span>
                             <span class="s1">&#39;xrt_world_size() will be removed in release 2.6.&#39;</span><span class="p">)</span>
 <span class="n">get_ordinal</span> <span class="o">=</span> <span class="n">deprecated</span><span class="p">(</span>
@@ -850,7 +851,6 @@
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span><span class="p">,</span>
                                             <span class="n">pin_layout</span><span class="p">)</span>
     <span class="n">results</span> <span class="o">=</span> <span class="n">inputs</span>
-
   <span class="k">return</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">else</span> <span class="n">results</span></div>
 
 
