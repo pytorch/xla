@@ -1,13 +1,20 @@
 import numpy as np
+from typing import List
 import torch
 import torch.nn as nn
+import torch.distributed as dist
+import torch.utils._pytree as pytree
 from absl.testing import absltest, parameterized
+from unittest import mock
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
+import torch_xla.debug.metrics as met
 from torch_xla._internal import pjrt, tpu
 
 
-class TestCollectiveOpsTpu(parameterized.TestCase):
+# Test for collective ops from xla_model
+class TestXMCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
   def _broadcast(sync):
@@ -130,6 +137,121 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [[[-ordinal] * world_size,
                                              list(range(world_size))]])
+
+
+# Test for collective ops from torch.distributed
+class TestDistCollectiveOpsTpu(parameterized.TestCase):
+
+  # TODO(zpcore): fix the openxla dynamo issue for inplace copy
+  @staticmethod
+  def my_compiler(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
+    return gm.forward
+
+  @staticmethod
+  def _all_reduce(use_dynamo: bool):
+    met.clear_all()
+
+    def callable(input):
+      dist.all_reduce(input, dist.ReduceOp.SUM)
+      return input
+
+    dist.init_process_group("xla", init_method='xla://')
+    device = xm.xla_device()
+    input = torch.tensor([xr.global_ordinal()],
+                         dtype=torch.float,
+                         device=device)
+
+    f = torch.compile(
+        callable, backend=TestDistCollectiveOpsTpu.my_compiler
+    ) if use_dynamo else callable
+    f(input)
+    torch_xla.sync()
+    if not use_dynamo:
+      assert 'xla::AllReduceInPlace' in met.counter_names(
+      ) or 'xla::AllReduce' in met.counter_names()
+    else:
+      assert 'xla::all_reduce' in met.counter_names()
+    return input.cpu()
+
+  @staticmethod
+  def _all_gather_into_tensor(use_dynamo: bool):
+    met.clear_all()
+
+    def callable(output, input):
+      dist.all_gather_into_tensor(output_tensor, input, None)
+      return output_tensor
+
+    dist.init_process_group("xla", init_method='xla://')
+    device = xm.xla_device()
+    input = torch.tensor([xr.global_ordinal()],
+                         dtype=torch.float,
+                         device=device)
+    output_tensor = torch.empty((1, xr.world_size()), device=device)
+    f = torch.compile(callable, backend='openxla') if use_dynamo else callable
+    f(output_tensor, input)
+    torch_xla.sync()
+    if not use_dynamo:
+      assert 'xla::AllGather' in met.counter_names(
+      ) or 'xla::AllGatherOut' in met.counter_names()
+    else:
+      assert 'xla::all_gather_into_tensor' in met.counter_names()
+    return output_tensor.cpu()
+
+  @staticmethod
+  def _all_gather(use_dynamo: bool):
+    met.clear_all()
+    dist.init_process_group("xla", init_method='xla://')
+    device = xm.xla_device()
+
+    def callable(input):
+      output_tensor = [
+          torch.tensor([0], dtype=torch.float).to(device)
+          for _ in range(xr.world_size())
+      ]
+      dist.all_gather(output_tensor, input, None)
+      return output_tensor
+
+    input = torch.tensor([xr.global_ordinal()],
+                         dtype=torch.float,
+                         device=device)
+
+    f = torch.compile(callable, backend='openxla') if use_dynamo else callable
+    output = f(input)
+    torch_xla.sync()
+    if not use_dynamo:
+      assert 'xla::AllGather' in met.counter_names(
+      ) or 'xla::AllGatherOut' in met.counter_names()
+    else:
+      assert 'xla::all_gather_into_tensor' in met.counter_names()
+    # output is list of tensors
+    return pytree.tree_map(lambda x: x.cpu(), output)
+
+  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
+  def test_all_reduce(self, use_dynamo):
+    results = pjrt.run_multiprocess(self._all_reduce, use_dynamo=use_dynamo)
+    expected = torch.tensor([sum(range(tpu.num_expected_global_devices()))],
+                            dtype=torch.float)
+    for index, val in results.items():
+      torch.testing.assert_close(val, expected)
+
+  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
+  def test_all_gather_into_tensor(self, use_dynamo):
+    results = pjrt.run_multiprocess(
+        self._all_gather_into_tensor, use_dynamo=use_dynamo)
+    expected = torch.arange(
+        tpu.num_expected_global_devices(), dtype=torch.float).unsqueeze(0)
+    for index, val in results.items():
+      torch.testing.assert_close(val, expected)
+
+  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
+  def test_all_gather(self, use_dynamo):
+    results = pjrt.run_multiprocess(self._all_gather, use_dynamo=use_dynamo)
+    expected = [
+        torch.tensor([i], dtype=torch.float)
+        for i in range(tpu.num_expected_global_devices())
+    ]
+    for index, val in results.items():
+      torch.testing.assert_close(val, expected)
 
 
 if __name__ == '__main__':
