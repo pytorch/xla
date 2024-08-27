@@ -316,6 +316,20 @@ This will initialize a persistent compilation cache at the specified path. The
 write to the cache, which can be useful when a shared cache mount is used for
 an SPMD workload.
 
+If you want to use  persistent compilation cache in the multi process training(with `torch_xla.launch` or `xmp.spawn`), you should use the different path for different process.
+
+```python
+def _mp_fn(index):
+  # cache init needs to happens inside the mp_fn.
+  xr.initialize_cache(f'/tmp/xla_cache_{index}', readonly=False)
+  ....
+
+if __name__ == '__main__':
+  torch_xla.launch(_mp_fn, args=())
+```
+If you don't have the access to the `index`, you can use `xr.global_ordinal()`. Check out the runnable example in [here](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_xla_ddp.py).
+
+
 ## Further Reading
 
 Additional documentation is available at the
