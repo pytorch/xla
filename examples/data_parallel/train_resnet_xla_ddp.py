@@ -6,6 +6,7 @@ from train_resnet_base import TrainResNetBase
 
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 
 
 class TrainResNetXLADDP(TrainResNetBase):
@@ -16,6 +17,8 @@ class TrainResNetXLADDP(TrainResNetBase):
 
 
 def _mp_fn(index):
+  # cache init needs to happens inside the mp_fn.
+  xr.initialize_cache(f'/tmp/xla_cache_{index}', readonly=False)
   xla_ddp = TrainResNetXLADDP()
   xla_ddp.start_training()
 
