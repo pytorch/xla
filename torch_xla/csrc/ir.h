@@ -19,8 +19,8 @@
 #include "absl/container/inlined_vector.h"
 #include "absl/hash/hash.h"
 #include "absl/types/span.h"
-#include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/dynamic_shape_detector.h"
+#include "torch_xla/csrc/runtime/types.h"
 #include "xla/client/xla_builder.h"
 
 namespace torch_xla {

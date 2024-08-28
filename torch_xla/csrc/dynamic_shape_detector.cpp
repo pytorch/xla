@@ -185,7 +185,9 @@ std::size_t DynamicShapeDetector::GetMaxAllowedTraces() {
   return max_allowed_traces_per_function;
 }
 
-bool DynamicShapeDetector::IsSessionActive() { return current_session_ != nullptr; }
+bool DynamicShapeDetector::IsSessionActive() {
+  return current_session_ != nullptr;
+}
 
 bool DynamicShapeDetector::AllowNewTrace() {
   XLA_CHECK(IsSessionActive());
