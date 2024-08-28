@@ -84,10 +84,12 @@ def step():
   return compile()
 
 
-def compile(f: Optional[Callable] = None,
-            full_graph: Optional[bool] = False,
-            name: Optional[str] = None,
-            detect_dynamic_shape = False,):
+def compile(
+    f: Optional[Callable] = None,
+    full_graph: Optional[bool] = False,
+    name: Optional[str] = None,
+    detect_dynamic_shape=False,
+):
   """
   Optimizes given model/function using torch_xla's LazyTensor tracing mode.
   PyTorch/XLA will trace the given function with given inputs and then generate

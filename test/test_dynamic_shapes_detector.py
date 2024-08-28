@@ -136,9 +136,9 @@ Expected: [] aten::add, xla_shape=f32[10]{0}, dynamic_dims: ()"""
     def foo(x, step):
       r = x + x
       if step == 0:
-          return r * 2
+        return r * 2
       if step == 1:
-          return r + x
+        return r + x
       return r / 3
 
     optfoo = torch_xla.compile(foo, detect_dynamic_shape=True)
@@ -207,9 +207,9 @@ Expected: [] aten::mul, xla_shape=f32[10]{0}, dynamic_dims: ()"""
     def foo(x, step):
       r = x + x
       if step == 0:
-          return r * 2
+        return r * 2
       if step == 1:
-          return r + x
+        return r + x
       return r
 
     optfoo = torch_xla.compile(foo, detect_dynamic_shape=True)
