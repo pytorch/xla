@@ -16,8 +16,9 @@ __all__ = [
 from jax._src import xla_bridge
 os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
 jax.config.update('jax_enable_x64', True)
-old_pjrt_options = jax.config.jax_pjrt_client_create_options
 
+# torch_xla2:oss-begin
+old_pjrt_options = jax.config.jax_pjrt_client_create_options
 try:
   jax.config.update(
     'jax_pjrt_client_create_options',
@@ -32,7 +33,7 @@ except RuntimeError:
   )
   xla_bridge._clear_backends()
   jax.devices()  # open PJRT  to see if it opens
-
+# torch_xla2:oss-end
 
 env = None
 def default_env():
