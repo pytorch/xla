@@ -220,6 +220,8 @@ def _aten_stack(tensors, dim=0):
 
 @op(torch.ops.aten._softmax)
 def _aten_softmax(x, dim, halftofloat):
+  if x.shape == ():
+      return jnp.astype(1.0, x.dtype)
   return jax.nn.softmax(x, dim)
 
 
@@ -1947,6 +1949,8 @@ def _aten_logical_not(self):
 # aten.log_softmax
 @op(torch.ops.aten._log_softmax)
 def _aten_log_softmax(self, axis=-1, half_to_float=False):
+  if self.shape == ():
+      return jnp.astype(0.0, self.dtype)
   return jax.nn.log_softmax(self, axis)
 
 
@@ -2024,6 +2028,8 @@ def _aten_slice_scatter(input, src, dim=0, start=None, end=None, step=1):
 # torch.sort(input, dim=-1, descending=False, stable=False, *, out=None)
 @op(torch.ops.aten.sort)
 def _aten_sort(a, dim=-1, descending=False, stable=False):
+  if a.shape == ():
+    return (a, jnp.astype(0, 'int64'))
   return (
     jnp.sort(a, axis=dim, stable=stable, descending=descending),
     jnp.argsort(a, axis=dim, stable=stable, descending=descending),
