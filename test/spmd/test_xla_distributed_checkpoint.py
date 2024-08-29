@@ -188,8 +188,10 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
                    "Multiple devices needed to change mesh")
   def test_in_host_partial_replication(self):
     dim = self.n_devices // 2
-    model1 = self._get_sharded_model(mesh_shape=(dim, self.n_devices // dim), pspec=(None, 0))
-    model2 = self._get_sharded_model(mesh_shape=(self.n_devices // dim, dim), pspec=(None, 0))
+    model1 = self._get_sharded_model(
+        mesh_shape=(dim, self.n_devices // dim), pspec=(None, 0))
+    model2 = self._get_sharded_model(
+        mesh_shape=(self.n_devices // dim, dim), pspec=(None, 0))
     self._save_and_restore(
         model1,
         model2,
