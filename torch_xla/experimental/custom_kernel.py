@@ -93,7 +93,7 @@ def to_jax_shape_dtype_struct(tensor: torch.Tensor) -> "jax.ShapeDtypeStruct":
                               convert_torch_dtype_to_jax(tensor.dtype))
 
 
-trace_pallas_arg_to_payload: Dict[Tuple[Any]] = {}
+trace_pallas_arg_to_payload: Dict[Tuple[Any], str] = {}
 
 
 def trace_pallas(kernel: Callable,
