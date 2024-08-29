@@ -770,8 +770,6 @@ def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
     if need_update and isinstance(all_xla_args_tensor_only[i], torch.Tensor):
       all_xla_args_tensor_only[i].copy_(cloned_args[i])
 
-  breakpoint()
-
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
   class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
