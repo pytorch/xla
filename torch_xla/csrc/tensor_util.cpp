@@ -145,6 +145,8 @@ xla::PrimitiveType XlaTypeFromTensorType(
       return xla::PrimitiveType::C128;
     case at::ScalarType::Float8_e4m3fn:
       return xla::PrimitiveType::F8E4M3FN;
+    case at::ScalarType::Float8_e5m2:
+      return xla::PrimitiveType::F8E5M2;
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
@@ -168,6 +170,21 @@ template <>
 struct Caster<tsl::bfloat16> {
   template <typename D>
   D cast(const tsl::bfloat16& value) const {
+    return static_cast<D>(static_cast<float>(value));
+  }
+};
+template <>
+struct Caster<at::Float8_e5m2> {
+  template <typename D>
+  D cast(const at::Float8_e5m2& value) const {
+    return static_cast<D>(static_cast<float>(value));
+  }
+};
+
+template <>
+struct Caster<tsl::float8_e5m2> {
+  template <typename D>
+  D cast(const tsl::float8_e5m2& value) const {
     return static_cast<D>(static_cast<float>(value));
   }
 };
@@ -309,6 +326,14 @@ struct NeedCast<at::BFloat16> {
   static constexpr bool value = true;
 };
 template <>
+struct NeedCast<tsl::float8_e5m2> {
+  static constexpr bool value = true;
+};
+template <>
+struct NeedCast<at::Float8_e5m2> {
+  static constexpr bool value = true;
+};
+template <>
 struct NeedCast<tsl::float8_e4m3fn> {
   static constexpr bool value = true;
 };
@@ -379,6 +404,18 @@ void CopyData<tsl::bfloat16, at::BFloat16>(tsl::bfloat16* dest,
                                            const at::BFloat16* source,
                                            int64_t n, const CopyCasted&) {
   CheckedMemcpy<tsl::bfloat16, at::BFloat16>(dest, source, n);
+}
+template <>
+void CopyData<at::Float8_e5m2, tsl::float8_e5m2>(at::Float8_e5m2* dest,
+                                                 const tsl::float8_e5m2* source,
+                                                 int64_t n, const CopyCasted&) {
+  CheckedMemcpy<at::Float8_e5m2, tsl::float8_e5m2>(dest, source, n);
+}
+template <>
+void CopyData<tsl::float8_e5m2, at::Float8_e5m2>(tsl::float8_e5m2* dest,
+                                                 const at::Float8_e5m2* source,
+                                                 int64_t n, const CopyCasted&) {
+  CheckedMemcpy<tsl::float8_e5m2, at::Float8_e5m2>(dest, source, n);
 }
 template <>
 void CopyData<at::Float8_e4m3fn, tsl::float8_e4m3fn>(
@@ -605,6 +642,10 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
       TensorToBuffer<SType, tsl::float8_e4m3fn>(tensor, dest_shape, dest_buffer,
                                                 dest_buffer_size, device);
       break;
+    case xla::PrimitiveType::F8E5M2:
+      TensorToBuffer<SType, tsl::float8_e5m2>(tensor, dest_shape, dest_buffer,
+                                              dest_buffer_size, device);
+      break;
     default:
       XLA_ERROR() << "Destination shape type not supported: " << dest_shape;
   }
@@ -756,6 +797,9 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
     case at::ScalarType::Float8_e4m3fn:
       return XlaLiteralToTensor<SType, at::Float8_e4m3fn>(literal,
                                                           dest_element_type);
+    case at::ScalarType::Float8_e5m2:
+      return XlaLiteralToTensor<SType, at::Float8_e5m2>(literal,
+                                                        dest_element_type);
 
     default:
       XLA_ERROR() << "Unsupported scalar type: " << dest_element_type;
@@ -821,6 +865,10 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
       TensorToBufferSType<at::Float8_e4m3fn>(tensor, dest_shape, dest_buffer,
                                              dest_buffer_size, device);
       break;
+    case at::ScalarType::Float8_e5m2:
+      TensorToBufferSType<at::Float8_e5m2>(tensor, dest_shape, dest_buffer,
+                                           dest_buffer_size, device);
+      break;
     default:
       XLA_ERROR() << "Tensor type not supported: " << tensor.type();
   }
@@ -875,6 +923,9 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
     case xla::PrimitiveType::F8E4M3FN:
       return XlaLiteralToTensorHelper<tsl::float8_e4m3fn>(literal,
                                                           dest_element_type);
+    case xla::PrimitiveType::F8E5M2:
+      return XlaLiteralToTensorHelper<tsl::float8_e5m2>(literal,
+                                                        dest_element_type);
     default:
       XLA_ERROR() << "Unsupported literal type: " << literal.shape();
   }
@@ -1159,6 +1210,8 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
       return at::ScalarType::ComplexDouble;
     case xla::PrimitiveType::F8E4M3FN:
       return at::ScalarType::Float8_e4m3fn;
+    case xla::PrimitiveType::F8E5M2:
+      return at::ScalarType::Float8_e5m2;
     default:
       XLA_ERROR() << "XLA type not supported: " << xla_type;
   }
@@ -1192,6 +1245,8 @@ xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type) {
       return xla::PrimitiveType::C128;
     case at::ScalarType::Float8_e4m3fn:
       return xla::PrimitiveType::F8E4M3FN;
+    case at::ScalarType::Float8_e5m2:
+      return xla::PrimitiveType::F8E5M2;
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
@@ -1270,6 +1325,8 @@ xla::PrimitiveType MakeXlaPrimitiveType(
       return GetDevicePrimitiveType(xla::PrimitiveType::C128, device);
     case at::ScalarType::Float8_e4m3fn:
       return GetDevicePrimitiveType(xla::PrimitiveType::F8E4M3FN, device);
+    case at::ScalarType::Float8_e5m2:
+      return GetDevicePrimitiveType(xla::PrimitiveType::F8E5M2, device);
     default:
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
