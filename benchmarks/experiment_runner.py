@@ -156,6 +156,12 @@ class ExperimentRunner:
             xla_flags = f"{xla_flags} {new_xla_flags}"
           process_env["XLA_FLAGS"] = xla_flags
 
+        if self._args.save_ir_format:
+          path = self._get_results_file_path(experiment_cfg, model_cfg, "dump",
+                                             self._args.save_ir_format)
+          process_env["XLA_SAVE_TENSORS_FMT"] = self._args.save_ir_format
+          process_env["XLA_SAVE_TENSORS_FILE"] = str(path)
+
         # Launch subprocess.
         try:
           command = [sys.executable] + sys.argv + [
@@ -1005,6 +1011,11 @@ def parse_args(args=None):
       default=5 * 1000,
       type=int,
       help="Defines the duration of the profiling when `profile-xla` flag is set.",
+  )
+  parser.add_argument(
+      "--save-ir-format",
+      choices=["text", "hlo", "stablehlo"],
+      help="Save intermediate IR.",
   )
   return parser.parse_args(args)
 
