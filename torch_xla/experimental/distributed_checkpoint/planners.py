@@ -36,9 +36,10 @@ from torch.distributed.checkpoint.utils import find_state_dict_object
 from torch.utils._pytree import tree_map
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 from torch_xla.experimental.distributed_checkpoint._helpers import (
-    FLATTEN_MAPPING, flatten_state_dict, dedup_tensors, _is_sharded_tensor,
+    FLATTEN_MAPPING, flatten_state_dict, _is_sharded_tensor,
     set_element, narrow_tensor_by_index, _unwrap_xla_sharded_tensor, _CpuShards)
 from typing import Any, Dict, List, Tuple, Union
+from torch.distributed.checkpoint._dedup_save_plans import dedup_save_plans
 
 
 class SPMDSavePlanner(SavePlanner):
@@ -107,7 +108,7 @@ class SPMDSavePlanner(SavePlanner):
   def create_global_plan(
       self, all_plans: List[SavePlan]) -> Tuple[List[SavePlan], Metadata]:
     # Deduplicate write items across plans
-    all_plans = dedup_tensors(all_plans)
+    all_plans = dedup_save_plans(all_plans)
 
     global_plan, metadata = create_default_global_save_plan(
         all_plans, rewrite_index_hints=False)
