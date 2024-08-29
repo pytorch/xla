@@ -46,13 +46,13 @@ class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
   def setUpClass(cls):
     super().setUpClass()
 
-  def _get_sharded_model(self, mesh_shape=None):
+  def _get_sharded_model(self, mesh_shape=None, pspec=(0, 1)):
     # Return a sharded SimpleLinear model with fc1.weight sharded and
     # fc2.weight explicitly replicated
     mesh_shape = mesh_shape or (1, self.n_devices)
     model = self.SimpleLinear().to(xm.xla_device())
     mesh = self._get_mesh(mesh_shape)
-    xs.mark_sharding(model.fc1.weight, mesh, (0, 1))
+    xs.mark_sharding(model.fc1.weight, mesh, pspec)
     xs.mark_sharding(model.fc2.weight, mesh, (None, None))
     return model
 
@@ -178,6 +178,18 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
     dim = self.n_devices // 2
     model1 = self._get_sharded_model(mesh_shape=(dim, self.n_devices // dim))
     model2 = self._get_sharded_model(mesh_shape=(self.n_devices // dim, dim))
+    self._save_and_restore(
+        model1,
+        model2,
+        save_planner=SPMDSavePlanner(),
+        load_planner=SPMDLoadPlanner())
+
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
+                   "Multiple devices needed to change mesh")
+  def test_in_host_partial_replication(self):
+    dim = self.n_devices // 2
+    model1 = self._get_sharded_model(mesh_shape=(dim, self.n_devices // dim), pspec=(None, 0))
+    model2 = self._get_sharded_model(mesh_shape=(self.n_devices // dim, dim), pspec=(None, 0))
     self._save_and_restore(
         model1,
         model2,
