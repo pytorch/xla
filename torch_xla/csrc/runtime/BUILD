@@ -504,7 +504,7 @@ ptxla_cc_test(
         ":computation_client",
         ":ifrt_computation_client",
         ":tensor_source",
-        "@tsl//tsl/lib/core:status_test_util",
+        "@xla//xla/tsl/lib/core:status_test_util",
         "@tsl//tsl/platform:env",
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/platform:logging",
