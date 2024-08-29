@@ -12,7 +12,6 @@ from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 
 import numpy as np
-from viztracer import VizTracer
 
 if xr.device_type() == 'TPU':
   from torch_xla.experimental.custom_kernel import jax_import_guard
