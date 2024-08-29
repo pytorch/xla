@@ -494,6 +494,31 @@ class MegabloxTest(unittest.TestCase):
     # Make sure gmm doesn't fallback.
     self.assertEqual(len(torch_xla._XLAC._get_executed_fallback_ops()), 0)
 
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_gmm_cache_miss(self):
+    met.clear_all()
+    jax.config.update('jax_default_matmul_precision', "highest")
+
+    self._init_test_cases()
+    test_case = self.tests_cases[-1]
+    # make sure that cache miss for different input shapes and dtype
+    met.clear_all()
+    for mul_factor in [[2, 1, 1, 1], [1, 2, 1, 1], [2, 1, 2, 1], [2, 1, 1, 2]]:
+      for dtype in [torch.float32, torch.bfloat16]:
+        for tiling in [(128, 128, 128), (256, 256, 256)]:
+          num_groups = test_case['num_groups'] * mul_factor[0]
+          k = test_case['k'] * mul_factor[1]
+          m = test_case['m'] * mul_factor[2]
+          n = test_case['n'] * mul_factor[3]
+          lhs_dtype = rhs_dtype = dtype
+
+          lhs = torch.rand(m, k, dtype=lhs_dtype)
+          rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+          group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+
+          out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"), tiling)
+          self.assertEqual(met.counter_value('trace_pallas_cache_hit'), None)
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
