@@ -746,11 +746,31 @@ def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
   args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
       all_xla_args_tensor_only)
 
+  # if arg0_1 is a place holder, replace torch.ops.aten.copy.default(arg0_1, ...) to
+  # torch.ops.aten.copy.default(cloned, ...)
+  need_recompile = False
+  for node in xla_model.graph.nodes:
+    if node.op == 'call_function':
+      if node.target == torch.ops.aten.copy.default and node.args[
+          0].op == 'placeholder':
+        need_recompile = True
+        # replace node with a cloned version to prevent redundant materialization.
+        with xla_model.graph.inserting_before(node):
+          cloned_node = xla_model.graph.call_function(
+              torch.clone, args=(node.args[0],), kwargs={})
+        # replace the first argumentdd with the cloned node
+        node.replace_input_with(node.args[0], cloned_node)
+
+  if need_recompile:
+    xla_model.recompile()
+
   # Again, same logic in the `extract_internal` above to support in-place operations.
   # TODO (@wonjoo): Make this duplicate code a bit cleaner.
   for i, need_update in enumerate(args_need_update_bool):
     if need_update and isinstance(all_xla_args_tensor_only[i], torch.Tensor):
       all_xla_args_tensor_only[i].copy_(cloned_args[i])
+
+  breakpoint()
 
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 

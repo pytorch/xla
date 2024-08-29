@@ -142,11 +142,6 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
 # Test for collective ops from torch.distributed
 class TestDistCollectiveOpsTpu(parameterized.TestCase):
 
-  # TODO(zpcore): fix the openxla dynamo issue for inplace copy
-  @staticmethod
-  def my_compiler(gm: torch.fx.GraphModule, example_inputs: List[torch.Tensor]):
-    return gm.forward
-
   @staticmethod
   def _all_reduce(use_dynamo: bool):
     met.clear_all()
@@ -161,9 +156,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
                          dtype=torch.float,
                          device=device)
 
-    f = torch.compile(
-        callable, backend=TestDistCollectiveOpsTpu.my_compiler
-    ) if use_dynamo else callable
+    f = torch.compile(callable, backend='openxla') if use_dynamo else callable
     f(input)
     torch_xla.sync()
     if not use_dynamo:
