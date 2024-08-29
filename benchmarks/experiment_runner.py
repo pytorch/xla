@@ -637,11 +637,11 @@ class ExperimentRunner:
       if evt.device_type == DeviceType.CPU:
         # In legacy profiler, kernel info is stored in cpu events
         if evt.is_legacy:
-          total_cuda_time += evt.self_cuda_time_total
+          total_cuda_time += evt.self_device_time_total
       elif evt.device_type == DeviceType.CUDA:
         # In kineto profiler, there're events with the correct device type
         # (e.g. CUDA)
-        total_cuda_time += evt.self_cuda_time_total
+        total_cuda_time += evt.self_device_time_total
 
     metrics["total_cpu_time_s"] = us_to_s(total_cpu_time)
     metrics["total_cuda_time_s"] = us_to_s(total_cuda_time)
@@ -661,9 +661,9 @@ class ExperimentRunner:
 
     extract_prof_info = lambda event: {
         "self_cpu_time_s": us_to_s(event.self_cpu_time_total),
-        "self_cuda_time_s": us_to_s(event.self_cuda_time_total),
+        "self_cuda_time_s": us_to_s(event.self_device_time_total),
         "total_cpu_time_s": us_to_s(event.cpu_time_total),
-        "total_cuda_time_s": us_to_s(event.cuda_time_total),
+        "total_cuda_time_s": us_to_s(event.device_time_total),
         "num_of_calls": event.count
     }
 
