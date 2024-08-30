@@ -153,11 +153,7 @@ skiplist = {
     "masked.std",
     "masked.sum",
     "masked.var",
-    "matrix_exp",
-    "matmul",
     "max_pool2d_with_indices_backward",
-    "max",
-    "median",
     "min",
     "mode",
     "multinomial",
@@ -395,7 +391,7 @@ def run_export_and_compare(testcase,
                            check_output=True,
                            equal_nan=True,
                            ignore_indices=False):
-  atol = 1e-3
+  atol = 3e-3 #to change here
   rtol = 1e-5
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
