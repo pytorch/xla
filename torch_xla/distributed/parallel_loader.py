@@ -66,11 +66,11 @@ class ParallelLoader(object):
     loader_prefetch_size (int, optional): The max capacity of the queue used by
       the thread which is reading samples from the `loader`, to be processed by
       the worker threads which upload data to the devices.
-      Default: 8
+      Default: 16
     device_prefetch_size (int, optional): The max size of the per-device queues,
       where the worker threads deposit tensors which have already been sent to
       devices.
-      Default: 4
+      Default: 8
     host_to_device_transfer_threads (int, optional): The number of threads that
       work in parallel to transfer data from loader queue to device queue.
       Default: 1
