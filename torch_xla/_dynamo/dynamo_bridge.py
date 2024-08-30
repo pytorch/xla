@@ -723,6 +723,18 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     return extract_compiled_graph_helper(xla_model, xla_args)
 
 
+def _clear_pending_irs_on_args(args_tensor_only, cloned_args):
+  # if args_tensor_only has pending IR which means there is a in place operations
+  # happened. We don't want to execute that operation yet, so we will replace the
+  # pending IR with the cloned arg.
+  args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
+      args_tensor_only)
+
+  for i, need_update in enumerate(args_need_update_bool):
+    if need_update and isinstance(args_tensor_only[i], torch.Tensor):
+      args_tensor_only[i].copy_(cloned_args[i])
+
+
 def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
                                         all_xla_args_tensor_only):
   # below logic will try to partition the fx graph based on the fallback ops.
@@ -739,36 +751,8 @@ def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
     print('Dynamo fallback ops are' + str(unsupported_nodes) +
           '. Please open a GitHub issue with the above op lowering requests.')
 
-  # This logic, needed for supporting in-place operations, is a duplicate of
-  # the one in the main `extract_internal` function above. We need to do this
-  # check for fetching fallback ops as well.
-  # TODO (@wonjoo): Make this duplicate code a bit cleaner.
-  args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
-      all_xla_args_tensor_only)
-
-  # if arg0_1 is a place holder, replace torch.ops.aten.copy.default(arg0_1, ...) to
-  # torch.ops.aten.copy.default(cloned, ...)
-  need_recompile = False
-  for node in xla_model.graph.nodes:
-    if node.op == 'call_function':
-      if node.target == torch.ops.aten.copy.default and node.args[
-          0].op == 'placeholder':
-        need_recompile = True
-        # replace node with a cloned version to prevent redundant materialization.
-        with xla_model.graph.inserting_before(node):
-          cloned_node = xla_model.graph.call_function(
-              torch.clone, args=(node.args[0],), kwargs={})
-        # replace the first argumentdd with the cloned node
-        node.replace_input_with(node.args[0], cloned_node)
-
-  if need_recompile:
-    xla_model.recompile()
-
-  # Again, same logic in the `extract_internal` above to support in-place operations.
-  # TODO (@wonjoo): Make this duplicate code a bit cleaner.
-  for i, need_update in enumerate(args_need_update_bool):
-    if need_update and isinstance(all_xla_args_tensor_only[i], torch.Tensor):
-      all_xla_args_tensor_only[i].copy_(cloned_args[i])
+  # UnsupportedNodesCollector might trigger in place ops, need to clear them here.
+  _clear_pending_irs_on_args(all_xla_args_tensor_only, cloned_args)
 
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
@@ -792,6 +776,9 @@ def partition_fx_graph_for_cpu_fallback(xla_model, xla_args, all_xla_args,
   # fuse partitions and exectue to collect inputs
   partitioned_graph = partitioner.fuse_partitions(partitions)
   InputCollector(partitioned_graph).run(*xla_args)
+
+  # InputCollector might trigger in place ops, need to clear them here.
+  _clear_pending_irs_on_args(all_xla_args_tensor_only, cloned_args)
 
   # compile each submodule and replace it with a call
   for node in partitioned_graph.graph.nodes:
