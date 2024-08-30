@@ -85,7 +85,7 @@ class TpuInfoCliTest(parameterized.TestCase):
 
       # v2 and v3 may have duplicates due to multithreading
       child_pids = set()
-      for _ in range(self.chip_type.value.accelerators_per_chip *
+      for _ in range(self.chip_type.value.devices_per_chip *
                      self.num_chips):
         child_pids.add(q.get(timeout=20.0))
       with contextlib.ExitStack() as e:
