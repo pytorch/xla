@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+git8955571 )
+                  master (2.5.0+gita0b20ed )
                 </div>
               
             
@@ -452,11 +452,11 @@
 <span class="sd">    loader_prefetch_size (int, optional): The max capacity of the queue used by</span>
 <span class="sd">      the thread which is reading samples from the `loader`, to be processed by</span>
 <span class="sd">      the worker threads which upload data to the devices.</span>
-<span class="sd">      Default: 8</span>
+<span class="sd">      Default: 16</span>
 <span class="sd">    device_prefetch_size (int, optional): The max size of the per-device queues,</span>
 <span class="sd">      where the worker threads deposit tensors which have already been sent to</span>
 <span class="sd">      devices.</span>
-<span class="sd">      Default: 4</span>
+<span class="sd">      Default: 8</span>
 <span class="sd">    host_to_device_transfer_threads (int, optional): The number of threads that</span>
 <span class="sd">      work in parallel to transfer data from loader queue to device queue.</span>
 <span class="sd">      Default: 1</span>
@@ -470,8 +470,8 @@
                <span class="n">devices</span><span class="p">,</span>
                <span class="n">batchdim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                <span class="n">batches_per_execution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-               <span class="n">loader_prefetch_size</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
-               <span class="n">device_prefetch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+               <span class="n">loader_prefetch_size</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+               <span class="n">device_prefetch_size</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
                <span class="n">host_to_device_transfer_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                <span class="n">input_sharding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>
