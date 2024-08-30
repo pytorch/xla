@@ -84,8 +84,8 @@ class ParallelLoader(object):
                devices,
                batchdim=0,
                batches_per_execution=1,
-               loader_prefetch_size=8,
-               device_prefetch_size=4,
+               loader_prefetch_size=16,
+               device_prefetch_size=8,
                host_to_device_transfer_threads=1,
                input_sharding=None):
     self._loader = loader
