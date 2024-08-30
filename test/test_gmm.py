@@ -94,60 +94,75 @@ class MegabloxTest(unittest.TestCase):
   def test_gmm(self):
     met.clear_all()
     jax.config.update('jax_default_matmul_precision', "highest")
+    compiled_gmm = torch.compile(torch.ops.xla.gmm, backend="openxla")
     gmm_funcs = [
-        gmm, torch.ops.xla.gmm,
-        torch.compile(torch.ops.xla.gmm, backend="openxla")
+        gmm,
+        torch.ops.xla.gmm,
+        compiled_gmm,
     ]
 
     self._init_test_cases()
-    for gmm_func in gmm_funcs:
-      for test_case in self.tests_cases:
-        num_groups = test_case['num_groups']
-        k = test_case['k']
-        m = test_case['m']
-        n = test_case['n']
-        lhs_dtype = rhs_dtype = test_case['dtype']
+    for test_cache in [False, True]:
+      for gmm_func in gmm_funcs:
+        for test_case in self.tests_cases:
+          num_groups = test_case['num_groups']
+          k = test_case['k']
+          m = test_case['m']
+          n = test_case['n']
+          lhs_dtype = rhs_dtype = test_case['dtype']
 
-        lhs = torch.rand(m, k, dtype=lhs_dtype)
-        rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-        ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+          lhs = torch.rand(m, k, dtype=lhs_dtype)
+          rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+          group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+          ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
-        out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
-        self.assertTrue(torch.allclose(ref_out, out.cpu()))
+          out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+          # torch.compiled version of the gmm will cache the payload in dynamo layer
+          # hence won't trigger the trace_pallas cache
+          if test_cache and gmm_func != compiled_gmm:
+            met.clear_counters()
+            # execute the same gmm func, expected to hit the cache
+            out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+            self.assertEqual(met.counter_value('trace_pallas_cache_hit'), 1)
+          self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure gmm doesn't fallback.
-    self.assertNotIn("aten::", met.short_metrics_report())
+    self.assertEqual(len(torch_xla._XLAC._get_executed_fallback_ops()), 0)
     jax.config.update('jax_default_matmul_precision', "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm_bf16(self):
     met.clear_all()
 
-    gmm_funcs = [
-        gmm, torch.ops.xla.gmm,
-        torch.compile(torch.ops.xla.gmm, backend="openxla")
-    ]
+    compiled_gmm = torch.compile(torch.ops.xla.gmm, backend="openxla")
+    gmm_funcs = [gmm, torch.ops.xla.gmm, compiled_gmm]
     self._init_test_cases()
-    for gmm_func in gmm_funcs:
-      for test_case in self.tests_cases:
-        num_groups = test_case['num_groups']
-        k = test_case['k']
-        m = test_case['m']
-        n = test_case['n']
-        lhs_dtype = rhs_dtype = torch.bfloat16
+    for test_cache in [False, True]:
+      for gmm_func in gmm_funcs:
+        for test_case in self.tests_cases:
+          num_groups = test_case['num_groups']
+          k = test_case['k']
+          m = test_case['m']
+          n = test_case['n']
+          lhs_dtype = rhs_dtype = torch.bfloat16
 
-        lhs = torch.rand(m, k, dtype=lhs_dtype)
-        rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
-        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-        ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+          lhs = torch.rand(m, k, dtype=lhs_dtype)
+          rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+          group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+          ref_out = self._reference_gmm(lhs, rhs, group_sizes)
 
-        out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
-
-        self.assertTrue(torch.allclose(ref_out, out.cpu()))
+          out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+          # torch.compiled version of the gmm will cache the payload in dynamo layer
+          # hence won't trigger the trace_pallas cache
+          if test_cache and gmm_func != compiled_gmm:
+            met.clear_counters()
+            # execute the same gmm func, expected to hit the cache
+            out = gmm_func(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+            self.assertEqual(met.counter_value('trace_pallas_cache_hit'), 1)
+          self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure gmm doesn't fallback.
-    self.assertNotIn("aten::", met.short_metrics_report())
+    self.assertEqual(len(torch_xla._XLAC._get_executed_fallback_ops()), 0)
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_make_group_metadata(self):
@@ -313,23 +328,29 @@ class MegabloxTest(unittest.TestCase):
     jax.config.update('jax_default_matmul_precision', "highest")
 
     self._init_test_cases()
-    for test_case in self.tests_cases:
-      num_groups = test_case['num_groups']
-      k = test_case['k']
-      m = test_case['m']
-      n = test_case['n']
-      lhs_dtype = rhs_dtype = test_case['dtype']
+    for test_cache in [False, True]:
+      for test_case in self.tests_cases:
+        num_groups = test_case['num_groups']
+        k = test_case['k']
+        m = test_case['m']
+        n = test_case['n']
+        lhs_dtype = rhs_dtype = test_case['dtype']
 
-      lhs = torch.rand(k, m, dtype=lhs_dtype)
-      rhs = torch.rand(m, n, dtype=rhs_dtype)
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      ref_out = self._reference_tgmm(lhs, rhs, group_sizes)
+        lhs = torch.rand(k, m, dtype=lhs_dtype)
+        rhs = torch.rand(m, n, dtype=rhs_dtype)
+        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+        ref_out = self._reference_tgmm(lhs, rhs, group_sizes)
 
-      out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
-      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+        out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+        if test_cache:
+          met.clear_counters()
+          # execute the same gmm func, expected to hit the cache
+          out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+          self.assertEqual(met.counter_value('trace_pallas_cache_hit'), 1)
+        self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure tgmm doesn't fallback.
-    self.assertNotIn("aten::", met.short_metrics_report())
+    self.assertEqual(len(torch_xla._XLAC._get_executed_fallback_ops()), 0)
     jax.config.update('jax_default_matmul_precision', "default")
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
@@ -337,23 +358,29 @@ class MegabloxTest(unittest.TestCase):
     met.clear_all()
 
     self._init_test_cases()
-    for test_case in self.tests_cases:
-      num_groups = test_case['num_groups']
-      k = test_case['k']
-      m = test_case['m']
-      n = test_case['n']
-      lhs_dtype = rhs_dtype = torch.bfloat16
+    for test_cache in [False, True]:
+      for test_case in self.tests_cases:
+        num_groups = test_case['num_groups']
+        k = test_case['k']
+        m = test_case['m']
+        n = test_case['n']
+        lhs_dtype = rhs_dtype = torch.bfloat16
 
-      lhs = torch.rand(k, m, dtype=lhs_dtype)
-      rhs = torch.rand(m, n, dtype=rhs_dtype)
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      ref_out = self._reference_tgmm(lhs, rhs, group_sizes)
+        lhs = torch.rand(k, m, dtype=lhs_dtype)
+        rhs = torch.rand(m, n, dtype=rhs_dtype)
+        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+        ref_out = self._reference_tgmm(lhs, rhs, group_sizes)
 
-      out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
-      self.assertTrue(torch.allclose(ref_out, out.cpu()))
+        out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+        if test_cache:
+          met.clear_counters()
+          # execute the same gmm func, expected to hit the cache
+          out = tgmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"))
+          self.assertEqual(met.counter_value('trace_pallas_cache_hit'), 1)
+        self.assertTrue(torch.allclose(ref_out, out.cpu()))
 
     # Make sure tgmm doesn't fallback.
-    self.assertNotIn("aten::", met.short_metrics_report())
+    self.assertEqual(len(torch_xla._XLAC._get_executed_fallback_ops()), 0)
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm_backward(self):
@@ -365,25 +392,31 @@ class MegabloxTest(unittest.TestCase):
       n = test_case['n']
       lhs_dtype = rhs_dtype = torch.bfloat16
 
-      lhs = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True)
-      rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype, requires_grad=True)
-      group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
-      lhs.retain_grad()
-      rhs.retain_grad()
+      for test_cache in [False, True]:
+        met.clear_all()
+        lhs = torch.rand(m, k, dtype=lhs_dtype, requires_grad=True)
+        rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype, requires_grad=True)
+        group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+        lhs.retain_grad()
+        rhs.retain_grad()
 
-      ref_out = self._reference_gmm(lhs, rhs, group_sizes)
-      ref_out.sum().backward()
+        ref_out = self._reference_gmm(lhs, rhs, group_sizes)
+        ref_out.sum().backward()
 
-      ref_out_backward = torch.ones_like(ref_out)
-      grad_lhs, grad_rhs = gmm_backward(
-          ref_out_backward.to("xla"), lhs.to("xla"), rhs.to("xla"),
-          group_sizes.to("xla"))
+        ref_out_backward = torch.ones_like(ref_out)
+        grad_lhs, grad_rhs = gmm_backward(
+            ref_out_backward.to("xla"), lhs.to("xla"), rhs.to("xla"),
+            group_sizes.to("xla"))
+        # same gmm/tgmm was run for the `test_cache=False` case so the
+        # cache should be populated now
+        if test_cache:
+          self.assertEqual(met.counter_value('trace_pallas_cache_hit'), 2)
 
-      self.assertTrue(torch.allclose(lhs.grad, grad_lhs.cpu()))
-      self.assertTrue(torch.allclose(rhs.grad, grad_rhs.cpu()))
+        self.assertTrue(torch.allclose(lhs.grad, grad_lhs.cpu()))
+        self.assertTrue(torch.allclose(rhs.grad, grad_rhs.cpu()))
 
     # Make sure gmm doesn't fallback.
-    self.assertNotIn("aten::", met.short_metrics_report())
+    self.assertEqual(len(torch_xla._XLAC._get_executed_fallback_ops()), 0)
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm_backward_2(self):
@@ -420,7 +453,7 @@ class MegabloxTest(unittest.TestCase):
       self.assertTrue(torch.allclose(rhs.grad, rhs_xla.grad.cpu()))
 
     # Make sure gmm doesn't fallback.
-    self.assertNotIn("aten::", met.short_metrics_report())
+    self.assertEqual(len(torch_xla._XLAC._get_executed_fallback_ops()), 0)
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_gmm_backward_3(self):
@@ -458,7 +491,32 @@ class MegabloxTest(unittest.TestCase):
       self.assertTrue(torch.allclose(rhs.grad, rhs_xla.grad.cpu()))
 
     # Make sure gmm doesn't fallback.
-    self.assertNotIn("aten::", met.short_metrics_report())
+    self.assertEqual(len(torch_xla._XLAC._get_executed_fallback_ops()), 0)
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_gmm_cache_miss(self):
+    met.clear_all()
+    jax.config.update('jax_default_matmul_precision', "highest")
+
+    self._init_test_cases()
+    test_case = self.tests_cases[-1]
+    # make sure that cache miss for different input shapes and dtype
+    met.clear_all()
+    for mul_factor in [[2, 1, 1, 1], [1, 2, 1, 1], [2, 1, 2, 1], [2, 1, 1, 2]]:
+      for dtype in [torch.float32, torch.bfloat16]:
+        for tiling in [(128, 128, 128), (256, 256, 256)]:
+          num_groups = test_case['num_groups'] * mul_factor[0]
+          k = test_case['k'] * mul_factor[1]
+          m = test_case['m'] * mul_factor[2]
+          n = test_case['n'] * mul_factor[3]
+          lhs_dtype = rhs_dtype = dtype
+
+          lhs = torch.rand(m, k, dtype=lhs_dtype)
+          rhs = torch.rand(num_groups, k, n, dtype=rhs_dtype)
+          group_sizes = self._group_sizes_strategy(m=m, num_groups=num_groups)
+
+          out = gmm(lhs.to("xla"), rhs.to("xla"), group_sizes.to("xla"), tiling)
+          self.assertEqual(met.counter_value('trace_pallas_cache_hit'), None)
 
 
 if __name__ == '__main__':

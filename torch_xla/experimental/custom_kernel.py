@@ -9,7 +9,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
 import torch_xla.debug.metrics as met
 
-from typing import Any, List, Callable, Optional, Tuple
+from typing import Any, List, Callable, Optional, Tuple, Dict
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
@@ -93,10 +93,14 @@ def to_jax_shape_dtype_struct(tensor: torch.Tensor) -> "jax.ShapeDtypeStruct":
                               convert_torch_dtype_to_jax(tensor.dtype))
 
 
+trace_pallas_arg_to_payload: Dict[Tuple[Any], str] = {}
+
+
 def trace_pallas(kernel: Callable,
                  *args,
                  static_argnums=None,
                  static_argnames=None,
+                 use_cache=False,
                  **kwargs):
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
@@ -116,11 +120,27 @@ def trace_pallas(kernel: Callable,
     else:
       jax_args.append(arg)
 
+  hash_key = ()
+  if use_cache:
+    global trace_pallas_arg_to_payload
+    # implcit assumption here that everything in kwargs is hashable and not a tensor,
+    # which is true for the gmm and tgmm.
+    hash_key = (kernel, static_argnums, tuple(static_argnames), tuple(jax_args),
+                repr(sorted(kwargs.items())).encode())
+    if hash_key in trace_pallas_arg_to_payload:
+      torch_xla._XLAC._xla_increment_counter('trace_pallas_cache_hit', 1)
+      return trace_pallas_arg_to_payload[hash_key], tensor_args
+
   # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
   ir = jax.jit(
       kernel, static_argnums=static_argnums,
       static_argnames=static_argnames).lower(*jax_args, **kwargs).compiler_ir()
   payload = _extract_backend_config(ir)
+
+  if use_cache:
+    # if we reach here it means we have a cache miss.
+    trace_pallas_arg_to_payload[hash_key] = payload
+
   return payload, tensor_args
 
 
@@ -770,6 +790,7 @@ def gmm(
       rhs,
       group_sizes,
       static_argnames=["tiling", "preferred_element_type"],
+      use_cache=True,
       preferred_element_type=convert_torch_dtype_to_jax(preferred_element_type),
       tiling=(tm, tk, tn))
 
@@ -822,6 +843,7 @@ def tgmm(
       rhs,
       group_sizes,
       static_argnames=["tiling", "preferred_element_type"],
+      use_cache=True,
       preferred_element_type=convert_torch_dtype_to_jax(preferred_element_type),
       tiling=(tm, tk, tn))
 
