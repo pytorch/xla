@@ -9,7 +9,6 @@
 #include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
-#include "xla/tsl/lib/core/status_test_util.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/logging.h"
 #include "tsl/platform/test.h"
@@ -19,6 +18,7 @@
 #include "xla/literal_util.h"
 #include "xla/statusor.h"
 #include "xla/tests/literal_test_util.h"
+#include "xla/tsl/lib/core/status_test_util.h"
 
 namespace torch_xla {
 namespace runtime {
