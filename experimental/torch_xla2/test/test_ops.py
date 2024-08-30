@@ -391,7 +391,7 @@ def run_export_and_compare(testcase,
                            check_output=True,
                            equal_nan=True,
                            ignore_indices=False):
-  atol = 3e-3 #to change here
+  atol = 3e-3
   rtol = 1e-5
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
