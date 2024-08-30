@@ -5,7 +5,7 @@ from typing import Optional, Sequence
 
 import jax
 from jax import numpy as jnp
-
+import functools
 import numpy as np
 import torch
 import torch.distributed._functional_collectives
@@ -1548,10 +1548,10 @@ def _aten_round(input, decimals=0):
 # aten.max
 @op(torch.ops.aten.max)
 def _aten_max(self, dim=None, keepdim=False):
-  return jnp.max(self, axis=dim, keepdims=keepdim), jnp.argmax(
-    self, axis=dim, keepdims=keepdim
-  )
-
+  if dim is not None:
+    return _with_reduction_scalar(jnp.max, self, dim, keepdim), _with_reduction_scalar(jnp.argmax, self, dim, keepdim).astype(jnp.int64)
+  else:
+    return _with_reduction_scalar(jnp.max, self, dim, keepdim)
 
 # aten.maximum
 @op(torch.ops.aten.maximum)
@@ -3286,3 +3286,33 @@ def _aten_qr(input, *args, **kwargs):
 def _aten_linalg_qr(input, *args, **kwargs):
   mode = kwargs.get("mode", "reduced")
   return jax.numpy.linalg.qr(input, mode=mode)
+
+
+# torch.linalg.matrix_exp
+@op(torch.ops.aten.linalg_matrix_exp)
+def _aten_linalg_matrix_exp(input):
+  return jax.scipy.linalg.expm(input)
+
+@op(torch.ops.aten.median)
+def _aten_median(self, dim=None, keepdim=False):
+  output = _with_reduction_scalar(functools.partial(jnp.quantile, q=0.5, method='lower'), self, dim=dim, keepdim=keepdim).astype(self.dtype)
+  if dim is None:
+    return output
+  else:
+    index = _with_reduction_scalar(_get_median_index, self, dim, keepdim).astype(jnp.int64)
+    return output, index
+
+def _get_median_index(x, axis=None, keepdims=False):
+  sorted_arg = jnp.argsort(x, axis=axis)
+  n = x.shape[axis] if axis is not None else x.size
+  if n % 2 == 1:
+      index = n // 2
+  else:
+      index = (n // 2) - 1
+  if axis is None:
+      median_index = sorted_arg[index]
+  else:
+      median_index = jnp.take(sorted_arg, index, axis=axis)
+  if keepdims and axis is not None:
+          median_index = jnp.expand_dims(median_index, axis)
+  return median_index
