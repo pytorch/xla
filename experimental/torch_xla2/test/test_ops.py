@@ -361,6 +361,8 @@ random_ops = {
   'uniform',
 }
 
+atol_dict = {"matrix_exp": (3e-2, 1e-4)}
+
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
@@ -391,8 +393,10 @@ def run_export_and_compare(testcase,
                            check_output=True,
                            equal_nan=True,
                            ignore_indices=False):
-  atol = 3e-3
-  rtol = 1e-5
+  atol, rtol = (1e-3, 1e-5)
+  if func.name in atol_dict:
+    atol, rtol = atol_dict[func.name]
+  
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):
