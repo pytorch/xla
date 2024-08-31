@@ -292,10 +292,6 @@ skiplist = {
     "cdouble",
     "ceil",
     "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
-    "expm1",
-    "fft.fftshift",
-    "fft.ifftshift",
-    "fill",
     "nn.functional.smooth_l1_loss",
     "nn.functional.soft_margin_loss",
     "nn.functional.softplus",
