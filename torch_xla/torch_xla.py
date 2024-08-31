@@ -177,7 +177,8 @@ def compile(
     torch_xla._XLAC._set_allow_execution(not full_graph)
 
     if allowed_traces is not None:
-      torch_xla._XLAC._dynamic_shape_detector_set_max_allowed_traces(allowed_traces)
+      torch_xla._XLAC._dynamic_shape_detector_set_max_allowed_traces(
+          allowed_traces)
       torch_xla._XLAC._dynamic_shape_detector_start_session(current_id)
 
     try:

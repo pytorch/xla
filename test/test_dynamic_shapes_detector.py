@@ -170,7 +170,8 @@ Reached the end of the function at: [] aten::add, xla_shape=f32[10]{0}, dynamic_
 Expected: [] aten::mul, xla_shape=f32[10]{0}, dynamic_dims: ()"""
 
     with self.assertRaises(RuntimeError, msg=msg):
-      self._run_and_compare(foo, args=(inp, False), allowed_traces=allowed_traces)
+      self._run_and_compare(
+          foo, args=(inp, False), allowed_traces=allowed_traces)
 
   def test_trace_limit_exceeded_children_early_stop(self):
     # Test: catch trace limit exceeded error when the trace ends unexpectedly at
