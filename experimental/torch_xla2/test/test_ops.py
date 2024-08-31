@@ -78,7 +78,6 @@ skiplist = {
     "igamma",
     "igammac",
     "index_reduce",
-    "isclose",
     "kthvalue",
     "lgamma",
     "linalg.cholesky",
