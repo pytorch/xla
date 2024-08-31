@@ -166,14 +166,14 @@ DynamicShapeDetector* DynamicShapeDetector::Get() {
   return &ds_detector;
 }
 
-void DynamicShapeDetector::StartSession(std::string session) {
-  if (session_infos_.find(session) == session_infos_.end()) {
+void DynamicShapeDetector::StartSession(const std::string& name) {
+  if (session_infos_.find(name) == session_infos_.end()) {
     // Create a new session, with a fresh TrieNode.
-    session_infos_[session] = {session, std::make_unique<TrieNode>(), 0};
-    TF_VLOG(5) << "Created new session: " << session;
+    session_infos_[name] = {name, std::make_unique<TrieNode>(), 0};
+    TF_VLOG(5) << "Created new session: " << name;
   }
-  current_session_ = &session_infos_[session];
-  TF_VLOG(5) << "Started session: " << session;
+  current_session_ = &session_infos_[name];
+  TF_VLOG(5) << "Started session: " << name;
   RootBuilder();
 }
 
@@ -238,6 +238,13 @@ void DynamicShapeDetector::AddNodeInfo(torch::lazy::hash_t hash,
     // TODO(ysiraichi): we should actually rollback this trace.
     RootBuilder();
     throw;
+  }
+}
+
+void DynamicShapeDetector::RemoveSessionIfExists(const std::string& name) {
+  std::size_t removed = session_infos_.erase(name);
+  if (removed == 1) {
+    TF_VLOG(5) << "Removed session: " << name;
   }
 }
 

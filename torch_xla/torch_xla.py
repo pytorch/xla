@@ -4,6 +4,7 @@ import contextlib
 import functools
 import uuid
 from typing import Any, Callable, List, Optional, Tuple
+import weakref
 
 import torch
 import torch.distributed as dist
@@ -84,11 +85,16 @@ def step():
   return compile()
 
 
+# Keeps track of the alive functions. This allow us to remove session entries in the
+# C++ side for functions that are no longer alive.
+_compiled_id_to_functions_ref = weakref.WeakValueDictionary()
+
+
 def compile(
     f: Optional[Callable] = None,
     full_graph: Optional[bool] = False,
     name: Optional[str] = None,
-    detect_dynamic_shape=False,
+    allowed_traces: Optional[int] = None,
 ):
   """
   Optimizes given model/function using torch_xla's LazyTensor tracing mode.
@@ -106,6 +112,8 @@ def compile(
       name (Optional[name]): Name of the compiled program. The name of the function `f` will be used
         if not specified. This name will be used in the `PT_XLA_DEBUG` messages as well as HLO/IR dump
         file.
+      allowed_traces (Optional[int]): number of different traces of the given model/function that we
+        are allowed to have. An error will be raised in case this limit is exceeded.
 
   Example::
 
@@ -123,13 +131,30 @@ def compile(
       with torch_xla.compile():
         res = foo2(x)
   """
-  if name == None and f:
+  if name is None and f is not None:
     if hasattr(f, '__name__'):
       name = f.__name__
     elif hasattr(f, '__str__'):
       name = f.__str__()
 
-  current_id = uuid.uuid4().__str__()
+  if f is not None:
+    current_id = f"{name}_{id(f)}"
+  else:
+    current_id = str(uuid.uuid4())
+
+  # Check whether the function/module that corresponds with current_id is still alive. If it's not,
+  # we can remove it from the session's map in the C++ side, so we can start a fresh session.
+  #
+  # This solves the issue where there are 2 different local-scoped functions with the same name.
+  # Since they are local-scoped, they might end-up with the same id. And, since they have the same
+  # name, their current_id will be the same, even though they are different functions.
+  #
+  # This issue was observed when running test_dynamic_shape_detector.py.
+  if current_id not in _compiled_id_to_functions_ref:
+    torch_xla._XLAC._dynamic_shape_detector_remove_session(current_id)
+
+  if f is not None:
+    _compiled_id_to_functions_ref[current_id] = f
 
   def _clear_pending_ops_before_compile():
     sync()
@@ -140,25 +165,26 @@ def compile(
     saved_allow_execution = torch_xla._XLAC._get_allow_execution()
     saved_current_graph_name = torch_xla._XLAC._get_current_graph_name()
     torch_xla._XLAC._set_use_eager_mode(False)
-    if name != None:
+    if name is not None:
       torch_xla._XLAC._set_current_graph_name(name + '_clear_pending')
     # Clear pending operations
     _clear_pending_ops_before_compile()
 
-    if name != None:
+    if name is not None:
       torch_xla._XLAC._set_current_graph_name(name)
 
     # if full_graph sets to true execution can not happen before the sync below
     torch_xla._XLAC._set_allow_execution(not full_graph)
 
-    if detect_dynamic_shape:
+    if allowed_traces is not None:
+      torch_xla._XLAC._dynamic_shape_detector_set_max_allowed_traces(allowed_traces)
       torch_xla._XLAC._dynamic_shape_detector_start_session(current_id)
 
     try:
       yield
     finally:
       torch_xla._XLAC._set_allow_execution(saved_allow_execution)
-      if detect_dynamic_shape:
+      if allowed_traces is not None:
         torch_xla._XLAC._dynamic_shape_detector_end_session()
       # Collect the traced graph after running the target function and
       # execute the graph.
@@ -166,7 +192,7 @@ def compile(
       torch_xla._XLAC._set_use_eager_mode(saved_eager_mode_status)
       torch_xla._XLAC._set_current_graph_name(saved_current_graph_name)
 
-  return _compile() if not f else _compile()(f)
+  return _compile() if f is None else _compile()(f)
 
 
 def manual_seed(seed, device=None):

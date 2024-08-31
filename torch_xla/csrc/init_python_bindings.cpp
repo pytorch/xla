@@ -2521,11 +2521,14 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_current_graph_name",
         []() { return XLAGraphExecutor::Get()->CurrentGraphName(); });
-  m.def("_dynamic_shape_detector_start_session", [](std::string session) {
+  m.def("_dynamic_shape_detector_start_session", [](const std::string& session) {
     DynamicShapeDetector::Get()->StartSession(session);
   });
   m.def("_dynamic_shape_detector_end_session",
         []() { return DynamicShapeDetector::Get()->EndSession(); });
+  m.def("_dynamic_shape_detector_remove_session", [](const std::string& session) {
+    DynamicShapeDetector::Get()->RemoveSessionIfExists(session);
+  });
   m.def("_dynamic_shape_detector_set_max_allowed_traces",
         [](int64_t max_allowed_traces) {
           DynamicShapeDetector::SetMaxAllowedTraces(max_allowed_traces);

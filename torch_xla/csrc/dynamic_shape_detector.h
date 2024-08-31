@@ -188,7 +188,7 @@ class DynamicShapeDetector {
 
   // Starts recording the created IR nodes into the trie whose root is
   // associated with the session named: `name`.
-  void StartSession(std::string name);
+  void StartSession(const std::string& name);
 
   // Stops recording the created IR nodes for the active session.
   //
@@ -209,6 +209,9 @@ class DynamicShapeDetector {
 
   // Checks whether there's any session active.
   bool IsSessionActive();
+
+  // Maybe removes the session entry.
+  void RemoveSessionIfExists(const std::string& name);
 
   // API for setting the maximum number of traces allowed to be recorded.
   static void SetMaxAllowedTraces(std::size_t value);
