@@ -11,6 +11,7 @@ import torch
 import torch.distributed._functional_collectives
 from torch_xla2.ops import ops_registry
 from torch_xla2.ops import op_base, mappings
+from torch_xla2 import interop
 
 # Keys are OpOverload, value is a callable that takes
 # XLATensor2
@@ -36,6 +37,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.normal_: torch.ops.aten.normal,
   torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
   torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
+  torch.ops.aten.clamp_: torch.ops.aten.clamp,
 }
 
 
@@ -1081,7 +1083,7 @@ def _aten_linalg_vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
 
   # (Optional) dtype conversion
   if dtype is not None:
-    result = result.astype(dtype)
+    result = result.astype(mappings.t2j_dtype(dtype))
 
   return result
 
@@ -1674,6 +1676,7 @@ def _aten_atan2(input, other):
 
 # aten.bitwise_and
 @op(torch.ops.aten.bitwise_and)
+@op(torch.ops.aten.__and__)
 def _aten_bitwise_and(self, other):
   return self & other
 
