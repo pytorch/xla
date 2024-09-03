@@ -56,6 +56,4 @@ if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
 fi
 
 # Test `tpu-info` CLI compatibility
-# https://github.com/google/cloud-accelerator-diagnostics/tree/main/tpu_info
-pip install -r test/tpu/tpu_info/requirements.txt
 python3 test/tpu/tpu_info/test_cli.py
