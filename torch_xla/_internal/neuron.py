@@ -37,7 +37,7 @@ def set_rt_root_comm_id():
     os.environ['NEURON_RT_ROOT_COMM_ID'] = '{}:{}'.format(root_addr, root_port)
 
 
-def set_allreduce_bucket_size():
+def set_envvar_defaults():
   os.environ.setdefault('ALLREDUCE_GRADIENTS_BUCKET_SIZE_MB', '50')
 
 

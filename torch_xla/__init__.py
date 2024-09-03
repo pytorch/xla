@@ -117,23 +117,26 @@ def _summarize_fn_tracker():
 def _aws_ec2_inf_trn_init():
   try:
     from libneuronxla.libneuronpjrt_path import libneuronpjrt_path
-    os.environ.setdefault('NEURON_LIBRARY_PATH', libneuronpjrt_path())
-  except Exception as e:
+  except ImportError:
     pass
   else:
+    os.environ.setdefault('PJRT_DEVICE', 'NEURON')
+    os.environ.setdefault('NEURON_LIBRARY_PATH', libneuronpjrt_path())
+    # enable addition features and overrides
+    try:
+      from torch_neuronx import xla
+    except ImportError:
+      pass
+    else:
+      xla.init()
+
+    # basic initializations if torch-neuronx is not available
+    from ._internal import neuron
     if os.path.basename(sys.argv[0]) != 'neuron_parallel_compile':
       import libneuronxla
       libneuronxla.configure_environment()
-      from ._internal import neuron
-      neuron.set_allreduce_bucket_size()
+      neuron.set_envvar_defaults()
       neuron.configure_pjrt_environment()
-
-  try:
-    from torch_neuronx import xla
-  except ImportError:
-    return
-  else:
-    xla.init()
 
 
 def _setup_tpu_vm_library_path() -> bool:
