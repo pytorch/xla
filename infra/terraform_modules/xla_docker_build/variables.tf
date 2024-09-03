@@ -41,6 +41,7 @@ variable "trigger_on_push" {
     branch         = optional(string)
     tag            = optional(string)
     included_files = optional(list(string), [])
+    ignored_files  = optional(list(string), [])
   })
   default = null
 }

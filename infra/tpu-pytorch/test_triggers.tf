@@ -3,7 +3,10 @@ module "tpu_e2e_tests" {
 
   trigger_name = "ci-tpu-test-trigger"
 
-  trigger_on_push = { branch = "master" }
+  trigger_on_push = {
+    branch = "master"
+    ignored_files = ["experimental/torch_xla2/**"]
+  }
   run_e2e_tests   = true
 
   image_name = "pytorch-xla-test"
