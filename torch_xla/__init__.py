@@ -122,7 +122,10 @@ def _aws_ec2_inf_trn_init():
     pass
   else:
     if os.path.basename(sys.argv[0]) != 'neuron_parallel_compile':
+      import libneuronxla
+      libneuronxla.configure_environment()
       from ._internal import neuron
+      neuron.set_allreduce_bucket_size()
       neuron.configure_pjrt_environment()
 
   try:
