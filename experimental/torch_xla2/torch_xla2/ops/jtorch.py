@@ -168,3 +168,7 @@ def _corrcoef(x):
 @register_function(torch.sparse.mm, is_jax_function=False)
 def _sparse_mm(mat1, mat2, reduce='sum'):
   return torch.mm(mat1, mat2)
+
+@register_function(torch.isclose)
+def _aten_isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
+  return jnp.isclose(input, other, rtol, atol, equal_nan)
