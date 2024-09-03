@@ -221,7 +221,7 @@ def _aten_stack(tensors, dim=0):
 @op(torch.ops.aten._softmax)
 def _aten_softmax(x, dim, halftofloat):
   if x.shape == ():
-      return jnp.astype(1.0, x.dtype)
+    return jax.nn.softmax(x.reshape([1]), axis=0).reshape([])
   return jax.nn.softmax(x, dim)
 
 
