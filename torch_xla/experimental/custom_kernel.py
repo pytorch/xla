@@ -13,6 +13,8 @@ from typing import Any, List, Callable, Optional, Tuple, Dict
 from torch.library import impl
 from torch_xla.core.xla_model import XLA_LIB
 
+_XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
+
 
 def _extract_backend_config(
     module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> Optional[str]:
@@ -60,7 +62,9 @@ def convert_torch_dtype_to_jax(dtype: torch.dtype) -> "jnp.dtype":
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
   import jax.numpy as jnp
-
+  if _XLA_USE_BF16:
+    raise RuntimeError(
+        "Pallas kernel does not support XLA_USE_BF16, please unset the env var")
   if dtype == torch.float32:
     return jnp.float32
   elif dtype == torch.float64:
