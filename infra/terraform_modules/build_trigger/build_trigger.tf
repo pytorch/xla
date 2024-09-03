@@ -26,6 +26,7 @@ variable "trigger_on_push" {
     branch         = optional(string)
     tag            = optional(string)
     included_files = optional(list(string), [])
+    ignored_files  = optional(list(string), [])
   })
   default = null
 }
@@ -126,6 +127,7 @@ resource "google_cloudbuild_trigger" "trigger" {
   }
 
   included_files = var.trigger_on_push != null ? var.trigger_on_push.included_files : null
+  ignored_files = var.trigger_on_push != null ? var.trigger_on_push.ignored_files : null
 
   build {
     dynamic "step" {
