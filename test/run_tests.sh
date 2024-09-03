@@ -87,6 +87,16 @@ function run_xla_ir_debug {
   XLA_IR_DEBUG=1 run_test "$@"
 }
 
+function run_use_bf16 {
+  echo "Running with XLA_USE_BF16: $@"
+  XLA_USE_BF16=1 run_test "$@"
+}
+
+function run_downcast_bf16 {
+  echo "Running with XLA_DOWNCAST_BF16: $@"
+  XLA_DOWNCAST_BF16=1 run_test "$@"
+}
+
 function run_xla_hlo_debug {
   echo "Running with XLA_IR_DEBUG: $@"
   XLA_HLO_DEBUG=1 run_test "$@"
@@ -185,6 +195,8 @@ function run_xla_op_tests1 {
   run_test "$CDIR/dynamo/test_dynamo_config.py"
   run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_test "$CDIR/test_data_type.py"
+  run_use_bf16 "$CDIR/test_data_type.py"
+  run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/test_fp8.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
