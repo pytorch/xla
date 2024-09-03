@@ -139,11 +139,10 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
                                              list(range(world_size))]])
 
 
-# Test for collective ops from torch.distributed
-@absltest.skipIf(
-    lambda: tpu.num_logical_cores_per_chip() >= 2,
-    "Dynamo not supported on TPU v2/v3")
+@absltest.skipIf(lambda: tpu.num_logical_cores_per_chip() >= 2,
+                 "Dynamo not supported on TPU v2/v3")
 class TestDistCollectiveOpsTpu(parameterized.TestCase):
+  """Test for collective ops from torch.distributed"""
 
   @staticmethod
   def _all_reduce(use_dynamo: bool):
