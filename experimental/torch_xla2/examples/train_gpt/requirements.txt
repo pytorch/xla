@@ -1,2 +1,4 @@
 tqdm
 git+https://github.com/karpathy/minGPT.git@master
+datasets
+tiktoken

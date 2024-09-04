@@ -225,7 +225,8 @@ class DistributedDataParallel(torch.nn.Module):
     )
 
   def jit_step(self, func):
-    @interop.jax_jit
+    @functools.partial(interop.jax_jit,
+                       kwargs_for_jax_jit={'donate_argnums': 0})
     def _jit_fn(states, args):
       self.load_state_dict(states)
       outputs = func(*args)

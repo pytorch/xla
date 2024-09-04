@@ -80,7 +80,7 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
-  x._elem = y._elem
+  x._elem = y._elem.astype(x._elem.dtype)
   return x
 
 
@@ -3259,6 +3259,13 @@ def _aten_flatten(x, start_dim=0, end_dim=-1):
 @op(torch.ops.aten.new_empty_strided)
 def _new_empty_strided(self, size, stride, **kwargs):
   return jnp.empty(size)
+
+
+@op(torch.ops.aten.empty_like)
+@op_base.convert_dtype(use_default_dtype=False)
+def _aten_empty_like(self, *, dtype=None, **kwargs):
+  breakpoint()
+  return jnp.empty_like(self, dtype)
 
 
 @op(torch.ops.aten._unsafe_index_put, is_jax_function=False)
