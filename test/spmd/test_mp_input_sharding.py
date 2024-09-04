@@ -17,14 +17,19 @@ class MpInputShardingTest(unittest.TestCase):
 
   class fake_dataloader:
 
-    def __init__(self, batch):
+    def __init__(self, batch, size=1):
       self.batch = batch
+      self.batch_size = size
+      self.counter = 0
 
     def __iter__(self):
       return self
 
     def __next__(self):
-      return self.batch
+      if self.counter < self.batch_size:
+        self.counter += 1
+        return self.batch
+      raise StopIteration
 
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        "Multiple devices required for tupled partition spec")
@@ -33,9 +38,7 @@ class MpInputShardingTest(unittest.TestCase):
     batch = {'x': torch.randn((16, 128)), 'y': torch.randn((16, 128, 128))}
     train_loader = self.fake_dataloader(batch)
     num_devices = xr.global_runtime_device_count()
-    mesh_shape = (num_devices, 1)
-    device_ids = np.arange(num_devices)
-    mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+    mesh = xs.get_1d_mesh('x')
 
     train_loader = pl.MpDeviceLoader(
         train_loader,
@@ -62,9 +65,7 @@ class MpInputShardingTest(unittest.TestCase):
     batch = torch.randn((16, 128))
     train_loader = self.fake_dataloader(batch)
     num_devices = xr.global_runtime_device_count()
-    mesh_shape = (num_devices, 1)
-    device_ids = np.arange(num_devices)
-    mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+    mesh = xs.get_1d_mesh('x')
 
     train_loader = pl.MpDeviceLoader(
         train_loader, device, input_sharding=xs.ShardingSpec(mesh, ('x', None)))
@@ -76,20 +77,47 @@ class MpInputShardingTest(unittest.TestCase):
 
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        "Multiple devices required for tupled partition spec")
-  def test_error_missing_keys(self):
+  def test_input_sharding_none(self):
     device = xm.xla_device()
     batch = {'x': torch.randn((16, 128)), 'y': torch.randn((16, 128, 128))}
     train_loader = self.fake_dataloader(batch)
     num_devices = xr.global_runtime_device_count()
-    mesh_shape = (num_devices, 1)
-    device_ids = np.arange(num_devices)
-    mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+
+    train_loader = pl.MpDeviceLoader(train_loader, device, input_sharding=None)
+    train_loader = iter(train_loader)
+    data = next(train_loader)
+    annotation = '{replicated}'
+    self.assertEqual(annotation,
+                     torch_xla._XLAC._get_xla_sharding_spec(data['x']))
+    self.assertEqual(annotation,
+                     torch_xla._XLAC._get_xla_sharding_spec(data['y']))
+
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for tupled partition spec")
+  def test_error_missing_keys(self):
+    device = xm.xla_device()
+    batch = {'x': torch.randn((16, 128)), 'y': torch.randn((16, 128, 128))}
+    train_loader = self.fake_dataloader(batch)
+    mesh = xs.get_1d_mesh('x')
     train_loader = pl.MpDeviceLoader(
         train_loader,
         device,
         input_sharding={'x': xs.ShardingSpec(mesh, ('x', None))})
     train_loader = iter(train_loader)
     with self.assertRaises(KeyError):
+      data = next(train_loader)
+
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for tupled partition spec")
+  def test_error_input_sharding_not_dict(self):
+    device = xm.xla_device()
+    batch = {'x': torch.randn((16, 128)), 'y': torch.randn((16, 128, 128))}
+    train_loader = self.fake_dataloader(batch)
+    mesh = xs.get_1d_mesh('x')
+    train_loader = pl.MpDeviceLoader(
+        train_loader, device, input_sharding=xs.ShardingSpec(mesh, ('x', None)))
+    train_loader = iter(train_loader)
+    with self.assertRaises(ValueError):
       data = next(train_loader)
 
 

@@ -184,22 +184,31 @@ class ParallelLoader(object):
         input batch is a dict. Otherwise, returns a list of torch.Tensor.
     """
     result = None
-    if isinstance(batches[0], dict) and isinstance(self._input_sharding, dict):
+    if isinstance(batches[0], dict):
+      if self._input_sharding and not isinstance(self._input_sharding, dict):
+        return [
+            ValueError(
+                f"input_sharding should be a dict or None when input batch is a dict."
+            )
+        ]
       result = []
       for batch in batches:
         xla_batch = {}
         missing_keys = []
         for key, tensor in batch.items():
           assert type(tensor) == torch.Tensor
-          if key not in self._input_sharding:
-            missing_keys.append(key)
-            continue
+          sharding_spec = None
+          if self._input_sharding:
+            if key not in self._input_sharding:
+              missing_keys.append(key)
+              continue
+            sharding_spec = self._input_sharding[key]
+
           # xla_tensor is a list of tensors.
-          xla_tensor = xm.send_cpu_data_to_device(tensor, device,
-                                                  self._input_sharding[key])
+          xla_tensor = xm.send_cpu_data_to_device(tensor, device, sharding_spec)
           xla_batch[key] = xla_tensor[0]
         if len(missing_keys) != 0:
-          # Returning exception as raisng in the dataloading thread doesn't surface the problem in the main thread.
+          # Returning exception as raising in the dataloading thread doesn't surface the problem in the main thread.
           return [
               KeyError(f"Keys: {missing_keys} are missing from input_sharding.")
           ]
