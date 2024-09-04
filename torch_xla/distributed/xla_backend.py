@@ -170,6 +170,34 @@ class ProcessGroupXla(ProcessGroup):
 
     return _ret_work(output_tensors)
 
+  # call site https://github.com/pytorch/pytorch/blob/758d78790164bfb041555daed380de96e06f78a3/torch/distributed/distributed_c10d.py#L3856
+  def _reduce_scatter_base(self, output_tensor, input_tensor, opts):
+    """
+    Reduces, then scatters a flattened tensor to all processes in a group.
+
+    Args:
+        output (Tensor): Output tensor.
+        input (Tensor): Input tensor that is of size output tensor size times world size
+        opts: distributed reduce op (ReduceOp).
+
+    Returns:
+        Async work handle, if async_op is set to True.
+        None, if not async_op or if not part of the group.
+    """
+    reduce_type = self._get_reduce_type(opts.reduceOp)
+    groups = self._mesh
+    shard_count = len(groups[0]) if groups else self.size()
+    xm.reduce_scatter(
+        reduce_type,
+        input_tensor,
+        scatter_dim=0,
+        shard_count=shard_count,
+        scale=1.0,
+        groups=groups,
+        output=output_tensor,
+        pin_layout=False)
+    return _ret_work(output_tensor)
+
   # Call site:
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L2683
   def barrier(self, opts):

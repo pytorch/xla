@@ -221,6 +221,31 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     # output is list of tensors
     return pytree.tree_map(lambda x: x.cpu(), output)
 
+  @staticmethod
+  def _reduce_scatter(use_dynamo: bool):
+    met.clear_all()
+    dist.init_process_group("xla", init_method='xla://')
+    device = xm.xla_device()
+
+    def callable(output, input):
+      dist.reduce_scatter_tensor(output, input)
+      return output
+
+    # check https://github.com/pytorch/pytorch/blob/758d78790164bfb041555daed380de96e06f78a3/torch/distributed/distributed_c10d.py#L3766-L3814
+    # for input and output tensor example
+    tensor_in = torch.arange(
+        xr.world_size() * 2, dtype=torch.float, device=device)
+    tensor_out = torch.zeros(2, dtype=torch.float, device=device)
+    f = torch.compile(callable, backend='openxla') if use_dynamo else callable
+    output = f(tensor_out, tensor_in)
+    torch_xla.sync()
+    if not use_dynamo:
+      assert 'xla::ReduceScatter' in met.counter_names(
+      ) or 'xla::ReduceScatterOut' in met.counter_names()
+    else:
+      assert 'xla::reduce_scatter_tensor' in met.counter_names()
+    return output.cpu()
+
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
   def test_all_reduce(self, use_dynamo):
     results = pjrt.run_multiprocess(self._all_reduce, use_dynamo=use_dynamo)
@@ -247,6 +272,20 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     ]
     for index, val in results.items():
       torch.testing.assert_close(val, expected)
+
+  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
+  def test_reduce_scatter(self, use_dynamo):
+    results = pjrt.run_multiprocess(self._reduce_scatter, use_dynamo=use_dynamo)
+    expected = [
+        torch.tensor([
+            2 * i * tpu.num_expected_global_devices(),
+            (2 * i + 1) * tpu.num_expected_global_devices()
+        ],
+                     dtype=torch.float)
+        for i in range(tpu.num_expected_global_devices())
+    ]
+    for index, val in results.items():
+      torch.testing.assert_close(val, expected[index])
 
 
 if __name__ == '__main__':
