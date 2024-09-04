@@ -47,17 +47,11 @@ def configure_pjrt_environment():
   """
   from torch.distributed import is_torchelastic_launched
 
-  # Set default PJRT_DEVICE to Neuron if not set
-  if os.environ.get('PJRT_DEVICE', None) is None:
-    logger.info('PJRT_DEVICE not set, defaulting to NEURON')
-    os.environ['PJRT_DEVICE'] = 'NEURON'
-
   # Set root communication address/port
   set_rt_root_comm_id()
 
   # Set env variables if we don't use GSPMD, using PJRT, and using torchrun
   if os.environ.get('XLA_USE_SPMD', '0') != '1' \
-      and os.environ.get('PJRT_DEVICE', None) == 'NEURON' \
       and is_torchelastic_launched():
     # Env variables that only need to be set once
     # NEURON_PJRT_PROCESSES_NUM_DEVICES is a list of core counts and is too long for very large cluster,
@@ -116,7 +110,8 @@ def initialize_env(local_rank, local_world_size):
 class NeuronPlugin(plugins.DevicePlugin):
 
   def library_path(self):
-    return os.environ.get("NEURON_LIBRARY_PATH", "libneuronpjrt.so")
+    from libneuronxla.libneuronpjrt_path import libneuronpjrt_path
+    return os.environ.get("NEURON_LIBRARY_PATH", libneuronpjrt_path())
 
   def configure_multiprocess(self, local_rank, local_world_size):
     initialize_env(local_rank, local_world_size)

@@ -120,8 +120,8 @@ def _aws_ec2_inf_trn_init():
   except ImportError:
     pass
   else:
-    os.environ.setdefault('PJRT_DEVICE', 'NEURON')
-    os.environ.setdefault('NEURON_LIBRARY_PATH', libneuronpjrt_path())
+    #os.environ.setdefault('PJRT_DEVICE', 'NEURON')
+    #os.environ.setdefault('NEURON_LIBRARY_PATH', libneuronpjrt_path())
     # enable addition features and overrides
     try:
       from torch_neuronx import xla
@@ -137,6 +137,10 @@ def _aws_ec2_inf_trn_init():
       libneuronxla.configure_environment()
       neuron.set_envvar_defaults()
       neuron.configure_pjrt_environment()
+    # found libneuronxla
+    return True
+  # did not find libneuronxla
+  return False
 
 
 def _setup_tpu_vm_library_path() -> bool:
@@ -196,7 +200,7 @@ from ._patched_functions import _apply_patches
 _found_libtpu = _setup_tpu_vm_library_path()
 
 # Setup Neuron library for AWS EC2 inf/trn instances.
-_aws_ec2_inf_trn_init()
+_found_libneuronxla = _aws_ec2_inf_trn_init()
 
 
 def _prepare_to_exit():
