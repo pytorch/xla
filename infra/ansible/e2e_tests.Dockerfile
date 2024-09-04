@@ -17,10 +17,6 @@ WORKDIR /ansible
 RUN pip install ansible
 COPY . /ansible
 
-# Install runtime pip and apt dependencies.
-ARG ansible_vars
-RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
-
 # Copy test sources.
 RUN mkdir -p /src/pytorch/xla
 COPY --from=build /src/pytorch/xla/test /src/pytorch/xla/test
@@ -32,6 +28,10 @@ COPY --from=build /dist/*.whl ./
 
 RUN echo "Installing the following wheels" && ls *.whl
 RUN pip install *.whl
+
+# Install runtime pip and apt dependencies.
+ARG ansible_vars
+RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
 
 WORKDIR /
 
