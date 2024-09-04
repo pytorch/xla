@@ -6,6 +6,8 @@ https://github.com/karpathy/nanoGPT
 
 Example command (single host):
 torchrun --standalone xla/experimental/torch_xla2/examples/train_gpt/train_ddp.py
+
+Tested on a TPU v4-8
 """
 
 import datetime
@@ -48,7 +50,7 @@ def main():
     ids.append(enc.eot_token)
     return {"ids": ids}
 
-  dataset = dataset.map(tokenize, num_proc=8)
+  dataset = dataset.map(tokenize, num_proc=32)
 
   def group_texts(exs):
     """Group batches of tokens into `block_size` chunks."""
@@ -61,7 +63,7 @@ def main():
     return {"x": xs, "y": ys}
 
   dataset = dataset.map(
-    group_texts, batched=True, remove_columns=["text", "ids"], num_procs=8,
+    group_texts, batched=True, remove_columns=["text", "ids"], num_proc=32,
   )
   dataset.shard(dist.get_world_size(), dist.get_rank())
   env = torch_xla2.default_env()
