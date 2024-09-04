@@ -924,7 +924,10 @@ def _aten_max_pool2d_with_indices(
 
 @op(torch.ops.aten.min)
 def _aten_min(x, axis=None):
-  return jnp.min(x, axis=axis), jnp.argmin(x, axis=axis).astype(jnp.int64)
+  if axis:
+    return jnp.min(x, axis=axis), jnp.argmin(x, axis=axis).astype(jnp.int64)
+  else:
+    return jnp.min(x, axis=axis)
 
 
 @op(torch.ops.aten.amin)
