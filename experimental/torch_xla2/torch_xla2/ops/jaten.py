@@ -2581,6 +2581,289 @@ def _aten_special_modified_bessel_i0(self):
       self, [self <= 8], [small, default]
   )
 
+@op(torch.ops.aten.special_modified_bessel_i1)
+@op_base.promote_int_input
+def _aten_special_modified_bessel_i1(self):
+    # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L3271-L3364
+
+    def small(x):
+        A = jnp.array(
+            [
+                2.77791411276104639959e-18,
+                -2.11142121435816608115e-17,
+                1.55363195773620046921e-16,
+                -1.10559694773538630805e-15,
+                7.60068429473540693410e-15,
+                -5.04218550472791168711e-14,
+                3.22379336594557470981e-13,
+                -1.98397439776494371520e-12,
+                1.17361862988909016308e-11,
+                -6.66348972350202774223e-11,
+                3.62559028155211703701e-10,
+                -1.88724975172282928790e-09,
+                9.38153738649577178388e-09,
+                -4.44505912879632808065e-08,
+                2.00329475355213526229e-07,
+                -8.56872026469545474066e-07,
+                3.47025130813767847674e-06,
+                -1.32731636560394358279e-05,
+                4.78156510755005422638e-05,
+                -1.61760815825896745588e-04,
+                5.12285956168575772895e-04,
+                -1.51357245063125314899e-03,
+                4.15642294431288815669e-03,
+                -1.05640848946261981558e-02,
+                2.47264490306265168283e-02,
+                -5.29459812080949914269e-02,
+                1.02643658689847095384e-01,
+                -1.76416518357834055153e-01,
+                2.52587186443633654823e-01,
+            ],
+            dtype=self.dtype,
+        )
+
+        def f(carry, val):
+            p, q, a = carry
+            p, q = q, a
+            return (p, q, ((jnp.abs(x) / 2.0) - 2.0) * q - p + val), None
+
+        (p, _, a), _ = jax.lax.scan(
+            f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
+        
+        return jax.lax.cond(
+          x < 0, lambda: -(0.5 * (a - p) * jnp.abs(x) * jnp.exp(jnp.abs(x))), lambda: 0.5 * (a - p) * jnp.abs(x) * jnp.exp(jnp.abs(x))
+        )
+
+    def default(x):
+        B = jnp.array(
+            [
+                7.51729631084210481353e-18,
+                4.41434832307170791151e-18,
+                -4.65030536848935832153e-17,
+                -3.20952592199342395980e-17,
+                2.96262899764595013876e-16,
+                3.30820231092092828324e-16,
+                -1.88035477551078244854e-15,
+                -3.81440307243700780478e-15,
+                1.04202769841288027642e-14,
+                4.27244001671195135429e-14,
+                -2.10154184277266431302e-14,
+                -4.08355111109219731823e-13,
+                -7.19855177624590851209e-13,
+                2.03562854414708950722e-12,
+                1.41258074366137813316e-11,
+                3.25260358301548823856e-11,
+                -1.89749581235054123450e-11,
+                -5.58974346219658380687e-10,
+                -3.83538038596423702205e-09,
+                -2.63146884688951950684e-08,
+                -2.51223623787020892529e-07,
+                -3.88256480887769039346e-06,
+                -1.10588938762623716291e-04,
+                -9.76109749136146840777e-03,
+                7.78576235018280120474e-01,
+            ],
+            dtype=self.dtype,
+        )
+
+        def f(carry, val):
+            p, q, b = carry
+            p, q = q, b
+            return (p, q, (32.0 / jnp.abs(x) - 2.0) * q - p + val), None
+
+        (p, _, b), _ = jax.lax.scan(
+            f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
+        
+        return jax.lax.cond(
+          x < 0, lambda: -(jnp.exp(jnp.abs(x)) * (0.5 * (b - p)) / jnp.sqrt(jnp.abs(x))), lambda: jnp.exp(jnp.abs(x)) * (0.5 * (b - p)) / jnp.sqrt(jnp.abs(x))
+        )
+
+    return jnp.piecewise(
+        self, [self <= 8], [small, default]
+    )
+
+@op(torch.ops.aten.special_modified_bessel_k0)
+@op_base.promote_int_input
+def _aten_special_modified_bessel_k0(self):
+    # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L3367-L3441
+
+    def zero(x):
+      return jnp.array(jnp.inf, x.dtype)
+
+    def negative(x):
+        return jnp.array(jnp.nan, x.dtype)
+
+    def small(x):
+        A = jnp.array(
+            [
+            1.37446543561352307156e-16,
+            4.25981614279661018399e-14,
+            1.03496952576338420167e-11,
+            1.90451637722020886025e-09,
+            2.53479107902614945675e-07,
+            2.28621210311945178607e-05,
+            1.26461541144692592338e-03,
+            3.59799365153615016266e-02,
+            3.44289899924628486886e-01,
+            -5.35327393233902768720e-01,
+            ],
+            dtype=self.dtype,
+        )
+
+        def f(carry, val):
+            p, q, a = carry
+            p, q = q, a
+            return (p, q, (x * x - 2.0) * q - p + val), None
+
+        (p, _, a), _ = jax.lax.scan(
+            f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
+        
+        return 0.5 * (a - p) - jnp.log(0.5 * x) * _aten_special_modified_bessel_i0(x)
+
+    def default(x):
+        B = jnp.array(
+            [
+            5.30043377268626276149e-18,
+            -1.64758043015242134646e-17,
+            5.21039150503902756861e-17,
+            -1.67823109680541210385e-16,
+            5.51205597852431940784e-16,
+            -1.84859337734377901440e-15,
+            6.34007647740507060557e-15,
+            -2.22751332699166985548e-14,
+            8.03289077536357521100e-14,
+            -2.98009692317273043925e-13,
+            1.14034058820847496303e-12,
+            -4.51459788337394416547e-12,
+            1.85594911495471785253e-11,
+            -7.95748924447710747776e-11,
+            3.57739728140030116597e-10,
+            -1.69753450938905987466e-09,
+            8.57403401741422608519e-09,
+            -4.66048989768794782956e-08,
+            2.76681363944501510342e-07,
+            -1.83175552271911948767e-06,
+            1.39498137188764993662e-05,
+            -1.28495495816278026384e-04,
+            1.56988388573005337491e-03,
+            -3.14481013119645005427e-02,
+            2.44030308206595545468e+00,
+            ],
+            dtype=self.dtype,
+        )
+
+        def f(carry, val):
+            p, q, b = carry
+            p, q = q, b
+            return (p, q, (8.0 / x - 2.0) * q - p + val), None
+
+        (p, _, b), _ = jax.lax.scan(
+            f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
+        
+        return jnp.exp(-x) * (0.5 * (b - p)) / jnp.sqrt(x)
+
+    return jnp.piecewise(
+        self, [self <= 2, self < 0, self == 0], [small, negative, zero, default]
+    )
+
+@op(torch.ops.aten.special_modified_bessel_k1)
+@op_base.promote_int_input
+def _aten_special_modified_bessel_k1(self):
+    # Adapted from https://github.com/pytorch/pytorch/blob/f8f41dcb24cb4f4e87a51bb04847942dd835e496/aten/src/ATen/native/Math.h#L3444-L3519
+
+    def zero(x):
+      return jnp.array(jnp.inf, x.dtype)
+
+    def negative(x):
+        return jnp.array(jnp.nan, x.dtype)
+
+    def small(x):
+        A = jnp.array(
+            [
+            -7.02386347938628759343e-18,
+            -2.42744985051936593393e-15,
+            -6.66690169419932900609e-13,
+            -1.41148839263352776110e-10,
+            -2.21338763073472585583e-08,
+            -2.43340614156596823496e-06,
+            -1.73028895751305206302e-04,
+            -6.97572385963986435018e-03,
+            -1.22611180822657148235e-01,
+            -3.53155960776544875667e-01,
+            1.52530022733894777053e+00,
+            ],
+            dtype=self.dtype,
+        )
+
+        def f(carry, val):
+            p, q, a = carry
+            p, q = q, a
+            a = (x * x - 2.0) * q - p + val
+            return (p, q, a), None
+
+        (p, _, a), _ = jax.lax.scan(
+            f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=A)
+        
+        return jnp.log(0.5 * x) * _aten_special_modified_bessel_i1(x) + 0.5 * (a - p) / x
+
+    def default(x):
+        B = jnp.array(
+            [
+            -5.75674448366501715755e-18,
+            1.79405087314755922667e-17,
+            -5.68946255844285935196e-17,
+            1.83809354436663880070e-16,
+            -6.05704724837331885336e-16,
+            2.03870316562433424052e-15,
+            -7.01983709041831346144e-15,
+            2.47715442448130437068e-14,
+            -8.97670518232499435011e-14,
+            +3.34841966607842919884e-13,
+            -1.28917396095102890680e-12,
+            5.13963967348173025100e-12,
+            -2.12996783842756842877e-11,
+            9.21831518760500529508e-11,
+            -4.19035475934189648750e-10,
+            2.01504975519703286596e-09,
+            -1.03457624656780970260e-08,
+            5.74108412545004946722e-08,
+            -3.50196060308781257119e-07,
+            2.40648494783721712015e-06,
+            -1.93619797416608296024e-05,
+            1.95215518471351631108e-04,
+            -2.85781685962277938680e-03,
+            1.03923736576817238437e-01,
+            2.72062619048444266945e+00,
+            ],
+            dtype=self.dtype,
+        )
+
+        def f(carry, val):
+            p, q, b = carry
+            p, q = q, b
+            b = (8.0 / x - 2.0) * q - p + val
+            return (p, q, b), None
+
+        (p, _, b), _ = jax.lax.scan(
+            f, init=(jnp.zeros_like(x), jnp.zeros_like(x), 0), xs=B)
+        
+        return jnp.exp(-x) * (0.5 * (b - p)) / jnp.sqrt(x)
+
+    return jnp.piecewise(
+        self, [self <= 2, self < 0, self == 0], [small, negative, zero, default]
+    )
+
+@op(torch.ops.aten.polygamma)
+def _aten_polygamma(x, n):
+    if n.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
+      n = n.astype(mappings.t2j_dtype(torch.get_default_dtype()))
+    return jax.lax.polygamma(jnp.float32(x), n)
+
+@op(torch.ops.aten.special_ndtri)
+@op_base.promote_int_input
+def _aten_special_ndtri(self):
+    return jax.scipy.special.ndtri(self)
+
 @op(torch.ops.aten.special_bessel_j0)
 @op_base.promote_int_input
 def _aten_special_bessel_j0(self):

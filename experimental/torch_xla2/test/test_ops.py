@@ -242,11 +242,6 @@ skiplist = {
     "scatter_reduce",
     "searchsorted",
     "special.airy_ai",
-    "special.modified_bessel_i1",
-    "special.modified_bessel_k0",
-    "special.modified_bessel_k1",
-    "special.ndtri",
-    "special.polygamma",
     "special.scaled_modified_bessel_k0",
     "special.scaled_modified_bessel_k1",
     "special.spherical_bessel_j0",
@@ -409,6 +404,11 @@ class TestOpInfo(TestCase):
   def setUp(self):
     self.env = tensor.Environment()
 
+  # Replaces all values in the input torch_tensor that are less than the given threshold
+  # with the threshold value itself.
+  def replace_values_below_threshold(self, torch_tensor, threshold):
+      return torch.where(torch_tensor < threshold, torch.tensor(threshold), torch_tensor)
+
   @ops(ops_to_test, allowed_dtypes=(torch.float32, torch.long))
   def test_reference_eager(self, device, dtype, op):
     sample_inputs = op.sample_inputs(device, dtype)
@@ -417,6 +417,13 @@ class TestOpInfo(TestCase):
       if isinstance(t, torch.Tensor) and t.is_sparse:
         continue
       check_output = op.name not in random_ops
+
+      if op.name == "special.polygamma":
+        # The polygamma function is inaccurate for values < 1.
+        # To avoid errors during testing, replace values below 1 with 1.
+        sample_input.input = self.replace_values_below_threshold(
+            sample_input.input, 1)
+
       run_export_and_compare(self, op, sample_input, check_output)
 
 
