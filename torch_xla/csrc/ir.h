@@ -19,6 +19,7 @@
 #include "absl/container/inlined_vector.h"
 #include "absl/hash/hash.h"
 #include "absl/types/span.h"
+#include "torch_xla/csrc/dynamic_shape_detector.h"
 #include "torch_xla/csrc/runtime/types.h"
 #include "xla/client/xla_builder.h"
 
@@ -35,9 +36,12 @@ template <typename T>
 using OutputMap =
     std::unordered_map<torch::lazy::Output, T, torch::lazy::Output::Hasher>;
 
+void DetectDynamicShape(torch::lazy::NodePtr node);
+
 template <typename T, typename... Args>
 torch::lazy::NodePtr MakeNode(Args&&... args) {
   torch::lazy::NodePtr res = std::make_shared<T>(std::forward<Args>(args)...);
+  DetectDynamicShape(res);
   return res;
 }
 

@@ -40,6 +40,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/dl_convertor.h"
 #include "torch_xla/csrc/dtype.h"
+#include "torch_xla/csrc/dynamic_shape_detector.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -2526,6 +2527,24 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_current_graph_name",
         []() { return XLAGraphExecutor::Get()->CurrentGraphName(); });
+  m.def("_dynamic_shape_detector_start_session",
+        [](const std::string& session) {
+          DynamicShapeDetector::Get()->StartSession(session);
+        });
+  m.def("_dynamic_shape_detector_end_session",
+        []() { return DynamicShapeDetector::Get()->EndSession(); });
+  m.def("_dynamic_shape_detector_remove_session",
+        [](const std::string& session) {
+          DynamicShapeDetector::Get()->RemoveSessionIfExists(session);
+        });
+  m.def("_dynamic_shape_detector_set_max_allowed_traces",
+        [](int64_t max_allowed_traces) {
+          DynamicShapeDetector::SetMaxAllowedTraces(max_allowed_traces);
+        });
+  m.def("_dynamic_shape_detector_get_max_allowed_traces",
+        [](int64_t max_allowed_traces) {
+          return DynamicShapeDetector::GetMaxAllowedTraces();
+        });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);

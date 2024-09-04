@@ -287,11 +287,13 @@ ptxla_cc_library(
 ptxla_cc_library(
     name = "ir",
     srcs = [
+        "dynamic_shape_detector.cpp",
         "ir.cpp",
         "lowering_context.cpp",
         "stack_frame_index_builder.cpp",
     ],
     hdrs = [
+        "dynamic_shape_detector.h",
         "ir.h",
         "lowering_context.h",
         "stack_frame_index_builder.h",

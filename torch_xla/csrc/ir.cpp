@@ -43,6 +43,22 @@ torch::lazy::hash_t GetOperandHashes(const torch::lazy::OpList& operands,
 
 }  // namespace
 
+void DetectDynamicShape(torch::lazy::NodePtr node) {
+  DynamicShapeDetector* detector = DynamicShapeDetector::Get();
+
+  if (!detector->IsSessionActive()) {
+    return;
+  }
+
+  // don't add leaf nodes
+  std::unordered_set<std::string> unwanted_nodes = {"xla::device_data",
+                                                    "prim::Constant"};
+
+  if (unwanted_nodes.find(node->op().ToString()) == unwanted_nodes.end()) {
+    detector->AddNodeInfo(node->hash(), node->ToString());
+  }
+}
+
 XlaNode::XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
                  std::vector<torch::lazy::Shape>&& shapes, xla::Shape xla_shape,
                  size_t num_outputs, torch::lazy::hash_t hash_seed)
