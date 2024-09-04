@@ -33,6 +33,7 @@ module "tpu_e2e_tests" {
     # The commit ID associated with the triggered build. Substituted when
     # Cloud Build is triggered.
     xla_git_rev = "$COMMIT_SHA"
+    bundle_libtpu = "0"
   }
 
   # Substitutions used in the "run_e2e_tests" step, see
