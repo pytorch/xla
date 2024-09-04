@@ -1760,6 +1760,13 @@ def _aten_eq(input1, input2):
   return input1 == input2
 
 
+# aten.equal
+@op(torch.ops.aten.equal, is_jax_function=False)
+def _aten_equal(input, other):
+  res = jnp.array_equal(input._elem, other._elem)
+  return bool(res)
+
+
 # aten.erf
 @op(torch.ops.aten.erf)
 @op_base.promote_int_input
