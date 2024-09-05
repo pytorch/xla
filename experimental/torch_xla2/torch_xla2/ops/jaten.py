@@ -903,8 +903,8 @@ def _aten_max_pool2d_with_indices(
     init_val = -(1 << 31)
   init_val = jnp.array(init_val).astype(inputs.dtype)
 
-  # Separate maxpool result and indices into two reduce_window ops. Since 
-  # the indices tensor is usually unused in inference, separating the two 
+  # Separate maxpool result and indices into two reduce_window ops. Since
+  # the indices tensor is usually unused in inference, separating the two
   # can help DCE computations for argmax.
   y = jax.lax.reduce_window(
       inputs, init_val, jax.lax.max, dims, strides, padding
@@ -915,7 +915,7 @@ def _aten_max_pool2d_with_indices(
   if is_single_input:
     indices = jnp.squeeze(indices, axis=0)
     y = jnp.squeeze(y, axis=0)
-    
+
   return y, indices
 
 
@@ -3259,13 +3259,6 @@ def _aten_flatten(x, start_dim=0, end_dim=-1):
 @op(torch.ops.aten.new_empty_strided)
 def _new_empty_strided(self, size, stride, **kwargs):
   return jnp.empty(size)
-
-
-@op(torch.ops.aten.empty_like)
-@op_base.convert_dtype(use_default_dtype=False)
-def _aten_empty_like(self, *, dtype=None, **kwargs):
-  breakpoint()
-  return jnp.empty_like(self, dtype)
 
 
 @op(torch.ops.aten._unsafe_index_put, is_jax_function=False)
