@@ -120,9 +120,9 @@ def _aws_ec2_inf_trn_init():
   except ImportError:
     pass
   else:
-    #os.environ.setdefault('PJRT_DEVICE', 'NEURON')
-    #os.environ.setdefault('NEURON_LIBRARY_PATH', libneuronpjrt_path())
-    # enable addition features and overrides
+    # Need to set NEURON_LIBRARY_PATH here for proper Neuron Cache behavior
+    os.environ.setdefault('NEURON_LIBRARY_PATH', libneuronpjrt_path())
+    # Enable addition features and overrides
     try:
       from torch_neuronx import xla
     except ImportError:
@@ -130,16 +130,16 @@ def _aws_ec2_inf_trn_init():
     else:
       xla.init()
 
-    # basic initializations if torch-neuronx is not available
+    # Basic initializations if torch-neuronx is not available
     from ._internal import neuron
     if os.path.basename(sys.argv[0]) != 'neuron_parallel_compile':
       import libneuronxla
       libneuronxla.configure_environment()
       neuron.set_envvar_defaults()
       neuron.configure_pjrt_environment()
-    # found libneuronxla
+    # Found libneuronxla
     return True
-  # did not find libneuronxla
+  # Did not find libneuronxla
   return False
 
 
