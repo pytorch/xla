@@ -1678,6 +1678,66 @@ def _aten_bitwise_xor(self, other):
   return self ^ other
 
 
+# aten.broadcast_tensors
+@op(torch.ops.aten.broadcast_tensors)
+def _aten_broadcast_tensors(*tensors):
+
+  def _get_broadcast_shape(shapes):
+    """
+    Determines the output shape by broadcasting all input shapes.
+
+    Args:
+      shapes: A list of tuples representing the shapes of the input tensors.
+
+    Returns: 
+      A tuple representing the broadcasted output shape.
+    """
+
+    # Find the maximum number of dimensions among all input tensors
+    max_dims = max(len(shape) for shape in shapes)
+    # Pad shorter shapes with 1s on the left to match the maximum number of dimensions
+    padded_shapes = [(1,) * (max_dims - len(shape)) + shape for shape in shapes]
+
+    # Initialize the output shape with 1s
+    output_shape = [1] * max_dims
+    # Iterate through each dimension and apply broadcasting rules
+    for dim in range(max_dims):
+      dim_sizes = [shape[dim] for shape in padded_shapes]
+      max_size = max(dim_sizes)
+      if all(size == 1 or size == max_size for size in dim_sizes):
+        output_shape[dim] = max_size
+      else:
+        raise ValueError("Incompatible shapes for broadcasting")
+    return tuple(output_shape)
+
+  def _broadcast_dimensions(input_shape, output_shape):
+    """
+    Determines the broadcast_dimensions argument for jax.lax.broadcast_in_dim.
+
+    Args:
+      input_shape: The shape of the input tensor.
+      output_shape: The desired output shape after broadcasting.
+
+    Returns:
+      A tuple specifying which dimensions of the input tensor should be broadcasted.
+    """
+
+    res = tuple(i for i, (in_dim, out_dim) in enumerate(zip(input_shape, output_shape)))
+    return res
+
+  # Get the shapes of all input tensors
+  shapes = [t.shape for t in tensors]
+  # Find the output shape by broadcasting all input shapes
+  output_shape = _get_broadcast_shape(shapes)
+  # Broadcast each tensor to the output shape
+  broadcasted_tensors = [
+      jax.lax.broadcast_in_dim(t, output_shape, _broadcast_dimensions(t.shape, output_shape))
+      for t in tensors
+  ]
+
+  return broadcasted_tensors
+
+
 # aten.broadcast_to
 @op(torch.ops.aten.broadcast_to)
 def _aten_broadcast_to(input, shape):
