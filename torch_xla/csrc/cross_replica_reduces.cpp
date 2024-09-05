@@ -309,6 +309,28 @@ AllGatherResultCoalesced BuildAllGatherCoalesced(
   return {result, token_handler.GetNewToken(result[0])};
 }
 
+at::Tensor collective_broadcast(const at::Tensor& input, int64_t src,
+                                std::string) {
+  XLATensorPtr xinput = bridge::GetXlaTensor(input);
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  at::Tensor mask;
+  const torch::lazy::BackendDevice& device = xinput->GetDevice();
+  if (device.ordinal() == src) {
+    mask = at::ones_like(input);
+  } else {
+    mask = at::zeros_like(input);
+  }
+  XLATensorPtr xmask = bridge::GetXlaTensor(mask);
+  auto masked_input = tensor_methods::mul(xinput, xmask);
+  auto result = tensor_methods::all_reduce(masked_input, AllReduceType::kSum,
+                                           1.0, {}, true);
+  return bridge::AtenFromXlaTensor(result);
+}
+
+TORCH_LIBRARY_IMPL(_c10d_functional, XLA, m) {
+  m.impl("broadcast", collective_broadcast);
+}
+
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
