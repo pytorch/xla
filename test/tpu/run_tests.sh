@@ -51,8 +51,8 @@ if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
     python3 examples/eager/train_decoder_only_eager_spmd_data_parallel.py
     python3 examples/eager/train_decoder_only_eager_with_compile.py
     python3 examples/eager/train_decoder_only_eager_multi_process.py
-    # python3 test/test_pallas.py # ERROR: Mosaic failed to compile TPU kernel: Bad rhs type in tpu.matmul, Failed to parse the Mosaic module, AssertionError: False is not true
-    # python3 test/test_pallas_spmd.py # ERROR: AssertionError: False is not true
+    python3 test/test_pallas.py # ERROR: Mosaic failed to compile TPU kernel: Bad rhs type in tpu.matmul, Failed to parse the Mosaic module, AssertionError: False is not true
+    python3 test/test_pallas_spmd.py # ERROR: AssertionError: False is not true
 fi
 
 # Test `tpu-info` CLI compatibility
