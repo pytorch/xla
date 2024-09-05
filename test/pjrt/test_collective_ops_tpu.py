@@ -246,7 +246,7 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     else:
       assert 'xla::reduce_scatter_tensor' in met.counter_names()
     return output.cpu()
-
+  
   @staticmethod
   def _broadcast(src: int, random_fill: int, use_dynamo: bool):
     met.clear_all()
@@ -256,11 +256,8 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     def callable(input, src):
       dist.broadcast(input, src)
       return input
-
-    tensor_in = torch.tensor([xr.global_ordinal(), random_fill],
-                             dtype=torch.float,
-                             device=device)
-    print(tensor_in, src, random_fill)
+  
+    tensor_in = torch.tensor([xr.global_ordinal(), random_fill], dtype=torch.float, device=device)
     f = torch.compile(callable, backend='openxla') if use_dynamo else callable
     output = f(tensor_in, src)
     torch_xla.sync()
@@ -269,7 +266,6 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       ) or 'xla::AllReduce' in met.counter_names()
     else:
       assert 'xla::collective_broadcast' in met.counter_names()
-    print(met.counter_names())
     return output.cpu()
 
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
@@ -313,22 +309,18 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     for index, val in results.items():
       torch.testing.assert_close(val, expected[index])
 
+
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
   def test_broadcast(self, use_dynamo):
     src = random.randrange(0, tpu.num_expected_global_devices())
-    random_fill = random.randint(-100, 100)
-    results = pjrt.run_multiprocess(
-        self._broadcast,
-        src=src,
-        random_fill=random_fill,
-        use_dynamo=use_dynamo)
+    random_fill = random.randint(-100,100)
+    results = pjrt.run_multiprocess(self._broadcast, src = src, random_fill = random_fill, use_dynamo=use_dynamo)
     expected = torch.tensor([
-        src,
-        random_fill,
-    ], dtype=torch.float)
+            src,
+            random_fill,
+        ],dtype=torch.float)
     for index, val in results.items():
       torch.testing.assert_close(val, expected)
-
 
 if __name__ == '__main__':
   absltest.main()
