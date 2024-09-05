@@ -16,7 +16,6 @@ skiplist = {
     "_upsample_bilinear2d_aa",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "block_diag",
-    "broadcast_tensors",
     "bucketize",
     "byte",
     "cat",
