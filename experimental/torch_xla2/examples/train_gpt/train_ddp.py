@@ -50,7 +50,7 @@ def main():
     ids.append(enc.eot_token)
     return {"ids": ids}
 
-  dataset = dataset.map(tokenize, num_proc=32)
+  dataset = dataset.map(tokenize, num_proc=16)
 
   def group_texts(exs):
     """Group batches of tokens into `block_size` chunks."""
@@ -63,7 +63,7 @@ def main():
     return {"x": xs, "y": ys}
 
   dataset = dataset.map(
-    group_texts, batched=True, remove_columns=["text", "ids"], num_proc=32,
+    group_texts, batched=True, remove_columns=["text", "ids"], num_proc=16
   )
   dataset.shard(dist.get_world_size(), dist.get_rank())
   env = torch_xla2.default_env()
