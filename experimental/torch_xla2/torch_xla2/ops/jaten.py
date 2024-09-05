@@ -539,6 +539,8 @@ def _aten_ne(x, y):
 def _aten_cumsum(x, y, dtype=None):
   if dtype:
     dtype = mappings.t2j_dtype(dtype)
+  if not x.shape:
+    return x
   res = jnp.cumsum(x, y, dtype)
   return res
 
