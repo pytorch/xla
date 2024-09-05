@@ -1,3 +1,4 @@
+import math
 import unittest
 
 import torch
@@ -4346,6 +4347,13 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.copy_, args, kwargs, check_dtype=True)
+
+  def test_aten_rand_like(self):
+    args = (
+      torch.ones((3, 3), dtype=torch.bfloat16),
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.rand_like, args, kwargs, atol=math.inf, check_dtype=True)
 
 
 if __name__ == "__main__":
