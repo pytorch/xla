@@ -205,6 +205,21 @@ def _aten_detach(self):
   return self
 
 
+@op(torch.ops.aten.imag)
+def _aten_imag(x):
+  return jnp.imag(x)
+
+
+@op(torch.ops.aten.isfinite)
+def _aten_isfinite(x):
+  return jnp.isfinite(x)
+
+
+@op(torch.ops.aten.real)
+def _aten_real(x):
+  return jnp.real(x)
+
+
 @op(torch.ops.aten.view_as_real)
 def _aten_view_as_real(x):
   real = jnp.real(x)
@@ -1958,6 +1973,26 @@ def _aten_log_softmax(self, axis=-1, half_to_float=False):
   return jax.nn.log_softmax(self, axis)
 
 
+# aten.logaddexp
+@op(torch.ops.aten.logaddexp)
+def _aten_logaddexp(self, other):
+  return jnp.logaddexp(self, other)
+
+
+# aten.logaddexp2
+@op(torch.ops.aten.logaddexp2)
+def _aten_logaddexp2(self, other):
+  return jnp.logaddexp2(self, other)
+
+
+# aten.logcumsumexp
+@op(torch.ops.aten.logcumsumexp)
+def _aten_logcumsumexp(self, dim=None):
+  if self.shape == ():
+    return self
+  return jax.lax.cumlogsumexp(self, axis=dim)
+
+
 # aten.max_pool3d_backward
 # aten.logical_xor
 @op(torch.ops.aten.logical_xor)
@@ -3579,6 +3614,7 @@ def _aten_linalg_qr(input, *args, **kwargs):
 @op(torch.ops.aten.linalg_matrix_exp)
 def _aten_linalg_matrix_exp(input):
   return jax.scipy.linalg.expm(input)
+
 
 @op(torch.ops.aten.median)
 def _aten_median(self, dim=None, keepdim=False):
