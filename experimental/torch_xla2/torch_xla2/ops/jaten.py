@@ -80,7 +80,7 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
-  x._elem = y._elem
+  x._elem = y._elem.astype(x._elem.dtype)
   return x
 
 
