@@ -80,7 +80,7 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
-  x._elem = y._elem.astype(x._elem.dtype)
+  x._elem = y._elem
   return x
 
 
@@ -903,8 +903,8 @@ def _aten_max_pool2d_with_indices(
     init_val = -(1 << 31)
   init_val = jnp.array(init_val).astype(inputs.dtype)
 
-  # Separate maxpool result and indices into two reduce_window ops. Since
-  # the indices tensor is usually unused in inference, separating the two
+  # Separate maxpool result and indices into two reduce_window ops. Since 
+  # the indices tensor is usually unused in inference, separating the two 
   # can help DCE computations for argmax.
   y = jax.lax.reduce_window(
       inputs, init_val, jax.lax.max, dims, strides, padding
@@ -915,7 +915,7 @@ def _aten_max_pool2d_with_indices(
   if is_single_input:
     indices = jnp.squeeze(indices, axis=0)
     y = jnp.squeeze(y, axis=0)
-
+    
   return y, indices
 
 

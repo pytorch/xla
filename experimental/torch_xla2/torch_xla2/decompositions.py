@@ -100,7 +100,7 @@ _try_register(aten.bernoulli.default, bernoulli)
 
 
 def rand_like(self, **kwargs):
-    dtype = kwargs.get('dtype', self.dtype)
+    dtype = kwargs.get('dtype')
     return torch.rand(self.shape, dtype=dtype)
 
 def channel_shuffle(self, groups):
