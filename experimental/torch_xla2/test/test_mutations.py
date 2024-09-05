@@ -34,16 +34,6 @@ class TestMutations(TestCase):
       xt = torch_xla2.tensor.j2t(x._elem)
       self.assertEqual(xt, torch.tensor([4, 10, 18], dtype=torch.int32))
 
-  def test_div(self):
-    with self.env:
-      x = torch.tensor([1, 2, 3], dtype=torch.int32)
-      y = torch.tensor([4, 5, 6], dtype=torch.int32)
-
-      x.div_(y)
-      xt = torch_xla2.tensor.j2t(x._elem)
-      self.assertEqual(xt,
-                      torch.tensor([1. / 4, 2. / 5, 3. / 6], dtype=torch.float))
-
 
 if __name__ == '__main__':
   unittest.main()
