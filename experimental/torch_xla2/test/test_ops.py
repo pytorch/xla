@@ -28,7 +28,7 @@ skiplist = {
     "complex",
     "cummax",
     "cummin",
-    "diag",
+    "cumsum",
     "diag_embed",
     "diagflat",
     "diagonal_copy",
