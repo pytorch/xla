@@ -179,11 +179,8 @@ skiplist = {
     "nn.functional.dropout",
     "nn.functional.embedding_bag",
     "nn.functional.embedding",
-    "nn.functional.feature_alpha_dropout",
     "nn.functional.fractional_max_pool2d",
     "nn.functional.fractional_max_pool3d",
-    "nn.functional.gaussian_nll_loss",
-    "nn.functional.grid_sample",
     "nn.functional.group_norm",
     "nn.functional.hinge_embedding_loss",
     "nn.functional.instance_norm",
@@ -325,6 +322,8 @@ random_ops = {
   'rand',
   'rand_like',
   'uniform',
+  # Dropout is not deterministic https://pytorch.org/docs/stable/generated/torch.nn.functional.feature_alpha_dropout.html
+  'nn.functional.feature_alpha_dropout',
 }
 
 atol_dict = {"matrix_exp": (3e-2, 1e-4)}
