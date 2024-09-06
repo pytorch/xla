@@ -72,6 +72,9 @@ def _maybe_select_default_device():
         + num_devices_str)
     os.environ[xenv.PJRT_DEVICE] = 'CUDA'
     os.environ[xenv.GPU_NUM_DEVICES] = num_devices_str
+  elif torch_xla._found_libneuronxla:
+    logging.warning('Found libneuronpjrt.so. Setting PJRT_DEVICE=NEURON.')
+    os.environ[xenv.PJRT_DEVICE] = 'NEURON'
   else:
     logging.warning('Defaulting to PJRT_DEVICE=CPU')
     os.environ[xenv.PJRT_DEVICE] = 'CPU'

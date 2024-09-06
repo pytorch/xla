@@ -86,7 +86,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
         reload(torch_xla)
         logs_context = contextlib.nullcontext()
         if expect_using_pjrt:
-          self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])
+          self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU', 'NEURON'])
         else:
           self.assertIsNone(xr.device_type())
 
