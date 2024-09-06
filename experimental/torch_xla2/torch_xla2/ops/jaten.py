@@ -1725,6 +1725,10 @@ def _aten_broadcast_tensors(*tensors):
     res = tuple(i for i, (in_dim, out_dim) in enumerate(zip(input_shape, output_shape)))
     return res
 
+  # clean some function's previous wrap
+  if len(tensors)==1 and len(tensors[0])>=1 and isinstance(tensors[0][0], jax.Array):
+    tensors = tensors[0]
+
   # Get the shapes of all input tensors
   shapes = [t.shape for t in tensors]
   # Find the output shape by broadcasting all input shapes
