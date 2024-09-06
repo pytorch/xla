@@ -32,7 +32,6 @@ skiplist = {
     "cross",
     "cummax",
     "cummin",
-    "cumsum",
     "diag",
     "diag_embed",
     "diagflat",
