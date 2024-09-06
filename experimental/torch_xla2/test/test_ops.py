@@ -26,7 +26,6 @@ skiplist = {
     "cholesky_solve",
     "combinations",
     "complex",
-    "cross",
     "cummax",
     "cummin",
     "cumsum",
