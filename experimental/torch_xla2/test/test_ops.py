@@ -249,7 +249,6 @@ skiplist = {
     "to_sparse",
     "topk",
     "trace",
-    "triangular_solve",
     "triu",
     "unbind",
     "unfold_copy",

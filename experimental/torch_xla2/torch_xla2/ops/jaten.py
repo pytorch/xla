@@ -3644,3 +3644,7 @@ def _get_median_index(x, axis=None, keepdims=False):
   if keepdims and axis is not None:
           median_index = jnp.expand_dims(median_index, axis)
   return median_index
+
+@op(torch.ops.aten.triangular_solve)
+def _aten_triangular_solve(b, a, upper=True, transpose=False, unittriangular=False):
+  return (jax.lax.linalg.triangular_solve(a, b, left_side=True, lower=not upper, transpose_a=transpose, unit_diagonal=unittriangular), a)
