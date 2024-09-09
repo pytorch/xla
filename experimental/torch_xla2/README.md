@@ -17,7 +17,7 @@ In particular, the following are not needed:
 
 TorchXLA2 and torch-xla have different installation instructions, please follow
 the instructions below from scratch (fresh venv / conda environment.) for different env.
-- For TPU: follow [install `torch_xla2` from source on TPU]()
+- For TPU: follow [install `torch_xla2` from source on TPU](https://github.com/pytorch/xla/blob/master/experimental/torch_xla2/README.md#1-installing-torch_xla2-from-source-on-tpu)
 - For MAC: follow [install `torch_xla2` from source on MAC]()
 - [Try]For other: follow [install `torch_xla2` from source on other env]()
 
