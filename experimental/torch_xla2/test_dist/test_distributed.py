@@ -73,7 +73,7 @@ def test_all_gather_tensor_func(multi_cpu, process_group):
   ("op", "expected"),
   [
     (dist.ReduceOp.SUM, sum(range(4))),
-    (dist.ReduceOp.AVG, sum(range(4)) / 4),
+    (dist.ReduceOp.AVG, sum(range(4)) // 4),
     (dist.ReduceOp.MIN, 0),
     (dist.ReduceOp.MAX, 3),
   ],
