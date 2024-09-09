@@ -2733,6 +2733,17 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.native_layer_norm, args, kwargs)
+  
+  def test_aten_native_layer_norm_1(self):
+    args = (
+        torch.randn((1, 10, 10, 10)).to(torch.float32),
+        [10],
+        torch.randn((10,)).to(torch.float32),
+        torch.randn((10,)).to(torch.float32),
+        0.0,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.native_layer_norm, args, kwargs)
 
   def test_aten_native_batch_norm_legit(self):
     batch = 3
