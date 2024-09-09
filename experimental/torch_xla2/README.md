@@ -16,12 +16,15 @@ In particular, the following are not needed:
 
 
 TorchXLA2 and torch-xla have different installation instructions, please follow
-the instructions below from scratch (fresh venv / conda environment.)
+the instructions below from scratch (fresh venv / conda environment.) for different env.
+- For TPU: follow [install `torch_xla2` from source on TPU]()
+- For MAC: follow [install `torch_xla2` from source on MAC]()
+- [Try]For other: follow [install `torch_xla2` from source on other env]()
 
-For MAC:
-### 1. Installing `torch_xla2` on MAC
 
-##### 1.1 Git clone `torch_xla2` on MAC
+### 1. Installing `torch_xla2` from source on TPU
+
+##### 1.1 Git clone `torch_xla2` on TPU
 ```bash
 $ git clone https://github.com/pytorch/xla.git
 $ cd xla/experimental/torch_xla2
@@ -59,60 +62,93 @@ pip3 install -r test-requirements.txt
 pytest test
 ```
 
-For non-Mac CPU:
-### 1. Installing `torch_xla2`
 
-The following instructions assume you are in the `torch_xla2` directory:
+### 2. Installing `torch_xla2` from source on MAC
 
-```
+##### 2.1 Git clone `torch_xla2` on MAC
+```bash
 $ git clone https://github.com/pytorch/xla.git
 $ cd xla/experimental/torch_xla2
 ```
 
-
-#### 1.0 (recommended) Make a virtualenv / conda env
-
-If you are using VSCode, then [you can create a new environment from
-UI](https://code.visualstudio.com/docs/python/environments). Select the
-`dev-requirements.txt` when asked to install project dependencies.
-
-Otherwise create a new environment from the command line.
-
+##### 2.2 setpu virtual env
 ```bash
 # Option 1: venv
-python -m venv my_venv
+python3 -m venv my_venv
 source my_venv/bin/activate
 
 # Option 2: conda
 conda create --name <your_name> python=3.10
 conda activate <your_name>
-
-# Either way, install the dev requirements.
-pip install -r dev-requirements.txt
 ```
 
-Note: `dev-requirements.txt` will install the CPU-only version of PyTorch.
+##### 2.3 install requirements
+```bash
+pip3 install -r dev-requirements.txt
+pip3 install numpy
+pip3 install jax==0.4.31 jaxlib==0.4.31
+```
 
-#### 1.1 Install this package
+##### 2.4 install `torch_xla` from source for your platform:
+```bash
+pip3 install -e .[cpu]
+pip3 install -e .[cuda]
+pip3 install -e .[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+```
 
+##### 2.5 (optional) verify installation by running all tests
+
+```bash
+pip3 install -r test-requirements.txt
+pytest test
+```
+
+### 3. [BLOKCED] Installing `torch_xla2` from source on other env
+For Google inside developer, please feel free to try this part, but current status is it will block at run tests steps with `pytest test` command
+
+##### 3.1 Git clone `torch_xla2` on other env
+```bash
+$ git clone https://github.com/pytorch/xla.git
+$ cd xla/experimental/torch_xla2
+```
+
+##### 3.2 setpu virtual env
+```bash
+# Option 1: venv
+python3 -m venv my_venv
+source my_venv/bin/activate
+
+# Option 2: conda
+conda create --name <your_name> python=3.10
+conda activate <your_name>
+```
+
+##### 3.3 install requirements
+```bash
+pip3 install -r dev-requirements.txt
+pip3 install numpy
+pip3 install jax==0.4.31 jaxlib==0.4.31
+```
+
+##### 3.4 install `torch_xla` from source for your platform:
+```bash
+pip3 install -e .[cpu]
+pip3 install -e .[cuda]
+pip3 install -e .[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+```
+
+##### 3.5 (optional) verify installation by running all tests
+
+```bash
+pip3 install -r test-requirements.txt
+pytest test
+```
+
+### Install `torch_xla2` with specific jax
 If you want to install torch_xla2 without the jax dependency and use the jax dependency from torch_xla:
 ```bash
 pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 pip install -e .
-```
-
-Otherwise, install `torch_xla2` from source for your platform:
-```bash
-pip install -e .[cpu]
-pip install -e .[cuda]
-pip install -e .[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
-```
-
-#### 1.2 (optional) verify installation by running tests
-
-```bash
-pip install -r test-requirements.txt
-pytest test
 ```
 
 ## Run a model
