@@ -18,7 +18,48 @@ In particular, the following are not needed:
 TorchXLA2 and torch-xla have different installation instructions, please follow
 the instructions below from scratch (fresh venv / conda environment.)
 
+For MAC:
+### 1. Installing `torch_xla2` on MAC
 
+##### 1.1 Git clone `torch_xla2` on MAC
+```bash
+$ git clone https://github.com/pytorch/xla.git
+$ cd xla/experimental/torch_xla2
+```
+
+##### 1.2 setpu virtual env
+```bash
+# Option 1: venv
+python3 -m venv my_venv
+source my_venv/bin/activate
+
+# Option 2: conda
+conda create --name <your_name> python=3.10
+conda activate <your_name>
+```
+
+##### 1.3 install requirements
+```bash
+pip3 install -r dev-requirements.txt
+pip3 install numpy
+pip3 install jax==0.4.31 jaxlib==0.4.31
+```
+
+##### 1.4 install `torch_xla` from source for your platform:
+```bash
+pip3 install -e .[cpu]
+pip3 install -e .[cuda]
+pip3 install -e .[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+```
+
+##### 1.5 (optional) verify installation by running all tests
+
+```bash
+pip3 install -r test-requirements.txt
+pytest test
+```
+
+For non-Mac CPU:
 ### 1. Installing `torch_xla2`
 
 The following instructions assume you are in the `torch_xla2` directory:
