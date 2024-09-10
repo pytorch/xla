@@ -595,7 +595,7 @@ def _aten_native_layer_norm(
   """
   if isinstance(normalized_shape, int):
     normalized_shape = [normalized_shape]
-  axis = [i for i, d in enumerate(input.shape) if d in normalized_shape]
+  axis = [len(input.shape) - i - 1 for i in range(len(normalized_shape))]
 
   # Calculate mean and standard deviation
   mean = jnp.mean(input, axis=axis, keepdims=True)
