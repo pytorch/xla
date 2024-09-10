@@ -24,7 +24,8 @@ the instructions below from scratch (fresh venv / conda environment.)
 The following instructions assume you are in the `torch_xla2` directory:
 
 ```
-$ git clone https://github.com/pytorch/xla.git
+Fork the repository
+$ git clone https://github.com/<github_username>/xla.git
 $ cd xla/experimental/torch_xla2
 ```
 
@@ -119,7 +120,7 @@ import torch_xla2
 
 env = torch_xla2.default_env() 
 ```
-Then, execute the instiation of the model, as well as evaluation of model, 
+Then, execute the instantiation of the model, as well as evaluation of model, 
 using `env` as a context manager:
 
 ```python
