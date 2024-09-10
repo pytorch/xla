@@ -29,6 +29,13 @@ class TestExperimentalCallback(absltest.TestCase):
     callback.on_ready_callback(c, cb)
     event.wait(3)
 
+  def test_callback_event(self):
+    c = self.executable()
+    c_ready_event = callback.on_ready_event(c)
+    c_ready_event.wait(3)
+    self.assertNotIn("Data Handle: None",
+                     torch_xla._XLAC._get_xla_tensor_debug_info(c))
+
 
 if __name__ == "__main__":
   absltest.main()
