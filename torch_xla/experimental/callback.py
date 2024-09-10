@@ -28,7 +28,6 @@ def on_ready_event(tensor: torch.Tensor) -> threading.Event:
   ready_event = threading.Event()
 
   def _callback_wrapper():
-    print('set event')
     ready_event.set()
 
   torch_xla._XLAC._on_ready_callback(tensor, _callback_wrapper)
