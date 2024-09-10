@@ -595,7 +595,7 @@ def _aten_native_layer_norm(
   """
   if isinstance(normalized_shape, int):
     normalized_shape = [normalized_shape]
-  axis = [len(input.shape) - i - 1 for i in range(len(normalized_shape))]
+  axis = [i for i, d in enumerate(input.shape) if d in normalized_shape]
 
   # Calculate mean and standard deviation
   mean = jnp.mean(input, axis=axis, keepdims=True)
@@ -1062,34 +1062,39 @@ def _aten_linalg_vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
       The tensor containing the calculated vector norms.
   """
 
-  if ord not in {2, float("inf"), float("-inf"), "fro"}:
+  if ord not in {2, float("inf"), float("-inf"), "fro"} and not isinstance(ord, (int, float)):
     raise ValueError(
       f"Unsupported ord value: {ord}. Supported values are 2, inf, -inf, and"
       " 'fro'."
     )
-
+    
   # Special cases (for efficiency and clarity)
-  if ord == 2:  # Euclidean norm
-    result = jnp.sqrt(jnp.sum(jnp.abs(self) ** 2, axis=dim, keepdims=keepdim))
+  if ord == 0:
+    if self.shape == ():
+      result = jnp.array(float(self != 0))
+    else:
+      result = _with_reduction_scalar(jnp.sum, jnp.where(self != 0, 1, 0), dim, keepdim)
+
+  elif ord == 2:  # Euclidean norm
+    result = jnp.sqrt(_with_reduction_scalar(jnp.sum, jnp.abs(self) ** 2, dim, keepdim))
 
   elif ord == float("inf"):
-    result = jnp.max(jnp.abs(self), axis=dim, keepdims=keepdim)
+    result = _with_reduction_scalar(jnp.max, jnp.abs(self), dim, keepdim)
 
   elif ord == float("-inf"):
-    result = jnp.min(jnp.abs(self), axis=dim, keepdims=keepdim)
+    result = _with_reduction_scalar(jnp.min, jnp.abs(self), dim, keepdim)
 
   elif ord == "fro":  # Frobenius norm
-    result = jnp.sqrt(jnp.sum(jnp.abs(self) ** 2, axis=dim, keepdims=keepdim))
+    result = jnp.sqrt(_with_reduction_scalar(jnp.sum, jnp.abs(self) ** 2, dim, keepdim))
 
   else:  # General case (e.g., ord = 1, ord = 3)
-    result = jnp.sum(jnp.abs(self) ** ord, axis=dim, keepdims=keepdim) ** (
+    result = _with_reduction_scalar(jnp.sum, jnp.abs(self) ** ord, dim, keepdim) ** (
       1.0 / ord
     )
 
   # (Optional) dtype conversion
   if dtype is not None:
-    result = result.astype(mappings.t2j_dtype(dtype))
-
+    result = jnp.astype(result, self.dtype)
   return result
 
 
