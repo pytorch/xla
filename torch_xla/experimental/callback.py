@@ -19,11 +19,11 @@ def on_ready_callback(tensor, callback: Callable[[torch.Tensor], None]):
 
 
 def on_ready_event(tensor: torch.Tensor) -> threading.Event:
-  """Installs callback on `tensor` to be called when underlying buffer is ready.
+  """Return a python threading.event that will be set once underlying
+  tensor buffer is ready.
 
-  Note: Since `callback` will need to re-acquire the GIL since it is a Python
-  callable. If the main thread is blocking on `callback` and holding the GIL,
-  this will result in a deadlock.
+  Args:
+    tensor: tensor that the event will be blocked on
   """
   ready_event = threading.Event()
 
