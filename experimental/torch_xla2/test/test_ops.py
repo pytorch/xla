@@ -127,7 +127,6 @@ skiplist = {
     "masked.logsumexp",
     "masked.mean",
     "masked.median",
-    "masked.norm",
     "masked.normalize",
     "masked.prod",
     "masked_scatter",
