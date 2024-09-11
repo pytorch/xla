@@ -25,6 +25,28 @@ def _fake_while_loop(cond_fn, body_fn, operands):
 
 class WhileLoopTest(unittest.TestCase):
 
+  def test_while_loop_addition_issue7986(self):
+    device = xm.xla_device()
+
+    def cond_fn(iteri, x):
+      # if iteri==5:
+      #   print("cond_fn: iteri is 5 now !!!")
+      # print("iteri: ", iteri)
+      return iteri > 0
+
+    def body_fn(iteri, x):
+      # if iteri==5:
+      #   print("body_fn: iteri is 5 now !!!")
+      # print("iteri: ", iteri)
+      return iteri - 1, torch.add(x, 1)
+
+    init_val = torch.tensor(3, dtype=torch.int32, device=device)
+    iteri = torch.tensor(10, device=device)
+    # _, res_with_loop = while_loop(cond_fn, body_fn, (iteri, init_val))
+    _, res_with_loop = _xla_while_loop_wrapper(cond_fn, body_fn, (iteri, init_val), additional_inputs=())
+    _, res_without_loop = _fake_while_loop(cond_fn, body_fn, (iteri, init_val))
+    self.assertTrue(torch.all(torch.eq(res_with_loop, res_without_loop)))
+
   def test_while_loop_addition(self):
     device = xm.xla_device()
 
