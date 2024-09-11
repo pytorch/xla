@@ -257,7 +257,6 @@ skiplist = {
     "expand_as",
     "mean",
     "nanmean",
-    "atleast_3d",
     "bfloat16",
     "bmm",
     "broadcast_shapes",
