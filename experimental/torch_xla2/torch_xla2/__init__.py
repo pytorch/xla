@@ -11,6 +11,7 @@ VERSION = __version__
 __all__ = [
   'default_env',
   'extract_jax',
+  'enable_globally',
 ]
 
 from jax._src import xla_bridge
@@ -61,3 +62,22 @@ def extract_jax(mod: torch.nn.Module, env=None):
     return env.t2j_iso(res)
 
   return states, jax_func
+
+def enable_globally():
+  global env 
+  env = default_env().__enter__()
+  return env
+
+def disable_globally():
+  global env 
+  default_env().__exit__(None, None, None)
+
+
+torch.utils.rename_privateuse1_backend('jax')
+unsupported_dtype = [torch.quint8]
+torch.utils.generate_methods_for_privateuse1_backend(
+  for_tensor=True, for_module=True, for_storage=True, 
+  unsupported_dtype=unsupported_dtype)
+
+import jax
+torch._register_device_module('jax', jax)

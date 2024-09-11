@@ -4,6 +4,7 @@ import numpy
 import torch
 import torch.func
 import torch.utils.dlpack as torchdl
+import torch.utils._mode_utils as mode_utils
 
 
 def t2j(t):
@@ -38,14 +39,15 @@ def t2j(t):
 
 
 def j2t(x):
-  try:
-    dl = jaxdl.to_dlpack(x)
-    res = torchdl.from_dlpack(dl)
-  except Exception:
-    res = torch.from_numpy(numpy.asarray(x))
-  if x.dtype == jnp.bool_:
-    res = res.to(torch.bool)
-  return res
+  with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+    try:
+      dl = jaxdl.to_dlpack(x)
+      res = torchdl.from_dlpack(dl)
+    except Exception:
+      res = torch.from_numpy(numpy.asarray(x))
+    if x.dtype == jnp.bool_:
+      res = res.to(torch.bool)
+    return res
 
 TORCH_DTYPE_TO_JAX = {
     # NO_MAPPING        : jnp.float0.dtype (signless scalar int),
@@ -86,7 +88,7 @@ JAX_DTYPE_TO_TORCH[jnp.dtype('uint4')] = torch.uint8
 
 def t2j_dtype(dtype):
   if dtype not in TORCH_DTYPE_TO_JAX:
-    raise RuntimeError(f'Attempting to convert unknown type: {dtype} to torch type,')
+    raise RuntimeError(f'Attempting to convert unknown type: {dtype} to jax type,')
   return TORCH_DTYPE_TO_JAX[dtype]
 
 

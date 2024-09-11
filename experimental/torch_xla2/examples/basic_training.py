@@ -7,18 +7,16 @@ and optimizer
 """
 
 import torch
-from torch.utils import _pytree as pytree
 import torchvision
 import torchvision.transforms as transforms
-import torch_xla2.tensor
-
-
-xla_env = torch_xla2.default_env()
 
 # PyTorch TensorBoard support
-from torch.utils.tensorboard import SummaryWriter
-from datetime import datetime
+#from torch.utils.tensorboard import SummaryWriter
+#from datetime import datetime
 
+# NOTE: add these lines to make it run on TPUs!
+import torch_xla2
+torch_xla2.enable_globally()
 
 transform = transforms.Compose(
     [transforms.ToTensor(),
@@ -83,7 +81,6 @@ class GarmentClassifier(nn.Module):
 
 
 model = GarmentClassifier()
-model = xla_env.to_xla(model)
 
 loss_fn = torch.nn.CrossEntropyLoss()
 
@@ -102,7 +99,7 @@ print('Total loss for this batch: {}'.format(loss.item()))
 # Optimizers specified in the torch.optim package
 optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-def train_one_epoch(epoch_index, tb_writer):
+def train_one_epoch(epoch_index, tb_writer=None):
     running_loss = 0.
     last_loss = 0.
 
@@ -112,7 +109,6 @@ def train_one_epoch(epoch_index, tb_writer):
     for i, data in enumerate(training_loader):
         # Every data instance is an input + label pair
         # NEW: Move model to XLA device
-        data = xla_env.to_xla(data)
         inputs, labels = data
 
         # Zero your gradients for every batch!
@@ -135,7 +131,7 @@ def train_one_epoch(epoch_index, tb_writer):
             last_loss = running_loss / 1000 # loss per batch
             print('  batch {} loss: {}'.format(i + 1, last_loss))
             tb_x = epoch_index * len(training_loader) + i + 1
-            tb_writer.add_scalar('Loss/train', last_loss, tb_x)
+            #tb_writer.add_scalar('Loss/train', last_loss, tb_x)
             running_loss = 0.
 
     return last_loss
@@ -143,8 +139,8 @@ def train_one_epoch(epoch_index, tb_writer):
 
 
 # Initializing in a separate cell so we can easily add more epochs to the same run
-timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
+#timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+#writer = SummaryWriter('runs/fashion_trainer_{}'.format(timestamp))
 epoch_number = 0
 EPOCHS = 2
 best_vloss = 1_000_000.
@@ -156,7 +152,7 @@ for epoch in range(EPOCHS):
     model.train(True)
 
 
-    avg_loss = train_one_epoch(epoch_number, writer)
+    avg_loss = train_one_epoch(epoch_number)
 
     running_vloss = 0.0
     # Set the model to evaluation mode, disabling dropout and using population
@@ -167,7 +163,6 @@ for epoch in range(EPOCHS):
     with torch.no_grad():
         for i, vdata in enumerate(validation_loader):
           # NOTE: move to XLA device
-          vinputs, vlabels = xla_env.to_xla(vdata)
           voutputs = model(vinputs)  # call model's forward
           vloss = loss_fn(voutputs, vlabels)
           running_vloss += vloss

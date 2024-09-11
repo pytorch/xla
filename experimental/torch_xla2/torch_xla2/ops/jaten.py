@@ -2,6 +2,7 @@
 
 import sys
 from typing import Optional, Sequence
+import functools
 
 import jax
 from jax import numpy as jnp
@@ -38,6 +39,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
   torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
+  torch.ops.aten.random_: torch.ops.aten.uniform,
 }
 
 
@@ -55,6 +57,18 @@ def op(*aten, **kwargs):
   def inner(func):
     for a in aten:
       ops_registry.register_torch_dispatch_op(a, func, **kwargs)
+      continue
+
+      if isinstance(a, torch._ops.OpOverloadPacket):
+        opname = a.default.name() if 'default' in a.overloads() else a._qualified_op_name
+      elif isinstance(a, torch._ops.OpOverload):
+        opname = a.name()
+      else:
+        raise RuntimeError(f'oops {a}')
+
+      torchfunc = functools.partial(interop.call_jax, func)
+      # HACK: to_copy is where we make the initial conversion from CPU tensor to JAX tensor
+      torch.library.impl(opname, 'privateuseone')(torchfunc if a != torch.ops.aten._to_copy else func)
     return func
 
   return inner
@@ -80,14 +94,13 @@ def _aten_add(x, y, *, alpha=1):
   return x + y * alpha
 
 
-@op(torch.ops.aten.copy_, torch.ops.aten.copy_.default, is_jax_function=False)
+@op(torch.ops.aten.copy_, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
   x._elem = y._elem.astype(x._elem.dtype)
   return x
 
 
 @op(torch.ops.aten.clone)
-@op(torch.ops.aten.clone.default)
 def _aten_clone(x, memory_format=None):
   return x
 
@@ -433,6 +446,8 @@ def _aten__to_copy(self, **kwargs):
   return jnp.copy(self)
 
 
+
+
 @op(torch.ops.aten.empty)
 @op_base.convert_dtype()
 def _aten_empty(size: Sequence[int], *, dtype=None, **kwargs):
@@ -465,7 +480,6 @@ def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
 
 
 @op(torch.ops.aten.empty_permuted)
-@op(torch.ops.aten.empty_permuted.default)
 @op_base.convert_dtype()
 def _aten_empty_permuted(sizes, physical_layout, dtype=None, **kwargs):
   # Ignore the physical layout,
@@ -474,7 +488,6 @@ def _aten_empty_permuted(sizes, physical_layout, dtype=None, **kwargs):
 
 
 @op(torch.ops.aten.empty_strided)
-@op(torch.ops.aten.empty_strided.default)
 @op_base.convert_dtype()
 def _aten_empty_strided(sizes, stride, dtype=None, **kwargs):
   # Ignore stride, since JAX and torch tensor doesn't share the same memory.
@@ -540,7 +553,6 @@ def permute(t, dims):
 
 @op(torch.ops.aten.unsqueeze)
 @op(torch.ops.aten.unsqueeze_copy)
-@op(torch.ops.aten.unsqueeze.default)
 def _aten_unsqueeze(self, dim):
   if dim < 0:
     dim += self.ndim + 1
@@ -1618,7 +1630,6 @@ def _with_reduction_scalar(jax_func, self, dim, keepdim):
 def _aten_any(self, dim=None, keepdim=False):
   return _with_reduction_scalar(jnp.any, self, dim, keepdim)
 
-
 # aten.arange
 @op(torch.ops.aten.arange.start_step)
 @op(torch.ops.aten.arange.start)
@@ -1634,6 +1645,7 @@ def _aten_arange(
   requires_grad=False,
   device=None,
   pin_memory=False,
+  **kwargs
 ):
   return jnp.arange(
     op_base.maybe_convert_constant_dtype(start, dtype),
@@ -1960,7 +1972,6 @@ def _aten_ge(self, other):
 
 
 @op(torch.ops.aten.glu)
-@op(torch.ops.aten.glu.default)
 def _aten_glu(x, dim=-1):
   return jax.nn.glu(x, dim)
 
@@ -2110,6 +2121,38 @@ def _aten_prod(self, dim=None, keepdim=False):
 
 
 # aten.randperm
+# randperm.generator(SymInt n, *, Generator? generator, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None)
+@op(torch.ops.aten.randperm, needs_env=True)
+def _aten_randperm(
+  n, *, 
+  generator=None, 
+  dtype=None, 
+  layout=None, 
+  device=None, 
+  pin_memory=None,
+  env=None):
+    """
+    Generates a random permutation of integers from 0 to n-1.
+
+    Args:
+        n: The upper bound (exclusive) of the permutation range.
+        generator: A PRNGKey used as the random key. If None, a new key is created.
+        dtype: The desired data type of the output array. Default is jnp.int64.
+        layout: The desired layout of the output array (e.g., 'row-major', 'column-major').
+        device: The desired device on which to place the output array (e.g., jax.devices()[0]).
+        pin_memory: Whether to pin the output array's memory to the host.
+
+    Returns:
+        A DeviceArray containing a random permutation of integers from 0 to n-1.
+    """
+    if dtype:
+      dtype = mappings.t2j_dtype(dtype)
+    else:
+      dtype = jnp.int64.dtype
+    key = env.get_and_rotate_prng_key(generator)
+    indices = jnp.arange(n, dtype=dtype)
+    permutation = jax.random.permutation(key, indices)
+    return permutation
 
 
 # aten.reflection_pad3d
@@ -2467,6 +2510,12 @@ def _aten_normal(self, mean=0, std=1, generator=None, env=None):
   res = _randn(*shape, generator=generator, env=env)
   return res * std + mean
 
+# TODO: not clear what this function should actually do
+# https://github.com/pytorch/pytorch/blob/d96c80649f301129219469d8b4353e52edab3b78/aten/src/ATen/native/native_functions.yaml#L7933-L7940
+@op(torch.ops.aten.lift_fresh)
+def _aten_lift_fresh(self):
+  return self
+
 @op(torch.ops.aten.uniform, needs_env=True)
 def _aten_uniform(self, from_=0, to=1, *, generator=None, env=None):
   assert from_ <= to, f'Uniform from(passed in {from_}) must be less than to(passed in {to})'
@@ -2476,7 +2525,7 @@ def _aten_uniform(self, from_=0, to=1, *, generator=None, env=None):
 
 #func: randint.low_generator(SymInt low, SymInt high, SymInt[] size, *, Generator? generator, ScalarType? dtype=long, Layout? layout=None, Device? device=None, bool? pin_memory=None) -> Tensor
 
-@op(torch.ops.aten.randint, torch.ops.aten.randint.generator, needs_env=True)
+@op(torch.ops.aten.randint, needs_env=True)
 @op_base.convert_dtype(use_default_dtype=False)
 def _aten_randint(
   *args,
