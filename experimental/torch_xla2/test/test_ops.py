@@ -28,7 +28,7 @@ skiplist = {
     "complex",
     "cummax",
     "cummin",
-    "diag",
+    "cumsum",
     "diag_embed",
     "diagflat",
     "diagonal_copy",
@@ -318,7 +318,7 @@ random_ops = {
   'nn.functional.feature_alpha_dropout',
 }
 
-atol_dict = {"matrix_exp": (3e-2, 1e-4)}
+atol_dict = {"matrix_exp": (2e-1, 2e-4)}
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):

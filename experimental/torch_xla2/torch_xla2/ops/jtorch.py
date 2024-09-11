@@ -63,6 +63,10 @@ def _torch_argsort(input, dim=-1, descending=False, stable=False):
     res = res.squeeze()
   return res
 
+@register_function(torch.diag)
+def _diag(input, diagonal=0):
+  return jnp.diag(input, k=diagonal)
+
 @register_function(torch.einsum)
 def _einsum(equation, *operands):
   def get_params(*a):
