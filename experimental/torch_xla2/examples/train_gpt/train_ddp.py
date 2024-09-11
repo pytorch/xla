@@ -1,13 +1,17 @@
-"""Example using `minGPT` with DistributedDataParallel on both CPU and JAX.
+"""WIP example using `minGPT` with DistributedDataParallel on both CPU and JAX.
+
+Required `mingpt` package for model definition (see requirements.txt). Some
+hyperparameters and training configuration borrowed from nanoGPT:
+https://github.com/karpathy/nanoGPT
 
 Example command (single host):
-OMP_NUM_THREADS=16 RANK=0 LOCAL_RANK=0 WORLD_SIZE=1 MASTER_ADDR=localhost MASTER_PORT=12355 python xla/experimental/torch_xla2/examples/train_g
-pt/train_ddp.py
+torchrun --standalone xla/experimental/torch_xla2/examples/train_gpt/train_ddp.py
+
+Tested on a TPU v4-8
 """
 
-import pickle
+import datetime
 import jax
-import numpy as np
 import torch
 import torch.utils.data
 import torch.utils.data.distributed
@@ -16,96 +20,84 @@ import torch.optim as optim
 import torch_xla2
 from tqdm import tqdm
 from mingpt.model import GPT
+from datasets import load_dataset
+import tiktoken
+import pathlib
+import torch.utils._pytree as torch_pytree
 
 
-# Dataset copied from `minGPT` demo:
-# https://github.com/karpathy/minGPT/blob/master/demo.ipynb
-class SortDataset(torch.utils.data.Dataset):
-  """
-  Dataset for the Sort problem. E.g. for problem length 6:
-  Input: 0 0 2 1 0 1 -> Output: 0 0 0 1 1 2
-  Which will feed into the transformer concatenated as:
-  input:  0 0 2 1 0 1 0 0 0 1 1
-  output: I I I I I 0 0 0 1 1 2
-  where I is "ignore", as the transformer is reading the input sequence
-  """
-
-  def __init__(self, split, length=6, num_digits=3):
-    assert split in {"train", "test"}
-    self.split = split
-    self.length = length
-    self.num_digits = num_digits
-
-  def __len__(self):
-    return 10000  # ...
-
-  def get_vocab_size(self):
-    return self.num_digits
-
-  def get_block_size(self):
-    return self.length * 2 - 1
-
-  def __getitem__(self, idx):
-    while True:
-      inp = torch.randint(
-        self.num_digits, size=(self.length,), dtype=torch.long
-      )
-      if torch.rand(1).item() < 0.5:
-        if inp.unique().nelement() > self.length // 2:
-          continue
-      h = hash(pickle.dumps(inp.tolist()))
-      inp_split = "test" if h % 4 == 0 else "train"
-      if inp_split == self.split:
-        break
-
-    sol = torch.sort(inp)[0]
-
-    cat = torch.cat((inp, sol), dim=0)
-
-    x = cat[:-1].clone()
-    y = cat[1:].clone()
-    y[: self.length - 1] = -1
-    return x, y
+def _checkpoint(jax_model, path: pathlib.Path):
+  torch.save(
+    torch_pytree.tree_map_only(
+      torch_xla2.tensor.XLATensor2,
+      torch_xla2.tensor.XLATensor2.torch,
+      jax_model.state_dict(),
+    ),
+    path,
+  )
 
 
 def main():
+  dist.init_process_group(backend="gloo")
+  dataset_name = "Skylion007/openwebtext"
+  dataset = load_dataset(dataset_name, split="train", trust_remote_code=True)
+
+  enc = tiktoken.get_encoding("gpt2")
+
+  def tokenize(ex):
+    """Tokenize each example and append the end-of-text token."""
+    ids = enc.encode_ordinary(ex["text"])
+    ids.append(enc.eot_token)
+    return {"ids": ids}
+
+  dataset = dataset.map(tokenize, num_proc=16)
+
+  def group_texts(exs):
+    """Group batches of tokens into `block_size` chunks."""
+    cat = torch.cat([torch.tensor(ex) for ex in exs["ids"]])
+    total_len = cat.size()[0]
+    num_chunks = total_len // 1025
+    split = torch.split(cat[: num_chunks * 1025], 1025)
+    xs = [ex[:-1] for ex in split]
+    ys = [ex[1:] for ex in split]
+    return {"x": xs, "y": ys}
+
+  dataset = dataset.map(
+    group_texts, batched=True, remove_columns=["text", "ids"], num_proc=16
+  )
+  dataset.shard(dist.get_world_size(), dist.get_rank())
   env = torch_xla2.default_env()
 
-  dist.init_process_group(backend="gloo")
   print(jax.device_count(), "devices")
 
   torch.manual_seed(0)
-  dataset = SortDataset("train")
-  sampler = torch.utils.data.distributed.DistributedSampler(
-    dataset, dist.get_world_size(), dist.get_rank(), shuffle=False
-  )
-  per_device_batch_size = 128
+  per_device_batch_size = 8
   local_batch_size = jax.local_device_count() * per_device_batch_size
   global_batch_size = jax.device_count() * per_device_batch_size
   dataloader = torch.utils.data.DataLoader(
-    dataset, batch_size=local_batch_size, sampler=sampler, drop_last=True
+    dataset.with_format("torch"), batch_size=local_batch_size, drop_last=True
   )
 
   # Create model and wrap with DDP
   def create_model():
     torch.manual_seed(0)
     model_config = GPT.get_default_config()
-    model_config.model_type = "gpt-nano"
-    model_config.vocab_size = dataset.get_vocab_size()
-    model_config.block_size = dataset.get_block_size()
-    return GPT(model_config)
+    model_config.model_type = "gpt2"
+    model_config.vocab_size = enc.n_vocab
+    model_config.block_size = 1024
+    # TODO: use bf16 when erroneous type promotions are fixed
+    return GPT(model_config)  # .to(dtype=torch.bfloat16)
 
+  checkpoint_subdir = pathlib.Path(
+    "checkpoints"
+  ) / datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+  checkpoint_subdir.mkdir(parents=True)
   jax_model = torch_xla2.distributed.DistributedDataParallel(
     create_model(), env
   )
-  cpu_model = torch.nn.parallel.DistributedDataParallel(create_model())
 
-  # Check that models initialized to same parameters
-  for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
-    np.testing.assert_allclose(jp.detach().numpy(), cp.detach().numpy())
-
-  cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=3e-4)
-  jax_optimizer = optim.SGD(jax_model.parameters(), lr=3e-4)
+  # TODO: LR scheduler
+  jax_optimizer = optim.SGD(jax_model.parameters(), lr=6e-4, weight_decay=0.1)
 
   # Contents of `step_fn` can be inlined if using eager
   @jax_model.jit_step
@@ -118,52 +110,37 @@ def main():
 
     return jax_output, jax_loss
 
-  iters = 20000
-  epochs = iters // global_batch_size + 1
+  tokens_per_batch = global_batch_size * 1024
 
-  for epoch in range(epochs):
+  for epoch in range(1):
     print("epoch", epoch)
-    for data, target in tqdm(
-      dataloader, unit="ex", unit_scale=global_batch_size
+    for i, batch in enumerate(
+      tqdm(dataloader, unit="tok", unit_scale=tokens_per_batch)
     ):
+      data, target = batch["x"], batch["y"]
       jax_data, jax_target = env.j2t_iso(
         (jax_model.shard_input(data), jax_model.shard_input(target))
       )
       jax_output, jax_loss = step_fn(jax_data, jax_target)
 
-      cpu_optimizer.zero_grad()
-      cpu_output, cpu_loss = cpu_model(data, target)
-      cpu_loss.backward()
-      torch.nn.utils.clip_grad_norm_(cpu_model.parameters(), 1.0)
-      cpu_optimizer.step()
-
-      # TODO: this fails, even without DDP
-      # for cp, jp in zip(cpu_model.parameters(), jax_model.parameters()):
-      #   np.testing.assert_allclose(jax_loss.item(), cpu_loss.item(), rtol=1.3e-6, atol=1e-5)
-
-    print("jax loss", jax_loss.item())
-    print("cpu loss", cpu_loss.item())
+      if i % 1000 == 0:
+        _checkpoint(jax_model, checkpoint_subdir / "gpt2_124m_{epoch}_{i}.ckpt")
+        print("step", i, jax_loss.item())
 
   with torch.no_grad():
     with env:
-      input_jax = torch.tensor([[0, 0, 2, 1, 0, 1]], dtype=torch.long)
+      inp = enc.encode("This GPT-2 example is")
+      input_jax = torch.tensor([inp], dtype=torch.long)
       # TODO: need to access underlying module for methods
-      cat_jax = jax_model._module.generate(
+      jax_generated = jax_model._module.generate(
         jax_model.replicate_input(input_jax),
-        input_jax[0].nelement(),
+        100,
         do_sample=False,
       )
 
-    input_cpu = torch.tensor([[0, 0, 2, 1, 0, 1]], dtype=torch.long)
-    cat_cpu = cpu_model.module.generate(
-      input_cpu, input_jax[0].nelement(), do_sample=False
-    )
-
-  sol_candidate_jax = cat_jax[:, input_jax.nelement() :]
-  sol_candidate_cpu = cat_cpu[:, input_cpu.nelement() :]
-  print("input sequence  :", input_cpu.tolist())
-  print("predicted sorted (JAX):", sol_candidate_jax.numpy())
-  print("predicted sorted (CPU):", sol_candidate_cpu.numpy())
+  print("input sequence:", inp, enc.decode(inp))
+  print(jax_generated)
+  print("predicted (JAX):", enc.decode(jax_generated.numpy().tolist()))
 
 
 if __name__ == "__main__":
