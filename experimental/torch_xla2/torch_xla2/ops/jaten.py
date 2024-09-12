@@ -118,6 +118,8 @@ def _aten_index_select(x, dim, index):
 
 @op(torch.ops.aten.mean)
 def _aten_mean(x, dim=None, keepdim=False):
+  if x.shape == () and dim is not None:
+    dim = None # disable dim for jax array without dim
   return jnp.mean(x, dim, keepdims=keepdim)
 
 
