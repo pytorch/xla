@@ -118,6 +118,8 @@ def _aten_index_select(x, dim, index):
 
 @op(torch.ops.aten.mean)
 def _aten_mean(x, dim=None, keepdim=False):
+  if x.shape == () and dim is not None:
+    dim = None # disable dim for jax array without dim
   return jnp.mean(x, dim, keepdims=keepdim)
 
 
@@ -1974,6 +1976,22 @@ def _aten_hardtanh(input, min_val=-1, max_val=1, inplace=False):
   return jnp.clip(input, min_val, max_val)
 
 
+# aten.histc
+@op(torch.ops.aten.histc)
+def _aten_histc(input, bins=100, min=0, max=0):
+  if min==0 and max==0:
+    if isinstance(input, jnp.ndarray) and input.size == 0:
+      min = 0
+      max = 0
+    else:
+      min = jnp.min(input)
+      max = jnp.max(input)
+  range_value = (min, max)
+  print("range_value: ", range_value)
+  hist, bin_edges = jnp.histogram(input, bins=bins, range=range_value, weights=None, density=None)
+  return hist
+
+
 # aten.lcm
 @op(torch.ops.aten.lcm)
 def _aten_lcm(input, other):
@@ -1999,7 +2017,7 @@ def _aten_le(self, other):
 
 # aten.leaky_relu
 @op(torch.ops.aten.leaky_relu)
-def _aten_leaky_relu(x, negative_slope):
+def _aten_leaky_relu(x, negative_slope=0.01):
   return jax.nn.leaky_relu(x, negative_slope)
 
 
