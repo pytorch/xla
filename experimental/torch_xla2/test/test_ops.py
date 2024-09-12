@@ -64,7 +64,6 @@ skiplist = {
     "geometric",
     "geqrf",
     "grid_sampler_2d",
-    "histc",
     "histogram",
     "histogramdd",
     "hypot",
