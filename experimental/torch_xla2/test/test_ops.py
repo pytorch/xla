@@ -64,9 +64,8 @@ skiplist = {
     "geometric",
     "geqrf",
     "grid_sampler_2d",
-    "histogram",
-    "histogramdd",
-    "hypot",
+    "histogram", # hard op: AssertionError: Tensor-likes are not close!
+    "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
     "igamma",
     "igammac",
     "index_reduce",
