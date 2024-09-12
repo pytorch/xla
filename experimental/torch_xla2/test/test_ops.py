@@ -125,8 +125,6 @@ skiplist = {
     "masked.logsumexp",
     "masked.mean",
     "masked.median",
-    "masked.normalize",
-    "masked.prod",
     "masked_scatter",
     "masked_select",
     "max_pool2d_with_indices_backward",

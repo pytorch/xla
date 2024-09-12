@@ -2124,7 +2124,7 @@ def _aten_nonzero(x):
 
 @op(torch.ops.aten.prod)
 def _aten_prod(self, dim=None, keepdim=False):
-  return jnp.prod(self, axis=dim, keepdims=keepdim)
+  return _with_reduction_scalar(jnp.prod, self, dim, keepdim)
 
 
 # aten.randperm
