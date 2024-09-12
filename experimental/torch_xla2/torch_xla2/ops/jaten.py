@@ -1987,9 +1987,13 @@ def _aten_histc(input, bins=100, min=0, max=0):
       min = jnp.min(input)
       max = jnp.max(input)
   range_value = (min, max)
-  print("range_value: ", range_value)
   hist, bin_edges = jnp.histogram(input, bins=bins, range=range_value, weights=None, density=None)
   return hist
+
+
+@op(torch.ops.aten.hypot)
+def _aten_hypot(input, other):
+  return jnp.hypot(input, other)
 
 
 # aten.lcm
