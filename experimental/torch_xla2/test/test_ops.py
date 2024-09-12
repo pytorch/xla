@@ -179,7 +179,6 @@ skiplist = {
     "nn.functional.instance_norm",
     "nn.functional.interpolate",
     "nn.functional.layer_norm",
-    "nn.functional.linear",
     "nn.functional.logsigmoid",
     "nn.functional.margin_ranking_loss",
     "nn.functional.max_pool1d",
