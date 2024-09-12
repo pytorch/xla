@@ -41,13 +41,13 @@ XLA_LIB = Library("xla", "DEF")
 from . import xla_model as this_module
 
 xrt_world_size = deprecated(this_module, torch_xla.runtime.world_size,
-                            'xrt_world_size() will be removed in release 2.6.')
+                            'xrt_world_size() will be removed in release 2.7.')
 get_ordinal = deprecated(
     this_module, torch_xla.runtime.global_ordinal,
-    'xla_model.get_ordinal() will be removed in release 2.6.')
+    'xla_model.get_ordinal() will be removed in release 2.7.')
 parse_xla_device = deprecated(
     this_module, _utils.parse_xla_device,
-    'xla_model.parse_xla_device() will be removed in release 2.6.')
+    'xla_model.parse_xla_device() will be removed in release 2.7.')
 
 
 class DeviceContext(object):
