@@ -76,7 +76,6 @@ skiplist = {
     "linalg.det",
     "linalg.eig",
     "linalg.eigh",
-    "linalg.eigvals",
     "linalg.eigvalsh",
     "linalg.householder_product",
     "linalg.inv",
