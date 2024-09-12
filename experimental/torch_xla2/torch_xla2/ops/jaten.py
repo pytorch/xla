@@ -2002,6 +2002,11 @@ def _aten_igamma(input, other):
   return jax.scipy.special.gammainc(input, other)
 
 
+@op(torch.ops.aten.linalg_eig)
+def _aten_linalg_eig(A):
+  return jax.numpy.linalg.eig(A)
+
+
 # aten.lcm
 @op(torch.ops.aten.lcm)
 def _aten_lcm(input, other):
