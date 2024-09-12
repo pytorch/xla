@@ -1,4 +1,5 @@
 """Tensor constructor overrides"""
+import collections.abc
 import functools
 from typing import Optional, Sequence
 import numpy as np
@@ -10,11 +11,24 @@ from jax.experimental.shard_map import shard_map
 
 import torch
 from torch_xla2.ops.ops_registry import register_torch_function_op
-from torch_xla2.ops import op_base, mappings
+from torch_xla2.ops import op_base, mappings, jaten
+import torch_xla2.tensor
 
 
 def register_function(torch_func, **kwargs):
   return functools.partial(register_torch_function_op, torch_func, **kwargs)
+
+
+@register_function(torch.as_tensor, is_jax_function=False, needs_env=True)
+@op_base.convert_dtype(use_default_dtype=False)  # Attempt to infer type from elements
+def _as_tensor(data, dtype=None, device=None, env=None):
+  if isinstance(data, torch.Tensor):
+    return env._to_copy(data, dtype, device)
+  if isinstance(data, np.ndarray):
+    jax_res = jnp.asarray(data)
+  else:
+    jax_res = _tensor(data, dtype=dtype)
+  return torch_xla2.tensor.XLATensor2(jax_res, env)
 
 
 @register_function(torch.tensor)
@@ -176,3 +190,78 @@ def _sparse_mm(mat1, mat2, reduce='sum'):
 @register_function(torch.isclose)
 def _aten_isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
   return jnp.isclose(input, other, rtol, atol, equal_nan)
+
+@register_function(torch.ones)
+def _ones(*size: int, dtype=None, **kwargs):
+  if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
+    size = size[0]
+  return torch.ops.aten.ones(size, dtype=dtype)
+
+
+@register_function(torch.zeros, is_jax_function=False)
+def _zeros(*size: int, dtype=None, **kwargs):
+  if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
+    size = size[0]
+  return torch.ops.aten.zeros(size, dtype=dtype)
+
+
+@register_function(torch.eye)
+@op_base.convert_dtype()
+def _eye(n: int, m: Optional[int] = None, *, dtype=None, **kwargs):
+  return jnp.eye(n, m, dtype=dtype)
+
+
+@register_function(torch.full)
+@op_base.convert_dtype()
+def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
+  # TODO: handle torch.Size
+  return jnp.full(size, fill_value, dtype=dtype)
+
+
+@register_function(torch.empty)
+@op_base.convert_dtype()
+def empty(*size: Sequence[int], dtype=None, **kwargs):
+  if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
+    size = size[0]
+  return jnp.empty(size, dtype=dtype)
+
+@register_function(torch.arange, is_jax_function=False)
+def arange(
+  start, end=None, step=None, 
+  out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False,
+  pin_memory=None,
+):
+  if end is None:
+    end = start
+    start = 0
+  if step is None:
+    step = 1
+  return torch.ops.aten.arange(start, end, step, dtype=dtype)
+
+@register_function(torch.empty_strided, is_jax_function=False)
+def empty_strided(
+  size, stride, *, dtype=None, layout=None, device=None, requires_grad=False, pin_memory=False):
+  return empty(size, dtype=dtype)
+
+
+@register_function(torch.rand, is_jax_function=False)
+def rand(
+  *size, **kwargs
+):
+  if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
+    size = size[0]
+  return torch.ops.aten.rand(size, **kwargs)
+
+@register_function(torch.randn, is_jax_function=False)
+def randn(
+  *size, generator=None, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False, pin_memory=False
+):
+  if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
+    size = size[0]
+  return torch.ops.aten.randn(size, generator=generator, dtype=dtype)
+
+@register_function(torch.randint, is_jax_function=False)
+def randint(
+  *args, **kwargs
+):
+  return torch.ops.aten.randint(*args, **kwargs)

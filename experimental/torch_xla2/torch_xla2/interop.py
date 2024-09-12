@@ -91,7 +91,7 @@ def _jax_view(t: TorchValue) -> JaxValue:
         assert isinstance(t, tensor.XLATensor2)
         return t.jax()
     if isinstance(t, type(torch.int32)):
-        return tensor.j2t_dtype(t)
+        return tensor.t2j_dtype(t)
 
     # torch.nn.Module needs special handling
     if not isinstance(t, torch.nn.Module) and callable(t):  # t is a TorchCallable

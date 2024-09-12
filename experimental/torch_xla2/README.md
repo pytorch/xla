@@ -131,6 +131,15 @@ with env:
   print(type(res))  # outputs XLATensor2
 ```
 
+You can also enable the environment globally with
+```python
+import torch_xla2
+
+torch_xla2.enable_globally() 
+```
+
+Then everything afterwards is run with XLA.
+
 ## What is happening behind the scene:
 
 When a torch op is executed inside of `env` context manager, we can swap out the 

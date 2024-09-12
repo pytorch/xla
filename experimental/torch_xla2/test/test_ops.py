@@ -378,6 +378,7 @@ class TestOpInfo(TestCase):
 
   def setUp(self):
     self.env = tensor.Environment()
+    torch.manual_seed(0)
 
   # Replaces all values in the input torch_tensor that are less than the given threshold
   # with the threshold value itself.

@@ -55,7 +55,10 @@ def convert_dtype(use_default_dtype: bool = True):
                 **kwargs: P.kwargs):
       if not dtype and use_default_dtype:
         dtype = torch.get_default_dtype()
-      jax_dtype = mappings.t2j_dtype(dtype)
+      if isinstance(dtype, torch.dtype):
+        jax_dtype = mappings.t2j_dtype(dtype)
+      else:
+        jax_dtype = dtype
 
       return func(*args, dtype=jax_dtype, **kwargs)
 
