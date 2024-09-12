@@ -2001,7 +2001,7 @@ def _aten_le(self, other):
 
 # aten.leaky_relu
 @op(torch.ops.aten.leaky_relu)
-def _aten_leaky_relu(x, negative_slope):
+def _aten_leaky_relu(x, negative_slope=0.01):
   return jax.nn.leaky_relu(x, negative_slope)
 
 
