@@ -1293,7 +1293,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f"all-reduce(f32[8,8]{{1,0}} %custom-call.2), channel_id=1, replica_groups={{{{{','.join([str(x) for x in self.device_ids])}}}}}, use_global_device_ids=true, to_apply=%AddComputation.3",
         hlo)
 
-    expected_x = torch.ones(8, 8)* int(self.n_devices*scale)
+    expected_x = torch.ones(8, 8) * int(self.n_devices * scale)
     self.assertTrue(torch.allclose(x.cpu(), expected_x))
 
   def test_get_1d_mesh(self):
