@@ -218,7 +218,6 @@ skiplist = {
     "prod",
     "put",
     "quantile",
-    "renorm",
     "repeat_interleave",
     "resize_",
     "resize_as_",
