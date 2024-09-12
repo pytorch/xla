@@ -73,7 +73,6 @@ skiplist = {
     "linalg.cholesky",
     "linalg.cholesky_ex",
     "linalg.cond",
-    "linalg.cross",
     "linalg.det",
     "linalg.eig",
     "linalg.eigh",
