@@ -255,7 +255,6 @@ skiplist = {
     "argwhere",
     "cumulative_trapezoid",
     "expand_as",
-    "mean",
     "nanmean",
     "bmm",
     "broadcast_shapes",
