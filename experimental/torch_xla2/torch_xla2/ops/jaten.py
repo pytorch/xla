@@ -1645,7 +1645,6 @@ def _aten_arange(
   requires_grad=False,
   device=None,
   pin_memory=False,
-  **kwargs
 ):
   return jnp.arange(
     op_base.maybe_convert_constant_dtype(start, dtype),
