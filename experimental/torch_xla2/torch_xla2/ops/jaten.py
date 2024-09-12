@@ -2257,7 +2257,6 @@ def _aten_unbind(a, dim=0):
 @op(torch.ops.aten.where.ScalarOther)
 @op(torch.ops.aten.where.Scalar)
 def _aten_where(condition, x, y):
-  print(condition, x, y)
   return jnp.where(condition, x, y)
 
 
