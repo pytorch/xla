@@ -122,7 +122,6 @@ skiplist = {
     "masked.argmax",
     "masked.argmin",
     "masked.cumsum",
-    "masked.log_softmax",
     "masked.logaddexp",
     "masked.logsumexp",
     "masked.mean",
