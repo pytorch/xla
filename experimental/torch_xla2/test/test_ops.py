@@ -66,7 +66,6 @@ skiplist = {
     "grid_sampler_2d",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
-    "igamma",
     "igammac",
     "index_reduce",
     "kthvalue",
