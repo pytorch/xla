@@ -301,6 +301,7 @@ random_ops = {
   'uniform',
   # Dropout is not deterministic https://pytorch.org/docs/stable/generated/torch.nn.functional.feature_alpha_dropout.html
   'nn.functional.feature_alpha_dropout',
+  'histc', # result is not stable for single negative scalar
 }
 
 atol_dict = {"matrix_exp": (2e-1, 2e-4)}
