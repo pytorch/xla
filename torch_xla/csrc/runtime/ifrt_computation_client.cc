@@ -76,7 +76,8 @@ torch::lazy::hash_t hash_comp_env(
     ifrt_devices.push_back(device);
   }
 
-  tsl::RCReference<xla::ifrt::DeviceList> device_list = xla::ifrt::BasicDeviceList::Create(std::move(ifrt_devices));
+  tsl::RCReference<xla::ifrt::DeviceList> device_list =
+      xla::ifrt::BasicDeviceList::Create(std::move(ifrt_devices));
 
   auto topology_desc = client->GetTopologyForDevices(device_list);
   if (topology_desc.ok()) {
@@ -206,7 +207,8 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
 
     for (auto array : arrays) {
       shards.push_back(std::make_shared<IfrtData>(
-          IfrtDeviceToString(array->sharding().devices()->devices().front()), array));
+          IfrtDeviceToString(array->sharding().devices()->devices().front()),
+          array));
     }
   } else {
     shards.push_back(data);
@@ -233,9 +235,11 @@ ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
     shard_shapes.push_back(ifrt_shard->buffer->shape());
   }
   xla::ifrt::Shape ifrt_shape(shape.dimensions());
-  tsl::RCReference<xla::ifrt::DeviceList> devices_list = xla::ifrt::BasicDeviceList::Create({client_->addressable_devices().begin(),
-                                      client_->addressable_devices().end()});
-    
+  tsl::RCReference<xla::ifrt::DeviceList> devices_list =
+      xla::ifrt::BasicDeviceList::Create(
+          {client_->addressable_devices().begin(),
+           client_->addressable_devices().end()});
+
   XLA_CHECK_EQ(shard_shapes.size(), devices_list->size());
   std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding =
       xla::ifrt::ConcreteSharding::Create(devices_list, xla::ifrt::MemoryKind(),
@@ -320,8 +324,10 @@ ComputationClient::DataPtr IfrtComputationClient::TransferShardsToDevice(
     shard_shapes.push_back(ifrt_shard->buffer->shape());
   }
   xla::ifrt::Shape ifrt_shape(shape.dimensions());
-  tsl::RCReference<xla::ifrt::DeviceList> devices_list = xla::ifrt::BasicDeviceList::Create({client_->addressable_devices().begin(),
-                                      client_->addressable_devices().end()});
+  tsl::RCReference<xla::ifrt::DeviceList> devices_list =
+      xla::ifrt::BasicDeviceList::Create(
+          {client_->addressable_devices().begin(),
+           client_->addressable_devices().end()});
   std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding =
       xla::ifrt::ConcreteSharding::Create(devices_list, xla::ifrt::MemoryKind(),
                                           ifrt_shape, shard_shapes);
