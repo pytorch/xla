@@ -135,7 +135,6 @@ skiplist = {
     "new_empty_strided",
     "nextafter",
     "nn.functional.adaptive_avg_pool1d",
-    "nn.functional.adaptive_avg_pool2d",
     "nn.functional.adaptive_avg_pool3d",
     "nn.functional.adaptive_max_pool1d",
     "nn.functional.adaptive_max_pool2d",
