@@ -346,7 +346,7 @@ ComputationClient::DataPtr IfrtComputationClient::CopyToDevice(
 
 tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
     const std::shared_ptr<IfrtData> handle) {
-  if (handle->buffer->sharding().devices().size() == 1) {
+  if (handle->buffer->sharding().devices()->size() == 1) {
     return handle->buffer;
   }
 
@@ -383,7 +383,7 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
       computations = Compile(std::move(instances));
 
-  XLA_CHECK_EQ(handle->buffer->sharding().devices().size(),
+  XLA_CHECK_EQ(handle->buffer->sharding().devices()->size(),
                GetLocalDevices().size());
 
   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
