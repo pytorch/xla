@@ -206,7 +206,7 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
 
     for (auto array : arrays) {
       shards.push_back(std::make_shared<IfrtData>(
-          IfrtDeviceToString(array->sharding().devices()[0]), array));
+          IfrtDeviceToString(array->sharding().devices()->devices().front()), array));
     }
   } else {
     shards.push_back(data);
