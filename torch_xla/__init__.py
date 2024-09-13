@@ -66,7 +66,7 @@ def _setup_libtpu_flags():
   # improves device memory usage.
   flags = _set_missing_flags(
       flags, (('xla_tpu_prefer_async_allgather_to_allreduce', 'true'),))
-  
+
   # This flag enables FlashAttention HLO pass that pattern matches attention
   # and rewrites it as flash attention. This pattern matching is causing
   # issues for our standard dot product attention. Turning it off till
