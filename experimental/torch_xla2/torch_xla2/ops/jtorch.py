@@ -191,6 +191,7 @@ def _sparse_mm(mat1, mat2, reduce='sum'):
 def _aten_isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
   return jnp.isclose(input, other, rtol, atol, equal_nan)
 
+
 @register_function(torch.ones)
 def _ones(*size: int, dtype=None, **kwargs):
   if len(size) == 1 and isinstance(size[0], collections.abc.Iterable):
@@ -265,3 +266,15 @@ def randint(
   *args, **kwargs
 ):
   return torch.ops.aten.randint(*args, **kwargs)
+
+
+@register_function(torch.logdet)
+def logdet(input):
+  _, logabsdet = jaten._aten__linalg_slogdet(input)
+  return logabsdet
+
+
+@register_function(torch.linalg.slogdet)
+def slogdet(input):
+  sign, logabsdet = jaten._aten__linalg_slogdet(input)
+  return torch.return_types.slogdet((sign, logabsdet))

@@ -3766,6 +3766,13 @@ def _aten_linalg_matrix_exp(input):
   return jax.scipy.linalg.expm(input)
 
 
+# torch._linalg.slogdet
+@op(torch.ops.aten._linalg_slogdet)
+def _aten__linalg_slogdet(input):
+  res = jnp.linalg.slogdet(input)
+  return res.sign, res.logabsdet
+
+
 @op(torch.ops.aten.median)
 def _aten_median(self, dim=None, keepdim=False):
   output = _with_reduction_scalar(functools.partial(jnp.quantile, q=0.5, method='lower'), self, dim=dim, keepdim=keepdim).astype(self.dtype)
