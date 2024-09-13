@@ -2265,6 +2265,9 @@ def _aten_topk(input, k, dim=None, largest=True, sorted=True, *, out=None):
   if not largest:
     input = -input  # Find top-k of negated input if we want the smallest
 
+  if input.ndim == 0:
+    return input, jnp.array(0, dtype=jnp.int64.dtype)
+
   transpose_shape = None
   if dim != -1 and dim != len(input.shape) - 1:
     transpose_shape = list(range(len(input.shape)))
