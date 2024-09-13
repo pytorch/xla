@@ -1989,6 +1989,7 @@ def _aten_hardtanh(input, min_val=-1, max_val=1, inplace=False):
 # aten.histc
 @op(torch.ops.aten.histc)
 def _aten_histc(input, bins=100, min=0, max=0):
+  # TODO(@manfei): this function might cause some uncertainty
   if min==0 and max==0:
     if isinstance(input, jnp.ndarray) and input.size == 0:
       min = 0
@@ -1997,9 +1998,23 @@ def _aten_histc(input, bins=100, min=0, max=0):
       min = jnp.min(input)
       max = jnp.max(input)
   range_value = (min, max)
-  print("range_value: ", range_value)
   hist, bin_edges = jnp.histogram(input, bins=bins, range=range_value, weights=None, density=None)
   return hist
+
+
+@op(torch.ops.aten.hypot)
+def _aten_hypot(input, other):
+  return jnp.hypot(input, other)
+
+
+@op(torch.ops.aten.igamma)
+def _aten_igamma(input, other):
+  return jax.scipy.special.gammainc(input, other)
+
+
+@op(torch.ops.aten.linalg_eig)
+def _aten_linalg_eig(A):
+  return jax.numpy.linalg.eig(A)
 
 
 # aten.lcm
