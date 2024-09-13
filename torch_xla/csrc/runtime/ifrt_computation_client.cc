@@ -233,8 +233,9 @@ ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
     shard_shapes.push_back(ifrt_shard->buffer->shape());
   }
   xla::ifrt::Shape ifrt_shape(shape.dimensions());
-  xla::ifrt::DeviceList devices_list({client_->addressable_devices().begin(),
-                                      client_->addressable_devices().end()});
+  tsl::RCReference<xla::ifrt::DeviceList> device_list = xla::ifrt::BasicDeviceList::Create({client_->addressable_devices().begin(),
+                                      client_->addressable_devices().end()};
+    
   XLA_CHECK_EQ(shard_shapes.size(), devices_list.size());
   std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding =
       xla::ifrt::ConcreteSharding::Create(devices_list, xla::ifrt::MemoryKind(),
