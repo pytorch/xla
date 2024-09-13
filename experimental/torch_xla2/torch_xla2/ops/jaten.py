@@ -698,6 +698,11 @@ def _aten_squeeze_dim(self, dim):
   new_shape = [p for i, p in enumerate(self.shape) if i not in dim or p != 1]
   return self.reshape(new_shape)
 
+@op(torch.ops.aten.bucketize)
+def _aten_bucketize(input, boundaries, *, out_int32=False, right=False, out=None):
+  assert boundaries[0] < boundaries[-1], "boundaries must contain a strictly increasing sequence"
+  return_type = jnp.int32 if out_int32 else jnp.int64
+  return jnp.digitize(input, boundaries, right=not right).astype(return_type)
 
 @op(torch.ops.aten.convolution)
 def _aten_convolution(
