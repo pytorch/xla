@@ -223,11 +223,7 @@ skiplist = {
     "svd",
     "svd_lowrank",
     "take_along_dim",
-    "take",
-    "tensor_split",
-    "to_sparse",
-    "topk",
-    "trace",
+    "to_sparse", # We are not supporting sparse tensors yet.
     "triu",
     "unbind",
     "unfold_copy",
@@ -362,6 +358,13 @@ ops_to_test = [
         test.variant_test_name not in variant_test_name_to_skip)
 ]
 
+# Sort related ops should ignore index;
+# For example: sort( [1, 0, 0]) -> [0, 0, 1]
+# the correct index can be [1, 2, 0] or [2, 1, 0]
+should_ignore_indexes = {
+  "topk"
+}
+
 
 class TestOpInfo(TestCase):
 
@@ -392,8 +395,11 @@ class TestOpInfo(TestCase):
         # To avoid errors during testing, replace values below 1 with 1.
         sample_input.input = self.replace_values_below_threshold(
             sample_input.input, 1)
+      
+      ignore_index = op.name in should_ignore_indexes
 
-      run_export_and_compare(self, op, sample_input, check_output)
+      run_export_and_compare(self, op, sample_input, check_output, 
+                             ignore_indices=ignore_index)
 
 
 instantiate_device_type_tests(TestOpInfo, globals())

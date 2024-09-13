@@ -275,6 +275,11 @@ def logdet(input):
 
 
 @register_function(torch.linalg.slogdet)
-def slogdet(input):
+def linalg_slogdet(input):
   sign, logabsdet = jaten._aten__linalg_slogdet(input)
   return torch.return_types.slogdet((sign, logabsdet))
+
+
+@register_function(torch.tensor_split)
+def tensor_split(input, indices_or_sections, dim=0):
+  return jnp.array_split(input, indices_or_sections, axis=dim)
