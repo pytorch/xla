@@ -114,7 +114,8 @@ class ExperimentLoader:
       if cfg_xla is None:
         return False
     elif cfg_accelerator in ("cpu", "cuda"):
-      pass
+      if cfg_xla == "XRT":
+        return False
     else:
       raise NotImplementedError
 
