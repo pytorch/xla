@@ -76,7 +76,8 @@ torch::lazy::hash_t hash_comp_env(
     ifrt_devices.push_back(device);
   }
 
-  tsl::RCReference<xla::ifrt::DeviceList> device_list(std::move(ifrt_devices));
+  tsl::RCReference<xla::ifrt::DeviceList> device_list = xla::ifrt::BasicDeviceList::Create(std::move(ifrt_devices));
+  device_list(
   auto topology_desc = client->GetTopologyForDevices(device_list);
   if (topology_desc.ok()) {
     // Some backends support a topology description which provides a better
