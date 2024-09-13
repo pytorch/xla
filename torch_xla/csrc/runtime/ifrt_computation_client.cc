@@ -68,7 +68,7 @@ torch::lazy::hash_t hash_comp_env(
   hash = torch::lazy::HashCombine(
       hash, torch::lazy::StringHash(platform_version.c_str()));
   // Include global devices in the hash, ensuring order is consistent.
-  xla::ifrt::DeviceList::Devices ifrt_devices;
+  xla::ifrt::BasicDeviceList::Devices ifrt_devices;
   for (auto& device : ordered_devices) {
     std::string device_str(device->ToString());
     hash = torch::lazy::HashCombine(
@@ -76,7 +76,7 @@ torch::lazy::hash_t hash_comp_env(
     ifrt_devices.push_back(device);
   }
 
-  xla::ifrt::DeviceList device_list(std::move(ifrt_devices));
+  tsl::RCReference<xla::ifrt::DeviceList> device_list(std::move(ifrt_devices));
   auto topology_desc = client->GetTopologyForDevices(device_list);
   if (topology_desc.ok()) {
     // Some backends support a topology description which provides a better
