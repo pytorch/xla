@@ -71,9 +71,8 @@ def _setup_libtpu_flags():
   # and rewrites it as flash attention. This pattern matching is causing
   # issues for our standard dot product attention. Turning it off till
   # we fix the issue with pattern matching.
-  flags = _set_missing_flags(
-      flags, (('xla_tpu_enable_flash_attention', 'false'),)
-  )
+  flags = _set_missing_flags(flags,
+                             (('xla_tpu_enable_flash_attention', 'false'),))
 
   if tpu.version() == 5:
     default_v5_flags = {
