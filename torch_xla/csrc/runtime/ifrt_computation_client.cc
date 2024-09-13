@@ -234,7 +234,7 @@ ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
   }
   xla::ifrt::Shape ifrt_shape(shape.dimensions());
   tsl::RCReference<xla::ifrt::DeviceList> device_list = xla::ifrt::BasicDeviceList::Create({client_->addressable_devices().begin(),
-                                      client_->addressable_devices().end()};
+                                      client_->addressable_devices().end()});
     
   XLA_CHECK_EQ(shard_shapes.size(), devices_list.size());
   std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding =
