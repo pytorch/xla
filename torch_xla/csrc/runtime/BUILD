@@ -301,8 +301,8 @@ cc_library(
         "@xla//xla/pjrt/c:pjrt_c_api_profiler_extension_hdrs",
         "@xla//xla:status",
         "@tsl//tsl/profiler/lib:profiler_factory",
-        "@tsl//tsl/profiler/rpc:profiler_server_impl",
-        "@tsl//tsl/profiler/rpc/client:capture_profile",
+        "@xla//xla/tsl/profiler/rpc:profiler_server_impl",
+        "@xla//xla/tsl/profiler/rpc/client:capture_profile",
         "@com_google_absl//absl/container:flat_hash_map",
 
         # TODO: We get missing symbol errors without these deps. Why aren't they
@@ -311,7 +311,7 @@ cc_library(
         "@tsl//tsl/profiler/protobuf:profiler_options_proto_cc_impl",
         "@tsl//tsl/profiler/protobuf:profiler_service_proto_cc_impl",
         "@tsl//tsl/profiler/protobuf:profiler_service_monitor_result_proto_cc_impl",
-        "@tsl//tsl/profiler/rpc/client:profiler_client",
+        "@xla//xla/tsl/profiler/rpc/client:profiler_client",
     ],
 )
 
@@ -463,7 +463,7 @@ ptxla_cc_test(
         ":xla_util",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
-        "@tsl//tsl/lib/core:status_test_util",
+        "@xla//xla/tsl/lib/core:status_test_util",
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/platform:status_matchers",
         "@xla//xla:shape_util",
@@ -479,7 +479,7 @@ ptxla_cc_test(
         ":computation_client",
         ":pjrt_computation_client",
         ":tensor_source",
-        "@tsl//tsl/lib/core:status_test_util",
+        "@xla//xla/tsl/lib/core:status_test_util",
         "@tsl//tsl/platform:env",
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/platform:logging",
@@ -504,7 +504,7 @@ ptxla_cc_test(
         ":computation_client",
         ":ifrt_computation_client",
         ":tensor_source",
-        "@tsl//tsl/lib/core:status_test_util",
+        "@xla//xla/tsl/lib/core:status_test_util",
         "@tsl//tsl/platform:env",
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/platform:logging",
