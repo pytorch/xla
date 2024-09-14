@@ -25,6 +25,8 @@ python3 test/pjrt/test_dtypes.py
 python3 test/pjrt/test_dynamic_plugin_tpu.py
 python3 test/test_while_loop.py
 python3 test/test_scan.py
+python3 test/test_pallas.py
+python3 test/test_pallas_spmd.py
 python3 test/test_input_output_aliases.py
 python3 test/test_gmm.py
 python3 test/eager/test_eager_spmd.py
@@ -51,8 +53,6 @@ if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
     python3 examples/eager/train_decoder_only_eager_spmd_data_parallel.py
     python3 examples/eager/train_decoder_only_eager_with_compile.py
     python3 examples/eager/train_decoder_only_eager_multi_process.py
-    python3 test/test_pallas.py
-    python3 test/test_pallas_spmd.py
 fi
 
 # Test `tpu-info` CLI compatibility
