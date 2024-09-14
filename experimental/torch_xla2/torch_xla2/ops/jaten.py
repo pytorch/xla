@@ -3821,7 +3821,10 @@ def _aten_unsafe_index_put(self, indices, values, accumulate=False):
   return self.index_put_(indices, values, accumulate)
 
 
-@op(torch.ops.aten.conj_physical)
+@op(torch.ops.aten.conj_physical,
+    torch.ops.aten.conj,
+    torch.ops.aten._conj_physical,
+    torch.ops.aten._conj)
 def _aten_conj_physical(self):
   return jnp.conjugate(self)
 
@@ -3887,3 +3890,48 @@ def _get_median_index(x, axis=None, keepdims=False):
 @op(torch.ops.aten.triangular_solve)
 def _aten_triangular_solve(b, a, upper=True, transpose=False, unittriangular=False):
   return (jax.lax.linalg.triangular_solve(a, b, left_side=True, lower=not upper, transpose_a=transpose, unit_diagonal=unittriangular), a)
+
+
+# func: _fft_c2c(Tensor self, SymInt[] dim, int normalization, bool forward) -> Tensor
+@op(torch.ops.aten._fft_c2c)
+def _aten__fft_c2c(self, dim, normalization, forward):
+  if forward:
+    norm = [
+      'backward', 
+      'ortho', 
+      'forward',
+    ][normalization]
+    return jnp.fft.fftn(self, axes=dim, norm=norm)
+  else:
+    norm = [
+      'forward',
+      'ortho', 
+      'backward', 
+    ][normalization]
+    return jnp.fft.ifftn(self, axes=dim, norm=norm)
+
+
+@op(torch.ops.aten._fft_r2c)
+def _aten__fft_r2c(self, dim, normalization, onesided):
+  norm = [
+    'backward', 
+    'ortho', 
+    'forward',
+  ][normalization]
+  if onesided:
+    return jnp.fft.rfftn(self, axes=dim, norm=norm)
+  else:
+    return jnp.fft.fftn(self, axes=dim, norm=norm)
+
+@op(torch.ops.aten._fft_c2r)
+def _aten__fft_c2r(self, dim, normalization, last_dim_size):
+  norm = [
+    'forward',
+    'ortho', 
+    'backward', 
+  ][normalization]
+  if len(dim) == 1:
+    s = [last_dim_size]
+  else:
+    s = None
+  return jnp.fft.irfftn(self, norm=norm, axes=dim, s=s)
