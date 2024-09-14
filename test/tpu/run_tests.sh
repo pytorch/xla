@@ -13,7 +13,6 @@ python3 test/spmd/test_xla_spmd_python_api_interaction.py
 python3 test/spmd/test_xla_auto_sharding.py
 python3 test/spmd/test_fsdp_v2.py
 XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shape_models.py -v
-XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shapes.py -v
 python3 test/test_autocast.py
 python3 test/test_fp8.py
 python3 test/test_grad_checkpoint.py
@@ -46,6 +45,7 @@ python3 examples/train_resnet_amp.py
 # Egaer tests will take more HBM, only run them on TPU v4 CI
 TPU_VERSION=$(python -c "import sys; sys.path.remove(''); import torch_xla; print(torch_xla._internal.tpu.version())")
 if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
+    XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shapes.py -v
     python3 test/dynamo/test_traceable_collectives.py
     python3 examples/data_parallel/train_resnet_xla_ddp.py
     python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py
@@ -53,6 +53,7 @@ if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
     python3 examples/eager/train_decoder_only_eager_spmd_data_parallel.py
     python3 examples/eager/train_decoder_only_eager_with_compile.py
     python3 examples/eager/train_decoder_only_eager_multi_process.py
+    
 fi
 
 # Test `tpu-info` CLI compatibility
