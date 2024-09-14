@@ -13,7 +13,6 @@ python3 test/spmd/test_xla_spmd_python_api_interaction.py
 python3 test/spmd/test_xla_auto_sharding.py
 python3 test/spmd/test_fsdp_v2.py
 XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shape_models.py -v
-XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shapes.py -v
 python3 test/test_autocast.py
 python3 test/test_fp8.py
 python3 test/test_grad_checkpoint.py
@@ -53,6 +52,7 @@ if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
     python3 examples/eager/train_decoder_only_eager_spmd_data_parallel.py
     python3 examples/eager/train_decoder_only_eager_with_compile.py
     python3 examples/eager/train_decoder_only_eager_multi_process.py
+    XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shapes.py -v
 fi
 
 # Test `tpu-info` CLI compatibility
