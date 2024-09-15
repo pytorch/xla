@@ -106,7 +106,6 @@ skiplist = {
     "lu_solve",
     "lu_unpack",
     "masked.amax",
-    "masked.amin",
     "masked.argmax",
     "masked.argmin",
     "masked.cumsum",
