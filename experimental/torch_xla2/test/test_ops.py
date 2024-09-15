@@ -107,7 +107,6 @@ skiplist = {
     "lu_unpack",
     "masked.amax",
     "masked.argmin",
-    "masked.cumsum",
     "masked.median",
     "masked_scatter",
     "masked_select",
