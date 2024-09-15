@@ -900,7 +900,7 @@ def _aten_relu(self):
 
 @op(torch.ops.aten.cat)
 def _aten_cat(tensors, dims=0):
-  non_empty_tensors = tuple([t for t in tensors if math.prod(t.type.shape) != 0])
+  non_empty_tensors = tuple([t for t in tensors if t.size != 0])
   if not non_empty_tensors:
     return tensors[0]
   return jnp.concatenate(non_empty_tensors, dims)
