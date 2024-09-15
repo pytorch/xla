@@ -900,6 +900,7 @@ def _aten_relu(self):
 
 @op(torch.ops.aten.cat)
 def _aten_cat(tensors, dims=0):
+  tensors = [t for t in tensors if t.size > 0]
   return jnp.concatenate(tensors, dims)
 
 
