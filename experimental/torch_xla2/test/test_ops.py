@@ -110,7 +110,7 @@ skiplist = {
     "masked.argmax",
     "masked.argmin",
     "masked.cumsum",
-    "masked.median", # RuntimeError: Object of type 'XLATensor2' is not an instance of 'sequence'
+    "masked.median",
     "masked_scatter",
     "masked_select",
     "max_pool2d_with_indices_backward",
