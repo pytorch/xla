@@ -188,6 +188,8 @@ def _aten_triu(m, k):
 @op(torch.ops.aten.slice)
 @op(torch.ops.aten.slice_copy)
 def _aten_slice(self, dim=0, start=None, end=None, step=1):
+  if dim < 0:
+    dim += self.ndim
   if end == sys.maxsize:
     end = self.shape[dim]
   sl = slice(start, end, step)
@@ -3220,6 +3222,7 @@ def _aten_special_hermite_polynomial_he(self, n):
 
 
 @op(torch.ops.aten.narrow)
+@op(torch.ops.aten.narrow_copy)
 def _aten_narrow(input, dim, start, length):
   return jax.lax.dynamic_slice_in_dim(input, start, length, axis=dim)
 
