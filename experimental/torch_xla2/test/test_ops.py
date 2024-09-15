@@ -25,8 +25,6 @@ skiplist = {
     "cholesky_solve",
     "combinations",
     "complex",
-    "cummax",
-    "cummin",
     "diag_embed",
     "diagflat",
     "diagonal_copy",

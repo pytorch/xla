@@ -565,6 +565,70 @@ def _aten_unsqueeze(self, dim):
 def _aten_ne(x, y):
   return jnp.not_equal(x, y)
 
+# Create indices along a specific axis
+#
+# For example
+# x = jnp.zeros((3,4))
+#
+# _indices_along_axis(x, axis=0)
+# >> [[0], [1], [2]] shape (3, 1)
+#
+# _indices_along_axis(x, axis=1)
+# >> [[0, 1, 2, 3]] shape (1, 4)
+def _indices_along_axis(x, axis):
+  return jnp.expand_dims(
+      jnp.arange(x.shape[axis]),
+      axis = [d for d in range(len(x.shape)) if d != axis]
+  )
+
+def _broadcast_indices(indices, shape):
+  return jnp.broadcast_to(
+      indices,
+      shape
+  )
+
+@op(torch.ops.aten.cummax)
+def _aten_cummax(x, dim):
+  if not x.shape:
+    return x, jnp.zeros_like(x, dtype=jnp.int64)
+
+  axis = dim
+
+  indice_along_axis = _indices_along_axis(x, axis)
+  indices = _broadcast_indices(indice_along_axis, x.shape)
+
+
+  def cummax_reduce_func(carry, elem):
+    v1, v2 = carry['val'], elem['val'] 
+    i1, i2 = carry['idx'], elem['idx']
+
+    v = jnp.maximum(v1, v2)
+    i = jnp.where(v1 > v2, i1, i2)
+    return {'val': v, 'idx': i}
+  res = jax.lax.associative_scan(cummax_reduce_func, {'val': x, 'idx': indices}, axis=axis)
+  return res['val'], res['idx']
+
+@op(torch.ops.aten.cummin)
+def _aten_cummin(x, dim):
+  if not x.shape:
+    return x, jnp.zeros_like(x, dtype=jnp.int64)
+ 
+  axis = dim
+
+  indice_along_axis = _indices_along_axis(x, axis)
+  indices = _broadcast_indices(indice_along_axis, x.shape)
+
+  def cummin_reduce_func(carry, elem):
+    v1, v2 = carry['val'], elem['val'] 
+    i1, i2 = carry['idx'], elem['idx']
+
+    v = jnp.minimum(v1, v2)
+    i = jnp.where(v1 < v2, i1, i2)
+    return {'val': v, 'idx': i}
+
+  res = jax.lax.associative_scan(cummin_reduce_func, {'val': x, 'idx': indices}, axis=axis)
+  return res['val'], res['idx']
+
 
 @op(torch.ops.aten.cumsum)
 def _aten_cumsum(x, y, dtype=None):
