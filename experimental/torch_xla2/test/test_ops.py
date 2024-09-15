@@ -110,7 +110,6 @@ skiplist = {
     "masked.argmax",
     "masked.argmin",
     "masked.cumsum",
-    "masked.mean",
     "masked.median",
     "masked_scatter",
     "masked_select",
