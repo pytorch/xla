@@ -173,8 +173,8 @@ int64_t XLATensorImpl::numel_custom() const {
 }
 
 bool XLATensorImpl::is_contiguous_custom(at::MemoryFormat memory_format) const {
-  // Only check that the storage is already contiguous.
-  XLA_CHECK(is_contiguous_) << "Non-contiguous storage for XLA tensor";
+  // Storage is always contiguous, but the tensor metadata is_contiguous_ might
+  // be false due to the update in the functionalization layer..
   return true;
 }
 
