@@ -35,24 +35,6 @@ skiplist = {
     "erfinv",
     "expand",
     "exponential",
-    "fft.fft2",
-    "fft.fft",
-    "fft.fftn",
-    "fft.hfft2",
-    "fft.hfft",
-    "fft.hfftn",
-    "fft.ifft2",
-    "fft.ifft",
-    "fft.ifftn",
-    "fft.ihfft2",
-    "fft.ihfft",
-    "fft.ihfftn",
-    "fft.irfft2",
-    "fft.irfft",
-    "fft.irfftn",
-    "fft.rfft2",
-    "fft.rfft",
-    "fft.rfftn",
     "floor_divide",
     "gather",
     "gcd",
@@ -366,6 +348,7 @@ class TestOpInfo(TestCase):
 
   def setUp(self):
     self.env = tensor.Environment()
+    #self.env.config.debug_accuracy_for_each_op = True 
     torch.manual_seed(0)
 
   # Replaces all values in the input torch_tensor that are less than the given threshold
