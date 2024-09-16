@@ -331,6 +331,10 @@ def _aten_div(x, y, rounding_mode=""):
 def _aten_true_divide(x, y):
   return x / y
 
+@op(torch.ops.aten.dist)
+def _aten_dist(input, other, p=2):
+  diff = jnp.abs(jnp.subtract(input, other))
+  return _aten_linalg_vector_norm(diff, ord=p)
 
 @op(torch.ops.aten.bmm)
 def _aten_bmm(x, y):

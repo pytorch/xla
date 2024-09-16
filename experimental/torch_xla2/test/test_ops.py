@@ -31,7 +31,6 @@ skiplist = {
     "diagonal_scatter",
     "diff",
     "digamma",
-    "dist",
     "erfc",
     "erfinv",
     "expand",
