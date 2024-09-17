@@ -190,7 +190,6 @@ skiplist = {
     "take_along_dim",
     "to_sparse", # We are not supporting sparse tensors yet.
     "triu",
-    "unbind",
     "unfold_copy",
     "unfold",
     "unique_consecutive",
