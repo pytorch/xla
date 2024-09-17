@@ -2784,26 +2784,42 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertGreaterEqual(buf_ptr_3, 0)
 
   def test_consistent_strides(self):
+    # Tests whether the `is_contiguous()` method is consisten with the tensor's stride.
+    # In other words, if `is_contiguous()` is true, the tensor's stride should reflect
+    # in a contiguous storage.
+
     def stride_is_contiguous(tensor):
+      # Order the sizes and strides tuple list in ascending stride order, so that the
+      # first element corresponds to the smallest stride.
       sizes_and_strides = list(sorted(zip(tensor.shape, tensor.stride()), key=lambda t: t[1]))
+
+      # A contiguous tensor's smallest stride should be 1.
       if sizes_and_strides[0][1] != 1:
         return False
+
+      # Check whether the next larger stride `stride[i + 1]` is equal the current
+      # one `stride[i]` multiplied by the current size `size[i]`.
       for i, (size, stride) in enumerate(sizes_and_strides[:-1]):
         if stride[i + 1] != stride[i] * size[i]:
           return False
+
       return True
 
-    def assert_consistent(tensor):
+    def assert_strides_consistent(tensor, value):
+      self.assertEquals(tensor.is_contiguous(), value)
       self.assertEquals(tensor.is_contiguous(), stride_is_contiguous(tensor))
 
+    # Obviously contiguous, since it was created with random.
     a = torch.rand(10).to(xm.xla_device())
-    assert_consistent(a)
+    assert_strides_consistent(a, True)
 
+    # Not contiguous, since we are skipping every other element.
     b = a[::2]
-    assert_consistent(b)
+    assert_strides_consistent(b, False)
 
+    # Still not contiguous, since 'b' is not contiguous.
     c = b[1:]
-    assert_consistent(c)
+    assert_strides_consistent(c, False)
 
 
 class TestDLPack(parameterized.TestCase):
