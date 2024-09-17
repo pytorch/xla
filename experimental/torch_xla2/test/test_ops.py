@@ -173,11 +173,13 @@ skiplist = {
     "var_mean",
     "argwhere",
     "nanmean",
+    "ceil",
     "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
     "nn.functional.triplet_margin_loss",
     "nn.functional.triplet_margin_with_distance_loss",
     "randint",
     "repeat",
+    "trunc",
 }
 
 # These inputs are themselves views
