@@ -86,7 +86,6 @@ skiplist = {
     "lu",
     "lu_solve",
     "lu_unpack",
-    "masked.argmin",
     "masked.median",
     "masked_scatter",
     "masked_select",
