@@ -229,7 +229,6 @@ skiplist = {
     "true_divide",
     "trunc",
     "unflatten",
-    "unsafe_chunk",
     "unsafe_split",
     "unsqueeze",
     "view_as_complex",
