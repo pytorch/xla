@@ -239,6 +239,16 @@ def _aten_real(x):
   return jnp.real(x)
 
 
+@op(torch.ops.aten.resize_)
+def _aten_resize_as_(x, y):
+  return jax.image.resize(x, size, method=interpolation)
+
+
+@op(torch.ops.aten.resize_as_)
+def _aten_resize_as_(x, y):
+  return jax.image.resize(x, y.shape, method='linear')
+
+
 @op(torch.ops.aten.view_as_real)
 def _aten_view_as_real(x):
   real = jnp.real(x)
