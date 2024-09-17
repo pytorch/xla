@@ -192,6 +192,18 @@ PyTorch profiling:
 **PyTorch/XLA Metrics:** (repeat-specific) the flag `--dump-pytorch-xla-metrics` creates a
 new file, dumping PyTorch/XLA metrics, such as graph compiling and execution information.
 
+**Intermediate Representations (IR):** the parameter `--save-ir` allows the selection of
+one of the used IRs: `hlo` (similar to `--dump-hlo` above), `stablehlo`, and `text`
+(PyTorch lazy IR).
+
+## Model Verification
+
+In order to validate the execution of the benchmarks, it is possible to run an accuracy
+check on them by specifying the flag `--verify`. For consistency reasons, we run a similar
+version of the accuracy test run in the PyTorch HUD, which, at its core, uses [the `same`
+function][10]. In summary, it tries to check the accuracy by one of these three methods:
+(i) cosine similarity; (ii) `torch.allclose`; and (iii) root mean squared error (RMSE).
+
 [1]: https://github.com/pytorch/benchmark
 [2]: https://github.com/pytorch/pytorch/blob/main/benchmarks/dynamo/torchbench.py
 [3]: https://hud.pytorch.org/benchmark/compilers
@@ -201,3 +213,4 @@ new file, dumping PyTorch/XLA metrics, such as graph compiling and execution inf
 [7]: https://github.com/pytorch/pytorch/blob/main/.github/ci_commit_pins/torchbench.txt
 [8]: https://jsonlines.org/
 [9]: https://pytorch.org/docs/stable/torch.compiler_profiling_torch_compile.html
+[10]: https://github.com/pytorch/pytorch/blob/a4e9a1c90b74572b48f2eedf1e931c18713c1781/torch/_dynamo/utils.py#L1616
