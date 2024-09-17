@@ -97,7 +97,6 @@ skiplist = {
     "mvlgamma",
     "nanmedian",
     "nanquantile",
-    "native_layer_norm",
     "new_empty",
     "new_empty_strided",
     "nextafter",
