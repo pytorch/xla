@@ -19,6 +19,7 @@ skiplist = {
     "cat",
     "cauchy",
     "cdist",
+    "ceil",
     "cholesky",
     "cholesky_inverse",
     "cholesky_solve",
