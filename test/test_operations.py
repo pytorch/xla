@@ -2806,21 +2806,20 @@ class TestGeneric(test_utils.XlaTestCase):
 
       return True
 
-    def assert_strides_consistent(tensor, value):
-      self.assertEquals(tensor.is_contiguous(), value)
+    def assert_strides_consistent(tensor):
       self.assertEquals(tensor.is_contiguous(), stride_is_contiguous(tensor))
 
     # Obviously contiguous, since it was created with random.
     a = torch.rand(10).to(xm.xla_device())
-    assert_strides_consistent(a, True)
+    assert_strides_consistent(a)
 
     # Not contiguous, since we are skipping every other element.
     b = a[::2]
-    assert_strides_consistent(b, False)
+    assert_strides_consistent(b)
 
     # Still not contiguous, since 'b' is not contiguous.
     c = b[1:]
-    assert_strides_consistent(c, False)
+    assert_strides_consistent(c)
 
 
 class TestDLPack(parameterized.TestCase):
