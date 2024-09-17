@@ -1,3 +1,4 @@
+import dataclasses
 import jax
 import os
 import torch
@@ -92,3 +93,28 @@ def enable_performance_mode():
   jax.config.update('jax_enable_x64', False)
   jax.config.update('jax_default_matmul_precision', 'default')
   default_env().config.internal_respect_torch_return_dtypes = False
+
+
+
+@dataclasses.dataclass
+class CompileOptions:
+  # only valid if compiling nn.Module
+  methods_to_compile: List[str] = dataclasses.field(default_factory=lambda: ['forward'])  
+  jax_jit_kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
+  mode: str = 'jax' # or dynamo or export
+
+
+def compile(fn, options: Optional[CompileOptions] = None):
+  options = options or CompileOptions()
+  if options.mode == 'jax':
+    from torch_xla2 import interop
+    if isinstance(fn, torch.nn.Module):
+      module = interop.JittableModule(fn, extra_jit_kwargs=config.jax_jit_kwargs)
+      for n in config.method_to_compile:
+        module.make_jitted(n)
+    else:
+      return interop.jax_jit(fn)
+  elif options.mode == 'dynamo':
+    raise RuntimeError('dynamo mode is not supported yet')
+  elif options.mode == 'export':
+    raise RuntimeError('export mode is not supported yet')

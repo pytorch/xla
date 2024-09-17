@@ -49,10 +49,7 @@ def set_all_buffers(m, params, buffers):
 
 class JittableModule(torch.nn.Module):
 
-    # TODO: add statedict loading hook
-
     def __init__(self, m: torch.nn.Module, extra_jit_args={}):
-        super().__init__()
         self.params, self.buffers = extract_all_buffers(m)
         self._model = m
         self._jitted = {}
