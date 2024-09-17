@@ -2783,6 +2783,28 @@ class TestGeneric(test_utils.XlaTestCase):
     buf_ptr_3 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_3)
     self.assertGreaterEqual(buf_ptr_3, 0)
 
+  def test_consistent_strides(self):
+    def stride_is_contiguous(tensor):
+      sizes_and_strides = list(sorted(zip(tensor.shape, tensor.stride()), key=lambda t: t[1]))
+      if sizes_and_strides[0][1] != 1:
+        return False
+      for i, (size, stride) in enumerate(sizes_and_strides[:-1]):
+        if stride[i + 1] != stride[i] * size[i]:
+          return False
+      return True
+
+    def assert_consistent(tensor):
+      self.assertEquals(tensor.is_contiguous(), stride_is_contiguous(tensor))
+
+    a = torch.rand(10).to(xm.xla_device())
+    assert_consistent(a)
+
+    b = a[::2]
+    assert_consistent(b)
+
+    c = b[1:]
+    assert_consistent(c)
+
 
 class TestDLPack(parameterized.TestCase):
 
