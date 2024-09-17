@@ -151,7 +151,6 @@ skiplist = {
     "quantile",
     "repeat_interleave",
     "resize_",
-    "resize_as_",
     "rot90",
     "rsub",
     "scatter_add",
