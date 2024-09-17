@@ -2791,7 +2791,8 @@ class TestGeneric(test_utils.XlaTestCase):
     def stride_is_contiguous(tensor):
       # Order the sizes and strides tuple list in ascending stride order, so that the
       # first element corresponds to the smallest stride.
-      sizes_and_strides = list(sorted(zip(tensor.shape, tensor.stride()), key=lambda t: t[1]))
+      sizes_and_strides = list(
+          sorted(zip(tensor.shape, tensor.stride()), key=lambda t: t[1]))
 
       # A contiguous tensor's smallest stride should be 1.
       if sizes_and_strides[0][1] != 1:
