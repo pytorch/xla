@@ -49,23 +49,48 @@ def set_all_buffers(m, params, buffers):
 
 class JittableModule:
 
-    def __init__(self, m: torch.nn.Module):
+    def __init__(self, m: torch.nn.Module, extra_jit_args={}):
         self.params, self.buffers = extract_all_buffers(m)
         self._model = m
+        self._jitted = {}
+
+        self._extra_jit_args = extra_jit_args
 
 
     def __call__(self, *args, **kwargs):
-        res = self._model(*args, **kwargs)
-        return res
+        return self.forward(*args, **kwargs)
+
 
     def functional_call(
-            self, method_name, params, buffers, args, kwargs=None):
+            self, method_name, params, buffers, *args, **kwargs):
         kwargs = kwargs or {}
         params_copy = copy.copy(params)
         params_copy.update(buffers)
         with torch_stateless._reparametrize_module(self._model, params_copy):
             res = getattr(self._model, method_name)(*args, **kwargs)
         return res
+
+
+    def forward(self, *args, **kwargs):
+        if 'forward' not in self._jitted:
+            jitted = jax_jit(
+                functools.partial(self.functional_call, 'forward'),
+                kwargs_for_jax_jit=self._extra_jit_args,
+            )
+            def jitted_forward(*args, **kwargs):
+                return jitted(self.params, self.buffers, *args, **kwargs)
+            self._jitted['forward'] = jitted_forward
+        return self._jitted['forward'](*args, **kwargs)
+
+    def __getattr__(self, key):
+        return getattr(self._model, key)
+
+
+
+
+
+
+    
 
 
 def _torch_view(t: JaxValue) -> TorchValue:

@@ -327,8 +327,8 @@ class Environment(contextlib.ContextDecorator):
             the_tensor = the_tensor.to(new_dtype)
         jax_device = self.get_as_jax_device(new_device)
         if jax_device:
-          with jax.default_device(jax_device):
-            arr = t2j(the_tensor)
+          arr = t2j(the_tensor)
+          arr = jax.device_put(arr, jax_device)
         else:
           with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
             return torch_tensor.to(new_device)
