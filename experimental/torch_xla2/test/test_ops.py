@@ -36,7 +36,6 @@ skiplist = {
     "expand",
     "exponential",
     "floor_divide",
-    "gather",
     "gcd",
     "geometric",
     "geqrf",

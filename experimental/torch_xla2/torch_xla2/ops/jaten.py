@@ -2042,8 +2042,10 @@ def _aten_frexp(input):
 # aten.gather
 @op(torch.ops.aten.gather)
 def _aten_gather(input, dim, index):
+  if input.ndim == 0:
+    return jnp.broadcast_to(input, index.shape)
   if dim < 0:
-      dim += input.ndim
+    dim += input.ndim
   input_indexes, source_indexes = _scatter_index(dim, index)
   return input[input_indexes]
 
