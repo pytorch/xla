@@ -26,7 +26,6 @@ skiplist = {
     "combinations",
     "complex",
     "diag_embed",
-    "diagflat",
     "diagonal_copy",
     "diagonal_scatter",
     "diff",
