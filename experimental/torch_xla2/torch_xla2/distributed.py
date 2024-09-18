@@ -208,7 +208,7 @@ class DistributedDataParallel(torch.nn.Module):
     global_batch_shape = (global_batch_size,) + inp.shape[1:]
 
     sharding = NamedSharding(self._mesh, P("batch"))
-    return jax.make_array_from_single_device_arrays(
+    return self._env.j2t_iso(jax.make_array_from_single_device_arrays(
       global_batch_shape,
       NamedSharding(self._mesh, P("batch")),
       arrays=[
@@ -217,7 +217,7 @@ class DistributedDataParallel(torch.nn.Module):
           per_replica_batches, sharding.addressable_devices
         )
       ],
-    )
+    ))
 
   def replicate_input(self, inp):
     return self._env.j2t_iso(
