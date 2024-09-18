@@ -58,7 +58,7 @@ import test_utils
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
 XLA_DISABLE_FUNCTIONALIZATION = bool(
-    os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', False))
+    int(os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', '0')))
 
 
 def _is_on_tpu():
@@ -2820,6 +2820,26 @@ class TestGeneric(test_utils.XlaTestCase):
     # Still not contiguous, since 'b' is not contiguous.
     c = b[1:]
     assert_strides_consistent(c)
+
+  def test_contiguity_on_different_memory_format(self):
+    # Create contiguous strided tensor.
+    a = torch.rand(2, 3, 4, 5).to(xm.xla_device())
+    self.assertTrue(a.is_contiguous())
+    # When functionalization is disabled, we fallback to the old behavior, where
+    # `is_contiguous()` calls always returns True.
+    self.assertEquals(a.is_contiguous(memory_format=torch.channels_last), XLA_DISABLE_FUNCTIONALIZATION)
+
+    # Make `a` contiguous in torch.channels_last memory format.
+    #
+    # This should, in theory, be a no-op, since we can't really change the strides
+    # of XLA tensors. However, `contiguous` is a composite operation that checks the
+    # tensor's metadata. Therefore, it shall clone the tensor whenever its strides
+    # do not conform to the given memory format.
+    b = a.contiguous(memory_format=torch.channels_last)
+    # When functionalization is disabled, we fallback to the old behavior, where
+    # `is_contiguous()` calls always returns True.
+    self.assertEquals(b.is_contiguous(), XLA_DISABLE_FUNCTIONALIZATION)
+    self.assertTrue(b.is_contiguous(memory_format=torch.channels_last))
 
 
 class TestDLPack(parameterized.TestCase):
