@@ -1364,7 +1364,7 @@ def _aten_scatter_add(input, dim, index, src):
 
 # aten.masked_scatter
 @op(torch.ops.aten.masked_scatter)
-def _aten_scatter_add(self, mask, source):
+def _aten_masked_scatter(self, mask, source):
 
   broadcast_shape = jnp.broadcast_shapes(self.shape, mask.shape)
 
