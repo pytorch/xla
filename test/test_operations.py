@@ -2827,7 +2827,9 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertTrue(a.is_contiguous())
     # When functionalization is disabled, we fallback to the old behavior, where
     # `is_contiguous()` calls always returns True.
-    self.assertEquals(a.is_contiguous(memory_format=torch.channels_last), XLA_DISABLE_FUNCTIONALIZATION)
+    self.assertEquals(
+        a.is_contiguous(memory_format=torch.channels_last),
+        XLA_DISABLE_FUNCTIONALIZATION)
 
     # Make `a` contiguous in torch.channels_last memory format.
     #
