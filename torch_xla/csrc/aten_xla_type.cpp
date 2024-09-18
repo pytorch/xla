@@ -1233,18 +1233,20 @@ at::Tensor XLANativeFunctions::clone(
   at::Tensor out = bridge::AtenFromXlaTensor(
       tensor_methods::clone(bridge::GetXlaTensor(self)));
 
-  at::Tensor ref;
-  if (memory_format.has_value() &&
-      *memory_format != at::MemoryFormat::Preserve) {
-    // We need to run the meta function as reference, for setting the correct
-    // strides to the output tensor.
-    at::Tensor ref_self = self.to(at::kMeta);
-    ref = ref_self.clone(memory_format);
-  } else {
-    ref = self;
+  if (!runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    at::Tensor ref;
+    if (memory_format.has_value() &&
+        *memory_format != at::MemoryFormat::Preserve) {
+      // We need to run the meta function as reference, for setting the correct
+      // strides to the output tensor.
+      at::Tensor ref_self = self.to(at::kMeta);
+      ref = ref_self.clone(memory_format);
+    } else {
+      ref = self;
+    }
+    out.unsafeGetTensorImpl()->set_sizes_and_strides(ref.sym_sizes(),
+                                                     ref.sym_strides());
   }
-  out.unsafeGetTensorImpl()->set_sizes_and_strides(ref.sym_sizes(),
-                                                   ref.sym_strides());
 
   return out;
 }
