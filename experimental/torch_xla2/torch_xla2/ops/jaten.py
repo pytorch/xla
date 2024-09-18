@@ -1939,6 +1939,17 @@ def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
   return jnp.diagonal(input, offset, dim1, dim2)
 
 
+# aten.diagflat
+@op(torch.ops.aten.diagflat)
+def _aten_diagflat(input, offset=0):
+  return jnp.diagflat(jnp.array(input), offset)
+
+
+@op(torch.ops.aten.movedim)
+def _aten_movedim(input, source, destination):
+  return jnp.moveaxis(input, source, destination)
+
+
 # aten.eq
 @op(torch.ops.aten.eq)
 def _aten_eq(input1, input2):
