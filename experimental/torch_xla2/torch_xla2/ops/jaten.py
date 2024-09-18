@@ -1383,6 +1383,9 @@ def _aten_masked_scatter(self, mask, source):
 
   return final_arr
 
+@op(torch.ops.aten.masked_select)
+def _aten_masked_select(self, mask):
+  return self[mask]
 
 # aten.logical_not
 
