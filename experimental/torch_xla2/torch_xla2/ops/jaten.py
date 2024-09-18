@@ -40,6 +40,10 @@ mutation_ops_to_functional = {
   torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
   torch.ops.aten.random_: torch.ops.aten.uniform,
+  torch.ops.aten.ceil_: torch.ops.aten.ceil,
+  torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
+  torch.ops.aten.unsqueeze_: torch.ops.aten.unsqueeze,
+  torch.ops.aten.transpose_: torch.ops.aten.transpose,
 }
 
 
@@ -1476,11 +1480,6 @@ def _aten_pixel_shuffle(x, upscale_factor):
 def _aten_lt(self, other):
   return self < other
 
-# aten.logical_not_
-@op(torch.ops.aten.logical_not_)
-def _aten_logical_not_(input):
-  return jnp.logical_not(input)
-
 
 def pool(inputs, init, reduce_fn, window_shape, strides, padding):
   """Helper function to define pooling functions.
@@ -2043,6 +2042,8 @@ def _aten_frexp(input):
 # aten.gather
 @op(torch.ops.aten.gather)
 def _aten_gather(input, dim, index):
+  if dim < 0:
+      dim += input.ndim
   input_indexes, source_indexes = _scatter_index(dim, index)
   return input[input_indexes]
 
