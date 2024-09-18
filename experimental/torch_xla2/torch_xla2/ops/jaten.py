@@ -1384,8 +1384,19 @@ def _aten_masked_scatter(self, mask, source):
   return final_arr
 
 @op(torch.ops.aten.masked_select)
-def _aten_masked_select(self, mask):
-  return self[mask]
+def _aten_masked_select(self, mask, *args, **kwargs):
+  broadcast_shape = jnp.broadcast_shapes(self.shape, mask.shape)
+
+  if self.shape != broadcast_shape:
+    self = jnp.broadcast_to(self, broadcast_shape)
+  if mask.shape != broadcast_shape:
+    mask = jnp.broadcast_to(mask, broadcast_shape)
+
+  self_flat = self.flatten()
+  mask_flat = mask.flatten()
+  true_indices = jnp.where(mask_flat)[0]
+
+  return self_flat[true_indices]
 
 # aten.logical_not
 

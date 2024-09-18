@@ -80,7 +80,6 @@ skiplist = {
     "lu_solve",
     "lu_unpack",
     "masked.median",
-    "masked_select",
     "max_pool2d_with_indices_backward",
     "min",
     "mode",
