@@ -2399,13 +2399,9 @@ def _aten_trunc(a):
   return jnp.trunc(a)
 
 
-@op(torch.ops.aten.unbind)
 @op(torch.ops.aten.unbind_copy)
 def _aten_unbind(a, dim=0):
-  return tuple(
-    _aten_squeeze_dim(jax.lax.index_in_dim(a, i, axis=dim), dim)
-    for i in range(a.shape[dim])
-  )
+  return [jax.lax.index_in_dim(a, i, dim, keepdims=False) for i in range(a.shape[dim])]
 
 
 # NOTE: skip aten.upsample_nearest2d and aten.upsample_bilinear2d
