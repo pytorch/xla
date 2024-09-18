@@ -1362,6 +1362,27 @@ def _aten_scatter_add(input, dim, index, src):
   input_indexes, source_indexes = _scatter_index(dim, index)
   return input.at[input_indexes].add(src[source_indexes])
 
+# aten.masked_scatter
+@op(torch.ops.aten.masked_scatter)
+def _aten_scatter_add(self, mask, source):
+
+  broadcast_shape = jnp.broadcast_shapes(self.shape, mask.shape)
+
+  if self.shape != broadcast_shape:
+    self = jnp.broadcast_to(self, broadcast_shape)
+  elif mask.shape != broadcast_shape:
+    mask = jnp.broadcast_to(mask, broadcast_shape)
+
+  self_flat = self.flatten()
+  mask_flat = mask.flatten()
+  source_flat = source.flatten()
+
+  true_indices = jnp.where(mask_flat)[0]
+  self_flat = self_flat.at[true_indices].set(source_flat[:len(true_indices)])
+  final_arr = self_flat.reshape(self.shape)
+
+  return final_arr
+
 
 # aten.logical_not
 
