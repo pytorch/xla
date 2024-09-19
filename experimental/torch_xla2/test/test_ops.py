@@ -61,9 +61,6 @@ skiplist = {
     "linalg.matrix_norm",
     "linalg.matrix_power",
     "linalg.matrix_rank",
-    "linalg.norm",
-    "linalg.pinv",
-    "linalg.solve",
     "linalg.solve_ex",
     "linalg.solve_triangular",
     "linalg.svd",
@@ -198,7 +195,7 @@ random_ops = {
   'nn.functional.feature_alpha_dropout',
 }
 
-atol_dict = {"matrix_exp": (2e-1, 2e-4)}
+atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0)}
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):
