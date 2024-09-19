@@ -1343,6 +1343,8 @@ def _scatter_index(dim, index):
   index_shape = list(index.shape)
   input_indexes = []
   source_indexes = []
+  if dim < 0:
+    dim += len(index_shape)
   for i in range(len(index_shape)):
     source_indexes.append(slice(0, index_shape[i]))
     if i == dim:
