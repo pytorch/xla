@@ -283,3 +283,9 @@ def linalg_slogdet(input):
 @register_function(torch.tensor_split)
 def tensor_split(input, indices_or_sections, dim=0):
   return jnp.array_split(input, indices_or_sections, axis=dim)
+
+
+@register_function(torch.linalg.solve)
+def linalg_solve(a, b):
+  res, _ = jaten._aten__linalg_solve_ex(a, b)
+  return res
