@@ -201,8 +201,24 @@ one of the used IRs: `hlo` (similar to `--dump-hlo` above), `stablehlo`, and `te
 In order to validate the execution of the benchmarks, it is possible to run an accuracy
 check on them by specifying the flag `--verify`. For consistency reasons, we run a similar
 version of the accuracy test run in the PyTorch HUD, which, at its core, uses [the `same`
-function][10]. In summary, it tries to check the accuracy by one of these three methods:
-(i) cosine similarity; (ii) `torch.allclose`; and (iii) root mean squared error (RMSE).
+function][10]. In summary, it tries to check the accuracy of the inference
+prediction/training gradients by running one of these three methods: (i) cosine
+similarity; (ii) `torch.allclose`; and (iii) root mean squared error (RMSE).
+
+As the result of the verification, the benchmarking scripts will change the
+`verification_code` field of the corresponding line of the _results.jsonl_ file with one
+of the following:
+
+| Flag                         | Short Description                                        |
+|:----------------------------:|----------------------------------------------------------|
+| `PASS`                       | Verification passed the accuracy check                   |
+| `FAIL`                       | Verification failed the accuracy check                   |
+| `EAGER_FAILED`               | Eager execution failed                                   |
+| `EXCEPTION_RAISED`           | An exception was raised when running the verifier        |
+| `NONDETERMINISTIC_EAGER_RUN` | Two eager runs of the benchmark have mismatching results |
+| `VERIFIER_SKIPPED`           | Verification was skipped                                 |
+| `VERIFIER_DIDNT_RUN`         | Verification did not run due to an unexpected reason     |
+
 
 [1]: https://github.com/pytorch/benchmark
 [2]: https://github.com/pytorch/pytorch/blob/main/benchmarks/dynamo/torchbench.py
