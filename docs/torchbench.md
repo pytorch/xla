@@ -46,9 +46,10 @@ python xla/benchmarks/experiment_runner.py \
     --accelerator=cuda
 ```
 
-It will run the whole Torchbench collection, with all possible configurations. For
-example, assume that Torchbench is composed of only 2 benchmarks (currently, there are
-103): `llama` and `dlrm`. Then, the command will run 16 times (8 for each benchmark):
+It will run the whole Torchbench collection, with all possible configurations, repeating
+10 times a 1-iteration run. For example, assume that Torchbench is composed of only 2
+benchmarks (currently, there are 103): `llama` and `dlrm`. Then, the command will run 16
+times (8 for each benchmark):
 
 ```
 model: llama
@@ -97,8 +98,10 @@ model: llama
 2. xla: PJRT, dynamo: openxla,  test: eval
 ```
 
-For a more detailed list of the available command-line arguments, run
-_experiment_runner.py_ with the `--help` argument:
+You can also modify the number of repetitions (`--repeat`) as well as the number of
+iterations (`--iterations-per-run`) to be run in each repetition. For a more detailed list
+of the available command-line arguments, run _experiment_runner.py_ with the `--help`
+argument:
 
 ```bash
 python xla/benchmarks/experiment_runner.py --help
