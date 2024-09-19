@@ -104,6 +104,39 @@ _experiment_runner.py_ with the `--help` argument:
 python xla/benchmarks/experiment_runner.py --help
 ```
 
+Finally, the benchmarking script will output the file _output/results.jsonl_, where each
+line will contain: (i) the experiment information, e.g. model name, xla, dynamo, test,
+etc.; and (ii) collected metrics, e.g. total running time, etc. A line in that file will
+look like the following:
+
+```
+{
+  "model": {
+    "suite_name": "torchbench",
+    "model_name": "llama"
+  },
+  "experiment": {
+    "accelerator": "cuda",
+    "accelerator_model": "NVIDIA ...",
+    "xla": "PJRT",
+    "xla_flags": null,
+    "dynamo": "openxla",
+    "torch_xla2": null,
+    "keep_model_data_on_cuda": false,
+    "test": "eval",
+    "batch_size": 1
+  },
+  "repeat": 5,
+  "iterations_per_run": 1,
+  "metrics": {
+    "total_time": [...],
+    ...
+  },
+  "timestamp": ...,
+  "verification_code": "VERIFIER_SKIPPED"
+}
+```
+
 ## Experiment Result
 
 The benchmarking scripts will store the resulting artifacts in a directory called `output`
