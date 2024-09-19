@@ -137,6 +137,44 @@ look like the following:
 }
 ```
 
+## Troubleshooting and Debugging
+
+### Run the Verifier
+
+First things of, make sure that the benchmark you are trying to run actually meets [the
+accuracy we expect][#model-verification] by passing the `--verify` flag to the
+_experiment_runner.py_ script. If the benchmark does passes the check, you should see the
+following in your _results.jsonl_ file:
+
+```
+{
+  "model": {
+    "suite_name": "torchbench",
+    "model_name": "llama"
+  },
+  ...
+  "verification_code": "PASS"
+}
+```
+
+With this result in hands, if the `verification_code` is something other than `PASS` it
+means either that the result (prediction/gradients) is wrong, or that we cannot tell, for
+some reason. More specifically:
+
+| Flag                         | Troubleshoot                                                  |
+|:----------------------------:|---------------------------------------------------------------|
+| `FAIL`                       | Result is wrong                                               |
+| `EAGER_FAILED`               | This benchmark should not be running (it is failing on eager) |
+| `EXCEPTION_RAISED`           | There may be something wrong with the verifier                |
+| `NONDETERMINISTIC_EAGER_RUN` | Eager is not deterministic, so cannot compare the results     |
+| `VERIFIER_SKIPPED`           | We should skip the verifier for this benchmark                |
+| `VERIFIER_DIDNT_RUN`         | There was some uncaught error with the verifier process       |
+
+Please, open an issue if you see any of the codes in the table above, except for
+`FAIL`. If you see `FAIL`, but did not introduce any change to any code, please, open an
+issue. Otherwise, it means that your change likely introduced some incorrect behavior.
+
+
 ## Experiment Result
 
 The benchmarking scripts will store the resulting artifacts in a directory called `output`
