@@ -145,7 +145,7 @@ look like the following:
 ### Run the Verifier
 
 First things of, make sure that the benchmark you are trying to run actually meets [the
-accuracy we expect][#model-verification] by passing the `--verify` flag to the
+accuracy we expect](#model-verification) by passing the `--verify` flag to the
 _experiment_runner.py_ script. If the benchmark does passes the check, you should see the
 following in your _results.jsonl_ file:
 
@@ -181,11 +181,11 @@ issue. Otherwise, it means that your change likely introduced some incorrect beh
 
 In order to find out performance improvement opportunities, the benchmarking scripts
 provide a few command-line arguments. For more information, check out [the optional
-metrics][#optional-metrics] and [the available dump-able
-information][#dumping-benchmark-specific-data].
+metrics](#optional-metrics) and [the available dump-able
+information](#dumping-benchmark-specific-data).
 
 A good overall command-line argument for that is the flag `--dump-pytorch-profiles` (see
-[this section][#dumping-benchmark-specific-data] for more details). It makes use of
+[this section](#dumping-benchmark-specific-data) for more details). It makes use of
 [PyTorch baked in profiler][11].
 
 Suppose, for example we profile [the `speech_transformer` benchmark][12] by passing that
@@ -261,7 +261,7 @@ PyTorch/XLA manipulates mainly 2 IRs:
 2. **HLO Graph:** DAG output of lowering the lazy IR, [used by XLA][15] in the backend
 
 In order to inspect them (i.e. the compiled HLO graphs), our benchmarking scripts exposed
-[the `--save-ir-format` command-line argument][#dumping-benchmark-specific-data]. By
+[the `--save-ir-format` command-line argument](#dumping-benchmark-specific-data). By
 specifying such a flag, every compiled graph will get dumped in the file
 _dump-...<format>_, where _"<format>"_ can be any of:
 
