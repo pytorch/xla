@@ -1194,6 +1194,10 @@ def _aten_linalg_vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
   # (Optional) dtype conversion
   if dtype is not None:
     result = jnp.astype(result, self.dtype)
+
+  new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+  if result.dtype == jax.numpy.int64:
+    result = result.astype(new_dtype)
   return result
 
 
@@ -3927,6 +3931,24 @@ def _aten_linalg_matrix_exp(input):
 def _aten__linalg_slogdet(input):
   res = jnp.linalg.slogdet(input)
   return res.sign, res.logabsdet
+
+
+# torch.linalg.svd
+@op(torch.ops.aten._linalg_svd)
+def _aten__linalg_svd(a, full_matrices=True):
+  return jnp.linalg.svd(a, full_matrices)
+
+
+# torch.linalg.pinv
+@op(torch.ops.aten.linalg_pinv.atol_rtol_tensor)
+def _aten_linalg_pinv_atol_rtol_tensor(a, rtol=None, **kwargs):
+  return jnp.linalg.pinv(a, rtol, hermitian=False)
+
+
+# torch.linalg.solve
+@op(torch.ops.aten._linalg_solve_ex)
+def _aten__linalg_solve_ex(a, b):
+  return jnp.linalg.solve(a, b), jnp.array(0)
 
 
 @op(torch.ops.aten.median)
