@@ -1441,12 +1441,16 @@ def _aten_atan(self):
 
 
 # aten.scatter_reduce
+@op(torch.ops.aten.scatter)
 @op(torch.ops.aten.scatter_reduce)
 def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
+  if isinstance(src, float):
+    dtype = _torch_binary_scalar_type(src, input)
+    src = jnp.array(src, dtype=dtype)
   input_indexes, source_indexes = _scatter_index(dim, index)
-  if reduce == "sum":
+  if reduce == "sum" or reduce == "add":
     return input.at[input_indexes].add(src[source_indexes])
-  elif reduce == "prod":
+  elif reduce == "prod" or reduce == "multiply":
     return input.at[input_indexes].multiply(src[source_indexes])
   elif reduce == "mean":
     return input.at[input_indexes].add(src[source_indexes])
@@ -1455,7 +1459,7 @@ def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
   elif reduce == "amin":
     return input.at[input_indexes].min(src[source_indexes])
   else:
-    raise RuntimeError("Unknow reduction type: ", reduce)
+    raise RuntimeError("Unknown reduction type: ", reduce)
 
 
 # aten.acos
@@ -1663,10 +1667,12 @@ def _aten_reciprocal(a):
   return 1 / a
 
 
-# aten.scatter
+# aten.select_scatter
 @op(torch.ops.aten.select_scatter)
 def _aten_select_scatter(input, src, dim, index):
   input_indexes = []
+  if dim < 0:
+    dim += len(input.shape)
   for x in range(len(input.shape)):
     if x == dim:
       input_indexes.append(index)

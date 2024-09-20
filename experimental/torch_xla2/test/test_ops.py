@@ -148,7 +148,6 @@ skiplist = {
     "resize_as_",
     "rot90",
     "rsub",
-    "scatter",
     "scatter_reduce",
     "searchsorted",
     "special.airy_ai",
