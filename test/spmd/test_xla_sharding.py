@@ -1068,7 +1068,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([model.fc2.weight.grad])
     self.assertIn(
-        '%opt-barrier.37 = (f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) opt-barrier((f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) %tuple.36)',
+        '%opt-barrier.38 = (f32[1,64]{1,0}, f32[1]{0}, f32[2,64]{1,0}) opt-barrier((f32[1,64]{1,0}, f32[1]{0}, f32[2,64]{1,0}) %tuple.37)',
         hlo)
 
   def test_mark_shard_scalar(self):
