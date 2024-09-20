@@ -341,6 +341,26 @@ module @IrToHlo.129 attributes {mhlo.cross_program_prefetches = [], mhlo.input_o
 }
 ```
 
+### Torchbench Configuration
+
+In order to get as close as possible to the Torchbench configuration used in the PyTorch
+HUD, our benchmarking scripts make use of the YAML file [found in the PyTorch core
+repository][16] (e.g. `dtypes`, batch-size, tolerance, benchmarks to be skipped), which we
+shall refer to it as if it were a dictionary `config`. In summary, here are some implicit
+configurations that may not be obvious at first:
+
+- **Inference `dtype`:** always set to `bfloat16` unless the model is found in
+  `config["dtype"]["force_amp_for_fp16_bf16_models"]` (the model is run in AMP mode)
+  and `config["dtype"]["force_fp16_for_bf16_models"]` (the model is run using `float16`)
+
+- **Training `dtype`:** always set to use AMP mode
+
+- **Inductor:** CUDAGraphs always on
+
+- **Model Initialization:** some benchmarks change their behavior depending on the
+  device. Therefore, when using XLA:CUDA, we first initialize the benchmark on CUDA, and
+  then move it to XLA:CUDA
+
 ## Experiment Results
 
 The benchmarking scripts will store the resulting artifacts in a directory called `output`
@@ -472,3 +492,4 @@ of the following:
 [13]: https://pytorch.org/tutorials/recipes/recipes/profiler_recipe.html#using-tracing-functionality
 [14]: https://github.com/pytorch/pytorch/issues/76440
 [15]: https://openxla.org/xla/architecture
+[16]: https://github.com/pytorch/pytorch/blob/main/benchmarks/dynamo/torchbench.yaml
