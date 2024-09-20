@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+gitd0ea5cc )
+                  master (2.6.0+gitd79a37c )
                 </div>
               
             
@@ -481,12 +481,14 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span> <span class="o">=</span> <span class="n">input_sharding</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_threads</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_devices</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="p">[</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="n">PerDeviceQueue</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">loader_prefetch_size</span><span class="p">,</span>
                                             <span class="n">device_prefetch_size</span><span class="p">)</span>
     <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader_worker</span><span class="p">)</span>
     <span class="n">thread</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thread</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
       <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">host_to_device_transfer_threads</span><span class="p">):</span>
         <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span>
@@ -497,6 +499,7 @@
             <span class="p">))</span>
         <span class="n">thread</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thread</span><span class="p">)</span>
 
   <span class="k">def</span> <span class="nf">per_device_loader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieves the loader iterator object for the given device.</span>
@@ -525,6 +528,9 @@
       <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
       <span class="n">dqueue</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
+    <span class="k">for</span> <span class="n">thread</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_threads</span><span class="p">:</span>
+      <span class="n">thread</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
   <span class="nd">@property</span>
   <span class="k">def</span> <span class="nf">batches_per_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batches_per_execution</span>
@@ -533,18 +539,21 @@
     <span class="n">queues</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
     <span class="n">data_iter</span> <span class="o">=</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">)</span>
     <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">:</span>
-      <span class="k">try</span><span class="p">:</span>
-        <span class="n">_</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">data_iter</span><span class="p">)</span>
-      <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
-        <span class="k">break</span>
-      <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_devices</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">queue_no</span><span class="p">,</span> <span class="n">device_batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">batch</span><span class="p">):</span>
-          <span class="n">queues</span><span class="p">[</span><span class="n">queue_no</span><span class="p">]</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">device_batch</span><span class="p">)</span>
-        <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="n">queues</span><span class="p">:</span>
-      <span class="n">dqueue</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">close_write</span><span class="p">()</span>
+
+    <span class="k">try</span><span class="p">:</span>
+      <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="n">_</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">data_iter</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+          <span class="k">break</span>
+        <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_devices</span><span class="p">):</span>
+          <span class="k">for</span> <span class="n">queue_no</span><span class="p">,</span> <span class="n">device_batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">batch</span><span class="p">):</span>
+            <span class="n">queues</span><span class="p">[</span><span class="n">queue_no</span><span class="p">]</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">device_batch</span><span class="p">)</span>
+          <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="n">queues</span><span class="p">:</span>
+        <span class="n">dqueue</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">close_write</span><span class="p">()</span>
 
   <span class="k">def</span> <span class="nf">_get_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dqueue</span><span class="p">):</span>
     <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
@@ -557,16 +566,21 @@
 
   <span class="k">def</span> <span class="nf">_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dqueue</span><span class="p">,</span> <span class="n">host_to_device_transfer_threads</span><span class="p">):</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">dqueue</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-      <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_batch</span><span class="p">(</span><span class="n">dqueue</span><span class="p">)</span>
-      <span class="k">if</span> <span class="ow">not</span> <span class="n">batch</span><span class="p">:</span>
-        <span class="k">break</span>
-      <span class="n">batch</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">)</span>
-      <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
-        <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-    <span class="n">close_queue_count</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">dqueue</span><span class="o">.</span><span class="n">close_queue_count</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">close_queue_count</span> <span class="o">==</span> <span class="n">host_to_device_transfer_threads</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-      <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">close_write</span><span class="p">()</span>
+
+    <span class="k">try</span><span class="p">:</span>
+      <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_batch</span><span class="p">(</span><span class="n">dqueue</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">batch</span><span class="p">:</span>
+          <span class="k">break</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+          <span class="n">batch</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span>
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+          <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="n">close_queue_count</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">dqueue</span><span class="o">.</span><span class="n">close_queue_count</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">close_queue_count</span> <span class="o">==</span> <span class="n">host_to_device_transfer_threads</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">close_write</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="MpDeviceLoader"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.parallel_loader.MpDeviceLoader">[docs]</a><span class="k">class</span> <span class="nc">MpDeviceLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -592,11 +606,15 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="n">device</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader_kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span> <span class="o">=</span> <span class="kc">None</span>
 
   <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="n">parallel_loader</span> <span class="o">=</span> <span class="n">ParallelLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">],</span>
-                                     <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader_kwargs</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">parallel_loader</span><span class="o">.</span><span class="n">per_device_loader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span> <span class="o">=</span> <span class="n">ParallelLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">],</span>
+                                           <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader_kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span><span class="o">.</span><span class="n">per_device_loader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
 
   <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">)</span></div>
