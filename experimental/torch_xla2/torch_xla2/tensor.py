@@ -205,6 +205,10 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
         return self.env.dispatch(func, types, args, kwargs)
       except OperatorNotFound:
         pass
+      if _name_of_func(func) in ('rot90'): # skip rot90 with k%4==0 due to no change
+        if len(args) >= 2 and type(args[1]) == int:
+          if ((args[1])%4 == 0):
+            return args[0]
       return func(*args, **(kwargs or {}))
 
 
