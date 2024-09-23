@@ -29,8 +29,10 @@ import test_utils
 def _is_on_tpu():
   return xr.device_type() == 'TPU'
 
+
 def _is_on_neuron():
   return xr.device_type() == 'NEURON'
+
 
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
 skipOnNeuron = unittest.skipIf(_is_on_neuron(), 'Not supported on NEURON')
