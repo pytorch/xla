@@ -29,8 +29,11 @@ import test_utils
 def _is_on_tpu():
   return xr.device_type() == 'TPU'
 
+def _is_on_neuron():
+  return xr.device_type() == 'NEURON'
 
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
+skipOnNeuron = unittest.skipIf(_is_on_neuron(), 'Not supported on NEURON')
 
 
 class DynamoInPlaceTest(unittest.TestCase):
@@ -152,6 +155,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     })
     return "cuda:0"
 
+  @skipOnNeuron
   def test_simple_model(self):
     device = xm.xla_device()
     x = torch.tensor(100.0)
@@ -361,6 +365,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     return loader
 
   @skipOnTpu
+  @skipOnNeuron
   @parameterized.parameters(
       True,
       False,
@@ -393,6 +398,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
 
+  @skipOnNeuron
   def test_resnet18_lazy_vs_dynamo(self):
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     device = torch_xla.device()
@@ -555,6 +561,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
             input.grad, xla_input.grad.cpu(), rtol=1e-05, atol=1e-04))
 
   @skipOnTpu
+  @skipOnNeuron
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
