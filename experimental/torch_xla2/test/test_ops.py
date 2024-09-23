@@ -96,8 +96,6 @@ skiplist = {
     "nn.functional.avg_pool2d",
     "nn.functional.avg_pool3d",
     "nn.functional.bilinear",
-    "nn.functional.conv2d",
-    "nn.functional.conv3d",
     "nn.functional.conv_transpose1d",
     "nn.functional.conv_transpose2d",
     "nn.functional.conv_transpose3d",
