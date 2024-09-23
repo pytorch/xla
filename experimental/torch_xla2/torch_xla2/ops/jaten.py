@@ -799,7 +799,10 @@ def _aten_convolution(
   if transposed:
     raise NotImplementedError("Transposed convolution is not implemented.")
 
-  def make_padding(padding):
+  def make_padding(padding, num_spatial_dims):
+    # Expand single padding to pairs expected by jax
+    if len(padding) == 1 and len(padding) < num_spatial_dims:
+      padding *= num_spatial_dims
     return ((p, p) for p in padding)
 
   def create_default_conv_dimension_numbers(num_spatial_dims):
@@ -822,7 +825,7 @@ def _aten_convolution(
     input,
     weight,
     stride,
-    make_padding(padding),
+    make_padding(padding, len(stride)),
     lhs_dilation=(1,) * len(stride),
     rhs_dilation=dilation,
     dimension_numbers=create_default_conv_dimension_numbers(len(stride)),
