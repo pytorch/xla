@@ -3651,6 +3651,16 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.select_scatter, args, kwargs)
 
+  def test_aten_select_scatter_3(self):
+    args = (
+        torch.randn((10, 10)).to(torch.float32),
+        torch.randint(0, 10, (10,)).to(torch.int64),
+        -1,
+        0,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.select_scatter, args, kwargs)
+
   def test_aten_sigmoid_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
