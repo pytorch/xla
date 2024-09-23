@@ -150,7 +150,6 @@ skiplist = {
     "put",
     "quantile",
     "repeat_interleave",
-    "rot90",
     "rsub",
     "scatter_add",
     "scatter",
