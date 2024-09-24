@@ -319,7 +319,8 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
         self._all_to_all_single, use_dynamo=use_dynamo)
     expected = torch.arange(
         tpu.num_expected_global_devices(), dtype=torch.float)
-    # Note: all_to_all xla op does not honor the order of the all_to_all.
+    # Note: AllToAll xla op does not honor the order of the all_to_all, which means
+    # the rank may not follow the order.
     for _, val in results.items():
       self.assertTrue(torch.allclose(val.sort().values, expected.sort().values))
 
