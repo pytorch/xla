@@ -243,6 +243,22 @@ def _aten_real(x):
   return jnp.real(x)
 
 
+@op(torch.Tensor.resize_)
+def _aten_resize_(x, size, interpolation='linear'):
+  new_size = tuple(size)
+  return jax.numpy.resize(x, new_size)
+
+
+@op(torch.ops.aten.resize_as_)
+def _aten_resize_as_(x, y):
+  return jax.numpy.resize(x, y.shape)
+
+
+@op(torch.ops.aten.repeat_interleave.Tensor)
+def repeat_interleave(repeats, dim=0):
+  return jnp.repeat(jnp.arange(repeats.shape[dim]), repeats)
+
+
 @op(torch.ops.aten.view_as_real)
 def _aten_view_as_real(x):
   real = jnp.real(x)
