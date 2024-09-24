@@ -70,6 +70,9 @@ class SampleGenerator(DataLoader):
     self._count += 1
     return self._data
 
+  def __getitem__(self, index):
+      return self.next()
+
 
 class FnDataGenerator(object):
 
