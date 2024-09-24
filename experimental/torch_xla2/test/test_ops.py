@@ -149,7 +149,6 @@ skiplist = {
     "prod",
     "put",
     "quantile",
-    "repeat_interleave",
     "rsub",
     "scatter_add",
     "scatter",
