@@ -250,6 +250,11 @@ def _aten_resize_as_(x, y):
   return jax.numpy.resize(x, y.shape)
 
 
+@op(torch.ops.aten.repeat_interleave.Tensor)
+def repeat_interleave(repeats, dim=0):
+  return jnp.repeat(jnp.arange(repeats.shape[dim]), repeats)
+
+
 @op(torch.ops.aten.view_as_real)
 def _aten_view_as_real(x):
   real = jnp.real(x)
