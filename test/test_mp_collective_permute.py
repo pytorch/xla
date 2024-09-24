@@ -7,7 +7,7 @@ import torch_xla.core.xla_model as xm
 
 def _mp_fn(index):
   device = xm.xla_device()
-  if xm.xla_device_hw(device) == 'TPU':
+  if xm.xla_device_hw(device) in ['TPU', 'NEURON']:
     world_size = xr.world_size()
     ordinal = xr.global_ordinal()
     value = torch.tensor([ordinal] * 100, dtype=torch.int32, device=device)

@@ -40,6 +40,10 @@ mutation_ops_to_functional = {
   torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
   torch.ops.aten.random_: torch.ops.aten.uniform,
+  torch.ops.aten.ceil_: torch.ops.aten.ceil,
+  torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
+  torch.ops.aten.unsqueeze_: torch.ops.aten.unsqueeze,
+  torch.ops.aten.transpose_: torch.ops.aten.transpose,
 }
 
 
@@ -811,7 +815,10 @@ def _aten_convolution(
   if transposed:
     raise NotImplementedError("Transposed convolution is not implemented.")
 
-  def make_padding(padding):
+  def make_padding(padding, num_spatial_dims):
+    # Expand single padding to pairs expected by jax
+    if len(padding) == 1 and len(padding) < num_spatial_dims:
+      padding *= num_spatial_dims
     return ((p, p) for p in padding)
 
   def create_default_conv_dimension_numbers(num_spatial_dims):
@@ -834,7 +841,7 @@ def _aten_convolution(
     input,
     weight,
     stride,
-    make_padding(padding),
+    make_padding(padding, len(stride)),
     lhs_dilation=(1,) * len(stride),
     rhs_dilation=dilation,
     dimension_numbers=create_default_conv_dimension_numbers(len(stride)),
@@ -1206,6 +1213,10 @@ def _aten_linalg_vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
   # (Optional) dtype conversion
   if dtype is not None:
     result = jnp.astype(result, self.dtype)
+
+  new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+  if result.dtype == jax.numpy.int64:
+    result = result.astype(new_dtype)
   return result
 
 
@@ -1355,6 +1366,8 @@ def _scatter_index(dim, index):
   index_shape = list(index.shape)
   input_indexes = []
   source_indexes = []
+  if dim < 0:
+    dim += len(index_shape)
   for i in range(len(index_shape)):
     source_indexes.append(slice(0, index_shape[i]))
     if i == dim:
@@ -1378,6 +1391,41 @@ def _aten_scatter_add(input, dim, index, src):
   input_indexes, source_indexes = _scatter_index(dim, index)
   return input.at[input_indexes].add(src[source_indexes])
 
+# aten.masked_scatter
+@op(torch.ops.aten.masked_scatter)
+def _aten_masked_scatter(self, mask, source):
+
+  broadcast_shape = jnp.broadcast_shapes(self.shape, mask.shape)
+
+  if self.shape != broadcast_shape:
+    self = jnp.broadcast_to(self, broadcast_shape)
+  elif mask.shape != broadcast_shape:
+    mask = jnp.broadcast_to(mask, broadcast_shape)
+
+  self_flat = self.flatten()
+  mask_flat = mask.flatten()
+  source_flat = source.flatten()
+
+  true_indices = jnp.where(mask_flat)[0]
+  self_flat = self_flat.at[true_indices].set(source_flat[:len(true_indices)])
+  final_arr = self_flat.reshape(self.shape)
+
+  return final_arr
+
+@op(torch.ops.aten.masked_select)
+def _aten_masked_select(self, mask, *args, **kwargs):
+  broadcast_shape = jnp.broadcast_shapes(self.shape, mask.shape)
+
+  if self.shape != broadcast_shape:
+    self = jnp.broadcast_to(self, broadcast_shape)
+  if mask.shape != broadcast_shape:
+    mask = jnp.broadcast_to(mask, broadcast_shape)
+
+  self_flat = self.flatten()
+  mask_flat = mask.flatten()
+  true_indices = jnp.where(mask_flat)[0]
+
+  return self_flat[true_indices]
 
 # aten.logical_not
 
@@ -1416,12 +1464,16 @@ def _aten_atan(self):
 
 
 # aten.scatter_reduce
+@op(torch.ops.aten.scatter)
 @op(torch.ops.aten.scatter_reduce)
 def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
+  if isinstance(src, float):
+    dtype = _torch_binary_scalar_type(src, input)
+    src = jnp.array(src, dtype=dtype)
   input_indexes, source_indexes = _scatter_index(dim, index)
-  if reduce == "sum":
+  if reduce == "sum" or reduce == "add":
     return input.at[input_indexes].add(src[source_indexes])
-  elif reduce == "prod":
+  elif reduce == "prod" or reduce == "multiply":
     return input.at[input_indexes].multiply(src[source_indexes])
   elif reduce == "mean":
     return input.at[input_indexes].add(src[source_indexes])
@@ -1430,7 +1482,7 @@ def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
   elif reduce == "amin":
     return input.at[input_indexes].min(src[source_indexes])
   else:
-    raise RuntimeError("Unknow reduction type: ", reduce)
+    raise RuntimeError("Unknown reduction type: ", reduce)
 
 
 # aten.acos
@@ -1491,11 +1543,6 @@ def _aten_pixel_shuffle(x, upscale_factor):
 @op(torch.ops.aten.lt)
 def _aten_lt(self, other):
   return self < other
-
-# aten.logical_not_
-@op(torch.ops.aten.logical_not_)
-def _aten_logical_not_(input):
-  return jnp.logical_not(input)
 
 
 def pool(inputs, init, reduce_fn, window_shape, strides, padding):
@@ -1643,10 +1690,12 @@ def _aten_reciprocal(a):
   return 1 / a
 
 
-# aten.scatter
+# aten.select_scatter
 @op(torch.ops.aten.select_scatter)
 def _aten_select_scatter(input, src, dim, index):
   input_indexes = []
+  if dim < 0:
+    dim += len(input.shape)
   for x in range(len(input.shape)):
     if x == dim:
       input_indexes.append(index)
@@ -1956,6 +2005,17 @@ def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
   return jnp.diagonal(input, offset, dim1, dim2)
 
 
+# aten.diagflat
+@op(torch.ops.aten.diagflat)
+def _aten_diagflat(input, offset=0):
+  return jnp.diagflat(jnp.array(input), offset)
+
+
+@op(torch.ops.aten.movedim)
+def _aten_movedim(input, source, destination):
+  return jnp.moveaxis(input, source, destination)
+
+
 # aten.eq
 @op(torch.ops.aten.eq)
 def _aten_eq(input1, input2):
@@ -2059,6 +2119,10 @@ def _aten_frexp(input):
 # aten.gather
 @op(torch.ops.aten.gather)
 def _aten_gather(input, dim, index):
+  if input.ndim == 0:
+    return jnp.broadcast_to(input, index.shape)
+  if dim < 0:
+    dim += input.ndim
   input_indexes, source_indexes = _scatter_index(dim, index)
   return input[input_indexes]
 
@@ -3886,6 +3950,24 @@ def _aten_linalg_matrix_exp(input):
 def _aten__linalg_slogdet(input):
   res = jnp.linalg.slogdet(input)
   return res.sign, res.logabsdet
+
+
+# torch.linalg.svd
+@op(torch.ops.aten._linalg_svd)
+def _aten__linalg_svd(a, full_matrices=True):
+  return jnp.linalg.svd(a, full_matrices)
+
+
+# torch.linalg.pinv
+@op(torch.ops.aten.linalg_pinv.atol_rtol_tensor)
+def _aten_linalg_pinv_atol_rtol_tensor(a, rtol=None, **kwargs):
+  return jnp.linalg.pinv(a, rtol, hermitian=False)
+
+
+# torch.linalg.solve
+@op(torch.ops.aten._linalg_solve_ex)
+def _aten__linalg_solve_ex(a, b):
+  return jnp.linalg.solve(a, b), jnp.array(0)
 
 
 @op(torch.ops.aten.median)

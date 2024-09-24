@@ -391,7 +391,7 @@ class Environment(contextlib.ContextDecorator):
       if func in (torch.Tensor.to, torch.ops.aten._to_copy, torch.ops.aten._to_copy.default):
         return self._torch_Tensor_to(args, kwargs)
 
-      # If the func don't act on XLATensor2, and is not a tensor constructor,
+      # If the func doesn't act on XLATensor2, and is not a tensor constructor,
       # We should skip and let torch handle it.
       tensor_args = [t for t in args if isinstance(t, torch.Tensor)]
       if tensor_args and all(not isinstance(t, XLATensor2) for t in tensor_args):

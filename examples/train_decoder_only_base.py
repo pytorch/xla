@@ -18,7 +18,10 @@ class TrainDecoderOnlyBase():
 
   def __init__(self):
     self.config = DecoderOnlyConfig()
-    self.batch_size = 16
+    if xr.device_type() == 'NEURON':
+      self.batch_size = 4
+    else:
+      self.batch_size = 16
     self.seq_len = 512
     self.num_steps = 200
     self.num_epochs = 1
