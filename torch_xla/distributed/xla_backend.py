@@ -215,8 +215,19 @@ class ProcessGroupXla(ProcessGroup):
   def alltoall(self, *args):
     raise NotImplementedError
 
-  def alltoall_base(self, *args):
-    raise NotImplementedError
+  # handle the nondynamo path when call torch.distributed.all_to_all_single
+  # call from https://github.com/pytorch/pytorch/blob/758d78790164bfb041555daed380de96e06f78a3/torch/distributed/distributed_c10d.py#L3996
+  # Note for pytorch, the split/concat dimension is always 0, while for XLA alltoall,
+  # we can't specify different split sizes.
+  def alltoall_base(self, output, input, output_split_sizes, input_split_sizes,
+                    opts):
+    assert (output_split_sizes is None or len(output_split_sizes) == 0) and \
+           (input_split_sizes is None or len(input_split_sizes) == 0), \
+           "XLA doesn't support specifying non-empty output_split_sizes and input_split_sizes"
+    split_count = xr.world_size()
+    result = xm.all_to_all(input, 0, 0, split_count, pin_layout=False)
+    output.copy_(result)
+    return _ret_work(output)
 
   def gather(self, *args):
     raise NotImplementedError
