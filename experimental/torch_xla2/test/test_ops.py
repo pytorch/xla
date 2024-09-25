@@ -137,7 +137,6 @@ skiplist = {
     "prod",
     "put",
     "rsub",
-    "scatter_reduce",
     "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",

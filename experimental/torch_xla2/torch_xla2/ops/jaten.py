@@ -1471,12 +1471,33 @@ def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
     dtype = _torch_binary_scalar_type(src, input)
     src = jnp.array(src, dtype=dtype)
   input_indexes, source_indexes = _scatter_index(dim, index)
+  # "Zero out" target elements when not included
+  if not include_self:
+    if reduce in ["sum", "mean"]:
+      base_input = jnp.zeros_like(src)
+    elif reduce == "prod":
+      base_input = jnp.ones_like(src)
+    elif reduce == "amax":
+      base_input = jnp.full_like(src, -jnp.inf)
+    else:  # amin
+      base_input = jnp.full_like(src, jnp.inf)
+    input = input.at[input_indexes].set(base_input[source_indexes])
+
   if reduce == "sum" or reduce == "add":
     return input.at[input_indexes].add(src[source_indexes])
   elif reduce == "prod" or reduce == "multiply":
     return input.at[input_indexes].multiply(src[source_indexes])
   elif reduce == "mean":
-    return input.at[input_indexes].add(src[source_indexes])
+    if include_self:
+      count = jnp.ones_like(input)
+    else:
+      count = jnp.zeros_like(input)
+    count = count.at[input_indexes].add(jnp.ones_like(src)[source_indexes])
+    count = jnp.clip(count, min=1)
+    mean = input.at[input_indexes].add(src[source_indexes])
+    if _is_int(input):
+      return mean // count
+    return mean / count
   elif reduce == "amax":
     return input.at[input_indexes].max(src[source_indexes])
   elif reduce == "amin":
