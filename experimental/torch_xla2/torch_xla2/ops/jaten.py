@@ -2202,6 +2202,10 @@ def _aten_linalg_eig(A):
 def _aten_linalg_eigh(A, UPLO='L'):
   return jnp.linalg.eigh(A, UPLO)
 
+@op(torch.ops.aten._linalg_eigvalsh)
+def _aten_linalg_eigvalsh(A, UPLO='L'):
+  return jnp.linalg.eigvalsh(A, UPLO)
+  
 # aten.lcm
 @op(torch.ops.aten.lcm)
 def _aten_lcm(input, other):
