@@ -4026,3 +4026,28 @@ def _aten__fft_c2r(self, dim, normalization, last_dim_size):
   else:
     s = None
   return jnp.fft.irfftn(self, norm=norm, axes=dim, s=s)
+
+@op(torch.ops.aten.max_pool2d)
+def _aten_max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False):
+    if stride is None:
+        stride = kernel_size
+    
+    # Handle padding modes ('SAME' or 'VALID') conversion for PyTorch-like behavior.
+    if padding == 0:
+        padding_mode = 'VALID'
+    else:
+        padding_mode = 'SAME'
+    
+    # JAX doesn't support dilation in reduce_window, so we ignore it.
+    # JAX doesn't support ceil_mode, so we ignore it.
+
+    window_shape = (kernel_size, kernel_size)
+    strides = (stride, stride)
+
+    # Apply max pooling using jax.lax.reduce_window
+    pooled = jax.lax.reduce_window(input, -jnp.inf, jax.lax.max,
+                                   window_dimensions=window_shape,
+                                   window_strides=strides,
+                                   padding=padding_mode)
+    
+    return pooled
