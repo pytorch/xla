@@ -2198,6 +2198,9 @@ def _aten_igamma(input, other):
 def _aten_linalg_eig(A):
   return jnp.linalg.eig(A)
 
+@op(torch.ops.aten._linalg_eigh)
+def _aten_linalg_eigh(A, UPLO='L'):
+  return jnp.linalg.eigh(A, UPLO)
 
 # aten.lcm
 @op(torch.ops.aten.lcm)
