@@ -181,7 +181,7 @@ random_ops = {
   'nn.functional.feature_alpha_dropout',
 }
 
-atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0), "linalg.eig": (2e0, 3e0), "linalg.eigh": (5e1, 3e0)}
+atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0), "linalg.eig": (2e0, 3e0), "linalg.eigh": (5e1, 3e0), "linalg.eigvalsh": (5e1, 3e0)}
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):
