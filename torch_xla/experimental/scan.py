@@ -4,7 +4,7 @@ Reference: https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html
 
 """
 
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, Tuple
 
 import torch
 from torch.utils._pytree import tree_map, tree_iter
@@ -15,10 +15,10 @@ Y = TypeVar('Y')
 
 
 def scan(
-    fn: Callable[[Carry, X], tuple[Carry, Y]],
+    fn: Callable[[Carry, X], Tuple[Carry, Y]],
     init: Carry,
     xs: X,
-) -> tuple[Carry, Y]:
+) -> Tuple[Carry, Y]:
   """Apply a function over leading dimension of tensors while carrying along state.
   
   This is similar to the JAX `jax.lax.scan` function found in [1].
