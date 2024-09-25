@@ -491,6 +491,20 @@ It is possible to improve performance of those affected configurations by disabl
 functionalization layer by setting `XLA_DISABLE_FUNCTIOINALIZATON=1`. However, note that
 in-place operations will stop working as expected. This might lead to unexpected results.
 
+### OpenXLA CUDA Fallback
+
+Since 806de832360deb2a08fdf1447ad66d91cae5ebf9, we run fallback operation on CUDA whenever
+it is possible to do so. However, you may encounter cases where it is better to fallback
+to CPU, instead. In order to do so, set `XLA_FALLBACK_CPU=1` environment variable. Note
+that, in general, CUDA is faster than CPU for parallel operations. However, operations
+such as `tensor.item()` might not benefit from that. If you ever encounter those, please,
+open an issue.
+
+### XLA Flags
+
+Our benchmarking scripts allow for the specification of XLA (actual compiler) flags by
+passing `--xla-flags=<actual-flags-list>`. By default, we run without any specific flags.
+
 
 [1]: https://github.com/pytorch/benchmark
 [2]: https://github.com/pytorch/pytorch/blob/main/benchmarks/dynamo/torchbench.py
@@ -508,3 +522,4 @@ in-place operations will stop working as expected. This might lead to unexpected
 [14]: https://github.com/pytorch/pytorch/issues/76440
 [15]: https://openxla.org/xla/architecture
 [16]: https://github.com/pytorch/pytorch/blob/main/benchmarks/dynamo/torchbench.yaml
+[17]: https://jax.readthedocs.io/en/latest/gpu_performance_tips.html
