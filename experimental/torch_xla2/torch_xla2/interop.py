@@ -47,9 +47,12 @@ def set_all_buffers(m, params, buffers):
     set_one(m, '')
 
 
-class JittableModule:
+class JittableModule(torch.nn.Module):
+
+    # TODO: add statedict loading hook
 
     def __init__(self, m: torch.nn.Module, extra_jit_args={}):
+        super().__init__()
         self.params, self.buffers = extract_all_buffers(m)
         self._model = m
         self._jitted = {}
@@ -83,14 +86,51 @@ class JittableModule:
         return self._jitted['forward'](*args, **kwargs)
 
     def __getattr__(self, key):
+        if key == '_model':
+            return super().__getattr__(key)
+        if key in self._jitted:
+            return self._jitted[key]
         return getattr(self._model, key)
 
+    def make_jitted(self, key):
+        jitted = jax_jit(
+            functools.partial(self.functional_call, key), 
+            kwargs_for_jax_jit=self._extra_jit_args)
+        def call(*args, **kwargs):
+            return jitted(self.params, self.buffers, *args, **kwargs)
+        self._jitted[key] = call
 
 
 
 
 
-    
+class CompileMixin:
+
+    def functional_call(
+            self, method, params, buffers, *args, **kwargs):
+        kwargs = kwargs or {}
+        params_copy = copy.copy(params)
+        params_copy.update(buffers)
+        with torch_stateless._reparametrize_module(self, params_copy):
+            res = method(*args, **kwargs)
+        return res
+
+    def jit(self, method):
+        jitted = jax_jit(functools.partial(self.functional_call, method_name))
+        def call(*args, **kwargs):
+            return jitted(self.named_paramters(), self.named_buffers(), *args, **kwargs)
+        return call
+
+
+def compile_nn_module(m: torch.nn.Module, methods=None):
+    if methods is None:
+        methods = ['forward']
+
+    new_parent = type(
+        m.__class__.__name__ + '_with_CompileMixin',
+        (CompileMixin, m.__class__),
+    )
+    m.__class__ = NewParent
 
 
 def _torch_view(t: JaxValue) -> TorchValue:

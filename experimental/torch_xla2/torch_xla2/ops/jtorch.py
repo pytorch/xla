@@ -175,8 +175,6 @@ def getitem(self, indexes):
     indexes = (indexes, )
   elif isinstance(indexes, list):
     indexes = tuple(indexes)
-  if not isinstance(self, jax.Array):
-    breakpoint()
   return self[indexes]
 
 @register_function(torch.corrcoef)

@@ -339,7 +339,8 @@ class TestOpInfo(TestCase):
     print('op_db size: ', len(op_db), 'testing: ', len(ops_to_test))
 
   def setUp(self):
-    self.env = tensor.Environment()
+    self.env = torch_xla2.default_env()
+    torch_xla2.enable_accuracy_mode()
     #self.env.config.debug_accuracy_for_each_op = True 
     torch.manual_seed(0)
 
