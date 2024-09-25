@@ -2196,7 +2196,7 @@ def _aten_igamma(input, other):
 
 @op(torch.ops.aten.linalg_eig)
 def _aten_linalg_eig(A):
-  return jax.numpy.linalg.eig(A)
+  return jnp.linalg.eig(A)
 
 
 # aten.lcm
