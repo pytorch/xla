@@ -266,7 +266,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+gitb378a28 )
+                  master (2.6.0+git3cd4677 )
                 </div>
               
             
@@ -1410,7 +1410,9 @@ arguments passed in <cite>args</cite>.</p></li>
 <li><p><strong>args</strong> (<em>tuple</em>) – The arguments for <cite>fn</cite>.
 Default: Empty tuple</p></li>
 <li><p><strong>nprocs</strong> (<em>python:int</em>) – The number of processes/devices for the replication. At the
-moment, if specified, can be either 1 or the maximum number of devices.</p></li>
+moment, if specified, can be either 1 or None (which would automatically
+converted to the maximum number of devices). Other numbers would result
+in ValueError.</p></li>
 <li><p><strong>join</strong> (<em>bool</em>) – Whether the call should block waiting for the completion of the
 processes which have being spawned.
 Default: True</p></li>
