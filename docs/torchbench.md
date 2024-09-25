@@ -476,6 +476,21 @@ of the following:
 | `VERIFIER_SKIPPED`           | Verification was skipped                                 |
 | `VERIFIER_DIDNT_RUN`         | Verification did not run due to an unexpected reason     |
 
+## Tips and Tricks
+
+### Functionalization
+
+PyTorch/XLA is a functional PyTorch backend, that relies on PyTorch's functionalization
+layer for supporting features, such as aliasing and mutation. For example, the update
+`a[::2].add_(1)` would not propagate to `a` if it weren't for the functionalization
+layer. In the end, it translates to higher overhead when tracing. Which means that, mainly
+in non-dynamo settings (where we always trace before running an iteration), overhead might
+take a significant slice of the total time.
+
+It is possible to improve performance of those affected configurations by disabling said
+functionalization layer by setting `XLA_DISABLE_FUNCTIOINALIZATON=1`. However, note that
+in-place operations will stop working as expected. This might lead to unexpected results.
+
 
 [1]: https://github.com/pytorch/benchmark
 [2]: https://github.com/pytorch/pytorch/blob/main/benchmarks/dynamo/torchbench.py
