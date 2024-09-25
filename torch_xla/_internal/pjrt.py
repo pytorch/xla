@@ -194,7 +194,9 @@ def spawn(fn: Callable,
   Args:
     fn: Callable that takes the process index as the first argument.
     nprocs (int): The number of processes/devices for the replication. At the
-      moment, if specified, can be either 1 or the maximum number of devices.
+      moment, if specified, can be either 1 or None (which would automatically
+      converted to the maximum number of devices). Other numbers would result
+      in ValueError.
     args: args to pass to `fn`
     start_method: The Python `multiprocessing` process creation method.
       Default: `spawn`
@@ -204,7 +206,9 @@ def spawn(fn: Callable,
   if nprocs == 1:
     return _run_singleprocess(spawn_fn)
   elif nprocs is not None:
-    logging.warning('Unsupported nprocs (%d), ignoring...' % nprocs)
+    raise ValueError(
+        'Unsupported nprocs (%d). Please use the environment variable for the hardware you are using (X_NUM_DEVICES where X is CPU, GPU, TPU, NEURONCORE, etc).'
+        % nprocs)
 
   run_multiprocess(spawn_fn, start_method=start_method)
 
