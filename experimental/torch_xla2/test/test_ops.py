@@ -153,7 +153,6 @@ skiplist = {
     "unravel_index",
     "trunc",
     "var_mean",
-    "argwhere",
     "nanmean",
     "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
     "nn.functional.upsample_bilinear",
