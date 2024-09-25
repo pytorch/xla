@@ -40,7 +40,6 @@ skiplist = {
     "lgamma",
     "linalg.cholesky",
     "linalg.cholesky_ex",
-    "linalg.cond",
     "linalg.det",
     "linalg.eigvalsh",
     "linalg.householder_product",
