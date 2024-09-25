@@ -273,7 +273,7 @@ if os.getenv('XLA_USE_EAGER_DEBUG_MODE', '0') == '1':
 from .torch_xla import *
 
 # register all custom kenels and decomp by default
-from ._internal import custom_kernel, decomp_registration, c10d_registration
+from ._internal import custom_kernel, decomp_registration
 
 # select default PJRT_DEVICE before any execution
 runtime._maybe_select_default_device()

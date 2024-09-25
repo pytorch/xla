@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from typing import List
 import torch
 import torch.nn as nn
@@ -139,7 +140,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
                                              list(range(world_size))]])
 
 
-@absltest.skipIf(lambda: tpu.num_logical_cores_per_chip() >= 2,
+@absltest.skipIf(tpu.num_logical_cores_per_chip() >= 2,
                  "Dynamo not supported on TPU v2/v3")
 class TestDistCollectiveOpsTpu(parameterized.TestCase):
   """Test for collective ops from torch.distributed"""
@@ -246,6 +247,29 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       assert 'xla::reduce_scatter_tensor' in met.counter_names()
     return output.cpu()
 
+  @staticmethod
+  def _broadcast(src: int, random_fill: int, use_dynamo: bool):
+    met.clear_all()
+    dist.init_process_group("xla", init_method='xla://')
+    device = xm.xla_device()
+
+    def callable(input, src):
+      dist.broadcast(input, src)
+      return input
+
+    tensor_in = torch.tensor([xr.global_ordinal(), random_fill],
+                             dtype=torch.float,
+                             device=device)
+    f = torch.compile(callable, backend='openxla') if use_dynamo else callable
+    output = f(tensor_in, src)
+    torch_xla.sync()
+    if not use_dynamo:
+      assert 'xla::AllReduceInPlace' in met.counter_names(
+      ) or 'xla::AllReduce' in met.counter_names()
+    else:
+      assert 'xla::collective_broadcast' in met.counter_names()
+    return output.cpu()
+
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
   def test_all_reduce(self, use_dynamo):
     results = pjrt.run_multiprocess(self._all_reduce, use_dynamo=use_dynamo)
@@ -286,6 +310,22 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     ]
     for index, val in results.items():
       torch.testing.assert_close(val, expected[index])
+
+  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
+  def test_broadcast(self, use_dynamo):
+    src = random.randrange(0, tpu.num_expected_global_devices())
+    random_fill = random.randint(-100, 100)
+    results = pjrt.run_multiprocess(
+        self._broadcast,
+        src=src,
+        random_fill=random_fill,
+        use_dynamo=use_dynamo)
+    expected = torch.tensor([
+        src,
+        random_fill,
+    ], dtype=torch.float)
+    for index, val in results.items():
+      torch.testing.assert_close(val, expected)
 
 
 if __name__ == '__main__':
