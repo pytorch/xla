@@ -39,7 +39,7 @@ def _prepare_spmd_partition_spec(param,
 
 class SpmdFullyShardedDataParallel(nn.Module):
   """
-  This is an experiemntal implementation of rewriting FullyShardedDataParallel using SPMD.
+  This is an experimental implementation of rewriting FullyShardedDataParallel using SPMD.
   The usage is similar to FSDP, but with some subtle differences args.
 
   Args:
@@ -53,6 +53,18 @@ class SpmdFullyShardedDataParallel(nn.Module):
       dtype for full parameters for computation. This defaults to
       ``torch.float32`` but can be set to ``torch.float16`` or
       ``torch.bfloat16``. The sharded parameters will always be in FP32.
+
+    Note:
+        Support for TorchDistX initialization:
+        This implementation supports using TorchDistX's ``deferred_init`` for module initialization,
+        which can help save host memory. When using `deferred_init`, the module will be initialized
+        by a default initialization function that calls torchdistX's ``materialize_module``.
+
+    Example:
+        >>> # With torchdistX
+        >>> module = deferred_init.deferred_init(MyModule, device="cuda")
+        >>> # Will initialize via deferred_init.materialize_module().
+        >>> fsdp_model = FSDPv2(module)
   """
 
   def __init__(
