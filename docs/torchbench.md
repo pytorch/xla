@@ -505,6 +505,15 @@ open an issue.
 Our benchmarking scripts allow for the specification of XLA (actual compiler) flags by
 passing `--xla-flags=<actual-flags-list>`. By default, we run without any specific flags.
 
+## Nightly CI
+
+Every night, we run Torchbench as described in this document in our Nightly
+CI. Specifically, we run the following configurations for inference and training, using
+the default for the options not mentioned:
+
+- on TPU: dynamo and non-dynamo
+- on GPU: eager, inductor, dynamo, and non-dynamo
+
 
 [1]: https://github.com/pytorch/benchmark
 [2]: https://github.com/pytorch/pytorch/blob/main/benchmarks/dynamo/torchbench.py
