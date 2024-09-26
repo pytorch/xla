@@ -1058,11 +1058,25 @@ def _aten_max_pool2d_with_indices(
 
 
 @op(torch.ops.aten.min)
-def _aten_min(x, axis=None):
-  if axis:
-    return jnp.min(x, axis=axis), jnp.argmin(x, axis=axis).astype(jnp.int64)
+def _aten_min(x, dim=None, keepdim=False):
+  if dim is not None:
+    return _with_reduction_scalar(jnp.min, x, dim, keepdim), _with_reduction_scalar(jnp.argmin, x, dim, keepdim).astype(jnp.int64)
   else:
-    return jnp.min(x, axis=axis)
+    return _with_reduction_scalar(jnp.min, x, dim, keepdim)
+
+
+@op(torch.ops.aten.mode)
+def _aten_mode(input, dim=-1, keepdim=False, *, out=None):
+  if input.ndim == 0: # single number
+    return input, jnp.array(0)
+  dim = (input.ndim + dim) % input.ndim # jnp.scipy.stats.mode does not accept -1 as dim
+  # keepdims must be True for accurate broadcasting
+  mode, _ = jax.scipy.stats.mode(input, axis=dim, keepdims=True)
+  mode_broadcast = jnp.broadcast_to(mode, input.shape)
+  if not keepdim:
+    mode = mode.squeeze(axis=dim)
+  indices = jnp.argmax(jnp.equal(mode_broadcast, input), axis=dim, keepdims=keepdim)
+  return mode, indices
 
 
 @op(torch.ops.aten.amin)
