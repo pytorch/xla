@@ -7,6 +7,7 @@ from torch.testing._internal.common_device_type import (
     instantiate_device_type_tests, ops)
 from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
+import torch_xla2
 
 
 skiplist = {
@@ -259,7 +260,8 @@ class TestOpInfo(TestCase):
     print('op_db size: ', len(op_db), 'testing: ', len(ops_to_test))
 
   def setUp(self):
-    self.env = tensor.Environment()
+    self.env = torch_xla2.default_env()
+    torch_xla2.enable_accuracy_mode()
     #self.env.config.debug_accuracy_for_each_op = True 
     torch.manual_seed(0)
 
