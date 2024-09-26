@@ -151,6 +151,7 @@ ptxla_cc_library(
         "@xla//xla/client/lib:slicing",
         "@xla//xla/client/lib:sorting",
         "@xla//xla/client/lib:svd",
+        "@xla//xla/hlo/pass:hlo_pass_pipeline",
         "@xla//xla/stream_executor:dnn",
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/profiler/lib:traceme",
