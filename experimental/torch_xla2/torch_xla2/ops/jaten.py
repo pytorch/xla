@@ -243,6 +243,22 @@ def _aten_real(x):
   return jnp.real(x)
 
 
+@op(torch.Tensor.resize_)
+def _aten_resize_(x, size, interpolation='linear'):
+  new_size = tuple(size)
+  return jax.numpy.resize(x, new_size)
+
+
+@op(torch.ops.aten.resize_as_)
+def _aten_resize_as_(x, y):
+  return jax.numpy.resize(x, y.shape)
+
+
+@op(torch.ops.aten.repeat_interleave.Tensor)
+def repeat_interleave(repeats, dim=0):
+  return jnp.repeat(jnp.arange(repeats.shape[dim]), repeats)
+
+
 @op(torch.ops.aten.view_as_real)
 def _aten_view_as_real(x):
   real = jnp.real(x)
@@ -1455,12 +1471,33 @@ def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
     dtype = _torch_binary_scalar_type(src, input)
     src = jnp.array(src, dtype=dtype)
   input_indexes, source_indexes = _scatter_index(dim, index)
+  # "Zero out" target elements when not included
+  if not include_self:
+    if reduce in ["sum", "mean"]:
+      base_input = jnp.zeros_like(src)
+    elif reduce == "prod":
+      base_input = jnp.ones_like(src)
+    elif reduce == "amax":
+      base_input = jnp.full_like(src, -jnp.inf)
+    else:  # amin
+      base_input = jnp.full_like(src, jnp.inf)
+    input = input.at[input_indexes].set(base_input[source_indexes])
+
   if reduce == "sum" or reduce == "add":
     return input.at[input_indexes].add(src[source_indexes])
   elif reduce == "prod" or reduce == "multiply":
     return input.at[input_indexes].multiply(src[source_indexes])
   elif reduce == "mean":
-    return input.at[input_indexes].add(src[source_indexes])
+    if include_self:
+      count = jnp.ones_like(input)
+    else:
+      count = jnp.zeros_like(input)
+    count = count.at[input_indexes].add(jnp.ones_like(src)[source_indexes])
+    count = jnp.clip(count, min=1)
+    mean = input.at[input_indexes].add(src[source_indexes])
+    if _is_int(input):
+      return mean // count
+    return mean / count
   elif reduce == "amax":
     return input.at[input_indexes].max(src[source_indexes])
   elif reduce == "amin":
@@ -2020,6 +2057,12 @@ def _aten_erf(x):
   return jax.lax.erf(x)
 
 
+@op(torch.ops.aten.erfinv)
+@op_base.promote_int_input
+def _aten_erfinv(input):
+  return jax.lax.erf_inv(input)
+
+
 # aten.exp
 @op(torch.ops.aten.exp)
 def _aten_exp(input):
@@ -2159,8 +2202,11 @@ def _aten_igamma(input, other):
 
 @op(torch.ops.aten.linalg_eig)
 def _aten_linalg_eig(A):
-  return jax.numpy.linalg.eig(A)
+  return jnp.linalg.eig(A)
 
+@op(torch.ops.aten._linalg_eigh)
+def _aten_linalg_eigh(A, UPLO='L'):
+  return jnp.linalg.eigh(A, UPLO)
 
 # aten.lcm
 @op(torch.ops.aten.lcm)
@@ -4026,6 +4072,7 @@ def _aten__fft_c2r(self, dim, normalization, last_dim_size):
   else:
     s = None
   return jnp.fft.irfftn(self, norm=norm, axes=dim, s=s)
+
 
 @op(torch.ops.aten.max_unpool2d)
 @op(torch.ops.aten.max_unpool3d)

@@ -7,6 +7,7 @@ from torch.testing._internal.common_device_type import (
     instantiate_device_type_tests, ops)
 from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
+import torch_xla2
 
 
 skiplist = {
@@ -23,13 +24,10 @@ skiplist = {
     "cholesky",
     "cholesky_inverse",
     "cholesky_solve",
-    "combinations",
     "complex",
-    "diag_embed",
     "diagonal_copy",
     "diagonal_scatter",
     "digamma",
-    "erfinv",
     "exponential",
     "gcd",
     "geometric",
@@ -42,11 +40,7 @@ skiplist = {
     "lgamma",
     "linalg.cholesky",
     "linalg.cholesky_ex",
-    "linalg.cond",
     "linalg.det",
-    "linalg.eig",
-    "linalg.eigh",
-    "linalg.eigvalsh",
     "linalg.householder_product",
     "linalg.inv",
     "linalg.inv_ex",
@@ -135,12 +129,7 @@ skiplist = {
     "polygamma",
     "prod",
     "put",
-    "repeat_interleave",
-    "resize_",
-    "resize_as_",
-    "rot90",
     "rsub",
-    "scatter_reduce",
     "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",
@@ -188,7 +177,7 @@ random_ops = {
   'nn.functional.feature_alpha_dropout',
 }
 
-atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0)}
+atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0), "linalg.eig": (2e0, 3e0), "linalg.eigh": (5e1, 3e0), "linalg.eigvalsh": (5e1, 3e0)}
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):
@@ -267,7 +256,8 @@ class TestOpInfo(TestCase):
     print('op_db size: ', len(op_db), 'testing: ', len(ops_to_test))
 
   def setUp(self):
-    self.env = tensor.Environment()
+    self.env = torch_xla2.default_env()
+    torch_xla2.enable_accuracy_mode()
     #self.env.config.debug_accuracy_for_each_op = True 
     torch.manual_seed(0)
 

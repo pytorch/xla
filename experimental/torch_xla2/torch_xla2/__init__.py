@@ -16,7 +16,6 @@ __all__ = [
 
 from jax._src import xla_bridge
 os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
-jax.config.update('jax_enable_x64', True)
 
 # torch_xla2:oss-begin
 old_pjrt_options = jax.config.jax_pjrt_client_create_options
@@ -81,3 +80,15 @@ torch.utils.generate_methods_for_privateuse1_backend(
 
 import jax
 torch._register_device_module('jax', jax)
+
+
+def enable_accuracy_mode():
+  jax.config.update('jax_enable_x64', True)
+  jax.config.update('jax_default_matmul_precision', 'highest')
+  default_env().config.internal_respect_torch_return_dtypes = True
+
+
+def enable_performance_mode():
+  jax.config.update('jax_enable_x64', False)
+  jax.config.update('jax_default_matmul_precision', 'default')
+  default_env().config.internal_respect_torch_return_dtypes = False
