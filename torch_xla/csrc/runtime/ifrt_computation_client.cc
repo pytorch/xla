@@ -68,7 +68,7 @@ torch::lazy::hash_t hash_comp_env(
   hash = torch::lazy::HashCombine(
       hash, torch::lazy::StringHash(platform_version.c_str()));
   // Include global devices in the hash, ensuring order is consistent.
-  xla::ifrt::DeviceList::Devices ifrt_devices;
+  xla::ifrt::BasicDeviceList::Devices ifrt_devices;
   for (auto& device : ordered_devices) {
     std::string device_str(device->ToString());
     hash = torch::lazy::HashCombine(
@@ -76,7 +76,9 @@ torch::lazy::hash_t hash_comp_env(
     ifrt_devices.push_back(device);
   }
 
-  xla::ifrt::DeviceList device_list(std::move(ifrt_devices));
+  tsl::RCReference<xla::ifrt::DeviceList> device_list =
+      xla::ifrt::BasicDeviceList::Create(std::move(ifrt_devices));
+
   auto topology_desc = client->GetTopologyForDevices(device_list);
   if (topology_desc.ok()) {
     // Some backends support a topology description which provides a better
@@ -205,7 +207,8 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
 
     for (auto array : arrays) {
       shards.push_back(std::make_shared<IfrtData>(
-          IfrtDeviceToString(array->sharding().devices()[0]), array));
+          IfrtDeviceToString(array->sharding().devices()->devices().front()),
+          array));
     }
   } else {
     shards.push_back(data);
@@ -232,9 +235,12 @@ ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
     shard_shapes.push_back(ifrt_shard->buffer->shape());
   }
   xla::ifrt::Shape ifrt_shape(shape.dimensions());
-  xla::ifrt::DeviceList devices_list({client_->addressable_devices().begin(),
-                                      client_->addressable_devices().end()});
-  XLA_CHECK_EQ(shard_shapes.size(), devices_list.size());
+  tsl::RCReference<xla::ifrt::DeviceList> devices_list =
+      xla::ifrt::BasicDeviceList::Create(
+          {client_->addressable_devices().begin(),
+           client_->addressable_devices().end()});
+
+  XLA_CHECK_EQ(shard_shapes.size(), devices_list->size());
   std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding =
       xla::ifrt::ConcreteSharding::Create(devices_list, xla::ifrt::MemoryKind(),
                                           ifrt_shape, shard_shapes);
@@ -318,8 +324,10 @@ ComputationClient::DataPtr IfrtComputationClient::TransferShardsToDevice(
     shard_shapes.push_back(ifrt_shard->buffer->shape());
   }
   xla::ifrt::Shape ifrt_shape(shape.dimensions());
-  xla::ifrt::DeviceList devices_list({client_->addressable_devices().begin(),
-                                      client_->addressable_devices().end()});
+  tsl::RCReference<xla::ifrt::DeviceList> devices_list =
+      xla::ifrt::BasicDeviceList::Create(
+          {client_->addressable_devices().begin(),
+           client_->addressable_devices().end()});
   std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding =
       xla::ifrt::ConcreteSharding::Create(devices_list, xla::ifrt::MemoryKind(),
                                           ifrt_shape, shard_shapes);
@@ -346,7 +354,7 @@ ComputationClient::DataPtr IfrtComputationClient::CopyToDevice(
 
 tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
     const std::shared_ptr<IfrtData> handle) {
-  if (handle->buffer->sharding().devices().size() == 1) {
+  if (handle->buffer->sharding().devices()->size() == 1) {
     return handle->buffer;
   }
 
@@ -383,7 +391,7 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
       computations = Compile(std::move(instances));
 
-  XLA_CHECK_EQ(handle->buffer->sharding().devices().size(),
+  XLA_CHECK_EQ(handle->buffer->sharding().devices()->size(),
                GetLocalDevices().size());
 
   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions

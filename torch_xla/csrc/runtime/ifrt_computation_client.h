@@ -223,7 +223,7 @@ class IfrtComputationClient : public ComputationClient {
         ss << "  Data Shape: " << shape().ToString() << "\n";
         ss << "  OpSharding: "
            << xla::HloSharding::FromProto(*sharding_)->ToString() << "\n";
-        ss << "  NumShards: " << buffer->sharding().devices().size() << "\n";
+        ss << "  NumShards: " << buffer->sharding().devices()->size() << "\n";
       } else {
         ss << "XLAData: \n";
         ss << "  Data Device: " << device() << "\n";
