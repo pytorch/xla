@@ -28,7 +28,6 @@ skiplist = {
     "diagonal_copy",
     "diagonal_scatter",
     "digamma",
-    "erfinv",
     "exponential",
     "gcd",
     "geometric",
