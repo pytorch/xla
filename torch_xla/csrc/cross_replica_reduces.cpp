@@ -11,6 +11,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_methods.h"
@@ -307,6 +308,44 @@ AllGatherResultCoalesced BuildAllGatherCoalesced(
     }
   }
   return {result, token_handler.GetNewToken(result[0])};
+}
+
+at::Tensor all_to_all_single(const at::Tensor& input,
+                             std::vector<int64_t> output_split_sizes,
+                             std::vector<int64_t> input_split_sizes,
+                             std::string group_name) {
+  // this basically is the code copy from
+  // init_python_bindings.cpp:_xla_all_to_all
+  TORCH_LAZY_FN_COUNTER("xla::");
+  if (output_split_sizes.size() != 0 && input_split_sizes.size() != 0) {
+    for (size_t i = 0; i < input_split_sizes.size(); i++) {
+      if (input_split_sizes[i] != 1)
+        throw std::runtime_error(
+            "torch_xla does not support arbitrary split sizes for all_to_all");
+    }
+  }
+  bool pin_layout = false;
+  const torch::lazy::Value& token =
+      GetAllReduceToken(bridge::GetCurrentDevice());
+  int64_t split_count = runtime::GetComputationClient()->GetAllDevices().size();
+  std::vector<int64_t> all_groups(split_count);
+  std::iota(all_groups.begin(), all_groups.end(), 0);
+  XLATensorPtr result_ptr;
+  torch::lazy::Value new_token;
+  std::tie(result_ptr, new_token) =
+      tensor_methods::all_to_all(bridge::GetXlaTensor(input), token, 0, 0,
+                                 split_count, {all_groups}, pin_layout);
+  at::Tensor result = bridge::AtenFromXlaTensor(std::move(result_ptr));
+
+  at::Tensor result_with_grad = torch::autograd::make_variable(
+      result, /*requires_grad=*/input.requires_grad());
+  SetAllReduceToken(bridge::GetCurrentDevice(),
+                    std::make_shared<torch::lazy::Value>(new_token));
+  return result_with_grad;
+}
+
+TORCH_LIBRARY_IMPL(_c10d_functional, XLA, m) {
+  m.impl("all_to_all_single", all_to_all_single);
 }
 
 CollectivePermuteResult BuildCollectivePermute(

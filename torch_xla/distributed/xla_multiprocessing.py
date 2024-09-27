@@ -19,7 +19,9 @@ def spawn(fn,
     args (tuple): The arguments for `fn`.
       Default: Empty tuple
     nprocs (int): The number of processes/devices for the replication. At the
-      moment, if specified, can be either 1 or the maximum number of devices.
+      moment, if specified, can be either 1 or None (which would automatically
+      converted to the maximum number of devices). Other numbers would result
+      in ValueError.
     join (bool): Whether the call should block waiting for the completion of the
       processes which have being spawned.
       Default: True

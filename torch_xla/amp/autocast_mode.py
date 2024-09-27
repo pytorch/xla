@@ -47,7 +47,7 @@ class autocast(torch.amp.autocast_mode.autocast):
           enabled=enabled,
           dtype=self._dtype,
           cache_enabled=cache_enabled)
-    elif self._xla_device == 'TPU':
+    elif self._xla_device == 'TPU' or self._xla_device == 'NEURON':
       if dtype is None:
         dtype = torch.bfloat16
       if dtype != torch.bfloat16:
