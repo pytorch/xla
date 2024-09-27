@@ -160,9 +160,9 @@ GPU and nightly builds are available in our public GCS bucket.
 | 2.4 (CUDA 12.4 + Python 3.9) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.4/torch_xla-2.4.0-cp39-cp39-linux_x86_64.whl` |
 | 2.4 (CUDA 12.4 + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.4/torch_xla-2.4.0-cp310-cp310-linux_x86_64.whl` |
 | 2.4 (CUDA 12.4 + Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.4/torch_xla-2.4.0-cp311-cp311-linux_x86_64.whl` |
-| nightly (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0.dev-cp38-cp38-linux_x86_64.whl` |
-| nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0.dev-cp310-cp310-linux_x86_64.whl` |
-| nightly (CUDA 12.1 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.5.0.dev-cp38-cp38-linux_x86_64.whl` |
+| nightly (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0.dev-cp38-cp38-linux_x86_64.whl` |
+| nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0.dev-cp310-cp310-linux_x86_64.whl` |
+| nightly (CUDA 12.1 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.6.0.dev-cp38-cp38-linux_x86_64.whl` |
 
 <details>
 
@@ -170,23 +170,23 @@ GPU and nightly builds are available in our public GCS bucket.
 You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. Here is an example:
 
 ```
-pip3 install torch==2.5.0.dev20240613+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly%2B20240613-cp310-cp310-linux_x86_64.whl
+pip3 install torch==2.6.0.dev20240925+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly%2B20240925-cp310-cp310-linux_x86_64.whl
 ```
 
-The torch wheel version `2.5.0.dev20240613+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
+The torch wheel version `2.6.0.dev20240925+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
 </details>
 
 #### Use nightly build after 08/20/2024
 
-You can also add `yyyymmdd` after `torch_xla-2.5.0.dev` to get the nightly wheel of a specified date. Here is an example:
+You can also add `yyyymmdd` after `torch_xla-2.6.0.dev` to get the nightly wheel of a specified date. Here is an example:
 
 ```
 pip3 install torch==2.5.0.dev20240820+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
 pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0.dev20240820-cp310-cp310-linux_x86_64.whl
 ```
 
-The torch wheel version `2.5.0.dev20240820+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
+The torch wheel version `2.6.0.dev20240925+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
 
 <details>
 
