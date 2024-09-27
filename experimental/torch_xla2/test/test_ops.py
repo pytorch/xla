@@ -32,7 +32,6 @@ skiplist = {
     "diff",
     "digamma",
     "erfc",
-    "erfinv",
     "expand",
     "exponential",
     "floor_divide",

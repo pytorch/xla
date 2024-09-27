@@ -1959,6 +1959,12 @@ def _aten_erf(x):
   return jax.lax.erf(x)
 
 
+@op(torch.ops.aten.erfinv)
+@op_base.promote_int_input
+def _aten_erfinv(input):
+  return jax.lax.erf_inv(input)
+
+
 # aten.exp
 @op(torch.ops.aten.exp)
 def _aten_exp(input):
