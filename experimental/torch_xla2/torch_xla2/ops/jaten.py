@@ -14,10 +14,6 @@ from torch_xla2.ops import ops_registry
 from torch_xla2.ops import op_base, mappings
 from torch_xla2 import interop
 
-import collections
-from itertools import repeat
-
-
 # Keys are OpOverload, value is a callable that takes
 # XLATensor2
 all_ops = {}

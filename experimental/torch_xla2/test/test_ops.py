@@ -279,9 +279,7 @@ class TestOpInfo(TestCase):
   @ops(ops_to_test, allowed_dtypes=(torch.float32, torch.long))
   def test_reference_eager(self, device, dtype, op):
     sample_inputs = op.sample_inputs(device, dtype)
-    print(f"{op=}")
     for sample_input in sample_inputs:
-      print("sample_input: ", sample_input)
       t = sample_input.input
       if isinstance(t, torch.Tensor) and t.is_sparse:
         continue
