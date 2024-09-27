@@ -4034,23 +4034,13 @@ def _aten_max_unpool3d(input, indices, output_size, stride=None, padding=0):
       raise ValueError("output_size value is not set correctly. It cannot be None or empty.")
 
     output_size = [input.shape[0], input.shape[1]] + output_size
-        
-    # Initialize an output array of zeros with the provided output_size
     output = jnp.zeros(output_size, dtype=input.dtype)
 
-    # Use numpy.ndindex to iterate over all indices of the input tensor
     for idx in np.ndindex(input.shape):
         max_index = indices[idx]
-
-        # Get the spatial dimensions of the output
         spatial_dims = output_size[2:]  # (D, H, W)
-
-        # Unravel the flat index to multi-dimensional index
         unpooled_spatial_idx = np.unravel_index(max_index, spatial_dims)
-
-        # Combine batch, channel, and spatial indices
         full_idx = idx[:2] + unpooled_spatial_idx
-
         output = output.at[full_idx].set(input[idx])
 
     return output
@@ -4062,23 +4052,13 @@ def _aten_max_unpool2d(input, indices, output_size, stride=None, padding=0):
 
     output_size = [input.shape[0], input.shape[1]] + output_size
 
-    # Initialize the output array with zeros
     output = jnp.zeros(output_size, dtype=input.dtype)
 
-    # Use numpy.ndindex to iterate over all indices of the input tensor
     for idx in np.ndindex(input.shape):
         max_index = indices[idx]
-
-        # Get the spatial dimensions of the output (H, W)
         spatial_dims = output_size[2:]
-
-        # Unravel the flat index to multi-dimensional index for 2D
         unpooled_spatial_idx = np.unravel_index(max_index, spatial_dims)
-
-        # Combine batch, channel, and spatial indices
         full_idx = idx[:2] + unpooled_spatial_idx
-
-        # Set the value in the output array at the corresponding location
         output = output.at[full_idx].set(input[idx])
 
     return output
