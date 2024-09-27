@@ -14,6 +14,10 @@ from torch_xla2.ops import ops_registry
 from torch_xla2.ops import op_base, mappings
 from torch_xla2 import interop
 
+import collections
+from itertools import repeat
+
+
 # Keys are OpOverload, value is a callable that takes
 # XLATensor2
 all_ops = {}
@@ -4027,27 +4031,86 @@ def _aten__fft_c2r(self, dim, normalization, last_dim_size):
     s = None
   return jnp.fft.irfftn(self, norm=norm, axes=dim, s=s)
 
-@op(torch.ops.aten.max_pool2d)
-def _aten_max_pool2d(input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False):
-    if stride is None:
-        stride = kernel_size
-    
-    # Handle padding modes ('SAME' or 'VALID') conversion for PyTorch-like behavior.
-    if padding == 0:
-        padding_mode = 'VALID'
-    else:
-        padding_mode = 'SAME'
-    
-    # JAX doesn't support dilation in reduce_window, so we ignore it.
-    # JAX doesn't support ceil_mode, so we ignore it.
+# @op(torch.nn.functional.max_pool2d)
+# def _aten_max_pool2d(self, input, kernel_size, stride=None, padding=0, dilation=1, ceil_mode=False, return_indices=False):
+#     print('================== Hello World [_aten_max_pool2d] =======================')
+#     if stride is None:
+#         stride = kernel_size
+#     
+#     # Handle padding modes ('SAME' or 'VALID') conversion for PyTorch-like behavior.
+#     if padding == 0:
+#         padding_mode = 'VALID'
+#     else:
+#         padding_mode = 'SAME'
+#     
+#     # JAX doesn't support dilation in reduce_window, so we ignore it.
+#     # JAX doesn't support ceil_mode, so we ignore it.
+# 
+#     window_shape = (kernel_size, kernel_size)
+#     strides = (stride, stride)
+# 
+#     # Apply max pooling using jax.lax.reduce_window
+#     pooled = jax.lax.reduce_window(input, -jnp.inf, jax.lax.max,
+#                                    window_dimensions=window_shape,
+#                                    window_strides=strides,
+#                                    padding=padding_mode)
+#     
+#     return pooled
 
-    window_shape = (kernel_size, kernel_size)
-    strides = (stride, stride)
 
-    # Apply max pooling using jax.lax.reduce_window
-    pooled = jax.lax.reduce_window(input, -jnp.inf, jax.lax.max,
-                                   window_dimensions=window_shape,
-                                   window_strides=strides,
-                                   padding=padding_mode)
-    
-    return pooled
+
+@op(torch.ops.aten.max_unpool3d)
+def _aten_max_unpool3d(input, indices, output_size, stride=None, padding=0):
+    if output_size is None:
+      raise ValueError("output_size value is not set correctly. It cannot be None or empty.")
+
+    output_size = [input.shape[0], input.shape[1]] + output_size
+        
+    # Initialize an output array of zeros with the provided output_size
+    output = jnp.zeros(output_size, dtype=input.dtype)
+
+    # Use numpy.ndindex to iterate over all indices of the input tensor
+    for idx in np.ndindex(input.shape):
+        max_index = indices[idx]
+
+        # Get the spatial dimensions of the output
+        spatial_dims = output_size[2:]  # (D, H, W)
+
+        # Unravel the flat index to multi-dimensional index
+        unpooled_spatial_idx = np.unravel_index(max_index, spatial_dims)
+
+        # Combine batch, channel, and spatial indices
+        full_idx = idx[:2] + unpooled_spatial_idx
+
+        output = output.at[full_idx].set(input[idx])
+
+    return output
+
+@op(torch.ops.aten.max_unpool2d)
+def _aten_max_unpool2d(input, indices, output_size, stride=None, padding=0):
+    if output_size is None:
+        raise ValueError("output_size value is not set correctly. It cannot be None or empty.")
+
+    output_size = [input.shape[0], input.shape[1]] + output_size
+
+    # Initialize the output array with zeros
+    output = jnp.zeros(output_size, dtype=input.dtype)
+
+    # Use numpy.ndindex to iterate over all indices of the input tensor
+    for idx in np.ndindex(input.shape):
+        max_index = indices[idx]
+
+        # Get the spatial dimensions of the output (H, W)
+        spatial_dims = output_size[2:]
+
+        # Unravel the flat index to multi-dimensional index for 2D
+        unpooled_spatial_idx = np.unravel_index(max_index, spatial_dims)
+
+        # Combine batch, channel, and spatial indices
+        full_idx = idx[:2] + unpooled_spatial_idx
+
+        # Set the value in the output array at the corresponding location
+        output = output.at[full_idx].set(input[idx])
+
+    return output
+
