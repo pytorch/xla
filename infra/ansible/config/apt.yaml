@@ -16,6 +16,7 @@ apt:
       - clang-format
       - gcc-10
       - g++-10
+      - clang-17
       - lcov
       - less
 
