@@ -833,6 +833,11 @@ def parse_args(args=None):
         tasks""",
   )
   parser.add_argument(
+      "--enable-functionalization",
+      action="store_true",
+      help="Enable the functionalization layer by default",
+  )
+  parser.add_argument(
       "--dry-run",
       action="store_true",
       help="Do a dry run to only print the benchmark commands.",
