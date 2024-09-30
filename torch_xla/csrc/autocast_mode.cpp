@@ -95,7 +95,7 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   KERNEL_XLA(hinge_embedding_loss, fp32)
   // KERNEL_XLA(poisson_nll_loss, fp32)
   KERNEL_XLA(smooth_l1_loss, fp32)
-  // KERNEL_XLA(cross_entropy_loss, fp32)
+  KERNEL_XLA(cross_entropy_loss, fp32)
   KERNEL_XLA(l1_loss, fp32)
   // KERNEL_XLA(huber_loss, fp32)
   KERNEL_XLA(margin_ranking_loss, fp32)
