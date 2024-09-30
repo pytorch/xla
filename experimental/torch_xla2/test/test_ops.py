@@ -54,7 +54,6 @@ skiplist = {
     "linalg.lu_solve",
     "linalg.matrix_norm",
     "linalg.matrix_power",
-    "linalg.matrix_rank",
     "linalg.solve_ex",
     "linalg.solve_triangular",
     "linalg.svd",
