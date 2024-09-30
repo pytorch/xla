@@ -670,6 +670,23 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         torch_xla._XLAC._get_xla_sharding_spec(xt),
         torch_xla._XLAC._get_xla_sharding_spec(explicit_xt))
 
+  def test_send_cpu_data_to_device_with_multiple_sharding(self):
+    tensors = [torch.randn(16), torch.randn(16, 16), torch.randn(16, 16, 16)]
+    mesh = self._get_mesh((self.n_devices, 1))
+    specs = [
+        xs.ShardingSpec(mesh, spec) for spec in [(0, None), (0, None, None)]
+    ]
+    xtensors = xm.send_cpu_data_to_device(tensors, xm.xla_device(), specs)
+    str_specs = [torch_xla._XLAC._get_xla_sharding_spec(t) for t in xtensors]
+    self.assertEqual(str_specs[0], '{replicated}')
+    if self.n_devices > 1:
+      dev_fmt = (self.n_devices, ','.join(map(str, range(self.n_devices))))
+      self.assertEqual(str_specs[1], "{devices=[%d,1]%s}" % dev_fmt)
+      self.assertEqual(str_specs[2], "{devices=[%d,1,1]%s}" % dev_fmt)
+    else:
+      self.assertEqual(str_specs[1], '{replicated}')
+      self.assertEqual(str_specs[2], '{replicated}')
+
   def test_multiple_operations(self):
     t1 = torch.randn(2, 2)
     t2 = torch.randn(2, 2)
