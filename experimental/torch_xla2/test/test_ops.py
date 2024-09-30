@@ -69,8 +69,6 @@ skiplist = {
     "lu_unpack",
     "masked.median",
     "max_pool2d_with_indices_backward",
-    "min",
-    "mode",
     "multinomial",
     "mvlgamma",
     "nanmedian",
@@ -243,7 +241,8 @@ ops_to_test = [
 # For example: sort( [1, 0, 0]) -> [0, 0, 1]
 # the correct index can be [1, 2, 0] or [2, 1, 0]
 should_ignore_indexes = {
-  "topk"
+  "topk",
+  "mode"
 }
 
 
