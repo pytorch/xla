@@ -25,8 +25,8 @@ build -c opt
 build --config=short_logs
 
 # Force GCC because clang/bazel has issues.
-build --action_env=CC=gcc
-build --action_env=CXX=g++
+build --action_env=CC=clang
+build --action_env=CXX=clang++
 build --spawn_strategy=standalone
 
 ###########################################################################
