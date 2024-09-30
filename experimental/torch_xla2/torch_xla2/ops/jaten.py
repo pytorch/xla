@@ -367,9 +367,30 @@ def _aten_bmm(x, y):
 
 @op(torch.ops.aten.embedding)
 # embedding(Tensor weight, Tensor indices, SymInt padding_idx=-1, bool scale_grad_by_freq=False, bool sparse=False)
-def _aten_embedding(a, w, padding_idx=-1):
+def _aten_embedding(a, w, padding_idx=-1, scale_grad_by_freq=False, sparse=False):
   return jnp.take(a, w, axis=0)
 
+@op(torch.ops.aten.embedding_renorm_)
+def _aten_embedding_renorm_(weight, indices, max_norm, norm_type):
+  # Adapted from https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/Embedding.cpp
+  unique_indices = jnp.unique(indices)
+
+  norm = jnp.linalg.norm(
+      _aten_embedding(weight, unique_indices),
+      ord=norm_type,
+      axis=1,
+  )
+
+  indice_idx = jnp.where(norm > max_norm)
+
+  scale = max_norm / (norm[indice_idx] + 1e-7)
+
+  indices_to_update = unique_indices[indice_idx]
+
+  weight = weight.at[indices_to_update].set(
+      weight[indices_to_update] * scale[:, None]
+  )
+  return weight
 
 #- func: _embedding_bag_forward_only(
 # Tensor weight, Tensor indices, Tensor offsets, bool scale_grad_by_freq=False,

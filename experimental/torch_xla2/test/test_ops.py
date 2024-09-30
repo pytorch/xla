@@ -96,7 +96,6 @@ skiplist = {
     "nn.functional.dropout3d",
     "nn.functional.dropout",
     "nn.functional.embedding_bag",
-    "nn.functional.embedding",
     "nn.functional.fractional_max_pool2d",
     "nn.functional.fractional_max_pool3d",
     "nn.functional.group_norm",
