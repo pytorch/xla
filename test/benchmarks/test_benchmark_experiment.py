@@ -9,7 +9,7 @@ class BenchmarkExperimentTest(unittest.TestCase):
     be = BenchmarkExperiment("cpu", "PJRT", "some xla_flags", "openxla", None,
                              False, "train", "123", False)
     actual = be.to_dict()
-    self.assertEqual(9, len(actual))
+    self.assertEqual(10, len(actual))
     self.assertEqual("cpu", actual["accelerator"])
     self.assertTrue("accelerator_model" in actual)
     self.assertEqual("PJRT", actual["xla"])
