@@ -195,8 +195,7 @@ class ParallelLoader(object):
       if not isinstance(batches[0], dict):
         return [
             ValueError(
-                f"input batch should be a dict when input sharding is a dict."
-            )
+                f"input batch should be a dict when input sharding is a dict.")
         ]
       result = []
       for batch in batches:

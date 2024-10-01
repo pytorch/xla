@@ -85,7 +85,9 @@ class MpInputShardingTest(unittest.TestCase):
     mesh = xs.get_1d_mesh('x')
 
     train_loader = pl.MpDeviceLoader(
-        train_loader, device, input_sharding={'x': xs.ShardingSpec(mesh, ('x', None))})
+        train_loader,
+        device,
+        input_sharding={'x': xs.ShardingSpec(mesh, ('x', None))})
     train_loader = iter(train_loader)
     with self.assertRaises(ValueError):
       data = next(train_loader)
