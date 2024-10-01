@@ -2232,6 +2232,13 @@ def _aten_hypot(input, other):
 def _aten_igamma(input, other):
   return jax.scipy.special.gammainc(input, other)
 
+@op(torch.ops.aten.lgamma)
+def _aten_lgamma(input, *, out=None):
+  return jax.scipy.special.gammaln(input).astype(jnp.float32)
+
+@op(torch.ops.aten.mvlgamma)
+def _aten_mvlgamma(input, p, *, out=None):
+  return jax.scipy.special.multigammaln(input, d)
 
 @op(torch.ops.aten.linalg_eig)
 def _aten_linalg_eig(A):
@@ -3935,6 +3942,19 @@ def _aten_special_hermite_polynomial_he(self, n):
   return vectorized(self, n.astype(jnp.int64))
 
 
+@op(torch.ops.aten.multinomial, needs_env=True)
+def _aten_multinomial(input, num_samples, replacement=False, *, generator=None, out=None, env=None):
+  assert num_samples <= input.shape[-1] or replacement, "cannot take a larger sample than population when replacement=False"
+  assert jnp.all(input >= 0), "inputs must be non-negative"
+  key = env.get_and_rotate_prng_key(generator)
+  if input.ndim == 1:
+    assert jnp.sum(input) > 0, "rows of input must have non-zero sum"
+    return jax.random.choice(key, input.shape[-1], (num_samples,), replace=replacement, p=input)
+  else:
+    assert jnp.all(jnp.sum(input, axis=1) > 0), "rows of input must have non-zero sum"
+    return jnp.array([jax.random.choice(key, input.shape[-1], (num_samples,), replace=replacement, p=input[i, :]) for i in range(input.shape[0])])
+
+
 @op(torch.ops.aten.narrow)
 @op(torch.ops.aten.narrow_copy)
 def _aten_narrow(input, dim, start, length):
@@ -4046,6 +4066,17 @@ def _aten_median(self, dim=None, keepdim=False):
   else:
     index = _with_reduction_scalar(_get_median_index, self, dim, keepdim).astype(jnp.int64)
     return output, index
+
+
+@op(torch.ops.aten.nanmedian)
+def _aten_nanmedian(input, dim=None, keepdim=False, *, out=None):
+  output = _with_reduction_scalar(functools.partial(jnp.nanquantile, q=0.5, method='lower'), input, dim=dim, keepdim=keepdim).astype(input.dtype)
+  if dim is None:
+    return output
+  else:
+    index = _with_reduction_scalar(_get_median_index, input, dim, keepdim).astype(jnp.int64)
+    return output, index
+
 
 def _get_median_index(x, axis=None, keepdims=False):
   sorted_arg = jnp.argsort(x, axis=axis)
