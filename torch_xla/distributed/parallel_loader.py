@@ -12,7 +12,7 @@ class PerDeviceQueue(object):
 
   def __init__(self, device, loader_prefetch_size, device_prefetch_size):
     self.device = device
-    self.loader_queue = kq.Queue(maxsize=loader_prefetch_size)
+    self.cpu_loader_queue = kq.Queue(maxsize=loader_prefetch_size)
     self.queue = kq.Queue(maxsize=device_prefetch_size)
     self.close_queue_count = itertools.count()
 
@@ -46,6 +46,8 @@ class PerDeviceLoader(object):
         self._batches_yielded += 1
 
     item = self._loader.next_item(self._device)
+    if isinstance(item, Exception):
+      raise item
     if item is None:
       xm.mark_step()
       raise StopIteration
@@ -56,7 +58,7 @@ class ParallelLoader(object):
   """Wraps an existing PyTorch DataLoader with background data upload.
 
   Args:
-    loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be
+    cpu_loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be
       wrapped.
     devices (`torch.device`...): The list of devices where the data has to be
       sent. The i-th sample returned by the `loader` will be sent to `devices[i
@@ -74,13 +76,12 @@ class ParallelLoader(object):
     host_to_device_transfer_threads (int, optional): The number of threads that
       work in parallel to transfer data from loader queue to device queue.
       Default: 1
-    input_sharding (ShardingSpec, optional): Sharding spec to apply to
-      compatible input tensors after loading.
-      Default: None
+    input_sharding (ShardingSpec, Dict(str, ShardingSpec), optional): Sharding
+      spec to apply to compatible input tensors after loading.
   """
 
   def __init__(self,
-               loader,
+               cpu_loader,
                devices,
                batchdim=0,
                batches_per_execution=1,
@@ -88,7 +89,7 @@ class ParallelLoader(object):
                device_prefetch_size=8,
                host_to_device_transfer_threads=1,
                input_sharding=None):
-    self._loader = loader
+    self._cpu_loader = cpu_loader
     self._devices = [torch.device(x) for x in devices]
     self._batchdim = batchdim
     self._batches_per_execution = batches_per_execution
@@ -140,7 +141,7 @@ class ParallelLoader(object):
     self._done = True
     for dqueue in self._queues.values():
       dqueue.queue.close()
-      dqueue.loader_queue.close()
+      dqueue.cpu_loader_queue.close()
 
     for thread in self._threads:
       thread.join()
@@ -151,7 +152,7 @@ class ParallelLoader(object):
 
   def _loader_worker(self):
     queues = list(self._queues.values())
-    data_iter = enumerate(self._loader)
+    data_iter = enumerate(self._cpu_loader)
     batch = []
 
     try:
@@ -163,20 +164,65 @@ class ParallelLoader(object):
         batch.append(data)
         if len(batch) == len(self._devices):
           for queue_no, device_batch in enumerate(batch):
-            queues[queue_no].loader_queue.put(device_batch)
+            queues[queue_no].cpu_loader_queue.put(device_batch)
           batch = []
     finally:
       for dqueue in queues:
-        dqueue.loader_queue.close_write()
+        dqueue.cpu_loader_queue.close_write()
 
   def _get_batch(self, dqueue):
     batch = []
-    while dqueue.queue.max_size() > len(batch):
-      item = dqueue.loader_queue.get()
+    while len(batch) < dqueue.queue.max_size():
+      item = dqueue.cpu_loader_queue.get()
       if item is None:
         break
       batch.append(item)
     return batch
+
+  def send_cpu_data_to_device(self, batches, device):
+    """Move batch to device.
+    Args:
+      batch -> List(torch.Tensor), List(Dict(str: torch.Tensor)): Input batch
+        present in the cpu memory
+      device: TPU device where the batch should be moved
+    
+    Returns:
+      result -> List(torch.Tensor), Dict(str: torch.Tensor): Returns a dict if the
+        input batch is a dict. Otherwise, returns a list of torch.Tensor.
+    """
+    result = None
+    if isinstance(self._input_sharding, dict):
+      if not isinstance(batches[0], dict):
+        return [
+            ValueError(
+                f"input batch should be a dict when input sharding is a dict."
+            )
+        ]
+      result = []
+      for batch in batches:
+        xla_batch = {}
+        missing_keys = []
+        for key, tensor in batch.items():
+          assert type(tensor) == torch.Tensor
+          sharding_spec = None
+          if self._input_sharding:
+            if key not in self._input_sharding:
+              missing_keys.append(key)
+              continue
+            sharding_spec = self._input_sharding[key]
+
+          # xla_tensor is a list of tensors.
+          xla_tensor = xm.send_cpu_data_to_device(tensor, device, sharding_spec)
+          xla_batch[key] = xla_tensor[0]
+        if len(missing_keys) != 0:
+          # Returning exception as raising in the dataloading thread doesn't surface the problem in the main thread.
+          return [
+              KeyError(f"Keys: {missing_keys} are missing from input_sharding.")
+          ]
+        result.append(xla_batch)
+    else:
+      result = xm.send_cpu_data_to_device(batches, device, self._input_sharding)
+    return result
 
   def _worker(self, dqueue, host_to_device_transfer_threads):
     device = torch.device(dqueue.device)
@@ -187,8 +233,7 @@ class ParallelLoader(object):
         if not batch:
           break
         with torch.no_grad():
-          batch = xm.send_cpu_data_to_device(batch, device,
-                                             self._input_sharding)
+          batch = self.send_cpu_data_to_device(batch, device)
         for data in batch:
           dqueue.queue.put(data)
     finally:

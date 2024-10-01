@@ -14,6 +14,24 @@ train_loader = pl.MpDeviceLoader(
          input_sharding=xs.ShardingSpec(input_mesh, ('data', None, None, None)))
 ```
 
+It is also possible to specify a different `input_sharding` for each element of the batch if they are different shapes:
+
+```python
+# if batch = next(train_loader) looks like
+# {'x': <tensor of shape [s1, s2, s3, s4]>, 'y': <tensor for shape [s1, s2]>}
+
+# MpDeviceLoader returns ParallelLoader.per_device_loader as iterator
+train_loader = pl.MpDeviceLoader(
+         train_loader,  # wraps PyTorch DataLoader
+         device,
+	       # specify different sharding for each input of the batch.
+         input_sharding={
+          'x': xs.ShardingSpec(input_mesh, ('data', None, None, None)), 
+          'y': xs.ShardingSpec(input_mesh, ('data', None))
+        }
+)
+```
+
 ### Virtual Device Optimization
 
 PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because GSPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.
