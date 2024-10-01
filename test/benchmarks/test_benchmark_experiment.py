@@ -7,7 +7,7 @@ class BenchmarkExperimentTest(unittest.TestCase):
 
   def test_to_dict(self):
     be = BenchmarkExperiment("cpu", "PJRT", "some xla_flags", "openxla", None,
-                             False, "train", "123")
+                             False, "train", "123", False)
     actual = be.to_dict()
     self.assertEqual(9, len(actual))
     self.assertEqual("cpu", actual["accelerator"])
@@ -19,6 +19,7 @@ class BenchmarkExperimentTest(unittest.TestCase):
     self.assertEqual(False, actual["keep_model_data_on_cuda"])
     self.assertEqual("train", actual["test"])
     self.assertEqual("123", actual["batch_size"])
+    self.assertEqual(False, actual["enable_functionalization"])
 
 
 if __name__ == '__main__':
