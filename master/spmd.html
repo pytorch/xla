@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+gitb9e65e7 )
+                  master (2.6.0+gitcc631b9 )
                 </div>
               
             
@@ -558,8 +558,24 @@ the table. The design doc is <a class="reference external" href="https://github.
 <span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
          <span class="n">train_loader</span><span class="p">,</span>  <span class="c1"># wraps PyTorch DataLoader</span>
          <span class="n">device</span><span class="p">,</span>
-         <span class="c1"># assume 4d input and we want to shard at the batch dimension.</span>
+     <span class="c1"># assume 4d input and we want to shard at the batch dimension.</span>
          <span class="n">input_sharding</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>It is also possible to specify a different <code class="docutils literal notranslate"><span class="pre">input_sharding</span></code> for each element of the batch if they are different shapes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># if batch = next(train_loader) looks like</span>
+<span class="c1"># {&#39;x&#39;: &lt;tensor of shape [s1, s2, s3, s4]&gt;, &#39;y&#39;: &lt;tensor for shape [s1, s2]&gt;}</span>
+
+<span class="c1"># MpDeviceLoader returns ParallelLoader.per_device_loader as iterator</span>
+<span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
+         <span class="n">train_loader</span><span class="p">,</span>  <span class="c1"># wraps PyTorch DataLoader</span>
+         <span class="n">device</span><span class="p">,</span>
+     <span class="c1"># specify different sharding for each input of the batch.</span>
+         <span class="n">input_sharding</span><span class="o">=</span><span class="p">{</span>
+          <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+          <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+        <span class="p">}</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <p>PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because GSPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.</p>
