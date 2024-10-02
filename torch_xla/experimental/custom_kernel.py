@@ -536,12 +536,12 @@ def ref_extended_paged_attn(
 
   return torch.cat(outputs, dim=0)
 
-def paged_attention(q,
-                    k_pages,
-                    v_pages,
-                    lengths,
-                    page_indices,
-                    pages_per_compute_block,
+def paged_attention(q, # [batch_size, num_heads, head_size]
+                    k_pages, # [num_kv_size, total_num_pages, page_size, head_size]
+                    v_pages, # [num_kv_size, total_num_pages, page_size, head_size]
+                    lengths, # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
+                    page_indices, # [batch_size, pages_per_sequence]
+                    pages_per_compute_block, # scalar, = block_size // page_size
                     megacore_mode: str = None,
                     attn_logits_soft_cap: float = None):
   # Import JAX within the function such that we don't need to call the jax_import_guard()

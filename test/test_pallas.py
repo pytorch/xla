@@ -548,8 +548,6 @@ class PallasTest(unittest.TestCase):
             atol=1e-5,
             rtol=1e-5))
 
-
-
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_paged_attention_extended_wrapper(self):
