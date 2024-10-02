@@ -1311,6 +1311,8 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(mesh_without_name.mesh_shape,
                      (xr.global_runtime_device_count(),))
 
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_sharding(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1328,8 +1330,11 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(data.size(), torch.Size([8, 3, 64, 64]))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(data),
-        f"{{devices=[{mesh.size()},1,1,1]0,1,2,3}}")
+        f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
+    )
 
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1347,8 +1352,11 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(data.size(), torch.Size([mesh.size() - 1, 3, 64, 64]))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(data),
-        f"{{devices=[{mesh.size()},1,1,1]0,1,2,3}}")
+        f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
+    )
 
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size_and_mini_batch(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
