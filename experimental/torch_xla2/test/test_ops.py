@@ -14,8 +14,8 @@ skiplist = {
     "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
                  # such as 0 to negative power.
     "_segment_reduce",
-    "_upsample_bilinear2d_aa",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
+    "_upsample_bilinear2d_aa", # test passing scales_h, scales_w is failing.
     "byte",
     "cat",
     "cauchy",
