@@ -15,7 +15,6 @@ skiplist = {
                  # such as 0 to negative power.
     "_segment_reduce",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
-    "_upsample_bilinear2d_aa", # test passing scales_h, scales_w is failing.
     "byte",
     "cat",
     "cauchy",
