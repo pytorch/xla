@@ -1,6 +1,7 @@
 import logging
 import os
 import unittest
+from typing import List, Optional, Tuple
 
 import torch
 from torch import nn as nn
@@ -547,6 +548,178 @@ class PallasTest(unittest.TestCase):
             atol=1e-5,
             rtol=1e-5))
 
+  def ref_extended_paged_attn(
+    self,
+    query: torch.Tensor,
+    key_cache: torch.Tensor,
+    value_cache: torch.Tensor,
+    query_lens: List[int],
+    kv_lens: List[int],
+    block_tables: torch.Tensor,
+    scale: float,
+    sliding_window: Optional[int] = None,
+    soft_cap: Optional[float] = None,
+  ) -> torch.Tensor:
+    num_seqs = len(query_lens)
+    block_tables = block_tables.cpu().numpy()
+    _, block_size, num_kv_heads, head_size = key_cache.shape
+
+    outputs: List[torch.Tensor] = []
+    start_idx = 0
+    for i in range(num_seqs):
+      query_len = query_lens[i]
+      kv_len = kv_lens[i]
+      q = query[start_idx:start_idx + query_len]
+      q *= scale
+
+      num_kv_blocks = (kv_len + block_size - 1) // block_size
+      block_indices = block_tables[i, :num_kv_blocks]
+
+      k = key_cache[block_indices].view(-1, num_kv_heads, head_size)
+      k = k[:kv_len]
+      v = value_cache[block_indices].view(-1, num_kv_heads, head_size)
+      v = v[:kv_len]
+
+      if q.shape[1] != k.shape[1]:
+        k = torch.repeat_interleave(k, q.shape[1] // k.shape[1], dim=1)
+        v = torch.repeat_interleave(v, q.shape[1] // v.shape[1], dim=1)
+      attn = torch.einsum("qhd,khd->hqk", q, k).float()
+      empty_mask = torch.ones(query_len, kv_len)
+      mask = torch.triu(empty_mask, diagonal=kv_len - query_len + 1).bool()
+      if sliding_window is not None:
+        sliding_window_mask = torch.triu(empty_mask,
+                                         diagonal=kv_len -
+                                         (query_len + sliding_window) +
+                                         1).bool().logical_not()
+        mask |= sliding_window_mask
+      if soft_cap is not None:
+        attn = soft_cap * torch.tanh(attn / soft_cap)
+      attn.masked_fill_(mask, float("-inf"))
+      attn = torch.softmax(attn, dim=-1).to(v.dtype)
+      out = torch.einsum("hqk,khd->qhd", attn, v)
+
+      outputs.append(out)
+      start_idx += query_len
+
+    return torch.cat(outputs, dim=0)
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_paged_attention_extended_wrapper(self):
+
+    # TODO(xiowei): we may want to parameterize the test similar to
+    # https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L159-L168
+    seq_lens = [(1, 1328), (5, 18), (129, 463)]
+    num_heads = (8, 2)
+    head_size = 128
+    block_size = 16 # what's block_size?
+    sliding_window = None
+    dtype = torch.bfloat16
+    soft_cap = None
+    num_blocks = 2048
+
+    torch.manual_seed(42)
+    num_seqs = len(seq_lens)
+    query_lens = [x[0] for x in seq_lens]
+    kv_lens = [x[1] for x in seq_lens]
+    num_query_heads = num_heads[0]
+    num_kv_heads = num_heads[1]
+    assert num_query_heads % num_kv_heads == 0
+    max_query_len = max(query_lens)
+    max_kv_len = max(kv_lens)
+    window_size = ((sliding_window,
+                    sliding_window) if sliding_window is not None else
+                   (-1, -1))
+    scale = head_size**-0.5
+
+    query = torch.randn(sum(query_lens),
+                        num_query_heads,
+                        head_size,
+                        dtype=dtype)
+    key_cache = torch.randn(num_blocks,
+                            block_size,
+                            num_kv_heads,
+                            head_size,
+                            dtype=dtype)
+    value_cache = torch.randn_like(key_cache)
+    max_num_blocks_per_seq = (max_kv_len + block_size - 1) // block_size
+    block_tables = torch.randint(0,
+                                 num_blocks,
+                                 (num_seqs, max_num_blocks_per_seq),
+                                 dtype=torch.int32)
+    ref_output = self.ref_extended_paged_attn(
+      query=query,
+      key_cache=key_cache,
+      value_cache=value_cache,
+      query_lens=query_lens,
+      kv_lens=kv_lens,
+      block_tables=block_tables,
+      scale=scale,
+      sliding_window=sliding_window,
+      soft_cap=soft_cap,
+    )
+    print(f'{ref_output.shape=}')
+
+
+    # from torch_xla.experimental.custom_kernel import paged_attention
+    # from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
+
+    # max_kv_len = 2048
+    # block_size = 512
+    # page_size = 64
+    # num_kv_heads = 8
+    # q_kv_head_ratio = 8
+    # head_dim = 256
+    # dtype = torch.float32
+    # seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
+
+    # q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+    #     seq_lens,
+    #     page_size,
+    #     max_kv_len,
+    #     num_kv_heads,
+    #     num_kv_heads * q_kv_head_ratio,
+    #     head_dim,
+    # )
+
+    # q_xla = q.to("xla")
+    # k_pages_xla = k_pages.to("xla")
+    # v_pages_xla = v_pages.to("xla")
+    # seq_lens_xla = seq_lens.to("xla")
+    # page_indices_xla = page_indices.to("xla")
+
+    # output = paged_attention(
+    #     q_xla,
+    #     k_pages_xla,
+    #     v_pages_xla,
+    #     seq_lens_xla,
+    #     page_indices_xla,
+    #     pages_per_compute_block=block_size // page_size,
+    # )
+
+    # q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    # k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    # v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    # seq_lens_jax = jnp.array(seq_lens.numpy(), dtype=jnp.int32)
+    # page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    # expected_output = torch.from_numpy(
+    #     np.array(
+    #         jax_paged_attention(
+    #             q_jax,
+    #             k_pages_jax,
+    #             v_pages_jax,
+    #             seq_lens_jax,
+    #             page_indices_jax,
+    #             pages_per_compute_block=block_size // page_size,
+    #         )))
+
+    # self.assertTrue(
+    #     torch.allclose(
+    #         output.cpu()[seq_lens > 0],
+    #         expected_output.cpu()[seq_lens > 0],
+    #         atol=1e-5,
+    #         rtol=1e-5))
+
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
                    "This test only works on TPUv4 and TPUv5p.")
   def test_paged_attention_wrapper_with_megacore_modes(self):
@@ -762,7 +935,7 @@ class PallasTest(unittest.TestCase):
               expected_output.cpu()[seq_lens > 0],
               atol=1e-5,
               rtol=1e-5))
-
+  
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   def test_flash_attention_wrapper_segment_ids_1(self):
