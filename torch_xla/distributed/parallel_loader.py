@@ -1,4 +1,5 @@
 import itertools
+import queue
 import threading
 import torch
 import torch_xla
@@ -46,9 +47,9 @@ class PerDeviceLoader(object):
         self._batches_yielded += 1
 
     item = self._loader.next_item(self._device)
-    if isinstance(item, Exception):
-      raise item
     if item is None:
+      if not self._loader._exception_queue.empty():
+        raise self._loader._exception_queue.get()
       xm.mark_step()
       raise StopIteration
     return item
@@ -95,6 +96,7 @@ class ParallelLoader(object):
     self._batches_per_execution = batches_per_execution
     self._done = False
     self._queues = dict()
+    self._exception_queue = queue.Queue()
     self._input_sharding = input_sharding
     self._threads = []
     for device in self._devices:
@@ -193,10 +195,8 @@ class ParallelLoader(object):
     result = None
     if isinstance(self._input_sharding, dict):
       if not isinstance(batches[0], dict):
-        return [
-            ValueError(
-                f"input batch should be a dict when input sharding is a dict.")
-        ]
+        raise ValueError(
+            f"input batch should be a dict when input sharding is a dict.")
       result = []
       for batch in batches:
         xla_batch = {}
@@ -215,9 +215,8 @@ class ParallelLoader(object):
           xla_batch[key] = xla_tensor[0]
         if len(missing_keys) != 0:
           # Returning exception as raising in the dataloading thread doesn't surface the problem in the main thread.
-          return [
-              KeyError(f"Keys: {missing_keys} are missing from input_sharding.")
-          ]
+          raise KeyError(
+              f"Keys: {missing_keys} are missing from input_sharding.")
         result.append(xla_batch)
     else:
       result = xm.send_cpu_data_to_device(batches, device, self._input_sharding)
@@ -232,7 +231,13 @@ class ParallelLoader(object):
         if not batch:
           break
         with torch.no_grad():
-          batch = self.send_cpu_data_to_device(batch, device)
+          try:
+            batch = self.send_cpu_data_to_device(batch, device)
+          except Exception as e:
+            # _worker is being run in a daemon thread, raise the error
+            # will not work. Put the error in an error queue instead.
+            self._exception_queue.put(e)
+            break
         for data in batch:
           dqueue.queue.put(data)
     finally:
