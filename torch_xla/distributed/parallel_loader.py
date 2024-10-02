@@ -6,6 +6,7 @@ import torch_xla.debug.profiler as xp
 import torch_xla.utils.keyd_queue as kq
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
+import queue
 
 
 class PerDeviceQueue(object):
@@ -47,6 +48,8 @@ class PerDeviceLoader(object):
 
     item = self._loader.next_item(self._device)
     if item is None:
+      if not self._loader._exception_queue.empty():
+        raise self._loader._exception_queue.get()
       xm.mark_step()
       raise StopIteration
     return item
@@ -94,6 +97,7 @@ class ParallelLoader(object):
     self._batches_per_execution = batches_per_execution
     self._done = False
     self._queues = dict()
+    self._exception_queue = queue.Queue()
     self._input_sharding = input_sharding
     self._threads = []
     for device in self._devices:
@@ -187,8 +191,14 @@ class ParallelLoader(object):
         if not batch:
           break
         with torch.no_grad():
-          batch = xm.send_cpu_data_to_device(batch, device,
-                                             self._input_sharding)
+          try:
+            batch = xm.send_cpu_data_to_device(batch, device,
+                                               self._input_sharding)
+          except Exception as e:
+            # _worker is being run in a daemon thread, raise the error
+            # will not work. Put the error in an error queue instead.
+            self._exception_queue.put(e)
+            break
         for data in batch:
           dqueue.queue.put(data)
     finally:

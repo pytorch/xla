@@ -1299,6 +1299,20 @@ def send_cpu_data_to_device(
     shardings = None
     if input_sharding:
       shardings = [input_sharding.xla_spec(t) for t in tensors]
+    if input_sharding and input_sharding.minibatch:
+      # when minibatch is configured we must make sure batch dimension of
+      # the tensor is divisible by the data mesh dimension.
+      data_mesh_dim = input_sharding.mesh.mesh_shape[0]
+      for tensor, sharding in zip(tensors, shardings):
+        # assume batch dimension is 0
+        if sharding and tensor.dim() > 0 and (tensor.size()[0] %
+                                              data_mesh_dim) != 0:
+          raise RuntimeError(
+              "When minibatch is configured, batch dimension of the tensor " +
+              "must be divisible by data mesh dimension.input data shape " + 
+              f"={tensor.size()}, mesh data dimension = {data_mesh_dim}"
+          )
+
     xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices,
                                                       shardings)
     return xtensors
