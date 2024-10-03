@@ -2040,6 +2040,14 @@ def _aten__pdist_forward(x, p=2):
   return condensed_dists
 
 
+@op(torch.ops.aten.cholesky_inverse)
+def _aten_cholesky_inverse(input, upper=True):
+  t = jnp.matrix_transpose(input)
+  if "complex" in str(input.dtype):
+    t = t.conjugate()
+  return jnp.linalg.inv(input @ t)
+
+
 # aten.cos
 @op(torch.ops.aten.cos)
 @op_base.promote_int_input

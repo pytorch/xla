@@ -22,7 +22,6 @@ skiplist = {
     "cdist",
     "ceil",
     "cholesky",
-    "cholesky_inverse",
     "cholesky_solve",
     "complex",
     "diagonal_copy",
