@@ -8,6 +8,7 @@ import torch_xla.utils.keyd_queue as kq
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 
+
 class PerDeviceQueue(object):
 
   def __init__(self, device, loader_prefetch_size, device_prefetch_size):
