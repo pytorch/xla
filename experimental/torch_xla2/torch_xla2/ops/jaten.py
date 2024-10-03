@@ -2041,7 +2041,7 @@ def _aten__pdist_forward(x, p=2):
 
 
 @op(torch.ops.aten.cholesky_inverse)
-def _aten_cholesky_inverse(input, upper=True):
+def _aten_cholesky_inverse(input, upper=False):
   t = jnp.matrix_transpose(input)
   if "complex" in str(input.dtype):
     t = t.conjugate()
