@@ -136,11 +136,9 @@ def _aws_ec2_inf_trn_init():
   except ImportError:
     # Basic initializations if torch-neuronx is not available
     from ._internal import neuron
+
     if os.path.basename(sys.argv[0]) != 'neuron_parallel_compile':
-      import libneuronxla
-      libneuronxla.configure_environment()
-      neuron.set_envvar_defaults()
-      neuron.configure_pjrt_environment()
+      neuron.initialize()
   else:
     xla.init()
   # Found libneuronxla
