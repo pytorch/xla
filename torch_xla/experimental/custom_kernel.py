@@ -483,12 +483,12 @@ def flash_attention(
                               sm_scale, ab, partition_spec, mesh)
 
 def ref_extended_paged_attn(
-  query: torch.Tensor,
-  key_cache: torch.Tensor,
-  value_cache: torch.Tensor,
-  query_lens: List[int],
-  kv_lens: List[int],
-  block_tables: torch.Tensor,
+  query: torch.Tensor, # [sum(query_len), num_query_heads, head_size], eg query_len=[1,5,129]
+  key_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
+  value_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
+  query_lens: List[int], # eg [1,5,129]
+  kv_lens: List[int], # eg [1328,18,463]
+  block_tables: torch.Tensor, # [num_seq=len(seq_lens), max_num_blocks_per_seq]
   scale: float,
   sliding_window: Optional[int] = None,
   soft_cap: Optional[float] = None,
@@ -516,7 +516,7 @@ def ref_extended_paged_attn(
     if q.shape[1] != k.shape[1]:
       k = torch.repeat_interleave(k, q.shape[1] // k.shape[1], dim=1)
       v = torch.repeat_interleave(v, q.shape[1] // v.shape[1], dim=1)
-    attn = torch.einsum("qhd,khd->hqk", q, k).float()
+    attn = torch.einsum("qhd,khd->hqk", q, k).float() # xw32q: what does it mean?
     empty_mask = torch.ones(query_len, kv_len)
     mask = torch.triu(empty_mask, diagonal=kv_len - query_len + 1).bool()
     if sliding_window is not None:
@@ -529,16 +529,75 @@ def ref_extended_paged_attn(
       attn = soft_cap * torch.tanh(attn / soft_cap)
     attn.masked_fill_(mask, float("-inf"))
     attn = torch.softmax(attn, dim=-1).to(v.dtype)
-    out = torch.einsum("hqk,khd->qhd", attn, v)
+    out = torch.einsum("hqk,khd->qhd", attn, v) # xw32q: what does it mean?
 
     outputs.append(out)
     start_idx += query_len
 
   return torch.cat(outputs, dim=0)
 
+def extended_paged_attention(q, # [batch_size, query_len, num_heads, head_size]
+                    k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
+                    v_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
+                    lengths, # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
+                    page_indices, # [batch_size, pages_per_sequence]
+                    pages_per_compute_block, # scalar, = block_size // page_size
+                    megacore_mode: str = None,
+                    attn_logits_soft_cap: float = None):
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
+
+  assert megacore_mode in [
+      "kv_head", "batch", None
+  ], "megacore_mode must be one of ['kv_head', 'batch', None]."
+
+  payload, tensor_args = trace_pallas(
+      paged_attention,
+      q,
+      k_pages,
+      v_pages,
+      lengths,
+      page_indices,
+      pages_per_compute_block=pages_per_compute_block,
+      megacore_mode=megacore_mode,
+      attn_logits_soft_cap=attn_logits_soft_cap,
+      static_argnames=[
+          "pages_per_compute_block", "megacore_mode", "attn_logits_soft_cap"
+      ],
+  )
+
+  batch_size, num_heads, head_dim = q.shape
+  num_kv_heads, _, page_size, head_dim_k = k_pages.shape
+  batch_size_paged_indices, pages_per_sequence = page_indices.shape
+  q_dtype_for_kernel_launch = q.dtype
+  if (num_heads // num_kv_heads) % 8 != 0:
+    q = q.reshape(batch_size, num_heads, 1, head_dim)
+    q_dtype_for_kernel_launch = torch.float32
+
+  page_indices_reshaped = page_indices.reshape(-1)
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
+  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  output_shape = torch.Size(list(q.shape[:-1]) + [1])
+
+  output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
+      [
+          lengths,
+          page_indices_reshaped,
+          buffer_index,
+          step,
+          q.to(q_dtype_for_kernel_launch),
+          k_pages,
+          v_pages,
+      ], payload, [q.shape, output_shape, output_shape],
+      [q_dtype_for_kernel_launch, torch.float32, torch.float32])
+
+  return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
+
 def paged_attention(q, # [batch_size, num_heads, head_size]
-                    k_pages, # [num_kv_size, total_num_pages, page_size, head_size]
-                    v_pages, # [num_kv_size, total_num_pages, page_size, head_size]
+                    k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
+                    v_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
                     lengths, # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
                     page_indices, # [batch_size, pages_per_sequence]
                     pages_per_compute_block, # scalar, = block_size // page_size

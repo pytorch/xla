@@ -53,7 +53,8 @@ class PallasTest(unittest.TestCase):
       page_size,
       max_seq_len,
       num_kv_heads,
-      num_heads,
+      # num_heads is really num_query_heads. See https://github.com/pytorch/xla/blob/4813702885fb7653d09193f2c0980b0c6766fbfa/test/test_pallas.py#L508
+      num_heads, 
       head_dim,
       dtype=torch.float32,
   ):
@@ -575,95 +576,71 @@ class PallasTest(unittest.TestCase):
     window_size = ((sliding_window,
                     sliding_window) if sliding_window is not None else
                    (-1, -1))
-    scale = head_size**-0.5
+    ref_scale = head_size**-0.5
 
-    query = torch.randn(sum(query_lens),
+    ref_query = torch.randn(sum(query_lens),
                         num_query_heads,
                         head_size,
                         dtype=dtype)
-    key_cache = torch.randn(num_blocks,
+    ref_key_cache = torch.randn(num_blocks,
                             block_size,
                             num_kv_heads,
                             head_size,
                             dtype=dtype)
-    value_cache = torch.randn_like(key_cache)
+    ref_value_cache = torch.randn_like(ref_key_cache)
     max_num_blocks_per_seq = (max_kv_len + block_size - 1) // block_size
-    block_tables = torch.randint(0,
+    ref_block_tables = torch.randint(0,
                                  num_blocks,
                                  (num_seqs, max_num_blocks_per_seq),
                                  dtype=torch.int32)
     ref_output = ref_extended_paged_attn(
-      query=query,
-      key_cache=key_cache,
-      value_cache=value_cache,
+      query=ref_query,
+      key_cache=ref_key_cache,
+      value_cache=ref_value_cache,
       query_lens=query_lens,
       kv_lens=kv_lens,
-      block_tables=block_tables,
-      scale=scale,
+      block_tables=ref_block_tables,
+      scale=ref_scale,
       sliding_window=sliding_window,
       soft_cap=soft_cap,
     )
+
+    from torch_xla.experimental.custom_kernel import extended_paged_attention
+    batch_size = len(seq_lens)
+    q = torch.randn(batch_size,
+                    sum(query_lens),
+                    num_query_heads,
+                    head_size,
+                    dtype=dtype)
+    k_pages = torch.randn(num_kv_heads,
+                          num_blocks,
+                          block_size,
+                          head_size,
+                          dtype=dtype)
+    v_pages = torch.randn_like(k_pages)
+    # what `length` should I use?
+    page_indices = torch.randint(0,
+                                 num_blocks,
+                                 (num_seqs, max_num_blocks_per_seq),
+                                 dtype=torch.int32)
+    # what should I use for pages_per_compute_block?
+    attn_logits_soft_cap = soft_cap
+    output = ref_extended_paged_attn(
+      q,
+      k_pages,
+      v_pages,
+      # ?lengths
+      page_indices,
+      # ?pages_per_compute_block
+    )
+    self.assertTrue(
+        torch.allclose(
+            output.cpu()[seq_lens > 0],
+            ref_output.cpu()[seq_lens > 0],
+            atol=1e-5,
+            rtol=1e-5))
+
     print(f'{ref_output.shape=}')
-
-
-    # from torch_xla.experimental.custom_kernel import paged_attention
-    # from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
-
-    # max_kv_len = 2048
-    # block_size = 512
-    # page_size = 64
-    # num_kv_heads = 8
-    # q_kv_head_ratio = 8
-    # head_dim = 256
-    # dtype = torch.float32
-    # seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
-
-    # q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
-    #     seq_lens,
-    #     page_size,
-    #     max_kv_len,
-    #     num_kv_heads,
-    #     num_kv_heads * q_kv_head_ratio,
-    #     head_dim,
-    # )
-
-    # q_xla = q.to("xla")
-    # k_pages_xla = k_pages.to("xla")
-    # v_pages_xla = v_pages.to("xla")
-    # seq_lens_xla = seq_lens.to("xla")
-    # page_indices_xla = page_indices.to("xla")
-
-    # output = paged_attention(
-    #     q_xla,
-    #     k_pages_xla,
-    #     v_pages_xla,
-    #     seq_lens_xla,
-    #     page_indices_xla,
-    #     pages_per_compute_block=block_size // page_size,
-    # )
-
-    # q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
-    # k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
-    # v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
-    # seq_lens_jax = jnp.array(seq_lens.numpy(), dtype=jnp.int32)
-    # page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
-    # expected_output = torch.from_numpy(
-    #     np.array(
-    #         jax_paged_attention(
-    #             q_jax,
-    #             k_pages_jax,
-    #             v_pages_jax,
-    #             seq_lens_jax,
-    #             page_indices_jax,
-    #             pages_per_compute_block=block_size // page_size,
-    #         )))
-
-    # self.assertTrue(
-    #     torch.allclose(
-    #         output.cpu()[seq_lens > 0],
-    #         expected_output.cpu()[seq_lens > 0],
-    #         atol=1e-5,
-    #         rtol=1e-5))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
                    "This test only works on TPUv4 and TPUv5p.")
