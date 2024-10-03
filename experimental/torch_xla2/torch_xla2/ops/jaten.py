@@ -1,9 +1,10 @@
 """Torch ops implemented using jax."""
 
 import sys
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple, Union
 import functools
 
+import math
 import jax
 from jax import numpy as jnp
 import functools
@@ -2232,6 +2233,13 @@ def _aten_hypot(input, other):
 def _aten_igamma(input, other):
   return jax.scipy.special.gammainc(input, other)
 
+@op(torch.ops.aten.lgamma)
+def _aten_lgamma(input, *, out=None):
+  return jax.scipy.special.gammaln(input).astype(jnp.float32)
+
+@op(torch.ops.aten.mvlgamma)
+def _aten_mvlgamma(input, p, *, out=None):
+  return jax.scipy.special.multigammaln(input, d)
 
 @op(torch.ops.aten.linalg_eig)
 def _aten_linalg_eig(A):
@@ -3935,6 +3943,19 @@ def _aten_special_hermite_polynomial_he(self, n):
   return vectorized(self, n.astype(jnp.int64))
 
 
+@op(torch.ops.aten.multinomial, needs_env=True)
+def _aten_multinomial(input, num_samples, replacement=False, *, generator=None, out=None, env=None):
+  assert num_samples <= input.shape[-1] or replacement, "cannot take a larger sample than population when replacement=False"
+  assert jnp.all(input >= 0), "inputs must be non-negative"
+  key = env.get_and_rotate_prng_key(generator)
+  if input.ndim == 1:
+    assert jnp.sum(input) > 0, "rows of input must have non-zero sum"
+    return jax.random.choice(key, input.shape[-1], (num_samples,), replace=replacement, p=input)
+  else:
+    assert jnp.all(jnp.sum(input, axis=1) > 0), "rows of input must have non-zero sum"
+    return jnp.array([jax.random.choice(key, input.shape[-1], (num_samples,), replace=replacement, p=input[i, :]) for i in range(input.shape[0])])
+
+
 @op(torch.ops.aten.narrow)
 @op(torch.ops.aten.narrow_copy)
 def _aten_narrow(input, dim, start, length):
@@ -4047,6 +4068,17 @@ def _aten_median(self, dim=None, keepdim=False):
     index = _with_reduction_scalar(_get_median_index, self, dim, keepdim).astype(jnp.int64)
     return output, index
 
+
+@op(torch.ops.aten.nanmedian)
+def _aten_nanmedian(input, dim=None, keepdim=False, *, out=None):
+  output = _with_reduction_scalar(functools.partial(jnp.nanquantile, q=0.5, method='lower'), input, dim=dim, keepdim=keepdim).astype(input.dtype)
+  if dim is None:
+    return output
+  else:
+    index = _with_reduction_scalar(_get_median_index, input, dim, keepdim).astype(jnp.int64)
+    return output, index
+
+
 def _get_median_index(x, axis=None, keepdims=False):
   sorted_arg = jnp.argsort(x, axis=axis)
   n = x.shape[axis] if axis is not None else x.size
@@ -4130,3 +4162,68 @@ def _aten_max_unpoolxd(input, indices, output_size, stride=None, padding=0):
 
     return output
 
+@op(torch.ops.aten._upsample_bilinear2d_aa)
+def _aten_upsample_bilinear2d_aa(input, output_size, align_corners, scale_factors=None, scales_h=None, scales_w=None):
+    # input: is of type jaxlib.xla_extension.ArrayImpl
+    image = input
+    method = "bilinear"
+    antialias = True # ignored for upsampling
+
+    # https://jax.readthedocs.io/en/latest/_autosummary/jax.image.resize.html
+    # Resize does not distinguish batch, channel size.
+    # We need to leave them as is
+    # https://pytorch.org/vision/stable/transforms.html#supported-input-types-and-conventions
+    # pytorch image shape is (C,H,W) or (N,C,H,W)
+    # N - batch size
+    # C - no of channels
+    # H,W - heigth, width
+
+    shape = list(image.shape)
+    # overriding output_size
+    if scale_factors:
+      shape[-1] = int(math.floor(shape[-1]*scale_factors[-1]))
+      shape[-2] = int(math.floor(shape[-2]*scale_factors[-2]))
+    if scales_h:
+      shape[-2] = int(math.floor(shape[-2]*scales_h))
+    if scales_w:
+      shape[-1] = int(math.floor(shape[-1]*scales_w))
+    # output_size overrides scale_factors, scales_*
+    if output_size:
+      shape[-1] = output_size[-1]
+      shape[-2] = output_size[-2]
+
+    # align_corners is not supported in resize()
+    # https://github.com/jax-ml/jax/issues/11206
+    if align_corners:
+      return resize_with_aligned_corners2d(image, shape, scale_factors, method, antialias=True)
+    return jax.image.resize(image, shape, method, antialias) # precision=Precision.HIGHEST
+
+# From: https://github.com/jax-ml/jax/issues/11206
+def resize_with_aligned_corners2d(
+    image: jax.Array,
+    shape: Tuple[int, ...],
+    scale: Tuple[int, ...],
+    method: Union[str, jax.image.ResizeMethod],
+    antialias: bool,
+):
+    """Alternative to jax.image.resize(), which emulates align_corners=True in PyTorch's
+    interpolation functions."""
+
+
+    spatial_dims = (2,3)
+    if len(shape) == 3:
+      spatial_dims = (1,2)
+
+    scale = jnp.array([(shape[i] - 1.0) / (image.shape[i] - 1.0) for i in spatial_dims])
+    #translation = (scale / 2.0 - 0.5)
+    translation = (scale * 0.0 )
+
+    return jax.image.scale_and_translate(
+        image,
+        shape,
+        method=method,
+        scale=scale,
+        spatial_dims=spatial_dims,
+        translation=translation,
+        antialias=antialias,
+    )

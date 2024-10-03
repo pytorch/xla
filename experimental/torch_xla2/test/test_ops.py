@@ -14,8 +14,8 @@ skiplist = {
     "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
                  # such as 0 to negative power.
     "_segment_reduce",
-    "_upsample_bilinear2d_aa",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
+    "_upsample_bilinear2d_aa", # test passing scales_h, scales_w is failing.
     "byte",
     "cat",
     "cauchy",
@@ -37,7 +37,6 @@ skiplist = {
     "igammac",
     "index_reduce",
     "kthvalue",
-    "lgamma",
     "linalg.cholesky",
     "linalg.cholesky_ex",
     "linalg.det",
@@ -69,9 +68,6 @@ skiplist = {
     "lu_unpack",
     "masked.median",
     "max_pool2d_with_indices_backward",
-    "multinomial",
-    "mvlgamma",
-    "nanmedian",
     "new_empty_strided",
     "nextafter",
     "nn.functional.adaptive_avg_pool3d",
@@ -169,6 +165,7 @@ random_ops = {
   'rand',
   'rand_like',
   'uniform',
+  'multinomial',
   # Dropout is not deterministic https://pytorch.org/docs/stable/generated/torch.nn.functional.feature_alpha_dropout.html
   'nn.functional.feature_alpha_dropout',
 }
