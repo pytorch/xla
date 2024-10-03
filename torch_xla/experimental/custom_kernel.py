@@ -482,6 +482,100 @@ def flash_attention(
   return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
                               sm_scale, ab, partition_spec, mesh)
 
+
+def extended_paged_attention(
+    q, # [batch_size, query_len, num_heads, head_size]
+    k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
+    v_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
+    lengths, # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
+    page_indices, # [batch_size, pages_per_sequence]
+    pages_per_compute_block, # scalar, = block_size // page_size. xw32q: I'm confused. What are the meanings of block_size and page_size?
+    megacore_mode: str = None,
+    attn_logits_soft_cap: float = None,
+    use_pallas: bool = False
+) -> torch.Tensor: # [batch_size, query_len, num_heads, head_dim]
+  if not use_pallas:
+    return _naive_paged_attention(
+      q,
+      k_pages,
+      v_pages,
+      lengths,
+      page_indices,
+      pages_per_compute_block,
+      megacore_mode,
+      attn_logits_soft_cap,
+    )
+
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
+
+  assert megacore_mode in [
+      "kv_head", "batch", None
+  ], "megacore_mode must be one of ['kv_head', 'batch', None]."
+
+  payload, tensor_args = trace_pallas(
+      paged_attention,
+      q,
+      k_pages,
+      v_pages,
+      lengths,
+      page_indices,
+      pages_per_compute_block=pages_per_compute_block,
+      megacore_mode=megacore_mode,
+      attn_logits_soft_cap=attn_logits_soft_cap,
+      static_argnames=[
+          "pages_per_compute_block", "megacore_mode", "attn_logits_soft_cap"
+      ],
+  )
+
+  batch_size, num_heads, head_dim = q.shape
+  num_kv_heads, _, page_size, head_dim_k = k_pages.shape
+  batch_size_paged_indices, pages_per_sequence = page_indices.shape
+  q_dtype_for_kernel_launch = q.dtype
+  if (num_heads // num_kv_heads) % 8 != 0:
+    q = q.reshape(batch_size, num_heads, 1, head_dim)
+    q_dtype_for_kernel_launch = torch.float32
+
+  page_indices_reshaped = page_indices.reshape(-1)
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
+  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  output_shape = torch.Size(list(q.shape[:-1]) + [1])
+
+  output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
+      [
+          lengths,
+          page_indices_reshaped,
+          buffer_index,
+          step,
+          q.to(q_dtype_for_kernel_launch),
+          k_pages,
+          v_pages,
+      ], payload, [q.shape, output_shape, output_shape],
+      [q_dtype_for_kernel_launch, torch.float32, torch.float32])
+
+  return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
+
+# This function calls the reference paged_attention impl from
+# https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L19
+def _naive_paged_attention(
+    q, # [batch_size, query_len, num_heads, head_size]
+    k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
+    v_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
+    lengths, # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
+    page_indices, # [batch_size, pages_per_sequence]
+    pages_per_compute_block, # scalar, = block_size // page_size. xw32q: I'm confused. What are the meanings of block_size and page_size?
+    megacore_mode: str = None,
+    attn_logits_soft_cap: float = None,
+) -> torch.Tensor: # [batch_size, query_len, num_heads, head_dim]
+  ...
+  
+
+# This function is copied from
+# https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L19
+# The signature shape annotation comes from the test https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L168
+# that calls it.
 def ref_extended_paged_attn(
   query: torch.Tensor, # [sum(query_len), num_query_heads, head_size], eg query_len=[1,5,129]
   key_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
@@ -536,64 +630,21 @@ def ref_extended_paged_attn(
 
   return torch.cat(outputs, dim=0)
 
-def extended_paged_attention(q, # [batch_size, query_len, num_heads, head_size]
-                    k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
-                    v_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
-                    lengths, # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
-                    page_indices, # [batch_size, pages_per_sequence]
-                    pages_per_compute_block, # scalar, = block_size // page_size
-                    megacore_mode: str = None,
-                    attn_logits_soft_cap: float = None):
-  # Import JAX within the function such that we don't need to call the jax_import_guard()
-  # in the global scope which could cause problems for xmp.spawn.
-  jax_import_guard()
-  from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
-
-  assert megacore_mode in [
-      "kv_head", "batch", None
-  ], "megacore_mode must be one of ['kv_head', 'batch', None]."
-
-  payload, tensor_args = trace_pallas(
-      paged_attention,
-      q,
-      k_pages,
-      v_pages,
-      lengths,
-      page_indices,
-      pages_per_compute_block=pages_per_compute_block,
-      megacore_mode=megacore_mode,
-      attn_logits_soft_cap=attn_logits_soft_cap,
-      static_argnames=[
-          "pages_per_compute_block", "megacore_mode", "attn_logits_soft_cap"
-      ],
-  )
-
-  batch_size, num_heads, head_dim = q.shape
-  num_kv_heads, _, page_size, head_dim_k = k_pages.shape
-  batch_size_paged_indices, pages_per_sequence = page_indices.shape
-  q_dtype_for_kernel_launch = q.dtype
-  if (num_heads // num_kv_heads) % 8 != 0:
-    q = q.reshape(batch_size, num_heads, 1, head_dim)
-    q_dtype_for_kernel_launch = torch.float32
-
-  page_indices_reshaped = page_indices.reshape(-1)
-  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
-  step = torch.zeros((1,), dtype=torch.int32).to("xla")
-  output_shape = torch.Size(list(q.shape[:-1]) + [1])
-
-  output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
-      [
-          lengths,
-          page_indices_reshaped,
-          buffer_index,
-          step,
-          q.to(q_dtype_for_kernel_launch),
-          k_pages,
-          v_pages,
-      ], payload, [q.shape, output_shape, output_shape],
-      [q_dtype_for_kernel_launch, torch.float32, torch.float32])
-
-  return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
+# This function is copied exactly from
+# https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L19
+# The signature shape annotation comes from the test https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L168
+# that calls it.
+# def ref_paged_attn(
+#   query: torch.Tensor, # [sum(query_len), num_query_heads, head_size], eg query_len=[1,5,129]
+#   key_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
+#   value_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
+#   query_lens: List[int], # eg [1,5,129]
+#   kv_lens: List[int], # eg [1328,18,463]
+#   block_tables: torch.Tensor, # [num_seq=len(seq_lens), max_num_blocks_per_seq]
+#   scale: float,
+#   sliding_window: Optional[int] = None,
+#   soft_cap: Optional[float] = None,
+# ) -> torch.Tensor:
 
 def paged_attention(q, # [batch_size, num_heads, head_size]
                     k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
