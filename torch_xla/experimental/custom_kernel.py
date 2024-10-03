@@ -565,7 +565,7 @@ def _naive_paged_attention(
     v_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
     lengths, # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
     page_indices, # [batch_size, pages_per_sequence]
-    pages_per_compute_block, # scalar, = block_size // page_size. xw32q: I'm confused. What are the meanings of block_size and page_size?
+    pages_per_compute_block, # scalar, = block_size // page_size. It's a tunable parameter.
     megacore_mode: str = None,
     attn_logits_soft_cap: float = None,
 ) -> torch.Tensor: # [batch_size, query_len, num_heads, head_dim]
@@ -576,7 +576,7 @@ def _naive_paged_attention(
 # https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L19
 # The signature shape annotation comes from the test https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L168
 # that calls it.
-def ref_extended_paged_attn(
+def _ref_extended_paged_attn(
   query: torch.Tensor, # [sum(query_len), num_query_heads, head_size], eg query_len=[1,5,129]
   key_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
   value_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
@@ -629,22 +629,6 @@ def ref_extended_paged_attn(
     start_idx += query_len
 
   return torch.cat(outputs, dim=0)
-
-# This function is copied exactly from
-# https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L19
-# The signature shape annotation comes from the test https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L168
-# that calls it.
-# def ref_paged_attn(
-#   query: torch.Tensor, # [sum(query_len), num_query_heads, head_size], eg query_len=[1,5,129]
-#   key_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
-#   value_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
-#   query_lens: List[int], # eg [1,5,129]
-#   kv_lens: List[int], # eg [1328,18,463]
-#   block_tables: torch.Tensor, # [num_seq=len(seq_lens), max_num_blocks_per_seq]
-#   scale: float,
-#   sliding_window: Optional[int] = None,
-#   soft_cap: Optional[float] = None,
-# ) -> torch.Tensor:
 
 def paged_attention(q, # [batch_size, num_heads, head_size]
                     k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
