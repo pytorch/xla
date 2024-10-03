@@ -320,8 +320,8 @@ _extra_decompositions = get_decompositions([torch.ops.aten.grid_sampler_2d])
 
 
 def _run_decompositions(exported_model):
-  if hasattr(torch.export, 'core_op_decompositions'):
-    decomp_table = torch.export.core_op_decompositions()
+  if hasattr(torch.export, 'default_decompositions'):
+    decomp_table = torch.export.default_decompositions()
   else:
     decomp_table = core_aten_decompositions()
   decomp_table.update(_extra_decompositions)
