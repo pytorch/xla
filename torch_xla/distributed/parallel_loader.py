@@ -7,8 +7,6 @@ import torch_xla.debug.profiler as xp
 import torch_xla.utils.keyd_queue as kq
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
-import queue
-
 
 class PerDeviceQueue(object):
 
