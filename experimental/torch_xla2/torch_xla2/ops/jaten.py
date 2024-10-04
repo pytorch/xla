@@ -1066,9 +1066,25 @@ def _aten_max_pool2d_with_indices(
 
   inputs_per_channels = break_into_channels(inputs)
   print(f"{inputs_per_channels=}")
-  import ipdb; ipdb.set_trace()
   indices = jnp.arange(np.prod(inputs.shape)).reshape(inputs.shape)
   print(f"1- {indices=}")
+  print(f"1- {indices.shape=}")
+
+  indices_channels = []
+  for inputs_per_channel in inputs_per_channels:
+    indices_channels.append(jnp.arange(np.prod(inputs_per_channel.shape)).reshape(inputs_per_channel.shape))
+  
+  print(f"{indices_channels=}")
+
+  indices = jnp.stack(indices_channels, axis=0)
+  print(f"2- {indices=}")
+  print(f"2- {indices.shape=}")
+
+  indices = jnp.expand_dims(indices, axis=0)
+  print(f"3- {indices=}")
+  print(f"3- {indices.shape=}")
+  
+  import ipdb; ipdb.set_trace()
 
   def reduce_fn(a, b):
     ai, av = a
@@ -1095,7 +1111,8 @@ def _aten_max_pool2d_with_indices(
     indices = jnp.squeeze(indices, axis=0)
     y = jnp.squeeze(y, axis=0)
     print(f"3- {indices=}")
-    
+
+  import ipdb; ipdb.set_trace()
   return y, indices
 
 # TODO add more ops
