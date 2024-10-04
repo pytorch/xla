@@ -14,6 +14,7 @@ import torch.distributed._functional_collectives
 from torch_xla2.ops import ops_registry
 from torch_xla2.ops import op_base, mappings
 from torch_xla2 import interop
+from torch_xla2.ops import jax_reimplement
 
 # Keys are OpOverload, value is a callable that takes
 # XLATensor2
@@ -4197,33 +4198,34 @@ def _aten_upsample_bilinear2d_aa(input, output_size, align_corners, scale_factor
       shape[-1] = output_size[-1]
       shape[-2] = output_size[-2]
 
-    # align_corners is not supported in resize()
-    # https://github.com/jax-ml/jax/issues/11206
-    if align_corners:
-      return resize_with_aligned_corners2d(image, shape, scale_factors, method, antialias=True)
-    return jax.image.resize(image, shape, method, antialias) # precision=Precision.HIGHEST
-
-# From: https://github.com/jax-ml/jax/issues/11206
-def resize_with_aligned_corners2d(
-    image: jax.Array,
-    shape: Tuple[int, ...],
-    scale: Tuple[int, ...],
-    method: Union[str, jax.image.ResizeMethod],
-    antialias: bool,
-):
-    """Alternative to jax.image.resize(), which emulates align_corners=True in PyTorch's
-    interpolation functions."""
-
+    # pytorch upsample_bilinear returns the input as is when the shape is the same as input
+    if shape == list(image.shape):
+      return image
 
     spatial_dims = (2,3)
     if len(shape) == 3:
       spatial_dims = (1,2)
 
-    scale = jnp.array([(shape[i] - 1.0) / (image.shape[i] - 1.0) for i in spatial_dims])
-    #translation = (scale / 2.0 - 0.5)
-    translation = (scale * 0.0 )
+    scale = list([shape[i] / image.shape[i]  for i in spatial_dims])
+    if scale_factors:
+      scale = scale_factors
+    if scales_h:
+      scale[0] = scales_h
+    if scales_w:
+      scale[1] = scales_w
+    scale = jnp.array(scale)
 
-    return jax.image.scale_and_translate(
+    # align_corners is not supported in resize()
+    # https://github.com/jax-ml/jax/issues/11206
+    if align_corners:
+      scale = jnp.array([(shape[i] - 1.0) / (image.shape[i] - 1.0) for i in spatial_dims])
+
+    translation = jnp.array([0 for i in spatial_dims])
+    #translation = (scale / 2.0 - 0.5)
+
+    #return jax.image.scale_and_translate(
+    # local copied fixed implentation of scale_and_translate
+    return jax_reimplement.scale_and_translate(
         image,
         shape,
         method=method,
