@@ -2367,6 +2367,10 @@ def _aten_logical_xor(self, other):
 def _aten_neg(x):
   return -1 * x
 
+@op(torch.ops.aten.nextafter)
+def _aten_nextafter(input, other, *, out=None):
+  return jnp.nextafter(input, other)
+
 
 # aten.nonzero
 @op(torch.ops.aten.nonzero)

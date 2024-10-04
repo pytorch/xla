@@ -68,7 +68,6 @@ skiplist = {
     "lu_unpack",
     "masked.median",
     "max_pool2d_with_indices_backward",
-    "nextafter",
     "nn.functional.adaptive_avg_pool3d",
     "nn.functional.adaptive_max_pool1d",
     "nn.functional.adaptive_max_pool2d",
