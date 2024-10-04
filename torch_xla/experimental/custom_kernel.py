@@ -506,15 +506,13 @@ def extended_paged_attention(
       attn_logits_soft_cap,
     )
 
-  # Import JAX within the function such that we don't need to call the jax_import_guard()
-  # in the global scope which could cause problems for xmp.spawn.
-  jax_import_guard()
-  from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
+  from torch_xla.experimental.pallas_kernels.paged_attention_kernel import paged_attention
 
   assert megacore_mode in [
       "kv_head", "batch", None
   ], "megacore_mode must be one of ['kv_head', 'batch', None]."
 
+  q = q[:,0,...]
   payload, tensor_args = trace_pallas(
       paged_attention,
       q,
