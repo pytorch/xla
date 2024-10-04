@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+gita2681e8 )
+                  master (2.6.0+git0b19374 )
                 </div>
               
             
@@ -637,7 +637,16 @@
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;XLA_USE_SPMD&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
   <span class="k">if</span> <span class="n">auto</span><span class="p">:</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_auto_sharding</span><span class="p">()</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;XLA_AUTO_SPMD&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span></div>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;XLA_AUTO_SPMD&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+
+  <span class="k">if</span> <span class="n">device_type</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;NEURON&#39;</span><span class="p">:</span>
+    <span class="c1"># In case of Neuron, reset the initialization environment to accommodate SPMD.</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="kn">from</span> <span class="nn">torch_neuronx.initialization</span> <span class="kn">import</span> <span class="n">initialize</span>
+
+      <span class="n">initialize</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+      <span class="k">pass</span></div>
 
 
 <div class="viewcode-block" id="is_spmd"><a class="viewcode-back" href="../../index.html#torch_xla.runtime.is_spmd">[docs]</a><span class="k">def</span> <span class="nf">is_spmd</span><span class="p">():</span>
