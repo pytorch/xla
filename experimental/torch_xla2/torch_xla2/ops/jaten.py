@@ -956,7 +956,6 @@ def _aten_relu(self):
 def _aten_cat(tensors, dims=0):
   return jnp.concatenate(tensors, dims)
 
-
 def _ceil_mode_padding(
     padding: list[int],
     input_shape: list[int],
@@ -997,6 +996,25 @@ def _ceil_mode_padding(
     ceil_mode_padding.append((left_padding, right_padding))
   return ceil_mode_padding
 
+
+def break_into_channels(input_tensor):
+    """
+    This function takes a 4D tensor (batch_size, channels, height, width) and returns
+    a list of 2D tensors, each representing one channel of the input.
+    
+    Args:
+    input_tensor (torch.Tensor): A 4D tensor representing the input.
+    
+    Returns:
+    List of 2D tensors, where each tensor corresponds to one channel of the input.
+    """
+    batch_size, channels, height, width = input_tensor.shape
+    channel_list = []
+
+    for channel in range(channels):
+        channel_list.append(input_tensor[0, channel, :, :])  # Extracting each channel
+
+    return channel_list
 
 @op(torch.ops.aten.max_pool2d_with_indices)
 @op(torch.ops.aten.max_pool3d_with_indices)
@@ -1046,7 +1064,11 @@ def _aten_max_pool2d_with_indices(
     ), f"each entry in padding {padding} must be length 2"
     padding = ((0, 0), (0, 0)) + padding
 
+  inputs_per_channels = break_into_channels(inputs)
+  print(f"{inputs_per_channels=}")
+  import ipdb; ipdb.set_trace()
   indices = jnp.arange(np.prod(inputs.shape)).reshape(inputs.shape)
+  print(f"1- {indices=}")
 
   def reduce_fn(a, b):
     ai, av = a
@@ -1068,12 +1090,13 @@ def _aten_max_pool2d_with_indices(
   indices, _ = jax.lax.reduce_window(
       (indices, inputs), (0, init_val), reduce_fn, dims, strides, padding
   )
+  print(f"2- {indices=}")
   if is_single_input:
     indices = jnp.squeeze(indices, axis=0)
     y = jnp.squeeze(y, axis=0)
+    print(f"3- {indices=}")
     
   return y, indices
-
 
 # TODO add more ops
 
