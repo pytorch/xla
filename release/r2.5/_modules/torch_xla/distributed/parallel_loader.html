@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.5.0+gitc074e31 )
+                  master (2.5.0+git8ff43a9 )
                 </div>
               
             
@@ -385,6 +385,7 @@
               
   <h1>Source code for torch_xla.distributed.parallel_loader</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">queue</span>
 <span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
@@ -398,7 +399,7 @@
 
   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">loader_prefetch_size</span><span class="p">,</span> <span class="n">device_prefetch_size</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">loader_queue</span> <span class="o">=</span> <span class="n">kq</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">loader_prefetch_size</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cpu_loader_queue</span> <span class="o">=</span> <span class="n">kq</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">loader_prefetch_size</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="n">kq</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">device_prefetch_size</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">close_queue_count</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
 
@@ -433,6 +434,8 @@
 
     <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="o">.</span><span class="n">next_item</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="o">.</span><span class="n">_exception_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="o">.</span><span class="n">_exception_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
       <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
       <span class="k">raise</span> <span class="ne">StopIteration</span>
     <span class="k">return</span> <span class="n">item</span>
@@ -442,7 +445,7 @@
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be</span>
+<span class="sd">    cpu_loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be</span>
 <span class="sd">      wrapped.</span>
 <span class="sd">    devices (`torch.device`...): The list of devices where the data has to be</span>
 <span class="sd">      sent. The i-th sample returned by the `loader` will be sent to `devices[i</span>
@@ -460,13 +463,13 @@
 <span class="sd">    host_to_device_transfer_threads (int, optional): The number of threads that</span>
 <span class="sd">      work in parallel to transfer data from loader queue to device queue.</span>
 <span class="sd">      Default: 1</span>
-<span class="sd">    input_sharding (ShardingSpec, optional): Sharding spec to apply to</span>
-<span class="sd">      compatible input tensors after loading.</span>
+<span class="sd">    input_sharding (ShardingSpec, Dict(str, ShardingSpec), optional): Sharding</span>
+<span class="sd">      spec to apply to compatible input tensors after loading.</span>
 <span class="sd">      Default: None</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-               <span class="n">loader</span><span class="p">,</span>
+               <span class="n">cpu_loader</span><span class="p">,</span>
                <span class="n">devices</span><span class="p">,</span>
                <span class="n">batchdim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                <span class="n">batches_per_execution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
@@ -474,12 +477,13 @@
                <span class="n">device_prefetch_size</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
                <span class="n">host_to_device_transfer_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                <span class="n">input_sharding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_cpu_loader</span> <span class="o">=</span> <span class="n">cpu_loader</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_devices</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_batchdim</span> <span class="o">=</span> <span class="n">batchdim</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_batches_per_execution</span> <span class="o">=</span> <span class="n">batches_per_execution</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_exception_queue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span> <span class="o">=</span> <span class="n">input_sharding</span>
     <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_devices</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="p">[</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="n">PerDeviceQueue</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">loader_prefetch_size</span><span class="p">,</span>
@@ -523,7 +527,7 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
       <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-      <span class="n">dqueue</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+      <span class="n">dqueue</span><span class="o">.</span><span class="n">cpu_loader_queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
   <span class="nd">@property</span>
   <span class="k">def</span> <span class="nf">batches_per_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -531,7 +535,7 @@
 
   <span class="k">def</span> <span class="nf">_loader_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">queues</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
-    <span class="n">data_iter</span> <span class="o">=</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">)</span>
+    <span class="n">data_iter</span> <span class="o">=</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cpu_loader</span><span class="p">)</span>
     <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">:</span>
       <span class="k">try</span><span class="p">:</span>
@@ -541,19 +545,60 @@
       <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
       <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_devices</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">queue_no</span><span class="p">,</span> <span class="n">device_batch</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">batch</span><span class="p">):</span>
-          <span class="n">queues</span><span class="p">[</span><span class="n">queue_no</span><span class="p">]</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">device_batch</span><span class="p">)</span>
+          <span class="n">queues</span><span class="p">[</span><span class="n">queue_no</span><span class="p">]</span><span class="o">.</span><span class="n">cpu_loader_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">device_batch</span><span class="p">)</span>
         <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="n">queues</span><span class="p">:</span>
-      <span class="n">dqueue</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">close_write</span><span class="p">()</span>
+      <span class="n">dqueue</span><span class="o">.</span><span class="n">cpu_loader_queue</span><span class="o">.</span><span class="n">close_write</span><span class="p">()</span>
 
   <span class="k">def</span> <span class="nf">_get_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dqueue</span><span class="p">):</span>
     <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">while</span> <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">max_size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">):</span>
-      <span class="n">item</span> <span class="o">=</span> <span class="n">dqueue</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">max_size</span><span class="p">():</span>
+      <span class="n">item</span> <span class="o">=</span> <span class="n">dqueue</span><span class="o">.</span><span class="n">cpu_loader_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
       <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">break</span>
       <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">batch</span>
+
+  <span class="k">def</span> <span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batches</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Move batch to device.</span>
+<span class="sd">    Args:</span>
+<span class="sd">      batch -&gt; List(torch.Tensor), List(Dict(str: torch.Tensor)): Input batch</span>
+<span class="sd">        present in the cpu memory</span>
+<span class="sd">      device: TPU device where the batch should be moved</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">      result -&gt; List(torch.Tensor), Dict(str: torch.Tensor): Returns a dict if the</span>
+<span class="sd">        input batch is a dict. Otherwise, returns a list of torch.Tensor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batches</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;input batch should be a dict when input sharding is a dict.&quot;</span><span class="p">)</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">batches</span><span class="p">:</span>
+        <span class="n">xla_batch</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">missing_keys</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">batch</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+          <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+          <span class="n">sharding_spec</span> <span class="o">=</span> <span class="kc">None</span>
+          <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">:</span>
+              <span class="n">missing_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+              <span class="k">continue</span>
+            <span class="n">sharding_spec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+          <span class="c1"># xla_tensor is a list of tensors.</span>
+          <span class="n">xla_tensor</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">sharding_spec</span><span class="p">)</span>
+          <span class="n">xla_batch</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">xla_tensor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing_keys</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+          <span class="c1"># Returning exception as raising in the dataloading thread doesn&#39;t surface the problem in the main thread.</span>
+          <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+              <span class="sa">f</span><span class="s2">&quot;Keys: </span><span class="si">{</span><span class="n">missing_keys</span><span class="si">}</span><span class="s2"> are missing from input_sharding.&quot;</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xla_batch</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batches</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
 
   <span class="k">def</span> <span class="nf">_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dqueue</span><span class="p">,</span> <span class="n">host_to_device_transfer_threads</span><span class="p">):</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">dqueue</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
@@ -561,7 +606,13 @@
       <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_batch</span><span class="p">(</span><span class="n">dqueue</span><span class="p">)</span>
       <span class="k">if</span> <span class="ow">not</span> <span class="n">batch</span><span class="p">:</span>
         <span class="k">break</span>
-      <span class="n">batch</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">)</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+      <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># _worker is being run in a daemon thread, raise the error</span>
+        <span class="c1"># will not work. Put the error in an error queue instead.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_exception_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="k">break</span>
       <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
         <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
     <span class="n">close_queue_count</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">dqueue</span><span class="o">.</span><span class="n">close_queue_count</span><span class="p">)</span>
