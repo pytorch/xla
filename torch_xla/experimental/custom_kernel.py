@@ -495,7 +495,7 @@ def extended_paged_attention(
     use_pallas: bool = False
 ) -> torch.Tensor: # [batch_size, query_len, num_heads, head_dim]
   if not use_pallas:
-    return _naive_paged_attention(
+    return _ref_paged_attention(
       q,
       k_pages,
       v_pages,
@@ -557,78 +557,59 @@ def extended_paged_attention(
 
   return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
 
-# This function calls the reference paged_attention impl from
-# https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L19
-def _naive_paged_attention(
-    q, # [batch_size, query_len, num_heads, head_size]
+def _ref_paged_attention(
+    q, # [batch_size, query_len, num_query_heads, head_size]
     k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
     v_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
-    lengths, # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
+    lengths, # [batch_size]. nb batch_size = len(seq_lens)
     page_indices, # [batch_size, pages_per_sequence]
-    pages_per_compute_block, # scalar, = block_size // page_size. It's a tunable parameter.
+    pages_per_compute_block, # scalar, = pallas_computer_block_size // page_size. It's a tunable parameter in Pallas kernel. Not used in the reference impl.
     megacore_mode: str = None,
     attn_logits_soft_cap: float = None,
 ) -> torch.Tensor: # [batch_size, query_len, num_heads, head_dim]
-  ...
-  
+  batch_size, query_len, num_query_heads, head_size = q.shape
+  num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
+  num_query_per_kv = num_query_heads // num_kv_heads
 
-# This function is copied from
-# https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L19
-# The signature shape annotation comes from the test https://github.com/vllm-project/vllm/blob/1cabfcefb64a489c8ff9dcb289b4dd47cf8f89cf/tests/kernels/test_flash_attn.py#L168
-# that calls it.
-def _ref_extended_paged_attn(
-  query: torch.Tensor, # [sum(query_len), num_query_heads, head_size], eg query_len=[1,5,129]
-  key_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
-  value_cache: torch.Tensor, # [total_num_pages, page_size, num_kv_heads, head_size]
-  query_lens: List[int], # eg [1,5,129]
-  kv_lens: List[int], # eg [1328,18,463]
-  block_tables: torch.Tensor, # [num_seq=len(seq_lens), max_num_blocks_per_seq]
-  scale: float,
-  sliding_window: Optional[int] = None,
-  soft_cap: Optional[float] = None,
-) -> torch.Tensor:
-  num_seqs = len(query_lens)
-  block_tables = block_tables.cpu().numpy()
-  _, block_size, num_kv_heads, head_size = key_cache.shape
+  lengths = lengths.cpu()
+  page_indices = page_indices.cpu()
 
   outputs: List[torch.Tensor] = []
-  start_idx = 0
-  for i in range(num_seqs):
-    query_len = query_lens[i]
-    kv_len = kv_lens[i]
-    q = query[start_idx:start_idx + query_len]
-    q *= scale
+  for i in range(batch_size):
+    kv_len = lengths[i]
+    num_pages = (kv_len + page_size - 1) // page_size
+    indices = page_indices[i, :num_pages]
 
-    num_kv_blocks = (kv_len + block_size - 1) // block_size
-    block_indices = block_tables[i, :num_kv_blocks]
+    k = k_pages[:, indices]     # [num_kv_heads, num_pages, page_size, head_size]
+    k = k.permute(1, 2, 0, 3)   # [num_pages, page_size, num_kv_heads, head_size]
+    k = k.reshape(num_pages * page_size, num_kv_heads, head_size)
+    k = k[:kv_len]              # [kv_len, num_kv_heads, head_size]
 
-    k = key_cache[block_indices].view(-1, num_kv_heads, head_size)
-    k = k[:kv_len]
-    v = value_cache[block_indices].view(-1, num_kv_heads, head_size)
-    v = v[:kv_len]
+    v = v_pages[:, indices]     # [num_kv_heads, num_pages, page_size, head_size]
+    v = v.permute(1, 2, 0, 3)   # [num_pages, page_size, num_kv_heads, head_size]
+    v = v.reshape(num_pages * page_size, num_kv_heads, head_size)
+    v = v[:kv_len]              # [kv_len, num_kv_heads, head_size]
 
-    if q.shape[1] != k.shape[1]:
-      k = torch.repeat_interleave(k, q.shape[1] // k.shape[1], dim=1)
-      v = torch.repeat_interleave(v, q.shape[1] // v.shape[1], dim=1)
-    attn = torch.einsum("qhd,khd->hqk", q, k).float() # xw32q: what does it mean?
+    if num_query_per_kv != 1:
+      # GQA/MQA
+      k = torch.repeat_interleave(k, num_query_per_kv, dim=1)     # [kv_len, num_query_heads, head_size]
+      v = torch.repeat_interleave(v, num_query_per_kv, dim=1)     # [kv_len, num_query_heads, head_size]
+
+    # NOTE: To balance efficiency and performance, we use the original dtype (e.g., bfloat16 or float16)
+    # for matrix multiplications (i.e., q @ k and attn @ v) while using float32 for softmax.
+    # However, the kernel doesn't have to strictly follow the dtypes here.
+    # For example, it can use bfloat16 instead of float32 or vice versa for performance or simplicity.
+    attn = torch.einsum("qhd,khd->hqk", q[i], k)       # [num_query_heads, query_len, kv_len]
+    attn = attn.float()
     empty_mask = torch.ones(query_len, kv_len)
     mask = torch.triu(empty_mask, diagonal=kv_len - query_len + 1).bool()
-    if sliding_window is not None:
-      sliding_window_mask = torch.triu(empty_mask,
-                                        diagonal=kv_len -
-                                        (query_len + sliding_window) +
-                                        1).bool().logical_not()
-      mask |= sliding_window_mask
-    if soft_cap is not None:
-      attn = soft_cap * torch.tanh(attn / soft_cap)
     attn.masked_fill_(mask, float("-inf"))
-    attn = torch.softmax(attn, dim=-1).to(v.dtype)
-    out = torch.einsum("hqk,khd->qhd", attn, v) # xw32q: what does it mean?
-
+    attn = torch.softmax(attn, dim=-1).to(v.dtype)  # [num_query_heads, query_len, kv_len]
+    out = torch.einsum("hqk,khd->qhd", attn, v)     # [query_len, num_query_heads, head_size]
     outputs.append(out)
-    start_idx += query_len
 
-  return torch.cat(outputs, dim=0)
+  output = torch.stack(outputs, dim=0)    # [batch_size, query_len, num_query_heads, head_size]
+  return output
 
 def paged_attention(q, # [batch_size, num_heads, head_size]
                     k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
