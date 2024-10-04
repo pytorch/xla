@@ -3990,8 +3990,13 @@ def _new_empty(self, size, **kwargs):
 
 
 @op(torch.ops.aten.new_empty_strided)
-def _new_empty_strided(self, size, stride, **kwargs):
-  return jnp.empty(size)
+def _new_empty_strided(self, size, stride, dtype=None, **kwargs):
+  # Ignore stride, since JAX and torch tensor doesn't share the same memory.
+  if not dtype:
+    return jnp.empty(size, dtype=self.dtype)
+  else:
+    jax_dtype = mappings.t2j_dtype(dtype)
+    return jnp.empty(size, dtype=jax_dtype)
 
 
 @op(torch.ops.aten._unsafe_index_put, is_jax_function=False)
