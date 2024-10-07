@@ -567,8 +567,8 @@ class PallasTest(unittest.TestCase):
     head_size: int = 128
     dtype: torch.dtype = torch.bfloat16
     max_kv_len: int = 1024
-    page_size: int = 16
-    total_num_pages: int = 1000
+    page_size: int = 64
+    total_num_pages: int = 32
     assert num_query_heads % num_kv_heads == 0
     assert query_len <= max_kv_len
     assert max_kv_len <= total_num_pages * page_size
@@ -610,7 +610,7 @@ class PallasTest(unittest.TestCase):
     self.assertTrue(
         torch.allclose(
             output.cpu(),
-            ref_out.cpu(),
+            ref_output.cpu(),
             atol=1e-5,
             rtol=1e-5))
 

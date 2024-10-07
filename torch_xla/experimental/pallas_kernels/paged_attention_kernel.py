@@ -456,8 +456,8 @@ def paged_attention(
     )
   if pages_per_sequence % pages_per_compute_block != 0:
     raise ValueError(
-        "pages_per_compute_block must be divisible by pages per sequence. Got"
-        f" {pages_per_compute_block} and {pages_per_sequence}."
+        "pages_per_sequence must be divisible by pages_per_compute_block. Got"
+        f" {pages_per_sequence} and {pages_per_compute_block}."
     )
   if lengths.shape != (batch_size,):
     raise ValueError("`lengths` and `q` must have the same batch size")
