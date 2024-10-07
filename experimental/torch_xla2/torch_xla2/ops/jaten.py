@@ -2258,6 +2258,10 @@ def _aten_linalg_eig(A):
 def _aten_linalg_eigh(A, UPLO='L'):
   return jnp.linalg.eigh(A, UPLO)
 
+@op(torch.ops.aten.gcd)
+def _aten_gcd(input, other):
+  return jnp.gcd(input, other)
+
 # aten.lcm
 @op(torch.ops.aten.lcm)
 def _aten_lcm(input, other):
@@ -2716,6 +2720,12 @@ def _bernoulli(
   res = jax.random.uniform(key, self.shape) < p
   return res
 
+
+@op(torch.ops.aten.geometric_, needs_env=True)
+def geometric(self, p, *, generator=None, env=None):
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.geometric(key, p, self.shape)
+  return res
 
 
 @op(torch.ops.aten.randn_like, needs_env=True)
