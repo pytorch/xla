@@ -158,6 +158,24 @@ def _aten_complex(real, imag):
   return jnp.array(real, dtype=jnp.float32) + 1j * jnp.array(imag, dtype=jnp.float32)
 
 
+# aten.exponential_
+@op(torch.ops.aten.exponential_)
+def _aten_exponential_(x, lambd=1.0):
+  """
+  Fills the input array with values drawn from an exponential distribution.
+
+  Args:
+    x: An array to be filled with exponential samples.
+    lambd: The rate parameter of the exponential distribution.
+
+  Returns:
+    The input array filled with exponential samples.
+  """
+  key = jax.random.PRNGKey(0)  # Use a different key for each call
+  samples = jax.random.exponential(key, x.shape) / lambd
+  return x.at[:].set(samples)
+
+
 @op(torch.ops.aten.select)
 def _aten_select(x, dim, indexes):
   return jax.lax.index_in_dim(x, index=indexes, axis=dim, keepdims=False)
