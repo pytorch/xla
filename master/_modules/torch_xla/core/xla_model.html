@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git14d14ae )
+                  master (2.6.0+gite3cf356 )
                 </div>
               
             
@@ -1685,6 +1685,22 @@
     <span class="n">shardings</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">input_sharding</span><span class="p">:</span>
       <span class="n">shardings</span> <span class="o">=</span> <span class="p">[</span><span class="n">input_sharding</span><span class="o">.</span><span class="n">xla_spec</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">input_sharding</span> <span class="ow">and</span> <span class="n">input_sharding</span><span class="o">.</span><span class="n">minibatch</span><span class="p">:</span>
+      <span class="c1"># when minibatch is configured we must make sure batch dimension of</span>
+      <span class="c1"># the tensor is divisible by the local runtime device count.</span>
+      <span class="k">for</span> <span class="n">tensor</span><span class="p">,</span> <span class="n">sharding</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">shardings</span><span class="p">):</span>
+        <span class="c1"># assume batch dimension is 0</span>
+        <span class="n">local_runtime_device_count</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">addressable_runtime_device_count</span><span class="p">(</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">sharding</span> <span class="ow">and</span> <span class="n">tensor</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="p">(</span><span class="n">tensor</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span>
+                                              <span class="n">local_runtime_device_count</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+              <span class="s2">&quot;When minibatch is configured, batch dimension of the tensor &quot;</span> <span class="o">+</span>
+              <span class="s2">&quot;must be divisible by local runtime device count.input data shape &quot;</span>
+              <span class="o">+</span>
+              <span class="sa">f</span><span class="s2">&quot;=</span><span class="si">{</span><span class="n">tensor</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2">, local_runtime_device_count = </span><span class="si">{</span><span class="n">local_runtime_device_count</span><span class="si">}</span><span class="s2">&quot;</span>
+          <span class="p">)</span>
+
     <span class="n">xtensors</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tensors_from_aten</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="p">,</span>
                                                       <span class="n">shardings</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">xtensors</span>
