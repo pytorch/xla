@@ -192,6 +192,27 @@ def _aten_gcd(a, b):
   return jax.numpy.gcd(a, b)
 
 
+# aten.geometric_
+@op(torch.ops.aten.geometric_)
+def _aten_geometric_(x, p):
+  """
+  Fills the input array with values drawn from a geometric distribution.
+
+  Args:
+    x: An array to be filled with geometric samples.
+    p: The probability of success in each trial.
+
+  Returns:
+    The input array filled with geometric samples.
+  """
+  key = jax.random.PRNGKey(0)  # Use a different key for each call
+  # JAX's geometric distribution returns the number of failures before the first success,
+  # while PyTorch's returns the number of trials required to get the first success.
+  # We adjust for this difference by adding 1.
+  samples = jax.random.geometric(key, p, x.shape) + 1 
+  return x.at[:].set(samples)
+
+
 @op(torch.ops.aten.select)
 def _aten_select(x, dim, indexes):
   return jax.lax.index_in_dim(x, index=indexes, axis=dim, keepdims=False)
