@@ -24,7 +24,6 @@ skiplist = {
     "diagonal_copy",
     "diagonal_scatter",
     "digamma",
-    "gcd",
     "geometric",
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
