@@ -2258,6 +2258,37 @@ def _aten_linalg_eig(A):
 def _aten_linalg_eigh(A, UPLO='L'):
   return jnp.linalg.eigh(A, UPLO)
 
+
+@op(torch.ops.aten.linalg_lu)
+def _aten_linalg_lu(A, pivot=True, out=None):
+  dtype = A.dtype
+
+  *_, m, n = A.shape
+  k = jnp.minimum(m, n)
+
+  lu, _, permutation = jax.lax.linalg.lu(A)
+
+  L = jnp.tril(lu[..., :, :k], k=-1)
+  eye_L = jnp.eye(m, k, dtype=dtype)
+  L = L + eye_L
+
+  U = jnp.triu(lu[..., :k, :])
+
+  def perm_to_P(perm):
+      m = perm.shape[-1]
+      P = jnp.eye(m, dtype=dtype)[perm].T
+      return P
+
+  if permutation.ndim > 1:
+    num_batch_dims = permutation.ndim - 1
+    for _ in range(num_batch_dims):
+      perm_to_P = jax.vmap(perm_to_P, in_axes=0)
+
+  P = perm_to_P(permutation)
+
+  return P,L,U
+
+
 # aten.lcm
 @op(torch.ops.aten.lcm)
 def _aten_lcm(input, other):
