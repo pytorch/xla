@@ -21,7 +21,6 @@ skiplist = {
     "ceil",
     "cholesky",
     "cholesky_solve",
-    "complex",
     "diagonal_copy",
     "diagonal_scatter",
     "digamma",
