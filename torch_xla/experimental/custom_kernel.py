@@ -489,7 +489,7 @@ def extended_paged_attention(
     v_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
     lengths, # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
     page_indices, # [batch_size, pages_per_sequence]
-    pages_per_compute_block, # scalar, = block_size // page_size. xw32q: I'm confused. What are the meanings of block_size and page_size?
+    pages_per_compute_block, # scalar, = pallas_compute_block_size // page_size.
     megacore_mode: str = None,
     attn_logits_soft_cap: float = None,
     use_pallas: bool = False
@@ -506,13 +506,12 @@ def extended_paged_attention(
       attn_logits_soft_cap,
     )
 
-  from torch_xla.experimental.pallas_kernels.paged_attention_kernel import paged_attention
+  from torch_xla.experimental.pallas_kernels.extended_paged_attention_kernel import paged_attention
 
   assert megacore_mode in [
       "kv_head", "batch", None
   ], "megacore_mode must be one of ['kv_head', 'batch', None]."
 
-  q = q[:,0,...]
   payload, tensor_args = trace_pallas(
       paged_attention,
       q,
@@ -528,17 +527,18 @@ def extended_paged_attention(
       ],
   )
 
-  batch_size, num_heads, head_dim = q.shape
+  batch_size, query_len, num_heads, head_dim = q.shape
   num_kv_heads, _, page_size, head_dim_k = k_pages.shape
   batch_size_paged_indices, pages_per_sequence = page_indices.shape
   q_dtype_for_kernel_launch = q.dtype
   if (num_heads // num_kv_heads) % 8 != 0:
-    q = q.reshape(batch_size, num_heads, 1, head_dim)
+    q = q.reshape(batch_size, query_len, num_heads, 1, head_dim)
     q_dtype_for_kernel_launch = torch.float32
 
   page_indices_reshaped = page_indices.reshape(-1)
   buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
   step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  # TODO(xiowei): check the correct output_shape for the 2nd and 3rd output.
   output_shape = torch.Size(list(q.shape[:-1]) + [1])
 
   output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
@@ -553,7 +553,7 @@ def extended_paged_attention(
       ], payload, [q.shape, output_shape, output_shape],
       [q_dtype_for_kernel_launch, torch.float32, torch.float32])
 
-  return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
+  return output.reshape(batch_size, query_len, num_heads, head_dim).to(q.dtype)
 
 def _ref_paged_attention(
     q, # [batch_size, query_len, num_query_heads, head_size]
