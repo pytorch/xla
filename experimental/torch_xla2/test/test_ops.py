@@ -24,7 +24,6 @@ skiplist = {
     "diagonal_copy",
     "diagonal_scatter",
     "digamma",
-    "geometric",
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
@@ -163,6 +162,7 @@ random_ops = {
   'nn.functional.feature_alpha_dropout',
   'cauchy',
   'exponential',
+  'geometric',
 }
 
 atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0), "linalg.eig": (2e0, 3e0), "linalg.eigh": (5e1, 3e0), "linalg.eigvalsh": (5e1, 3e0)}
