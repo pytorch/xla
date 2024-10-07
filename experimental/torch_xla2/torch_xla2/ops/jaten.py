@@ -176,6 +176,22 @@ def _aten_exponential_(x, lambd=1.0):
   return x.at[:].set(samples)
 
 
+# aten.gcd
+@op(torch.ops.aten.gcd)
+def _aten_gcd(a, b):
+  """
+  Computes the element-wise greatest common divisor (GCD) of two arrays.
+
+  Args:
+    a: First input array.
+    b: Second input array.
+
+  Returns:
+    An array containing the element-wise GCD of the input arrays.
+  """
+  return jax.numpy.gcd(a, b)
+
+
 @op(torch.ops.aten.select)
 def _aten_select(x, dim, indexes):
   return jax.lax.index_in_dim(x, index=indexes, axis=dim, keepdims=False)
