@@ -17,7 +17,6 @@ skiplist = {
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
     "cat",
-    "cauchy",
     "cdist",
     "ceil",
     "cholesky",
@@ -165,6 +164,7 @@ random_ops = {
   'multinomial',
   # Dropout is not deterministic https://pytorch.org/docs/stable/generated/torch.nn.functional.feature_alpha_dropout.html
   'nn.functional.feature_alpha_dropout',
+  'cauchy',
 }
 
 atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0), "linalg.eig": (2e0, 3e0), "linalg.eigh": (5e1, 3e0), "linalg.eigvalsh": (5e1, 3e0)}
