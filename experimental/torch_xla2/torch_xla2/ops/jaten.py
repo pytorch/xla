@@ -192,6 +192,12 @@ def _aten_gcd(a, b):
   return jax.numpy.gcd(a, b)
 
 
+# aten.linalg_householder_product
+@op(torch.ops.aten.linalg_householder_product)
+def _aten_linalg_householder_product(input, tau):
+  return jax.lax.linalg.householder_product(a = input, taus = tau)
+
+
 # aten.geometric_
 @op(torch.ops.aten.geometric_)
 def _aten_geometric_(x, p):
