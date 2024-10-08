@@ -122,6 +122,7 @@ skiplist = {
     "unique_consecutive",
     "unique",
     "unravel_index",
+    "trunc",
     "var_mean",
     "argwhere",
     "nanmean",
