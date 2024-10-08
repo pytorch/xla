@@ -110,7 +110,6 @@ skiplist = {
     "polygamma",
     "prod",
     "put",
-    "rsub",
     "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",
