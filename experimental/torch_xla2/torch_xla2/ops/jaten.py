@@ -143,12 +143,6 @@ def _aten_cauchy_(x, median=0, sigma=1):
   return x.at[:].set(samples)
 
 
-# aten.trunc
-@op(torch.ops.aten.trunc)
-def _aten_trunc(x):
-  return jnp.trunc(x)
-
-
 # aten.complex
 @op(torch.ops.aten.complex)
 def _aten_complex(real, imag):
