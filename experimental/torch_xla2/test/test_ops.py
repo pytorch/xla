@@ -116,7 +116,6 @@ skiplist = {
     "special.scaled_modified_bessel_k1",
     "special.spherical_bessel_j0",
     "special.zeta",
-    "stft",
     "svd",
     "svd_lowrank",
     "to_sparse", # We are not supporting sparse tensors yet.
