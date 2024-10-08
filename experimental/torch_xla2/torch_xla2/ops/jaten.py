@@ -2090,11 +2090,13 @@ def _aten_diagonal_scatter(input, src, offset=0, dim1=0, dim2=1):
   if input.ndim == 2:
     return input.at[tuple(indexes)].set(src)
   else:
-    # src has the same shape as the output of jnp.diagonal(input, offset, dim1, dim2).
-    # Last dimension always contains the diagonal elements, while the preceding dimensions
-    # represent the "slices" or "planes" from which these diagonals are extracted.
-    # Thus, we alter input axes to match this assumption, write src and then move the axes
-    # back to the original state.
+    # src has the same shape as the output of 
+    # jnp.diagonal(input, offset, dim1, dim2).
+    # Last dimension always contains the diagonal elements,
+    # while the preceding dimensions represent the "slices"
+    # from which these diagonals are extracted. Thus,
+    # we alter input axes to match this assumption, write src
+    # and then move the axes back to the original state.
     input = jnp.moveaxis(input, (dim1, dim2), (-2,-1))
     multi_indexes = [slice(None)]*(input.ndim-2) + indexes
     input = input.at[tuple(multi_indexes)].set(src)
