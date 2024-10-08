@@ -112,6 +112,12 @@ def _aten_clone(x, memory_format=None):
   return x
 
 
+# aten.trunc
+@op(torch.ops.aten.trunc)
+def _aten_trunc(x):
+  return jnp.trunc(x)
+
+
 @op(torch.ops.aten.index_copy)
 def _aten_index_copy(x, dim, indexes, source):
   # return jax.lax.scatter(x, index, dim)
