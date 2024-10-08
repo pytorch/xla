@@ -182,47 +182,10 @@ def _aten_exponential_(x, lambd=1.0):
   return x.at[:].set(samples)
 
 
-# aten.gcd
-@op(torch.ops.aten.gcd)
-def _aten_gcd(a, b):
-  """
-  Computes the element-wise greatest common divisor (GCD) of two arrays.
-
-  Args:
-    a: First input array.
-    b: Second input array.
-
-  Returns:
-    An array containing the element-wise GCD of the input arrays.
-  """
-  return jax.numpy.gcd(a, b)
-
-
 # aten.linalg_householder_product
 @op(torch.ops.aten.linalg_householder_product)
 def _aten_linalg_householder_product(input, tau):
   return jax.lax.linalg.householder_product(a = input, taus = tau)
-
-
-# aten.geometric_
-@op(torch.ops.aten.geometric_)
-def _aten_geometric_(x, p):
-  """
-  Fills the input array with values drawn from a geometric distribution.
-
-  Args:
-    x: An array to be filled with geometric samples.
-    p: The probability of success in each trial.
-
-  Returns:
-    The input array filled with geometric samples.
-  """
-  key = jax.random.PRNGKey(0)  # Use a different key for each call
-  # JAX's geometric distribution returns the number of failures before the first success,
-  # while PyTorch's returns the number of trials required to get the first success.
-  # We adjust for this difference by adding 1.
-  samples = jax.random.geometric(key, p, x.shape) + 1 
-  return x.at[:].set(samples)
 
 
 @op(torch.ops.aten.select)
