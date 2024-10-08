@@ -19,7 +19,6 @@ skiplist = {
     "byte",
     "cat",
     "cauchy",
-    "cdist",
     "ceil",
     "cholesky",
     "cholesky_inverse",
