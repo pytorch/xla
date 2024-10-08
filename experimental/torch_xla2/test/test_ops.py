@@ -22,7 +22,6 @@ skiplist = {
     "cholesky",
     "cholesky_solve",
     "diagonal_copy",
-    "diagonal_scatter",
     "digamma",
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
@@ -39,7 +38,6 @@ skiplist = {
     "linalg.ldl_factor_ex",
     "linalg.ldl_solve",
     "linalg.lstsq",
-    "linalg.lu",
     "linalg.lu_factor",
     "linalg.lu_factor_ex",
     "linalg.lu_solve",
@@ -144,8 +142,9 @@ random_ops = {
   'empty_permuted',
   'empty_strided',
   'bernoulli',
-  "new_empty",
-  "new_empty_strided",
+  'geometric',
+  'new_empty',
+  'new_empty_strided',
   'randint_like',
   'randn',
   'randn_like',
@@ -194,7 +193,7 @@ def run_export_and_compare(testcase,
   atol, rtol = (1e-3, 1e-5)
   if func.name in atol_dict:
     atol, rtol = atol_dict[func.name]
-  
+
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):

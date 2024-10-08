@@ -35,13 +35,14 @@ mutation_ops_to_functional = {
   torch.ops.aten.ge_: torch.ops.aten.ge,
   torch.ops.aten.eq_: torch.ops.aten.eq,
   torch.ops.aten.ne_: torch.ops.aten.ne,
+  torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
+  torch.ops.aten.geometric_: torch.ops.aten.geometric,
+  torch.ops.aten.normal_: torch.ops.aten.normal,
+  torch.ops.aten.random_: torch.ops.aten.uniform,
   torch.ops.aten.uniform_: torch.ops.aten.uniform,
   torch.ops.aten.relu_: torch.ops.aten.relu,
-  torch.ops.aten.normal_: torch.ops.aten.normal,
   torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
-  torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
-  torch.ops.aten.random_: torch.ops.aten.uniform,
   torch.ops.aten.ceil_: torch.ops.aten.ceil,
   torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
   torch.ops.aten.unsqueeze_: torch.ops.aten.unsqueeze,
@@ -2134,6 +2135,40 @@ def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
   return jnp.diagonal(input, offset, dim1, dim2)
 
 
+def diag_indices_with_offset(input_shape, offset, dim1=0, dim2=1):
+    input_len = len(input_shape)
+    if dim1 == dim2 or not (0 <= dim1 < input_len and 0 <= dim2 < input_len):
+      raise ValueError("dim1 and dim2 must be different and in range [0, " + str(input_len-1)+ "]")
+
+    size1, size2 = input_shape[dim1], input_shape[dim2]
+    if offset >= 0:
+        indices1 = jnp.arange(min(size1, size2 - offset))
+        indices2 = jnp.arange(offset, offset + len(indices1))
+    else:
+        indices2 = jnp.arange(min(size1 + offset, size2 ))
+        indices1 = jnp.arange(-offset, -offset + len(indices2))
+    return [indices1, indices2]
+
+@op(torch.ops.aten.diagonal_scatter)
+def _aten_diagonal_scatter(input, src, offset=0, dim1=0, dim2=1):
+  indexes = diag_indices_with_offset(input.shape, offset, dim1, dim2)
+
+  if input.ndim == 2:
+    return input.at[tuple(indexes)].set(src)
+  else:
+    # src has the same shape as the output of 
+    # jnp.diagonal(input, offset, dim1, dim2).
+    # Last dimension always contains the diagonal elements,
+    # while the preceding dimensions represent the "slices"
+    # from which these diagonals are extracted. Thus,
+    # we alter input axes to match this assumption, write src
+    # and then move the axes back to the original state.
+    input = jnp.moveaxis(input, (dim1, dim2), (-2,-1))
+    multi_indexes = [slice(None)]*(input.ndim-2) + indexes
+    input = input.at[tuple(multi_indexes)].set(src)
+    return jnp.moveaxis(input, (-2,-1), (dim1, dim2))
+
+
 # aten.diagflat
 @op(torch.ops.aten.diagflat)
 def _aten_diagflat(input, offset=0):
@@ -2322,6 +2357,42 @@ def _aten_linalg_eig(A):
 @op(torch.ops.aten._linalg_eigh)
 def _aten_linalg_eigh(A, UPLO='L'):
   return jnp.linalg.eigh(A, UPLO)
+
+
+@op(torch.ops.aten.linalg_lu)
+def _aten_linalg_lu(A, pivot=True, out=None):
+  dtype = A.dtype
+
+  *_, m, n = A.shape
+  k = jnp.minimum(m, n)
+
+  lu, _, permutation = jax.lax.linalg.lu(A)
+
+  L = jnp.tril(lu[..., :, :k], k=-1)
+  eye_L = jnp.eye(m, k, dtype=dtype)
+  L = L + eye_L
+
+  U = jnp.triu(lu[..., :k, :])
+
+  def perm_to_P(perm):
+      m = perm.shape[-1]
+      P = jnp.eye(m, dtype=dtype)[perm].T
+      return P
+
+  if permutation.ndim > 1:
+    num_batch_dims = permutation.ndim - 1
+    for _ in range(num_batch_dims):
+      perm_to_P = jax.vmap(perm_to_P, in_axes=0)
+
+  P = perm_to_P(permutation)
+
+  return P,L,U
+
+
+@op(torch.ops.aten.gcd)
+def _aten_gcd(input, other):
+  return jnp.gcd(input, other)
+
 
 # aten.lcm
 @op(torch.ops.aten.lcm)
@@ -2781,6 +2852,12 @@ def _bernoulli(
   res = jax.random.uniform(key, self.shape) < p
   return res
 
+
+@op(torch.ops.aten.geometric, needs_env=True)
+def geometric(self, p, *, generator=None, env=None):
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.geometric(key, p, self.shape)
+  return res
 
 
 @op(torch.ops.aten.randn_like, needs_env=True)
