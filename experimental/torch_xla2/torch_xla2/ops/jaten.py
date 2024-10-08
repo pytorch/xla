@@ -124,6 +124,65 @@ def _aten_index_copy(x, dim, indexes, source):
   return x.at[dim].set(source)
 
 
+# aten.cauchy_
+@op(torch.ops.aten.cauchy_)
+def _aten_cauchy_(x, median=0, sigma=1):
+  """
+  Fills the input array with values drawn from a Cauchy distribution.
+
+  Args:
+    x: An array to be filled with Cauchy samples.
+    median: The median of the Cauchy distribution.
+    sigma: The scale parameter of the Cauchy distribution.
+
+  Returns:
+    The input array filled with Cauchy samples.
+  """
+  key = jax.random.PRNGKey(0)  # You should use a different key for each call
+  samples = jax.random.cauchy(key, x.shape) * sigma + median
+  return x.at[:].set(samples)
+
+
+# aten.complex
+@op(torch.ops.aten.complex)
+def _aten_complex(real, imag):
+  """
+  Constructs a complex array from real and imaginary parts.
+
+  Args:
+    real: An array of real values.
+    imag: An array of imaginary values.
+
+  Returns:
+    A complex array with the specified real and imaginary parts.
+  """
+  return jnp.array(real, dtype=jnp.float32) + 1j * jnp.array(imag, dtype=jnp.float32)
+
+
+# aten.exponential_
+@op(torch.ops.aten.exponential_)
+def _aten_exponential_(x, lambd=1.0):
+  """
+  Fills the input array with values drawn from an exponential distribution.
+
+  Args:
+    x: An array to be filled with exponential samples.
+    lambd: The rate parameter of the exponential distribution.
+
+  Returns:
+    The input array filled with exponential samples.
+  """
+  key = jax.random.PRNGKey(0)  # Use a different key for each call
+  samples = jax.random.exponential(key, x.shape) / lambd
+  return x.at[:].set(samples)
+
+
+# aten.linalg_householder_product
+@op(torch.ops.aten.linalg_householder_product)
+def _aten_linalg_householder_product(input, tau):
+  return jax.lax.linalg.householder_product(a = input, taus = tau)
+
+
 @op(torch.ops.aten.select)
 def _aten_select(x, dim, indexes):
   return jax.lax.index_in_dim(x, index=indexes, axis=dim, keepdims=False)
@@ -161,14 +220,14 @@ def _aten_searchsorted(sorted_sequence, values):
 
 @op(torch.ops.aten.sub.Tensor)
 @op(torch.ops.aten.sub.Scalar)
-def _aten_sub(x, y):
+def _aten_sub(x, y, alpha=1):
   if isinstance(x, float):
     dtype = _torch_binary_scalar_type(x, y)
     x = jnp.array(x, dtype=dtype)
   if isinstance(y, float):
     dtype = _torch_binary_scalar_type(y, x)
     y = jnp.array(y, dtype=dtype)
-  return x - y
+  return x - y*alpha
 
 
 @op(torch.ops.aten.mm)

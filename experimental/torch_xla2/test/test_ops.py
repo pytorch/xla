@@ -17,15 +17,12 @@ skiplist = {
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
     "cat",
-    "cauchy",
     "cdist",
     "ceil",
     "cholesky",
     "cholesky_solve",
-    "complex",
     "diagonal_copy",
     "digamma",
-    "exponential",
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
@@ -35,7 +32,6 @@ skiplist = {
     "linalg.cholesky",
     "linalg.cholesky_ex",
     "linalg.det",
-    "linalg.householder_product",
     "linalg.inv",
     "linalg.inv_ex",
     "linalg.ldl_factor",
@@ -112,15 +108,12 @@ skiplist = {
     "polygamma",
     "prod",
     "put",
-    "rsub",
     "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",
     "special.scaled_modified_bessel_k1",
     "special.spherical_bessel_j0",
     "special.zeta",
-    "stft",
-    "sub",
     "svd",
     "svd_lowrank",
     "to_sparse", # We are not supporting sparse tensors yet.
@@ -162,6 +155,8 @@ random_ops = {
   'multinomial',
   # Dropout is not deterministic https://pytorch.org/docs/stable/generated/torch.nn.functional.feature_alpha_dropout.html
   'nn.functional.feature_alpha_dropout',
+  'cauchy',
+  'exponential',
 }
 
 atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0), "linalg.eig": (2e0, 3e0), "linalg.eigh": (5e1, 3e0), "linalg.eigvalsh": (5e1, 3e0)}
