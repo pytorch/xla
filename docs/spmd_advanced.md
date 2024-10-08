@@ -10,8 +10,26 @@ PyTorch/XLA SPMD takes a single-device program, shards and executes it in parall
 train_loader = pl.MpDeviceLoader(
          train_loader,  # wraps PyTorch DataLoader
          device,
-	     # assume 4d input and we want to shard at the batch dimension.
+	 # assume 4d input and we want to shard at the batch dimension.
          input_sharding=xs.ShardingSpec(input_mesh, ('data', None, None, None)))
+```
+
+It is also possible to specify a different `input_sharding` for each element of the batch if they are different shapes:
+
+```python
+# if batch = next(train_loader) looks like
+# {'x': <tensor of shape [s1, s2, s3, s4]>, 'y': <tensor for shape [s1, s2]>}
+
+# MpDeviceLoader returns ParallelLoader.per_device_loader as iterator
+train_loader = pl.MpDeviceLoader(
+         train_loader,  # wraps PyTorch DataLoader
+         device,
+	 # specify different sharding for each input of the batch.
+         input_sharding={
+          'x': xs.ShardingSpec(input_mesh, ('data', None, None, None)), 
+          'y': xs.ShardingSpec(input_mesh, ('data', None))
+        }
+)
 ```
 
 ### Virtual Device Optimization

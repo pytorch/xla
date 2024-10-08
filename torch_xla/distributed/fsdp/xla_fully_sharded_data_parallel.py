@@ -413,8 +413,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     # FSDP data parallelism with model parallelism (e.g. Megatron)
     self.sharding_groups = sharding_groups
     if sharding_groups is None:
-      self.rank = xm.get_ordinal()
-      self.world_size = xm.xrt_world_size()
+      self.rank = xr.global_ordinal()
+      self.world_size = xr.world_size()
     else:
       if sharding_rank is None or sharding_world_size is None:
         raise ValueError(

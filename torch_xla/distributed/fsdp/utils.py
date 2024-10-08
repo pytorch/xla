@@ -64,13 +64,13 @@ class DummyReduceScatter:
   """A dummy op for debugging with the same output shape as reduce_scatter"""
 
   def __init__(self, shard_count):
-    assert shard_count == xm.xrt_world_size()
+    assert shard_count == xr.world_size()
     self.scale = 1.0
 
   def __call__(self, input, callback):
     full_size = input.size(0)
-    shard_size = full_size // xm.xrt_world_size()
-    begin = shard_size * xm.get_ordinal()
+    shard_size = full_size // xr.world_size()
+    begin = shard_size * xr.global_ordinal()
     end = begin + shard_size
     slices = [None] * input.dim()
     slices[0] = slice(begin, end)
