@@ -262,14 +262,14 @@ def _aten_searchsorted(sorted_sequence, values):
 
 @op(torch.ops.aten.sub.Tensor)
 @op(torch.ops.aten.sub.Scalar)
-def _aten_sub(x, y):
+def _aten_sub(x, y, alpha=1):
   if isinstance(x, float):
     dtype = _torch_binary_scalar_type(x, y)
     x = jnp.array(x, dtype=dtype)
   if isinstance(y, float):
     dtype = _torch_binary_scalar_type(y, x)
     y = jnp.array(y, dtype=dtype)
-  return x - y
+  return x - y*alpha
 
 
 @op(torch.ops.aten.mm)
