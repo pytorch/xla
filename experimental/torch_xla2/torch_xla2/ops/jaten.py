@@ -41,7 +41,8 @@ mutation_ops_to_functional = {
   torch.ops.aten.random_: torch.ops.aten.uniform,
   torch.ops.aten.uniform_: torch.ops.aten.uniform,
   torch.ops.aten.relu_: torch.ops.aten.relu,
-  torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
+  # squeeze_ is expected to change tensor's shape. So replace with new value 
+  torch.ops.aten.squeeze_: (torch.ops.aten.squeeze, True),
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
   torch.ops.aten.ceil_: torch.ops.aten.ceil,
   torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
@@ -51,6 +52,10 @@ mutation_ops_to_functional = {
 
 
 def make_mutation(op):
+  if type(mutation_ops_to_functional[op]) is tuple:
+    return op_base.InplaceOp(mutation_ops_to_functional[op][0],
+                             replace=mutation_ops_to_functional[op][1],
+                             position_to_mutate=0)
   return op_base.InplaceOp(mutation_ops_to_functional[op], position_to_mutate=0)
 
 
@@ -103,7 +108,13 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
-  x._elem = y._elem.astype(x._elem.dtype)
+  if x.ndim == 1 and y.ndim == 0:
+    # case of torch.empty((1,)).copy_(tensor(N))
+    # we need to return 0D tensor([N]) and not scalar tensor(N)
+    # ref: https://github.com/pytorch/xla/issues/7505#issuecomment-2395319131
+    x._elem = jnp.array([y._elem.astype(x._elem.dtype)])
+  else:
+    x._elem = y._elem.astype(x._elem.dtype)
   return x
 
 
