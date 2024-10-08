@@ -27,8 +27,6 @@ skiplist = {
     "diagonal_scatter",
     "digamma",
     "exponential",
-    "gcd",
-    "geometric",
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
@@ -153,8 +151,9 @@ random_ops = {
   'empty_permuted',
   'empty_strided',
   'bernoulli',
-  "new_empty",
-  "new_empty_strided",
+  'geometric',
+  'new_empty',
+  'new_empty_strided',
   'randint_like',
   'randn',
   'randn_like',
@@ -201,7 +200,7 @@ def run_export_and_compare(testcase,
   atol, rtol = (1e-3, 1e-5)
   if func.name in atol_dict:
     atol, rtol = atol_dict[func.name]
-  
+
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):

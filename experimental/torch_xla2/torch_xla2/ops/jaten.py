@@ -35,13 +35,14 @@ mutation_ops_to_functional = {
   torch.ops.aten.ge_: torch.ops.aten.ge,
   torch.ops.aten.eq_: torch.ops.aten.eq,
   torch.ops.aten.ne_: torch.ops.aten.ne,
+  torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
+  torch.ops.aten.geometric_: torch.ops.aten.geometric,
+  torch.ops.aten.normal_: torch.ops.aten.normal,
+  torch.ops.aten.random_: torch.ops.aten.uniform,
   torch.ops.aten.uniform_: torch.ops.aten.uniform,
   torch.ops.aten.relu_: torch.ops.aten.relu,
-  torch.ops.aten.normal_: torch.ops.aten.normal,
   torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
-  torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
-  torch.ops.aten.random_: torch.ops.aten.uniform,
   torch.ops.aten.ceil_: torch.ops.aten.ceil,
   torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
   torch.ops.aten.unsqueeze_: torch.ops.aten.unsqueeze,
@@ -2289,6 +2290,11 @@ def _aten_linalg_lu(A, pivot=True, out=None):
   return P,L,U
 
 
+@op(torch.ops.aten.gcd)
+def _aten_gcd(input, other):
+  return jnp.gcd(input, other)
+
+
 # aten.lcm
 @op(torch.ops.aten.lcm)
 def _aten_lcm(input, other):
@@ -2747,6 +2753,12 @@ def _bernoulli(
   res = jax.random.uniform(key, self.shape) < p
   return res
 
+
+@op(torch.ops.aten.geometric, needs_env=True)
+def geometric(self, p, *, generator=None, env=None):
+  key = env.get_and_rotate_prng_key(generator)
+  res = jax.random.geometric(key, p, self.shape)
+  return res
 
 
 @op(torch.ops.aten.randn_like, needs_env=True)
