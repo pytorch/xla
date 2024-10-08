@@ -33,7 +33,6 @@ skiplist = {
     "linalg.cholesky",
     "linalg.cholesky_ex",
     "linalg.det",
-    "linalg.householder_product",
     "linalg.inv",
     "linalg.inv_ex",
     "linalg.ldl_factor",
