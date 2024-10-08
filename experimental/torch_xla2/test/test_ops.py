@@ -118,7 +118,6 @@ skiplist = {
     "special.spherical_bessel_j0",
     "special.zeta",
     "stft",
-    "sub",
     "svd",
     "svd_lowrank",
     "to_sparse", # We are not supporting sparse tensors yet.
