@@ -43,7 +43,6 @@ skiplist = {
     "linalg.ldl_factor_ex",
     "linalg.ldl_solve",
     "linalg.lstsq",
-    "linalg.lu",
     "linalg.lu_factor",
     "linalg.lu_factor_ex",
     "linalg.lu_solve",
