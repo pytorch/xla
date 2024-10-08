@@ -24,7 +24,6 @@ skiplist = {
     "cholesky_solve",
     "complex",
     "diagonal_copy",
-    "diagonal_scatter",
     "digamma",
     "exponential",
     "gcd",
