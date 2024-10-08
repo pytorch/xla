@@ -227,7 +227,7 @@ def run_export_and_compare(testcase,
 
 ops_to_test = [
     test for test in op_db
-    if (test.name not in skiplist and test.name not in not_support_ops_list and
+    if (test.name not in (skiplist | not_support_ops_list) and
         test.variant_test_name not in variant_test_name_to_skip)
 ]
 
