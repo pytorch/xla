@@ -48,7 +48,6 @@ skiplist = {
     "linalg.tensorsolve",
     "linalg.vector_norm",
     "linspace",
-    "log_normal",
     "logspace",
     "lu",
     "lu_solve",
@@ -160,6 +159,7 @@ random_ops = {
   'nn.functional.feature_alpha_dropout',
   'cauchy',
   'exponential',
+  'log_normal',
 }
 
 atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0), "linalg.eig": (2e0, 3e0), "linalg.eigh": (5e1, 3e0), "linalg.eigvalsh": (5e1, 3e0)}

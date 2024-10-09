@@ -47,6 +47,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
   torch.ops.aten.unsqueeze_: torch.ops.aten.unsqueeze,
   torch.ops.aten.transpose_: torch.ops.aten.transpose,
+  torch.ops.aten.log_normal_: torch.ops.aten.log_normal,
 }
 
 
