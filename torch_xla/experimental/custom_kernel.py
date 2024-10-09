@@ -506,7 +506,7 @@ def extended_paged_attention(
       attn_logits_soft_cap,
     )
 
-  from torch_xla.experimental.pallas_kernels.extended_paged_attention_kernel import paged_attention
+  from torch_xla.experimental.pallas_kernels.extended_paged_attention_kernel0 import paged_attention
 
   assert megacore_mode in [
       "kv_head", "batch", None

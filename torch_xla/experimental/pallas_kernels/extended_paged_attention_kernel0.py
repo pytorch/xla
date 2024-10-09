@@ -332,7 +332,7 @@ def paged_flash_attention_kernel_inline_seq_dim(
         buffer_index_ref,
         step_ref,
         q_ref,
-        k_pages_hbm_ref,
+        k_pages_hbm_ref, # 
         k_scales_pages_hbm_ref,
         v_pages_hbm_ref,
         v_scales_pages_hbm_ref,
@@ -418,7 +418,7 @@ def paged_attention(
   Returns:
     The output of attention([batch_size, num_heads, head_dim]).
   """
-  return jnp.zeros_like(q, jnp.int32)
+  # return jnp.zeros_like(q, q.dtype)
   if isinstance(k_pages, quantization_utils.QuantizedTensor):
     k_pages, k_scales_pages = k_pages.weight, k_pages.scales
     assert isinstance(k_scales_pages, jax.Array)  # For typing.
@@ -507,6 +507,7 @@ def paged_attention(
     q_dtype_for_kernel_launch = jnp.float32
   else:
     if megacore_mode == "kv_head":
+      # q.shape=[batch_size, num_heads, head_dim]
       q_block_spec = pl.BlockSpec(
           (None, num_heads // num_kv_heads, head_dim),
           lambda core_index, b, h, *_: (b, h * num_cores + core_index, 0),
@@ -533,6 +534,7 @@ def paged_attention(
         if megacore_mode == "kv_head"
         else num_kv_heads,
     )
+    # xw32q: shouldn't batch dim and kv_heads dim be parallel?
     dimension_semantics = ("parallel", "arbitrary", "arbitrary")
   else:
     kernel = paged_flash_attention_kernel
@@ -549,12 +551,14 @@ def paged_attention(
   if k_scales_pages is not None and v_scales_pages is not None:
     in_specs = [
         q_block_spec,
+        # pltpu.TPUMemorySpace.ANY means we are putting everything in HBM.
         pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
         pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
         pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
         pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
     ]
     scratch_shapes = (
+        # xw32: how is the pltpu.VMEM being used? I see. It's used in the kernel.
         pltpu.VMEM(
             (
                 2,  # For double buffering during DMA copies.
@@ -596,10 +600,11 @@ def paged_attention(
   else:
     in_specs = [
         q_block_spec,
+        # Below 4 correspond to the 4 input: k_pages, k_scales_pages, q_pages, etc.
         pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
-        None,  # type: ignore[list-item]
+        None,  # type: ignore[list-item]  k_scales_pages=None
         pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
-        None,  # type: ignore[list-item]
+        None,  # type: ignore[list-item]  v_scales_pages=None
     ]
     scratch_shapes = (
         pltpu.VMEM(
@@ -610,8 +615,8 @@ def paged_attention(
                 head_dim,
             ),
             k_pages.dtype,
-        ),  # k_pages buffer
-        None,
+        ),  # k_pages buffer, k_pages.shape=[num_kv_heads, total_num_pages, page_size, head_dim]
+        None, # k_scales_pages=None
         pltpu.VMEM(
             (
                 2,  # For double buffering during DMA copies.
@@ -621,7 +626,7 @@ def paged_attention(
             ),
             v_pages.dtype,
         ),  # v_pages buffer
-        None,
+        None, # v_scales_pages=None
         pltpu.SemaphoreType.DMA,
     )
 
@@ -656,6 +661,7 @@ def paged_attention(
           jax.ShapeDtypeStruct((*q.shape[:-1], 1), jnp.float32),
       ],
   )(
+      # The first 4 are prefetched scalars.
       lengths,
       page_indices.reshape(-1),
       jnp.zeros((1,), jnp.int32),  # buffer index
