@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+gite3cf356 )
+                  master (2.6.0+git8ec552d )
                 </div>
               
             
@@ -393,6 +393,7 @@
 <span class="kn">import</span> <span class="nn">torch_xla.utils.keyd_queue</span> <span class="k">as</span> <span class="nn">kq</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.debug.profiler</span> <span class="k">as</span> <span class="nn">xp</span>
 
 
 <span class="k">class</span> <span class="nc">PerDeviceQueue</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -546,7 +547,8 @@
     <span class="k">try</span><span class="p">:</span>
       <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_done</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
-          <span class="n">_</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">data_iter</span><span class="p">)</span>
+          <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s2">&quot;cpu_loader.next&quot;</span><span class="p">):</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">data_iter</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
           <span class="k">break</span>
         <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
@@ -613,12 +615,14 @@
 
     <span class="k">try</span><span class="p">:</span>
       <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-        <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_batch</span><span class="p">(</span><span class="n">dqueue</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s2">&quot;get_batch_from_cpu_queue&quot;</span><span class="p">):</span>
+          <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_batch</span><span class="p">(</span><span class="n">dqueue</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">batch</span><span class="p">:</span>
           <span class="k">break</span>
         <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
           <span class="k">try</span><span class="p">:</span>
-            <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s2">&quot;cpu_data_to_xla_device&quot;</span><span class="p">):</span>
+              <span class="n">batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
           <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="c1"># _worker is being run in a daemon thread, raise the error</span>
             <span class="c1"># will not work. Put the error in an error queue instead.</span>
