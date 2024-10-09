@@ -53,4 +53,6 @@ export BUILD_CPP_TESTS='1'
 export TF_CUDA_COMPUTE_CAPABILITIES="sm_50,sm_70,sm_75,compute_80,$TF_CUDA_COMPUTE_CAPABILITIES"
 build_torch_xla $XLA_DIR
 
+apt-get install clang-17
+
 popd
