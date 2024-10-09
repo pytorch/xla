@@ -1373,7 +1373,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
             mesh, ('data', None, None, None), minibatch=True))
     with self.assertRaisesRegex(
         RuntimeError,
-        "When minibatch is configured, batch dimension of the tensor must be divisible by local runtime device count*"
+        "When minibatch is configured, the per-host batch size must be divisible by local runtime device count. Per host input data shape *"
     ):
       data, _ = iter(train_device_loader).__next__()
 
