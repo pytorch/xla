@@ -57,8 +57,8 @@ import test_utils
 
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
-XLA_DISABLE_FUNCTIONALIZATION = bool(int(
-    os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', "0")))
+XLA_DISABLE_FUNCTIONALIZATION = bool(
+    int(os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', "0")))
 
 
 def _is_on_tpu():
