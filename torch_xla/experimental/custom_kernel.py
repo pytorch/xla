@@ -620,7 +620,8 @@ def paged_attention(q, # [batch_size, num_heads, head_size]
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   jax_import_guard()
-  from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
+  # from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention
+  from torch_xla.experimental.pallas_kernels.paged_attention_kernel import paged_attention
 
   assert megacore_mode in [
       "kv_head", "batch", None
