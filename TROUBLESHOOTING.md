@@ -198,7 +198,6 @@ You can enable the PyTorch/XLA + Dynamo debugging tool by setting `XLA_DYNAMO_DE
 ## Performance Profiling
 To profile your workload in depth to understand bottlenecks please check the following resources:
 * [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm)
-* [Colab notebook](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
 * [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
 * [Utility script for capturing performance profiles](https://github.com/pytorch/xla/blob/master/scripts/capture_profile.py)
 
