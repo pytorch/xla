@@ -45,6 +45,7 @@ class MultiPageAsyncCopyDescriptor:
       # vmem_buffer correspond to scratch_shapes.pltpu.VMEM(2,pages_per_compute_block, page_size, head_dim).
       # Currently has shape = (pages_per_compute_block, page_size, head_dim)
       # It should be the receive buffer to hold the pages copied from HBM.
+      # In the test, pages_per_compute_block=8, page_size=64
       vmem_buffer, 
       scales_vmem_buffer,
       sem,
@@ -53,6 +54,7 @@ class MultiPageAsyncCopyDescriptor:
       num_pages_to_load,
       head_index,
   ):
+    print(f'xw32 head_index is not None: {head_index is not None}')
     self._vmem_buffer = vmem_buffer
     self._scales_vmem_buffer = scales_vmem_buffer
     self._num_pages_to_load = num_pages_to_load
@@ -273,7 +275,8 @@ def paged_flash_attention_kernel(
     k = async_copy_k.wait_and_get_loaded()
     import pdb; pdb.set_trace()
     # q.shape=(8,256)=(num_heads // num_kv_heads, head_dim)
-    # k.shape=(512, 256)=(,head_dim)
+
+    # k.shape=(512, 256)=(pages_per_compute_block*page_size,head_dim) # the first dim is pages_per_compute_block*page_size=512 (note, pages_per_compute_block=8, page_size=64), so qk.shape might be [num_heads // num_kv_heads,pages_per_compute_block*page_size]
     qk = jnp.einsum('hd,td->ht', q, k, preferred_element_type=jnp.float32)
     if attn_logits_soft_cap is not None:
       capped_qk = jnp.tanh(qk / attn_logits_soft_cap)
@@ -332,7 +335,6 @@ def paged_flash_attention_kernel_inline_seq_dim(
 ):
   # This is for the case: inline_seq_dim: whether to fuse kernel instances along the sequence dim into
   #     one kernel.
-  import pdb; pdb.set_trace()
   core_index, b, h = pl.program_id(0), pl.program_id(1), pl.program_id(2)
 
   # Initialize the output HBM buffers to avoid accessing garbage memory inside
@@ -340,7 +342,7 @@ def paged_flash_attention_kernel_inline_seq_dim(
   m_ref[...] = jnp.full_like(m_ref, -jnp.inf)
   l_ref[...] = jnp.zeros_like(l_ref)
   o_ref[...] = jnp.zeros_like(o_ref)
-  print(f'xw32 {k_pages_hbm_ref.shape=}')
+  # print(f'xw32 {k_pages_hbm_ref.shape=}')
 
   def body(i, _):
     paged_flash_attention_kernel(
@@ -403,14 +405,14 @@ def paged_attention(
     *,
     mask_value: float = DEFAULT_MASK_VALUE,
     attn_logits_soft_cap: float | None = None,
-    pages_per_compute_block: int,
+    pages_per_compute_block: int, # =8 (block_size // page_size)=(512/64)
     megacore_mode: str | None = None,
     inline_seq_dim: bool = True,
 ) -> jax.Array:
   """Paged grouped query attention.
 
   Args:
-    q: A [batch_size, num_heads, head_dim] jax.Array.
+    q: A [batch_size, num_heads, head_dim] jax.Array. # TODO(xw32):add dim
     k_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
     v_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
     lengths: A i32[batch_size] jax.Array the length of each example.
@@ -435,9 +437,8 @@ def paged_attention(
       one kernel.
 
   Returns:
-    The output of attention([batch_size, num_heads, head_dim]).
+    The output of attention([batch_size, num_heads, head_dim]).  # TODO(xw32):add dim
   """
-  import pdb; pdb.set_trace()
   print('xw32 paged_attention kernel begins.')
   if isinstance(k_pages, quantization_utils.QuantizedTensor):
     k_pages, k_scales_pages = k_pages.weight, k_pages.scales
@@ -456,7 +457,7 @@ def paged_attention(
   else:
     v_scales_pages = None
 
-  batch_size, num_heads, head_dim = q.shape
+  batch_size, num_heads, head_dim = q.shape  # TODO(xw32):add dim
   num_kv_heads, _, page_size, head_dim_k = k_pages.shape
   batch_size_paged_indices, pages_per_sequence = page_indices.shape
 
@@ -538,7 +539,7 @@ def paged_attention(
       )
     else: # q.shape=[batch_size, num_heads, head_dim], grid=[num_cores, batch_size, num_kv_heads]
       q_block_spec = pl.BlockSpec(
-          (None, num_heads // num_kv_heads, head_dim),
+          (None, num_heads // num_kv_heads, head_dim),  # TODO(xw32):add dim for the query_len dimension
           lambda core_index, b, h, *_: (b, h, 0),
       )
     q_dtype_for_kernel_launch = q.dtype
@@ -547,7 +548,7 @@ def paged_attention(
   if inline_seq_dim:
     kernel = paged_flash_attention_kernel_inline_seq_dim
     grid = (
-        num_cores,
+        num_cores, # TODO(xw32):add dim to loop over the query_len dimension
         batch_size // num_cores if megacore_mode == "batch" else batch_size,
         num_kv_heads // num_cores
         if megacore_mode == "kv_head"
@@ -616,9 +617,9 @@ def paged_attention(
   else:
     in_specs = [
         q_block_spec,
-        pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
+        pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY), # for k_pages_hbm_ref
         None,  # type: ignore[list-item]
-        pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
+        pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY), # for v_pages_hbm_ref
         None,  # type: ignore[list-item]
     ]
     scratch_shapes = (
