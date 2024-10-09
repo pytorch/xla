@@ -57,8 +57,8 @@ import test_utils
 
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
-XLA_DISABLE_FUNCTIONALIZATION = bool(
-    os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', False))
+XLA_DISABLE_FUNCTIONALIZATION = bool(int(
+    os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', "0")))
 
 
 def _is_on_tpu():
@@ -682,6 +682,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         xla_a[:, s::e] = 2
         self.assertEqual(a.data, xla_a.data.cpu())
 
+  @skipIfFunctionalizationEnabled("functionalization raises another error")
   def test_arange_nan(self):
     with self.assertRaisesRegex(RuntimeError, r'unsupported range'):
       a = torch.arange(-5, float('nan'), device=xm.xla_device())
