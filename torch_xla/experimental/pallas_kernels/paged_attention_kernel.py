@@ -41,7 +41,11 @@ class MultiPageAsyncCopyDescriptor:
       self,
       pages_hbm_ref,
       scales_pages_hbm_ref,
-      vmem_buffer,
+      # xw32 note:
+      # vmem_buffer correspond to scratch_shapes.pltpu.VMEM(2,pages_per_compute_block, page_size, head_dim).
+      # Currently has shape = (pages_per_compute_block, page_size, head_dim)
+      # It should be the receive buffer to hold the pages copied from HBM.
+      vmem_buffer, 
       scales_vmem_buffer,
       sem,
       page_indices,
@@ -142,6 +146,7 @@ def paged_flash_attention_kernel(
     program_ids=(),
 ):
   """Pallas kernel for paged attention."""
+  # xw32: core_index, b, h, i=num_cores, batch_size, num_kv_heads, i
   if program_ids:
     core_index, b, h, i = program_ids
   else:
@@ -151,7 +156,11 @@ def paged_flash_attention_kernel(
         pl.program_id(2),
         pl.program_id(3),
     )
+  # i loops through the compute blocks
+  # xw32: note num_kv_heads, _, page_size, head_dim_k = k_pages.shape
   num_kv_heads, _, page_size, _ = k_pages_hbm_ref.shape
+  print(f'xw32 line158 {k_pages_hbm_ref.shape=}')
+  # xw32: bk should be the overall compute block size.
   bk = page_size * pages_per_compute_block
   num_cores = pl.num_programs(0)
 
@@ -164,6 +173,7 @@ def paged_flash_attention_kernel(
   b = b * b_step + b_start
   length = lengths_ref[b]
 
+  # returns the next (b, h, i)
   def compute_block_indices(b, h, i):
 
     def advance_b():
@@ -261,6 +271,9 @@ def paged_flash_attention_kernel(
     )
     q = q_ref[...].astype(jnp.float32)
     k = async_copy_k.wait_and_get_loaded()
+    import pdb; pdb.set_trace()
+    # q.shape=(8,256)=(num_heads // num_kv_heads, head_dim)
+    # k.shape=(512, 256)=(,head_dim)
     qk = jnp.einsum('hd,td->ht', q, k, preferred_element_type=jnp.float32)
     if attn_logits_soft_cap is not None:
       capped_qk = jnp.tanh(qk / attn_logits_soft_cap)
@@ -317,6 +330,9 @@ def paged_flash_attention_kernel_inline_seq_dim(
     attn_logits_soft_cap: float | None,
     megacore_mode: str | None,
 ):
+  # This is for the case: inline_seq_dim: whether to fuse kernel instances along the sequence dim into
+  #     one kernel.
+  import pdb; pdb.set_trace()
   core_index, b, h = pl.program_id(0), pl.program_id(1), pl.program_id(2)
 
   # Initialize the output HBM buffers to avoid accessing garbage memory inside
@@ -324,6 +340,7 @@ def paged_flash_attention_kernel_inline_seq_dim(
   m_ref[...] = jnp.full_like(m_ref, -jnp.inf)
   l_ref[...] = jnp.zeros_like(l_ref)
   o_ref[...] = jnp.zeros_like(o_ref)
+  print(f'xw32 {k_pages_hbm_ref.shape=}')
 
   def body(i, _):
     paged_flash_attention_kernel(
@@ -354,7 +371,9 @@ def paged_flash_attention_kernel_inline_seq_dim(
     )
     return ()
 
-  bk = pages_per_compute_block * k_pages_hbm_ref.shape[-2]
+  # xw32: nb num_kv_heads, _, page_size, head_dim_k = k_pages.shape
+  # so k_pages_hbm_ref.shape[-2] is the page_size.
+  bk = pages_per_compute_block * k_pages_hbm_ref.shape[-2] # The accumulated page sizes for all the pages in this compute block.
 
   if megacore_mode == "batch":
     num_cores = pl.num_programs(0)
@@ -418,6 +437,8 @@ def paged_attention(
   Returns:
     The output of attention([batch_size, num_heads, head_dim]).
   """
+  import pdb; pdb.set_trace()
+  print('xw32 paged_attention kernel begins.')
   if isinstance(k_pages, quantization_utils.QuantizedTensor):
     k_pages, k_scales_pages = k_pages.weight, k_pages.scales
     assert isinstance(k_scales_pages, jax.Array)  # For typing.
@@ -504,7 +525,7 @@ def paged_attention(
           lambda core_index, b, h, *_: (b, h, 0, 0),
       )
     q_dtype_for_kernel_launch = jnp.float32
-  else:
+  else: # xw32: goes to this branch.
     if megacore_mode == "kv_head":
       q_block_spec = pl.BlockSpec(
           (None, num_heads // num_kv_heads, head_dim),
@@ -515,7 +536,7 @@ def paged_attention(
           (None, num_heads // num_kv_heads, head_dim),
           lambda core_index, b, h, *_: (b * num_cores + core_index, h, 0),
       )
-    else:
+    else: # q.shape=[batch_size, num_heads, head_dim], grid=[num_cores, batch_size, num_kv_heads]
       q_block_spec = pl.BlockSpec(
           (None, num_heads // num_kv_heads, head_dim),
           lambda core_index, b, h, *_: (b, h, 0),
@@ -532,7 +553,7 @@ def paged_attention(
         if megacore_mode == "kv_head"
         else num_kv_heads,
     )
-    dimension_semantics = ("parallel", "arbitrary", "arbitrary")
+    dimension_semantics = ("parallel", "arbitrary", "arbitrary") # xw32q: shouldn't the batch dimension and kv_head dimension be parallelizable?
   else:
     kernel = paged_flash_attention_kernel
     grid = (
@@ -541,7 +562,7 @@ def paged_attention(
         num_kv_heads // num_cores
         if megacore_mode == "kv_head"
         else num_kv_heads,
-        pages_per_sequence // pages_per_compute_block,
+        pages_per_sequence // pages_per_compute_block, # number of compute blocks for the sequence.
     )  # type: ignore
     dimension_semantics = ("parallel", "arbitrary", "arbitrary", "arbitrary")
 
@@ -609,7 +630,7 @@ def paged_attention(
                 head_dim,
             ),
             k_pages.dtype,
-        ),  # k_pages buffer
+        ),  # k_pages buffer. This is used in the kernel after the output var. Aka, def kernel(*prefetch_refs, *input_refs, *output_refs, *scratch_refs)
         None,
         pltpu.VMEM(
             (
