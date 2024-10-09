@@ -2366,7 +2366,6 @@ def _aten_linalg_eigh(A, UPLO='L'):
 
 @op(torch.ops.aten.linalg_inv_ex)
 def _aten_linalg_inv_ex(A):
-
   return jnp.linalg.inv(A), jnp.zeros(A.shape[:-2], jnp.int32)
 
 
