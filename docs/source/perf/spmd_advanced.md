@@ -117,8 +117,8 @@ from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 generated_table = visualize_tensor_sharding(t, use_color=False)
 ```
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="_static/img/spmd_debug_1.png">
-  <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="_static/img/spmd_debug_1_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="../_static/img/spmd_debug_1.png">
+  <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="../_static/img/spmd_debug_1_light.png">
 </picture>
 
 - Code snippet used `visualize_sharding` and visualization result:
@@ -129,8 +129,8 @@ sharding = '{devices=[2,2]0,1,2,3}'
 generated_table = visualize_sharding(sharding, use_color=False)
 ```
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="_static/img/spmd_debug_2.png">
-  <img alt="visualize_sharding example on TPU v4-8(single-host)" src="_static/img/spmd_debug_2_light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="../_static/img/spmd_debug_2.png">
+  <img alt="visualize_sharding example on TPU v4-8(single-host)" src="../_static/img/spmd_debug_2_light.png">
 </picture>
 
 You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style `tiled`, `partial_replication` and `replicated`.
