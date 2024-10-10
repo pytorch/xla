@@ -522,7 +522,7 @@ def paged_attention(
     if megacore_mode == "kv_head":
       # q.shape=[batch_size, query_len, num_heads, head_dim]
       # xw32q: The way it chunks the `num_heads` dimension (num_heads // num_kv_heads),
-      # does it mean it is a MQA?
+      # does it mean it is a MQA? Correct. Multiple query heads uses the same kv head.
       q_block_spec = pl.BlockSpec(
           (None, None, num_heads // num_kv_heads, head_dim),
           lambda core_index, q, b, h, *_: (b, q, h * num_cores + core_index, 0),
@@ -554,6 +554,7 @@ def paged_attention(
         else num_kv_heads,
     )
     # xw32q: shouldn't batch dim and kv_heads dim be parallel?
+    # both batch dim and kv heads are independent and can be parallel.
     dimension_semantics = ("parallel", "arbitrary", "arbitrary", "arbitrary")
   else:
     kernel = paged_flash_attention_kernel

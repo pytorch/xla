@@ -686,10 +686,16 @@ class PallasTest(unittest.TestCase):
                 pages_per_compute_block=pallas_compute_block_size // page_size,
             )))
 
-    # print(f'{expected_output.cpu()=}')
-    # print(f'{actual_output.cpu()=}')
     expected_output_cpu=expected_output.cpu()
-    actual_output_cpu=actual_output.cpu()
+    # Need to squeeze out the query_len dimension!
+    actual_output_cpu=actual_output.squeeze().cpu()
+    # print(f'{expected_output_cpu=}')
+    # print(f'{actual_output_cpu=}')
+    # print(f'actual_output_cpu.shape={actual_output_cpu.shape}')
+    # print(f'expected_output_cpu.shape={expected_output_cpu.shape}')
+    self.assertEqual(actual_output_cpu.shape, expected_output_cpu.shape)
+    torch.set_printoptions(profile="full")
+    print(f'{(actual_output_cpu-expected_output_cpu).abs()}')
     print(f'Output max diff: {(expected_output_cpu - actual_output_cpu).abs().max().item()}')
     print(f'Output mean diff: {(expected_output_cpu - actual_output_cpu).abs().mean().item()}')
     self.assertTrue(
