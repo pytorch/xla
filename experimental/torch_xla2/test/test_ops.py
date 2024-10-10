@@ -108,7 +108,6 @@ skiplist = {
     "unique",
     "unravel_index",
     "var_mean",
-    "argwhere",
     "nanmean",
     "nn.functional.upsample_bilinear",
     "randint",
