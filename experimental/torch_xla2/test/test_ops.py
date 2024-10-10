@@ -43,7 +43,6 @@ skiplist = {
     "linalg.tensorsolve",
     "linalg.vector_norm",
     "linspace",
-    "log_normal",
     "logspace",
     "lu",
     "lu_solve",
@@ -155,6 +154,7 @@ random_ops = {
   'nn.functional.feature_alpha_dropout',
   'cauchy',
   'exponential',
+  'log_normal',
 }
 
 atol_dict = {"linalg.eig": (2e0, 3e0),
