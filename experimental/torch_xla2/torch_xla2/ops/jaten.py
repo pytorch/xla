@@ -4204,7 +4204,7 @@ def _aten__linalg_slogdet(input):
 # torch.linalg.svd
 @op(torch.ops.aten._linalg_svd)
 def _aten__linalg_svd(a, full_matrices=True):
-  return jnp.linalg.svd(a, full_matrices)
+  return jnp.linalg.svd(a, full_matrices=full_matrices)
 
 
 # torch.linalg.pinv
@@ -4216,7 +4216,35 @@ def _aten_linalg_pinv_atol_rtol_tensor(a, rtol=None, **kwargs):
 # torch.linalg.solve
 @op(torch.ops.aten._linalg_solve_ex)
 def _aten__linalg_solve_ex(a, b):
-  return jnp.linalg.solve(a, b), jnp.array(0)
+  res = jnp.linalg.solve(a, b)
+  info_shape = a.shape[0] if len(a.shape) >= 3 else []
+  info = jnp.zeros(info_shape, dtype=mappings.t2j_dtype(torch.int32))
+  return res, info
+
+
+# torch.linalg.solve_triangular
+@op(torch.ops.aten.linalg_solve_triangular)
+def _aten_linalg_solve_triangular(a, b, *, upper=True, left=True, unitriangular=False):
+  if left is False:
+    a = jnp.matrix_transpose(a)
+    b = jnp.matrix_transpose(b)
+    upper = not upper
+  res = jax.scipy.linalg.solve_triangular(a, b, lower=not upper, unit_diagonal=unitriangular)
+  if left is False:
+    res = jnp.matrix_transpose(res)
+  return res
+
+
+@op(torch.ops.aten.linalg_inv_ex)
+def _aten_linalg_inv_ex(a):
+  ainv = jnp.linalg.inv(a)
+  info = jnp.array(0)
+  return ainv, info
+
+
+@op(torch.ops.aten._linalg_check_errors)
+def _aten__linalg_check_errors(*args, **kwargs):
+  pass
 
 
 @op(torch.ops.aten.median)
