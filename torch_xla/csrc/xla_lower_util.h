@@ -119,6 +119,9 @@ std::vector<xla::XlaOp> BuildAmpUpdateScale(const xla::XlaOp& current_scale,
                                             double scale_backoff_factor,
                                             int scale_growth_interval);
 
+xla::XlaOp BuildScan(const Callable f, const at::Tensor& init,
+                     const at::Tensor& xs);
+
 std::vector<xla::XlaOp> BuildSgdOptimizerStep(
     const xla::XlaOp& found_inf, const xla::XlaOp& step,
     const xla::XlaOp& param, const xla::XlaOp& buf, const xla::XlaOp& d_p,
