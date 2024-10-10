@@ -615,6 +615,90 @@ class PallasTest(unittest.TestCase):
             atol=1e-5,
             rtol=1e-5))
 
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_extended_paged_attention_single_query(self):
+    from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
+    from torch_xla.experimental.pallas_kernels.extended_paged_attention_kernel0 import paged_attention as jax_extended_paged_attention0
+
+    # flash_attn_block_size seems to be the compute block concept
+    # in flash attn per https://github.com/jax-ml/jax/blob/c6e5530aab9b859056883ccb3c1937259b998af0/jax/experimental/pallas/ops/tpu/paged_attention/paged_attention_kernel.py#L400-L401
+    # And pages_per_compute_block seems to be a tunable param in vLLM per
+    # https://github.com/vllm-project/vllm/blob/f5e1bf5d44877149eaabf9c04379a4e14a023145/vllm/attention/backends/pallas.py#L184
+    pallas_compute_block_size = 512
+    batch_size: int = 3
+    query_len: int = 1
+    num_query_heads: int = 64
+    num_kv_heads: int = 8
+    head_size: int = 128
+    dtype: torch.dtype = torch.float32
+    max_kv_len: int = 1024
+    page_size: int = 64
+    total_num_pages: int = 32
+    assert num_query_heads % num_kv_heads == 0
+    assert query_len <= max_kv_len
+    assert max_kv_len <= total_num_pages * page_size
+
+    q = torch.randn(batch_size, query_len, num_query_heads, head_size, dtype=dtype)
+    k_pages = torch.randn(num_kv_heads, total_num_pages, page_size, head_size, dtype=dtype)
+    v_pages = torch.rand_like(k_pages)
+    kv_seq_lengths = torch.randint(query_len, max_kv_len + 1, (batch_size,))
+    page_indices = torch.randint(0, total_num_pages, (batch_size, total_num_pages))
+    
+    # Run the extended_paged_attention with query_len=1
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    assert q_jax.shape==(batch_size, query_len, num_query_heads, head_size), f"Input q_jax has the wrong shape: {q_jax.shape}. Expect {(batch_size, query_len, num_query_heads, head_size)}."
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    kv_seq_lens_jax = jnp.array(kv_seq_lengths.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    actual_output = torch.from_numpy(
+        np.array(
+            jax_extended_paged_attention0(
+                q_jax,
+                k_pages_jax,
+                v_pages_jax,
+                kv_seq_lens_jax,
+                page_indices_jax,
+                pages_per_compute_block=pallas_compute_block_size // page_size,
+            )))
+    
+    # Run the original paged_attention.
+    ref_q_jax = jnp.array(q.squeeze().numpy(), dtype=jnp.float32)
+    assert ref_q_jax.shape==(batch_size, num_query_heads, head_size), f"Input ref_q_jax has the wrong shape: {ref_q_jax.shape}. Expect {(batch_size, num_query_heads, head_size)}."
+    assert jnp.allclose(q_jax[:,0,...], ref_q_jax)
+    ref_k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    assert jnp.allclose(k_pages_jax, ref_k_pages_jax)
+    ref_v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    assert jnp.allclose(v_pages_jax, ref_v_pages_jax)
+    ref_kv_seq_lens_jax = jnp.array(kv_seq_lengths.numpy(), dtype=jnp.int32)
+    assert jnp.allclose(kv_seq_lens_jax, ref_kv_seq_lens_jax)
+    ref_page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    assert jnp.allclose(page_indices_jax, ref_page_indices_jax)
+    expected_output = torch.from_numpy(
+        np.array(
+            jax_paged_attention(
+                ref_q_jax,
+                ref_k_pages_jax,
+                ref_v_pages_jax,
+                ref_kv_seq_lens_jax,
+                ref_page_indices_jax,
+                pages_per_compute_block=pallas_compute_block_size // page_size,
+            )))
+
+    # print(f'{expected_output.cpu()=}')
+    # print(f'{actual_output.cpu()=}')
+    expected_output_cpu=expected_output.cpu()
+    actual_output_cpu=actual_output.cpu()
+    print(f'Output max diff: {(expected_output_cpu - actual_output_cpu).abs().max().item()}')
+    print(f'Output mean diff: {(expected_output_cpu - actual_output_cpu).abs().mean().item()}')
+    self.assertTrue(
+        torch.allclose(
+            expected_output_cpu,
+            actual_output_cpu,
+            atol=1e-5,
+            rtol=1e-5))
+
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
                    "This test only works on TPUv4 and TPUv5p.")
   def test_paged_attention_wrapper_with_megacore_modes(self):

@@ -1,6 +1,5 @@
-# This is the original paged_attention_kernel copied from
+# This is the adapted extended_paged_attention_kernel copied from
 # https://github.com/jax-ml/jax/blob/main/jax/experimental/pallas/ops/tpu/paged_attention/paged_attention_kernel.py#L400-L401
-# Don't review it. Will be removed later.
 
 # Copyright 2024 The JAX Authors.
 #
@@ -49,6 +48,7 @@ class MultiPageAsyncCopyDescriptor:
       num_pages_to_load,
       head_index,
   ):
+    # Original k_pages has shape [num_kv_heads, total_num_pages, page_size, head_dim]
     self._vmem_buffer = vmem_buffer
     self._scales_vmem_buffer = scales_vmem_buffer
     self._num_pages_to_load = num_pages_to_load
@@ -113,7 +113,6 @@ class MultiPageAsyncCopyDescriptor:
     jax_array = self._maybe_dequantize(jax_array, scales_jax_array)
     return jax_array.reshape(-1, head_dim)
 
-
 def paged_flash_attention_kernel(
     lengths_ref,
     page_indices_ref,
@@ -142,16 +141,21 @@ def paged_flash_attention_kernel(
     program_ids=(),
 ):
   """Pallas kernel for paged attention."""
-  if program_ids:
-    core_index, b, h, i = program_ids
+  # xw32: core_index, b, h, i=num_cores, batch_size, num_kv_heads, i
+  # Note the original q.shape=[batch_size, query_len, num_heads, head_dim]
+  print(f'xw32 line147 {q_ref.shape=}')
+  if program_ids: # inline_seq_dim case.
+    core_index, q_idx, b, h, i = program_ids # The 2nd one is q_idx but we don't use it.
   else:
-    core_index, b, h, i = (
+    core_index, q_idx, b, h, i = (
         pl.program_id(0),
         pl.program_id(1),
         pl.program_id(2),
         pl.program_id(3),
+        pl.program_id(4),
     )
   num_kv_heads, _, page_size, _ = k_pages_hbm_ref.shape
+  # xw32: bk should be the overall compute block size.
   bk = page_size * pages_per_compute_block
   num_cores = pl.num_programs(0)
 
@@ -317,10 +321,16 @@ def paged_flash_attention_kernel_inline_seq_dim(
     attn_logits_soft_cap: float | None,
     megacore_mode: str | None,
 ):
-  core_index, b, h = pl.program_id(0), pl.program_id(1), pl.program_id(2)
+  print(f'xw32 line325 {m_ref.shape=}')
+  core_index, q_idx, b, h = pl.program_id(0), pl.program_id(1), pl.program_id(2), pl.program_id(3)
 
   # Initialize the output HBM buffers to avoid accessing garbage memory inside
   # the kernel body below.
+  # Note, q_block_spec = pl.BlockSpec(
+  #       (None, None, num_heads // num_kv_heads, head_dim), # bs,query_len,num_heads,head_dim
+  #       lambda core_index, q, b, h, *_: (b, q, h, 0),
+  #   )
+  # m_ref,l_ref,o_ref has out_specs=q_block_spec
   m_ref[...] = jnp.full_like(m_ref, -jnp.inf)
   l_ref[...] = jnp.zeros_like(l_ref)
   o_ref[...] = jnp.zeros_like(o_ref)
@@ -332,7 +342,7 @@ def paged_flash_attention_kernel_inline_seq_dim(
         buffer_index_ref,
         step_ref,
         q_ref,
-        k_pages_hbm_ref, # 
+        k_pages_hbm_ref,
         k_scales_pages_hbm_ref,
         v_pages_hbm_ref,
         v_scales_pages_hbm_ref,
@@ -350,11 +360,13 @@ def paged_flash_attention_kernel_inline_seq_dim(
         mask_value=mask_value,
         attn_logits_soft_cap=attn_logits_soft_cap,
         megacore_mode=megacore_mode,
-        program_ids=(core_index, b, h, i),
+        program_ids=(core_index, q_idx, b, h, i),
     )
     return ()
 
-  bk = pages_per_compute_block * k_pages_hbm_ref.shape[-2]
+  # xw32: nb num_kv_heads, _, page_size, head_dim_k = k_pages.shape
+  # so k_pages_hbm_ref.shape[-2] is the page_size.
+  bk = pages_per_compute_block * k_pages_hbm_ref.shape[-2] # The accumulated page sizes for all the pages in this compute block.
 
   if megacore_mode == "batch":
     num_cores = pl.num_programs(0)
@@ -391,7 +403,7 @@ def paged_attention(
   """Paged grouped query attention.
 
   Args:
-    q: A [batch_size, num_heads, head_dim] jax.Array.
+    q: A [batch_size, query_len, num_heads, head_dim] jax.Array.
     k_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
     v_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
     lengths: A i32[batch_size] jax.Array the length of each example.
@@ -416,9 +428,8 @@ def paged_attention(
       one kernel.
 
   Returns:
-    The output of attention([batch_size, num_heads, head_dim]).
+    The output of attention([batch_size, query_len, num_heads, head_dim]).
   """
-  # return jnp.zeros_like(q, q.dtype)
   if isinstance(k_pages, quantization_utils.QuantizedTensor):
     k_pages, k_scales_pages = k_pages.weight, k_pages.scales
     assert isinstance(k_scales_pages, jax.Array)  # For typing.
@@ -436,7 +447,8 @@ def paged_attention(
   else:
     v_scales_pages = None
 
-  batch_size, num_heads, head_dim = q.shape
+  # TODO(xw32): consider renaming num_heads to num_query_heads
+  batch_size, query_len, num_heads, head_dim = q.shape
   num_kv_heads, _, page_size, head_dim_k = k_pages.shape
   batch_size_paged_indices, pages_per_sequence = page_indices.shape
 
@@ -486,6 +498,7 @@ def paged_attention(
     raise ValueError("megacore_mode must be one of ['kv_head', 'batch', None]")
 
   if (num_heads // num_kv_heads) % 8 != 0:
+    # TODO(xw32):add the query_len dim to this branch later.
     # Reshape q to hint XLA to pick a <1x128> layout otherwise it will pick a
     # <8x128> layout for a <1x128> memref inside the kernel and error out.
     q = q.reshape(batch_size, num_heads, 1, head_dim)
@@ -507,46 +520,53 @@ def paged_attention(
     q_dtype_for_kernel_launch = jnp.float32
   else:
     if megacore_mode == "kv_head":
-      # q.shape=[batch_size, num_heads, head_dim]
+      # q.shape=[batch_size, query_len, num_heads, head_dim]
+      # xw32q: The way it chunks the `num_heads` dimension (num_heads // num_kv_heads),
+      # does it mean it is a MQA?
       q_block_spec = pl.BlockSpec(
-          (None, num_heads // num_kv_heads, head_dim),
-          lambda core_index, b, h, *_: (b, h * num_cores + core_index, 0),
+          (None, None, num_heads // num_kv_heads, head_dim),
+          lambda core_index, q, b, h, *_: (b, q, h * num_cores + core_index, 0),
       )
     elif megacore_mode == "batch":
       q_block_spec = pl.BlockSpec(
-          (None, num_heads // num_kv_heads, head_dim),
-          lambda core_index, b, h, *_: (b * num_cores + core_index, h, 0),
+          (None, None, num_heads // num_kv_heads, head_dim),
+          lambda core_index, q, b, h, *_: (b * num_cores + core_index, q, h, 0),
       )
     else:
+      # Here, if (num_heads // num_kv_heads)%8==0 and megacore_mode is None and inline_seq_dim == True, then
+      # grid=[num_cores, query_len, batch_size, num_kv_heads]
       q_block_spec = pl.BlockSpec(
-          (None, num_heads // num_kv_heads, head_dim),
-          lambda core_index, b, h, *_: (b, h, 0),
+          (None, None, num_heads // num_kv_heads, head_dim),
+          lambda core_index, q, b, h, *_: (b, q, h, 0),
       )
     q_dtype_for_kernel_launch = q.dtype
 
   dimension_semantics: Sequence[Literal["parallel", "arbitrary"]]
   if inline_seq_dim:
     kernel = paged_flash_attention_kernel_inline_seq_dim
+    # query_len goes before batch_size and num_kv_heads so the flash_attention kernel doesn't need to be changed.
     grid = (
         num_cores,
+        query_len,
         batch_size // num_cores if megacore_mode == "batch" else batch_size,
         num_kv_heads // num_cores
         if megacore_mode == "kv_head"
         else num_kv_heads,
     )
     # xw32q: shouldn't batch dim and kv_heads dim be parallel?
-    dimension_semantics = ("parallel", "arbitrary", "arbitrary")
+    dimension_semantics = ("parallel", "arbitrary", "arbitrary", "arbitrary")
   else:
     kernel = paged_flash_attention_kernel
     grid = (
         num_cores,
+        query_len,
         batch_size // num_cores if megacore_mode == "batch" else batch_size,
         num_kv_heads // num_cores
         if megacore_mode == "kv_head"
         else num_kv_heads,
         pages_per_sequence // pages_per_compute_block,
     )  # type: ignore
-    dimension_semantics = ("parallel", "arbitrary", "arbitrary", "arbitrary")
+    dimension_semantics = ("parallel", "arbitrary", "arbitrary", "arbitrary", "arbitrary")
 
   if k_scales_pages is not None and v_scales_pages is not None:
     in_specs = [
@@ -597,7 +617,7 @@ def paged_attention(
         ),  # v_scales_pages buffer
         pltpu.SemaphoreType.DMA,
     )
-  else:
+  else: # either k_scales_pages or v_scales_pages is None.
     in_specs = [
         q_block_spec,
         # Below 4 correspond to the 4 input: k_pages, k_scales_pages, q_pages, etc.
@@ -672,4 +692,4 @@ def paged_attention(
       v_pages,
       v_scales_pages,
   )
-  return out.reshape(batch_size, num_heads, head_dim).astype(q.dtype)
+  return out.reshape(batch_size, query_len, num_heads, head_dim).astype(q.dtype)
