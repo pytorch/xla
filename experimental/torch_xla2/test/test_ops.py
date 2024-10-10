@@ -11,15 +11,25 @@ import torch_xla2
 
 
 skiplist = {
+    "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
+                 # such as 0 to negative power.
     "_segment_reduce",
+    "_upsample_bilinear2d_aa",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
     "cat",
-    "cdist",
+    "cauchy",
+    "ceil",
     "cholesky",
+    "cholesky_inverse",
     "cholesky_solve",
+    "complex",
     "diagonal_copy",
+    "diagonal_scatter",
     "digamma",
+    "exponential",
+    "gcd",
+    "geometric",
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
@@ -29,12 +39,14 @@ skiplist = {
     "linalg.cholesky",
     "linalg.cholesky_ex",
     "linalg.det",
+    "linalg.householder_product",
     "linalg.inv",
     "linalg.inv_ex",
     "linalg.ldl_factor",
     "linalg.ldl_factor_ex",
     "linalg.ldl_solve",
     "linalg.lstsq",
+    "linalg.lu",
     "linalg.lu_factor",
     "linalg.lu_factor_ex",
     "linalg.lu_solve",
@@ -55,6 +67,8 @@ skiplist = {
     "lu_unpack",
     "masked.median",
     "max_pool2d_with_indices_backward",
+    "new_empty_strided",
+    "nextafter",
     "nn.functional.adaptive_avg_pool3d",
     "nn.functional.adaptive_max_pool1d",
     "nn.functional.adaptive_max_pool2d",
@@ -105,33 +119,30 @@ skiplist = {
     "polygamma",
     "prod",
     "put",
+    "rsub",
     "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",
     "special.scaled_modified_bessel_k1",
     "special.spherical_bessel_j0",
     "special.zeta",
+    "stft",
+    "sub",
     "svd",
     "svd_lowrank",
+    "to_sparse", # We are not supporting sparse tensors yet.
     "unfold_copy",
     "unfold",
     "unique_consecutive",
     "unique",
     "unravel_index",
+    "trunc",
     "var_mean",
     "argwhere",
     "nanmean",
+    "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
     "nn.functional.upsample_bilinear",
     "randint",
-}
-
-not_support_ops_list = {
-  "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
-  "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
-                 # such as 0 to negative power.
-  "ceil", # only failed with python 3.9
-  "trunc", # only failed with python 3.9
-  "to_sparse", # We are not supporting sparse tensors yet.
 }
 
 # These inputs are themselves views
@@ -146,9 +157,7 @@ random_ops = {
   'empty_permuted',
   'empty_strided',
   'bernoulli',
-  'geometric',
-  'new_empty',
-  'new_empty_strided',
+  "new_empty",
   'randint_like',
   'randn',
   'randn_like',
@@ -158,8 +167,6 @@ random_ops = {
   'multinomial',
   # Dropout is not deterministic https://pytorch.org/docs/stable/generated/torch.nn.functional.feature_alpha_dropout.html
   'nn.functional.feature_alpha_dropout',
-  'cauchy',
-  'exponential',
 }
 
 atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0), "linalg.eig": (2e0, 3e0), "linalg.eigh": (5e1, 3e0), "linalg.eigvalsh": (5e1, 3e0)}
@@ -197,7 +204,7 @@ def run_export_and_compare(testcase,
   atol, rtol = (1e-3, 1e-5)
   if func.name in atol_dict:
     atol, rtol = atol_dict[func.name]
-
+  
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):
@@ -222,7 +229,7 @@ def run_export_and_compare(testcase,
 
 ops_to_test = [
     test for test in op_db
-    if (test.name not in (skiplist | not_support_ops_list) and
+    if (test.name not in skiplist and
         test.variant_test_name not in variant_test_name_to_skip)
 ]
 

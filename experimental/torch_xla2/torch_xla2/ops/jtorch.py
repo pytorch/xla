@@ -289,3 +289,7 @@ def tensor_split(input, indices_or_sections, dim=0):
 def linalg_solve(a, b):
   res, _ = jaten._aten__linalg_solve_ex(a, b)
   return res
+
+@register_function(torch.cdist)
+def _cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
+    return jaten._aten_cdist(x1, x2, p, compute_mode)

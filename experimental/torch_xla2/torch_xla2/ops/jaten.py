@@ -1,10 +1,9 @@
 """Torch ops implemented using jax."""
 
 import sys
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence
 import functools
 
-import math
 import jax
 from jax import numpy as jnp
 import functools
@@ -14,7 +13,6 @@ import torch.distributed._functional_collectives
 from torch_xla2.ops import ops_registry
 from torch_xla2.ops import op_base, mappings
 from torch_xla2 import interop
-from torch_xla2.ops import jax_reimplement
 
 # Keys are OpOverload, value is a callable that takes
 # XLATensor2
@@ -35,14 +33,13 @@ mutation_ops_to_functional = {
   torch.ops.aten.ge_: torch.ops.aten.ge,
   torch.ops.aten.eq_: torch.ops.aten.eq,
   torch.ops.aten.ne_: torch.ops.aten.ne,
-  torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
-  torch.ops.aten.geometric_: torch.ops.aten.geometric,
-  torch.ops.aten.normal_: torch.ops.aten.normal,
-  torch.ops.aten.random_: torch.ops.aten.uniform,
   torch.ops.aten.uniform_: torch.ops.aten.uniform,
   torch.ops.aten.relu_: torch.ops.aten.relu,
+  torch.ops.aten.normal_: torch.ops.aten.normal,
   torch.ops.aten.squeeze_: torch.ops.aten.squeeze,
+  torch.ops.aten.bernoulli_: torch.ops.aten.bernoulli.p,
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
+  torch.ops.aten.random_: torch.ops.aten.uniform,
   torch.ops.aten.ceil_: torch.ops.aten.ceil,
   torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
   torch.ops.aten.unsqueeze_: torch.ops.aten.unsqueeze,
@@ -112,12 +109,6 @@ def _aten_clone(x, memory_format=None):
   return x
 
 
-# aten.trunc
-@op(torch.ops.aten.trunc)
-def _aten_trunc(x):
-  return jnp.trunc(x)
-
-
 @op(torch.ops.aten.index_copy)
 def _aten_index_copy(x, dim, indexes, source):
   # return jax.lax.scatter(x, index, dim)
@@ -128,65 +119,6 @@ def _aten_index_copy(x, dim, indexes, source):
     else:
       dims.append(slice(None, None, None))
   return x.at[dim].set(source)
-
-
-# aten.cauchy_
-@op(torch.ops.aten.cauchy_)
-def _aten_cauchy_(x, median=0, sigma=1):
-  """
-  Fills the input array with values drawn from a Cauchy distribution.
-
-  Args:
-    x: An array to be filled with Cauchy samples.
-    median: The median of the Cauchy distribution.
-    sigma: The scale parameter of the Cauchy distribution.
-
-  Returns:
-    The input array filled with Cauchy samples.
-  """
-  key = jax.random.PRNGKey(0)  # You should use a different key for each call
-  samples = jax.random.cauchy(key, x.shape) * sigma + median
-  return x.at[:].set(samples)
-
-
-# aten.complex
-@op(torch.ops.aten.complex)
-def _aten_complex(real, imag):
-  """
-  Constructs a complex array from real and imaginary parts.
-
-  Args:
-    real: An array of real values.
-    imag: An array of imaginary values.
-
-  Returns:
-    A complex array with the specified real and imaginary parts.
-  """
-  return jnp.array(real, dtype=jnp.float32) + 1j * jnp.array(imag, dtype=jnp.float32)
-
-
-# aten.exponential_
-@op(torch.ops.aten.exponential_)
-def _aten_exponential_(x, lambd=1.0):
-  """
-  Fills the input array with values drawn from an exponential distribution.
-
-  Args:
-    x: An array to be filled with exponential samples.
-    lambd: The rate parameter of the exponential distribution.
-
-  Returns:
-    The input array filled with exponential samples.
-  """
-  key = jax.random.PRNGKey(0)  # Use a different key for each call
-  samples = jax.random.exponential(key, x.shape) / lambd
-  return x.at[:].set(samples)
-
-
-# aten.linalg_householder_product
-@op(torch.ops.aten.linalg_householder_product)
-def _aten_linalg_householder_product(input, tau):
-  return jax.lax.linalg.householder_product(a = input, taus = tau)
 
 
 @op(torch.ops.aten.select)
@@ -226,14 +158,14 @@ def _aten_searchsorted(sorted_sequence, values):
 
 @op(torch.ops.aten.sub.Tensor)
 @op(torch.ops.aten.sub.Scalar)
-def _aten_sub(x, y, alpha=1):
+def _aten_sub(x, y):
   if isinstance(x, float):
     dtype = _torch_binary_scalar_type(x, y)
     x = jnp.array(x, dtype=dtype)
   if isinstance(y, float):
     dtype = _torch_binary_scalar_type(y, x)
     y = jnp.array(y, dtype=dtype)
-  return x - y*alpha
+  return x - y
 
 
 @op(torch.ops.aten.mm)
@@ -2107,14 +2039,6 @@ def _aten__pdist_forward(x, p=2):
   return condensed_dists
 
 
-@op(torch.ops.aten.cholesky_inverse)
-def _aten_cholesky_inverse(input, upper=False):
-  t = jnp.matrix_transpose(input)
-  if "complex" in str(input.dtype):
-    t = t.conjugate()
-  return jnp.linalg.inv(input @ t)
-
-
 # aten.cos
 @op(torch.ops.aten.cos)
 @op_base.promote_int_input
@@ -2133,40 +2057,6 @@ def _aten_cosh(input):
 @op(torch.ops.aten.diagonal)
 def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
   return jnp.diagonal(input, offset, dim1, dim2)
-
-
-def diag_indices_with_offset(input_shape, offset, dim1=0, dim2=1):
-    input_len = len(input_shape)
-    if dim1 == dim2 or not (0 <= dim1 < input_len and 0 <= dim2 < input_len):
-      raise ValueError("dim1 and dim2 must be different and in range [0, " + str(input_len-1)+ "]")
-
-    size1, size2 = input_shape[dim1], input_shape[dim2]
-    if offset >= 0:
-        indices1 = jnp.arange(min(size1, size2 - offset))
-        indices2 = jnp.arange(offset, offset + len(indices1))
-    else:
-        indices2 = jnp.arange(min(size1 + offset, size2 ))
-        indices1 = jnp.arange(-offset, -offset + len(indices2))
-    return [indices1, indices2]
-
-@op(torch.ops.aten.diagonal_scatter)
-def _aten_diagonal_scatter(input, src, offset=0, dim1=0, dim2=1):
-  indexes = diag_indices_with_offset(input.shape, offset, dim1, dim2)
-
-  if input.ndim == 2:
-    return input.at[tuple(indexes)].set(src)
-  else:
-    # src has the same shape as the output of 
-    # jnp.diagonal(input, offset, dim1, dim2).
-    # Last dimension always contains the diagonal elements,
-    # while the preceding dimensions represent the "slices"
-    # from which these diagonals are extracted. Thus,
-    # we alter input axes to match this assumption, write src
-    # and then move the axes back to the original state.
-    input = jnp.moveaxis(input, (dim1, dim2), (-2,-1))
-    multi_indexes = [slice(None)]*(input.ndim-2) + indexes
-    input = input.at[tuple(multi_indexes)].set(src)
-    return jnp.moveaxis(input, (-2,-1), (dim1, dim2))
 
 
 # aten.diagflat
@@ -2358,42 +2248,6 @@ def _aten_linalg_eig(A):
 def _aten_linalg_eigh(A, UPLO='L'):
   return jnp.linalg.eigh(A, UPLO)
 
-
-@op(torch.ops.aten.linalg_lu)
-def _aten_linalg_lu(A, pivot=True, out=None):
-  dtype = A.dtype
-
-  *_, m, n = A.shape
-  k = jnp.minimum(m, n)
-
-  lu, _, permutation = jax.lax.linalg.lu(A)
-
-  L = jnp.tril(lu[..., :, :k], k=-1)
-  eye_L = jnp.eye(m, k, dtype=dtype)
-  L = L + eye_L
-
-  U = jnp.triu(lu[..., :k, :])
-
-  def perm_to_P(perm):
-      m = perm.shape[-1]
-      P = jnp.eye(m, dtype=dtype)[perm].T
-      return P
-
-  if permutation.ndim > 1:
-    num_batch_dims = permutation.ndim - 1
-    for _ in range(num_batch_dims):
-      perm_to_P = jax.vmap(perm_to_P, in_axes=0)
-
-  P = perm_to_P(permutation)
-
-  return P,L,U
-
-
-@op(torch.ops.aten.gcd)
-def _aten_gcd(input, other):
-  return jnp.gcd(input, other)
-
-
 # aten.lcm
 @op(torch.ops.aten.lcm)
 def _aten_lcm(input, other):
@@ -2511,10 +2365,6 @@ def _aten_logical_xor(self, other):
 @op(torch.ops.aten.neg)
 def _aten_neg(x):
   return -1 * x
-
-@op(torch.ops.aten.nextafter)
-def _aten_nextafter(input, other, *, out=None):
-  return jnp.nextafter(input, other)
 
 
 # aten.nonzero
@@ -2852,12 +2702,6 @@ def _bernoulli(
   res = jax.random.uniform(key, self.shape) < p
   return res
 
-
-@op(torch.ops.aten.geometric, needs_env=True)
-def geometric(self, p, *, generator=None, env=None):
-  key = env.get_and_rotate_prng_key(generator)
-  res = jax.random.geometric(key, p, self.shape)
-  return res
 
 
 @op(torch.ops.aten.randn_like, needs_env=True)
@@ -4145,13 +3989,8 @@ def _new_empty(self, size, **kwargs):
 
 
 @op(torch.ops.aten.new_empty_strided)
-def _new_empty_strided(self, size, stride, dtype=None, **kwargs):
-  # Ignore stride, since JAX and torch tensor doesn't share the same memory.
-  if not dtype:
-    return jnp.empty(size, dtype=self.dtype)
-  else:
-    jax_dtype = mappings.t2j_dtype(dtype)
-    return jnp.empty(size, dtype=jax_dtype)
+def _new_empty_strided(self, size, stride, **kwargs):
+  return jnp.empty(size)
 
 
 @op(torch.ops.aten._unsafe_index_put, is_jax_function=False)
@@ -4322,69 +4161,41 @@ def _aten_max_unpoolxd(input, indices, output_size, stride=None, padding=0):
 
     return output
 
-@op(torch.ops.aten._upsample_bilinear2d_aa)
-def _aten_upsample_bilinear2d_aa(input, output_size, align_corners, scale_factors=None, scales_h=None, scales_w=None):
-    # input: is of type jaxlib.xla_extension.ArrayImpl
-    image = input
-    method = "bilinear"
-    antialias = True # ignored for upsampling
+@op(torch.ops.aten.cdist)
+def _aten_cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
+  x1 = x1.astype(jnp.float32)  # Cast input to float32
+  x2 = x2.astype(jnp.float32)  # Cast input to float32
+  if p == 0.0:
+    # For p = 0, use Hamming-like distance multiplied by the number of elements
+    return _hamming_distance(x1, x2).astype(jnp.float32)  # Cast to float32
+  elif p == 2.0:
+    # Use optimized Euclidean distance calculation
+    if compute_mode == 'use_mm_for_euclid_dist_if_necessary' and (x1.shape[-2] > 25 or x2.shape[-2] > 25):
+      return _euclidean_mm(x1, x2)
+    elif compute_mode == 'use_mm_for_euclid_dist':
+      return _euclidean_mm(x1, x2)
+    else:
+      return _euclidean_direct(x1, x2)
+  else:
+    # General p-norm distance calculation
+    diff = jnp.abs(jnp.expand_dims(x1, -2) - jnp.expand_dims(x2, -3))
+    return jnp.sum(jnp.power(diff, p), axis=-1).astype(jnp.float32) ** (1 / p)
 
-    # https://jax.readthedocs.io/en/latest/_autosummary/jax.image.resize.html
-    # Resize does not distinguish batch, channel size.
-    # We need to leave them as is
-    # https://pytorch.org/vision/stable/transforms.html#supported-input-types-and-conventions
-    # pytorch image shape is (C,H,W) or (N,C,H,W)
-    # N - batch size
-    # C - no of channels
-    # H,W - heigth, width
 
-    shape = list(image.shape)
-    # overriding output_size
-    if scale_factors:
-      shape[-1] = int(math.floor(shape[-1]*scale_factors[-1]))
-      shape[-2] = int(math.floor(shape[-2]*scale_factors[-2]))
-    if scales_h:
-      shape[-2] = int(math.floor(shape[-2]*scales_h))
-    if scales_w:
-      shape[-1] = int(math.floor(shape[-1]*scales_w))
-    # output_size overrides scale_factors, scales_*
-    if output_size:
-      shape[-1] = output_size[-1]
-      shape[-2] = output_size[-2]
+def _hamming_distance(x1, x2):
+  # Calculate the Hamming distance for p = 0
+  diff = jnp.not_equal(jnp.expand_dims(x1, -2), jnp.expand_dims(x2, -3))
+  return jnp.sum(diff, axis=-1) * x1.shape[-1]
 
-    # pytorch upsample_bilinear returns the input as is when the shape is the same as input
-    if shape == list(image.shape):
-      return image
+def _euclidean_mm(x1, x2):
+  # Numerically stable version of Euclidean distance using matrix multiplication
+  x1_sq = jnp.sum(x1 ** 2, axis=-1, keepdims=True).astype(jnp.float32)
+  x2_sq = jnp.sum(x2 ** 2, axis=-1, keepdims=True).T.astype(jnp.float32)
+  # Ensure no negative values due to floating-point errors by using jnp.maximum with 0
+  dist = jnp.sqrt(jnp.maximum(x1_sq + x2_sq - 2 * jnp.dot(x1, x2.T), 0.0))
+  return dist.astype(jnp.float32)
 
-    spatial_dims = (2,3)
-    if len(shape) == 3:
-      spatial_dims = (1,2)
-
-    scale = list([shape[i] / image.shape[i]  for i in spatial_dims])
-    if scale_factors:
-      scale = scale_factors
-    if scales_h:
-      scale[0] = scales_h
-    if scales_w:
-      scale[1] = scales_w
-    scale = jnp.array(scale)
-
-    # align_corners is not supported in resize()
-    # https://github.com/jax-ml/jax/issues/11206
-    if align_corners:
-      scale = jnp.array([(shape[i] - 1.0) / (image.shape[i] - 1.0) for i in spatial_dims])
-
-    translation = jnp.array([0 for i in spatial_dims])
-    #translation = (scale / 2.0 - 0.5)
-
-    #return jax.image.scale_and_translate(
-    # local copied fixed implentation of scale_and_translate
-    return jax_reimplement.scale_and_translate(
-        image,
-        shape,
-        method=method,
-        scale=scale,
-        spatial_dims=spatial_dims,
-        translation=translation,
-        antialias=antialias,
-    )
+def _euclidean_direct(x1, x2):
+  diff = jnp.expand_dims(x1, -2) - jnp.expand_dims(x2, -3)
+  # Ensure no negative values due to floating-point errors
+  return jnp.sqrt(jnp.maximum(jnp.sum(diff ** 2, axis=-1), 0.0)).astype(jnp.float32)
