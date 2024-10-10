@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git8ec552d )
+                  master (2.6.0+git543ccc8 )
                 </div>
               
             
@@ -293,22 +293,49 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../index.html">PyTorch/XLA documentation</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Docs</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../debug.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../eager_mode.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../gpu.html">How to run with PyTorch/XLA:GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../multi_process_distributed.html">How to do DistributedDataParallel(DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../quantized_ops.html">Quantized Operations for XLA device (Experimental feature)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../runtime.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../spmd.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../spmd.html#fully-sharded-data-parallel-fsdp-via-spmd">Fully Sharded Data Parallel(FSDP) via SPMD</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../spmd.html#pytorch-xla-spmd-advanced-topics">PyTorch/XLA SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../spmd.html#distributed-checkpointing">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../torch_compile.html">TorchDynamo(torch.compile) integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../learn/xla-overview.html">Pytorch/XLA overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../learn/api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../learn/dynamic_shape.html">Dynamic shape</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../learn/pjrt.html">PJRT Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../learn/troubleshoot.html">Troubleshoot</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../accelerators/gpu.html">Learn about GPUs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../features/pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../features/stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../features/triton.html">Custom GPU Kernels via Triton</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/ddp.html">How to do DistributedDataParallel(DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute/configure-environment.html">Configure a development environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute/codegen_migration.html">Codegen migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute/plugins.html">Custom Hardware Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
 </ul>
 
             
@@ -505,7 +532,7 @@
   <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="is_master_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.is_master_ordinal">[docs]</a><span class="k">def</span> <span class="nf">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<div class="viewcode-block" id="is_master_ordinal"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.is_master_ordinal">[docs]</a><span class="k">def</span> <span class="nf">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Checks whether the current process is the master ordinal (0).</span>
 
 <span class="sd">  Args:</span>
@@ -529,7 +556,7 @@
     <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">fd</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="n">flush</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="xla_device"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xla_device">[docs]</a><span class="k">def</span> <span class="nf">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<div class="viewcode-block" id="xla_device"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.xla_device">[docs]</a><span class="k">def</span> <span class="nf">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">devkind</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a given instance of an XLA device.</span>
 
@@ -576,7 +603,7 @@
   <span class="k">return</span> <span class="p">[</span><span class="n">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="xla_device_hw"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xla_device_hw">[docs]</a><span class="k">def</span> <span class="nf">xla_device_hw</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<div class="viewcode-block" id="xla_device_hw"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.xla_device_hw">[docs]</a><span class="k">def</span> <span class="nf">xla_device_hw</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the hardware type of the given device.</span>
 
 <span class="sd">  Args:</span>
@@ -794,7 +821,7 @@
   <span class="k">return</span> <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span>
 
 
-<div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span>
+<div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span>
     <span class="n">reduce_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">inputs</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]],</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
@@ -899,7 +926,7 @@
   <span class="k">return</span> <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">padding</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+<div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
                <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                <span class="n">groups</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1104,7 +1131,7 @@
   <span class="k">return</span> <span class="n">buckets</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="all_to_all"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_to_all">[docs]</a><span class="k">def</span> <span class="nf">all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+<div class="viewcode-block" id="all_to_all"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.all_to_all">[docs]</a><span class="k">def</span> <span class="nf">all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
                <span class="n">split_dimension</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                <span class="n">concat_dimension</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                <span class="n">split_count</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1369,7 +1396,7 @@
   <span class="k">return</span> <span class="n">buckets</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+<div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
                      <span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
                      <span class="n">run_async</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Adds a closure to the list of the ones to be run at the end of the step.</span>
@@ -1443,7 +1470,7 @@
 
 <span class="c1"># TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be</span>
 <span class="c1"># dump as outputs. Need further investigation.</span>
-<div class="viewcode-block" id="get_stablehlo"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_stablehlo">[docs]</a><span class="k">def</span> <span class="nf">get_stablehlo</span><span class="p">(</span><span class="n">tensors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<div class="viewcode-block" id="get_stablehlo"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.get_stablehlo">[docs]</a><span class="k">def</span> <span class="nf">get_stablehlo</span><span class="p">(</span><span class="n">tensors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Get StableHLO for the computation graph in string format.</span>
 
 <span class="sd">  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.</span>
@@ -1469,7 +1496,7 @@
 
 <span class="c1"># TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be</span>
 <span class="c1"># dump as outputs. Need further investigation.</span>
-<div class="viewcode-block" id="get_stablehlo_bytecode"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_stablehlo_bytecode">[docs]</a><span class="k">def</span> <span class="nf">get_stablehlo_bytecode</span><span class="p">(</span><span class="n">tensors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<div class="viewcode-block" id="get_stablehlo_bytecode"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.get_stablehlo_bytecode">[docs]</a><span class="k">def</span> <span class="nf">get_stablehlo_bytecode</span><span class="p">(</span><span class="n">tensors</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Get StableHLO for the computation graph in bytecode format.</span>
 
 <span class="sd">  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.</span>
@@ -1490,7 +1517,7 @@
       <span class="n">tensors</span><span class="p">,</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[],</span> <span class="kc">True</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="wait_device_ops"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.wait_device_ops">[docs]</a><span class="k">def</span> <span class="nf">wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]):</span>
+<div class="viewcode-block" id="wait_device_ops"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.wait_device_ops">[docs]</a><span class="k">def</span> <span class="nf">wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Waits for all the async operations on the given devices to complete.</span>
 
 <span class="sd">  Args:</span>
@@ -1575,7 +1602,7 @@
           <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="optimizer_step"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.optimizer_step">[docs]</a><span class="k">def</span> <span class="nf">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">Optimizer</span><span class="p">,</span>
+<div class="viewcode-block" id="optimizer_step"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.optimizer_step">[docs]</a><span class="k">def</span> <span class="nf">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">Optimizer</span><span class="p">,</span>
                    <span class="n">barrier</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                    <span class="n">optimizer_args</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="p">{},</span>
                    <span class="n">groups</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1616,7 +1643,7 @@
   <span class="k">return</span> <span class="n">loss</span></div>
 
 
-<div class="viewcode-block" id="save"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.save">[docs]</a><span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<div class="viewcode-block" id="save"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.save">[docs]</a><span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
          <span class="n">file_or_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TextIO</span><span class="p">],</span>
          <span class="n">master_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
          <span class="n">global_master</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
@@ -1769,7 +1796,7 @@
   <span class="k">return</span> <span class="p">[</span><span class="nb">bytes</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">payloads</span><span class="p">]</span>
 
 
-<div class="viewcode-block" id="rendezvous"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.rendezvous">[docs]</a><span class="k">def</span> <span class="nf">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<div class="viewcode-block" id="rendezvous"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.rendezvous">[docs]</a><span class="k">def</span> <span class="nf">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                <span class="n">payload</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
                <span class="n">replicas</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Waits for all the mesh clients to reach the named rendezvous.</span>
@@ -1828,7 +1855,7 @@
   <span class="k">return</span> <span class="n">result</span>
 
 
-<div class="viewcode-block" id="mesh_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.mesh_reduce">[docs]</a><span class="k">def</span> <span class="nf">mesh_reduce</span><span class="p">(</span><span class="n">tag</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
+<div class="viewcode-block" id="mesh_reduce"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.mesh_reduce">[docs]</a><span class="k">def</span> <span class="nf">mesh_reduce</span><span class="p">(</span><span class="n">tag</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
                 <span class="n">reduce_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">ToXlaTensorArena</span><span class="p">]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an out-of-graph client mesh reduction.</span>
 
@@ -1860,7 +1887,7 @@
   <span class="k">return</span> <span class="n">reduce_fn</span><span class="p">(</span><span class="n">xldata</span><span class="p">)</span> <span class="k">if</span> <span class="n">xldata</span> <span class="k">else</span> <span class="n">cpu_data</span></div>
 
 
-<div class="viewcode-block" id="set_rng_state"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.set_rng_state">[docs]</a><span class="k">def</span> <span class="nf">set_rng_state</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="set_rng_state"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.set_rng_state">[docs]</a><span class="k">def</span> <span class="nf">set_rng_state</span><span class="p">(</span><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Sets the random number generator state.</span>
 
 <span class="sd">  Args:</span>
@@ -1873,7 +1900,7 @@
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_rng_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">if</span> <span class="n">device</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="get_rng_state"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_rng_state">[docs]</a><span class="k">def</span> <span class="nf">get_rng_state</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="get_rng_state"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.get_rng_state">[docs]</a><span class="k">def</span> <span class="nf">get_rng_state</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Gets the current running random number generator state.</span>
 
 <span class="sd">  Args:</span>
@@ -1915,7 +1942,7 @@
   <span class="n">bytes_limit</span><span class="p">:</span> <span class="nb">int</span>
 
 
-<div class="viewcode-block" id="get_memory_info"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_memory_info">[docs]</a><span class="k">def</span> <span class="nf">get_memory_info</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MemoryInfo</span><span class="p">:</span>
+<div class="viewcode-block" id="get_memory_info"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.get_memory_info">[docs]</a><span class="k">def</span> <span class="nf">get_memory_info</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MemoryInfo</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the device memory usage.</span>
 
 <span class="sd">  Args:</span>

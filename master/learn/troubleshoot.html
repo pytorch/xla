@@ -1,0 +1,1232 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Troubleshoot &mdash; PyTorch/XLA master documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Learn about TPUs" href="../accelerators/tpu.html" />
+    <link rel="prev" title="PJRT Runtime" href="pjrt.html" />
+  <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','');</script>
+    <!-- End Google Tag Manager -->
+  
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+
+          <li class="main-menu-item">
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Learn
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/get-started">
+                  <span class=dropdown-title>Get Started</span>
+                  <p>Run PyTorch locally or get started quickly with one of the supported cloud platforms</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials">
+                  <span class="dropdown-title">Tutorials</span>
+                  <p>Whats new in PyTorch tutorials</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/basics/intro.html">
+                  <span class="dropdown-title">Learn the Basics</span>
+                  <p>Familiarize yourself with PyTorch concepts and modules</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/recipes/recipes_index.html">
+                  <span class="dropdown-title">PyTorch Recipes</span>
+                  <p>Bite-size, ready-to-deploy PyTorch code examples</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/introyt.html">
+                  <span class="dropdown-title">Intro to PyTorch - YouTube Series</span>
+                  <p>Master PyTorch basics with our engaging YouTube tutorial series</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Ecosystem
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem">
+                  <span class="dropdown-title">Tools</span>
+                  <p>Learn about the tools and frameworks in the PyTorch Ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class=dropdown-title>Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class=dropdown-title>Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class=dropdown-title>Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
+                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                  <p>Award winners announced at this year's PyTorch Conference</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Edge
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/edge">
+                  <span class="dropdown-title">About PyTorch Edge</span>
+                  <p>Build innovative and privacy-aware AI experiences for edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
+                  <span class="dropdown-title">ExecuTorch</span>
+                  <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+              </div>
+            </div>  
+          </li>
+
+          <li class="main-menu-item">
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p>Explore the documentation for comprehensive guidance on how to use PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/pytorch-domains">
+                  <span class="dropdown-title">PyTorch Domains</span>
+                  <p>Read the PyTorch Domains documentation to learn more about domain-specific libraries</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Blogs & News 
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/blog/">
+                  <span class="dropdown-title">PyTorch Blog</span>
+                  <p>Catch up on the latest technical news and happenings</p>
+                </a>
+                 <a class="nav-dropdown-item" href="https://pytorch.org/community-blog">
+                  <span class="dropdown-title">Community Blog</span>
+                  <p>Stories from the PyTorch ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/videos">
+                  <span class="dropdown-title">Videos</span>
+                  <p>Learn about the latest PyTorch tutorials, new, and more </p>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                About
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn more about the PyTorch Foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
+                  <span class="dropdown-title">Governing Board</span>
+                  <p></p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li class="main-menu-item">
+            <div class="no-dropdown">
+              <a href="https://pytorch.org/join" data-cta="join">
+                Become a Member
+              </a>
+            </div>
+          </li>
+          <li>
+           <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="github-icon">
+             </a>
+           </div>
+          </li>
+          <!--- TODO: This block adds the search icon to the nav bar. We will enable it later. 
+          <li>
+            <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="search-icon">
+             </a>
+            </div>
+          </li>
+          --->
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  master (2.6.0+git543ccc8 )
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="xla-overview.html">Pytorch/XLA overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dynamic_shape.html">Dynamic shape</a></li>
+<li class="toctree-l1"><a class="reference internal" href="eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pjrt.html">PJRT Runtime</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshoot</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">How to do DistributedDataParallel(DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure a development environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="../index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+      <li>Troubleshoot</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/learn/troubleshoot.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          <!-- Google Tag Manager (noscript) -->
+          <noscript><iframe src="https://www.googletagmanager.com/ns.html?id="
+          height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+          <!-- End Google Tag Manager (noscript) -->
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <div class="section" id="troubleshoot">
+<h1>Troubleshoot<a class="headerlink" href="#troubleshoot" title="Permalink to this heading">¶</a></h1>
+<p>Note that the information in this section is subject to be removed in
+future releases of the <em>PyTorch/XLA</em> software, since many of them are
+peculiar to a given internal implementation which might change.</p>
+<div class="section" id="sanity-check">
+<h2>Sanity Check<a class="headerlink" href="#sanity-check" title="Permalink to this heading">¶</a></h2>
+<p>Before performing any in depth debugging, we want to do a sanity check
+on the installed PyTorch/XLA.</p>
+<div class="section" id="check-pytorch-xla-version">
+<h3>Check PyTorch/XLA Version<a class="headerlink" href="#check-pytorch-xla-version" title="Permalink to this heading">¶</a></h3>
+<p>PyTorch and PyTorch/XLA version should match. Check out our
+<a class="reference external" href="https://github.com/pytorch/xla#getting-started">README</a> for more
+detials on versions available.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>vm:~$<span class="w"> </span>python
+&gt;&gt;&gt;<span class="w"> </span>import<span class="w"> </span>torch
+&gt;&gt;&gt;<span class="w"> </span>import<span class="w"> </span>torch_xla
+&gt;&gt;&gt;<span class="w"> </span>print<span class="o">(</span>torch.__version__<span class="o">)</span>
+<span class="m">2</span>.1.0+cu121
+&gt;&gt;&gt;<span class="w"> </span>print<span class="o">(</span>torch_xla.__version__<span class="o">)</span>
+<span class="m">2</span>.1.0
+</pre></div>
+</div>
+</div>
+<div class="section" id="perform-a-simple-calculation">
+<h3>Perform A Simple Calculation<a class="headerlink" href="#perform-a-simple-calculation" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>vm:~$<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="nv">PJRT_DEVICE</span><span class="o">=</span>TPU
+vm:~$<span class="w"> </span>python3
+&gt;&gt;&gt;<span class="w"> </span>import<span class="w"> </span>torch
+&gt;&gt;&gt;<span class="w"> </span>import<span class="w"> </span>torch_xla.core.xla_model<span class="w"> </span>as<span class="w"> </span>xm
+&gt;&gt;&gt;<span class="w"> </span><span class="nv">t1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>torch.tensor<span class="o">(</span><span class="m">100</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span>xm.xla_device<span class="o">())</span>
+&gt;&gt;&gt;<span class="w"> </span><span class="nv">t2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>torch.tensor<span class="o">(</span><span class="m">200</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span>xm.xla_device<span class="o">())</span>
+&gt;&gt;&gt;<span class="w"> </span>print<span class="o">(</span>t1<span class="w"> </span>+<span class="w"> </span>t2<span class="o">)</span>
+tensor<span class="o">(</span><span class="m">300</span>,<span class="w"> </span><span class="nv">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="o">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="run-resnet-with-fake-data">
+<h3>Run Resnet With Fake Data<a class="headerlink" href="#run-resnet-with-fake-data" title="Permalink to this heading">¶</a></h3>
+<p>For nightly</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>vm:~$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/pytorch/xla.git
+vm:~$<span class="w"> </span>python<span class="w"> </span>xla/test/test_train_mp_imagenet.py<span class="w"> </span>--fake_data
+</pre></div>
+</div>
+<p>For release version <code class="docutils literal notranslate"><span class="pre">x.y</span></code>, you want to use the branch <code class="docutils literal notranslate"><span class="pre">rx.y</span></code>. For
+example if you installed 2.1 release, you should do</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>vm:~$<span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>r2.1<span class="w"> </span>https://github.com/pytorch/xla.git
+vm:~$<span class="w"> </span>python<span class="w"> </span>xla/test/test_train_mp_imagenet.py<span class="w"> </span>--fake_data
+</pre></div>
+</div>
+<p>If you can get the resnet to run we can conclude that torch_xla is
+installed correctly.</p>
+</div>
+</div>
+<div class="section" id="performance-debugging">
+<h2>Performance Debugging<a class="headerlink" href="#performance-debugging" title="Permalink to this heading">¶</a></h2>
+<p>To diagnose performance issues, we can use the execution metrics and
+counters provided by <em>PyTorch/XLA</em> The <strong>first thing</strong> to check when
+model is slow is to generate a metrics report.</p>
+<p>Metrics report is extremely helpful in diagnosing issues. Please try to
+include it in your bug report sent to us if you have it.</p>
+</div>
+<div class="section" id="pytorch-xla-debugging-tool">
+<h2>PyTorch/XLA Debugging Tool<a class="headerlink" href="#pytorch-xla-debugging-tool" title="Permalink to this heading">¶</a></h2>
+<p>You can enable the PyTorch/XLA debugging tool by setting
+<code class="docutils literal notranslate"><span class="pre">PT_XLA_DEBUG_LEVEL=2</span></code>, which provides a couple useful debugging
+features. You can also lower the debug level to <code class="docutils literal notranslate"><span class="pre">1</span></code> to slip the
+execution analysis.</p>
+<div class="section" id="perform-a-auto-metrics-analysis">
+<h3>Perform A Auto-Metrics Analysis<a class="headerlink" href="#perform-a-auto-metrics-analysis" title="Permalink to this heading">¶</a></h3>
+<p>The debugging tool will analyze the metrics report and provide a
+summary. Some example output would be</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pt-xla-profiler:<span class="w"> </span>CompileTime<span class="w"> </span>too<span class="w"> </span>frequent:<span class="w"> </span><span class="m">21</span><span class="w"> </span>counts<span class="w"> </span>during<span class="w"> </span><span class="m">11</span><span class="w"> </span>steps
+pt-xla-profiler:<span class="w"> </span>TransferFromDeviceTime<span class="w"> </span>too<span class="w"> </span>frequent:<span class="w"> </span><span class="m">11</span><span class="w"> </span>counts<span class="w"> </span>during<span class="w"> </span><span class="m">11</span><span class="w"> </span>steps
+pt-xla-profiler:<span class="w"> </span>Op<span class="o">(</span>s<span class="o">)</span><span class="w"> </span>not<span class="w"> </span>lowered:<span class="w"> </span>aten::_ctc_loss,<span class="w"> </span>aten::_ctc_loss_backward,<span class="w">  </span>Please<span class="w"> </span>open<span class="w"> </span>a<span class="w"> </span>GitHub<span class="w"> </span>issue<span class="w"> </span>with<span class="w"> </span>the<span class="w"> </span>above<span class="w"> </span>op<span class="w"> </span>lowering<span class="w"> </span>requests.
+pt-xla-profiler:<span class="w"> </span>CompileTime<span class="w"> </span>too<span class="w"> </span>frequent:<span class="w"> </span><span class="m">23</span><span class="w"> </span>counts<span class="w"> </span>during<span class="w"> </span><span class="m">12</span><span class="w"> </span>steps
+pt-xla-profiler:<span class="w"> </span>TransferFromDeviceTime<span class="w"> </span>too<span class="w"> </span>frequent:<span class="w"> </span><span class="m">12</span><span class="w"> </span>counts<span class="w"> </span>during<span class="w"> </span><span class="m">12</span><span class="w"> </span>steps
+</pre></div>
+</div>
+</div>
+<div class="section" id="compilation-execution-analysis">
+<h3>Compilation &amp; Execution Analysis<a class="headerlink" href="#compilation-execution-analysis" title="Permalink to this heading">¶</a></h3>
+<p>The debugging tool will analyze every compilation and execution for your
+model. Some example output would be:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span><span class="o">================================================================================</span>
+Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Compilation<span class="w"> </span>Cause
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>mark_step<span class="w"> </span><span class="k">in</span><span class="w"> </span>parallel<span class="w"> </span>loader<span class="w"> </span>at<span class="w"> </span>step<span class="w"> </span>end
+Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Graph<span class="w"> </span>Info:
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>Graph<span class="w"> </span>Hash:<span class="w"> </span>c74c3b91b855b2b123f833b0d5f86943
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>Number<span class="w"> </span>of<span class="w"> </span>Graph<span class="w"> </span>Inputs:<span class="w"> </span><span class="m">35</span>
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>Number<span class="w"> </span>of<span class="w"> </span>Graph<span class="w"> </span>Outputs:<span class="w"> </span><span class="m">107</span>
+Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Python<span class="w"> </span>Frame<span class="w"> </span>Triggered<span class="w"> </span>Execution:
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>mark_step<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055<span class="o">)</span>
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>next<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44<span class="o">)</span>
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>__next__<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32<span class="o">)</span>
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>train_loop_fn<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48<span class="o">)</span>
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>start_training<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:65<span class="o">)</span>
+Compilation<span class="w"> </span>Analysis:<span class="w">   </span>&lt;module&gt;<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:73<span class="o">)</span>
+Compilation<span class="w"> </span>Analysis:<span class="w"> </span>--------------------------------------------------------------------------------
+Compilation<span class="w"> </span>Analysis:<span class="w"> </span><span class="o">================================================================================</span>
+
+Post<span class="w"> </span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span><span class="o">================================================================================</span>
+Post<span class="w"> </span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Graph<span class="w"> </span>input<span class="w"> </span>size:<span class="w"> </span><span class="m">1</span>.548000<span class="w"> </span>GB
+Post<span class="w"> </span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Graph<span class="w"> </span>output<span class="w"> </span>size:<span class="w"> </span><span class="m">7</span>.922460<span class="w"> </span>GB
+Post<span class="w"> </span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Aliased<span class="w"> </span>Input<span class="w"> </span>size:<span class="w"> </span><span class="m">1</span>.547871<span class="w"> </span>GB
+Post<span class="w"> </span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Intermediate<span class="w"> </span>tensor<span class="w"> </span>size:<span class="w"> </span><span class="m">12</span>.124478<span class="w"> </span>GB
+Post<span class="w"> </span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span>Compiled<span class="w"> </span>program<span class="w"> </span>size:<span class="w"> </span><span class="m">0</span>.028210<span class="w"> </span>GB
+Post<span class="w"> </span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span>--------------------------------------------------------------------------------
+Post<span class="w"> </span>Compilation<span class="w"> </span>Analysis:<span class="w"> </span><span class="o">================================================================================</span>
+
+Execution<span class="w"> </span>Analysis:<span class="w"> </span><span class="o">================================================================================</span>
+Execution<span class="w"> </span>Analysis:<span class="w"> </span>Execution<span class="w"> </span>Cause
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>mark_step<span class="w"> </span><span class="k">in</span><span class="w"> </span>parallel<span class="w"> </span>loader<span class="w"> </span>at<span class="w"> </span>step<span class="w"> </span>end
+Execution<span class="w"> </span>Analysis:<span class="w"> </span>Graph<span class="w"> </span>Info:
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>Graph<span class="w"> </span>Hash:<span class="w"> </span>c74c3b91b855b2b123f833b0d5f86943
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>Number<span class="w"> </span>of<span class="w"> </span>Graph<span class="w"> </span>Inputs:<span class="w"> </span><span class="m">35</span>
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>Number<span class="w"> </span>of<span class="w"> </span>Graph<span class="w"> </span>Outputs:<span class="w"> </span><span class="m">107</span>
+Execution<span class="w"> </span>Analysis:<span class="w"> </span>Python<span class="w"> </span>Frame<span class="w"> </span>Triggered<span class="w"> </span>Execution:
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>mark_step<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/core/xla_model.py:1055<span class="o">)</span>
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>next<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:44<span class="o">)</span>
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>__next__<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/torch_xla/distributed/parallel_loader.py:32<span class="o">)</span>
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>train_loop_fn<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:48<span class="o">)</span>
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>start_training<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:65<span class="o">)</span>
+Execution<span class="w"> </span>Analysis:<span class="w">   </span>&lt;module&gt;<span class="w"> </span><span class="o">(</span>/workspaces/dk3/pytorch/xla/examples/train_decoder_only_base.py:73<span class="o">)</span>
+Execution<span class="w"> </span>Analysis:<span class="w"> </span>--------------------------------------------------------------------------------
+Execution<span class="w"> </span>Analysis:<span class="w"> </span><span class="o">================================================================================</span>
+</pre></div>
+</div>
+<p>Some common causes of Compilation/Executation are 1. User manually call
+<code class="docutils literal notranslate"><span class="pre">mark_step</span></code>. 2. <a class="reference external" href="https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51">Parallel
+loader</a>
+call <code class="docutils literal notranslate"><span class="pre">mark_step</span></code> for every x (configurable) batch. 3. Exiting a
+<a class="reference external" href="https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171">profiler StepTrace
+region</a>.</p>
+<ol class="arabic simple">
+<li><p>Dynamo decide to compile/execute the graph. 5. User trying to
+access(often due to logging) the value of a tensor before the
+<code class="docutils literal notranslate"><span class="pre">mark_step</span></code>.</p></li>
+</ol>
+<p>The executation caused by 1-4 are expected, and we want to avoid 5 by
+either reduce the frequency of accessing tensor values or manually add a
+<code class="docutils literal notranslate"><span class="pre">mark_step</span></code> before accessing.</p>
+<p>Users should expect to see this <code class="docutils literal notranslate"><span class="pre">Compilation</span> <span class="pre">Cause</span></code> +
+<code class="docutils literal notranslate"><span class="pre">Executation</span> <span class="pre">Cause</span></code> pairs for first couple steps. After the model
+stabilize users should expect to only see <code class="docutils literal notranslate"><span class="pre">Execution</span> <span class="pre">Cause</span></code>(you can
+disable execution analysis by <code class="docutils literal notranslate"><span class="pre">PT_XLA_DEBUG_LEVEL=1</span></code>). To use
+PyTorch/XLA efficiently, we expect the same models code to be run for
+every step and compilation only happen once for every graph. If you keep
+seeing <code class="docutils literal notranslate"><span class="pre">Compilation</span> <span class="pre">Cause</span></code>, you should try to dump the IR/HLO following
+<a class="reference external" href="#common-debugging-environment-variables-combinations">this section</a> and
+compare the graphs for each step and understand the source of the
+differences.</p>
+<p>Following section will explain how to get and understand a more detail
+metrics report.</p>
+</div>
+</div>
+<div class="section" id="get-a-metrics-report">
+<h2>Get A Metrics Report<a class="headerlink" href="#get-a-metrics-report" title="Permalink to this heading">¶</a></h2>
+<p>Put the following line in your program to generate a report:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
+
+<span class="c1"># For short report that only contains a few key metrics.</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">short_metrics_report</span><span class="p">())</span>
+<span class="c1"># For full report that includes all metrics.</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">metrics_report</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="understand-the-metrics-report">
+<h2>Understand The Metrics Report<a class="headerlink" href="#understand-the-metrics-report" title="Permalink to this heading">¶</a></h2>
+<p>The report includes things like: - how many time we issue <em>XLA</em>
+compilations and time spent on issuing. - how many times we execute and
+time spent on execution - how many device data handles we create/destroy
+etc.</p>
+<p>This information is reported in terms of percentiles of the samples. An
+example is:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>Metric:<span class="w"> </span>CompileTime
+<span class="w">  </span>TotalSamples:<span class="w"> </span><span class="m">202</span>
+<span class="w">  </span>Counter:<span class="w"> </span>06m09s401ms746.001us
+<span class="w">  </span>ValueRate:<span class="w"> </span>778ms572.062us<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Rate:<span class="w"> </span><span class="m">0</span>.425201<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Percentiles:<span class="w"> </span><span class="m">1</span>%<span class="o">=</span>001ms32.778us<span class="p">;</span><span class="w"> </span><span class="m">5</span>%<span class="o">=</span>001ms61.283us<span class="p">;</span><span class="w"> </span><span class="m">10</span>%<span class="o">=</span>001ms79.236us<span class="p">;</span><span class="w"> </span><span class="m">20</span>%<span class="o">=</span>001ms110.973us<span class="p">;</span><span class="w"> </span><span class="m">50</span>%<span class="o">=</span>001ms228.773us<span class="p">;</span><span class="w"> </span><span class="m">80</span>%<span class="o">=</span>001ms339.183us<span class="p">;</span><span class="w"> </span><span class="m">90</span>%<span class="o">=</span>001ms434.305us<span class="p">;</span><span class="w"> </span><span class="m">95</span>%<span class="o">=</span>002ms921.063us<span class="p">;</span><span class="w"> </span><span class="m">99</span>%<span class="o">=</span>21s102ms853.173us
+</pre></div>
+</div>
+<p>We also provide counters, which are named integer variables which track
+internal software status. For example:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>Counter:<span class="w"> </span>CachedSyncTensors
+<span class="w">  </span>Value:<span class="w"> </span><span class="m">395</span>
+</pre></div>
+</div>
+<p>In this report, any counter that starts with <code class="docutils literal notranslate"><span class="pre">aten::</span></code> indicates a
+context switch between the XLA device and CPU, which can be a potential
+performance optimization area in the model code.</p>
+<p>Counters are useful to understand which operations are routed back to
+the CPU engine of <em>PyTorch</em>. They are fully qualified with their C++
+namespace:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Counter</span><span class="p">:</span> <span class="n">aten</span><span class="p">::</span><span class="n">nonzero</span>
+  <span class="n">Value</span><span class="p">:</span> <span class="mi">33</span>
+</pre></div>
+</div>
+<p>If you see <code class="docutils literal notranslate"><span class="pre">aten::</span></code> ops other than <code class="docutils literal notranslate"><span class="pre">nonzero</span></code> and <code class="docutils literal notranslate"><span class="pre">_local_scalar_dense</span></code>,
+that usually means a missing lowering in PyTorch/XLA. Feel free to open
+a feature request for it on <a class="reference external" href="https://github.com/pytorch/xla/issues">GitHub
+issues</a>.</p>
+</div>
+<div class="section" id="clear-the-metrics-report">
+<h2>Clear The Metrics Report<a class="headerlink" href="#clear-the-metrics-report" title="Permalink to this heading">¶</a></h2>
+<p>If you want to clear the metrics between steps/epochs, you can use</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
+
+<span class="n">met</span><span class="o">.</span><span class="n">clear_all</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="pytorch-xla-dynamo-debugging-tool">
+<h2>PyTorch/XLA + Dynamo Debugging Tool<a class="headerlink" href="#pytorch-xla-dynamo-debugging-tool" title="Permalink to this heading">¶</a></h2>
+<p>You can enable the PyTorch/XLA + Dynamo debugging tool by setting
+<code class="docutils literal notranslate"><span class="pre">XLA_DYNAMO_DEBUG=1</span></code>.</p>
+</div>
+<div class="section" id="performance-profiling">
+<h2>Performance Profiling<a class="headerlink" href="#performance-profiling" title="Permalink to this heading">¶</a></h2>
+<p>To profile your workload in depth to understand bottlenecks please check
+the following resources:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm">Official
+tutorial</a></p></li>
+<li><p><a class="reference external" href="https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb">Colab
+notebook</a></p></li>
+<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py">Sample MNIST training script with
+profiling</a></p></li>
+<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/scripts/capture_profile.py">Utility script for capturing performance
+profiles</a></p></li>
+</ul>
+</div>
+<div class="section" id="simple-benchmarking">
+<h2>Simple Benchmarking<a class="headerlink" href="#simple-benchmarking" title="Permalink to this heading">¶</a></h2>
+<p>Take a look at:</p>
+<p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/train_resnet_benchmark.py">examples/train_resnet_benchmark.py</a>
+for how to benchmark a PyTorch/XLA model.</p>
+</div>
+<div class="section" id="known-performance-caveats">
+<h2>Known Performance Caveats<a class="headerlink" href="#known-performance-caveats" title="Permalink to this heading">¶</a></h2>
+<p>PyTorch/XLA behaves semantically like regular PyTorch and XLA tensors
+share the full tensor interface with CPU &amp; GPU tensors. However,
+constraints in XLA/hardware and the lazy evaluation model suggest
+certain patterns might result in bad performance.</p>
+<p>If your model shows bad performance, keep in mind the following caveats:</p>
+<ol class="arabic">
+<li><p><strong>XLA/TPU yield degraded performance with too many recompilations.</strong></p>
+<p>XLA compilation is expensive. PyTorch/XLA automatically recompiles
+the graph every time new shapes are encountered. Usually models
+should stabilize within a few steps and you can see huge speedup for
+the rest of training.</p>
+<p>In order to avoid recompilations, not only must shapes be constant,
+but computations across XLA devices in all hosts should also be
+constant.</p>
+<p><em>Possible sources</em>:</p>
+<ul class="simple">
+<li><p>Direct or indirect uses of <code class="docutils literal notranslate"><span class="pre">nonzero</span></code> introduce dynamic shapes;
+for example, masked indexing <code class="docutils literal notranslate"><span class="pre">base[index]</span></code> where <code class="docutils literal notranslate"><span class="pre">index</span></code> is a
+mask tensor.</p></li>
+<li><p>Loops with a different number of iterations between steps can
+result in different execution graphs, thus require
+recompilations.</p></li>
+</ul>
+<p><em>Solution</em>:</p>
+<ul class="simple">
+<li><p>Tensor shapes should be the same between iterations, or a low
+number of shape variations should be used.</p></li>
+<li><p>Pad tensors to fixed sizes when possible.</p></li>
+</ul>
+</li>
+<li><p><strong>Certain operations don’t have native translations to XLA.</strong></p>
+<p>For these operations PyTorch/XLA automatically transfers to the CPU
+memory, evaluates on CPU, and transfers the result back to the XLA
+device. Doing too many such operations during the training step can
+lead to significant slowdowns.</p>
+<p><em>Possible sources</em>:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">item()</span></code> operation explicitly asks to evaluate the result.
+Don’t use it unless it’s necessary.</p></li>
+</ul>
+<p><em>Solution</em>:</p>
+<ul>
+<li><p>For most ops we can lower them to XLA to fix it. Checkout
+<a class="reference external" href="#metrics-report">metrics report section</a> to find out the
+missing ops and open a feature request on
+<a class="reference external" href="https://github.com/pytorch/xla/issues">GitHub</a>.</p></li>
+<li><p>Even when a PyTorch tensor is known as a scalar, avoid using
+tensor.item()`. Keep it as a tensor and use tensor operations
+on it.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">torch.where</span></code> to substitute control flow when applicable.
+E.g. The control flow with <code class="docutils literal notranslate"><span class="pre">item()</span></code> used in
+<a class="reference external" href="https://github.com/pytorch/pytorch/blob/de19eeee99a2a282fc441f637b23d8e50c75ecd1/torch/nn/utils/clip_grad.py#L33">clip_grad_norm</a>
+is problematic and impacts performance, so we have
+<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_patches/X10-clip_grad.diff">patched</a>
+<code class="docutils literal notranslate"><span class="pre">clip_grad_norm_</span></code> by calling <code class="docutils literal notranslate"><span class="pre">torch.where</span></code> instead, which gives
+us a dramatic performance improvement.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="o">...</span>
+<span class="k">else</span><span class="p">:</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">device</span>
+  <span class="n">total_norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">([],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span> <span class="k">if</span> <span class="n">parameters</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+    <span class="n">param_norm</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">norm_type</span><span class="p">)</span> <span class="o">**</span> <span class="n">norm_type</span>
+    <span class="n">total_norm</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span><span class="n">param_norm</span><span class="p">)</span>
+  <span class="n">total_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_norm</span> <span class="o">**</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="n">norm_type</span><span class="p">))</span>
+<span class="n">clip_coef</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">max_norm</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">total_norm</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+  <span class="n">p</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">clip_coef</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">,</span> <span class="n">clip_coef</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)))</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+<li><p><strong>Iterators in ``torch_xla.distributed.data_parallel`` may drop
+the last few batches in the input iterator.</strong></p>
+<p>This is to make sure we do the same amount of work on all XLA
+devices.</p>
+<p><em>Solution</em>:</p>
+<ul class="simple">
+<li><p>When dataset is small, and there are too few steps, this may
+result in a no-op epoch. Therefore, it is better to use small
+batch sizes in those cases.</p></li>
+</ul>
+</li>
+</ol>
+</div>
+<div class="section" id="xla-tensor-quirks">
+<h2>XLA Tensor Quirks<a class="headerlink" href="#xla-tensor-quirks" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p><strong>XLA tensor internals are opaque.</strong> XLA tensors always appear to be
+contiguous and without storage. Networks should not try to check the
+strides of XLA tensors.</p></li>
+<li><p><strong>XLA tensors should be moved to the CPU before saving them.</strong>
+Saving XLA tensors directly causes them to be loaded back on the
+device(s) they were saved from. If a device is unavailable at load
+time then the load will fail. Moving XLA tensors to the CPU before
+saving them lets you decide which device(s) to put the loaded
+tensors on. This is necessary if you want to load the tensors on a
+machine without XLA devices. Care should be taken moving the XLA
+tensors to the CPU before saving them, however, as moving tensors
+across device types does not preserve view relationships. Instead,
+views should be reconstructed as necessary after the tensors are
+loaded.</p></li>
+<li><p><strong>Copying an XLA Tensor with Python’s copy.copy returns a deep copy,
+not a shallow copy.</strong> Use a view of an XLA tensor to get a shallow
+copy of it.</p></li>
+<li><p><strong>Handling shared weights.</strong> Modules can share weights by setting
+the Parameters of one module to another. This “tying” of module
+weights should be done <strong>AFTER</strong> the modules are moved to an XLA
+device. Otherwise two independent copies of the shared tensor will
+be made on the XLA device.</p></li>
+</ol>
+</div>
+<div class="section" id="more-debugging-tools">
+<h2>More Debugging Tools<a class="headerlink" href="#more-debugging-tools" title="Permalink to this heading">¶</a></h2>
+<p>We don’t expect users to use tools in this section to debug their
+models. But we might ask for them when you submit a bug report since
+they provide additional information that metrics report doesn’t have.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">print(torch_xla._XLAC._get_xla_tensors_text([res]))</span></code> where <code class="docutils literal notranslate"><span class="pre">res</span></code> is
+the result tensor prints out the IR.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">print(torch_xla._XLAC._get_xla_tensors_hlo([res]))</span></code> where <code class="docutils literal notranslate"><span class="pre">res</span></code> is
+the result tensor prints out the generated XLA HLO.</p></li>
+</ul>
+<p>Note these functions must be called prior to <code class="docutils literal notranslate"><span class="pre">mark_step()</span></code>, otherwise
+the tensor will already be materialized.</p>
+<div class="section" id="environment-variables">
+<h3>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this heading">¶</a></h3>
+<p>There are also a number of environment variables which control the
+behavior of the <em>PyTorch/XLA</em> software stack.</p>
+<p>Setting such variables will cause different degrees of performance
+degradation, so they should only be enabled for debugging.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_IR_DEBUG</span></code>: Enables the <em>Python</em> stack trace to be captured
+where creating IR nodes, hence allowing to understand which
+<em>PyTorch</em> operation was responsible for generating the IR.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_HLO_DEBUG</span></code>: Enables the <em>Python</em> stack frame captured when
+<em>XLA_IR_DEBUG</em> is active, to be propagated to the <em>XLA</em> <em>HLO</em>
+metadata.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_SAVE_TENSORS_FILE</span></code>: The path to a file which will be used to
+dump the IR graphs during execution. Note that the file can become
+really big if the option is left enabled and the <em>PyTorch</em> program
+let run for long time. The graphs are appended to the file, so to
+have a clean sheet from run to run, the file should be explicitly
+removed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_SAVE_TENSORS_FMT</span></code>: The format of the graphs stored within the
+<em>XLA_SAVE_TENSORS_FILE</em> file. Can be <code class="docutils literal notranslate"><span class="pre">text</span></code> (the default), <code class="docutils literal notranslate"><span class="pre">dot</span></code>
+(the <em>Graphviz</em> format) or <code class="docutils literal notranslate"><span class="pre">hlo</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_FLAGS=--xla_dump_to</span></code>: If set to <code class="docutils literal notranslate"><span class="pre">=/tmp/dir_name</span></code>, XLA compiler
+will dump the unoptimized and optimzed HLO per compilation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_METRICS_FILE</span></code>: If set, the path to a local file where the
+internal metrics will be saved at every step. Metrics will be
+appended to the file, if already existing.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_SAVE_HLO_FILE</span></code>: If set, the path to a local file where, in case
+of compilation/execution error, the offending HLO graph will be
+saved.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_SYNC_WAIT</span></code>: Forces the XLA tensor sync operation to wait for
+its completion, before moving to the next step.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_EAGER_DEBUG_MODE</span></code>: Forces the XLA tensor to execute
+eagerly, meaning compile and execute the torch operations one by
+one. This is useful to bypass the long compilation time but overall
+step time will be a lot slower and memory usage will be higher since
+all compiler optimizaiton will be skipped.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TF_CPP_LOG_THREAD_ID</span></code>: If set to 1, the TF logs will show the
+thread ID helping with debugging multithreaded processes.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TF_CPP_VMODULE</span></code>: Environment variable used for TF VLOGs and takes
+the form of <code class="docutils literal notranslate"><span class="pre">TF_CPP_VMODULE=name=value,...</span></code>. Note that for VLOGs you
+must set <code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL=0</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL</span></code>: Level to print messages for.
+<code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL=0</span></code> will turn on INFO logging,
+<code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL=1</span></code> WARNING and so on. Our PyTorch/XLA
+<code class="docutils literal notranslate"><span class="pre">TF_VLOG</span></code> uses <code class="docutils literal notranslate"><span class="pre">tensorflow::INFO</span></code> level by default so to see VLOGs
+set <code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL=0</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_DUMP_HLO_GRAPH</span></code>: If set to <code class="docutils literal notranslate"><span class="pre">=1</span></code> in case of a compilation or
+execution error the offending HLO graph will be dumped as part of
+the runtime error raised by <code class="docutils literal notranslate"><span class="pre">xla_util.cc</span></code>.</p></li>
+</ul>
+</div>
+<div class="section" id="common-debugging-environment-variables-combinations">
+<h3>Common Debugging Environment Variables Combinations<a class="headerlink" href="#common-debugging-environment-variables-combinations" title="Permalink to this heading">¶</a></h3>
+<ul>
+<li><p>Record the graph execution in the IR format</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_IR_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_HLO_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_SAVE_TENSORS_FMT</span><span class="o">=</span><span class="s2">&quot;text&quot;</span> <span class="n">XLA_SAVE_TENSORS_FILE</span><span class="o">=</span><span class="s2">&quot;/tmp/save1.ir&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p>Record the graph execution in the HLO format</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_IR_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_HLO_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_SAVE_TENSORS_FMT</span><span class="o">=</span><span class="s2">&quot;hlo&quot;</span> <span class="n">XLA_SAVE_TENSORS_FILE</span><span class="o">=</span><span class="s2">&quot;/tmp/save1.hlo&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p>Show debugging VLOG for runtime and graph compilation/execution</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">TF_CPP_MIN_LOG_LEVEL</span><span class="o">=</span><span class="mi">0</span> <span class="n">TF_CPP_VMODULE</span><span class="o">=</span><span class="s2">&quot;xla_graph_executor=5,pjrt_computation_client=3&quot;</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="reproducing-pytorch-xla-ci-cd-unit-test-failures">
+<h3>Reproducing PyTorch/XLA CI/CD unit test failures.<a class="headerlink" href="#reproducing-pytorch-xla-ci-cd-unit-test-failures" title="Permalink to this heading">¶</a></h3>
+<p>You may see some test failures for a PR such as:</p>
+<p>To execute this test, run the following from the base repo dir:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTORCH_TEST_WITH_SLOW</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>../test/test_torch.py<span class="w"> </span>-k<span class="w"> </span>test_put_xla_uint8
+</pre></div>
+</div>
+<p>Running this directly in the command line does not work. You need to set
+the environment variable <code class="docutils literal notranslate"><span class="pre">TORCH_TEST_DEVICES</span></code> to your local
+<code class="docutils literal notranslate"><span class="pre">pytorch/xla/test/pytorch_test_base.py</span></code>. For example:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">TORCH_TEST_DEVICES</span><span class="o">=</span>/path/to/pytorch/xla/test/pytorch_test_base.py<span class="w"> </span><span class="nv">PYTORCH_TEST_WITH_SLOW</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>../test/test_torch.py<span class="w"> </span>-k<span class="w"> </span>test_put_xla_uint8
+</pre></div>
+</div>
+<p>should work.</p>
+</div>
+</div>
+</div>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../accelerators/tpu.html" class="btn btn-neutral float-right" title="Learn about TPUs" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="pjrt.html" class="btn btn-neutral" title="PJRT Runtime" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">Troubleshoot</a><ul>
+<li><a class="reference internal" href="#sanity-check">Sanity Check</a><ul>
+<li><a class="reference internal" href="#check-pytorch-xla-version">Check PyTorch/XLA Version</a></li>
+<li><a class="reference internal" href="#perform-a-simple-calculation">Perform A Simple Calculation</a></li>
+<li><a class="reference internal" href="#run-resnet-with-fake-data">Run Resnet With Fake Data</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#performance-debugging">Performance Debugging</a></li>
+<li><a class="reference internal" href="#pytorch-xla-debugging-tool">PyTorch/XLA Debugging Tool</a><ul>
+<li><a class="reference internal" href="#perform-a-auto-metrics-analysis">Perform A Auto-Metrics Analysis</a></li>
+<li><a class="reference internal" href="#compilation-execution-analysis">Compilation &amp; Execution Analysis</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#get-a-metrics-report">Get A Metrics Report</a></li>
+<li><a class="reference internal" href="#understand-the-metrics-report">Understand The Metrics Report</a></li>
+<li><a class="reference internal" href="#clear-the-metrics-report">Clear The Metrics Report</a></li>
+<li><a class="reference internal" href="#pytorch-xla-dynamo-debugging-tool">PyTorch/XLA + Dynamo Debugging Tool</a></li>
+<li><a class="reference internal" href="#performance-profiling">Performance Profiling</a></li>
+<li><a class="reference internal" href="#simple-benchmarking">Simple Benchmarking</a></li>
+<li><a class="reference internal" href="#known-performance-caveats">Known Performance Caveats</a></li>
+<li><a class="reference internal" href="#xla-tensor-quirks">XLA Tensor Quirks</a></li>
+<li><a class="reference internal" href="#more-debugging-tools">More Debugging Tools</a><ul>
+<li><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
+<li><a class="reference internal" href="#common-debugging-environment-variables-combinations">Common Debugging Environment Variables Combinations</a></li>
+<li><a class="reference internal" href="#reproducing-pytorch-xla-ci-cd-unit-test-failures">Reproducing PyTorch/XLA CI/CD unit test failures.</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
+         <script src="../_static/sphinx_highlight.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">Stay up to date</li>
+            <li><a href="https://www.facebook.com/pytorch" target="_blank">Facebook</a></li>
+            <li><a href="https://twitter.com/pytorch" target="_blank">Twitter</a></li>
+            <li><a href="https://www.youtube.com/pytorch" target="_blank">YouTube</a></li>
+            <li><a href="https://www.linkedin.com/company/pytorch" target="_blank">LinkedIn</a></li>
+          </ul>  
+          </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">PyTorch Podcasts</li>
+            <li><a href="https://open.spotify.com/show/6UzHKeiy368jKfQMKKvJY5" target="_blank">Spotify</a></li>
+            <li><a href="https://podcasts.apple.com/us/podcast/pytorch-developer-podcast/id1566080008" target="_blank">Apple</a></li>
+            <li><a href="https://www.google.com/podcasts?feed=aHR0cHM6Ly9mZWVkcy5zaW1wbGVjYXN0LmNvbS9PQjVGa0lsOA%3D%3D" target="_blank">Google</a></li>
+            <li><a href="https://music.amazon.com/podcasts/7a4e6f0e-26c2-49e9-a478-41bd244197d0/PyTorch-Developer-Podcast?" target="_blank">Amazon</a></li>
+          </ul>
+         </div>
+        </div>
+        
+        <div class="privacy-policy">
+          <ul>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/terms/" target="_blank">Terms</a></li>
+            <li class="privacy-policy-links">|</li>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/privacy-policy/" target="_blank">Privacy</a></li>
+          </ul>
+        </div>
+        <div class="copyright">
+        <p>© Copyright The Linux Foundation. The PyTorch Foundation is a project of The Linux Foundation.
+          For web site terms of use, trademark policy and other policies applicable to The PyTorch Foundation please see
+          <a href="https://www.linuxfoundation.org/policies/">www.linuxfoundation.org/policies/</a>. The PyTorch Foundation supports the PyTorch open source
+          project, which has been established as PyTorch Project a Series of LF Projects, LLC. For policies applicable to the PyTorch Project a Series of LF Projects, LLC,
+          please see <a href="https://www.lfprojects.org/policies/">www.lfprojects.org/policies/</a>.</p>
+      </div>
+     </div>
+
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+           <li class="resources-mobile-menu-title">
+             <a>Learn</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/get-started">Get Started</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials">Tutorials</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/basics/intro.html">Learn the Basics</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/recipes/recipes_index.html">PyTorch Recipes</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/introyt.html">Introduction to PyTorch - YouTube Series</a>
+             </li>
+           </ul>
+           <li class="resources-mobile-menu-title">
+             <a>Ecosystem</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/ecosystem">Tools</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/#community-module">Community</a>
+             </li>
+             <li>
+               <a href="https://discuss.pytorch.org/">Forums</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/resources">Developer Resources</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Edge</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/edge">About PyTorch Edge</a>
+             </li>
+             
+             <li>
+               <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Docs</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/pytorch-domains">PyTorch Domains</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            <a>Blog & News</a>
+          </li>
+            
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/blog/">PyTorch Blog</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/community-blog">Community Blog</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/videos">Videos</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/community-stories">Community Stories</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/events">Events</a>
+            </li>
+          </ul>
+          
+          <li class="resources-mobile-menu-title">
+            <a>About</a>
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+          </ul>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>

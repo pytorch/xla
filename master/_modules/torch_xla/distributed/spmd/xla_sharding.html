@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git8ec552d )
+                  master (2.6.0+git543ccc8 )
                 </div>
               
             
@@ -293,22 +293,49 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../index.html">PyTorch/XLA documentation</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Docs</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../debug.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../eager_mode.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../gpu.html">How to run with PyTorch/XLA:GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../multi_process_distributed.html">How to do DistributedDataParallel(DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../quantized_ops.html">Quantized Operations for XLA device (Experimental feature)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../runtime.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../spmd.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../spmd.html#fully-sharded-data-parallel-fsdp-via-spmd">Fully Sharded Data Parallel(FSDP) via SPMD</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../spmd.html#pytorch-xla-spmd-advanced-topics">PyTorch/XLA SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../spmd.html#distributed-checkpointing">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../torch_compile.html">TorchDynamo(torch.compile) integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../learn/xla-overview.html">Pytorch/XLA overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../learn/api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../learn/dynamic_shape.html">Dynamic shape</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../learn/pjrt.html">PJRT Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../learn/troubleshoot.html">Troubleshoot</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../accelerators/gpu.html">Learn about GPUs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../features/pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../features/stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../features/triton.html">Custom GPU Kernels via Triton</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/ddp.html">How to do DistributedDataParallel(DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contribute/configure-environment.html">Configure a development environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contribute/codegen_migration.html">Codegen migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contribute/plugins.html">Custom Hardware Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
 </ul>
 
             
@@ -401,7 +428,7 @@
 <span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">IntEnum</span>
 
 
-<div class="viewcode-block" id="Mesh"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.Mesh">[docs]</a><span class="k">class</span> <span class="nc">Mesh</span><span class="p">:</span>
+<div class="viewcode-block" id="Mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.Mesh">[docs]</a><span class="k">class</span> <span class="nc">Mesh</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Describe the logical XLA device topology mesh and the underlying resources.</span>
 
 <span class="sd">  Args:</span>
@@ -513,7 +540,7 @@
 <span class="n">_GLOBAL_MESH</span><span class="p">:</span> <span class="n">Mesh</span> <span class="o">=</span> <span class="kc">None</span>
 
 
-<div class="viewcode-block" id="set_global_mesh"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.set_global_mesh">[docs]</a><span class="k">def</span> <span class="nf">set_global_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">):</span>
+<div class="viewcode-block" id="set_global_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.set_global_mesh">[docs]</a><span class="k">def</span> <span class="nf">set_global_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Set the global mesh that can be used for the current process.</span>
 
@@ -530,7 +557,7 @@
   <span class="n">_GLOBAL_MESH</span> <span class="o">=</span> <span class="n">mesh</span></div>
 
 
-<div class="viewcode-block" id="get_global_mesh"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.get_global_mesh">[docs]</a><span class="k">def</span> <span class="nf">get_global_mesh</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mesh</span><span class="p">]:</span>
+<div class="viewcode-block" id="get_global_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.get_global_mesh">[docs]</a><span class="k">def</span> <span class="nf">get_global_mesh</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mesh</span><span class="p">]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Get the global mesh for the current process.</span>
 
@@ -546,7 +573,7 @@
   <span class="k">return</span> <span class="n">_GLOBAL_MESH</span></div>
 
 
-<div class="viewcode-block" id="get_1d_mesh"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.get_1d_mesh">[docs]</a><span class="k">def</span> <span class="nf">get_1d_mesh</span><span class="p">(</span><span class="n">axis_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
+<div class="viewcode-block" id="get_1d_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.get_1d_mesh">[docs]</a><span class="k">def</span> <span class="nf">get_1d_mesh</span><span class="p">(</span><span class="n">axis_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Helper function to return the mesh with all devices in one dimension.</span>
 
@@ -576,7 +603,7 @@
 
 
 <span class="c1"># HybridDevice class has been inspired from jax&#39;s mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ</span>
-<div class="viewcode-block" id="HybridMesh"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.HybridMesh">[docs]</a><span class="k">class</span> <span class="nc">HybridMesh</span><span class="p">(</span><span class="n">Mesh</span><span class="p">):</span>
+<div class="viewcode-block" id="HybridMesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.HybridMesh">[docs]</a><span class="k">class</span> <span class="nc">HybridMesh</span><span class="p">(</span><span class="n">Mesh</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Creates a hybrid device mesh of devices connected with ICI and DCN networks.</span>
 <span class="sd">    The shape of logical mesh should be ordered by increasing network-intensity</span>
 <span class="sd">    e.g. [replica, data, model] where mdl has the most network communication</span>
@@ -959,7 +986,7 @@
   <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="mark_sharding"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.mark_sharding">[docs]</a><span class="k">def</span> <span class="nf">mark_sharding</span><span class="p">(</span>
+<div class="viewcode-block" id="mark_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.mark_sharding">[docs]</a><span class="k">def</span> <span class="nf">mark_sharding</span><span class="p">(</span>
     <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
     <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1011,7 +1038,7 @@
   <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="clear_sharding"><a class="viewcode-back" href="../../../../index.html#torch_xla.distributed.spmd.clear_sharding">[docs]</a><span class="k">def</span> <span class="nf">clear_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="clear_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.clear_sharding">[docs]</a><span class="k">def</span> <span class="nf">clear_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Clear sharding annotation from the input tensor and return a `cpu` casted tensor. This</span>
 <span class="sd">  is a in place operation but will also return the same torch.Tensor back.</span>

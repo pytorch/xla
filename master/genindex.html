@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git8ec552d )
+                  master (2.6.0+git543ccc8 )
                 </div>
               
             
@@ -293,22 +293,49 @@
               
             
             
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="index.html">PyTorch/XLA documentation</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Docs</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="debug.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="eager_mode.html">Eager Mode + Compile API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="gpu.html">How to run with PyTorch/XLA:GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="multi_process_distributed.html">How to do DistributedDataParallel(DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations for XLA device (Experimental feature)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="runtime.html">PJRT Runtime</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd.html#fully-sharded-data-parallel-fsdp-via-spmd">Fully Sharded Data Parallel(FSDP) via SPMD</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd.html#pytorch-xla-spmd-advanced-topics">PyTorch/XLA SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd.html#distributed-checkpointing">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="torch_compile.html">TorchDynamo(torch.compile) integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learn/xla-overview.html">Pytorch/XLA overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learn/api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learn/dynamic_shape.html">Dynamic shape</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learn/pjrt.html">PJRT Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="learn/troubleshoot.html">Troubleshoot</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="accelerators/gpu.html">Learn about GPUs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features/triton.html">Custom GPU Kernels via Triton</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/ddp.html">How to do DistributedDataParallel(DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contribute/configure-environment.html">Configure a development environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contribute/codegen_migration.html">Codegen migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contribute/plugins.html">Custom Hardware Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
 </ul>
 
             
@@ -408,17 +435,17 @@
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.add_step_closure">add_step_closure() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.add_step_closure">add_step_closure() (in module torch_xla.core.xla_model)</a>
 </li>
-      <li><a href="index.html#torch_xla.runtime.addressable_device_count">addressable_device_count() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.addressable_device_count">addressable_device_count() (in module torch_xla.runtime)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.all_gather">all_gather() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.all_gather">all_gather() (in module torch_xla.core.xla_model)</a>
 </li>
-      <li><a href="index.html#torch_xla.core.xla_model.all_reduce">all_reduce() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.all_reduce">all_reduce() (in module torch_xla.core.xla_model)</a>
 </li>
-      <li><a href="index.html#torch_xla.core.xla_model.all_to_all">all_to_all() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.all_to_all">all_to_all() (in module torch_xla.core.xla_model)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -426,15 +453,15 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.spmd.clear_sharding">clear_sharding() (in module torch_xla.distributed.spmd)</a>
+      <li><a href="learn/api-guide.html#torch_xla.distributed.spmd.clear_sharding">clear_sharding() (in module torch_xla.distributed.spmd)</a>
 </li>
-      <li><a href="index.html#torch_xla.compile">compile() (in module torch_xla)</a>
+      <li><a href="learn/api-guide.html#torch_xla.compile">compile() (in module torch_xla)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.debug.metrics.counter_names">counter_names() (in module torch_xla.debug.metrics)</a>
+      <li><a href="learn/api-guide.html#torch_xla.debug.metrics.counter_names">counter_names() (in module torch_xla.debug.metrics)</a>
 </li>
-      <li><a href="index.html#torch_xla.debug.metrics.counter_value">counter_value() (in module torch_xla.debug.metrics)</a>
+      <li><a href="learn/api-guide.html#torch_xla.debug.metrics.counter_value">counter_value() (in module torch_xla.debug.metrics)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -442,15 +469,15 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.device">device() (in module torch_xla)</a>
+      <li><a href="learn/api-guide.html#torch_xla.device">device() (in module torch_xla)</a>
 </li>
-      <li><a href="index.html#torch_xla.device_count">device_count() (in module torch_xla)</a>
+      <li><a href="learn/api-guide.html#torch_xla.device_count">device_count() (in module torch_xla)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.device_type">device_type() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.device_type">device_type() (in module torch_xla.runtime)</a>
 </li>
-      <li><a href="index.html#torch_xla.devices">devices() (in module torch_xla)</a>
+      <li><a href="learn/api-guide.html#torch_xla.devices">devices() (in module torch_xla)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -458,7 +485,7 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.experimental.eager_mode">eager_mode() (in module torch_xla.experimental)</a>
+      <li><a href="learn/api-guide.html#torch_xla.experimental.eager_mode">eager_mode() (in module torch_xla.experimental)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -466,27 +493,27 @@
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.spmd.get_1d_mesh">get_1d_mesh() (in module torch_xla.distributed.spmd)</a>
+      <li><a href="learn/api-guide.html#torch_xla.distributed.spmd.get_1d_mesh">get_1d_mesh() (in module torch_xla.distributed.spmd)</a>
 </li>
-      <li><a href="index.html#torch_xla.distributed.spmd.get_global_mesh">get_global_mesh() (in module torch_xla.distributed.spmd)</a>
+      <li><a href="learn/api-guide.html#torch_xla.distributed.spmd.get_global_mesh">get_global_mesh() (in module torch_xla.distributed.spmd)</a>
 </li>
-      <li><a href="index.html#torch_xla.runtime.get_master_ip">get_master_ip() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.get_master_ip">get_master_ip() (in module torch_xla.runtime)</a>
 </li>
-      <li><a href="index.html#torch_xla.core.xla_model.get_memory_info">get_memory_info() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.get_memory_info">get_memory_info() (in module torch_xla.core.xla_model)</a>
 </li>
-      <li><a href="index.html#torch_xla.core.xla_model.get_rng_state">get_rng_state() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.get_rng_state">get_rng_state() (in module torch_xla.core.xla_model)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.get_stablehlo">get_stablehlo() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.get_stablehlo">get_stablehlo() (in module torch_xla.core.xla_model)</a>
 </li>
-      <li><a href="index.html#torch_xla.core.xla_model.get_stablehlo_bytecode">get_stablehlo_bytecode() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.get_stablehlo_bytecode">get_stablehlo_bytecode() (in module torch_xla.core.xla_model)</a>
 </li>
-      <li><a href="index.html#torch_xla.runtime.global_device_count">global_device_count() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.global_device_count">global_device_count() (in module torch_xla.runtime)</a>
 </li>
-      <li><a href="index.html#torch_xla.runtime.global_ordinal">global_ordinal() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.global_ordinal">global_ordinal() (in module torch_xla.runtime)</a>
 </li>
-      <li><a href="index.html#torch_xla.runtime.global_runtime_device_count">global_runtime_device_count() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.global_runtime_device_count">global_runtime_device_count() (in module torch_xla.runtime)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -494,7 +521,7 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.spmd.HybridMesh">HybridMesh (class in torch_xla.distributed.spmd)</a>
+      <li><a href="learn/api-guide.html#torch_xla.distributed.spmd.HybridMesh">HybridMesh (class in torch_xla.distributed.spmd)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -502,13 +529,13 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.initialize_cache">initialize_cache() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.initialize_cache">initialize_cache() (in module torch_xla.runtime)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.is_master_ordinal">is_master_ordinal() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.is_master_ordinal">is_master_ordinal() (in module torch_xla.core.xla_model)</a>
 </li>
-      <li><a href="index.html#torch_xla.runtime.is_spmd">is_spmd() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.is_spmd">is_spmd() (in module torch_xla.runtime)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -516,13 +543,13 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.local_device_count">local_device_count() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.local_device_count">local_device_count() (in module torch_xla.runtime)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.local_ordinal">local_ordinal() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.local_ordinal">local_ordinal() (in module torch_xla.runtime)</a>
 </li>
-      <li><a href="index.html#torch_xla.runtime.local_process_count">local_process_count() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.local_process_count">local_process_count() (in module torch_xla.runtime)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -530,44 +557,44 @@
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.manual_seed">manual_seed() (in module torch_xla)</a>
+      <li><a href="learn/api-guide.html#torch_xla.manual_seed">manual_seed() (in module torch_xla)</a>
 </li>
-      <li><a href="index.html#torch_xla.distributed.spmd.mark_sharding">mark_sharding() (in module torch_xla.distributed.spmd)</a>
+      <li><a href="learn/api-guide.html#torch_xla.distributed.spmd.mark_sharding">mark_sharding() (in module torch_xla.distributed.spmd)</a>
 </li>
-      <li><a href="index.html#torch_xla.distributed.spmd.Mesh">Mesh (class in torch_xla.distributed.spmd)</a>
+      <li><a href="learn/api-guide.html#torch_xla.distributed.spmd.Mesh">Mesh (class in torch_xla.distributed.spmd)</a>
 </li>
-      <li><a href="index.html#torch_xla.core.xla_model.mesh_reduce">mesh_reduce() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.mesh_reduce">mesh_reduce() (in module torch_xla.core.xla_model)</a>
 </li>
-      <li><a href="index.html#torch_xla.debug.metrics.metric_data">metric_data() (in module torch_xla.debug.metrics)</a>
+      <li><a href="learn/api-guide.html#torch_xla.debug.metrics.metric_data">metric_data() (in module torch_xla.debug.metrics)</a>
 </li>
-      <li><a href="index.html#torch_xla.debug.metrics.metric_names">metric_names() (in module torch_xla.debug.metrics)</a>
+      <li><a href="learn/api-guide.html#torch_xla.debug.metrics.metric_names">metric_names() (in module torch_xla.debug.metrics)</a>
 </li>
-      <li><a href="index.html#torch_xla.debug.metrics.metrics_report">metrics_report() (in module torch_xla.debug.metrics)</a>
+      <li><a href="learn/api-guide.html#torch_xla.debug.metrics.metrics_report">metrics_report() (in module torch_xla.debug.metrics)</a>
 </li>
       <li>
     module
 
       <ul>
-        <li><a href="index.html#module-torch_xla">torch_xla</a>
+        <li><a href="learn/api-guide.html#module-torch_xla">torch_xla</a>
 </li>
-        <li><a href="index.html#module-torch_xla.core.xla_model">torch_xla.core.xla_model</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.core.xla_model">torch_xla.core.xla_model</a>
 </li>
-        <li><a href="index.html#module-torch_xla.debug.metrics">torch_xla.debug.metrics</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.debug.metrics">torch_xla.debug.metrics</a>
 </li>
-        <li><a href="index.html#module-torch_xla.distributed.parallel_loader">torch_xla.distributed.parallel_loader</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.distributed.parallel_loader">torch_xla.distributed.parallel_loader</a>
 </li>
-        <li><a href="index.html#module-torch_xla.distributed.spmd">torch_xla.distributed.spmd</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.distributed.spmd">torch_xla.distributed.spmd</a>
 </li>
-        <li><a href="index.html#module-torch_xla.distributed.xla_multiprocessing">torch_xla.distributed.xla_multiprocessing</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.distributed.xla_multiprocessing">torch_xla.distributed.xla_multiprocessing</a>
 </li>
-        <li><a href="index.html#module-torch_xla.experimental">torch_xla.experimental</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.experimental">torch_xla.experimental</a>
 </li>
-        <li><a href="index.html#module-torch_xla.runtime">torch_xla.runtime</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.runtime">torch_xla.runtime</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.distributed.parallel_loader.MpDeviceLoader">MpDeviceLoader (class in torch_xla.distributed.parallel_loader)</a>
+      <li><a href="learn/api-guide.html#torch_xla.distributed.parallel_loader.MpDeviceLoader">MpDeviceLoader (class in torch_xla.distributed.parallel_loader)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -575,7 +602,7 @@
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.optimizer_step">optimizer_step() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.optimizer_step">optimizer_step() (in module torch_xla.core.xla_model)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -583,7 +610,7 @@
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.rendezvous">rendezvous() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.rendezvous">rendezvous() (in module torch_xla.core.xla_model)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -591,19 +618,19 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.save">save() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.save">save() (in module torch_xla.core.xla_model)</a>
 </li>
-      <li><a href="index.html#torch_xla.distributed.spmd.set_global_mesh">set_global_mesh() (in module torch_xla.distributed.spmd)</a>
+      <li><a href="learn/api-guide.html#torch_xla.distributed.spmd.set_global_mesh">set_global_mesh() (in module torch_xla.distributed.spmd)</a>
 </li>
-      <li><a href="index.html#torch_xla.core.xla_model.set_rng_state">set_rng_state() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.set_rng_state">set_rng_state() (in module torch_xla.core.xla_model)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.debug.metrics.short_metrics_report">short_metrics_report() (in module torch_xla.debug.metrics)</a>
+      <li><a href="learn/api-guide.html#torch_xla.debug.metrics.short_metrics_report">short_metrics_report() (in module torch_xla.debug.metrics)</a>
 </li>
-      <li><a href="index.html#torch_xla.distributed.xla_multiprocessing.spawn">spawn() (in module torch_xla.distributed.xla_multiprocessing)</a>
+      <li><a href="learn/api-guide.html#torch_xla.distributed.xla_multiprocessing.spawn">spawn() (in module torch_xla.distributed.xla_multiprocessing)</a>
 </li>
-      <li><a href="index.html#torch_xla.sync">sync() (in module torch_xla)</a>
+      <li><a href="learn/api-guide.html#torch_xla.sync">sync() (in module torch_xla)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -615,28 +642,28 @@
     torch_xla
 
       <ul>
-        <li><a href="index.html#module-torch_xla">module</a>
+        <li><a href="learn/api-guide.html#module-torch_xla">module</a>
 </li>
       </ul></li>
       <li>
     torch_xla.core.xla_model
 
       <ul>
-        <li><a href="index.html#module-torch_xla.core.xla_model">module</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.core.xla_model">module</a>
 </li>
       </ul></li>
       <li>
     torch_xla.debug.metrics
 
       <ul>
-        <li><a href="index.html#module-torch_xla.debug.metrics">module</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.debug.metrics">module</a>
 </li>
       </ul></li>
       <li>
     torch_xla.distributed.parallel_loader
 
       <ul>
-        <li><a href="index.html#module-torch_xla.distributed.parallel_loader">module</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.distributed.parallel_loader">module</a>
 </li>
       </ul></li>
   </ul></td>
@@ -645,28 +672,28 @@
     torch_xla.distributed.spmd
 
       <ul>
-        <li><a href="index.html#module-torch_xla.distributed.spmd">module</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.distributed.spmd">module</a>
 </li>
       </ul></li>
       <li>
     torch_xla.distributed.xla_multiprocessing
 
       <ul>
-        <li><a href="index.html#module-torch_xla.distributed.xla_multiprocessing">module</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.distributed.xla_multiprocessing">module</a>
 </li>
       </ul></li>
       <li>
     torch_xla.experimental
 
       <ul>
-        <li><a href="index.html#module-torch_xla.experimental">module</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.experimental">module</a>
 </li>
       </ul></li>
       <li>
     torch_xla.runtime
 
       <ul>
-        <li><a href="index.html#module-torch_xla.runtime">module</a>
+        <li><a href="learn/api-guide.html#module-torch_xla.runtime">module</a>
 </li>
       </ul></li>
   </ul></td>
@@ -675,7 +702,7 @@
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.use_spmd">use_spmd() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.use_spmd">use_spmd() (in module torch_xla.runtime)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -683,11 +710,11 @@
 <h2 id="W">W</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.wait_device_ops">wait_device_ops() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.wait_device_ops">wait_device_ops() (in module torch_xla.core.xla_model)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.runtime.world_size">world_size() (in module torch_xla.runtime)</a>
+      <li><a href="learn/api-guide.html#torch_xla.runtime.world_size">world_size() (in module torch_xla.runtime)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -695,11 +722,11 @@
 <h2 id="X">X</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.xla_device">xla_device() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.xla_device">xla_device() (in module torch_xla.core.xla_model)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="index.html#torch_xla.core.xla_model.xla_device_hw">xla_device_hw() (in module torch_xla.core.xla_model)</a>
+      <li><a href="learn/api-guide.html#torch_xla.core.xla_model.xla_device_hw">xla_device_hw() (in module torch_xla.core.xla_model)</a>
 </li>
   </ul></td>
 </tr></table>
