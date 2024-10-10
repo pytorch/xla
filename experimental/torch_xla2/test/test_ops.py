@@ -40,11 +40,6 @@ skiplist = {
     "linalg.lu_solve",
     "linalg.matrix_norm",
     "linalg.matrix_power",
-    "linalg.solve_ex",
-    "linalg.solve_triangular",
-    "linalg.svd",
-    "linalg.svdvals",
-    "linalg.tensorinv",
     "linalg.tensorsolve",
     "linalg.vector_norm",
     "linspace",
@@ -162,7 +157,12 @@ random_ops = {
   'exponential',
 }
 
-atol_dict = {"matrix_exp": (2e-1, 2e-4), "linalg.pinv": (8e-1, 2e0), "linalg.eig": (2e0, 3e0), "linalg.eigh": (5e1, 3e0), "linalg.eigvalsh": (5e1, 3e0)}
+atol_dict = {"linalg.eig": (2e0, 3e0),
+             "linalg.eigh": (5e1, 3e0),
+             "linalg.eigvalsh": (5e1, 3e0),
+             "linalg.pinv": (8e-1, 2e0),
+             "linalg.svd": (1e0, 1e0),
+             "matrix_exp": (2e-1, 2e-4)}
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):

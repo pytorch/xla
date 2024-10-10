@@ -289,3 +289,13 @@ def tensor_split(input, indices_or_sections, dim=0):
 def linalg_solve(a, b):
   res, _ = jaten._aten__linalg_solve_ex(a, b)
   return res
+
+
+@register_function(torch.linalg.solve_ex)
+def linalg_solve_ex(a, b):
+  res, info = jaten._aten__linalg_solve_ex(a, b)
+  return res, info
+
+@register_function(torch.linalg.svd)
+def linalg_svd(a, full_matrices=True, **kwargs):
+  return jaten._aten__linalg_svd(a, full_matrices=full_matrices, **kwargs)
