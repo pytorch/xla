@@ -2543,6 +2543,9 @@ def _aten_nextafter(input, other, *, out=None):
 # aten.nonzero
 @op(torch.ops.aten.nonzero)
 def _aten_nonzero(x):
+  if jnp.ndim(x) == 0: # when x is scalar, return torch.tensor([], size=(1, 0), dtype=torch.int64)
+    res = torch.empty(1, 0, dtype=torch.int64)
+    return jnp.array(res.numpy())
   index_tuple = jnp.nonzero(x)
   index_tuple = [jnp.expand_dims(p, -1) for p in index_tuple]
   return jnp.concatenate(index_tuple, axis=-1)
