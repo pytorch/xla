@@ -46,7 +46,6 @@ skiplist = {
     "linalg.svdvals",
     "linalg.tensorinv",
     "linalg.tensorsolve",
-    "linalg.vector_norm",
     "linspace",
     "log_normal",
     "logspace",

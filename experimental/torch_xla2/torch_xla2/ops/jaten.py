@@ -1290,7 +1290,8 @@ def _aten_linalg_vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
   # Special cases (for efficiency and clarity)
   if ord == 0:
     if self.shape == ():
-      result = jnp.array(float(self != 0))
+      # float sets it to float64. set it back to input type
+      result = jnp.astype(jnp.array(float(self != 0)), self.dtype)
     else:
       result = _with_reduction_scalar(jnp.sum, jnp.where(self != 0, 1, 0), dim, keepdim)
 
