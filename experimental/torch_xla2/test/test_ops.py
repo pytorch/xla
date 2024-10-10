@@ -41,7 +41,6 @@ skiplist = {
     "linalg.matrix_norm",
     "linalg.matrix_power",
     "linalg.tensorsolve",
-    "linalg.vector_norm",
     "lu",
     "lu_solve",
     "lu_unpack",
