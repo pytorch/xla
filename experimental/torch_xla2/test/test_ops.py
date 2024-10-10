@@ -41,8 +41,6 @@ skiplist = {
     "linalg.matrix_norm",
     "linalg.matrix_power",
     "linalg.tensorsolve",
-    "linspace",
-    "logspace",
     "lu",
     "lu_solve",
     "lu_unpack",
@@ -260,6 +258,15 @@ class TestOpInfo(TestCase):
         continue
       check_output = op.name not in random_ops
 
+      #print("[DEBUG] sample_input: ", sample_input)
+
+      # TODO: this is a workaround to skip int64 cast for linspace
+      # reference: https://github.com/pytorch/xla/issues/7505#issuecomment-2400895692 and subsequent comments
+      # we have opened a bug in pytorch: https://github.com/pytorch/pytorch/issues/137546
+      if op.name == "linspace":
+        if 'dtype' in sample_input.kwargs:
+          if sample_input.kwargs['dtype'] == torch.int64:
+            sample_input.kwargs['dtype'] = torch.float
       if op.name == "special.polygamma":
         # The polygamma function is inaccurate for values < 1.
         # To avoid errors during testing, replace values below 1 with 1.
