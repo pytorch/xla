@@ -2346,12 +2346,6 @@ def _aten_histc(input, bins=100, min=0, max=0):
   return hist
 
 
-# Used by some linalg functions to raise an exception
-# when check_errors == True. This is currently a no-op.
-@op(torch.ops.aten._linalg_check_errors)
-def _aten_linalg_check_errors(A, api_name, is_matrix):
-  ...
-
 @op(torch.ops.aten.hypot)
 def _aten_hypot(input, other):
   return jnp.hypot(input, other)
@@ -2376,10 +2370,6 @@ def _aten_linalg_eig(A):
 @op(torch.ops.aten._linalg_eigh)
 def _aten_linalg_eigh(A, UPLO='L'):
   return jnp.linalg.eigh(A, UPLO)
-
-@op(torch.ops.aten.linalg_inv_ex)
-def _aten_linalg_inv_ex(A):
-  return jnp.linalg.inv(A), jnp.zeros(A.shape[:-2], jnp.int32)
 
 
 @op(torch.ops.aten.linalg_lu)
