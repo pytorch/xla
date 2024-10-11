@@ -693,4 +693,5 @@ def paged_attention(
       v_pages,
       v_scales_pages,
   )
+  print('xw32 finished the pallas kernel. Returning...')
   return out.reshape(batch_size, query_len, num_heads, head_dim).astype(q.dtype)

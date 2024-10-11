@@ -495,15 +495,12 @@ def extended_paged_attention(
     use_pallas: bool = False
 ) -> torch.Tensor: # [batch_size, query_len, num_heads, head_dim]
   if not use_pallas:
-    return _ref_paged_attention(
+    return ref_extended_paged_attention(
       q,
       k_pages,
       v_pages,
       lengths,
       page_indices,
-      pages_per_compute_block,
-      megacore_mode,
-      attn_logits_soft_cap,
     )
 
   from torch_xla.experimental.pallas_kernels.extended_paged_attention_kernel0 import paged_attention
@@ -555,15 +552,12 @@ def extended_paged_attention(
 
   return output.reshape(batch_size, query_len, num_heads, head_dim).to(q.dtype)
 
-def _ref_paged_attention(
+def ref_extended_paged_attention(
     q, # [batch_size, query_len, num_query_heads, head_size]
     k_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
     v_pages, # [num_kv_heads, total_num_pages, page_size, head_size]
     lengths, # [batch_size]. nb batch_size = len(seq_lens)
     page_indices, # [batch_size, pages_per_sequence]
-    pages_per_compute_block, # scalar, = pallas_computer_block_size // page_size. It's a tunable parameter in Pallas kernel. Not used in the reference impl.
-    megacore_mode: str = None,
-    attn_logits_soft_cap: float = None,
 ) -> torch.Tensor: # [batch_size, query_len, num_heads, head_dim]
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape

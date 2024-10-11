@@ -1,5 +1,6 @@
 # DO NOT REVIEW.
 # This is the test for the original paged attention in JAX.
+# To run, do root@t1v-n-f3643994-w-0:/workspaces/persist# python pytorch/xla/torch_xla/experimental/pallas_kernels/tpu_paged_attention_kernel_test.py 
 from absl.testing import absltest
 from absl.testing import parameterized
 import jax
@@ -46,7 +47,8 @@ def _generate_qkv(
   q = jax.random.normal(k4, (batch_size, num_heads, head_dim), dtype=dtype)
   return q, k_pages, v_pages, page_indices
 
-
+# page_indices: i32[batch_size, pages_per_sequence]=(6, 128)
+# pages: [num_kv_heads, total_num_pages, page_size, head_dim]=(8, 768, 16, 128)
 def _reconstruct_kv(page_indices, pages):
   # page_indices.shape=i32[batch_size, pages_per_sequence]=(6, 128)
   # pages.shape=[num_kv_heads, total_num_pages, page_size, head_dim]=(8, 768, 16, 128)
@@ -74,6 +76,7 @@ def _grouped_query_attention_reference(q, k, v, lengths, attn_logits_soft_cap):
   _, num_kv_heads, max_seq_len, _ = k.shape
   assert k.shape == v.shape
   assert num_heads % num_kv_heads == 0
+  # q.shape=[batch_size, num_heads, head_dim]
   q = q.reshape(batch_size, num_kv_heads, num_heads // num_kv_heads, head_dim)
 
   if isinstance(k, quantization_utils.QuantizedTensor):
@@ -86,6 +89,7 @@ def _grouped_query_attention_reference(q, k, v, lengths, attn_logits_soft_cap):
   logits = jnp.einsum(
       "bhgd,bhtd->bhgt", q.astype(jnp.float32), k.astype(jnp.float32)
   )
+  # logits.shape=[batch_size,num_kv_heads,num_heads // num_kv_heads,max_kv_len]
   if attn_logits_soft_cap is not None:
     logits = jnp.tanh(logits / attn_logits_soft_cap) * attn_logits_soft_cap
   # if max_seq_len=3, jnp.arange(3)[None]=[[0, 1, 2]]
