@@ -29,8 +29,6 @@ skiplist = {
     "linalg.cholesky",
     "linalg.cholesky_ex",
     "linalg.det",
-    "linalg.inv",
-    "linalg.inv_ex",
     "linalg.ldl_factor",
     "linalg.ldl_factor_ex",
     "linalg.ldl_solve",

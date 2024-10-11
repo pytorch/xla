@@ -4254,7 +4254,7 @@ def _aten_linalg_solve_triangular(a, b, *, upper=True, left=True, unitriangular=
 @op(torch.ops.aten.linalg_inv_ex)
 def _aten_linalg_inv_ex(a):
   ainv = jnp.linalg.inv(a)
-  info = jnp.array(0)
+  info = jnp.zeros(a.shape[:-2], jnp.int32)
   return ainv, info
 
 
