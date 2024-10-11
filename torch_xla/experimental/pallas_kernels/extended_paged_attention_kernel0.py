@@ -143,7 +143,9 @@ def paged_flash_attention_kernel(
   """Pallas kernel for paged attention."""
   # xw32: core_index, b, h, i=num_cores, batch_size, num_kv_heads, i
   # Note the original q.shape=[batch_size, query_len, num_heads, head_dim]
-  print(f'xw32 line147 {q_ref.shape=}')
+  # q_ref.shape=[8, 128]=(num_query_heads//num_kv_heads, head_size)
+  print(f'xw32 line146 paged_flash_attention_kernel begins. {q_ref.shape=}', flush=True)
+  pl.debug_print(f'xw32 line340 print using pl.debug_print batch_size')
   if program_ids: # inline_seq_dim case.
     core_index, q_idx, b, h, i = program_ids # The 2nd one is q_idx but we don't use it.
   else:
@@ -154,6 +156,7 @@ def paged_flash_attention_kernel(
         pl.program_id(3),
         pl.program_id(4),
     )
+  # k_pages_hbm_ref.shape=[num_kv_heads, total_num_pages, page_size, head_dim]
   num_kv_heads, _, page_size, _ = k_pages_hbm_ref.shape
   # xw32: bk should be the overall compute block size.
   bk = page_size * pages_per_compute_block
@@ -167,6 +170,7 @@ def paged_flash_attention_kernel(
   h = h * h_step + h_start
   b = b * b_step + b_start
   length = lengths_ref[b]
+  query_len = pl.num_programs(1)
 
   def compute_block_indices(b, h, i):
 
@@ -263,14 +267,19 @@ def paged_flash_attention_kernel(
     async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
         b, h, i, buffer_index
     )
+    # q_ref.shape=[8, 128]=(num_query_heads//num_kv_heads, head_size)
+    # k.shape=(pages_per_compute_block*page_size,head_size)
     q = q_ref[...].astype(jnp.float32)
     k = async_copy_k.wait_and_get_loaded()
     qk = jnp.einsum('hd,td->ht', q, k, preferred_element_type=jnp.float32)
+    # qk.shape=[num_heads // num_kv_heads,pages_per_compute_block*page_size]=[8, 512]
+    print(f'xw32 line275 {qk.shape=}')
     if attn_logits_soft_cap is not None:
       capped_qk = jnp.tanh(qk / attn_logits_soft_cap)
       qk = capped_qk * attn_logits_soft_cap
 
-    mask = i * bk + jax.lax.broadcasted_iota(jnp.int32, qk.shape, 1) < length
+    # xw32q: why does it make sense?
+    mask = (i * bk + jax.lax.broadcasted_iota(jnp.int32, qk.shape, 1)) < (length-query_len+q_idx+1)
     qk = qk + jnp.where(mask, 0.0, mask_value)
     m_curr = qk.max(axis=-1)
 
@@ -321,7 +330,7 @@ def paged_flash_attention_kernel_inline_seq_dim(
     attn_logits_soft_cap: float | None,
     megacore_mode: str | None,
 ):
-  print(f'xw32 line325 {m_ref.shape=}')
+  print(f'xw32 line324 paged_flash_attention_kernel_inline_seq_dim begins. {m_ref.shape=}', flush=True)
   core_index, q_idx, b, h = pl.program_id(0), pl.program_id(1), pl.program_id(2), pl.program_id(3)
 
   # Initialize the output HBM buffers to avoid accessing garbage memory inside
@@ -533,6 +542,7 @@ def paged_attention(
           lambda core_index, q, b, h, *_: (b * num_cores + core_index, q, h, 0),
       )
     else:
+      print('xw32 line536, (num_heads // num_kv_heads)%8==0 and megacore_mode is None', flush=True)
       # Here, if (num_heads // num_kv_heads)%8==0 and megacore_mode is None and inline_seq_dim == True, then
       # grid=[num_cores, query_len, batch_size, num_kv_heads]
       q_block_spec = pl.BlockSpec(
@@ -543,6 +553,7 @@ def paged_attention(
 
   dimension_semantics: Sequence[Literal["parallel", "arbitrary"]]
   if inline_seq_dim:
+    print('xw32 line547, inline_seq_dim is True', flush=True)
     kernel = paged_flash_attention_kernel_inline_seq_dim
     # query_len goes before batch_size and num_kv_heads so the flash_attention kernel doesn't need to be changed.
     grid = (
@@ -619,6 +630,7 @@ def paged_attention(
         pltpu.SemaphoreType.DMA,
     )
   else: # either k_scales_pages or v_scales_pages is None.
+    print('xw32 line624 either k_scales_pages or v_scales_pages is None', flush=True)
     in_specs = [
         q_block_spec,
         # Below 4 correspond to the 4 input: k_pages, k_scales_pages, q_pages, etc.
@@ -693,5 +705,5 @@ def paged_attention(
       v_pages,
       v_scales_pages,
   )
-  print('xw32 finished the pallas kernel. Returning...')
+  print('xw32 finished the pallas kernel. Returning...', flush=True)
   return out.reshape(batch_size, query_len, num_heads, head_dim).astype(q.dtype)
