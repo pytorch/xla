@@ -41,8 +41,6 @@ skiplist = {
     "linalg.matrix_norm",
     "linalg.matrix_power",
     "linalg.tensorsolve",
-    "lu",
-    "lu_solve",
     "lu_unpack",
     "masked.median",
     "max_pool2d_with_indices_backward",
