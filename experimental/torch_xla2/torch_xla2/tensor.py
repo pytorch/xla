@@ -209,7 +209,8 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
         if len(args) >= 2 and type(args[1]) == int:
           if ((args[1])%4 == 0):
             return args[0]
-      return func(*args, **(kwargs or {}))
+      ret = func(*args, **(kwargs or {}))
+      return ret
 
 
 class XLADispatchMode(torch_dispatch.TorchDispatchMode):
