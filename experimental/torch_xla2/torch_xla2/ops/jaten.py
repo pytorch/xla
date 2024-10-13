@@ -2770,6 +2770,73 @@ def _aten_unique2(input_tensor,
                           return_counts=return_counts)
 
 
+@op(torch.ops.aten.unique_consecutive)
+def _aten_unique_consecutive(input_tensor,
+                             return_inverse=False,
+                             return_counts=None,
+                             dim=None):
+  # Explanation of computations (shown in 1D for simplicity):
+  #
+  #   Input                                      [a b b c c c d d d d e e e e e]
+  #   Slice dropping final element (input[:-1])    [a b b c c c d d d d e e e e]
+  #   Slice dropping first element (input[1:])     [b b c c c d d d d e e e e e]
+  #   Boolean != operation on shifted slices       [1 0 1 0 0 1 0 0 0 1 0 0 0 0]
+  #   Prepend 1 to represent the first element   [1 1 0 1 0 0 1 0 0 0 1 0 0 0 0]
+  #   Filter input by the resulting bool array   [a b   c     d       e        ]
+  #   Output                                     [a b c d e]
+
+  if dim is None:
+    inverse_shape = input_tensor.shape
+    input_tensor = input_tensor.flatten()
+    ndim = 1
+    dim = 0
+  else:
+    inverse_shape = input_tensor.shape[dim]
+    ndim = input_tensor.ndim
+    if dim < 0:
+      dim += ndim
+
+  nd_slice_0 = tuple(slice(None, -1) if d == dim else slice(None)
+                     for d in range(ndim))
+  nd_slice_1 = tuple(slice(1, None) if d == dim else slice(None)
+                     for d in range(ndim))
+
+  axes_to_reduce = tuple(d for d in range(ndim) if d != dim)
+
+  does_not_equal_prior = (
+      jnp.any(input_tensor[nd_slice_0] != input_tensor[nd_slice_1],
+              axis=axes_to_reduce,
+              keepdims=False))
+
+  if input_tensor.shape[dim] != 0:
+    # Prepend `True` to represent the first element of the input.
+    does_not_equal_prior = (
+        jnp.insert(jnp.any(input_tensor[nd_slice_0] != input_tensor[nd_slice_1],
+                           axis=axes_to_reduce,
+                           keepdims=False),
+                   0,
+                   True))
+
+  include_indices = jnp.argwhere(does_not_equal_prior)[:, 0]
+
+  output_tensor = input_tensor[
+      tuple(include_indices if d == dim else slice(None) for d in range(ndim))]
+
+  if return_inverse or return_counts:
+    counts = (jnp.append(include_indices[1:], input_tensor.shape[dim]) -
+              include_indices[:])
+
+    inverse = (
+        jnp.reshape(jnp.repeat(jnp.arange(len(counts)), counts), inverse_shape)
+        if return_inverse
+        else None
+    )
+
+    return output_tensor, inverse, counts
+
+  return output_tensor, None, None
+
+
 # NOTE: skip aten.upsample_nearest2d and aten.upsample_bilinear2d
 # despite those being core aten ops, they also have decompositions.
 # here we are using torch decompositions.

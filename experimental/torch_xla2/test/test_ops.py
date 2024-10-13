@@ -115,7 +115,6 @@ skiplist = {
     "svd_lowrank",
     "unfold_copy",
     "unfold",
-    "unique_consecutive",
     "unravel_index",
     "var_mean",
     "argwhere",
