@@ -2701,6 +2701,75 @@ def _aten_unbind(a, dim=0):
   return [jax.lax.index_in_dim(a, i, dim, keepdims=False) for i in range(a.shape[dim])]
 
 
+# aten.unique_dim
+#
+# NOTE: Like the CUDA and CPU implementations, this implementation always sorts
+# the tensor regardless of the `sorted` argument passed to `torch.unique`.
+@op(torch.ops.aten.unique_dim)
+def _aten_unique_dim(input_tensor,
+                     dim,
+                     sort=True,
+                     return_inverse=False,
+                     return_counts=False):
+  result_tensor_or_tuple = jnp.unique(input_tensor,
+                                      return_index=False,
+                                      return_inverse=return_inverse,
+                                      return_counts=return_counts,
+                                      axis=dim,
+                                      equal_nan=False)
+  result_list = (
+      list(result_tensor_or_tuple) if isinstance(result_tensor_or_tuple, tuple)
+      else [result_tensor_or_tuple])
+
+  if not return_inverse:
+    result_list.insert(1, None)
+
+  if not return_counts:
+    result_list.insert(2, None)
+
+  # [result, None,    None]    if return_inverse=False and return_counts=False
+  # [result, inverse, None]    if return_inverse=True  and return_counts=False
+  # [result, None,    counts]  if return_inverse=False and return_counts=True
+  # [result, inverse, counts]  if return_inverse=True  and return_counts=True
+  return result_list
+
+
+# aten._unique
+#
+# NOTE: Like the CUDA and CPU implementations, this implementation always sorts
+# the tensor regardless of the `sorted` argument passed to `torch.unique`.
+@op(torch.ops.aten._unique)
+def _aten_unique(input_tensor,
+                 sort=True,
+                 return_inverse=False):
+  result_tensor_or_tuple = jnp.unique(input_tensor,
+                                      return_index=False,
+                                      return_inverse=return_inverse,
+                                      return_counts=False,
+                                      axis=None,
+                                      equal_nan=False)
+  if return_inverse:
+    return result_tensor_or_tuple
+  else:
+    return (result_tensor_or_tuple, None)
+
+
+# aten._unique2
+#
+# NOTE: Like the CUDA and CPU implementations, this implementation always sorts
+# the tensor regardless of the `sorted` argument passed to `torch.unique`.
+@op(torch.ops.aten._unique2)
+def _aten_unique2(input_tensor,
+                  sort=True,
+                  return_inverse=False,
+                  return_counts=False):
+  return _aten_unique_dim(input_tensor=input_tensor,
+                          dim=None,
+                          sort=sort,
+                          return_inverse=return_inverse,
+                          return_counts=return_counts)
+
+
 # NOTE: skip aten.upsample_nearest2d and aten.upsample_bilinear2d
 # despite those being core aten ops, they also have decompositions.
 # here we are using torch decompositions.
