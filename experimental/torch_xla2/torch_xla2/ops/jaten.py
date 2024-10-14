@@ -4439,6 +4439,7 @@ def _aten_upsample_bilinear2d_aa(input, output_size, align_corners, scale_factor
 def _aten_cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
   x1 = x1.astype(jnp.float32)  # Cast input to float32
   x2 = x2.astype(jnp.float32)  # Cast input to float32
+
   if p == 0.0:
     # For p = 0, use Hamming-like distance multiplied by the number of elements
     return _hamming_distance(x1, x2).astype(jnp.float32)  # Cast to float32
@@ -4455,22 +4456,74 @@ def _aten_cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary
     diff = jnp.abs(jnp.expand_dims(x1, -2) - jnp.expand_dims(x2, -3))
     return jnp.sum(jnp.power(diff, p), axis=-1).astype(jnp.float32) ** (1 / p)
 
-
 def _hamming_distance(x1, x2):
-  # Calculate the Hamming distance for p = 0
-  diff = jnp.not_equal(jnp.expand_dims(x1, -2), jnp.expand_dims(x2, -3))
-  return jnp.sum(diff, axis=-1) * x1.shape[-1]
+  """
+  Computes the Hamming-like distance for p=0.
+
+  Args:
+      x1: JAX array of shape (..., P, M)
+      x2: JAX array of shape (..., R, M)
+
+  Returns:
+      JAX array of shape (..., P, R) representing pairwise Hamming distances.
+  """
+  # Compute element-wise inequality: (..., P, R, M)
+  diff = jnp.not_equal(jnp.expand_dims(x1, -2), jnp.expand_dims(x2, -3))  # (..., P, R, M)
+
+  # Sum over the last axis (M) to count differing elements: (..., P, R)
+  hamming_dist = jnp.sum(diff, axis=-1).astype(jnp.float32)  # (..., P, R)
+
+  return hamming_dist
 
 def _euclidean_mm(x1, x2):
-  # Numerically stable version of Euclidean distance using matrix multiplication
-  x1_sq = jnp.sum(x1 ** 2, axis=-1, keepdims=True).astype(jnp.float32)
-  x2_sq = jnp.sum(x2 ** 2, axis=-1, keepdims=True).T.astype(jnp.float32)
-  # Ensure no negative values due to floating-point errors by using jnp.maximum with 0
-  dist = jnp.sqrt(jnp.maximum(x1_sq + x2_sq - 2 * jnp.dot(x1, x2.T), 0.0))
-  return dist.astype(jnp.float32)
+  """
+  Computes the Euclidean distance using matrix multiplication.
+
+  Args:
+      x1: JAX array of shape (..., P, M)
+      x2: JAX array of shape (..., R, M)
+
+  Returns:
+      JAX array of shape (..., P, R) representing pairwise Euclidean distances.
+  """
+  # Compute squared norms
+  x1_sq = jnp.sum(x1 ** 2, axis=-1, keepdims=True).astype(jnp.float32)  # (..., P, 1)
+  x2_sq = jnp.sum(x2 ** 2, axis=-1, keepdims=True).astype(jnp.float32)  # (..., R, 1)
+
+  # Reshape x2_sq to align for broadcasting: (..., 1, R)
+  x2_sq = jnp.swapaxes(x2_sq, -2, -1)  # (..., 1, R)
+
+  # Perform matrix multiplication: (..., P, M) @ (..., M, R) -> (..., P, R)
+  dot_product = jnp.matmul(x1, jnp.swapaxes(x2, -1, -2))  # (..., P, R)
+
+  # Compute the pairwise distances
+  dist_sq = x1_sq + x2_sq - 2 * dot_product  # (..., P, R)
+  dist_sq = jnp.maximum(dist_sq, 0.0)       # Numerical stability
+  dist = jnp.sqrt(dist_sq).astype(jnp.float32)  # (..., P, R)
+
+  return dist
 
 def _euclidean_direct(x1, x2):
-  diff = jnp.expand_dims(x1, -2) - jnp.expand_dims(x2, -3)
-  # Ensure no negative values due to floating-point errors
-  return jnp.sqrt(jnp.maximum(jnp.sum(diff ** 2, axis=-1), 0.0)).astype(jnp.float32)
+  """
+  Computes the Euclidean distance directly without matrix multiplication.
 
+  Args:
+      x1: JAX array of shape (..., P, M)
+      x2: JAX array of shape (..., R, M)
+
+  Returns:
+      JAX array of shape (..., P, R) representing pairwise Euclidean distances.
+  """
+  # Compute element-wise differences: (..., P, R, M)
+  diff = jnp.expand_dims(x1, -2) - jnp.expand_dims(x2, -3)  # (..., P, R, M)
+
+  # Compute squared differences and sum over the last axis (M): (..., P, R)
+  dist_sq = jnp.sum(diff ** 2, axis=-1).astype(jnp.float32)  # (..., P, R)
+
+  # Ensure numerical stability
+  dist_sq = jnp.maximum(dist_sq, 0.0)
+
+  # Compute square roots: (..., P, R)
+  dist = jnp.sqrt(dist_sq).astype(jnp.float32)  # (..., P, R)
+
+  return dist
