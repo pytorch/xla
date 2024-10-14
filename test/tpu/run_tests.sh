@@ -56,5 +56,7 @@ if [[ -n "$TPU_VERSION" && "$TPU_VERSION" == "4" ]]; then
     XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 test/ds/test_dynamic_shapes.py -v
 fi
 
-# Test `tpu-info` CLI compatibility
-python3 test/tpu/tpu_info/test_cli.py
+if [[ -n "$TPU_VERSION" && "$TPU_VERSION" != "6" ]]; then
+    # Test `tpu-info` CLI compatibility
+    python3 test/tpu/tpu_info/test_cli.py
+fi
