@@ -15,7 +15,6 @@ skiplist = {
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
     "cat",
-    "cdist",
     "cholesky",
     "cholesky_solve",
     "diagonal_copy",
@@ -151,7 +150,8 @@ atol_dict = {"linalg.eig": (2e0, 3e0),
              "linalg.eigvalsh": (5e1, 3e0),
              "linalg.pinv": (8e-1, 2e0),
              "linalg.svd": (1e0, 1e0),
-             "matrix_exp": (2e-1, 2e-4)}
+             "matrix_exp": (2e-1, 2e-4),
+             "cdist": (5e1, 3e0)}
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):

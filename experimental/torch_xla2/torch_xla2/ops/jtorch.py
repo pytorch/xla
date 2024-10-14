@@ -300,6 +300,10 @@ def linalg_solve_ex(a, b):
 def linalg_svd(a, full_matrices=True, **kwargs):
   return jaten._aten__linalg_svd(a, full_matrices=full_matrices, **kwargs)
 
+@register_function(torch.cdist)
+def _cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
+    return jaten._aten_cdist(x1, x2, p, compute_mode)
+
 @register_function(torch.lu)
 def lu(A, **kwargs):
   lu,pivots,_ = jax.lax.linalg.lu(A)
