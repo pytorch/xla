@@ -303,3 +303,21 @@ def linalg_svd(a, full_matrices=True, **kwargs):
 @register_function(torch.cdist)
 def _cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
     return jaten._aten_cdist(x1, x2, p, compute_mode)
+
+@register_function(torch.lu)
+def lu(A, **kwargs):
+  lu,pivots,_ = jax.lax.linalg.lu(A)
+  # JAX pivots are offset by 1 compared to torch
+  _pivots = pivots + 1
+  info_shape = pivots.shape[:-1]
+  info = jnp.zeros(info_shape, dtype=mappings.t2j_dtype(torch.int32))
+  if kwargs['get_infos'] == True:
+    return lu, _pivots, info
+  return lu, _pivots
+
+@register_function(torch.lu_solve)
+def lu_solve(b, LU_data, LU_pivots, **kwargs):
+  # JAX pivots are offset by 1 compared to torch
+  _pivots = LU_pivots - 1
+  x = jax.scipy.linalg.lu_solve((LU_data, _pivots), b)
+  return x
