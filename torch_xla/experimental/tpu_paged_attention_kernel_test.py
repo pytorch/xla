@@ -5,7 +5,8 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import jax
 from jax._src import test_util as jtu
-from jax.experimental.pallas.ops.tpu import paged_attention
+# from jax.experimental.pallas.ops.tpu import paged_attention
+from torch_xla.experimental.pallas_kernels.paged_attention_kernel import paged_attention
 from jax.experimental.pallas.ops.tpu.paged_attention import quantization_utils
 import jax.numpy as jnp
 import numpy as np
@@ -70,7 +71,7 @@ def _reconstruct_kv(page_indices, pages):
 
 
 def _grouped_query_attention_reference(q, k, v, lengths, attn_logits_soft_cap):
-  import pdb; pdb.set_trace()
+  # import pdb; pdb.set_trace()
   batch_size, num_heads, head_dim = q.shape
   # k,v: =[batch_size,num_kv_heads,max_kv_len,head_dim]=(6, 8, 2048, 128)
   _, num_kv_heads, max_seq_len, _ = k.shape
@@ -103,7 +104,7 @@ def _grouped_query_attention_reference(q, k, v, lengths, attn_logits_soft_cap):
   #        [1023],
   #        [2048]])
   mask = jnp.arange(max_seq_len)[None] < lengths[:, None]
-  # mask.shape=(6, 2048)
+  # mask.shape=(6, 2048)=[batch_size, max_seq_len]
   # (Pdb) p mask
   # Array([[False, False, False, ..., False, False, False],
   #        [ True,  True,  True, ..., False, False, False],
@@ -117,6 +118,7 @@ def _grouped_query_attention_reference(q, k, v, lengths, attn_logits_soft_cap):
   # jnp.where(mask, 0.0, mask_value)[:, None, None, :].shape=(6,1,1,2048)
   logits = logits + jnp.where(mask, 0.0, mask_value)[:, None, None, :]
   weights = jax.nn.softmax(logits, axis=-1)
+  # [batch_size,num_kv_heads,num_heads // num_kv_heads,max_kv_len],[batch_size,num_kv_heads,max_kv_len,head_dim]->[batch_size,num_kv_heads,num_heads // num_kv_heads,head_dim]
   o = jnp.einsum("bhgt,bhtd->bhgd", weights.astype(v.dtype), v)
   return o.reshape(batch_size, num_heads, head_dim)
 
@@ -190,7 +192,8 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         dtype,
         are_kv_quantized=are_kv_quantized,
     )
-    o = paged_attention.paged_attention(
+    print(f'line194 In test: {q.shape=}')
+    o = paged_attention(
         q, # [batch_size, num_heads, head_dim]
         k_pages, # [num_kv_heads, total_num_pages, page_size, head_dim]=(8, 768, 16, 128)
         v_pages, # [num_kv_heads, total_num_pages, page_size, head_dim]=(8, 768, 16, 128)
@@ -202,7 +205,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     )
     k = _reconstruct_kv(page_indices, k_pages)
     v = _reconstruct_kv(page_indices, v_pages)
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     # q: [batch_size, num_heads, head_dim]=(6,64,128)
     # k,v: =[batch_size,num_kv_heads,-1,head_dim]=(6, 8, 2048, 128)
     o_ref = _grouped_query_attention_reference(

@@ -49,12 +49,12 @@ class MultiPageAsyncCopyDescriptor:
       vmem_buffer, 
       scales_vmem_buffer,
       sem,
-      page_indices,
+      page_indices, # this is reshape to 1 dimensional tensor.
       page_indices_start_offset,
       num_pages_to_load,
       head_index,
   ):
-    print(f'xw32 head_index is not None: {head_index is not None}')
+    # print(f'xw32 head_index is not None: {head_index is not None}')
     self._vmem_buffer = vmem_buffer
     self._scales_vmem_buffer = scales_vmem_buffer
     self._num_pages_to_load = num_pages_to_load
@@ -149,6 +149,7 @@ def paged_flash_attention_kernel(
 ):
   """Pallas kernel for paged attention."""
   # xw32: core_index, b, h, i=num_cores, batch_size, num_kv_heads, i
+  print('xw32 line152 paged_attention_kernel.py paged_flash_attention_kernel is called')
   if program_ids:
     core_index, b, h, i = program_ids
   else:
@@ -179,6 +180,7 @@ def paged_flash_attention_kernel(
   def compute_block_indices(b, h, i):
 
     def advance_b():
+      pl.debug_print(f'xw32 paged_attention_kernel.py line183 advance_b starts')
       next_b = b + b_step
 
       def advance_to_next_non_zero_length():
@@ -206,6 +208,7 @@ def paged_flash_attention_kernel(
 
     return lax.cond(i * bk < lengths_ref[b], lambda: (b, h, i), advance_h)
 
+  # Initially at the pallas_call, k_vmem_buffer has shape (2,pages_per_compute_block, page_size, head_dim)
   def create_kv_async_copy_descriptors(b, h, i, buffer_index):
     page_offset = b * pages_per_sequence + i * pages_per_compute_block
     pages_to_load = pages_per_compute_block
@@ -239,6 +242,7 @@ def paged_flash_attention_kernel(
 
   @pl.when(i * bk < length)
   def flash_attention():  # pylint: disable=unused-variable
+    # xw32q: what does `step` do?
     step = step_ref[0]
     buffer_index = buffer_index_ref[0]
 
@@ -256,6 +260,8 @@ def paged_flash_attention_kernel(
       async_copy_k.start()
       async_copy_v.start()
 
+    # xw32q: what do we need to calculate the next batch index next_b?
+    # xw32q: why do we need to do i+1 when paged_flash_attention_kernel is already in a forloop. Is it for prefetching the next block
     next_b, next_h, next_i = compute_block_indices(b, h, i + 1)
 
     @pl.when(next_b < batch_size)
@@ -268,12 +274,12 @@ def paged_flash_attention_kernel(
       async_copy_next_v.start()
       buffer_index_ref[0] = next_buffer_index
 
+    # xw32q: why do we need to do again when we have already done it in `prefetch_first_block` when step==0?
     async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
         b, h, i, buffer_index
     )
     q = q_ref[...].astype(jnp.float32)
     k = async_copy_k.wait_and_get_loaded()
-    import pdb; pdb.set_trace()
     # q.shape=(8,256)=(num_heads // num_kv_heads, head_dim)
 
     # k.shape=(512, 256)=(pages_per_compute_block*page_size,head_dim) # the first dim is pages_per_compute_block*page_size=512 (note, pages_per_compute_block=8, page_size=64), so qk.shape might be [num_heads // num_kv_heads,pages_per_compute_block*page_size]
@@ -282,6 +288,7 @@ def paged_flash_attention_kernel(
       capped_qk = jnp.tanh(qk / attn_logits_soft_cap)
       qk = capped_qk * attn_logits_soft_cap
 
+    # xw32q: why does it make sense?
     mask = i * bk + jax.lax.broadcasted_iota(jnp.int32, qk.shape, 1) < length
     qk = qk + jnp.where(mask, 0.0, mask_value)
     m_curr = qk.max(axis=-1)
@@ -335,6 +342,9 @@ def paged_flash_attention_kernel_inline_seq_dim(
 ):
   # This is for the case: inline_seq_dim: whether to fuse kernel instances along the sequence dim into
   #     one kernel.
+  print(f'xw32 paged_attention_kernel.py. paged_flash_attention_kernel_inline_seq_dim batch_size={pl.num_programs(1)}, batch_idx={pl.program_id(1)}, {q_ref.shape=}')
+  jax.debug.print('xw32 line339 paged_attention_kernel.py paged_flash_attention_kernel_inline_seq_dim debug print.')
+  pl.debug_print(f'xw32 line340 print using pl.debug_print batch_size={pl.num_programs(1)}, batch_idx={pl.program_id(1)}, {q_ref.shape=}') 
   core_index, b, h = pl.program_id(0), pl.program_id(1), pl.program_id(2)
 
   # Initialize the output HBM buffers to avoid accessing garbage memory inside
@@ -676,6 +686,7 @@ def paged_attention(
           jax.ShapeDtypeStruct((*q.shape[:-1], 1), jnp.float32),
           jax.ShapeDtypeStruct((*q.shape[:-1], 1), jnp.float32),
       ],
+      debug=True,
   )(
       lengths,
       page_indices.reshape(-1),

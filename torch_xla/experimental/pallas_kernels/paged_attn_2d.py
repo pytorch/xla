@@ -1,4 +1,4 @@
-# DO NOT REVIEW.
+# DO NOT REVIEW. DO NOT CHANGE.
 # This is the reference extended paged attention.
 from typing import List
 
@@ -48,7 +48,7 @@ def ref_paged_attn(
         # [query_len, num_query_heads, head_size],[kv_len, num_query_heads, head_size] -> 
         # [num_query_heads,query_len,kv_len]
         # So below is: q[i].permute(1,0,2)@k.permute(1,2,0) aka:
-        # [num_query_heads, query_len, head_size]@[num_query_heads, head_size, kv_len]
+        # [num_query_heads, query_len, head_size]@[num_query_heads, head_size, kv_len]->[num_query_heads,query_len,kv_len]
         # N.B in Karpathy's impl, it's wei = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5 # (B, T, hs) @ (B, hs, T) -> (B, T, T)
         attn = torch.einsum("qhd,khd->hqk", q[i], k)       # [num_query_heads, query_len, kv_len]
         attn = attn.float()

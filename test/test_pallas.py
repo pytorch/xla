@@ -629,7 +629,8 @@ class PallasTest(unittest.TestCase):
     # https://github.com/vllm-project/vllm/blob/f5e1bf5d44877149eaabf9c04379a4e14a023145/vllm/attention/backends/pallas.py#L184
     pallas_compute_block_size = 512
     batch_size: int = 3
-    query_len: int = 3
+    query_len: int = 2
+    print(f'The test test_extended_paged_attention_multiple_queries begins with {query_len=}')
     num_query_heads: int = 64
     num_kv_heads: int = 8
     head_size: int = 128
@@ -663,6 +664,7 @@ class PallasTest(unittest.TestCase):
                  page_indices_jax,
                  pages_per_compute_block=pallas_compute_block_size // page_size,
              )
+    out = jax.block_until_ready(out)[0]
     # actual_output = torch.from_numpy(
     #     np.array(
     #         jax_extended_paged_attention0(
@@ -673,7 +675,8 @@ class PallasTest(unittest.TestCase):
     #             page_indices_jax,
     #             pages_per_compute_block=pallas_compute_block_size // page_size,
     #         )))
-    import pdb; pdb.set_trace()
+    print('xw32 line676 in the test', flush=True)
+    # import pdb; pdb.set_trace()
     out_np = np.array(out) # xw32: why does it hang?!
     actual_output = torch.from_numpy(out_np)
     
@@ -723,6 +726,7 @@ class PallasTest(unittest.TestCase):
     # Use single query and run on JAX's original paged_attention and
     # the new extended_paged_attention. Should get the same result.
     from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_paged_attention
+    
     from torch_xla.experimental.pallas_kernels.extended_paged_attention_kernel0 import paged_attention as jax_extended_paged_attention0
 
     # flash_attn_block_size seems to be the compute block concept
