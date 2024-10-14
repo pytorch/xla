@@ -2810,12 +2810,7 @@ def _aten_unique_consecutive(input_tensor,
 
   if input_tensor.shape[dim] != 0:
     # Prepend `True` to represent the first element of the input.
-    does_not_equal_prior = (
-        jnp.insert(jnp.any(input_tensor[nd_slice_0] != input_tensor[nd_slice_1],
-                           axis=axes_to_reduce,
-                           keepdims=False),
-                   0,
-                   True))
+    does_not_equal_prior = jnp.insert(does_not_equal_prior, 0, True)
 
   include_indices = jnp.argwhere(does_not_equal_prior)[:, 0]
 
