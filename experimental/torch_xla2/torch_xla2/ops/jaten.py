@@ -4388,6 +4388,11 @@ def _aten__fft_c2r(self, dim, normalization, last_dim_size):
   return jnp.fft.irfftn(self, norm=norm, axes=dim, s=s)
 
 
+@op(torch.ops.aten._trilinear)
+def _aten_trilinear(i1, i2, i3, expand1, expand2, expand3, sumdim, unroll_dim=1):
+  return _aten_sum(jnp.expand_dims(i1, expand1) * jnp.expand_dims(i2, expand2) * jnp.expand_dims(i3, expand3), sumdim)
+
+
 @op(torch.ops.aten.max_unpool2d)
 @op(torch.ops.aten.max_unpool3d)
 def _aten_max_unpoolxd(input, indices, output_size, stride=None, padding=0):

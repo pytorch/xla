@@ -46,7 +46,6 @@ skiplist = {
     "nn.functional.adaptive_max_pool2d",
     "nn.functional.adaptive_max_pool3d",
     "nn.functional.alpha_dropout",
-    "nn.functional.bilinear",
     "nn.functional.conv_transpose1d",
     "nn.functional.conv_transpose2d",
     "nn.functional.conv_transpose3d",
