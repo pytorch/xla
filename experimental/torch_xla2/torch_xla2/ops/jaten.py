@@ -49,6 +49,9 @@ mutation_ops_to_functional = {
   torch.ops.aten.transpose_: torch.ops.aten.transpose,
 }
 
+# Note: tuple comparisons work intuitively, e.g., `_jax_version >= (0, 4, 32)`.
+_jax_version = tuple(int(v) for v in jax.version._version.split("."))
+
 
 def make_mutation(op):
   return op_base.InplaceOp(mutation_ops_to_functional[op], position_to_mutate=0)
@@ -2723,6 +2726,8 @@ def _aten_unique_dim(input_tensor,
 
   if not return_inverse:
     result_list.insert(1, None)
+  elif _jax_version < (0, 4, 31) and dim is not None:
+    result_list[1] = result_list[1].flatten()
 
   if not return_counts:
     result_list.insert(2, None)
