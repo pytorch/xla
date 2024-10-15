@@ -4560,3 +4560,118 @@ def _euclidean_direct(x1, x2):
   dist = jnp.sqrt(dist_sq).astype(jnp.float32)
 
   return dist
+
+@op(torch.ops.aten.lu_unpack)
+def _aten_lu_unpack(LU_data, LU_pivots, unpack_data=True, unpack_pivots=True):
+  n = LU_data.shape[-2]
+  m = LU_data.shape[-1]
+  dim = min(n,m)
+  #print("input: lu.shape ", LU_data.shape, LU_pivots.shape)
+  if unpack_data:
+    L = jnp.tril(LU_data, k=-1)        # Extract lower triangle
+    #print("lower:", L)
+    eye = jnp.eye(n, m, dtype=LU_data.dtype)
+    #print("eye:", eye)
+    L = L + eye                        # Add ones to the diagonal of L
+    #print("lower+eye:", L)
+    start_indices = jnp.zeros(len(LU_data.shape), dtype=int)
+    limit_indices = list(LU_data.shape)
+    limit_indices[-1] = dim
+    #print("indices: ", start_indices, limit_indices)
+    L = jax.lax.slice(L, start_indices, limit_indices) # Reshape lower triangle to match pivot
+
+    U = jnp.triu(LU_data)              # Extract upper triangle
+    start_indices = jnp.zeros(len(LU_data.shape), dtype=int)
+    limit_indices = list(LU_data.shape)
+    limit_indices[-2] = dim
+    U = jax.lax.slice(U, start_indices, limit_indices) # Reshape upper triangle to match pivot
+    #print("upper:",U)
+  else:
+    L = torch.empty(torch.Size([0]))
+    U = torch.empty(torch.Size([0]))
+
+  if unpack_pivots:
+    if False:
+      pivots = LU_pivots - 1           # pivots are offset by 1 in jax
+
+      pivot_size = pivots.shape[-1]
+      #? m = pivot_size  # In LU decomposition, k = min(m, n), and here we assume m <= n
+
+      # use an identity to create permutation matrix
+      # tile the 2D identity matrix in other dims
+      leading_dims = LU_data.shape[:-2]
+      tile_shape = (*leading_dims, 1, 1)
+      identity = jnp.eye(n, dtype=jnp.float32)
+      identity = jnp.expand_dims(identity, axis=tuple(range(len(leading_dims))))
+      P = jnp.tile(identity, tile_shape)
+      print("debug: start permutation matrix:", P)
+
+      # Apply the swaps iteratively
+      for i in range(pivot_size):
+        # Get the swap indices
+        row_idx = jnp.arange(n) #? row_idx = jnp.arange(m) or (pivot_size)
+        col_idx = pivots[..., i]
+        print("r c :", row_idx, col_idx, i)
+
+        #print("debug: (1, 1):", P[...,1, 1])
+        #print("debug: (row_idx, i):", P[...,row_idx, i])
+        #print("debug: (0, col_idx):", P[...,0, col_idx])
+        #print("debug: (row_idx, col_idx):", P[...,row_idx, col_idx])
+        #print("debug: (row_idx, i):", P[...,row_idx, i])
+        #return
+        # Swap the columns in the permutation matrix
+        pi = P[..., i, row_idx]
+        pp = jnp.zeros(pi.shape, dtype=pi.dtype)
+        for j in range(len(col_idx)):
+          pp_row = P[..., col_idx[j] , row_idx][j]
+          print("debug: pp_row:", j, pp_row)
+          pp = pp.at[j].set(pp_row)
+        print("debug: (i, row_idx):", pi)
+        print("debug: (row_idx, col_idx):", pp)
+        P = P.at[..., i, row_idx].set(pp)
+        print("debug: p1:", P)
+        P = P.at[..., col_idx, row_idx].set(pi)
+        print("debug: p2:", P)
+    else:
+      # use an identity to create permutation matrix
+      # tile the 2D identity matrix in other dims
+      tile_shape = list(LU_data.shape)
+      tile_shape[-1] = 1
+      tile_shape[-2] = 1
+      P = jnp.tile(jnp.identity(n, dtype=jnp.float32), tile_shape)
+      print("debug: start permutation matrix:", P)
+      pivot_size = LU_pivots.shape[-1]
+
+      def _lu_unpack_2d(p, pivot):
+        jax.debug.print("unpack2d: {} {} {}", p , pivot, pivot.size)
+        _pivot = pivot - 1           # pivots are offset by 1 in jax
+        indices = jnp.array([*range(n)], dtype=jnp.int32)
+        def update_indices(i, _indices):
+          #jax.debug.print("fori <<: {} {} {} {}", i, _indices, _pivot, p)
+          tmp = _indices[i]
+          _indices = _indices.at[i].set(_indices[_pivot[i]])
+          _indices = _indices.at[_pivot[i]].set(tmp)
+          #jax.debug.print("fori >>: {} {} {} {}", i, _indices, _pivot, p)
+          return _indices
+        indices = jax.lax.fori_loop(0, _pivot.size, update_indices, indices)
+        #jax.debug.print("indices {}", indices)
+        p = p[jnp.array(indices)]
+        p = jnp.transpose(p)
+        return p
+
+      if len(LU_pivots.shape) == 1:
+        P = _lu_unpack_2d(P, LU_pivots)
+      else:
+        paxes = len(LU_pivots.shape)-2
+        daxes = len(LU_pivots.shape)-3
+        print("pivot shape: ", LU_pivots.shape, paxes, daxes)
+        v_lu_unpack_2d = jax.vmap(_lu_unpack_2d, in_axes=(((0,0))))
+        P = v_lu_unpack_2d(P, LU_pivots)
+      #print("permutation after: ", P)
+  else:
+    P = torch.empty(torch.Size([0]))
+  #print("permutation:", P)
+
+
+  #print("debug output:", P, L, U)
+  return P, L, U

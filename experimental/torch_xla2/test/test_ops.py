@@ -38,7 +38,6 @@ skiplist = {
     "linalg.matrix_norm",
     "linalg.matrix_power",
     "linalg.tensorsolve",
-    "lu_unpack",
     "masked.median",
     "max_pool2d_with_indices_backward",
     "nn.functional.adaptive_avg_pool3d",
@@ -249,7 +248,7 @@ class TestOpInfo(TestCase):
         continue
       check_output = op.name not in random_ops
 
-      #print("[DEBUG] sample_input: ", sample_input)
+      print("[DEBUG] sample_input: ", sample_input)
 
       # TODO: this is a workaround to skip int64 cast for linspace
       # reference: https://github.com/pytorch/xla/issues/7505#issuecomment-2400895692 and subsequent comments
