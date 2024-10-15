@@ -84,7 +84,7 @@ def load(path):
   Returns:
     The loaded data.
   """
-  ref_data = torch.load(path)
+  ref_data = torch.load(path, weights_only=False)
   tensor_folder = _get_tensors_folder(path)
 
   def convert_fn(tensors):
