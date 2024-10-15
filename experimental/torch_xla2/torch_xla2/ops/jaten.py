@@ -49,7 +49,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.transpose_: torch.ops.aten.transpose,
 }
 
-# Note: tuple comparisons work intuitively, e.g., `_jax_version >= (0, 4, 32)`.
+# Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
 _jax_version = tuple(int(v) for v in jax.version._version.split("."))
 
 
