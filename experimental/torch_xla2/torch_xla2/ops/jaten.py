@@ -2775,6 +2775,7 @@ def _aten_unique2(input_tensor,
                           return_counts=return_counts)
 
 
+# aten.unique_consecutive
 @op(torch.ops.aten.unique_consecutive)
 def _aten_unique_consecutive(input_tensor,
                              return_inverse=False,
