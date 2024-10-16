@@ -2413,10 +2413,7 @@ def _aten_linalg_eigh(A, UPLO='L'):
 
 
 @op(torch.ops.aten.linalg_lstsq)
-def _aten_linalg_lstsq(A, B, rcond=None, driver=None):
-  if not driver:
-      driver = 'gelsy'  # Set default driver
-
+def _aten_linalg_lstsq(A, B, rcond=None, driver='gelsy'):
   input_dtype = A.dtype
 
   m = A.shape[-2]
