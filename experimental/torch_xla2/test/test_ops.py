@@ -97,8 +97,6 @@ skiplist = {
     "svd_lowrank",
     "unfold_copy",
     "unfold",
-    "unique_consecutive",
-    "unique",
     "unravel_index",
     "var_mean",
     "nanmean",
@@ -109,7 +107,7 @@ skiplist = {
 not_support_ops_list = {
   "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
   "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
-                 # such as 0 to negative power.
+               # such as 0 to negative power.
   "ceil", # only failed with python 3.9
   "trunc", # only failed with python 3.9
   "to_sparse", # We are not supporting sparse tensors yet.
