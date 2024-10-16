@@ -1542,7 +1542,7 @@ def get_memory_info(device: Optional[torch.device] = None) -> MemoryInfo:
   Example:
 
     >>> xm.get_memory_info()
-    {'bytes_used': 290816, 'bytes_limit': 34088157184}
+    {'bytes_used': 290816, 'bytes_limit': 34088157184, 'peak_bytes_used': 500816}
   """
   if device == None:
     device = xla_device()

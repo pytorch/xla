@@ -991,6 +991,7 @@ ComputationClient::MemoryInfo PjRtComputationClient::GetMemoryInfo(
   return {
       stats.bytes_in_use,
       *stats.bytes_limit,
+      stats.peak_bytes_in_use,
   };
 }
 

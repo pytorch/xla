@@ -825,6 +825,7 @@ py::dict GetMemoryInfo(const std::string& device_str) {
   auto py_dict = py::dict();
   py_dict["bytes_used"] = mem_info.bytes_used;
   py_dict["bytes_limit"] = mem_info.bytes_limit;
+  py_dict["peak_bytes_used"] = mem_info.peak_bytes_used;
   return py_dict;
 }
 
