@@ -11,7 +11,7 @@
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-#include "xla/client/lib/logdet.h"
+#include "xla/hlo/builder/lib/logdet.h"
 #include "xla/client/lib/math.h"
 #include "xla/client/lib/matrix.h"
 
