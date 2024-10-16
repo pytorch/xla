@@ -29,7 +29,6 @@ skiplist = {
     "linalg.cholesky_ex",
     "linalg.det",
     "linalg.ldl_solve",
-    "linalg.lstsq",
     "linalg.lu_solve",
     "linalg.matrix_norm",
     "linalg.matrix_power",
