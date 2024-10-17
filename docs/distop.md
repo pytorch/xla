@@ -1,16 +1,17 @@
 # Support of Torch Distributed API in PyTorch/XLA
-Before the 2.5 release, PyTorch/XLA only supported collective ops through our custom API call `torch_xla.core.xla_model.*`.  In the 2.5 release, we adopt `torch.distributed.*` in PyTorch/XLA for both Dynamo and non-Dynamo cases.
+Before the 2.5 release, PyTorch/XLA only supported collective ops through our custom `torch_xla.core.xla_model.*` API.  In the 2.5 release, we adopt `torch.distributed.*` in PyTorch/XLA for both dynamo and non-dynamo cases.
+
 ## Collective ops lowering
 ### Collective ops lowering stack
-After introducing the [traceable collective communication APIs](https://github.com/pytorch/pytorch/issues/93173), dynamo can support the collective ops with reimplementing lowering in PyTorch/XLA. The collective op is only traceable through `torch.ops._c10d_functional` call. Below is the figure that shows how the collective op, `all_reduce` in this case, is lowered between torch and torch_xla:
+After introducing the [traceable collective communication APIs](https://github.com/pytorch/pytorch/issues/93173), dynamo can support the collective ops with reimplementing lowering in PyTorch/XLA. Collective ops are traceable through torch.ops._c10d_functional call. The following  figure shows how a collective op, `all_reduce` in this case, is lowered between torch and torch_xla:
 
 
 <img src="_static/img/dist_op_stack.png" alt="Alt Text" width="500" height="400">  
 
 _<span style="text-decoration:underline;">Figure 1. Collective ops lowering stack</span>_
 
-### non-Dynamo case
-Collective ops are lowered through registering the `ProcessGroupXla`, which is derived from `ProcessGroup`:
+### Non-dynamo case
+Collective ops are lowered by registering the `ProcessGroupXla`, which is derived from PyTorch `ProcessGroup`:
 
 ```Python
 # torch_xla/distributed/xla_backend.py
@@ -32,12 +33,12 @@ class ProcessGroupXla(ProcessGroup):
     ...
 ```
 
-The corresponding xla dist backend is initialized when we call:
+The corresponding xla dist backend is initialized when we enter multiprocess function call:
 ```Python
 def _mp_fn(rank):
   dist.init_process_group("xla", init_method='xla://')
 
-In this way, collective ops will be called based on the progress group instance:
+With `dist.init_process_group`, collective ops will be called based on the progress group instance:
 
   # E.g., pytorch/pytorch/blob/main/torch/distributed/distributed_c10d.py
   @_exception_logger
@@ -63,9 +64,20 @@ TORCH_LIBRARY_IMPL(_c10d_functional, XLA, m) {
 
 ## API description
 
-For release 2.5, we now support four collective operations for both Dynamo and non-Dynamo cases. Our goal is to align the distributed operation (dist op) APIs with PyTorch's upstream implementation. While the function signatures remain consistent, certain input restrictions still apply.
-For instance, specifying multiple groups for distributed collective operations is not yet supported. For usage examples, refer to [test_collective_ops_tpu.py](https://github.com/pytorch/xla/blob/v2.5.0-rc10/test/pjrt/test_collective_ops_tpu.py), which demonstrates the use of dist ops in both Dynamo and non-Dynamo scenarios.
-Below are the details for each operation:
+For release 2.5, we now support four collective operations for both dynamo and non-dynamo cases. Our goal is to align the distributed operation (dist op) APIs with PyTorch's upstream implementation.  One thing to note is that distributed collective ops will not work with the GSPMD, where the collective ops is automatically injected in the XLA compiler level. While distributed function signatures remain consistent, certain input restrictions still apply. For instance, specifying multiple groups for distributed collective operations is not yet supported. For usage examples, refer to [test_collective_ops_tpu.py](https://github.com/pytorch/xla/blob/v2.5.0-rc10/test/pjrt/test_collective_ops_tpu.py), which demonstrates the use of collective ops in both dynamo and non-dynamo scenarios.
+To use the distributed ops, we need to first call  `dist.init_process_group` in the multiprocess function:
+```Python
+import torch.distributed as dist
+import torch_xla
+def _mp_fn(rank):
+  dist.init_process_group("xla", init_method='xla://')
+  ...
+
+if __name__ == '__main__':
+  torch_xla.launch(_mp_fn)
+
+```
+Below are the details for collective operation functions:
 ```Python
 dist.all_reduce(input: torch.Tensor, op: dist.ReduceOp = ReduceOp.SUM)
 ```
