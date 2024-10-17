@@ -43,16 +43,22 @@ def move_scheduler(scheduler):
 with env:
   pipe.to('jax:1')
   move_scheduler(pipe.scheduler)
-  pipe.unet = JittableModule(pipe.unet, extra_jit_args={'static_argnames': ('return_dict',)})
-  pipe.text_encoder = JittableModule(pipe.text_encoder)
+  pipe.unet = torch_xla2.compile(
+    pipe.unet, torch_xla2.CompileOptions(
+      jax_jit_kwargs={'static_argnames': ('return_dict',)}
+    )
+  )
+  import pdb; pdb.set_trace()
+  pipe.text_encoder = torch_xla2.compile(pipe.text_encoder)
 
   BS = 4
   prompt = [prompt] * BS 
-  pipe.vae = JittableModule(
-    pipe.vae, 
-    extra_jit_args={'static_argnames': ('return_dict', )})
-  pipe.vae.make_jitted('decode')
-
+  pipe.vae = torch_xla2.compile(
+    pipe.vae, torch_xla2.CompileOptions(
+      jax_jit_kwargs={'static_argnames': ('return_dict',)},
+      methods_to_compile=['decode'],
+    )
+  )
   image = pipe(prompt).images[0]
 
   jax.profiler.start_trace('/tmp/sdxl')

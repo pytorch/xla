@@ -1,3 +1,4 @@
+from typing import List, Dict, Any, Optional
 import dataclasses
 import jax
 import os
@@ -109,9 +110,10 @@ def compile(fn, options: Optional[CompileOptions] = None):
   if options.mode == 'jax':
     from torch_xla2 import interop
     if isinstance(fn, torch.nn.Module):
-      module = interop.JittableModule(fn, extra_jit_kwargs=config.jax_jit_kwargs)
-      for n in config.method_to_compile:
+      module = interop.JittableModule(fn, extra_jit_args=options.jax_jit_kwargs)
+      for n in options.methods_to_compile:
         module.make_jitted(n)
+      return module
     else:
       return interop.jax_jit(fn)
   elif options.mode == 'dynamo':
