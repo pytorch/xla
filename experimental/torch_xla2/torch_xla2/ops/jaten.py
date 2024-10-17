@@ -2394,6 +2394,12 @@ def _aten_hypot(input, other):
   return jnp.hypot(input, other)
 
 
+@op(torch.ops.aten.digamma)
+def _aten_digamma(input, *, out=None):
+  res = jax.scipy.special.digamma(input).astype(jnp.float32)
+  # replace indices where input == 0 with -inf in res
+  return jnp.where(jnp.equal(input, jnp.zeros(input.shape)), -jnp.inf, res)
+
 @op(torch.ops.aten.igamma)
 def _aten_igamma(input, other):
   return jax.scipy.special.gammainc(input, other)
