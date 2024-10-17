@@ -1069,7 +1069,6 @@ class PyLoweringContext {
   // etc.)
   std::unordered_map<int64_t, at::Tensor> GetParameterIdTensorMapping() {
     // Find parameters in the lowering
-    const std::vector<size_t>& param_ids = lowering_ctx.GetParameterSequence();
     const std::vector<torch::lazy::BackendDataPtr>& device_data =
         lowering_ctx.GetParametersData();
 
@@ -1086,7 +1085,9 @@ class PyLoweringContext {
       at::ScalarType dtype =
           MaybeUpcastToHostTorchType(literal.shape().element_type());
       at::Tensor input = MakeTensorFromXlaLiteral(literal, dtype);
-      results[param_ids[i]] = input;
+      std::optional param_id = lowering_ctx.GetParameterId(device_data[i]);
+      XLA_CHECK(param_id.has_value());
+      results[param_id.value()] = input;
     }
     return results;
   }
@@ -1109,12 +1110,13 @@ class PyLoweringContext {
     torch::lazy::BackendData::Handle handle = data->GetHandle();
 
     // Linearly search parameters and compare opaque handles
-    const std::vector<size_t>& param_ids = lowering_ctx.GetParameterSequence();
     const std::vector<torch::lazy::BackendDataPtr>& device_data =
         lowering_ctx.GetParametersData();
     for (int i = 0; i < device_data.size(); ++i) {
       if (device_data[i]->GetHandle() == handle) {
-        return param_ids[i];
+        std::optional param_id = lowering_ctx.GetParameterId(device_data[i]);
+        XLA_CHECK(param_id.has_value());
+        return param_id.value();
       }
     }
     return -1;

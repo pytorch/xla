@@ -1,11 +1,14 @@
 import sys
 import unittest
-import torch_xla
-import torch
-from torch_xla.experimental.scan import scan
-from torch.utils._pytree import tree_map, tree_flatten, tree_iter
+from functools import reduce
 
-from test_utils import XlaTestCase
+import torch
+from torch.utils._pytree import tree_map, tree_flatten, tree_iter, tree_leaves, PyTree
+
+import torch_xla
+from torch_xla.experimental.scan import scan
+
+from test_utils import XlaTestCase  # type:ignore
 
 
 def _loopy_scan(fn, init, xs):
@@ -24,6 +27,8 @@ def _loopy_scan(fn, init, xs):
 class ScanTest(XlaTestCase):
 
   def setUp(self):
+    super().setUp()
+
     self.device = torch_xla.device()
 
   def compare_pytree(self, expected_pytree, actual_pytree):
@@ -32,22 +37,43 @@ class ScanTest(XlaTestCase):
     assert expected_spec == actual_spec
     super().compareResults(flat_expected_pytree, flat_actual_pytree)
 
-  def run_test(self, step_fn, init, xs):
+  def run_test(self, fn, init: PyTree, xs: PyTree):
+    """Compares the result of scanning with `fn` with our optimized HLO implementation
+    against a for loop implementation. Checks both output values and gradients.
+    """
     # Actual output
-    final_carry, ys = scan(step_fn, init, xs)
+    init_scan = tree_map(lambda v: v.detach().requires_grad_(), init)
+    xs_scan = tree_map(lambda v: v.detach().requires_grad_(), xs)
+    final_carry, ys = scan(fn, init_scan, xs_scan)
+    # Add up all leaves in `ys` and `backward()` once.
+    reduce(lambda a, b: a + b, map(lambda v: v.sum(), tree_leaves(ys)),
+           torch.tensor(0.0)).backward()
     torch_xla.sync()
 
     # Expected output
-    expected_final_carry, expected_ys = _loopy_scan(step_fn, init, xs)
+    init_loop = tree_map(lambda v: v.detach().requires_grad_(), init)
+    xs_loop = tree_map(lambda v: v.detach().requires_grad_(), xs)
+    expected_final_carry, expected_ys = _loopy_scan(fn, init_loop, xs_loop)
+    # Add up all leaves in `ys` and `backward()` once.
+    reduce(lambda a, b: a + b, map(lambda v: v.sum(), tree_leaves(expected_ys)),
+           torch.tensor(0.0)).backward()
     torch_xla.sync()
 
-    # Compare
+    # Compare values
     self.compare_pytree(expected_final_carry, final_carry)
     self.compare_pytree(expected_ys, ys)
 
+    # Compare gradients
+    self.compare_pytree(
+        tree_map(lambda v: v.grad, init_scan),
+        tree_map(lambda v: v.grad, init_loop))
+    self.compare_pytree(
+        tree_map(lambda v: v.grad, xs_scan), tree_map(lambda v: v.grad,
+                                                      xs_loop))
+
     return final_carry, ys
 
-  def test_scan_forward_simple(self):
+  def test_scan_simple(self):
     """This test uses `scan` to implement `torch.cumsum`."""
 
     def step_fn(carry, x):
@@ -55,8 +81,10 @@ class ScanTest(XlaTestCase):
       y = new_carry
       return new_carry, y
 
-    init = torch.tensor([0.0, 0.0], device=self.device)
-    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], device=self.device)
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=True,
+                      device=self.device)
     final_carry, ys = self.run_test(step_fn, init, xs)
 
     # Also ensure that our loop-based scan is correct, with manual checks
@@ -80,26 +108,33 @@ class ScanTest(XlaTestCase):
     with self.assertRaises(ValueError):
       scan(lambda a, b: (a, b), init, (xs_1, xs_2))
 
-  def test_scan_forward_tuples(self):
+  def test_scan_tuples(self):
     """Test scanning over the leading axis of a tuple of tensors simultaneously,
     which is a simple PyTree."""
 
-    def step_fn(carry, x):
+    def fn(carry, x):
       carry1, carry2 = carry
       x1, x2 = x
       new_carry1 = carry1 + x1.sum()
       new_carry2 = carry2 + x2.sum()
-      y1 = x1 * 2
-      y2 = x2 * 2
+      y1 = x1 * 2 + torch.sum(new_carry1)
+      y2 = x2 * 2 + torch.sum(new_carry2)
       return (new_carry1, new_carry2), (y1, y2)
 
-    init = (torch.tensor([0.0], device=self.device),
-            torch.tensor([1.0, 2.0], device=self.device))
+    init = (torch.tensor([0.0], requires_grad=True, device=self.device),
+            torch.tensor([1.0, 2.0], requires_grad=True, device=self.device))
 
-    xs = (torch.tensor([[1.0, 2.0], [3.0, 4.0]], device=self.device),
-          torch.tensor([[5.0, 6.0, 7.0], [8.0, 9.0, 10.0]], device=self.device))
+    xs = (torch.tensor([[1.0, 2.0], [3.0, 4.0]],
+                       requires_grad=True,
+                       device=self.device),
+          torch.tensor([[5.0, 6.0, 7.0], [8.0, 9.0, 10.0]],
+                       requires_grad=True,
+                       device=self.device))
 
-    self.run_test(step_fn, init, xs)
+    self.run_test(fn, init, xs)
+
+  # TODO(yifeit): Add a test involving in-place updates
+  # TODO(yifeit): Add a test involving RNG
 
 
 if __name__ == '__main__':
