@@ -3027,11 +3027,11 @@ def _aten_to_dtype_layout(
 
 # Tensor self, int[1]? dim=None, *, Scalar? correction=None, bool keepdim=False
 @op(torch.ops.aten.var_mean.correction)
-def _aten_var_mean_correction(self, dim=None, correction=None, keepdim=False):
-  return (
-    jnp.var(self, axis=dim, ddof=correction, keepdims=keepdim),
-    jnp.mean(self, dim, keepdims=keepdim),
-  )
+def _aten_var_mean_correction(tensor, dim=None, correction=1, keepdim=False):
+  mean = jnp.mean(tensor, dim, keepdims=keepdim)
+  # TODO: Pass in the `mean=mean` argument once `jax.numpy.var` supports it.
+  var = jnp.var(tensor, axis=dim, ddof=correction, keepdims=keepdim)
+  return var, mean
 
 
 @op(torch.ops.aten.scalar_tensor)

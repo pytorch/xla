@@ -93,7 +93,6 @@ skiplist = {
     "unfold_copy",
     "unfold",
     "unravel_index",
-    "var_mean",
     "nanmean",
     "nn.functional.upsample_bilinear",
     "randint",
