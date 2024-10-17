@@ -26,86 +26,6 @@ import numpy as np
 DEFAULT_MASK_VALUE = -0.7 * float(np.finfo(np.dtype("float32")).max)
 
 
-class MultiPageAsyncCopyDescriptor:
-  """Descriptor for async copy of multiple K/V pages from HBM."""
-
-  def __init__(
-      self,
-      pages_hbm_ref, # [num_kv_heads, total_num_pages, page_size, head_dim]
-      scales_pages_hbm_ref,
-      vmem_buffer, # [pages_per_compute_block, page_size, head_dim]
-      scales_vmem_buffer,
-      sem,
-      page_indices,
-      page_indices_start_offset,
-      num_pages_to_load,
-      kv_head_index,
-  ):
-    # Original k_pages has shape [num_kv_heads, total_num_pages, page_size, head_dim]
-    self._vmem_buffer = vmem_buffer
-    self._scales_vmem_buffer = scales_vmem_buffer
-    self._num_pages_to_load = num_pages_to_load
-    if kv_head_index is not None:
-      self._pages_hbm_ref = pages_hbm_ref.at[kv_head_index]
-      if scales_pages_hbm_ref is not None:
-        self._scales_pages_hbm_ref = scales_pages_hbm_ref.at[kv_head_index]
-      else:
-        self._scales_pages_hbm_ref = None
-    else:
-      self._pages_hbm_ref = pages_hbm_ref
-      self._scales_pages_hbm_ref = scales_pages_hbm_ref
-    self._sem = sem
-    self._page_indices = page_indices
-    self._page_indices_start_offset = page_indices_start_offset
-    self._async_copies = [
-        self._make_async_copy(i) for i in range(self._num_pages_to_load)
-    ]
-    if (
-        self._scales_pages_hbm_ref is not None
-        and self._scales_vmem_buffer is not None
-    ):
-      self._async_copies += [
-          self._make_scales_async_copy(i)
-          for i in range(self._num_pages_to_load)
-      ]
-
-  def _make_async_copy(self, i):
-    page_index = self._page_indices[self._page_indices_start_offset + i]
-    return pltpu.make_async_copy(
-        self._pages_hbm_ref.at[page_index], self._vmem_buffer.at[i], self._sem
-    )
-
-  def _make_scales_async_copy(self, i):
-    page_index = self._page_indices[self._page_indices_start_offset + i]
-    return pltpu.make_async_copy(
-        self._scales_pages_hbm_ref.at[page_index],  # pytype: disable=attribute-error
-        self._scales_vmem_buffer.at[i],  # pytype: disable=attribute-error
-        self._sem,
-    )
-
-  def start(self):
-    """Starts the async copies."""
-    for async_copy in self._async_copies:
-      async_copy.start()
-
-  def _maybe_dequantize(self, x, x_scale, dtype=jnp.bfloat16):
-    if x_scale is None:
-      return x.astype(dtype)
-    return quantization_utils.from_int8(x, x_scale, dtype=dtype)
-
-  def wait_and_get_loaded(self) -> jax.Array:
-    """Wait async copies and gets the loaded buffer as a jax.Array."""
-    for async_copy in self._async_copies:
-      async_copy.wait()
-    head_dim = self._vmem_buffer.shape[-1]
-    jax_array = self._vmem_buffer[...].astype(jnp.float32)
-    if self._scales_vmem_buffer is not None:
-      scales_jax_array = self._scales_vmem_buffer[...].astype(jnp.float32)
-    else:
-      scales_jax_array = None
-    jax_array = self._maybe_dequantize(jax_array, scales_jax_array)
-    return jax_array.reshape(-1, head_dim)
-
 def paged_flash_attention_kernel(
     # prefetched value
     lengths_ref, # [batch_size] jax.Array the length of each example
@@ -299,17 +219,17 @@ def paged_flash_attention_kernel(
 
 MIN_BLOCK_SIZE = 1
 
-@functools.partial(
-    jax.jit,
-    static_argnames=[
-        "num_kv_pages_per_compute_block",
-        "num_queries_per_compute_block",
-        "attn_logits_soft_cap",
-        "mask_value",
-        "megacore_mode",
-        "inline_seq_dim",
-    ],
-)
+# @functools.partial(
+#     jax.jit,
+#     static_argnames=[
+#         "num_kv_pages_per_compute_block",
+#         "num_queries_per_compute_block",
+#         "attn_logits_soft_cap",
+#         "mask_value",
+#         "megacore_mode",
+#         "inline_seq_dim",
+#     ],
+# )
 def paged_attention(
     q: jax.Array,
     k_pages: jax.Array | quantization_utils.QuantizedTensor,
@@ -488,40 +408,40 @@ def paged_attention(
       pltpu.VMEM((num_queries_per_compute_block, head_dim), jnp.float32), # acc_scratch
   )
 
-  out, _, _ = pl.pallas_call(
-      functools.partial(
-          paged_flash_attention_kernel,
-          pages_per_sequence=pages_per_sequence,
-          batch_size=batch_size,
-          num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
-          num_queries_per_compute_block=num_queries_per_compute_block,
-          mask_value=mask_value,
-          attn_logits_soft_cap=attn_logits_soft_cap,
-      ),
-      grid_spec=pltpu.PrefetchScalarGridSpec(
-          # There are 4 scalars prefetched per kernel call: `lengths_ref`,
-          # `page_indices_ref`, `buffer_index_ref`, `step_ref`
-          num_scalar_prefetch=4,
-          in_specs=in_specs,
-          out_specs=out_specs,
-          grid=grid,
-          scratch_shapes=scratch_shapes,
-      ),
-      # compiler_params=pltpu.TPUCompilerParams(
-      #     dimension_semantics=dimension_semantics), # do we need it?
-      out_shape=out_shape,
-  )(
-      # The first 4 are prefetched scalars.
-      lengths,
-      page_indices.reshape(-1),
-      jnp.zeros((1,), jnp.int32),  # buffer index
-      jnp.zeros((1,), jnp.int32),  # step
-      q.astype(q_dtype_for_kernel_launch),
-      k_pages,
-      k_scales_pages,
-      v_pages,
-      v_scales_pages,
-  )
+  # out, _, _ = pl.pallas_call(
+  #     functools.partial(
+  #         paged_flash_attention_kernel,
+  #         pages_per_sequence=pages_per_sequence,
+  #         batch_size=batch_size,
+  #         num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
+  #         num_queries_per_compute_block=num_queries_per_compute_block,
+  #         mask_value=mask_value,
+  #         attn_logits_soft_cap=attn_logits_soft_cap,
+  #     ),
+  #     grid_spec=pltpu.PrefetchScalarGridSpec(
+  #         # There are 4 scalars prefetched per kernel call: `lengths_ref`,
+  #         # `page_indices_ref`, `buffer_index_ref`, `step_ref`
+  #         num_scalar_prefetch=4,
+  #         in_specs=in_specs,
+  #         out_specs=out_specs,
+  #         grid=grid,
+  #         scratch_shapes=scratch_shapes,
+  #     ),
+  #     # compiler_params=pltpu.TPUCompilerParams(
+  #     #     dimension_semantics=dimension_semantics), # do we need it?
+  #     out_shape=out_shape,
+  # )(
+  #     # The first 4 are prefetched scalars.
+  #     lengths,
+  #     page_indices.reshape(-1),
+  #     jnp.zeros((1,), jnp.int32),  # buffer index
+  #     jnp.zeros((1,), jnp.int32),  # step
+  #     q.astype(q_dtype_for_kernel_launch),
+  #     k_pages,
+  #     k_scales_pages,
+  #     v_pages,
+  #     v_scales_pages,
+  # )
   print(f'xw32 finished the pallas kernel. {out.shape=} Returning...', flush=True)
   return out.reshape(batch_size, query_len, num_q_heads, head_dim).astype(q.dtype)
 
