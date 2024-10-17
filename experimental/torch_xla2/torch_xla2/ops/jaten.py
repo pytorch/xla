@@ -3034,7 +3034,7 @@ def _aten_var_mean_correction(tensor, dim=None, correction=1, keepdim=False):
   # be nullable, we still need to check for `None` per the API contract.
   if correction is None:
     correction = 1
-  mean = jnp.mean(tensor, dim, keepdims=keepdim)
+  mean = jnp.mean(tensor, axis=dim, keepdims=keepdim)
   # TODO: Pass in the `mean=mean` argument once `jax.numpy.var` supports it.
   var = jnp.var(tensor, axis=dim, ddof=correction, keepdims=keepdim)
   return var, mean
