@@ -245,6 +245,11 @@ def empty_strided(
   return empty(size, dtype=dtype)
 
 
+@register_function(torch.unravel_index)
+def unravel_index(indices, shape):
+  return jnp.unravel_index(indices, shape)
+
+
 @register_function(torch.rand, is_jax_function=False)
 def rand(
   *size, **kwargs
