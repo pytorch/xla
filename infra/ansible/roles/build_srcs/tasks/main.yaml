@@ -44,7 +44,7 @@
 
 - name: Build PyTorch/XLA
   ansible.builtin.command:
-    cmd: python setup.py bdist_wheel
+    cmd: python setup.py bdist_wheel -p manylinux_2_28_x86_64
     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
   environment: "{{ env_vars }}"
 
