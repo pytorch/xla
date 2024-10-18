@@ -90,7 +90,6 @@ skiplist = {
     "svd_lowrank",
     "unfold_copy",
     "unfold",
-    "unravel_index",
     "nanmean",
     "nn.functional.upsample_bilinear",
     "randint",
