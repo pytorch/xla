@@ -106,6 +106,86 @@ class MultiPageAsyncCopyDescriptor:
     jax_array = self._maybe_dequantize(jax_array, scales_jax_array)
     return jax_array.reshape(-1, head_dim)
 
+def _flash_attention(
+    q_head_idx, # scalar, ranges from 0 to num_query_heads_per_kv_head
+    lengths_ref, # [batch_size] jax.Array the length of each example
+    page_indices_ref, # 1d vector, results from page_indices.reshape(-1) where originally page_indices.shape=[batch_size, pages_per_sequence]
+    # input
+    q_ref, # q_ref.shape=[num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim]
+    k, # Should be [pages_per_compute_block*page_size,head_dim]
+    v, # Should be [pages_per_compute_block*page_size,head_dim]
+    # output
+    o_ref, # same shape as q_ref: [num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim]
+    m_ref,
+    l_ref,
+    # scratch space
+    m_scratch_ref,
+    l_scratch_ref,
+    acc_scratch_ref,
+    *,
+    batch_size: int,
+    num_kv_pages_per_compute_block: int,
+    num_queries_per_compute_block: int,
+    pages_per_sequence: int,
+    mask_value: float,
+    attn_logits_soft_cap: float | None,
+    page_size: int,
+    head_dim: int,
+):
+  b, kv_head_idx, q_blk_idx, kv_blk_idx = (
+      pl.program_id(0),
+      pl.program_id(1),
+      pl.program_id(2),
+      pl.program_id(3),
+  )
+
+  @pl.when(kv_blk_idx == 0)
+  def start_new_sequence():
+    m_scratch_ref = jnp.full(m_scratch_ref.shape, -jnp.inf, jnp.float32)
+    l_scratch_ref = jnp.zeros(l_scratch_ref.shape, jnp.float32)
+    acc_scratch_ref = jnp.zeros(acc_scratch_ref.shape, jnp.float32)
+  
+  m_prev = m_scratch_ref[...]
+  l_prev = l_scratch_ref[...]
+  q = q_ref[:, q_head_idx,:].astype(jnp.float32)
+  kv_seq_len_per_kv_compute_blk = num_kv_pages_per_compute_block*page_size
+  assert k.shape == [kv_seq_len_per_kv_compute_blk, head_dim]
+  s = jnp.einsum('hd,td->ht', q, k, preferred_element_type=jnp.float32)
+  mask_shape = (num_queries_per_compute_block, kv_seq_len_per_kv_compute_blk)
+  row_ids = jax.lax.broadcasted_iota(jnp.int32, mask_shape, 0)
+  row_ids += q_blk_idx * num_queries_per_compute_block
+  col_ids = jax.lax.broadcasted_iota(jnp.int32, mask_shape, 1)
+  col_ids += kv_blk_idx * kv_seq_len_per_kv_compute_blk
+  mask = col_ids <= row_ids
+  s = s + jnp.where(mask, 0.0, mask_value)
+
+  # online softmax
+  m_curr = jnp.max(s, axis=1)[:, None]  # Row max, shape [block_q, 1].
+  m_next = jnp.maximum(m_prev, m_curr)  # Shape [block_q, 128].
+  p = jnp.exp(s-m_next)
+
+  alpha = jnp.exp(m_prev - m_next)
+  l_corr = alpha * l_prev
+  l_next = jnp.sum(p, axis=1)[:, None] + l_corr
+  l_scratch_ref = l_next
+  m_scratch_ref = m_next
+
+  l_next_inv_safe = jnp.where(l_next == 0.0, 1.0, 1.0 / l_next)
+  acc_scratch_ref *= pltpu.repeat(l_corr * l_next_inv_safe, 1, 1)
+
+  o_curr = jax.lax.dot(
+          p.astype(v.dtype), v, preferred_element_type=jnp.float32
+      )
+  acc_scratch_ref += o_curr * pltpu.repeat(l_next_inv_safe, 1, 1)
+
+  num_kv_compute_blks = lengths_ref[b] // kv_seq_len_per_kv_compute_blk
+  @pl.when(kv_blk_idx == num_kv_compute_blks-1)
+  def store_output():
+    o_ref = acc_scratch_ref.astype(o_ref.dtype)
+    l_ref = l_scratch_ref.astype(l_ref.dtype)
+    m_ref = m_scratch_ref.astype(m_ref.dtype)
+
+
 def paged_flash_attention_kernel(
     # prefetched value
     lengths_ref, # [batch_size] jax.Array the length of each example
@@ -113,13 +193,13 @@ def paged_flash_attention_kernel(
     buffer_index_ref, # for double buffer
     step_ref, # xw32q: do we still need it?
     # input
-    q_ref, # q_ref.shape=[num_queries_per_compute_block, head_dim]
+    q_ref, # q_ref.shape=[num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim]
     k_pages_hbm_ref, # shape=[num_kv_heads, total_num_pages, page_size, head_dim]
     k_scales_pages_hbm_ref,
-    v_pages_hbm_ref,
+    v_pages_hbm_ref, # shape=[num_kv_heads, total_num_pages, page_size, head_dim]
     v_scales_pages_hbm_ref,
     # output
-    o_ref, # same shape as q_ref: [num_queries_per_compute_block, head_dim]
+    o_ref, # same shape as q_ref: [num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim]
     m_ref,
     l_ref,
     # scratch space
@@ -140,22 +220,21 @@ def paged_flash_attention_kernel(
     attn_logits_soft_cap: float | None,
 ):
   """Pallas kernel for paged attention."""
-  # grid=[batch_size, num_q_heads, num_q_len_blocks, num_kv_len_blocks]
-  b, q_head_idx, q_blk_idx, kv_blk_idx = (
+  b, kv_head_idx, q_blk_idx, kv_blk_idx = (
       pl.program_id(0),
       pl.program_id(1),
       pl.program_id(2),
       pl.program_id(3),
   )
-
+  num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim = q_ref.shape
+  assert q_ref.shape == [num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim]
   num_kv_heads, total_num_pages, page_size, head_dim = k_pages_hbm_ref.shape
-  assert q_ref.shape == [num_queries_per_compute_block, head_dim]
   compute_blk_size_kv = page_size * num_kv_pages_per_compute_block
+  # Step1: Get the K and V for the current batch and current kv head.
 
-  kv_length_for_cur_batch = lengths_ref[b]
-  
-  def compute_block_indices(b, q_head_idx, kv_blk_idx):
-    """Return next_b, next_q_head_idx, next_kv_blk_idx"""
+  # Loop over num_q_heads_per_kv_head and use the same K and V
+  def compute_block_indices(b, kv_head_idx, kv_blk_idx):
+    """Return next_b, next_kv_head_idx, next_kv_blk_idx"""
 
     def advance_b():
       next_b = b + 1
@@ -175,18 +254,18 @@ def paged_flash_attention_kernel(
               advance_to_next_non_zero_length,
               lambda: next_b,
           ),
-          0,
-          0,
+          0, # kv_head_idx
+          0, # kv_blk_idx
       )
 
-    def advance_h():
-      next_h = h + 1
-      return lax.cond(next_h < num_kv_heads, lambda: (b, next_h, 0), advance_b)
+    def advance_kv_head_idx():
+      next_kv_head_idx = kv_head_idx + 1
+      return lax.cond(next_kv_head_idx < num_kv_heads, lambda: (b, next_kv_head_idx, 0), advance_b)
 
-    return lax.cond(kv_blk_idx * compute_blk_size_kv < lengths_ref[b], lambda: (b, q_head_idx, kv_blk_idx), advance_h)
+    return lax.cond(kv_blk_idx * compute_blk_size_kv < lengths_ref[b], lambda: (b, kv_head_idx, kv_blk_idx), advance_kv_head_idx)
 
-  def create_kv_async_copy_descriptors(b, kv_head_idx, i, buffer_index):
-    page_offset = b * pages_per_sequence + i * num_kv_pages_per_compute_block
+  def create_kv_async_copy_descriptors(b, kv_head_idx, kv_blk_idx, buffer_index):
+    page_offset = b * pages_per_sequence + kv_blk_idx * num_kv_pages_per_compute_block
     pages_to_load = num_kv_pages_per_compute_block
     async_copy_k = MultiPageAsyncCopyDescriptor(
         k_pages_hbm_ref,
@@ -216,88 +295,249 @@ def paged_flash_attention_kernel(
     )
     return async_copy_k, async_copy_v
 
-  @pl.when(kv_blk_idx == 0)
-  def start_new_sequence():
-    m_scratch_ref = jnp.full(m_scratch_ref.shape, -jnp.inf, jnp.float32)
-    l_scratch_ref = jnp.zeros(l_scratch_ref.shape, jnp.float32)
-    acc_scratch_ref = jnp.zeros(acc_scratch_ref.shape, jnp.float32)
-
-  # xw32q: what if length % (i_kv_len * compute_blk_size_kv) != 0
-  # for the current batch, query_head, and current kv_i block and q_i block, we do this
-  # Flash attention begins
-  m_prev = m_scratch_ref[...]
-  l_prev = l_scratch_ref[...]
-  q = q_ref[...].astype(jnp.float32)
-
-  # Gather the k and v.
   step = step_ref[0]
   buffer_index = buffer_index_ref[0]
-  kv_head_idx_to_fetch = q_head_idx // num_kv_heads
-
   @pl.when(step == 0)
   def prefetch_first_block():  # pylint: disable=unused-variable
     async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
-        b, kv_head_idx_to_fetch, kv_blk_idx, buffer_index
+        b, kv_head_idx, kv_blk_idx, buffer_index
     )
     async_copy_k.start()
     async_copy_v.start()
   
-  next_b, next_q_head_idx, next_kv_blk_idx = compute_block_indices(b, q_head_idx, kv_blk_idx+1)
+  next_b, next_kv_head_idx, next_kv_blk_idx = compute_block_indices(b, kv_head_idx, kv_blk_idx+1)
 
   @pl.when(next_b < batch_size)
   def prefetch_next_block():  # pylint: disable=unused-variable
     next_buffer_index = jnp.where(buffer_index == 0, 1, 0)
     async_copy_next_k, async_copy_next_v = create_kv_async_copy_descriptors(
-        next_b, next_q_head_idx // num_kv_heads, next_kv_blk_idx, next_buffer_index
+        next_b, next_kv_head_idx, next_kv_blk_idx, next_buffer_index
     )
     async_copy_next_k.start()
     async_copy_next_v.start()
     buffer_index_ref[0] = next_buffer_index
   
   async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
-    b, kv_head_idx_to_fetch, kv_blk_idx, buffer_index 
+    b, kv_head_idx, kv_blk_idx, buffer_index 
   )
   k = async_copy_k.wait_and_get_loaded()
-  # TODO: continue to do attention.
-  assert k.shape == [num_kv_pages_per_compute_block*page_size, head_dim]
-  s = jnp.einsum('hd,td->ht', q, k, preferred_element_type=jnp.float32)
-
-  assert s.shape == [num_queries_per_compute_block, num_kv_pages_per_compute_block*page_size]
-  mask_shape = (num_queries_per_compute_block, num_kv_pages_per_compute_block*page_size)
-  row_ids = jax.lax.broadcasted_iota(jnp.int32, mask_shape, 0)
-  row_ids += q_blk_idx * num_queries_per_compute_block
-  col_ids = jax.lax.broadcasted_iota(jnp.int32, mask_shape, 1)
-  col_ids += kv_blk_idx * num_kv_pages_per_compute_block*page_size
-  mask = col_ids <= row_ids
-  s = s + jnp.where(mask, 0.0, mask_value)
-
-  # online softmax
-  m_curr = jnp.max(s, axis=1)[:, None]  # Row max, shape [block_q, 1].
-  m_next = jnp.maximum(m_prev, m_curr)  # Shape [block_q, 128].
-  p = jnp.exp(s-m_next)
-
-  alpha = jnp.exp(m_prev - m_next)
-  l_corr = alpha * l_prev
-  l_next = jnp.sum(p, axis=1)[:, None] + l_corr
-  l_scratch_ref = l_next
-  m_scratch_ref = m_next
-
-  l_next_inv_safe = jnp.where(l_next == 0.0, 1.0, 1.0 / l_next)
-  acc_scratch_ref *= pltpu.repeat(l_corr * l_next_inv_safe, 1, 1)
-
   v = async_copy_v.wait_and_get_loaded()
-  o_curr = jax.lax.dot(
-          p.astype(v.dtype), v, preferred_element_type=jnp.float32
+  for q_head_idx in range(num_q_heads_per_kv_head):
+    _flash_attention(
+      q_head_idx,
+      lengths_ref,
+      page_indices_ref,
+      q_ref,
+      k,
+      v,
+      o_ref,
+      m_ref,
+      l_ref,
+      m_scratch_ref,
+      l_scratch_ref,
+      acc_scratch_ref,
+      batch_size=batch_size,
+      num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
+      num_queries_per_compute_block=num_queries_per_compute_block,
+      pages_per_sequence=pages_per_sequence,
+      mask_value=mask_value,
+      attn_logits_soft_cap=attn_logits_soft_cap,
+      page_size=page_size,
+      head_dim=head_dim,
       )
-  acc_scratch_ref += o_curr * pltpu.repeat(l_next_inv_safe, 1, 1)
 
-  @pl.when(kv_blk_idx == (kv_length_for_cur_batch // (num_kv_pages_per_compute_block * page_size)-1))
-  def store_output():
-    o_ref = acc_scratch_ref.astype(o_ref.dtype)
-    l_ref = l_scratch_ref.astype(l_ref.dtype)
-    m_ref = m_scratch_ref.astype(m_ref.dtype)
+# def paged_flash_attention_kernel(
+#     # prefetched value
+#     lengths_ref, # [batch_size] jax.Array the length of each example
+#     page_indices_ref, # 1d vector, results from page_indices.reshape(-1) where originally page_indices.shape=[batch_size, pages_per_sequence]
+#     buffer_index_ref, # for double buffer
+#     step_ref, # xw32q: do we still need it?
+#     # input
+#     q_ref, # q_ref.shape=[num_queries_per_compute_block, head_dim]
+#     k_pages_hbm_ref, # shape=[num_kv_heads, total_num_pages, page_size, head_dim]
+#     k_scales_pages_hbm_ref,
+#     v_pages_hbm_ref,
+#     v_scales_pages_hbm_ref,
+#     # output
+#     o_ref, # same shape as q_ref: [num_queries_per_compute_block, head_dim]
+#     m_ref,
+#     l_ref,
+#     # scratch space
+#     k_vmem_buffer, # shape=[2, num_kv_pages_per_compute_block, num_kv_heads, head_dim]
+#     k_scales_vmem_buffer,
+#     v_vmem_buffer, # shape=[2, num_kv_pages_per_compute_block, num_kv_heads, head_dim]
+#     v_scales_vmem_buffer,
+#     sem,
+#     m_scratch_ref,
+#     l_scratch_ref,
+#     acc_scratch_ref,
+#     *,
+#     batch_size: int,
+#     num_kv_pages_per_compute_block: int,
+#     num_queries_per_compute_block: int,
+#     pages_per_sequence: int,
+#     mask_value: float,
+#     attn_logits_soft_cap: float | None,
+# ):
+#   """Pallas kernel for paged attention."""
+#   # grid=[batch_size, num_kv_heads, num_q_len_blocks, num_kv_len_blocks]
+#   b, q_head_idx, q_blk_idx, kv_blk_idx = (
+#       pl.program_id(0),
+#       pl.program_id(1),
+#       pl.program_id(2),
+#       pl.program_id(3),
+#   )
+# 
+#   num_kv_heads, total_num_pages, page_size, head_dim = k_pages_hbm_ref.shape
+#   assert q_ref.shape == [num_queries_per_compute_block, head_dim]
+#   compute_blk_size_kv = page_size * num_kv_pages_per_compute_block
+# 
+#   kv_length_for_cur_batch = lengths_ref[b]
+#   
+#   def compute_block_indices(b, q_head_idx, kv_blk_idx):
+#     """Return next_b, next_q_head_idx, next_kv_blk_idx"""
+# 
+#     def advance_b():
+#       next_b = b + 1
+# 
+#       def advance_to_next_non_zero_length():
+#         next_next_b = next_b + 1
+#         return lax.fori_loop(
+#             next_next_b,
+#             batch_size,
+#             lambda _, b: jnp.where(lengths_ref[b] == 0, b + 1, b),
+#             next_next_b,
+#         )
+# 
+#       return (
+#           lax.cond(
+#               jnp.logical_and(next_b < batch_size, lengths_ref[next_b] == 0),
+#               advance_to_next_non_zero_length,
+#               lambda: next_b,
+#           ),
+#           0,
+#           0,
+#       )
+# 
+#     def advance_h():
+#       next_h = h + 1
+#       return lax.cond(next_h < num_kv_heads, lambda: (b, next_h, 0), advance_b)
+# 
+#     return lax.cond(kv_blk_idx * compute_blk_size_kv < lengths_ref[b], lambda: (b, q_head_idx, kv_blk_idx), advance_h)
+# 
+#   def create_kv_async_copy_descriptors(b, kv_head_idx, i, buffer_index):
+#     page_offset = b * pages_per_sequence + i * num_kv_pages_per_compute_block
+#     pages_to_load = num_kv_pages_per_compute_block
+#     async_copy_k = MultiPageAsyncCopyDescriptor(
+#         k_pages_hbm_ref,
+#         k_scales_pages_hbm_ref,
+#         k_vmem_buffer.at[buffer_index],
+#         k_scales_vmem_buffer.at[buffer_index]
+#         if k_scales_vmem_buffer is not None
+#         else None,
+#         sem,
+#         page_indices_ref, # [batch_size*pages_per_sequence]
+#         page_offset,
+#         pages_to_load,
+#         kv_head_idx,
+#     )
+#     async_copy_v = MultiPageAsyncCopyDescriptor(
+#         v_pages_hbm_ref,
+#         v_scales_pages_hbm_ref,
+#         v_vmem_buffer.at[buffer_index],
+#         v_scales_vmem_buffer.at[buffer_index]
+#         if v_scales_vmem_buffer is not None
+#         else None,
+#         sem,
+#         page_indices_ref,
+#         page_offset,
+#         pages_to_load,
+#         kv_head_idx,
+#     )
+#     return async_copy_k, async_copy_v
+# 
+#   @pl.when(kv_blk_idx == 0)
+#   def start_new_sequence():
+#     m_scratch_ref = jnp.full(m_scratch_ref.shape, -jnp.inf, jnp.float32)
+#     l_scratch_ref = jnp.zeros(l_scratch_ref.shape, jnp.float32)
+#     acc_scratch_ref = jnp.zeros(acc_scratch_ref.shape, jnp.float32)
+# 
+#   # xw32q: what if length % (i_kv_len * compute_blk_size_kv) != 0
+#   # for the current batch, query_head, and current kv_i block and q_i block, we do this
+#   # Flash attention begins
+#   m_prev = m_scratch_ref[...]
+#   l_prev = l_scratch_ref[...]
+#   q = q_ref[...].astype(jnp.float32)
+# 
+#   # Gather the k and v.
+#   step = step_ref[0]
+#   buffer_index = buffer_index_ref[0]
+#   kv_head_idx_to_fetch = q_head_idx // num_kv_heads
+# 
+#   @pl.when(step == 0)
+#   def prefetch_first_block():  # pylint: disable=unused-variable
+#     async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
+#         b, kv_head_idx_to_fetch, kv_blk_idx, buffer_index
+#     )
+#     async_copy_k.start()
+#     async_copy_v.start()
+#   
+#   next_b, next_q_head_idx, next_kv_blk_idx = compute_block_indices(b, q_head_idx, kv_blk_idx+1)
+# 
+#   @pl.when(next_b < batch_size)
+#   def prefetch_next_block():  # pylint: disable=unused-variable
+#     next_buffer_index = jnp.where(buffer_index == 0, 1, 0)
+#     async_copy_next_k, async_copy_next_v = create_kv_async_copy_descriptors(
+#         next_b, next_q_head_idx // num_kv_heads, next_kv_blk_idx, next_buffer_index
+#     )
+#     async_copy_next_k.start()
+#     async_copy_next_v.start()
+#     buffer_index_ref[0] = next_buffer_index
+#   
+#   async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
+#     b, kv_head_idx_to_fetch, kv_blk_idx, buffer_index 
+#   )
+#   k = async_copy_k.wait_and_get_loaded()
+#   # TODO: continue to do attention.
+#   assert k.shape == [num_kv_pages_per_compute_block*page_size, head_dim]
+#   s = jnp.einsum('hd,td->ht', q, k, preferred_element_type=jnp.float32)
+# 
+#   assert s.shape == [num_queries_per_compute_block, num_kv_pages_per_compute_block*page_size]
+#   mask_shape = (num_queries_per_compute_block, num_kv_pages_per_compute_block*page_size)
+#   row_ids = jax.lax.broadcasted_iota(jnp.int32, mask_shape, 0)
+#   row_ids += q_blk_idx * num_queries_per_compute_block
+#   col_ids = jax.lax.broadcasted_iota(jnp.int32, mask_shape, 1)
+#   col_ids += kv_blk_idx * num_kv_pages_per_compute_block*page_size
+#   mask = col_ids <= row_ids
+#   s = s + jnp.where(mask, 0.0, mask_value)
+# 
+#   # online softmax
+#   m_curr = jnp.max(s, axis=1)[:, None]  # Row max, shape [block_q, 1].
+#   m_next = jnp.maximum(m_prev, m_curr)  # Shape [block_q, 128].
+#   p = jnp.exp(s-m_next)
+# 
+#   alpha = jnp.exp(m_prev - m_next)
+#   l_corr = alpha * l_prev
+#   l_next = jnp.sum(p, axis=1)[:, None] + l_corr
+#   l_scratch_ref = l_next
+#   m_scratch_ref = m_next
+# 
+#   l_next_inv_safe = jnp.where(l_next == 0.0, 1.0, 1.0 / l_next)
+#   acc_scratch_ref *= pltpu.repeat(l_corr * l_next_inv_safe, 1, 1)
+# 
+#   v = async_copy_v.wait_and_get_loaded()
+#   o_curr = jax.lax.dot(
+#           p.astype(v.dtype), v, preferred_element_type=jnp.float32
+#       )
+#   acc_scratch_ref += o_curr * pltpu.repeat(l_next_inv_safe, 1, 1)
+# 
+#   @pl.when(kv_blk_idx == (kv_length_for_cur_batch // (num_kv_pages_per_compute_block * page_size)-1))
+#   def store_output():
+#     o_ref = acc_scratch_ref.astype(o_ref.dtype)
+#     l_ref = l_scratch_ref.astype(l_ref.dtype)
+#     m_ref = m_scratch_ref.astype(m_ref.dtype)
 
-MIN_BLOCK_SIZE = 1
+MIN_BLOCK_SIZE = 128
 
 @functools.partial(
     jax.jit,
@@ -407,16 +647,17 @@ def paged_attention(
     # xw32: do we need to support this case? FWIW, FA pallas kernel only support num_q_heads == num_kv_heads 
     # The original paged_attention kernel support it but it doesn't provide much value.
     raise ValueError('(num_q_heads // num_kv_heads) % 8 != 0')
+  num_q_heads_per_kv_head = num_q_heads // num_kv_heads;
 
   # Here, we guarantee (num_q_heads // num_kv_heads) % 8 == 0
   # grid
   grid = (
       batch_size,
-      num_q_heads,
+      num_kv_heads,
       # what if query_len%num_queries_per_compute_block!=0 or pages_per_sequence%num_kv_pages_per_compute_block!=0
       query_len // num_queries_per_compute_block, # how many compute blocks we need to loop the query_len
       pages_per_sequence // num_kv_pages_per_compute_block, # how many compute blocks we need to loop the kv_len
-  )  # type: ignore
+  )
 
   # out_shape
   o_shape = jax.ShapeDtypeStruct(shape=q.shape, dtype=q.dtype)
@@ -431,25 +672,10 @@ def paged_attention(
   )
   out_shape = [o_shape, l_shape, m_shape]
 
-  # out_spec
-  o_specs = pl.BlockSpec( # same as q_block_spec
-      (None, num_queries_per_compute_block, None, head_dim), # q_ref.shape=[num_queries_per_compute_block, head_dim]
-      lambda batch_index, head_index, q_seq_blk_idx, *_: (batch_index, q_seq_blk_idx, head_index, 0), # map from grid idx to q's starting index
-  )
-  def lm_index_map(batch_index, head_index, q_seq_index, _):
-    return (batch_index, q_seq_index, head_index, 0)
-  l_specs = pl.BlockSpec(
-    (None, num_queries_per_compute_block, None, MIN_BLOCK_SIZE), lm_index_map
-  )
-  m_specs = pl.BlockSpec(
-    (None, num_queries_per_compute_block, None, MIN_BLOCK_SIZE), lm_index_map
-  )
-  out_specs = [o_specs, l_specs, m_specs]
-
-  # in-spec and scratch space. Note q.shape=[batch_size, query_len, num_q_heads, head_dim]
+  # in-spec. Note q.shape=[batch_size, query_len, num_q_heads, head_dim]
   q_block_spec = pl.BlockSpec(
-      (None, num_queries_per_compute_block, None, head_dim), # q_ref.shape=[num_queries_per_compute_block, head_dim]
-      lambda batch_index, head_index, q_seq_blk_idx, *_: (batch_index, q_seq_blk_idx, head_index, 0), # map from grid idx to q's starting index
+      (None, num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim), # q_ref.shape=[num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim]
+      lambda batch_index, kv_head_index, q_seq_blk_idx, *_: (batch_index, q_seq_blk_idx, kv_head_index, 0), # map from grid idx to q's starting index
   )
   q_dtype_for_kernel_launch = q.dtype
   in_specs = [
@@ -460,7 +686,23 @@ def paged_attention(
       pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
       None,  # type: ignore[list-item]  v_scales_pages=None
   ]
-  # Note k_pages.shape=[num_kv_heads, total_num_pages, page_size, head_dim]
+
+  # out_spec
+  o_specs = pl.BlockSpec( # same as q_block_spec
+      (None, num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim), # q_ref.shape=[num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim]
+      lambda batch_index, kv_head_index, q_seq_blk_idx, *_: (batch_index, q_seq_blk_idx, kv_head_index, 0), # map from grid idx to q's starting index
+  )
+  def lm_index_map(batch_index, kv_head_index, q_seq_index, _):
+    return (batch_index, q_seq_index, kv_head_index, 0)
+  l_specs = pl.BlockSpec(
+    (None, num_queries_per_compute_block, num_q_heads_per_kv_head, MIN_BLOCK_SIZE), lm_index_map
+  )
+  m_specs = pl.BlockSpec(
+    (None, num_queries_per_compute_block, num_q_heads_per_kv_head, MIN_BLOCK_SIZE), lm_index_map
+  )
+  out_specs = [o_specs, l_specs, m_specs]
+
+  # scratch space. Note k_pages.shape=[num_kv_heads, total_num_pages, page_size, head_dim]
   scratch_shapes = (
       pltpu.VMEM(
           (
@@ -483,9 +725,9 @@ def paged_attention(
       ),  # v_pages buffer
       None, # v_scales_pages=None
       pltpu.SemaphoreType.DMA,
-      pltpu.VMEM((num_queries_per_compute_block, MIN_BLOCK_SIZE), jnp.float32), # m_scratch
-      pltpu.VMEM((num_queries_per_compute_block, MIN_BLOCK_SIZE), jnp.float32), # l_scratch
-      pltpu.VMEM((num_queries_per_compute_block, head_dim), jnp.float32), # acc_scratch
+      pltpu.VMEM((num_queries_per_compute_block, num_q_heads_per_kv_head, MIN_BLOCK_SIZE), jnp.float32), # m_scratch
+      pltpu.VMEM((num_queries_per_compute_block, num_q_heads_per_kv_head, MIN_BLOCK_SIZE), jnp.float32), # l_scratch
+      pltpu.VMEM((num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim), jnp.float32), # acc_scratch
   )
 
   out, _, _ = pl.pallas_call(
