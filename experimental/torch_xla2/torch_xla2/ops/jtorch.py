@@ -326,3 +326,8 @@ def lu_solve(b, LU_data, LU_pivots, **kwargs):
   _pivots = LU_pivots - 1
   x = jax.scipy.linalg.lu_solve((LU_data, _pivots), b)
   return x
+
+@register_function(torch.linalg.tensorsolve)
+def linalg_tensorsolve(a, b):
+  res, _ = jaten._aten__linalg_solve_ex(a, b)
+  return res
