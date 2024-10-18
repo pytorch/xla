@@ -20,7 +20,9 @@ ComputationClient* GetComputationClient() {
 
     std::unique_ptr<ComputationClient> client;
 
-    static bool use_ifrt = sys_util::GetEnvBool("XLA_USE_IFRT", false);
+    // Disable IFRT right now as it currently crashes.
+    // static bool use_ifrt = sys_util::GetEnvBool("XLA_USE_IFRT", false);
+    static bool use_ifrt = false;
     if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
       if (use_ifrt) {
         client = std::make_unique<IfrtComputationClient>();
