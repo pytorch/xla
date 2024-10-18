@@ -40,23 +40,25 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  build-torch-with-cuda:
-    name: "Build PyTorch with CUDA"
-    uses: ./.github/workflows/_build_torch_with_cuda.yml
-    needs: get-torch-commit
-    with:
-      # note that to build a torch wheel with CUDA enabled, we do not need a GPU runner.
-      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
-      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-      runner: linux.24xlarge
+  # Disable due to https://github.com/pytorch/xla/issues/8199
+  # build-torch-with-cuda:
+  #   name: "Build PyTorch with CUDA"
+  #   uses: ./.github/workflows/_build_torch_with_cuda.yml
+  #   needs: get-torch-commit
+  #   with:
+  #     # note that to build a torch wheel with CUDA enabled, we do not need a GPU runner.
+  #     dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+  #     torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
+  #     runner: linux.24xlarge
 
-  build-cuda-plugin:
-    name: "Build XLA CUDA plugin"
-    uses: ./.github/workflows/_build_plugin.yml
-    with:
-      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  # Disable due to https://github.com/pytorch/xla/issues/8199
+  # build-cuda-plugin:
+  #   name: "Build XLA CUDA plugin"
+  #   uses: ./.github/workflows/_build_plugin.yml
+  #   with:
+  #     dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+  #   secrets:
+  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   test-python-cpu:
     name: "CPU tests"
@@ -70,30 +72,32 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cuda:
-    name: "GPU tests"
-    uses: ./.github/workflows/_test.yml
-    needs: [build-torch-xla, build-cuda-plugin, get-torch-commit]
-    with:
-      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
-      runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 300
-      collect-coverage: false
-      install-cuda-plugin: true
-      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  # Disable due to https://github.com/pytorch/xla/issues/8199
+  # test-cuda:
+  #   name: "GPU tests"
+  #   uses: ./.github/workflows/_test.yml
+  #   needs: [build-torch-xla, build-cuda-plugin, get-torch-commit]
+  #   with:
+  #     dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+  #     runner: linux.8xlarge.nvidia.gpu
+  #     timeout-minutes: 300
+  #     collect-coverage: false
+  #     install-cuda-plugin: true
+  #     torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
+  #   secrets:
+  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cuda-with-pytorch-cuda-enabled:
-    name: "GPU tests requiring torch CUDA"
-    uses: ./.github/workflows/_test_requiring_torch_cuda.yml
-    needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, get-torch-commit]
-    with:
-      dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
-      runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 300
-      collect-coverage: false
-      torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
+  # Disable due to https://github.com/pytorch/xla/issues/8199
+  # test-cuda-with-pytorch-cuda-enabled:
+  #   name: "GPU tests requiring torch CUDA"
+  #   uses: ./.github/workflows/_test_requiring_torch_cuda.yml
+  #   needs: [build-torch-with-cuda, build-torch-xla, build-cuda-plugin, get-torch-commit]
+  #   with:
+  #     dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.1
+  #     runner: linux.8xlarge.nvidia.gpu
+  #     timeout-minutes: 300
+  #     collect-coverage: false
+  #     torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
 
   test-tpu:
     name: "TPU tests"
