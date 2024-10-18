@@ -141,15 +141,15 @@ def _flash_attention(
 
   @pl.when(kv_blk_idx == 0)
   def start_new_sequence():
-    m_scratch_ref = jnp.full(m_scratch_ref.shape, -jnp.inf, jnp.float32)
-    l_scratch_ref = jnp.zeros(l_scratch_ref.shape, jnp.float32)
-    acc_scratch_ref = jnp.zeros(acc_scratch_ref.shape, jnp.float32)
+    m_scratch_ref[...] = jnp.full(m_scratch_ref.shape, -jnp.inf, jnp.float32)
+    l_scratch_ref[...] = jnp.zeros(l_scratch_ref.shape, jnp.float32)
+    acc_scratch_ref[...] = jnp.zeros(acc_scratch_ref.shape, jnp.float32)
   
   m_prev = m_scratch_ref[...]
   l_prev = l_scratch_ref[...]
   q = q_ref[:, q_head_idx,:].astype(jnp.float32)
   kv_seq_len_per_kv_compute_blk = num_kv_pages_per_compute_block*page_size
-  assert k.shape == [kv_seq_len_per_kv_compute_blk, head_dim]
+  assert k.shape == (kv_seq_len_per_kv_compute_blk, head_dim)
   s = jnp.einsum('hd,td->ht', q, k, preferred_element_type=jnp.float32)
   mask_shape = (num_queries_per_compute_block, kv_seq_len_per_kv_compute_blk)
   row_ids = jax.lax.broadcasted_iota(jnp.int32, mask_shape, 0)
@@ -181,9 +181,9 @@ def _flash_attention(
   num_kv_compute_blks = lengths_ref[b] // kv_seq_len_per_kv_compute_blk
   @pl.when(kv_blk_idx == num_kv_compute_blks-1)
   def store_output():
-    o_ref = acc_scratch_ref.astype(o_ref.dtype)
-    l_ref = l_scratch_ref.astype(l_ref.dtype)
-    m_ref = m_scratch_ref.astype(m_ref.dtype)
+    o_ref[...] = acc_scratch_ref.astype(o_ref.dtype)
+    l_ref[...] = l_scratch_ref.astype(l_ref.dtype)
+    m_ref[...] = m_scratch_ref.astype(m_ref.dtype)
 
 
 def paged_flash_attention_kernel(
@@ -212,10 +212,10 @@ def paged_flash_attention_kernel(
     l_scratch_ref,
     acc_scratch_ref,
     *,
+    pages_per_sequence: int,
     batch_size: int,
     num_kv_pages_per_compute_block: int,
     num_queries_per_compute_block: int,
-    pages_per_sequence: int,
     mask_value: float,
     attn_logits_soft_cap: float | None,
 ):
@@ -227,7 +227,7 @@ def paged_flash_attention_kernel(
       pl.program_id(3),
   )
   num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim = q_ref.shape
-  assert q_ref.shape == [num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim]
+  assert q_ref.shape == (num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim)
   num_kv_heads, total_num_pages, page_size, head_dim = k_pages_hbm_ref.shape
   compute_blk_size_kv = page_size * num_kv_pages_per_compute_block
   # Step1: Get the K and V for the current batch and current kv head.
@@ -467,6 +467,7 @@ def paged_attention(
       query_len // num_queries_per_compute_block, # how many compute blocks we need to loop the query_len
       pages_per_sequence // num_kv_pages_per_compute_block, # how many compute blocks we need to loop the kv_len
   )
+  print(f'xw32 line471 {grid=}')
 
   # out_shape
   o_shape = jax.ShapeDtypeStruct(shape=q.shape, dtype=q.dtype)
@@ -501,7 +502,7 @@ def paged_attention(
       (None, num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim), # q_ref.shape=[num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim]
       lambda batch_index, kv_head_index, q_seq_blk_idx, *_: (batch_index, q_seq_blk_idx, kv_head_index, 0), # map from grid idx to q's starting index
   )
-  def lm_index_map(batch_index, kv_head_index, q_seq_index, _):
+  def lm_index_map(batch_index, kv_head_index, q_seq_index, *_):
     return (batch_index, q_seq_index, kv_head_index, 0)
   l_specs = pl.BlockSpec(
     (None, num_queries_per_compute_block, num_q_heads_per_kv_head, MIN_BLOCK_SIZE), lm_index_map

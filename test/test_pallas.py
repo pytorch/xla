@@ -732,21 +732,30 @@ class PallasTest(unittest.TestCase):
     # in flash attn per https://github.com/jax-ml/jax/blob/c6e5530aab9b859056883ccb3c1937259b998af0/jax/experimental/pallas/ops/tpu/paged_attention/paged_attention_kernel.py#L400-L401
     # And pages_per_compute_block seems to be a tunable param in vLLM per
     # https://github.com/vllm-project/vllm/blob/f5e1bf5d44877149eaabf9c04379a4e14a023145/vllm/attention/backends/pallas.py#L184
-    pallas_compute_block_size = 512
     batch_size: int = 3
-    query_len: int = 2
-    print(f'The test test_extended_paged_attention_multiple_queries begins with {query_len=}')
-    num_query_heads: int = 64
-    num_kv_heads: int = 8
     head_size: int = 128
     dtype: torch.dtype = torch.float32
     max_kv_len: int = 1024
-    page_size: int = 64
     total_num_pages: int = 32
+
+    # num_compute_blks_q=1, num_compute_blks_kv=1,num_q_heads_per_kv_head=8
+    # num_compute_blks_q=(query_len//num_queries_per_compute_block)=1
+    # Change num_queries_per_compute_block to adjust num_compute_blks_q
+    # num_compute_blks_kv=(pages_per_sequence//num_kv_pages_per_compute_block)=32/32=1
+    # Change pallas_compute_block_size to adjust num_compute_blks_kv
+    pallas_compute_block_size = 64
+    page_size: int = 64
+    num_kv_pages_per_compute_block=pallas_compute_block_size // page_size
+    query_len: int = 4
+    num_queries_per_compute_block=4
+    num_query_heads: int = 64
+    num_kv_heads: int = 8
+
     assert num_query_heads % num_kv_heads == 0
     assert query_len <= max_kv_len
     assert max_kv_len <= total_num_pages * page_size
 
+    print(f'The test test_extended_paged_attention_multiple_queries begins with {query_len=}')
     q = torch.randn(batch_size, query_len, num_query_heads, head_size, dtype=dtype)
     k_pages = torch.randn(num_kv_heads, total_num_pages, page_size, head_size, dtype=dtype)
     v_pages = torch.rand_like(k_pages)
@@ -760,15 +769,17 @@ class PallasTest(unittest.TestCase):
     v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
     kv_seq_lens_jax = jnp.array(kv_seq_lengths.numpy(), dtype=jnp.int32)
     page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
-    print('xw32 calling jax_extended_paged_attention0')
+    print('xw32 calling jax_extended_paged_attention1')
     out = jax_extended_paged_attention1(
                  q_jax,
                  k_pages_jax,
                  v_pages_jax,
                  kv_seq_lens_jax,
                  page_indices_jax,
-                 pages_per_compute_block=pallas_compute_block_size // page_size,
+                 num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
+                 num_queries_per_compute_block = num_queries_per_compute_block,
              )
+          
     out = jax.block_until_ready(out)[0]
     # actual_output = torch.from_numpy(
     #     np.array(
@@ -784,6 +795,8 @@ class PallasTest(unittest.TestCase):
     # import pdb; pdb.set_trace()
     out_np = np.array(out) # xw32: why does it hang?!
     actual_output = torch.from_numpy(out_np)
+    print('my new extended paged attention finished')
+    return
     
     # Run Woosuk's non-kernel impl.
     ref_q_torch = q.detach().clone()
