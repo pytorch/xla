@@ -40,10 +40,10 @@ class MultiPageAsyncCopyDescriptor:
       self,
       pages_hbm_ref,
       scales_pages_hbm_ref,
-      vmem_buffer,
+      vmem_buffer, # shape=[pages_per_compute_block,page_size,head_dim]
       scales_vmem_buffer,
       sem,
-      page_indices,
+      page_indices, # 1d vector, results from page_indices.reshape(-1) where originally page_indices.shape=[batch_size, pages_per_sequence]
       page_indices_start_offset,
       num_pages_to_load,
       head_index,
@@ -115,7 +115,7 @@ class MultiPageAsyncCopyDescriptor:
 
 def paged_flash_attention_kernel(
     lengths_ref,
-    page_indices_ref,
+    page_indices_ref, # 1d vector, results from page_indices.reshape(-1) where originally page_indices.shape=[batch_size, pages_per_sequence]
     buffer_index_ref,
     step_ref,
     q_ref,
@@ -134,7 +134,7 @@ def paged_flash_attention_kernel(
     *,
     batch_size: int,
     pages_per_compute_block: int,
-    pages_per_sequence: int,
+    pages_per_sequence: int, # page_indices.shape[1]
     mask_value: float,
     attn_logits_soft_cap: float | None,
     megacore_mode: str | None,
@@ -145,7 +145,6 @@ def paged_flash_attention_kernel(
   # Note the original q.shape=[batch_size, query_len, num_heads, head_dim]
   # q_ref.shape=[8, 128]=(num_query_heads//num_kv_heads, head_size)
   print(f'xw32 line146 paged_flash_attention_kernel begins. {q_ref.shape=}', flush=True)
-  pl.debug_print(f'xw32 line340 print using pl.debug_print batch_size')
   if program_ids: # inline_seq_dim case.
     core_index, q_idx, b, h, i = program_ids # The 2nd one is q_idx but we don't use it.
   else:
@@ -156,6 +155,7 @@ def paged_flash_attention_kernel(
         pl.program_id(3),
         pl.program_id(4),
     )
+  pl.debug_print(f'xw32 line158 print using pl.debug_print batch_size {b=}')
   # k_pages_hbm_ref.shape=[num_kv_heads, total_num_pages, page_size, head_dim]
   num_kv_heads, _, page_size, _ = k_pages_hbm_ref.shape
   # xw32: bk should be the overall compute block size.
@@ -167,8 +167,8 @@ def paged_flash_attention_kernel(
   h_step = num_cores if megacore_mode == "kv_head" else 1
   h_start = core_index if megacore_mode == "kv_head" else 0
 
-  h = h * h_step + h_start
-  b = b * b_step + b_start
+  h = h * h_step + h_start # kv_head_index
+  b = b * b_step + b_start # batch_index
   length = lengths_ref[b]
   query_len = pl.num_programs(1)
 
@@ -546,9 +546,11 @@ def paged_attention(
       print('xw32 line536, (num_heads // num_kv_heads)%8==0 and megacore_mode is None', flush=True)
       # Here, if (num_heads // num_kv_heads)%8==0 and megacore_mode is None and inline_seq_dim == True, then
       # grid=[num_cores, query_len, batch_size, num_kv_heads]
+      # if (num_heads // num_kv_heads)%8==0 and megacore_mode is None and inline_seq_dim == False, then
+      # grid=[num_cores, query_len, batch_size, num_kv_heads, num_compute_block_in_sequence]
       q_block_spec = pl.BlockSpec(
-          (None, None, num_heads // num_kv_heads, head_dim),
-          lambda core_index, q, b, h, *_: (b, q, h, 0),
+          (None, None, num_heads // num_kv_heads, head_dim), # [1, 1, num_heads // num_kv_heads, head_dim] with the first 2 dim squeezed away.
+          lambda core_index, q, b, h, *_: (b, q, h, 0), # map from grid idx to q's starting index
       )
     q_dtype_for_kernel_launch = q.dtype
 

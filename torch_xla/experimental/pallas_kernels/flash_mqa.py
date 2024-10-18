@@ -7,6 +7,7 @@ from jax._src.lax.control_flow import for_loop
 import jax.numpy as jnp
 
 from jax.experimental import pallas as pl
+from jax._src import test_util as jtu
 from jax.experimental.pallas import tpu as pltpu
 
 
@@ -42,6 +43,7 @@ def flash_attention_kernel_unbatched(
 
   q_seq_idx = pl.program_id(2)
   kv_seq_idx = pl.program_id(3)
+  pl.debug_print('line45 kv_seq_idx={}', kv_seq_idx)
 
   kv_major_index = kv_seq_idx * block_k_major
   q_index = q_seq_idx * block_q
@@ -155,13 +157,13 @@ def flash_attention_kernel_unbatched(
       o_tile_ref[batch_idx] = acc_scratch_ref[:].astype(o_tile_ref.dtype)
 
 
-@functools.partial(
-    jax.jit,
-    static_argnames=[
-        "causal", "sm_scale", "block_b", "block_q", "block_k_major", "block_k",
-        "debug", "interpret"
-    ],
-)
+# @functools.partial(
+    # jax.jit,
+    # static_argnames=[
+        # "causal", "sm_scale", "block_b", "block_q", "block_k_major", "block_k",
+        # "debug", "interpret"
+    # ],
+# )
 def flash_mqa(
     q,  # [batch_size, num_heads, seq_len, d_model]
     k,  # [batch_size, seq_len, d_model]
@@ -227,26 +229,32 @@ def flash_mqa(
   m_scratch = jax.ShapeDtypeStruct((block_q, 128), dtype=jnp.float32)
   l_scratch = jax.ShapeDtypeStruct((block_q, 128), dtype=jnp.float32)
   acc_scratch = jax.ShapeDtypeStruct((block_q, head_dim), dtype=jnp.float32)
-  with jax.named_scope(f"flash_mqa_{causal=}_{block_q=}"
-                       f"_{block_k_major=}_{block_k=}"):
-    return pl.pallas_call(
-        kernel,
-        out_shape=(out_shape, m_scratch, l_scratch, acc_scratch),
-        in_specs=[
-            pl.BlockSpec((block_b, 1, block_q, head_dim), qo_index_map),
-            pl.BlockSpec((block_b, block_k_major, head_dim), kv_index_map),
-            pl.BlockSpec((block_b, block_k_major, head_dim), kv_index_map),
-        ],
-        out_specs=[
-            pl.BlockSpec((block_b, 1, block_q, head_dim), qo_index_map),
-            pl.BlockSpec(m_scratch.shape, lambda *_: (0, 0)),
-            pl.BlockSpec(l_scratch.shape, lambda *_: (0, 0)),
-            pl.BlockSpec(acc_scratch.shape, lambda *_: (0, 0)),
-        ],
-        grid=grid,
-        debug=debug,
-        interpret=interpret,
-    )(q, k, v)[0]
+  kernel = pl.pallas_call(
+      kernel,
+      out_shape=(out_shape, m_scratch, l_scratch, acc_scratch),
+      in_specs=[
+          pl.BlockSpec((block_b, 1, block_q, head_dim), qo_index_map),
+          pl.BlockSpec((block_b, block_k_major, head_dim), kv_index_map),
+          pl.BlockSpec((block_b, block_k_major, head_dim), kv_index_map),
+      ],
+      out_specs=[
+          pl.BlockSpec((block_b, 1, block_q, head_dim), qo_index_map),
+          pl.BlockSpec(m_scratch.shape, lambda *_: (0, 0)),
+          pl.BlockSpec(l_scratch.shape, lambda *_: (0, 0)),
+          pl.BlockSpec(acc_scratch.shape, lambda *_: (0, 0)),
+      ],
+      grid=grid,
+      debug=debug,
+      interpret=interpret,
+  )
+  compiled_kernel = (
+    jax.jit(kernel).lower(q, k, v).compile({'xla_tpu_enable_log_recorder': 'true'})
+  )
+  with jtu.capture_stderr() as get_output:
+    o = jax.block_until_ready(compiled_kernel(q, k, v)[0])
+
+  print('xw32 line256 out=', get_output())
+  return o
 
 
 @functools.partial(jax.jit, static_argnames=["sm_scale", "causal"])

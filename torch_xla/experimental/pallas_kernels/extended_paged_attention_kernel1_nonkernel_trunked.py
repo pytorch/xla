@@ -26,7 +26,7 @@ import numpy as np
 DEFAULT_MASK_VALUE = -0.7 * float(np.finfo(np.dtype("float32")).max)
 
 
-def paged_flash_attention_kernel(
+def paged_flash_attention_psudokernel(
     # prefetched value
     lengths_ref, # [batch_size] jax.Array the length of each example
     page_indices_ref, # 1d vector, results from page_indices.reshape(-1) where originally page_indices.shape=[batch_size, pages_per_sequence]
@@ -219,6 +219,24 @@ def paged_flash_attention_kernel(
 
 MIN_BLOCK_SIZE = 1
 
+# Copied from https://jax.readthedocs.io/en/latest/pallas/grid_blockspec.html
+def slices_for_invocation(x_shape: tuple[int, ...],
+                          x_spec: pl.BlockSpec,
+                          grid: tuple[int, ...],
+                          invocation_indices: tuple[int, ...]) -> tuple[slice, ...]:
+  assert len(invocation_indices) == len(grid)
+  assert all(0 <= i < grid_size for i, grid_size in zip(invocation_indices, grid))
+  block_indices = x_spec.index_map(*invocation_indices)
+  assert len(x_shape) == len(x_spec.block_shape) == len(block_indices)
+  elem_indices = []
+  for x_size, block_size, block_idx in zip(x_shape, x_spec.block_shape, block_indices):
+    start_idx = block_idx * block_size
+    # At least one element of the block must be within bounds
+    assert start_idx < x_size
+    elem_indices.append(slice(start_idx, start_idx + block_size))
+  return elem_indices
+
+
 # @functools.partial(
 #     jax.jit,
 #     static_argnames=[
@@ -407,6 +425,26 @@ def paged_attention(
       pltpu.VMEM((num_queries_per_compute_block, MIN_BLOCK_SIZE), jnp.float32), # l_scratch
       pltpu.VMEM((num_queries_per_compute_block, head_dim), jnp.float32), # acc_scratch
   )
+
+  num_q_len_blks = query_len // num_queries_per_compute_block
+  # number of blocks on kv page dimension. Each such block contains num_kv_pages_per_compute_block.
+  num_kv_blks = pages_per_sequence // num_kv_pages_per_compute_block 
+  for b in range(batch_size):
+    for q_head_idx in range(num_q_heads):
+      for q_len_blk_idx in range(num_q_len_blks):
+        for kv_blk_idx in range(num_kv_blks):
+          q_slice = slices_for_invocation(
+            x_shape=q.shape,
+            x_spec=q_block_spec,
+            grid=grid,
+            invocation_indices=(b,q_head_idx,q_len_blk_idx,kv_blk_idx))
+          q_ref = jnp.squeeze(q[q_slice[0], q_slice[1], q_slice[2], q_slice[3]])
+          paged_flash_attention_psudokernel(
+            lengths,
+            page_indices.reshape(-1),
+            jnp.zeros((1,), jnp.int32),  # buffer index
+            jnp.zeros((1,), jnp.int32),  # step
+          )
 
   # out, _, _ = pl.pallas_call(
   #     functools.partial(

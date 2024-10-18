@@ -125,14 +125,14 @@ def paged_flash_attention_kernel(
     page_indices_ref,
     buffer_index_ref,
     step_ref,
-    q_ref,
+    q_ref, # q_ref.shape=[num_heads // num_kv_heads, head_dim]
     k_pages_hbm_ref,
     k_scales_pages_hbm_ref,
     v_pages_hbm_ref,
     v_scales_pages_hbm_ref,
-    o_ref,
-    m_ref,
-    l_ref,
+    o_ref, # Same as q_ref.shape=[num_heads // num_kv_heads, head_dim]
+    m_ref, # Same as q_ref.shape=[num_heads // num_kv_heads, head_dim]
+    l_ref, # Same as q_ref.shape=[num_heads // num_kv_heads, head_dim]
     k_vmem_buffer,
     k_scales_vmem_buffer,
     v_vmem_buffer,
@@ -149,7 +149,6 @@ def paged_flash_attention_kernel(
 ):
   """Pallas kernel for paged attention."""
   # xw32: core_index, b, h, i=num_cores, batch_size, num_kv_heads, i
-  print('xw32 line152 paged_attention_kernel.py paged_flash_attention_kernel is called')
   if program_ids:
     core_index, b, h, i = program_ids
   else:
@@ -162,7 +161,6 @@ def paged_flash_attention_kernel(
   # i loops through the compute blocks
   # xw32: note num_kv_heads, _, page_size, head_dim_k = k_pages.shape
   num_kv_heads, _, page_size, _ = k_pages_hbm_ref.shape
-  print(f'xw32 line158 {k_pages_hbm_ref.shape=}')
   # xw32: bk should be the overall compute block size.
   bk = page_size * pages_per_compute_block
   num_cores = pl.num_programs(0)
@@ -175,12 +173,17 @@ def paged_flash_attention_kernel(
   h = h * h_step + h_start
   b = b * b_step + b_start
   length = lengths_ref[b]
+  print(f'xw32 line177 {b.dtype=}')
+  pl.debug_print("line178 hello {}", b)
+  pl.debug_print("line178 hello {}, {}", b, length)
+  pl.debug_print("line179 {}".format(b))
+  pl.debug_print("line180 %r" % (b))
+
 
   # returns the next (b, h, i)
   def compute_block_indices(b, h, i):
 
     def advance_b():
-      pl.debug_print(f'xw32 paged_attention_kernel.py line183 advance_b starts')
       next_b = b + b_step
 
       def advance_to_next_non_zero_length():
@@ -245,7 +248,10 @@ def paged_flash_attention_kernel(
     # xw32q: what does `step` do?
     step = step_ref[0]
     buffer_index = buffer_index_ref[0]
+    pl.debug_print(f'xw32 line246 {step=}, {buffer_index=}, {i=}')
 
+    # Note, o_ref.shape=[num_heads // num_kv_heads, head_dim]
+    # xw32q: why do we only initialize when i==0?
     @pl.when(i == 0)
     def init():  # pylint: disable=unused-variable
       m_ref[...] = jnp.full_like(m_ref, -jnp.inf)
@@ -284,6 +290,7 @@ def paged_flash_attention_kernel(
 
     # k.shape=(512, 256)=(pages_per_compute_block*page_size,head_dim) # the first dim is pages_per_compute_block*page_size=512 (note, pages_per_compute_block=8, page_size=64), so qk.shape might be [num_heads // num_kv_heads,pages_per_compute_block*page_size]
     qk = jnp.einsum('hd,td->ht', q, k, preferred_element_type=jnp.float32)
+    # qk.shape=[num_heads // num_kv_heads,pages_per_compute_block*page_size]
     if attn_logits_soft_cap is not None:
       capped_qk = jnp.tanh(qk / attn_logits_soft_cap)
       qk = capped_qk * attn_logits_soft_cap
@@ -293,7 +300,7 @@ def paged_flash_attention_kernel(
     qk = qk + jnp.where(mask, 0.0, mask_value)
     m_curr = qk.max(axis=-1)
 
-    s_curr = jnp.exp(qk - m_curr[..., None])
+    s_curr = jnp.exp(qk - m_curr[..., None]) # P_ij
     m_prev, l_prev = m_ref[...], l_ref[...]
     l_curr = jax.lax.broadcast_in_dim(s_curr.sum(axis=-1), l_prev.shape, (0,))
     m_curr = jax.lax.broadcast_in_dim(m_curr, m_prev.shape, (0,))
@@ -396,16 +403,7 @@ def paged_flash_attention_kernel_inline_seq_dim(
   lax.fori_loop(0, lax.div(length + bk - 1, bk), body, ())
 
 
-@functools.partial(
-    jax.jit,
-    static_argnames=[
-        "pages_per_compute_block",
-        "attn_logits_soft_cap",
-        "mask_value",
-        "megacore_mode",
-        "inline_seq_dim",
-    ],
-)
+
 def paged_attention(
     q: jax.Array,
     k_pages: jax.Array | quantization_utils.QuantizedTensor,
@@ -547,7 +545,9 @@ def paged_attention(
           (None, num_heads // num_kv_heads, head_dim),
           lambda core_index, b, h, *_: (b * num_cores + core_index, h, 0),
       )
-    else: # q.shape=[batch_size, num_heads, head_dim], grid=[num_cores, batch_size, num_kv_heads]
+    else: # q.shape=[batch_size, num_heads, head_dim]
+      # if inline_seq_dim is True, grid=[num_cores, batch_size, num_kv_heads]
+      # if inline_seq_dim is False, grid=[num_cores, batch_size, num_kv_heads, num_kv_len_blocks]
       q_block_spec = pl.BlockSpec(
           (None, num_heads // num_kv_heads, head_dim),  # TODO(xw32):add dim for the query_len dimension
           lambda core_index, b, h, *_: (b, h, 0),
@@ -656,7 +656,49 @@ def paged_attention(
         pltpu.SemaphoreType.DMA,
     )
 
-  out, _, _ = pl.pallas_call(
+  # out, _, _ = pl.pallas_call(
+  #     functools.partial(
+  #         kernel,
+  #         pages_per_sequence=pages_per_sequence,
+  #         batch_size=batch_size,
+  #         pages_per_compute_block=pages_per_compute_block,
+  #         mask_value=mask_value,
+  #         attn_logits_soft_cap=attn_logits_soft_cap,
+  #         megacore_mode=megacore_mode,
+  #     ),
+  #     grid_spec=pltpu.PrefetchScalarGridSpec(
+  #         # There are 4 scalars prefetched per kernel call: `lengths_ref`,
+  #         # `page_indices_ref`, `buffer_index_ref`, `step_ref`
+  #         num_scalar_prefetch=4,
+  #         in_specs=in_specs,
+  #         out_specs=[
+  #             q_block_spec,
+  #             q_block_spec,
+  #             q_block_spec,
+  #         ],
+  #         grid=grid,
+  #         scratch_shapes=scratch_shapes,
+  #     ),
+  #     compiler_params=pltpu.TPUCompilerParams(
+  #         dimension_semantics=dimension_semantics),
+  #     out_shape=[
+  #         jax.ShapeDtypeStruct(q.shape, q_dtype_for_kernel_launch),
+  #         jax.ShapeDtypeStruct((*q.shape[:-1], 1), jnp.float32),
+  #         jax.ShapeDtypeStruct((*q.shape[:-1], 1), jnp.float32),
+  #     ],
+  #     debug=True,
+  # )(
+  #     lengths,
+  #     page_indices.reshape(-1),
+  #     jnp.zeros((1,), jnp.int32),  # buffer index
+  #     jnp.zeros((1,), jnp.int32),  # step
+  #     q.astype(q_dtype_for_kernel_launch),
+  #     k_pages,
+  #     k_scales_pages,
+  #     v_pages,
+  #     v_scales_pages,
+  # )
+  my_kernel = pl.pallas_call(
       functools.partial(
           kernel,
           pages_per_sequence=pages_per_sequence,
@@ -686,8 +728,23 @@ def paged_attention(
           jax.ShapeDtypeStruct((*q.shape[:-1], 1), jnp.float32),
           jax.ShapeDtypeStruct((*q.shape[:-1], 1), jnp.float32),
       ],
-      debug=True,
-  )(
+  )
+  my_compiled_kernel = (
+      jax.jit(my_kernel)
+      .lower(lengths,
+             page_indices.reshape(-1),
+             jnp.zeros((1,), jnp.int32),
+             jnp.zeros((1,), jnp.int32),
+             q.astype(q_dtype_for_kernel_launch),
+             k_pages,
+             k_scales_pages,
+             v_pages,
+             v_scales_pages)
+      .compile({'xla_tpu_enable_log_recorder': 'true'})
+  )
+
+  print('xw32 line744 calling my_compiled_kernel')
+  out, _, _ = my_compiled_kernel(
       lengths,
       page_indices.reshape(-1),
       jnp.zeros((1,), jnp.int32),  # buffer index
