@@ -305,6 +305,16 @@ def linalg_solve_ex(a, b):
 def linalg_svd(a, full_matrices=True, **kwargs):
   return jaten._aten__linalg_svd(a, full_matrices=full_matrices, **kwargs)
 
+@register_function(torch.svd)
+def svd(a, some=True, compute_uv=True):
+  if not compute_uv:
+    S = jaten._aten__linalg_svd(a, full_matrices=False)[1]
+    U = jnp.zeros((a.shape[-2], a.shape[-2]), dtype=a.dtype)
+    V = jnp.zeros((a.shape[-1], a.shape[-1]), dtype=a.dtype)
+    return U, S, V
+  U, S, V = jaten._aten__linalg_svd(a, full_matrices=not some)
+  return U, S, jnp.matrix_transpose(V)
+
 @register_function(torch.cdist)
 def _cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
     return jaten._aten_cdist(x1, x2, p, compute_mode)
