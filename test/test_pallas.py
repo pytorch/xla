@@ -743,7 +743,7 @@ class PallasTest(unittest.TestCase):
     # Change num_queries_per_compute_block to adjust num_compute_blks_q
     # num_compute_blks_kv=(pages_per_sequence//num_kv_pages_per_compute_block)=32/32=1
     # Change pallas_compute_block_size to adjust num_compute_blks_kv
-    pallas_compute_block_size = 64
+    pallas_compute_block_size = 128
     page_size: int = 64
     num_kv_pages_per_compute_block=pallas_compute_block_size // page_size
     query_len: int = 4
