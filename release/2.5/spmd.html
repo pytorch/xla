@@ -1,0 +1,1184 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>PyTorch/XLA SPMD User Guide &mdash; PyTorch/XLA master documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="TorchDynamo(torch.compile) integration in PyTorch XLA" href="torch_compile.html" />
+    <link rel="prev" title="PJRT Runtime" href="runtime.html" />
+  <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','');</script>
+    <!-- End Google Tag Manager -->
+  
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+
+          <li class="main-menu-item">
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Learn
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/get-started">
+                  <span class=dropdown-title>Get Started</span>
+                  <p>Run PyTorch locally or get started quickly with one of the supported cloud platforms</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials">
+                  <span class="dropdown-title">Tutorials</span>
+                  <p>Whats new in PyTorch tutorials</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/basics/intro.html">
+                  <span class="dropdown-title">Learn the Basics</span>
+                  <p>Familiarize yourself with PyTorch concepts and modules</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/recipes/recipes_index.html">
+                  <span class="dropdown-title">PyTorch Recipes</span>
+                  <p>Bite-size, ready-to-deploy PyTorch code examples</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/introyt.html">
+                  <span class="dropdown-title">Intro to PyTorch - YouTube Series</span>
+                  <p>Master PyTorch basics with our engaging YouTube tutorial series</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Ecosystem
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem">
+                  <span class="dropdown-title">Tools</span>
+                  <p>Learn about the tools and frameworks in the PyTorch Ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class=dropdown-title>Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class=dropdown-title>Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class=dropdown-title>Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
+                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                  <p>Award winners announced at this year's PyTorch Conference</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Edge
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/edge">
+                  <span class="dropdown-title">About PyTorch Edge</span>
+                  <p>Build innovative and privacy-aware AI experiences for edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
+                  <span class="dropdown-title">ExecuTorch</span>
+                  <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+              </div>
+            </div>  
+          </li>
+
+          <li class="main-menu-item">
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p>Explore the documentation for comprehensive guidance on how to use PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/pytorch-domains">
+                  <span class="dropdown-title">PyTorch Domains</span>
+                  <p>Read the PyTorch Domains documentation to learn more about domain-specific libraries</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Blogs & News 
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/blog/">
+                  <span class="dropdown-title">PyTorch Blog</span>
+                  <p>Catch up on the latest technical news and happenings</p>
+                </a>
+                 <a class="nav-dropdown-item" href="https://pytorch.org/community-blog">
+                  <span class="dropdown-title">Community Blog</span>
+                  <p>Stories from the PyTorch ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/videos">
+                  <span class="dropdown-title">Videos</span>
+                  <p>Learn about the latest PyTorch tutorials, new, and more </p>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                About
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn more about the PyTorch Foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
+                  <span class="dropdown-title">Governing Board</span>
+                  <p></p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li class="main-menu-item">
+            <div class="no-dropdown">
+              <a href="https://pytorch.org/join" data-cta="join">
+                Become a Member
+              </a>
+            </div>
+          </li>
+          <li>
+           <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="github-icon">
+             </a>
+           </div>
+          </li>
+          <!--- TODO: This block adds the search icon to the nav bar. We will enable it later. 
+          <li>
+            <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="search-icon">
+             </a>
+            </div>
+          </li>
+          --->
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  master (2.5.0 )
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">PyTorch/XLA documentation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Docs</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="debug.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="eager_mode.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpu.html">How to run with PyTorch/XLA:GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multi_process_distributed.html">How to do DistributedDataParallel(DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations for XLA device (Experimental feature)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="runtime.html">PJRT Runtime</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#fully-sharded-data-parallel-fsdp-via-spmd">Fully Sharded Data Parallel(FSDP) via SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#pytorch-xla-spmd-advanced-topics">PyTorch/XLA SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="torch_compile.html">TorchDynamo(torch.compile) integration in PyTorch XLA</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+      <li>PyTorch/XLA SPMD User Guide</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="_sources/spmd.rst.txt" rel="nofollow"><img src="_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          <!-- Google Tag Manager (noscript) -->
+          <noscript><iframe src="https://www.googletagmanager.com/ns.html?id="
+          height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+          <!-- End Google Tag Manager (noscript) -->
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <div class="section" id="pytorch-xla-spmd-user-guide">
+<h1>PyTorch/XLA SPMD User Guide<a class="headerlink" href="#pytorch-xla-spmd-user-guide" title="Permalink to this heading">¶</a></h1>
+<p>In this user guide, we discuss how <a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is integrated in PyTorch/XLA, and provide a design overview to illustrate how the SPMD sharding annotation API and its constructs work.</p>
+<div class="section" id="what-is-pytorch-xla-spmd">
+<h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
+<p><a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is an automatic parallelization system for common ML workloads. The XLA compiler will transform the single device program into a partitioned one with proper collectives, based on the user provided sharding hints. This feature allows developers to write PyTorch programs as if they are on a single large device without any custom sharded computation ops and/or collective communications to scale.</p>
+<a class="reference external image-reference" href="_static/img/spmd_mode.png"><img alt="alt_text" src="_images/spmd_mode.png" /></a>
+<p><a href="#id2"><span class="problematic" id="id3">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
+</div>
+<div class="section" id="how-to-use-pytorch-xla-spmd">
+<h2>How to use PyTorch/XLA SPMD?<a class="headerlink" href="#how-to-use-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
+<p>Here is an simple example of using SPMD</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">Mesh</span>
+
+
+<span class="c1"># Enable XLA SPMD execution mode.</span>
+<span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
+
+
+<span class="c1"># Device mesh, this and partition spec as well as the input tensor shape define the individual shard shape.</span>
+<span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
+
+
+<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+
+
+<span class="c1"># Mesh partitioning, each device holds 1/8-th of the input</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Let’s explain these concepts one by one</p>
+<div class="section" id="spmd-mode">
+<h3>SPMD Mode<a class="headerlink" href="#spmd-mode" title="Permalink to this heading">¶</a></h3>
+<p>In order to use SPMD, you need to enable it via <code class="docutils literal notranslate"><span class="pre">xr.use_spmd()</span></code>. In SPMD mode there is only one logical device. Distributed computation and collective is handled by the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code>. Note that user can not mix SPMD with other distributed libraries.</p>
+</div>
+<div class="section" id="mesh">
+<h3>Mesh<a class="headerlink" href="#mesh" title="Permalink to this heading">¶</a></h3>
+<p>For a given cluster of devices, a physical mesh is a representation of the interconnect topology.</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mesh_shape</span></code> is a tuple that will be multiplied to the total number of physical devices.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">device_ids</span></code> is almost always <code class="docutils literal notranslate"><span class="pre">np.array(range(num_devices))</span></code>.</p></li>
+<li><p>Users are also encouraged to give each mesh dimension a name. In the above example, the first mesh dimension is the <code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and the second mesh dimension is the <code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p></li>
+</ol>
+<p>You can also check more mesh info via</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
+<span class="go">OrderedDict([(&#39;data&#39;, 4), (&#39;model&#39;, 1)])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="partition-spec">
+<h3>Partition Spec<a class="headerlink" href="#partition-spec" title="Permalink to this heading">¶</a></h3>
+<p>partition_spec has the same rank as the input tensor. Each dimension describes how the corresponding input tensor dimension is sharded across the device mesh. In the above example tensor <code class="docutils literal notranslate"><span class="pre">t</span></code>’s fist dimension is being sharded at <code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and the second dimension is being sharded at <code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p>
+<p>User can also shard tensor that has different dimensions from the mesh shape.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">t1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+<span class="n">t2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+<span class="c1"># First dimension is being replicated.</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
+
+<span class="c1"># First dimension is being sharded at data dimension.</span>
+<span class="c1"># model dimension is used for replication when omitted.</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,))</span>
+
+<span class="c1"># First dimension is sharded across both mesh axes.</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span> <span class="n">t2</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">((</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">),))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="further-reading">
+<h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_spmd_data_parallel.py">Example</a> to use SPMD to express data parallism.</p></li>
+<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py">Example</a> to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
+<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/spmd_advanced.md">SPMD advanced topics</a></p></li>
+<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/spmd_distributed_checkpoint.md">Spmd Distributed Checkpoint</a></p></li>
+</ol>
+</div>
+</div>
+<div class="section" id="fully-sharded-data-parallel-fsdp-via-spmd">
+<h1>Fully Sharded Data Parallel(FSDP) via SPMD<a class="headerlink" href="#fully-sharded-data-parallel-fsdp-via-spmd" title="Permalink to this heading">¶</a></h1>
+<p>Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that re-expresses the famous FSDP algorithm in SPMD. <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/spmd_fully_sharded_data_parallel.py">This</a> is
+an experimental feature that aiming to offer a familiar interface for users to enjoy all the benefits that SPMD brings into
+the table. The design doc is <a class="reference external" href="https://github.com/pytorch/xla/issues/6379">here</a>.</p>
+<p>Please review the <a class="reference external" href="./spmd_basic.md">SPMD user guide</a> before proceeding. You can also find a minimum runnable example <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py">here</a>.</p>
+<p>Example usage:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="kn">from</span> <span class="nn">torch_xla.experimental.spmd_fully_sharded_data_parallel</span> <span class="kn">import</span> <span class="n">SpmdFullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDPv2</span>
+
+<span class="c1"># Define the mesh following common SPMD practice</span>
+<span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
+<span class="c1"># To be noted, the mesh must have an axis named &#39;fsdp&#39;, which the weights and activations will be sharded on.</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
+
+<span class="c1"># Shard the input, and assume x is a 2D tensor.</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+
+<span class="c1"># As normal FSDP, but an extra mesh is needed.</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">my_module</span><span class="p">,</span> <span class="n">mesh</span><span class="p">)</span>
+<span class="n">optim</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+<span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters. Here is an example to autowrap each <code class="docutils literal notranslate"><span class="pre">DecoderLayer</span></code>.</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp.wrap</span> <span class="kn">import</span> <span class="n">transformer_auto_wrap_policy</span>
+
+<span class="c1"># Apply FSDP sharding on each DecoderLayer layer.</span>
+<span class="n">auto_wrap_policy</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span>
+    <span class="n">transformer_auto_wrap_policy</span><span class="p">,</span>
+    <span class="n">transformer_layer_cls</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">decoder_only_model</span><span class="o">.</span><span class="n">DecoderLayer</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">mesh</span><span class="o">=</span><span class="n">mesh</span><span class="p">,</span> <span class="n">auto_wrap_policy</span><span class="o">=</span><span class="n">auto_wrap_policy</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="sharding-output">
+<h2>Sharding output<a class="headerlink" href="#sharding-output" title="Permalink to this heading">¶</a></h2>
+<p>To ensure the XLA compiler correctly implements the FSDP algorithm, we need to shard both weights and activations. This means sharding the output of the forward method. Since the forward function output can vary, we offer shard_output to shard activations in cases where your module output doesn’t fall into one of these categories:</p>
+<ol class="arabic simple">
+<li><p>A single tensor</p></li>
+<li><p>A tuple of tensors where the 0th element is the activation.</p></li>
+</ol>
+<p>Example usage:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">shard_output</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
+    <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">logits</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">my_module</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">shard_output</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="gradient-checkpointing">
+<h2>Gradient checkpointing<a class="headerlink" href="#gradient-checkpointing" title="Permalink to this heading">¶</a></h2>
+<p>Currently, gradient checkpointing needs to be applied to the module before the FSDP wrapper. Otherwise, recursively loop into children modules will end up with infinite loop. We will fix this issue in the future releases.</p>
+<p>Example usage:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">checkpoint_module</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">checkpoint_module</span><span class="p">(</span><span class="n">my_module</span><span class="p">),</span> <span class="n">mesh</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="huggingface-llama-2-example">
+<h2>HuggingFace Llama 2 Example<a class="headerlink" href="#huggingface-llama-2-example" title="Permalink to this heading">¶</a></h2>
+<p>We have a fork of HF Llama 2 to demonstrate a potential integration <a class="reference external" href="https://github.com/huggingface/transformers/compare/main...pytorch-tpu:transformers:llama2-spmd-fsdp">here</a>.</p>
+</div>
+</div>
+<div class="section" id="pytorch-xla-spmd-advanced-topics">
+<h1>PyTorch/XLA SPMD advanced topics<a class="headerlink" href="#pytorch-xla-spmd-advanced-topics" title="Permalink to this heading">¶</a></h1>
+<p>In this doc we will cover some advance topic on GSPMD. Please read <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/spmd_basic.md">SPMD user guide</a> before procedding to this doc.</p>
+<p>PyTorch/XLA SPMD takes a single-device program, shards and executes it in parallel. The SPMD execution requires using the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step. To improve the native data loading performance, we made PyTorch/XLA ParallelLoader support input sharding directly (src), when passed the optional kwarg _input_sharding_:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># MpDeviceLoader returns ParallelLoader.per_device_loader as iterator</span>
+<span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
+        <span class="n">train_loader</span><span class="p">,</span>  <span class="c1"># wraps PyTorch DataLoader</span>
+        <span class="n">device</span><span class="p">,</span>
+          <span class="c1"># assume 4d input and we want to shard at the batch dimension.</span>
+        <span class="n">input_sharding</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>It is also possible to specify a different <code class="docutils literal notranslate"><span class="pre">input_sharding</span></code> for each element of the batch if they are different shapes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># if batch = next(train_loader) looks like</span>
+<span class="c1"># {&#39;x&#39;: &lt;tensor of shape [s1, s2, s3, s4]&gt;, &#39;y&#39;: &lt;tensor for shape [s1, s2]&gt;}</span>
+
+<span class="c1"># MpDeviceLoader returns ParallelLoader.per_device_loader as iterator</span>
+<span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
+        <span class="n">train_loader</span><span class="p">,</span>  <span class="c1"># wraps PyTorch DataLoader</span>
+        <span class="n">device</span><span class="p">,</span>
+          <span class="c1"># specify different sharding for each input of the batch.</span>
+        <span class="n">input_sharding</span><span class="o">=</span><span class="p">{</span>
+          <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span>
+          <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+        <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because GSPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.</p>
+<div class="section" id="hybrid-mesh">
+<h2>Hybrid Mesh<a class="headerlink" href="#hybrid-mesh" title="Permalink to this heading">¶</a></h2>
+<p>Mesh nicely abstracts how the physical device mesh is constructed. Users can arrange devices in any shape and order using the logical mesh. However, one can define a more performant mesh based on the physical topology, especially when it involves Data Center Network (DCN) cross slice connections. HybridMesh creates a mesh which gives good performance out of the box for such multislice environments. It accepts ici_mesh_shape and dcn_mesh_shape which denote logical mesh shapes of inner and outer network.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">HybridMesh</span>
+
+<span class="c1"># This example is assuming 2 slices of v4-8.</span>
+<span class="c1"># - ici_mesh_shape: shape of the logical mesh for inner connected devices.</span>
+<span class="c1"># - dcn_mesh_shape: shape of logical mesh for outer connected devices.</span>
+<span class="n">ici_mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># (data, fsdp, tensor)</span>
+<span class="n">dcn_mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">HybridMesh</span><span class="p">(</span><span class="n">ici_mesh_shape</span><span class="p">,</span> <span class="n">dcn_mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span><span class="s1">&#39;tensor&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">())</span>
+<span class="o">&gt;&gt;</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;tensor&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+</pre></div>
+</div>
+<div class="section" id="running-spmd-on-tpu-pod">
+<h3>Running SPMD on TPU Pod<a class="headerlink" href="#running-spmd-on-tpu-pod" title="Permalink to this heading">¶</a></h3>
+<p>There is no code change required to go from single TPU host to TPU Pod if you construct your mesh and partition spec based on the number of devices instead of some hardcode constant. To run the PyTorch/XLA workload on TPU Pod, please refer to the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md#pods">Pods section</a> of our PJRT guide.</p>
+</div>
+<div class="section" id="xlashardedtensor">
+<h3>XLAShardedTensor<a class="headerlink" href="#xlashardedtensor" title="Permalink to this heading">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">xs.mark_sharding</span></code> is a inplace op that will attach the sharding annotation to the input tensor, but it also return a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> python object.</p>
+<p>The main use case for <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> [<a class="reference external" href="https://github.com/pytorch/xla/issues/3871">RFC</a>] is to annotate a native <code class="docutils literal notranslate"><span class="pre">torch.tensor</span></code> (on a single device) with a sharding spec. The annotation takes place immediately, but the actual sharding of the tensor is delayed as the computation is carried out lazily, except for the input tensors which are sharded without delay. Once a tensor is annotated and wrapped inside a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>, it can be passed to existing PyTorch ops and <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> layers as <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code>. This is important to ensure that the same PyTorch layers and tensor ops can be stacked together with <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>. This means that the user does not need to rewrite the existing ops and model codes for sharded computation. Namely, <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> will satisfy the following requirements:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> is a <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> subclass and works directly with native torch ops and <code class="docutils literal notranslate"><span class="pre">module.layers</span></code>. We use <code class="docutils literal notranslate"><span class="pre">__torch_dispatch__</span></code> to send <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> to the XLA backend. PyTorch/XLA retrieves attached sharding annotations to trace the graph and invokes XLA SPMDPartitioner.</p></li>
+<li><p>Internally, <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> (and its global_tensor input) is backed by <code class="docutils literal notranslate"><span class="pre">XLATensor</span></code> with a special data structure holding references to the sharded device data.</p></li>
+<li><p>The sharded tensor after lazy execution may be gathered and materialized back to the host as global_tensor when requested on the host (e.g., printing the value of the global tensor.</p></li>
+<li><p>The handles to the local shards are materialized strictly after the lazy execution. <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> exposes <a class="reference external" href="https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L117">local_shards</a> to return the local shards on addressable devices as <span class="raw-html-m2r"><code>List[[XLAShard](https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L12)]</code></span>.</p></li>
+</ul>
+<p>There is also an ongoing effort to integrate <span class="raw-html-m2r"><code>XLAShardedTensor</code></span> into <span class="raw-html-m2r"><code>DistributedTensor</code></span> API to support XLA backend [<a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>].</p>
+</div>
+<div class="section" id="dtensor-integration">
+<h3>DTensor Integration<a class="headerlink" href="#dtensor-integration" title="Permalink to this heading">¶</a></h3>
+<p>PyTorch has prototype-released <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/_tensor/README.md">DTensor</a> in 2.1.
+We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>. We have a proof-of-concept integration for <code class="docutils literal notranslate"><span class="pre">distribute_tensor</span></code>, which calls <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> annotation API to shard a tensor and its computation using XLA:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.distributed</span> <span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">Shard</span><span class="p">,</span> <span class="n">distribute_tensor</span>
+
+<span class="c1"># distribute_tensor now works with `xla` backend using PyTorch/XLA SPMD.</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">DeviceMesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">world_size</span><span class="p">)))</span>
+<span class="n">big_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100000</span><span class="p">,</span> <span class="mi">88</span><span class="p">)</span>
+<span class="n">my_dtensor</span> <span class="o">=</span> <span class="n">distribute_tensor</span><span class="p">(</span><span class="n">big_tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">[</span><span class="n">Shard</span><span class="p">(</span><span class="mi">0</span><span class="p">)])</span>
+</pre></div>
+</div>
+<p>This feature is experimental and stay tuned for more updates, examples and tutorials in the upcoming releases.</p>
+</div>
+<div class="section" id="activation-sharding-for-torch-compile">
+<h3>Activation Sharding for torch.compile<a class="headerlink" href="#activation-sharding-for-torch-compile" title="Permalink to this heading">¶</a></h3>
+<p>In the 2.3 release, PyTorch/XLA added the custom op <code class="docutils literal notranslate"><span class="pre">dynamo_mark_sharding</span></code> which can be used to perform the activation sharding in a <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> region. This is part of our ongoing effort to make <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> + <code class="docutils literal notranslate"><span class="pre">GSPMD</span></code> to be the recommended way of doing the model inference using PyTorch/XLA. Example of using this custom op:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Activation output sharding</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_devices</span><span class="p">)]</span> <span class="c1"># List[int]</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">num_devices</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="c1"># List[int]</span>
+<span class="n">axis_names</span> <span class="o">=</span> <span class="s2">&quot;(&#39;data&#39;, &#39;model&#39;)&quot;</span> <span class="c1"># string version of axis_names</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="s2">&quot;(&#39;data&#39;, &#39;model&#39;)&quot;</span> <span class="c1"># string version of partition spec</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">dynamo_mark_sharding</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="n">axis_names</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="spmd-debugging-tool">
+<h3>SPMD Debugging Tool<a class="headerlink" href="#spmd-debugging-tool" title="Permalink to this heading">¶</a></h3>
+<p>We provide a <code class="docutils literal notranslate"><span class="pre">shard</span> <span class="pre">placement</span> <span class="pre">visualization</span> <span class="pre">debug</span> <span class="pre">tool</span></code> for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> to visualize sharded tensor, or you could use <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> or <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code>:</p>
+<ul class="simple">
+<li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">rich</span>
+
+<span class="c1"># Here, mesh is a 2x2 mesh with axes &#39;x&#39; and &#39;y&#39;</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+
+<span class="c1"># A tensor&#39;s sharding can be visualized using the `visualize_tensor_sharding` method</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd.debugging</span> <span class="kn">import</span> <span class="n">visualize_tensor_sharding</span>
+<span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_tensor_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_static/img/spmd_debug_1.png">
+  <img alt="visualize_tensor_sharding example on TPU v4-8(single-host)" src="_static/img/spmd_debug_1_light.png">
+</picture><ul class="simple">
+<li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> and visualization result:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd.debugging</span> <span class="kn">import</span> <span class="n">visualize_sharding</span>
+<span class="n">sharding</span> <span class="o">=</span> <span class="s1">&#39;{devices=[2,2]0,1,2,3}&#39;</span>
+<span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_sharding</span><span class="p">(</span><span class="n">sharding</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="_static/img/spmd_debug_2.png">
+  <img alt="visualize_sharding example on TPU v4-8(single-host)" src="_static/img/spmd_debug_2_light.png">
+</picture><p>You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style <code class="docutils literal notranslate"><span class="pre">tiled</span></code>, <code class="docutils literal notranslate"><span class="pre">partial_replication</span></code> and <code class="docutils literal notranslate"><span class="pre">replicated</span></code>.</p>
+</div>
+<div class="section" id="auto-sharding">
+<h3>Auto-Sharding<a class="headerlink" href="#auto-sharding" title="Permalink to this heading">¶</a></h3>
+<p>We are introducing a new PyTorch/XLA SPMD feature, called <code class="docutils literal notranslate"><span class="pre">auto-sharding</span></code>, <a class="reference external" href="https://github.com/pytorch/xla/issues/6322">RFC</a>. This is an experimental feature in <code class="docutils literal notranslate"><span class="pre">r2.3</span></code> and <code class="docutils literal notranslate"><span class="pre">nightly</span></code>, that supports <code class="docutils literal notranslate"><span class="pre">XLA:TPU</span></code> and a single TPUVM host.</p>
+<p>PyTorch/XLA auto-sharding can be enabled by one of the following:</p>
+<ul class="simple">
+<li><p>Setting envvar <code class="docutils literal notranslate"><span class="pre">XLA_AUTO_SPMD=1</span></code></p></li>
+<li><p>Calling the SPMD API in the beginning of your code:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">(</span><span class="n">auto</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Calling <code class="docutils literal notranslate"><span class="pre">pytorch.distributed._tensor.distribute_module</span></code> with <code class="docutils literal notranslate"><span class="pre">auto-policy</span></code> and <code class="docutils literal notranslate"><span class="pre">xla</span></code>:</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">from</span> <span class="nn">torch.distributed._tensor</span> <span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">distribute_module</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">auto_policy</span>
+
+<span class="n">device_count</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+<span class="n">device_mesh</span> <span class="o">=</span> <span class="n">DeviceMesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">device_count</span><span class="p">)))</span>
+
+<span class="c1"># Currently, model should be loaded to xla device via distribute_module.</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">MyModule</span><span class="p">()</span>  <span class="c1"># nn.module</span>
+<span class="n">sharded_model</span> <span class="o">=</span> <span class="n">distribute_module</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">device_mesh</span><span class="p">,</span> <span class="n">auto_policy</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Optionally, one can set the following options/env-vars to control the behvaior of
+the XLA-based auto-sharding pass:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_AUTO_USE_GROUP_SHARDING</span></code>: group resharding of the parameters. Set by default.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_AUTO_SPMD_MESH</span></code>: logical mesh shape to be used for auto-sharding. For example,
+<code class="docutils literal notranslate"><span class="pre">XLA_AUTO_SPMD_MESH=2,2</span></code> corresponds to a 2-by-2 mesh with 4 global devices. If unset,
+a default device mesh shape of <code class="docutils literal notranslate"><span class="pre">num_devices,1</span></code> will be used.</p></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section" id="distributed-checkpointing">
+<h1>Distributed Checkpointing<a class="headerlink" href="#distributed-checkpointing" title="Permalink to this heading">¶</a></h1>
+<p>PyTorch/XLA SPMD is compatible with the <a class="reference external" href="https://pytorch.org/docs/stable/distributed.checkpoint.html">torch.distributed.checkpoint</a> library through a dedicated <code class="docutils literal notranslate"><span class="pre">Planner</span></code> instance. Users are able to synchronously save and load checkpoints through this common interface.</p>
+<p>The SPMDSavePlanner and SPMDLoadPlanner (<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint.py">src</a>) classes enable the <code class="docutils literal notranslate"><span class="pre">save</span></code> and <code class="docutils literal notranslate"><span class="pre">load</span></code> functions to operate directly on the shards of an <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>, enabling all of the benefits of distributed checkpointing in SPMD training.</p>
+<p>Here is a demonstration of the synchronous distributed checkpointing API:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.distributed.checkpoint</span> <span class="k">as</span> <span class="nn">dist_cp</span>
+<span class="kn">import</span> <span class="nn">torch_xla.experimental.distributed_checkpoint</span> <span class="k">as</span> <span class="nn">xc</span>
+
+<span class="c1"># Saving a state_dict</span>
+<span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+    <span class="s2">&quot;optim&quot;</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+<span class="p">}</span>
+
+<span class="n">dist_cp</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
+    <span class="n">state_dict</span><span class="o">=</span><span class="n">state_dict</span><span class="p">,</span>
+    <span class="n">storage_writer</span><span class="o">=</span><span class="n">dist_cp</span><span class="o">.</span><span class="n">FileSystemWriter</span><span class="p">(</span><span class="n">CHECKPOINT_DIR</span><span class="p">),</span>
+    <span class="n">planner</span><span class="o">=</span><span class="n">xc</span><span class="o">.</span><span class="n">SPMDSavePlanner</span><span class="p">(),</span>
+<span class="p">)</span>
+<span class="o">...</span>
+
+<span class="c1"># Loading the model&#39;s state_dict from the checkpoint. The model should</span>
+<span class="c1"># already be on the XLA device and have the desired sharding applied.</span>
+<span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+<span class="p">}</span>
+
+<span class="n">dist_cp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+    <span class="n">state_dict</span><span class="o">=</span><span class="n">state_dict</span><span class="p">,</span>
+    <span class="n">storage_reader</span><span class="o">=</span><span class="n">dist_cp</span><span class="o">.</span><span class="n">FileSystemReader</span><span class="p">(</span><span class="n">CHECKPOINT_DIR</span><span class="p">),</span>
+    <span class="n">planner</span><span class="o">=</span><span class="n">xc</span><span class="o">.</span><span class="n">SPMDLoadPlanner</span><span class="p">(),</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The experimental <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint/manager.py#L40">CheckpointManager</a>
+interface provides a higher-level API over the <code class="docutils literal notranslate"><span class="pre">torch.distributed.checkpoint</span></code>
+functions to enable a few key features:</p>
+<ul class="simple">
+<li><p><strong>Managed checkpoints</strong>: Each checkpoint taken by the <code class="docutils literal notranslate"><span class="pre">CheckpointManager</span></code> is
+identified by the step at which it was taken. All steps tracked are accessible
+through the <code class="docutils literal notranslate"><span class="pre">CheckpointManager.all_steps</span></code> method, and any tracked steps can be
+restored using <code class="docutils literal notranslate"><span class="pre">CheckpointManager.restore</span></code>.</p></li>
+<li><p><strong>Asynchronous checkpointing</strong>: Checkpoints taken through the
+<code class="docutils literal notranslate"><span class="pre">CheckpointManager.save_async</span></code> API are written to persistent storage
+asynchronously to unblock training for the duration of the checkpoint. The
+input sharded state_dict is first moved to CPU before the checkpoint is
+dispatched to a background thread.</p></li>
+<li><p><strong>Auto-checkpointing on preemption</strong>: On Cloud TPU, preemptions can be detected
+and a checkpoint taken before the process is terminated. To use, ensure your
+TPU is provisioned through a QueuedResource with
+<a class="reference external" href="https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/queued-resources/create#--autocheckpoint-enabled">Autocheckpointing enabled</a>,
+and ensure the <code class="docutils literal notranslate"><span class="pre">chkpt_on_preemption</span></code> parameter is set when constructing the
+CheckpointManager (this option is enabled by default).</p></li>
+<li><p><strong>FSSpec Support</strong>: <code class="docutils literal notranslate"><span class="pre">CheckpointManager</span></code> uses an fsspec storage backend to enable
+checkpointing directly to any fsspec-compatible filesystem, including GCS.</p></li>
+</ul>
+<p>Example usage of the CheckpointManager is below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.experimental.distributed_checkpoint</span> <span class="kn">import</span> <span class="n">CheckpointManager</span><span class="p">,</span> <span class="n">prime_optimizer</span>
+
+<span class="c1"># Create a CheckpointManager to checkpoint every 10 steps into GCS.</span>
+<span class="n">chkpt_mgr</span> <span class="o">=</span> <span class="n">CheckpointManager</span><span class="p">(</span><span class="s1">&#39;gs://my-bucket/my-experiment&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+<span class="c1"># Select a checkpoint to restore from, and restore if applicable</span>
+<span class="n">tracked_steps</span> <span class="o">=</span> <span class="n">chkpt_mgr</span><span class="o">.</span><span class="n">all_steps</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">tracked_steps</span><span class="p">:</span>
+    <span class="c1"># Choose the highest step</span>
+    <span class="n">best_step</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">tracked_steps</span><span class="p">)</span>
+    <span class="c1"># Before restoring the checkpoint, the optimizer state must be primed</span>
+    <span class="c1"># to allow state to be loaded into it.</span>
+    <span class="n">prime_optimizer</span><span class="p">(</span><span class="n">optim</span><span class="p">)</span>
+    <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s1">&#39;optim&#39;</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()}</span>
+    <span class="n">chkpt_mgr</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">best_step</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">])</span>
+    <span class="n">optim</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;optim&#39;</span><span class="p">])</span>
+
+<span class="c1"># Call `save` or `save_async` every step within the train loop. These methods</span>
+<span class="c1"># return True when a checkpoint is taken.</span>
+<span class="k">for</span> <span class="n">step</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataloader</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s1">&#39;optim&#39;</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="n">chkpt_mgr</span><span class="o">.</span><span class="n">save_async</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Checkpoint taken at step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In distributed checkpointing, the state_dicts are loaded in-place, and only the
+required shards of the checkpoint are loaded. Since optimizer states are lazily
+created, the state isn’t present until the first <code class="docutils literal notranslate"><span class="pre">optimizer.step</span></code> call, and
+attempts to load an unprimed optimizer will fail.</p>
+<p>The utility method <code class="docutils literal notranslate"><span class="pre">prime_optimizer</span></code> is provided for this: it runs a fake train
+step by setting all gradients to zero and calling <code class="docutils literal notranslate"><span class="pre">optimizer.step</span></code>. <em>This is a
+destructive method and will touch both model parameters and optimizer state</em>,
+so it should only be called just prior to restoration.</p>
+<p>To use <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> APIs such as distributed checkpointing, a process
+group is required. In SPMD mode, the <code class="docutils literal notranslate"><span class="pre">xla</span></code> backend is not supported since the
+compiler is responsible for all collectives.</p>
+<p>Instead, a CPU process group such as <code class="docutils literal notranslate"><span class="pre">gloo</span></code> must be used. On TPUs, the <code class="docutils literal notranslate"><span class="pre">xla://</span></code>
+init_method is still supported to discover the master IP, global world size,
+and host rank. An example initialization is below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+<span class="c1"># Import to register the `xla://` init_method</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_backend</span>
+<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
+
+<span class="c1"># The `xla://` init_method will automatically discover master worker IP, rank,</span>
+<span class="c1"># and global world size without requiring environment configuration on TPUs.</span>
+<span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;gloo&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="torch_compile.html" class="btn btn-neutral float-right" title="TorchDynamo(torch.compile) integration in PyTorch XLA" accesskey="n" rel="next">Next <img src="_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="runtime.html" class="btn btn-neutral" title="PJRT Runtime" accesskey="p" rel="prev"><img src="_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">PyTorch/XLA SPMD User Guide</a><ul>
+<li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
+<li><a class="reference internal" href="#how-to-use-pytorch-xla-spmd">How to use PyTorch/XLA SPMD?</a><ul>
+<li><a class="reference internal" href="#spmd-mode">SPMD Mode</a></li>
+<li><a class="reference internal" href="#mesh">Mesh</a></li>
+<li><a class="reference internal" href="#partition-spec">Partition Spec</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#further-reading">Further Reading</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#fully-sharded-data-parallel-fsdp-via-spmd">Fully Sharded Data Parallel(FSDP) via SPMD</a><ul>
+<li><a class="reference internal" href="#sharding-output">Sharding output</a></li>
+<li><a class="reference internal" href="#gradient-checkpointing">Gradient checkpointing</a></li>
+<li><a class="reference internal" href="#huggingface-llama-2-example">HuggingFace Llama 2 Example</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pytorch-xla-spmd-advanced-topics">PyTorch/XLA SPMD advanced topics</a><ul>
+<li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a><ul>
+<li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
+<li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
+<li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
+<li><a class="reference internal" href="#activation-sharding-for-torch-compile">Activation Sharding for torch.compile</a></li>
+<li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
+<li><a class="reference internal" href="#auto-sharding">Auto-Sharding</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+         <script src="_static/jquery.js"></script>
+         <script src="_static/underscore.js"></script>
+         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="_static/doctools.js"></script>
+         <script src="_static/sphinx_highlight.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">Stay up to date</li>
+            <li><a href="https://www.facebook.com/pytorch" target="_blank">Facebook</a></li>
+            <li><a href="https://twitter.com/pytorch" target="_blank">Twitter</a></li>
+            <li><a href="https://www.youtube.com/pytorch" target="_blank">YouTube</a></li>
+            <li><a href="https://www.linkedin.com/company/pytorch" target="_blank">LinkedIn</a></li>
+          </ul>  
+          </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">PyTorch Podcasts</li>
+            <li><a href="https://open.spotify.com/show/6UzHKeiy368jKfQMKKvJY5" target="_blank">Spotify</a></li>
+            <li><a href="https://podcasts.apple.com/us/podcast/pytorch-developer-podcast/id1566080008" target="_blank">Apple</a></li>
+            <li><a href="https://www.google.com/podcasts?feed=aHR0cHM6Ly9mZWVkcy5zaW1wbGVjYXN0LmNvbS9PQjVGa0lsOA%3D%3D" target="_blank">Google</a></li>
+            <li><a href="https://music.amazon.com/podcasts/7a4e6f0e-26c2-49e9-a478-41bd244197d0/PyTorch-Developer-Podcast?" target="_blank">Amazon</a></li>
+          </ul>
+         </div>
+        </div>
+        
+        <div class="privacy-policy">
+          <ul>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/terms/" target="_blank">Terms</a></li>
+            <li class="privacy-policy-links">|</li>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/privacy-policy/" target="_blank">Privacy</a></li>
+          </ul>
+        </div>
+        <div class="copyright">
+        <p>© Copyright The Linux Foundation. The PyTorch Foundation is a project of The Linux Foundation.
+          For web site terms of use, trademark policy and other policies applicable to The PyTorch Foundation please see
+          <a href="https://www.linuxfoundation.org/policies/">www.linuxfoundation.org/policies/</a>. The PyTorch Foundation supports the PyTorch open source
+          project, which has been established as PyTorch Project a Series of LF Projects, LLC. For policies applicable to the PyTorch Project a Series of LF Projects, LLC,
+          please see <a href="https://www.lfprojects.org/policies/">www.lfprojects.org/policies/</a>.</p>
+      </div>
+     </div>
+
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+           <li class="resources-mobile-menu-title">
+             <a>Learn</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/get-started">Get Started</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials">Tutorials</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/basics/intro.html">Learn the Basics</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/recipes/recipes_index.html">PyTorch Recipes</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/introyt.html">Introduction to PyTorch - YouTube Series</a>
+             </li>
+           </ul>
+           <li class="resources-mobile-menu-title">
+             <a>Ecosystem</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/ecosystem">Tools</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/#community-module">Community</a>
+             </li>
+             <li>
+               <a href="https://discuss.pytorch.org/">Forums</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/resources">Developer Resources</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Edge</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/edge">About PyTorch Edge</a>
+             </li>
+             
+             <li>
+               <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Docs</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/pytorch-domains">PyTorch Domains</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            <a>Blog & News</a>
+          </li>
+            
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/blog/">PyTorch Blog</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/community-blog">Community Blog</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/videos">Videos</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/community-stories">Community Stories</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/events">Events</a>
+            </li>
+          </ul>
+          
+          <li class="resources-mobile-menu-title">
+            <a>About</a>
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+          </ul>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>
