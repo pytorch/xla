@@ -81,7 +81,10 @@ torch.utils.generate_methods_for_privateuse1_backend(
   unsupported_dtype=unsupported_dtype)
 
 import jax
-torch._register_device_module('jax', jax)
+import torch_xla2.device_module
+torch._register_device_module('jax', torch_xla2.device_module)
+
+
 
 
 def enable_accuracy_mode():

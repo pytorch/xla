@@ -109,6 +109,8 @@ def _aten_add(x, y, *, alpha=1):
 
   assert x.dtype == y.dtype, (x.dtype, y.dtype)
   """
+  if isinstance(x, torch.Tensor) or isinstance(y, torch.Tensor):
+    import pdb; pdb.set_trace()
   return x + y * alpha
 
 
@@ -904,6 +906,22 @@ def _aten_bucketize(input, boundaries, *, out_int32=False, right=False, out=None
   return_type = jnp.int32 if out_int32 else jnp.int64
   return jnp.digitize(input, boundaries, right=not right).astype(return_type)
 
+
+@op(torch.ops.aten.conv2d)
+def _aten_conv2d(
+  input,
+  weight,
+  bias,
+  stride,
+  padding,
+  dilation,
+  groups,
+):
+  return _aten_convolution(
+    input, weight, bias, stride, padding, 
+    dilation, transposed=False, 
+    output_padding=1, groups=groups)
+
 @op(torch.ops.aten.convolution)
 def _aten_convolution(
   input,
@@ -918,6 +936,11 @@ def _aten_convolution(
 ):
   if transposed:
     raise NotImplementedError("Transposed convolution is not implemented.")
+
+  num_shape_dim = weight.ndim - 1
+  batch_dims = input.shape[:-num_shape_dim]
+
+  input = input.reshape((-1, *input.shape[-num_shape_dim:]))
 
   def make_padding(padding, num_spatial_dims):
     # Expand single padding to pairs expected by jax
@@ -960,6 +983,8 @@ def _aten_convolution(
       shape[1] = bias.shape[0]
       bias = bias.reshape(tuple(shape))
     res = res + bias
+
+  res = res.reshape((*batch_dims, *res.shape[-num_shape_dim:]))
   return res
 
 
@@ -3214,9 +3239,9 @@ def _aten_native_batch_norm(input, weight, bias, running_mean, running_var, trai
     running_var = jnp.ones(input.shape[1], dtype=input.dtype)   # Initialize running variance if None
 
   if training:
-    return torch.ops.aten._native_batch_norm_legit(input, weight, bias, running_mean, running_var, training, momentum, eps)
+    return _aten__native_batch_norm_legit(input, weight, bias, running_mean, running_var, training, momentum, eps)
   else:
-    return torch.ops.aten._native_batch_norm_legit_no_training(input, weight, bias, running_mean, running_var, momentum, eps)
+    return _aten__native_batch_norm_legit_no_training(input, weight, bias, running_mean, running_var, momentum, eps)
 
 
 @op(torch.ops.aten.normal, needs_env=True)

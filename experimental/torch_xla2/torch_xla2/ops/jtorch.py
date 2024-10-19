@@ -1,4 +1,5 @@
 """Tensor constructor overrides"""
+import math
 import collections.abc
 import functools
 from typing import Optional, Sequence
@@ -98,13 +99,11 @@ def _einsum(equation, *operands):
   return jnp.einsum(equation, *filtered_operands)
 
 
-def _sdpa_reference(
-   query, key, value, attn_mask=None,
-   dropout_p=0.0, is_causal=False, scale=None) -> torch.Tensor:
+def _sdpa_reference(query, key, value, attn_mask=None, dropout_p=0.0,
+        is_causal=False, scale=None, enable_gqa=False) -> torch.Tensor:
     L, S = query.size(-2), key.size(-2)
-    scale_factor = 1 / np.sqrt(query.size(-1)) if scale is None else scale
+    scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
     attn_bias = torch.zeros(L, S, dtype=query.dtype)
-
     if is_causal:
         assert attn_mask is None
         temp_mask = torch.ones(L, S, dtype=torch.bool).tril(diagonal=0)
@@ -116,6 +115,10 @@ def _sdpa_reference(
             attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
         else:
             attn_bias += attn_mask
+    if enable_gqa:
+        key = key.repeat_interleave(query.size(-3)//key.size(-3), -3)
+        value = value.repeat_interleave(query.size(-3)//value.size(-3), -3)
+
     attn_weight = query @ key.transpose(-2, -1) * scale_factor
     attn_weight += attn_bias
     attn_weight = torch.softmax(attn_weight, dim=-1)
@@ -159,14 +162,14 @@ def _tpu_flash_attention(query, key, value, env):
 @register_function(torch.nn.functional.scaled_dot_product_attention, is_jax_function=False, needs_env=True)
 def scaled_dot_product_attention(
    query, key, value, attn_mask=None,
-   dropout_p=0.0, is_causal=False, scale=None, env=None) -> torch.Tensor:
+   dropout_p=0.0, is_causal=False, scale=None, enable_gqa=False, env=None) -> torch.Tensor:
 
    if env.config.use_tpu_flash_attention:
     jquery, jkey, jvalue = env.t2j_iso((query, key, value))
     res = _tpu_flash_attention(jquery, jkey, jvalue, env)
     return env.j2t_iso(res)
 
-   return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal, scale)
+   return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa)
 
 @register_function(torch.Tensor.__getitem__)
 def getitem(self, indexes):
