@@ -50,7 +50,7 @@ new_local_repository(
 #    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
 
-xla_hash = '32ebd694c4d0442e241d76324ff1a721831366b4'
+xla_hash = '590cd6fcd1ed24ab9cf494789a0fc524b94a4a6a'
 
 http_archive(
     name = "xla",
@@ -136,7 +136,56 @@ load("@xla//:workspace0.bzl", "xla_workspace0")
 
 xla_workspace0()
 
-load("@tsl//third_party/gpus:cuda_configure.bzl", "cuda_configure")
+load(
+    "@tsl//third_party/gpus/cuda/hermetic:cuda_json_init_repository.bzl",
+    "cuda_json_init_repository",
+)
+
+cuda_json_init_repository()
+
+load(
+   "@tsl//third_party/gpus/cuda/hermetic:cuda_json_init_repository.bzl",
+   "cuda_json_init_repository",
+)
+
+cuda_json_init_repository()
+
+load(
+   "@cuda_redist_json//:distributions.bzl",
+   "CUDA_REDISTRIBUTIONS",
+   "CUDNN_REDISTRIBUTIONS",
+)
+load(
+   "@tsl//third_party/gpus/cuda/hermetic:cuda_redist_init_repositories.bzl",
+   "cuda_redist_init_repositories",
+   "cudnn_redist_init_repository",
+)
+
+cuda_redist_init_repositories(
+   cuda_redistributions = CUDA_REDISTRIBUTIONS,
+)
+
+cudnn_redist_init_repository(
+   cudnn_redistributions = CUDNN_REDISTRIBUTIONS,
+)
+
+load(
+   "@tsl//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
+   "cuda_configure",
+)
+
 cuda_configure(name = "local_config_cuda")
-load("@tsl//third_party/nccl:nccl_configure.bzl", "nccl_configure")
+
+load(
+   "@tsl//third_party/nccl/hermetic:nccl_redist_init_repository.bzl",
+   "nccl_redist_init_repository",
+)
+
+nccl_redist_init_repository()
+
+load(
+   "@tsl//third_party/nccl/hermetic:nccl_configure.bzl",
+   "nccl_configure",
+)
+
 nccl_configure(name = "local_config_nccl")
