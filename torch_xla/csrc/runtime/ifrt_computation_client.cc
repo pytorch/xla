@@ -560,11 +560,7 @@ IfrtComputationClient::ExecuteReplicated(
     counter.Wait();
   }
 
-  xla::ExecuteOptions execute_options;
-  execute_options.untuple_result = options.explode_tuple;
-  execute_options.strict_shape_checking = true;
-  // TODO(yeounoh) currently only support single-slice execution
-  execute_options.multi_slice_config = nullptr;
+  xla::ifrt::ExecuteOptions execute_options;
 
   TF_VLOG(5) << "ExecuteReplicated acquiring IFRT device lock for "
              << spmd_device_str;

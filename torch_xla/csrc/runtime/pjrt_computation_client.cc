@@ -1025,7 +1025,7 @@ void PjRtComputationClient::RegisterCustomCall(const std::string& fn_name,
   args.function_name = fn_name.c_str();
   args.function_name_size = fn_name.size();
   args.api_version = 0;
-  args.custom_call_function = function_ptr;
+  args.handler_execute = function_ptr;
   PJRT_Error* error =
       reinterpret_cast<const PJRT_Gpu_Custom_Call*>(next)->custom_call(&args);
   if (error) {

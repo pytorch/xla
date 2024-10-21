@@ -8,8 +8,8 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 #include "tsl/platform/stacktrace.h"
 #include "xla/client/lib/constants.h"
-#include "xla/client/lib/loops.h"
 #include "xla/client/lib/slicing.h"
+#include "xla/hlo/builder/lib/loops.h"
 #include "xla/shape_util.h"
 
 namespace torch_xla {
