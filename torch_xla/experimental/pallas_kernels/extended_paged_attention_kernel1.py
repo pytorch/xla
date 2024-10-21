@@ -95,6 +95,7 @@ class MultiPageAsyncCopyDescriptor:
 
   def wait_and_get_loaded(self) -> jax.Array:
     """Wait async copies and gets the loaded buffer as a jax.Array."""
+    # Return value shape is (pages_per_compute_block*page_size,head_dim)
     for async_copy in self._async_copies:
       async_copy.wait()
     head_dim = self._vmem_buffer.shape[-1]
@@ -218,7 +219,7 @@ def paged_flash_attention_kernel(
     v_scales_vmem_buffer,
     sem,
     *,
-    pages_per_sequence: int,
+    pages_per_sequence: int, # bs, pages_per_sequence = page_indices.shape
     batch_size: int,
     num_kv_pages_per_compute_block: int,
     num_queries_per_compute_block: int,
@@ -302,38 +303,38 @@ def paged_flash_attention_kernel(
     )
     return async_copy_k, async_copy_v
 
-  # # copy begins
-  # step = step_ref[0]
-  # buffer_index = buffer_index_ref[0]
-  # @pl.when(step == 0)
-  # def prefetch_first_block():  # pylint: disable=unused-variable
-  #   async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
-  #       b, kv_head_idx, kv_blk_idx, buffer_index
-  #   )
-  #   async_copy_k.start()
-  #   async_copy_v.start()
-  
-  # next_b, next_kv_head_idx, next_kv_blk_idx = compute_block_indices(b, kv_head_idx, kv_blk_idx+1)
+  # copy begins
+  step = step_ref[0]
+  buffer_index = buffer_index_ref[0]
+  @pl.when(step == 0)
+  def prefetch_first_block():  # pylint: disable=unused-variable
+    async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
+        b, kv_head_idx, kv_blk_idx, buffer_index
+    )
+    async_copy_k.start()
+    async_copy_v.start()
 
-  # @pl.when(next_b < batch_size)
-  # def prefetch_next_block():  # pylint: disable=unused-variable
-  #   next_buffer_index = jnp.where(buffer_index == 0, 1, 0)
-  #   async_copy_next_k, async_copy_next_v = create_kv_async_copy_descriptors(
-  #       next_b, next_kv_head_idx, next_kv_blk_idx, next_buffer_index
-  #   )
-  #   async_copy_next_k.start()
-  #   async_copy_next_v.start()
-  #   buffer_index_ref[0] = next_buffer_index
+  next_b, next_kv_head_idx, next_kv_blk_idx = compute_block_indices(b, kv_head_idx, kv_blk_idx+1)
+
+  @pl.when(next_b < batch_size)
+  def prefetch_next_block():  # pylint: disable=unused-variable
+    next_buffer_index = jnp.where(buffer_index == 0, 1, 0)
+    async_copy_next_k, async_copy_next_v = create_kv_async_copy_descriptors(
+        next_b, next_kv_head_idx, next_kv_blk_idx, next_buffer_index
+    )
+    async_copy_next_k.start()
+    async_copy_next_v.start()
+    buffer_index_ref[0] = next_buffer_index
   
-  # async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
-  #   b, kv_head_idx, kv_blk_idx, buffer_index 
-  # )
-  # k = async_copy_k.wait_and_get_loaded()
-  # v = async_copy_v.wait_and_get_loaded()
-  # # copy ends
+  async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
+    b, kv_head_idx, kv_blk_idx, buffer_index
+  )
+  k = async_copy_k.wait_and_get_loaded() # (pages_per_compute_block*page_size,head_dim)
+  v = async_copy_v.wait_and_get_loaded()
+  # copy ends
   # TODO(xw32): Temporarily, fake a k and v, remove the 2 lines below later
-  k = jnp.full((compute_blk_size_kv, head_dim), 1, dtype=jnp.float32)
-  v = jnp.full((compute_blk_size_kv, head_dim), 1, dtype=jnp.float32)
+  # k = jnp.full((compute_blk_size_kv, head_dim), 1, dtype=jnp.float32)
+  # v = jnp.full((compute_blk_size_kv, head_dim), 1, dtype=jnp.float32)
 
   out = []
   for q_head_idx in range(num_q_heads_per_kv_head):
