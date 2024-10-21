@@ -90,6 +90,9 @@ def get_xla_supported_devices(devkind: Optional[str] = None,
   # TODO(wcromar): Remove `devkind` after 2.3 release cut. We no longer support
   # multiple device types.
   if not devkind:
+    import traceback,inspect
+    print(f"Current line: {inspect.currentframe().f_lineno}")
+    traceback.print_stack()
     devices = torch_xla._XLAC._xla_get_devices()
     return [
         f'xla:{i}'
@@ -224,6 +227,9 @@ def xla_replication_devices(
         'Cannot replicate if number of devices ({}) is different from {}'.
         format(len(local_devices), len(kind_devices)))
   replication_devices = []
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   for device in torch_xla._XLAC._xla_get_all_devices():
     # device is like 'CUDA:0'
     xdev = _utils.parse_xla_device(device)
@@ -255,8 +261,12 @@ def set_replication(device: torch.device,
   devctx = _get_device_context(device=device)
   devices = [str(x) for x in devices]
   if devices:
+    import traceback,inspect
+    print(f"Current line: {inspect.currentframe().f_lineno}")
     # sample replication_devices: ['CUDA:0', 'CUDA:1', 'CUDA:2', 'CUDA:3']
     replication_devices = xla_replication_devices(devices)
+    traceback.print_stack()
+    print(f"Current line: {inspect.currentframe().f_lineno}")
     torch_xla._XLAC._xla_set_replication_devices(replication_devices)
     devctx.device_index = devices.index(device)
   else:
