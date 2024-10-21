@@ -84,7 +84,6 @@ skiplist = {
     "special.scaled_modified_bessel_k1",
     "special.spherical_bessel_j0",
     "special.zeta",
-    "svd",
     "svd_lowrank",
     "unfold_copy",
     "unfold",
@@ -136,6 +135,7 @@ atol_dict = {"linalg.eig": (2e0, 3e0),
              "linalg.eigvalsh": (5e1, 3e0),
              "linalg.pinv": (8e-1, 2e0),
              "linalg.svd": (1e0, 1e0),
+             "svd": (1e0, 1e0),
              "matrix_exp": (2e-1, 2e-4),
              "cdist": (5e1, 3e0)}
 
