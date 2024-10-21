@@ -740,14 +740,15 @@ class PallasTest(unittest.TestCase):
 
     # num_compute_blks_q=1, num_compute_blks_kv=1,num_q_heads_per_kv_head=8
     # num_compute_blks_q=(query_len//num_queries_per_compute_block)=1
+    # num_queries_per_compute_block=8
     # Change num_queries_per_compute_block to adjust num_compute_blks_q
     # num_compute_blks_kv=(pages_per_sequence//num_kv_pages_per_compute_block)=32/32=1
     # Change pallas_compute_block_size to adjust num_compute_blks_kv
     pallas_compute_block_size = 128
     page_size: int = 64
     num_kv_pages_per_compute_block=pallas_compute_block_size // page_size
-    query_len: int = 4
-    num_queries_per_compute_block=4
+    query_len: int = 8
+    num_queries_per_compute_block=8
     num_query_heads: int = 64
     num_kv_heads: int = 8
 
