@@ -185,8 +185,10 @@ def _flash_attention(
 
   acc_scratch_ref[:] += jnp.dot(p_ij, v)
   # o_ref.shape=(4,8,128),o_ref[:, q_head_idx, :].shape=(4,128)
-  # acc_scratch_ref.shape=(4,128)
-  o_ref[:, q_head_idx, :] = acc_scratch_ref[:].astype(o_ref.dtype)
+  # acc_scratch_ref.shape=(4,128)=
+  # o_ref[:, q_head_idx, :] = acc_scratch_ref[:].astype(o_ref.dtype) # doesnt work
+  # pl.store(o_ref, (slice(None), pl.ds(start=q_head_idx, size=1), slice(None)), acc_scratch_ref[:].astype(o_ref.dtype)) # doesnt work
+  return acc_scratch_ref[:].astype(o_ref.dtype)
 
 def paged_flash_attention_kernel(
     # prefetched value
@@ -328,8 +330,9 @@ def paged_flash_attention_kernel(
   k = jnp.full((compute_blk_size_kv, head_dim), 1, dtype=jnp.float32)
   v = jnp.full((compute_blk_size_kv, head_dim), 1, dtype=jnp.float32)
 
+  out = []
   for q_head_idx in range(num_q_heads_per_kv_head):
-    _flash_attention(
+    out_q_head_idx = _flash_attention(
       q_head_idx,
       lengths_ref,
       page_indices_ref,
@@ -349,6 +352,13 @@ def paged_flash_attention_kernel(
       page_size=page_size,
       head_dim=head_dim,
       )
+    out.append(out_q_head_idx)
+  # temp_out = jnp.concatenate(out, axis=1)
+  temp_out = jnp.stack(out)
+  temp_out = jnp.reshape(temp_out, (num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim))
+  print(f'xw32 line357 {temp_out.shape=}')
+  o_ref[...] = temp_out
+  print(f'xw32 line359 {o_ref.shape=}')
 
 MIN_BLOCK_SIZE = 128
 
