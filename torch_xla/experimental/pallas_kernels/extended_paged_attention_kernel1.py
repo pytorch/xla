@@ -126,6 +126,7 @@ def _flash_attention(
     pages_per_sequence: int,
     mask_value: float,
     attn_logits_soft_cap: float | None,
+    query_len: int,
     page_size: int,
     head_dim: int,
 ):
@@ -149,12 +150,15 @@ def _flash_attention(
   assert k.shape == (kv_seq_len_per_kv_compute_blk, head_dim)
   p_ij = jnp.einsum('hd,td->ht', q, k, preferred_element_type=jnp.float32)
 
-  q_span = q_blk_idx + jax.lax.broadcasted_iota(
+  q_index = q_blk_idx * num_queries_per_compute_block
+  kv_index = kv_blk_idx * kv_seq_len_per_kv_compute_blk
+  kv_len = lengths_ref[b]
+  q_span = (kv_len - query_len) + q_index + jax.lax.broadcasted_iota(
       jnp.int32, (num_queries_per_compute_block, kv_seq_len_per_kv_compute_blk), 0
   )
-  kv_span = kv_blk_idx + jax.lax.broadcasted_iota(
+  kv_span = kv_index + jax.lax.broadcasted_iota(
       jnp.int32, (num_queries_per_compute_block, kv_seq_len_per_kv_compute_blk), 1
-  ) # TODO(xw32): probably need to account for query_len
+  )
   causal_mask = jnp.where(q_span < kv_span, float("-inf"), 0.)
   p_ij = p_ij + causal_mask
 
@@ -220,6 +224,7 @@ def paged_flash_attention_kernel(
     num_queries_per_compute_block: int,
     mask_value: float,
     attn_logits_soft_cap: float | None,
+    query_len: int,
 ):
   """Pallas kernel for paged attention."""
   b, kv_head_idx, q_blk_idx, kv_blk_idx = (
@@ -349,6 +354,7 @@ def paged_flash_attention_kernel(
       pages_per_sequence=pages_per_sequence,
       mask_value=mask_value,
       attn_logits_soft_cap=attn_logits_soft_cap,
+      query_len=query_len,
       page_size=page_size,
       head_dim=head_dim,
       )
@@ -564,6 +570,7 @@ def paged_attention(
           num_queries_per_compute_block=num_queries_per_compute_block,
           mask_value=mask_value,
           attn_logits_soft_cap=attn_logits_soft_cap,
+          query_len=query_len
       ),
       grid_spec=pltpu.PrefetchScalarGridSpec(
           # There are 4 scalars prefetched per kernel call: `lengths_ref`,
