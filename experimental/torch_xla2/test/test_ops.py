@@ -69,11 +69,9 @@ skiplist = {
     "nn.functional.upsample_nearest",
     "nonzero",
     "nonzero_static",
-    "norm",
     "normal",
     "ormqr",
     "pca_lowrank",
-    "pinverse",
     "polar",
     "polygamma",
     "prod",
@@ -87,8 +85,6 @@ skiplist = {
     "svd_lowrank",
     "unfold_copy",
     "unfold",
-    "nanmean",
-    "nn.functional.upsample_bilinear",
     "randint",
 }
 
