@@ -65,7 +65,6 @@ skiplist = {
     "nn.functional.rrelu",
     "nn.functional.triplet_margin_loss",
     "nn.functional.triplet_margin_with_distance_loss",
-    "nn.functional.unfold",
     "nn.functional.upsample_nearest",
     "nonzero",
     "nonzero_static",
