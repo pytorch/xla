@@ -141,6 +141,10 @@ def run_multiprocess(fn: Callable[..., R],
     Dict of the form {device_ordinal: return_value}, where
     return_value is the result of calling `fn`.
   """
+  return _WORLD_SIZE
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   if torch_xla._XLAC._xla_runtime_is_initialized():
     raise RuntimeError('Runtime is already initialized. Do not use the XLA '
                        'device before calling xmp.spawn.')
