@@ -797,7 +797,7 @@ class PallasTest(unittest.TestCase):
     # import pdb; pdb.set_trace()
     out_np = np.array(out) # xw32: why does it hang?!
     actual_output = torch.from_numpy(out_np)
-    print('my new extended paged attention finished')
+    print('my new extended paged attention finished yay')
     
     # Run Woosuk's non-kernel impl.
     ref_q_torch = q.detach().clone()

@@ -219,7 +219,7 @@ def paged_flash_attention_kernel(
     v_scales_vmem_buffer,
     sem,
     *,
-    pages_per_sequence: int, # bs, pages_per_sequence = page_indices.shape
+    pages_per_sequence: int, # [bs, pages_per_sequence] = page_indices.shape
     batch_size: int,
     num_kv_pages_per_compute_block: int,
     num_queries_per_compute_block: int,
@@ -234,6 +234,7 @@ def paged_flash_attention_kernel(
       pl.program_id(2),
       pl.program_id(3),
   )
+  num_q_blks = pl.num_programs(2)
   num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim = q_ref.shape
   assert q_ref.shape == (num_queries_per_compute_block, num_q_heads_per_kv_head, head_dim)
   num_kv_heads, total_num_pages, page_size, head_dim = k_pages_hbm_ref.shape
@@ -267,12 +268,16 @@ def paged_flash_attention_kernel(
       )
 
     def advance_kv_head_idx():
+      # assumption: kv_blk_idx * compute_blk_size_kv >= lengths_ref[b]
       next_kv_head_idx = kv_head_idx + 1
-      return lax.cond(next_kv_head_idx < num_kv_heads, lambda: (b, next_kv_head_idx, 0), advance_b)
+      return lax.cond(q_blk_idx==num_q_blks-1,
+                      lambda: lax.cond(next_kv_head_idx < num_kv_heads, lambda: (b, next_kv_head_idx, 0), advance_b),
+                      lambda: (b, kv_head_idx, 0))
 
     return lax.cond(kv_blk_idx * compute_blk_size_kv < lengths_ref[b], lambda: (b, kv_head_idx, kv_blk_idx), advance_kv_head_idx)
 
   def create_kv_async_copy_descriptors(b, kv_head_idx, kv_blk_idx, buffer_index):
+    pl.debug_print('line45 b={}, kv_head_idx={}', b, kv_head_idx)
     page_offset = b * pages_per_sequence + kv_blk_idx * num_kv_pages_per_compute_block
     pages_to_load = num_kv_pages_per_compute_block
     async_copy_k = MultiPageAsyncCopyDescriptor(
@@ -366,20 +371,21 @@ def paged_flash_attention_kernel(
   print(f'xw32 line357 {temp_out.shape=}')
   o_ref[...] = temp_out
   print(f'xw32 line359 {o_ref.shape=}')
+  step_ref[0] = step + 1
 
 MIN_BLOCK_SIZE = 128
 
-@functools.partial(
-    jax.jit,
-    static_argnames=[
-        "num_kv_pages_per_compute_block",
-        "num_queries_per_compute_block",
-        "attn_logits_soft_cap",
-        "mask_value",
-        "megacore_mode",
-        "inline_seq_dim",
-    ],
-)
+# @functools.partial(
+#     jax.jit,
+#     static_argnames=[
+#         "num_kv_pages_per_compute_block",
+#         "num_queries_per_compute_block",
+#         "attn_logits_soft_cap",
+#         "mask_value",
+#         "megacore_mode",
+#         "inline_seq_dim",
+#     ],
+# )
 def paged_attention(
     q: jax.Array,
     k_pages: jax.Array | quantization_utils.QuantizedTensor,
@@ -485,6 +491,11 @@ def paged_attention(
 
   # Here, we guarantee (num_q_heads // num_kv_heads) % 8 == 0
   # grid
+  # query_len dim has to come before kv_len dim for the fa v1 implementation because if we do the other way around,
+  # then for each j ([0, T_c]) and i ([0, T_r]), we load l_i and m_i from HBM and store to HBM.
+  # then for j+1, we have to loop over i ([0, T_r]) which requires the load l_i and m_i.
+  # But this is forbidden in Pallas: https://jax.readthedocs.io/en/latest/pallas/tpu/sparse.html#example-sparse-dense-matrix-multiplication
+  # "When we change output block Pallas will finally store the output into HBM and assume we never touch it again."
   grid = (
       batch_size,
       num_kv_heads,
@@ -562,7 +573,7 @@ def paged_attention(
       pltpu.SemaphoreType.DMA,
   )
 
-  out = pl.pallas_call(
+  kernel = pl.pallas_call(
       functools.partial(
           paged_flash_attention_kernel,
           pages_per_sequence=pages_per_sequence,
@@ -585,7 +596,24 @@ def paged_attention(
       # compiler_params=pltpu.TPUCompilerParams(
       #     dimension_semantics=dimension_semantics), # do we need it?
       out_shape=out_shape,
-  )(
+  )
+  compiled_kernel = (
+    jax.jit(kernel)
+    .lower(
+      # The first 4 are prefetched scalars.
+      lengths,
+      page_indices.reshape(-1),
+      jnp.zeros((1,), jnp.int32),  # buffer index
+      jnp.zeros((1,), jnp.int32),  # step
+      q.astype(q_dtype_for_kernel_launch),
+      k_pages,
+      k_scales_pages,
+      v_pages,
+      v_scales_pages,
+    )
+    .compile({'xla_tpu_enable_log_recorder': 'true'})
+  )
+  outs = compiled_kernel(
       # The first 4 are prefetched scalars.
       lengths,
       page_indices.reshape(-1),
@@ -597,7 +625,7 @@ def paged_attention(
       v_pages,
       v_scales_pages,
   ) # should get 4 return values
-  ret = out[0]
+  ret = outs[0]
   print(f'xw32 finished the pallas kernel. {ret.shape=} Returning...', flush=True)
   return ret.reshape(batch_size, query_len, num_q_heads, head_dim).astype(q.dtype)
 
