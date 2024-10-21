@@ -734,17 +734,18 @@ class PallasTest(unittest.TestCase):
     # https://github.com/vllm-project/vllm/blob/f5e1bf5d44877149eaabf9c04379a4e14a023145/vllm/attention/backends/pallas.py#L184
     batch_size: int = 3
     head_size: int = 128
-    dtype: torch.dtype = torch.float32
+    dtype_torch: torch.dtype = torch.float32
     max_kv_len: int = 1024
     total_num_pages: int = 32
+    pages_per_sequence = total_num_pages
 
     # num_compute_blks_q=1, num_compute_blks_kv=1,num_q_heads_per_kv_head=8
-    # num_compute_blks_q=(query_len//num_queries_per_compute_block)=1
-    # num_queries_per_compute_block=8
+    # num_compute_blks_q=(query_len//num_queries_per_compute_block)
     # Change num_queries_per_compute_block to adjust num_compute_blks_q
-    # num_compute_blks_kv=(pages_per_sequence//num_kv_pages_per_compute_block)=32/32=1
+    # num_compute_blks_kv=(pages_per_sequence//num_kv_pages_per_compute_block) where
+    # pages_per_sequence is the same as total_num_pages
     # Change pallas_compute_block_size to adjust num_compute_blks_kv
-    pallas_compute_block_size = 128
+    pallas_compute_block_size = 2048
     page_size: int = 64
     num_kv_pages_per_compute_block=pallas_compute_block_size // page_size
     query_len: int = 8
@@ -757,8 +758,8 @@ class PallasTest(unittest.TestCase):
     assert max_kv_len <= total_num_pages * page_size
 
     print(f'The test test_extended_paged_attention_multiple_queries begins with {query_len=}')
-    q = torch.randn(batch_size, query_len, num_query_heads, head_size, dtype=dtype)
-    k_pages = torch.randn(num_kv_heads, total_num_pages, page_size, head_size, dtype=dtype)
+    q = torch.randn(batch_size, query_len, num_query_heads, head_size, dtype=dtype_torch)
+    k_pages = torch.randn(num_kv_heads, total_num_pages, page_size, head_size, dtype=dtype_torch)
     v_pages = torch.rand_like(k_pages)
     kv_seq_lengths = torch.randint(query_len, max_kv_len + 1, (batch_size,))
     page_indices = torch.randint(0, total_num_pages, (batch_size, total_num_pages))
@@ -778,10 +779,10 @@ class PallasTest(unittest.TestCase):
                  kv_seq_lens_jax,
                  page_indices_jax,
                  num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
-                 num_queries_per_compute_block = num_queries_per_compute_block,
+                 num_queries_per_compute_block=num_queries_per_compute_block,
              )
           
-    out = jax.block_until_ready(out)[0]
+    out = jax.block_until_ready(out)
     # actual_output = torch.from_numpy(
     #     np.array(
     #         jax_extended_paged_attention0(
@@ -797,16 +798,15 @@ class PallasTest(unittest.TestCase):
     out_np = np.array(out) # xw32: why does it hang?!
     actual_output = torch.from_numpy(out_np)
     print('my new extended paged attention finished')
-    return
     
     # Run Woosuk's non-kernel impl.
     ref_q_torch = q.detach().clone()
     assert ref_q_torch.shape==(batch_size, query_len, num_query_heads, head_size), f"Input ref_q_torch has the wrong shape: {ref_q_torch.shape}. Expect {(batch_size, query_len, num_query_heads, head_size)}."
-    assert jnp.allclose(q_jax, jnp.array(ref_q_torch.numpy(), dtype=jnp.int32))
+    assert jnp.allclose(q_jax, jnp.array(ref_q_torch.numpy(), dtype=jnp.float32))
     ref_k_pages_torch = k_pages.detach().clone() 
-    assert jnp.allclose(k_pages_jax, jnp.array(ref_k_pages_torch.numpy(), dtype=jnp.int32))
+    assert jnp.allclose(k_pages_jax, jnp.array(ref_k_pages_torch.numpy(), dtype=jnp.float32))
     ref_v_pages_torch = v_pages.detach().clone()
-    assert jnp.allclose(v_pages_jax, jnp.array(ref_v_pages_torch.numpy(), dtype=jnp.int32))
+    assert jnp.allclose(v_pages_jax, jnp.array(ref_v_pages_torch.numpy(), dtype=jnp.float32))
     ref_kv_seq_lens_torch = kv_seq_lengths.detach().clone()
     assert jnp.allclose(kv_seq_lens_jax, jnp.array(ref_kv_seq_lens_torch.numpy(), dtype=jnp.int32))
     ref_page_indices_torch = page_indices.detach().clone()
@@ -822,13 +822,13 @@ class PallasTest(unittest.TestCase):
 
     expected_output_cpu=expected_output.cpu()
     # Need to squeeze out the query_len dimension!
-    actual_output_cpu=actual_output.squeeze().cpu()
+    actual_output_cpu=actual_output.cpu()
     # print(f'{expected_output_cpu=}')
     # print(f'{actual_output_cpu=}')
-    # print(f'actual_output_cpu.shape={actual_output_cpu.shape}')
-    # print(f'expected_output_cpu.shape={expected_output_cpu.shape}')
+    print(f'actual_output_cpu.shape={actual_output_cpu.shape}')
+    print(f'expected_output_cpu.shape={expected_output_cpu.shape}')
     self.assertEqual(actual_output_cpu.shape, expected_output_cpu.shape)
-    torch.set_printoptions(profile="full")
+    # torch.set_printoptions(profile="full")
     print(f'{(actual_output_cpu-expected_output_cpu).abs()}')
     print(f'Output max diff: {(expected_output_cpu - actual_output_cpu).abs().max().item()}')
     print(f'Output mean diff: {(expected_output_cpu - actual_output_cpu).abs().mean().item()}')

@@ -38,6 +38,7 @@ class FlashMQATest(jtu.JaxTestCase):
     head_dim = 256
     dtype = jnp.bfloat16
     kv_shape = (batch_size, kv_seq_len, head_dim)
+    # q_shape=(4, 2, 1024, 256)
     q_shape = (batch_size, n_heads, q_seq_len, head_dim)
     q_key, k_key, v_key = jax.random.split(jax.random.PRNGKey(0), 3)
     q = random.normal(q_key, q_shape, dtype=dtype)
