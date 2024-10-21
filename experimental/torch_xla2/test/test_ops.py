@@ -29,7 +29,6 @@ skiplist = {
     "linalg.det",
     "linalg.ldl_solve",
     "linalg.lu_solve",
-    "linalg.matrix_norm",
     "linalg.matrix_power",
     "max_pool2d_with_indices_backward",
     "nn.functional.adaptive_avg_pool3d",
