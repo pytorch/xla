@@ -1,5 +1,6 @@
 import jax
 import os
+import tempfile
 import tensorflow as tf
 import torch
 import torch.nn.functional as F
@@ -25,6 +26,7 @@ class TfIntegrationTest(test_base.TestCase):
 
   def setUp(self):
     torch.manual_seed(0)
+    torch_xla2.enable_accuracy_mode()
 
   def test_interpolate(self):
     """Simple model roundtripped through TF savedmodel"""
@@ -34,15 +36,17 @@ class TfIntegrationTest(test_base.TestCase):
     pt_model = Interpolate()
 
     # Export to SavedModel
-    sm_path = os.path.join(self.create_tempdir(), "interpolate.savedmodel")
-    tf_model = tf_integration.save_torch_module_as_tf_saved_model(
-        pt_model, arg, sm_path)
+    with tempfile.TemporaryDirectory() as tempdir:
+      sm_path = os.path.join(tempdir, "interpolate.savedmodel")
+      tf_model = tf_integration.save_torch_module_as_tf_saved_model(
+          pt_model, arg, sm_path)
 
-    # Reload SM and compare results with PT results
-    loaded_model = tf.saved_model.load(sm_path)
-    pt_res = pt_model(*arg)
-    tf_res = torch.tensor(loaded_model.f(*arg)[0].numpy())
-    self.assertTrue(torch.allclose(pt_res, tf_res, atol=1e-4))
+      # Reload SM and compare results with PT results
+      loaded_model = tf.saved_model.load(sm_path)
+      pt_res = pt_model(*arg)
+      tf_res = torch.tensor(loaded_model.f(*arg)[0].numpy())
+      self.assertTrue(torch.allclose(pt_res, tf_res, atol=1e-4))
+
 
 
 if __name__ == "__main__":
