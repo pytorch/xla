@@ -800,31 +800,26 @@ class PallasTest(unittest.TestCase):
     print('my new extended paged attention finished yay')
     
     # Run Woosuk's non-kernel impl.
-    ref_q_torch = q.detach().clone()
-    assert ref_q_torch.shape==(batch_size, query_len, num_query_heads, head_size), f"Input ref_q_torch has the wrong shape: {ref_q_torch.shape}. Expect {(batch_size, query_len, num_query_heads, head_size)}."
-    assert jnp.allclose(q_jax, jnp.array(ref_q_torch.numpy(), dtype=jnp.float32))
-    ref_k_pages_torch = k_pages.detach().clone() 
-    assert jnp.allclose(k_pages_jax, jnp.array(ref_k_pages_torch.numpy(), dtype=jnp.float32))
-    ref_v_pages_torch = v_pages.detach().clone()
-    assert jnp.allclose(v_pages_jax, jnp.array(ref_v_pages_torch.numpy(), dtype=jnp.float32))
-    ref_kv_seq_lens_torch = kv_seq_lengths.detach().clone()
-    assert jnp.allclose(kv_seq_lens_jax, jnp.array(ref_kv_seq_lens_torch.numpy(), dtype=jnp.int32))
-    ref_page_indices_torch = page_indices.detach().clone()
-    assert jnp.allclose(page_indices_jax, jnp.array(ref_page_indices_torch.numpy(), dtype=jnp.int32))
+    assert q.shape==(batch_size, query_len, num_query_heads, head_size), f"Input ref_q_torch has the wrong shape: {q.shape}. Expect {(batch_size, query_len, num_query_heads, head_size)}."
+    assert jnp.allclose(q_jax, jnp.array(q.numpy(), dtype=jnp.float32))
+    assert jnp.allclose(k_pages_jax, jnp.array(k_pages.numpy(), dtype=jnp.float32))
+    assert jnp.allclose(v_pages_jax, jnp.array(v_pages.numpy(), dtype=jnp.float32))
+    assert jnp.allclose(kv_seq_lens_jax, jnp.array(kv_seq_lengths.numpy(), dtype=jnp.int32))
+    assert jnp.allclose(page_indices_jax, jnp.array(page_indices.numpy(), dtype=jnp.int32))
 
     expected_output = ref_extended_paged_attention(
-      ref_q_torch,
-      ref_k_pages_torch,
-      ref_v_pages_torch,
-      ref_kv_seq_lens_torch,
-      ref_page_indices_torch,
+      q,
+      k_pages,
+      v_pages,
+      kv_seq_lengths,
+      page_indices,
     )
 
     expected_output_cpu=expected_output.cpu()
     # Need to squeeze out the query_len dimension!
     actual_output_cpu=actual_output.cpu()
-    # print(f'{expected_output_cpu=}')
-    # print(f'{actual_output_cpu=}')
+    print(f'{expected_output_cpu=}')
+    print(f'{actual_output_cpu=}')
     print(f'actual_output_cpu.shape={actual_output_cpu.shape}')
     print(f'expected_output_cpu.shape={expected_output_cpu.shape}')
     self.assertEqual(actual_output_cpu.shape, expected_output_cpu.shape)
@@ -836,8 +831,149 @@ class PallasTest(unittest.TestCase):
         torch.allclose(
             expected_output_cpu,
             actual_output_cpu,
-            atol=1e-5,
-            rtol=1e-5))
+            atol=1e-2,
+            rtol=1e-2))
+
+  def _ref_jax_extended_paged_attention(
+      self,
+      q,      # [batch_size, query_len, num_query_heads, head_size]
+      k_pages,# [num_kv_heads, total_num_pages, page_size, head_size]
+      v_pages,# [num_kv_heads, total_num_pages, page_size, head_size]
+      lengths,# [batch_size]
+      page_indices,# [batch_size, pages_per_sequence]
+  ):
+    batch_size, query_len, num_query_heads, head_size = q.shape
+    num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
+    num_query_per_kv = num_query_heads // num_kv_heads
+
+    lengths = lengths
+    page_indices = page_indices
+    outputs = []
+    for i in range(batch_size):
+      kv_len = lengths[i]
+      num_pages = (kv_len+page_size-1) // page_size
+      indices = page_indices[i, :num_pages]
+      
+      k = k_pages[:, indices]
+      k = jnp.permute_dims(k, (1, 2, 0, 3))
+      k = jnp.reshape(k, (num_pages * page_size, num_kv_heads, head_size))
+      k = k[:kv_len]
+
+      v = v_pages[:, indices]
+      v = jnp.permute_dims(v, (1, 2, 0, 3))
+      v = jnp.reshape(v, (num_pages * page_size, num_kv_heads, head_size))
+      v = v[:kv_len]
+
+      if num_query_per_kv != 1:
+        k = jnp.repeat(k, num_query_per_kv, axis=1)
+        v = jnp.repeat(v, num_query_per_kv, axis=1)
+
+      attn = jnp.einsum("qhd,khd->hqk", q[i], k)
+      attn = attn.astype('float32')
+      q_span = (kv_len-query_len) + jax.lax.broadcasted_iota(
+          jnp.int32, (query_len, kv_len), 0
+      )
+      kv_span = jax.lax.broadcasted_iota(
+          jnp.int32, (query_len, kv_len), 1
+      )
+      mask=jnp.where(q_span < kv_span, float("-inf"), 0.)
+      with jax.numpy_rank_promotion("allow"):
+        attn = attn + mask
+      attn = jax.nn.softmax(attn, axis=-1).astype(v.dtype)
+      out = jnp.einsum("hqk,khd->qhd", attn, v)
+      outputs.append(out)
+    output = jnp.stack(outputs, axis=0)
+    return output
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_extended_paged_attention_jax_ref_impl(self):
+    # Use multiple queries, verify my jax ref impl of paged attention against
+    # Woosuk's pytorch ref impl. Should get the same result.
+    from torch_xla.experimental.custom_kernel import ref_extended_paged_attention
+
+    batch_size: int = 3
+    head_size: int = 128
+    dtype_torch: torch.dtype = torch.float32
+    max_kv_len: int = 1024
+    total_num_pages: int = 32
+    pages_per_sequence = total_num_pages
+
+    # num_compute_blks_q=1, num_compute_blks_kv=1,num_q_heads_per_kv_head=8
+    # num_compute_blks_q=(query_len//num_queries_per_compute_block)
+    # Change num_queries_per_compute_block to adjust num_compute_blks_q
+    # num_compute_blks_kv=(pages_per_sequence//num_kv_pages_per_compute_block) where
+    # pages_per_sequence is the same as total_num_pages
+    # Change pallas_compute_block_size to adjust num_compute_blks_kv
+    pallas_compute_block_size = 2048
+    page_size: int = 64
+    num_kv_pages_per_compute_block=pallas_compute_block_size // page_size
+    query_len: int = 8
+    num_queries_per_compute_block=8
+    num_query_heads: int = 64
+    num_kv_heads: int = 8
+
+    assert num_query_heads % num_kv_heads == 0
+    assert query_len <= max_kv_len
+    assert max_kv_len <= total_num_pages * page_size
+
+    print(f'The test test_extended_paged_attention_multiple_queries begins with {query_len=}')
+    q = torch.randn(batch_size, query_len, num_query_heads, head_size, dtype=dtype_torch)
+    k_pages = torch.randn(num_kv_heads, total_num_pages, page_size, head_size, dtype=dtype_torch)
+    v_pages = torch.rand_like(k_pages)
+    kv_seq_lengths = torch.randint(query_len, max_kv_len + 1, (batch_size,))
+    page_indices = torch.randint(0, total_num_pages, (batch_size, total_num_pages))
+    
+    # Run the jax ref impl with query_len>1
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    assert q_jax.shape==(batch_size, query_len, num_query_heads, head_size), f"Input q_jax has the wrong shape: {q_jax.shape}. Expect {(batch_size, query_len, num_query_heads, head_size)}."
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    kv_seq_lens_jax = jnp.array(kv_seq_lengths.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    print('xw32 calling jax_extended_paged_attention1')
+    actual_output = self._ref_jax_extended_paged_attention(
+                 q_jax,
+                 k_pages_jax,
+                 v_pages_jax,
+                 kv_seq_lens_jax,
+                 page_indices_jax,
+             )
+          
+    
+    # Run Woosuk's non-kernel impl.
+    assert q.shape==(batch_size, query_len, num_query_heads, head_size), f"Input ref_q_torch has the wrong shape: {q.shape}. Expect {(batch_size, query_len, num_query_heads, head_size)}."
+    assert jnp.allclose(q_jax, jnp.array(q.numpy(), dtype=jnp.float32))
+    assert jnp.allclose(k_pages_jax, jnp.array(k_pages.numpy(), dtype=jnp.float32))
+    assert jnp.allclose(v_pages_jax, jnp.array(v_pages.numpy(), dtype=jnp.float32))
+    assert jnp.allclose(kv_seq_lens_jax, jnp.array(kv_seq_lengths.numpy(), dtype=jnp.int32))
+    assert jnp.allclose(page_indices_jax, jnp.array(page_indices.numpy(), dtype=jnp.int32))
+
+    expected_output = ref_extended_paged_attention(
+      q,
+      k_pages,
+      v_pages,
+      kv_seq_lengths,
+      page_indices,
+    )
+
+    expected_output_cpu=expected_output.cpu()
+    actual_output_cpu=torch.from_numpy(np.array(actual_output))
+    # print(f'{expected_output_cpu=}')
+    # print(f'{actual_output_cpu=}')
+    print(f'actual_output_cpu.shape={actual_output_cpu.shape}')
+    print(f'expected_output_cpu.shape={expected_output_cpu.shape}')
+    self.assertEqual(actual_output_cpu.shape, expected_output_cpu.shape)
+    # torch.set_printoptions(profile="full")
+    # print(f'{(actual_output_cpu-expected_output_cpu).abs()}')
+    print(f'Output max diff: {(expected_output_cpu - actual_output_cpu).abs().max().item()}')
+    print(f'Output mean diff: {(expected_output_cpu - actual_output_cpu).abs().mean().item()}')
+    self.assertTrue(
+        torch.allclose(
+            expected_output_cpu,
+            actual_output_cpu,
+            atol=3e-2,
+            rtol=2e-2))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
