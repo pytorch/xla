@@ -9,16 +9,16 @@ from torch_xla2 import export
 
 
 def exported_program_to_tf_function(ep, enable_xla=True):
-  jax_program = export.exported_program_to_jax_program(ep)
-
-  example_inputs = jax_program.flatten_inputs(*jax_program.example_inputs)
+  weights, jax_program = export.exported_program_to_jax(ep)
+  wrapped = lambda *args: jax_program(weights, (args,))
+  avals = export.extract_avals(ep)
   input_signature = [
       tf.TensorSpec(shape=t.shape, dtype=t.dtype, name=f"args_{i}")
-      for i, t in enumerate(example_inputs)
+      for i, t in enumerate(avals)
   ]
   tf_f = tf.function(
       jax2tf.convert(
-          jax_program.flatten_callable,
+          wrapped,
           with_gradient=False,
           enable_xla=enable_xla,
       ),
