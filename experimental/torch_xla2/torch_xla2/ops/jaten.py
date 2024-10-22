@@ -109,8 +109,6 @@ def _aten_add(x, y, *, alpha=1):
 
   assert x.dtype == y.dtype, (x.dtype, y.dtype)
   """
-  if isinstance(x, torch.Tensor) or isinstance(y, torch.Tensor):
-    import pdb; pdb.set_trace()
   return x + y * alpha
 
 

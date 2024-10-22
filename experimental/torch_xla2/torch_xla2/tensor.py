@@ -166,9 +166,6 @@ class XLATensor2(torch.Tensor):
 def debug_accuracy(func, args, kwargs, current_output):
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
       torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output))
-  
-  if func == torch.ops.aten._native_batch_norm_legit_no_training:
-    import pdb; pdb.set_trace()
 
   with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
     if 'device' in kwargs_torch:
