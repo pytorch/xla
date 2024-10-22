@@ -21,7 +21,6 @@ skiplist = {
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
-    "igammac",
     "index_reduce",
     "kthvalue",
     "linalg.cholesky",

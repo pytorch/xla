@@ -218,6 +218,19 @@ def _aten_index_select(x, dim, index):
   return jnp.take(x, index, dim)
 
 
+# aten.igammac
+@op(torch.ops.aten.igammac)
+def _aten_igammac(input, other):
+  if isinstance(input, jnp.ndarray):
+    input = jnp.where(input < 0, jnp.nan, input)
+  if isinstance(other, jnp.ndarray):
+    other = jnp.where(other < 0, jnp.nan, other)
+  else:
+    if (input==0 and other==0) or (input < 0) or (other < 0):
+      other = jnp.nan
+  return jnp.array(jax.scipy.special.gammaincc(input, other))
+
+
 @op(torch.ops.aten.mean)
 def _aten_mean(x, dim=None, keepdim=False):
   if x.shape == () and dim is not None:
