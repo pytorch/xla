@@ -252,7 +252,7 @@ class TestOpInfo(TestCase):
                              ignore_indices=ignore_index)
 
 
-instantiate_device_type_tests(TestOpInfo, globals())
+instantiate_device_type_tests(TestOpInfo, globals(), only_for='cpu')
 
 if __name__ == '__main__':
   unittest.main()

@@ -167,13 +167,16 @@ def debug_accuracy(func, args, kwargs, current_output):
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
       torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output))
 
-  expected_out = func(*args_torch, **kwargs_torch)
+  with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+    if 'device' in kwargs_torch:
+      kwargs_torch['device'] = 'cpu'  # do the torch native for comparison
+    expected_out = func(*args_torch, **kwargs_torch)
 
   flattened_current_out, _ = torch_pytree.tree_flatten(out_torch)
   flattened_expected_out, _ = torch_pytree.tree_flatten(expected_out)
 
   for ex, real in zip(flattened_expected_out, flattened_current_out):
-    if ex.dtype != real.dtype:
+    if isinstance(ex, torch.Tensor) and ex.dtype != real.dtype:
       ex = ex.to(real.dtype)
     try:
       if (isinstance(ex, torch.Tensor) and
@@ -222,7 +225,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
       if isinstance(func, torch._ops.OpOverloadPacket):
         with self:
           return func(*args, **kwargs)
-      if func.namespace not in ('aten', '_c10d_functional'):
+      if func.namespace not in ('aten', '_c10d_functional', 'torchvision'):
         return func(*args, **kwargs)
       return self.env.dispatch(func, types, args, kwargs)
 
@@ -294,7 +297,7 @@ class Environment(contextlib.ContextDecorator):
 
 
     def load_ops(self):
-      from torch_xla2.ops import jaten, jtorch, jc10d, ops_registry
+      from torch_xla2.ops import jaten, jtorch, jc10d, jtorchvision_nms, ops_registry
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
 
@@ -421,6 +424,8 @@ class Environment(contextlib.ContextDecorator):
         except AssertionError:
           if self.config.debug_mixed_tensor:
             import pdb; pdb.set_trace()
+          else:
+            raise
 
 
         if op.needs_env:
