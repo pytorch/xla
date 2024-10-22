@@ -1,15 +1,12 @@
-import os
 import jax
-import jax.export
+import os
 import tensorflow as tf
 import torch
 import torch.nn.functional as F
 import torch_xla2
-from torch_xla2 import tensor
+
 from torch_xla2 import tf_integration
-import torch_xla2.export
-from torch_xla2.ops import mappings
-from google3.testing.pybase import googletest as unittest
+from . import test_base
 
 
 class Interpolate(torch.nn.Module):
@@ -24,16 +21,7 @@ class Interpolate(torch.nn.Module):
     return masks
 
 
-class TensorConstant(torch.nn.Module):
-
-  def __init__(self):
-    super().__init__()
-
-  def forward(self, a):
-    return a / torch.tensor(3)
-
-
-class TfIntegrationTest(unittest.TestCase):
+class TfIntegrationTest(test_base.TestCase):
 
   def setUp(self):
     torch.manual_seed(0)
@@ -59,4 +47,4 @@ class TfIntegrationTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-  unittest.main()
+  test_base.main()
