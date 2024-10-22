@@ -39,6 +39,7 @@ jobs:
         run: |
           pip install -r test-requirements.txt
           pip install -e .[cpu]
+          pip install tensorflow-cpu  # for TF integrations tests
       - name: Run tests
         working-directory: experimental/torch_xla2
         shell: bash
