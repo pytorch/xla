@@ -2870,11 +2870,6 @@ def _aten_triu_indices(row, col, offset=0, *, dtype=jnp.int64.dtype, layout=None
   a, b = jnp.triu_indices(row, offset, col)
   return jnp.stack((a, b))
 
-# aten.trunc
-@op(torch.ops.aten.trunc)
-def _aten_trunc(a):
-  return jnp.trunc(a)
-
 
 @op(torch.ops.aten.unbind_copy)
 def _aten_unbind(a, dim=0):
