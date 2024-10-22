@@ -38,8 +38,7 @@ class TfIntegrationTest(test_base.TestCase):
     # Export to SavedModel
     with tempfile.TemporaryDirectory() as tempdir:
       sm_path = os.path.join(tempdir, "interpolate.savedmodel")
-      tf_model = tf_integration.save_torch_module_as_tf_saved_model(
-          pt_model, arg, sm_path)
+      tf_integration.save_torch_module_as_tf_saved_model(pt_model, arg, sm_path)
 
       # Reload SM and compare results with PT results
       loaded_model = tf.saved_model.load(sm_path)
