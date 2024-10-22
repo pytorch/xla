@@ -2706,11 +2706,33 @@ def _aten_nonzero(x):
 
 
 # aten.prod
-
-
 @op(torch.ops.aten.prod)
-def _aten_prod(self, dim=None, keepdim=False):
-  return _with_reduction_scalar(jnp.prod, self, dim, keepdim)
+def _aten_prod(input, dim=None, keepdim=False, *, dtype=None):
+  if dtype:
+    input = input.astype(mappings.t2j_dtype(dtype))
+  return _with_reduction_scalar(jnp.prod, input, dim, keepdim)
+
+
+@op(torch.ops.aten.put)
+def _aten_put(self, index, source, accumulate=False):
+  expanded = False
+  res = None
+
+  if self.ndim == 0:
+    expanded = True
+    self = jnp.expand_dims(self, 0)
+
+  if accumulate:
+    tmp = jnp.zeros(self.shape)
+    tmp = jnp.put(tmp, index, source, inplace=False)
+    res = jnp.add(self, tmp).astype(self.dtype)
+  else:
+    res = jnp.put(self, index, source, inplace=False)
+
+  if expanded:
+    res = res.squeeze()
+
+  return res
 
 
 # aten.randperm
@@ -3761,9 +3783,9 @@ def _aten_special_modified_bessel_k1(self):
 
 @op(torch.ops.aten.polygamma)
 def _aten_polygamma(x, n):
-    if n.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
-      n = n.astype(mappings.t2j_dtype(torch.get_default_dtype()))
-    return jax.lax.polygamma(jnp.float32(x), n)
+  if n.dtype in [jnp.int8, jnp.int16, jnp.int32, jnp.int64]:
+    n = n.astype(mappings.t2j_dtype(torch.get_default_dtype()))
+  return jax.lax.polygamma(jnp.float32(x), n)
 
 @op(torch.ops.aten.special_ndtri)
 @op_base.promote_int_input
@@ -4741,6 +4763,10 @@ def _aten_upsample_bilinear2d_aa(input, output_size, align_corners, scale_factor
         translation=translation,
         antialias=antialias,
     )
+
+@op(torch.ops.aten.polar)
+def _aten_polar(abs, angle, *, out=None):
+  return jax.lax.complex(abs * jnp.cos(angle), abs * jnp.sin(angle))
 
 @op(torch.ops.aten.cdist)
 def _aten_cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):

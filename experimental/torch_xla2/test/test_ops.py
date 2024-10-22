@@ -69,10 +69,6 @@ skiplist = {
     "normal",
     "ormqr",
     "pca_lowrank",
-    "polar",
-    "polygamma",
-    "prod",
-    "put",
     "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",
@@ -238,7 +234,7 @@ class TestOpInfo(TestCase):
         if 'dtype' in sample_input.kwargs:
           if sample_input.kwargs['dtype'] == torch.int64:
             sample_input.kwargs['dtype'] = torch.float
-      if op.name == "special.polygamma":
+      if op.name == "polygamma" or op.name == "special.polygamma":
         # The polygamma function is inaccurate for values < 1.
         # To avoid errors during testing, replace values below 1 with 1.
         sample_input.input = self.replace_values_below_threshold(
