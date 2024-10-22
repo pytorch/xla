@@ -29,20 +29,19 @@ class TfIntegrationTest(test_base.TestCase):
   def test_interpolate(self):
     """Simple model roundtripped through TF savedmodel"""
 
-    # Check Accuracy
+    # Create model
     arg = (torch.randn(3, 3, 200, 200),)
     pt_model = Interpolate()
 
+    # Export to SavedModel
     sm_path = os.path.join(self.create_tempdir(), "interpolate.savedmodel")
     tf_model = tf_integration.save_torch_module_as_tf_saved_model(
         pt_model, arg, sm_path)
-    print(tf_model)
-    loaded_model = tf.saved_model.load(sm_path)
 
+    # Reload SM and compare results with PT results
+    loaded_model = tf.saved_model.load(sm_path)
     pt_res = pt_model(*arg)
     tf_res = torch.tensor(loaded_model.f(*arg)[0].numpy())
-    print(pt_res)
-    print(tf_res)
     self.assertTrue(torch.allclose(pt_res, tf_res, atol=1e-4))
 
 
