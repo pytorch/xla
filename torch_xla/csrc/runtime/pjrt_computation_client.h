@@ -180,13 +180,22 @@ class PjRtComputationClient : public ComputationClient {
 
     PjRtData(std::string device, xla::Shape device_shape,
              std::shared_ptr<xla::PjRtBuffer> buffer)
-        : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
+        : Data(std::move(device), std::move(device_shape)), buffer(buffer) {
+          // std::cout << "create PjrtData with shape " << shape().ToString() << "\n";
+        }
 
     PjRtData(std::string device, std::shared_ptr<xla::PjRtBuffer> buffer)
         : Data(std::move(device),
                xla::Shape(buffer->element_type(), buffer->dimensions(),
                           buffer->is_dynamic_dimension(), {})),
-          buffer(buffer) {}
+          buffer(buffer) {
+            // std::cout << "create PjrtData with shape " << shape().ToString() << "\n";
+          }
+
+    virtual ~PjRtData() {
+      // std::cout << "destructor of Pjrtdata with shape " << shape().ToString()
+      //           << "\n";
+    }
 
     Handle GetHandle() override {
       XLA_CHECK(HasValue())

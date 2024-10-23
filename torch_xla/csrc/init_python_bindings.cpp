@@ -663,27 +663,32 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
   auto tensors = XLAGraphExecutor::Get()->GetLiveTensors(
       opt_device ? &opt_device.value() : nullptr);
   std::stringstream ss;
+  ss << "Number of live tensors: " << tensors.size() << "\n";
+  int64_t total_byte_size = 0;
   for (auto& tensor : tensors) {
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
     if (ir_value) {
       std::vector<const torch::lazy::Node*> roots({ir_value.node.get()});
       auto post_order = torch::lazy::Util::ComputePostOrder(roots);
       if (post_order.size() > nodes_threshold) {
-        ss << "Tensor: id=" << tensor->GetUniqueId()
-           << ", shape=" << tensor->shape().get()
-           << ", device=" << tensor->GetDevice()
-           << ", ir_nodes=" << post_order.size() << "\n";
-        for (size_t i = post_order.size(); i > 0; --i) {
-          if (!post_order[i - 1]->metadata().frame_info.empty()) {
-            ss << post_order[i - 1]->metadata().frame_info;
-            break;
-          }
-        }
+        // ss << "Tensor: id=" << tensor->GetUniqueId()
+        //    << ", shape=" << tensor->shape().get()
+        //    << ", device=" << tensor->GetDevice()
+        //    << ", ir_nodes=" << post_order.size() << "\n";
+        int64_t tensor_byte_size = xla::ShapeUtil::ByteSizeOf(tensor->shape());
+        total_byte_size += tensor_byte_size;
+        // for (size_t i = post_order.size(); i > 0; --i) {
+        //   if (!post_order[i - 1]->metadata().frame_info.empty()) {
+        //     ss << post_order[i - 1]->metadata().frame_info;
+        //     break;
+        //   }
+        // }
         ss << DumpUtil::PostOrderToText(post_order, roots);
         ss << "\n\n";
       }
     }
   }
+  ss << "Total byte size of lived tensor: " << total_byte_size << "\n";
   return ss.str();
 }
 
