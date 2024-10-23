@@ -4926,3 +4926,11 @@ def _aten_lu_unpack(LU_data, LU_pivots, unpack_data=True, unpack_pivots=True):
     P = torch.empty(torch.Size([0]))
 
   return P, L, U
+
+
+@op(torch.ops.aten.linear)
+def linear(input, weight, bias=None):
+  res = input @ jnp.transpose(weight)
+  if bias:
+    res += bias
+  return res
