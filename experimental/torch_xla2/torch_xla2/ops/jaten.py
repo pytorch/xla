@@ -357,6 +357,12 @@ def repeat_interleave(repeats, dim=0):
   return jnp.repeat(jnp.arange(repeats.shape[dim]), repeats)
 
 
+# aten.upsample_bilinear2d
+@op(torch.ops.aten.upsample_bilinear2d)
+def _aten_upsample_bilinear2d(x, output_size, align_corners=False, scale_h=None, scale_w=None):
+  return _aten_upsample_bilinear2d_aa(x, output_size=output_size, align_corners=align_corners, scale_factors=None, scales_h=scale_h, scales_w=scale_w)
+
+
 @op(torch.ops.aten.view_as_real)
 def _aten_view_as_real(x):
   real = jnp.real(x)
