@@ -173,9 +173,16 @@ int64_t XLATensorImpl::numel_custom() const {
 }
 
 bool XLATensorImpl::is_contiguous_custom(at::MemoryFormat memory_format) const {
+  // If functionalization is disabled, the tensors' metadata aren't being
+  // updated w.r.t. the output of meta functions. Therefore, we fallback to the
+  // old behavior returning true, always.
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return true;
+  }
+
   // Storage is always contiguous, but the tensor metadata is_contiguous_ might
   // be false due to the update in the functionalization layer..
-  return true;
+  return c10::TensorImpl::is_contiguous_custom(memory_format);
 }
 
 void XLATensorImpl::SetupSizeProperties() {

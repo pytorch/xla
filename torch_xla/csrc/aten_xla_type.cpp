@@ -1227,11 +1227,28 @@ at::Tensor XLANativeFunctions::clamp_min(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::clone(
-    const at::Tensor& self,
-    std::optional<at::MemoryFormat> /* memory_format */) {
+    const at::Tensor& self, std::optional<at::MemoryFormat> memory_format) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
+
+  at::Tensor out = bridge::AtenFromXlaTensor(
       tensor_methods::clone(bridge::GetXlaTensor(self)));
+
+  if (!runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    at::Tensor ref;
+    if (memory_format.has_value() &&
+        *memory_format != at::MemoryFormat::Preserve) {
+      // We need to run the meta function as reference, for setting the correct
+      // strides to the output tensor.
+      at::Tensor ref_self = self.to(at::kMeta);
+      ref = ref_self.clone(memory_format);
+    } else {
+      ref = self;
+    }
+    out.unsafeGetTensorImpl()->set_sizes_and_strides(ref.sym_sizes(),
+                                                     ref.sym_strides());
+  }
+
+  return out;
 }
 
 at::Tensor XLANativeFunctions::constant_pad_nd(const at::Tensor& self,
