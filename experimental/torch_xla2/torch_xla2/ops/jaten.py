@@ -44,6 +44,7 @@ mutation_ops_to_functional = {
   # squeeze_ is expected to change tensor's shape. So replace with new value 
   torch.ops.aten.squeeze_: (torch.ops.aten.squeeze, True),
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
+  torch.ops.aten.clamp_min_: torch.ops.aten.clamp_min,
   torch.ops.aten.ceil_: torch.ops.aten.ceil,
   torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
   torch.ops.aten.unsqueeze_: torch.ops.aten.unsqueeze,
@@ -2151,6 +2152,10 @@ def _aten_broadcast_to(input, shape):
 @op(torch.ops.aten.clamp.Tensor)
 def _aten_clamp(self, min=None, max=None):
   return jnp.clip(self, min, max)
+
+@op(torch.ops.aten.clamp_min)
+def _aten_clamp_min(input, min):
+  return jnp.clip(input, min=min)
 
 
 # aten.constant_pad_nd
