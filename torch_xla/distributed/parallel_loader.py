@@ -134,7 +134,7 @@ class ParallelLoader(object):
     return PerDeviceLoader(self, torch.device(device))
 
   def per_device_samples(self):
-    return len(self._loader) // len(self._devices)
+    return len(self._cpu_loader) // len(self._devices)
 
   def next_item(self, device):
     dqueue = self._queues[device]
