@@ -49,6 +49,8 @@ consists of the following fields.
 * `arch` (optional, "amd64"|"aarch64", default = "amd64") - Architecture
   affects installed dependencies and build process, see [apt.yaml](../ansible/config/apt.yaml) and
   [pip.yaml](../ansible/config/pip.yaml).
+* `cxx11_abi` (optional, "0"|"1", default = "0") - Whether to use C++11 ABI or
+  pre-C++11 ABI.
 
 To modify default values see `variable "versioned_builds"` in
 [artifacts_builds.tf](./artifacts_builds.tf). Modifying default values will modify
@@ -101,6 +103,8 @@ consists of the following fields.
   Used only if `accelerator` is set to "cuda"
 * `arch` (optional, "amd64"|"aarch64", default = "amd64") - Architecture
   influences installed dependencies and build process.
+* `cxx11_abi` (optional, "0"|"1", default = "0") - Whether to use C++11 ABI or
+  pre-C++11 ABI.
 
 Additionally, **`package_version` of all nightly builds** is configured through
 a separate `nightly_package_version` variable.

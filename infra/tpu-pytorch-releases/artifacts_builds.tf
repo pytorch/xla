@@ -10,6 +10,7 @@ variable "nightly_builds" {
       python_version = optional(string, "3.8")
       arch           = optional(string, "amd64")
       bundle_libtpu  = optional(string, "0")
+      cxx11_abi      = optional(string, "0")
     })
   )
 
@@ -44,6 +45,7 @@ variable "versioned_builds" {
       cuda_version    = optional(string, "11.8")
       arch            = optional(string, "amd64")
       bundle_libtpu   = optional(string, "0")
+      cxx11_abi       = optional(string, "0")
     })
   )
 
@@ -53,9 +55,10 @@ variable "versioned_builds" {
 locals {
   nightly_builds_dict = {
     for b in var.nightly_builds :
-    format("%s_%s",
+    format("%s_%s%s",
       b.python_version,
-      b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version)
+      b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version),
+      b.cxx11_abi == "1" ? "_cxx11" : ""
     ) => b
   }
 
@@ -71,10 +74,11 @@ locals {
 
   versioned_builds_dict = {
     for b in var.versioned_builds :
-    format("r%s_%s_%s",
+    format("r%s_%s_%s%s",
       replace(b.package_version, "+", "_"),
       b.python_version,
-      b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version)
+      b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version),
+      b.cxx11_abi == "1" ? "_cxx11" : ""
     ) => b
   }
 }
@@ -131,7 +135,8 @@ module "xrt_versioned_builds" {
   for_each = local.xrt_versioned_builds_dict
 
   ansible_vars = merge(each.value, {
-    xla_git_rev     = "$COMMIT_SHA"
+    xla_git_rev     = "$COMMIT_SHA",
+    cxx11_abi       = each.value.cxx11_abi
   })
 
   trigger_on_schedule = { schedule = "0 0 * * *", branch = "xrt" }
@@ -177,7 +182,8 @@ module "versioned_builds" {
     // Override `pytorch_git_rev` set in each value of `versioned_builds_dict`
     // if it's left empty.
     pytorch_git_rev = coalesce(each.value.pytorch_git_rev, each.value.git_tag)
-    xla_git_rev     = each.value.git_tag
+    xla_git_rev     = each.value.git_tag,
+    cxx11_abi       = each.value.cxx11_abi
   })
 
   # Use Ansible setup from master branch for versioned release, because source
