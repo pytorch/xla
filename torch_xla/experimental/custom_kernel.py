@@ -142,6 +142,9 @@ def trace_pallas(kernel: Callable,
       kernel, static_argnums=static_argnums,
       static_argnames=static_argnames).lower(*jax_args, **kwargs).compiler_ir()
   payload = _extract_backend_config(ir)
+  warnings.warn(
+      f'piz: payload for jax_args: {jax_args}==========\n{payload}\n============='
+  )
 
   if use_cache:
     # if we reach here it means we have a cache miss.
