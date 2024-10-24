@@ -3019,7 +3019,7 @@ at::Tensor XLANativeFunctions::roll(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::rrelu_with_noise(
-    const at::Tensor& self, const at::Tensor& noise, const at::Scalar& lower,
+    const at::Tensor& self, at::Tensor& noise, const at::Scalar& lower,
     const at::Scalar& upper, bool training,
     std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
