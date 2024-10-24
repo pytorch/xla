@@ -5,7 +5,7 @@
 #include "torch_xla/csrc/shape_helper.h"
 #include "xla/client/lib/constants.h"
 #include "xla/client/lib/matrix.h"
-#include "xla/client/lib/qr.h"
+#include "xla/hlo/builder/lib/qr.h"
 #include "xla/shape_util.h"
 #include "xla/util.h"
 
