@@ -16,7 +16,7 @@ def when(condition):
 
 
 def flash_attention_kernel(*args, **kwargs):
-  nb, nh = args[0].shape[:2]
+  nb, nh = args[0].shape[:2] # 1, 1
   for ib in range(nb):
     for ih in range(nh):
       flash_attention_kernel_unbatched((ib, ih), *args, **kwargs)
@@ -37,9 +37,11 @@ def flash_attention_kernel_unbatched(
     block_k: int,
     kv_seq_len: int,
 ):
+  # q_tile_ref.shape=(1, 1, 128, 256)=[batch_size, num_heads, seq_len, d_model]
   _, _, block_q, head_dim = q_tile_ref.shape
+  # k_tile_ref.shape=(1, 128, 256)=[batch_size, seq_len, d_model]
   _, block_k_major, _ = k_tile_ref.shape
-  local_batch_index, _ = batch_idx
+  local_batch_index, _ = batch_idx # (0, 0)
 
   q_seq_idx = pl.program_id(2)
   kv_seq_idx = pl.program_id(3)
@@ -59,6 +61,9 @@ def flash_attention_kernel_unbatched(
     diag_index = jax.lax.div(q_seq_idx * block_q, block_k_major)
     on_diag = kv_seq_idx == diag_index
 
+  # m_scratch_ref.shape=(block_q, 128)=(128, 128)
+  # l_scratch_ref.shape=(block_q, 128)=(128, 128)
+  # acc_scratch_ref.shape=(block_q, head_dim)=(128, 256)
   @when(kv_seq_idx == 0)
   def start_new_sequence():
     m_scratch_ref[:] = jnp.full(
@@ -124,8 +129,8 @@ def flash_attention_kernel_unbatched(
       acc_scratch_ref[:] *= pltpu.repeat(acc_scale, acc_scale_repeats, axis=1)
 
       # Update m_i and l_i for the next block_k.
-      l_scratch_ref[:] = l_i_new
-      m_scratch_ref[:] = m_i_new
+      l_scratch_ref[:] = l_i_new # Shape [block_q, 128].
+      m_scratch_ref[:] = m_i_new # Shape [block_q, 128].
 
       # Add the new block of attention weights.
       v = pl.load(
@@ -143,7 +148,7 @@ def flash_attention_kernel_unbatched(
   if causal:
     @when(below_or_on_diag)
     def _run_body():
-      for_loop.for_loop(block_k_major // block_k, body, init_state=())
+      for_loop.for_loop(block_k_major // block_k, body, init_state=()) # currently, both block_k_major=block_k=128, so we only loop once.
   else:
     for_loop.for_loop(block_k_major // block_k, body, init_state=())
 
@@ -178,6 +183,7 @@ def flash_mqa(
     debug: bool = False,
     interpret: bool = False,
 ):
+  # q_shape=(4, 2, 1024, 256)
   batch_size, num_heads, q_seq_len, head_dim = q.shape
   _, kv_seq_len, _ = k.shape
 
@@ -195,10 +201,10 @@ def flash_mqa(
     raise ValueError(f"{block_k_major=} should be smaller than {block_k=}")
   grid = (
       batch_size // block_b,
-      num_heads,
+      num_heads, # query head
       q_seq_len // block_q,
       kv_seq_len // block_k_major,
-  )
+  ) # (4,2,8,8)
 
   def kv_index_map(batch_index, _, q_seq_index, kv_seq_index):
     if not causal:
@@ -225,6 +231,8 @@ def flash_mqa(
       block_k=block_k,
       kv_seq_len=kv_seq_len,
   )
+  # q.shape=(4, 2, 1024, 256)
+  # q.shape=[batch_size, num_heads, q_seq_len, head_dim]
   out_shape = jax.ShapeDtypeStruct(shape=q.shape, dtype=q.dtype)
   m_scratch = jax.ShapeDtypeStruct((block_q, 128), dtype=jnp.float32)
   l_scratch = jax.ShapeDtypeStruct((block_q, 128), dtype=jnp.float32)
