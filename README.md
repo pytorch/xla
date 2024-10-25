@@ -276,7 +276,7 @@ GPUs](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
 ## Troubleshooting
 
 If PyTorch/XLA isn't performing as expected, see the [troubleshooting
-guide](TROUBLESHOOTING.md), which has suggestions for debugging and optimizing
+guide](docs/source/learn/troubleshoot.md), which has suggestions for debugging and optimizing
 your network(s).
 
 ## Providing Feedback
