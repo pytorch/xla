@@ -77,8 +77,7 @@ import torch_xla.runtime as xr
 import torch_xla.distributed.xla_backend
 
 def setup(rank, world_size):
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
+    os.environ['PJRT_DEVICE'] = 'TPU'
 
     # initialize the xla process group
     dist.init_process_group("xla", rank=rank, world_size=world_size)
