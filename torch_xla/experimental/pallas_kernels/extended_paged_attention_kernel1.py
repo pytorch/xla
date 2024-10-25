@@ -71,7 +71,7 @@ class MultiPageAsyncCopyDescriptor:
 
   def _make_async_copy(self, i):
     page_index = self._page_indices[self._page_indices_start_offset + i]
-    pl.debug_print('xw32 line74 _make_async_copy. page_index={}', page_index)
+    # pl.debug_print('xw32 line74 _make_async_copy. page_index={}', page_index)
     return pltpu.make_async_copy(
         self._pages_hbm_ref.at[page_index], self._vmem_buffer.at[i], self._sem
     )
@@ -121,6 +121,7 @@ def _flash_attention(
     o_ref,  # same shape as q_ref: [1, num_q_heads_per_kv_head, num_queries_per_compute_block, head_dim]
     l_ref,  # (1, num_q_heads_per_kv_head, num_queries_per_compute_block, MIN_BLOCK_SIZE)
     m_ref,  # (1, num_q_heads_per_kv_head, num_queries_per_compute_block, MIN_BLOCK_SIZE)
+    o_debug_ref,  # [batch_size, num_q_heads, query_len, head_dim]
     l_scratch_ref,  # [num_queries_per_compute_block, MIN_BLOCK_SIZE]
     m_scratch_ref,  # [num_queries_per_compute_block, MIN_BLOCK_SIZE]
     acc_scratch_ref,  # [num_queries_per_compute_block, head_dim]
@@ -222,7 +223,7 @@ def _flash_attention(
   acc_scratch_ref[...] += o_curr * l_broadcast(l_next_inv_safe)
 
   num_kv_blks = pl.num_programs(3)
-  print(f'xw32 line216 {o_ref[0, q_head_idx].shape=}, {acc_scratch_ref[...].shape=}')
+  print(f'xw32 line216 {o_ref.shape=}, {o_ref[0, q_head_idx].shape=}, {acc_scratch_ref[...].shape=}')  # (1, 1, 16, 128)
   pl.debug_print('xw32 line215 kv_blk_idx={}, (kv_len // kv_seq_len_per_kv_compute_blk) - 1)={}, pl.num_programs(3)={}', kv_blk_idx, (kv_len // kv_seq_len_per_kv_compute_blk) - 1, pl.num_programs(3))
   # Note num_kv_blks == pl.num_programs(3), but
   # (kv_len // kv_seq_len_per_kv_compute_blk) != pl.num_programs(3)
@@ -232,6 +233,7 @@ def _flash_attention(
     o_ref[0, q_head_idx] = acc_scratch_ref[...].astype(o_ref.dtype)
     l_ref[0, q_head_idx] = l_scratch_ref[...].astype(l_ref.dtype)
     m_ref[0, q_head_idx] = m_scratch_ref[...].astype(m_ref.dtype)
+    # o_debug_ref[b, kv_head_idx, :, :] = acc_scratch_ref[...].astype(o_ref.dtype)
 
 def paged_flash_attention_kernel(
     # prefetched value
@@ -252,6 +254,10 @@ def paged_flash_attention_kernel(
     o_ref,
     l_ref,
     m_ref,
+    k_debug_ref,  # TODO: debug use. delete later.
+    v_debug_ref,  # TODO: debug use. delete later.
+    q_debug_ref,  # TODO: debug use. delete later.
+    o_debug_ref,  # TODO: debug use. delete later.
     # scratch space
     k_vmem_buffer,  # shape=[2, num_kv_pages_per_compute_block, num_kv_heads, head_dim]
     k_scales_vmem_buffer,
@@ -370,6 +376,7 @@ def paged_flash_attention_kernel(
       async_copy_v.start()
 
     next_b, next_kv_head_idx, next_kv_blk_idx = compute_block_indices(b, kv_head_idx, q_blk_idx, kv_blk_idx+1)
+    pl.debug_print('xw32 line379 Calculated next_b={}, next_kv_head_idx={}, next_kv_blk_idx={}', next_b, next_kv_head_idx, next_kv_blk_idx)
 
     @pl.when(next_b < batch_size)
     def prefetch_next_block():  # pylint: disable=unused-variable
@@ -382,6 +389,7 @@ def paged_flash_attention_kernel(
       async_copy_next_v.start()
       buffer_index_ref[0] = next_buffer_index
 
+    pl.debug_print('xw32 line385 Retriving kv pages corresponding to b={}, kv_head_idx={}, kv_blk_idx={}', b, kv_head_idx, kv_blk_idx)
     async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
       b, kv_head_idx, kv_blk_idx, buffer_index
     )
@@ -397,6 +405,11 @@ def paged_flash_attention_kernel(
     #   #   for j in range(k.shape[1]):
     #   #     pl.debug_print('xw32 line345 k[{},{}]={}', i, j, k[i, j])
     v = async_copy_v.wait_and_get_loaded()
+    @pl.when(kv_head_idx == 1)  # debug use. delete later.
+    def _():
+      k_debug_ref[...] = k.astype(jnp.float32)
+      v_debug_ref[...] = v.astype(jnp.float32)
+      q_debug_ref[...] = q_ref[0, 0,:,:].astype(jnp.float32)
     # copy ends
     # TODO(xw32): Temporarily, fake a k and v, remove the 2 lines below later
     # k = jnp.full((compute_blk_size_kv, head_dim), 1, dtype=jnp.float32)
@@ -414,6 +427,7 @@ def paged_flash_attention_kernel(
         o_ref,  # [1, num_q_heads_per_kv_head, num_queries_per_compute_block, head_dim]
         l_ref,
         m_ref,
+        o_debug_ref,
         l_scratch_ref,  # [num_queries_per_compute_block, MIN_BLOCK_SIZE]
         m_scratch_ref,  # [num_queries_per_compute_block, MIN_BLOCK_SIZE]
         acc_scratch_ref,  # [num_queries_per_compute_block, head_dim]
@@ -509,7 +523,7 @@ def paged_attention(
   # The reason why we reshape is that the 2nd last dim is query_len instead of
   # num_q_heads. 2nd last dim in kernel has to be a multiple of 8. num_heads
   # is hard to satisfy this requirement.
-  q = jnp.reshape(q, (batch_size, num_q_heads, query_len, head_dim))
+  q = jnp.permute_dims(q, (0, 2, 1, 3))
   num_kv_heads, _, page_size, head_dim_k = k_pages.shape
   batch_size_paged_indices, pages_per_sequence = page_indices.shape
 
@@ -571,10 +585,23 @@ def paged_attention(
   m = jax.ShapeDtypeStruct(
       (batch_size, num_q_heads, query_len, MIN_BLOCK_SIZE), dtype=jnp.float32
   )
-  out_shape = (o_shape, l, m)
+  k_debug = jax.ShapeDtypeStruct(
+      (num_kv_pages_per_compute_block*page_size, head_dim), dtype=jnp.float32
+  )  # k for given batch and kv_head, for debug only. Delete later.
+  v_debug = jax.ShapeDtypeStruct(
+      (num_kv_pages_per_compute_block*page_size, head_dim), dtype=jnp.float32
+  )  # v for given batch and kv_head, for debug only. Delete later.
+  q_debug = jax.ShapeDtypeStruct(
+      (num_queries_per_compute_block, head_dim), dtype=jnp.float32
+  )
+  o_debug = jax.ShapeDtypeStruct(
+      (batch_size, num_q_heads, query_len, head_dim), dtype=q.dtype
+  )  # o_debug contains everything untrunked.
+  out_shape = (o_shape, l, m, k_debug, v_debug, q_debug, o_debug)
 
   # in-spec. Note q.shape=[batch_size, num_q_heads, query_len, head_dim]
   # Map from grid idx.
+  print(f'xw32 line591 {num_q_heads_per_kv_head=}')
   def qo_index_map(batch_index, kv_head_index, q_seq_blk_idx, *_):
     return (batch_index, kv_head_index, q_seq_blk_idx, 0)
   q_block_spec = pl.BlockSpec(
@@ -607,6 +634,14 @@ def paged_attention(
                  lm_index_map),  # l
     pl.BlockSpec((1, num_q_heads_per_kv_head, num_queries_per_compute_block, MIN_BLOCK_SIZE),
                  lm_index_map),  # m
+    pl.BlockSpec((num_kv_pages_per_compute_block*page_size, head_dim),
+                 lambda batch_index, kv_head_index, q_seq_blk_idx, *_: (0, 0)),  # k_debug
+    pl.BlockSpec((num_kv_pages_per_compute_block*page_size, head_dim),
+                 lambda batch_index, kv_head_index, q_seq_blk_idx, *_: (0, 0)),  # v_debug
+    pl.BlockSpec((num_queries_per_compute_block, head_dim),
+                 lambda batch_index, kv_head_index, q_seq_blk_idx, *_: (0, 0)),  # q_debug
+    pl.BlockSpec((batch_size, num_q_heads, query_len, head_dim),
+                 lambda batch_index, kv_head_index, q_seq_blk_idx, *_: (0, 0, 0, 0)),  # o_debug
   ]
 
   # scratch space. Note k_pages.shape=[num_kv_heads, total_num_pages, page_size, head_dim]
@@ -687,7 +722,7 @@ def paged_attention(
       buffer_index,  # buffer index
       step,  # step
       q.astype(q_dtype_for_kernel_launch),
-      k_pages,
+      k_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
       k_scales_pages,
       v_pages,
       v_scales_pages,
@@ -707,8 +742,12 @@ def paged_attention(
       v_scales_pages,
   )  # should get 3 return values.
   ret = outs[0]
-  print(f'xw32 finished the pallas kernel. {ret.shape=} Returning...', flush=True)
+  # print(f'xw32 finished the pallas kernel. {ret.shape=} Returning...', flush=True)
+  # print(f'xw32 actual k={outs[3]}')
+  # print(f'xw32 actual v={outs[4]}')
+  # print(f'xw32 actual q={outs[5]}')
+  # print(f'xw32 actual o_debug_ref.reshape(batch_size, query_len, num_q_heads, head_dim)={outs[6].reshape(batch_size, query_len, num_q_heads, head_dim)[:,:,1,:]}')
   # Reshape the output because we reshaped q at the beginning of the function.
-  return ret.reshape(batch_size, query_len, num_q_heads, head_dim).astype(q.dtype)
+  return jnp.permute_dims(ret, (0, 2, 1, 3)).astype(q.dtype)
 
 
