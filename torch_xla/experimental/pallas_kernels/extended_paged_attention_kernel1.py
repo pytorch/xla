@@ -227,13 +227,12 @@ def _flash_attention(
   pl.debug_print('xw32 line215 kv_blk_idx={}, (kv_len // kv_seq_len_per_kv_compute_blk) - 1)={}, pl.num_programs(3)={}', kv_blk_idx, (kv_len // kv_seq_len_per_kv_compute_blk) - 1, pl.num_programs(3))
   # Note num_kv_blks == pl.num_programs(3), but
   # (kv_len // kv_seq_len_per_kv_compute_blk) != pl.num_programs(3)
-  @pl.when(kv_blk_idx == num_kv_blks - 1)
-  def store_output():
-    pl.debug_print('xw32 line221 store_output')
-    o_ref[0, q_head_idx] = acc_scratch_ref[...].astype(o_ref.dtype)
-    l_ref[0, q_head_idx] = l_scratch_ref[...].astype(l_ref.dtype)
-    m_ref[0, q_head_idx] = m_scratch_ref[...].astype(m_ref.dtype)
-    # o_debug_ref[b, kv_head_idx, :, :] = acc_scratch_ref[...].astype(o_ref.dtype)
+  # @pl.when(kv_blk_idx == num_kv_blks - 1)
+  # def store_output():
+  o_ref[0, q_head_idx] = acc_scratch_ref[...].astype(o_ref.dtype)
+  l_ref[0, q_head_idx] = l_scratch_ref[...].astype(l_ref.dtype)
+  m_ref[0, q_head_idx] = m_scratch_ref[...].astype(m_ref.dtype)
+  # o_debug_ref[b, kv_head_idx, :, :] = acc_scratch_ref[...].astype(o_ref.dtype)
 
 def paged_flash_attention_kernel(
     # prefetched value
