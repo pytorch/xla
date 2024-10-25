@@ -176,12 +176,14 @@ class PjRtComputationClient : public ComputationClient {
 
   struct PjRtData : public Data {
     PjRtData(std::string device, xla::Shape device_shape)
-        : Data(std::move(device), std::move(device_shape)) {}
+        : Data(std::move(device), std::move(device_shape)) {
+          std::cout << "1 create PjrtData with shape " << shape().ToString() << "\n";
+        }
 
     PjRtData(std::string device, xla::Shape device_shape,
              std::shared_ptr<xla::PjRtBuffer> buffer)
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {
-          // std::cout << "create PjrtData with shape " << shape().ToString() << "\n";
+          std::cout << "2 create PjrtData with shape " << shape().ToString() << "\n";
         }
 
     PjRtData(std::string device, std::shared_ptr<xla::PjRtBuffer> buffer)
@@ -189,12 +191,12 @@ class PjRtComputationClient : public ComputationClient {
                xla::Shape(buffer->element_type(), buffer->dimensions(),
                           buffer->is_dynamic_dimension(), {})),
           buffer(buffer) {
-            // std::cout << "create PjrtData with shape " << shape().ToString() << "\n";
+            std::cout << "3 create PjrtData with shape " << shape().ToString() << "\n";
           }
 
     virtual ~PjRtData() {
-      // std::cout << "destructor of Pjrtdata with shape " << shape().ToString()
-      //           << "\n";
+      std::cout << "destructor of Pjrtdata with shape " << shape().ToString()
+                << "\n";
     }
 
     Handle GetHandle() override {

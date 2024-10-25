@@ -683,8 +683,8 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
         //     break;
         //   }
         // }
-        ss << DumpUtil::PostOrderToText(post_order, roots);
-        ss << "\n\n";
+        // ss << DumpUtil::PostOrderToText(post_order, roots);
+        // ss << "\n\n";
       }
     }
   }

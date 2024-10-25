@@ -266,12 +266,12 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
   int64_t total_size = 0;
   for (auto& tensor : tensors) {
     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor->device());
-    // std::cout << "transfer to device: dtype:" << tensor->shape().ToString() << std::endl;
-    // std::vector<torch::lazy::SourceLocation> frames = torch::lazy::GetPythonFrames();
-    // for (auto& location : frames) {
-    //   std::cout << "  " << location.function << " (" << location.file << ":"
-    //             << location.line << ")\n";
-    // }
+    std::cout << "transfer to device: dtype:" << tensor->shape().ToString() << std::endl;
+    std::vector<torch::lazy::SourceLocation> frames = torch::lazy::GetPythonFrames();
+    for (auto& location : frames) {
+      std::cout << "  " << location.function << " (" << location.file << ":"
+                << location.line << ")\n";
+    }
 
     total_size += xla::ShapeUtil::ByteSizeOf(tensor->shape());
 
@@ -768,7 +768,7 @@ PjRtComputationClient::ExecuteComputation(
     std::shared_ptr<PjRtData> data =
         std::make_shared<PjRtData>(device, std::move(buffer));
 
-    // std::cout << "result: " << data->ToString() << std::endl;
+    std::cout << "result: " << data->ToString() << std::endl;
     datas.push_back(data);
   }
   CreateDataHandlesCounter()->AddValue(datas.size());
