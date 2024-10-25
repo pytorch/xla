@@ -72,9 +72,9 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 #include "tsl/platform/env.h"
 #include "tsl/profiler/lib/traceme.h"
+#include "xla/hlo/parser/hlo_parser.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
-#include "xla/service/hlo_parser.h"
 
 namespace torch_xla {
 namespace {
