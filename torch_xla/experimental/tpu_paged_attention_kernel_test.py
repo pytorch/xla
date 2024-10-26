@@ -250,25 +250,44 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     output = jnp.stack(outputs, axis=0)
     return output
 
-  def test_extended_paged_attention_v1_multiple_queries(self):
-    # num_compute_blks_q=1, num_compute_blks_kv=1,num_q_heads_per_kv_head=1,
-    # num_compute_blks_q: =(query_len//num_queries_per_compute_block)
-    # Change num_queries_per_compute_block to adjust num_compute_blks_q
-    # num_compute_blks_kv: =(pages_per_sequence//num_kv_pages_per_compute_block) where
-    # pages_per_sequence=max_kv_seq_len // page_size=32, num_kv_pages_per_compute_block=block_kv_size//page_size.
-    # So num_compute_blks_kv=max_kv_len//block_kv_size
-    # Change pallas_compute_block_size to adjust num_compute_blks_kv
-    # Change num_query_heads to adjust num_q_heads_per_kv_head.
-    dtype = jnp.float32  # (jnp.float32, jnp.bfloat16)
-    page_size = 64  # (16, 32, 64)
-    num_kv_heads = 1  # (1, 8)
-    q_kv_head_ratio=1  # (1, 4, 8)
-    head_dim=128  # (128, 256)
+#   def test_extended_paged_attention_v1_multiple_queries(self):
+#     # num_compute_blks_q=1, num_compute_blks_kv=1,num_q_heads_per_kv_head=1,
+#     # num_compute_blks_q: =(query_len//num_queries_per_compute_block)
+#     # Change num_queries_per_compute_block to adjust num_compute_blks_q
+#     # num_compute_blks_kv: =(pages_per_sequence//num_kv_pages_per_compute_block) where
+#     # pages_per_sequence=max_kv_seq_len // page_size=32, num_kv_pages_per_compute_block=block_kv_size//page_size.
+#     # So num_compute_blks_kv=max_kv_len//block_kv_size
+#     # Change pallas_compute_block_size to adjust num_compute_blks_kv
+#     # Change num_query_heads to adjust num_q_heads_per_kv_head.
+#     dtype = jnp.float32  # (jnp.float32, jnp.bfloat16)
+#     page_size = 64  # (16, 32, 64)
+#     num_kv_heads = 1  # (1, 8)
+#     q_kv_head_ratio=1  # (1, 4, 8)
+#     head_dim=128  # (128, 256)
+#     num_queries_per_compute_block = 16
+#     block_kv_size = 512
+  @parameterized.product(
+      dtype=(jnp.float32, jnp.bfloat16),
+      page_size=(16, 32, 64),
+      num_kv_heads=(1, 8),
+      q_kv_head_ratio=(1, 4, 8),
+      head_dim=(128, 256),
+      num_queries_per_compute_block=(16, 32),
+      block_kv_size=(256, 512),
+  )
+  def test_paged_attention(
+      self,
+      dtype,
+      page_size,
+      num_kv_heads,
+      q_kv_head_ratio,
+      head_dim,
+      num_queries_per_compute_block,
+      block_kv_size,
+  ):
     max_kv_len = 512  # 2048
-    block_kv_size = 512
-    num_queries_per_compute_block = 16
-    kv_seq_lens = jnp.asarray([64])  # np.asarray([0, 3, 256, 513, 1023, 2048])
-    query_len = 16
+    query_len = 64
+    kv_seq_lens = jax.random.randint(jax.random.key(0), (1,), query_len, max_kv_len)
 
     assert query_len <= max_kv_len
     batch_size = len(kv_seq_lens)
