@@ -2,7 +2,7 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import jax
 from jax._src import test_util as jtu
-from torch_xla.experimental.pallas_kernels.extended_paged_attention_kernel1 import paged_attention
+from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention
 import jax.numpy as jnp
 import numpy as np
 
