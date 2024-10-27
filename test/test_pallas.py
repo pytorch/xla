@@ -558,7 +558,7 @@ class PallasTest(unittest.TestCase):
     from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention as jax_multi_queries_paged_attention
 
     dtype = torch.float32
-    page_size=16
+    page_size = 16
     num_kv_heads = 8
     q_kv_head_ratio = 4
     head_dim = 256
@@ -622,10 +622,7 @@ class PallasTest(unittest.TestCase):
 
     self.assertTrue(
         torch.allclose(
-            output.cpu(),
-            expected_output.cpu(),
-            atol=1e-5,
-            rtol=1e-5))
+            output.cpu(), expected_output.cpu(), atol=1e-5, rtol=1e-5))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
                    "This test only works on TPUv4 and TPUv5p.")

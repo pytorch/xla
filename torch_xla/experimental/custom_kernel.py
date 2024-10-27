@@ -482,13 +482,14 @@ def flash_attention(
   return FlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
                               sm_scale, ab, partition_spec, mesh)
 
+
 def _multi_queries_paged_attention_nonkernel(
     q,  # [batch_size, query_len, num_heads, head_size]
     k_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
     v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
     lengths,  # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
     page_indices,  # [batch_size, pages_per_sequence]
-) -> torch.Tensor: # [batch_size, query_len, num_heads, head_dim]
+) -> torch.Tensor:  # [batch_size, query_len, num_heads, head_dim]
   print('Running the nonkernel version of multi-queries paged attention.')
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
@@ -503,37 +504,43 @@ def _multi_queries_paged_attention_nonkernel(
     num_pages = (kv_len + page_size - 1) // page_size
     indices = page_indices[i, :num_pages]
 
-    k = k_pages[:, indices]     # [num_kv_heads, num_pages, page_size, head_size]
-    k = k.permute(1, 2, 0, 3)   # [num_pages, page_size, num_kv_heads, head_size]
+    k = k_pages[:, indices]  # [num_kv_heads, num_pages, page_size, head_size]
+    k = k.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_size]
     k = k.reshape(num_pages * page_size, num_kv_heads, head_size)
-    k = k[:kv_len]              # [kv_len, num_kv_heads, head_size]
+    k = k[:kv_len]  # [kv_len, num_kv_heads, head_size]
 
-    v = v_pages[:, indices]     # [num_kv_heads, num_pages, page_size, head_size]
-    v = v.permute(1, 2, 0, 3)   # [num_pages, page_size, num_kv_heads, head_size]
+    v = v_pages[:, indices]  # [num_kv_heads, num_pages, page_size, head_size]
+    v = v.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_size]
     v = v.reshape(num_pages * page_size, num_kv_heads, head_size)
-    v = v[:kv_len]              # [kv_len, num_kv_heads, head_size]
+    v = v[:kv_len]  # [kv_len, num_kv_heads, head_size]
 
     if num_query_per_kv != 1:
       # GQA/MQA
-      k = torch.repeat_interleave(k, num_query_per_kv, dim=1)     # [kv_len, num_query_heads, head_size]
-      v = torch.repeat_interleave(v, num_query_per_kv, dim=1)     # [kv_len, num_query_heads, head_size]
+      k = torch.repeat_interleave(
+          k, num_query_per_kv, dim=1)  # [kv_len, num_query_heads, head_size]
+      v = torch.repeat_interleave(
+          v, num_query_per_kv, dim=1)  # [kv_len, num_query_heads, head_size]
 
     # NOTE: To balance efficiency and performance, we use the original dtype (e.g., bfloat16 or float16)
     # for matrix multiplications (i.e., q @ k and attn @ v) while using float32 for softmax.
     # However, the kernel doesn't have to strictly follow the dtypes here.
     # For example, it can use bfloat16 instead of float32 or vice versa for performance or simplicity.
-    attn = torch.einsum("qhd,khd->hqk", q[i], k)       # [num_query_heads, query_len, kv_len]
+    attn = torch.einsum("qhd,khd->hqk", q[i],
+                        k)  # [num_query_heads, query_len, kv_len]
     attn = attn.float()
     empty_mask = torch.ones(query_len, kv_len)
     mask = torch.triu(empty_mask, diagonal=kv_len - query_len + 1).bool()
     attn.masked_fill_(mask, float("-inf"))
-    attn = torch.softmax(attn, dim=-1).to(v.dtype)  # [num_query_heads, query_len, kv_len]
-    out = torch.einsum("hqk,khd->qhd", attn, v)  # [query_len, num_query_heads, head_size]
+    attn = torch.softmax(
+        attn, dim=-1).to(v.dtype)  # [num_query_heads, query_len, kv_len]
+    out = torch.einsum("hqk,khd->qhd", attn,
+                       v)  # [query_len, num_query_heads, head_size]
     outputs.append(out)
 
-  output = torch.stack(outputs, dim=0)  # [batch_size, query_len, num_query_heads, head_size]
+  output = torch.stack(
+      outputs, dim=0)  # [batch_size, query_len, num_query_heads, head_size]
   return output
-  
+
 
 def multi_queries_paged_attention(
     q,  # [batch_size, query_len, num_heads, head_size]
@@ -544,15 +551,15 @@ def multi_queries_paged_attention(
     num_kv_pages_per_compute_block,
     num_queries_per_compute_block,
     use_kernel=True,
-): # [batch_size, query_len, num_heads, head_dim]:
+):  # [batch_size, query_len, num_heads, head_dim]:
   assert len(q.shape) == 4, "q should have 4 dimensions."
   if not use_kernel:
     return _multi_queries_paged_attention_nonkernel(
-      q,
-      k_pages,
-      v_pages,
-      lengths,
-      page_indices,
+        q,
+        k_pages,
+        v_pages,
+        lengths,
+        page_indices,
     )
   print('Running the kernel version of multi-queries paged attention.')
 
@@ -595,6 +602,7 @@ def multi_queries_paged_attention(
       ], payload, [q.shape, output_shape, output_shape],
       [q_dtype_for_kernel_launch, torch.float32, torch.float32])
   return output.permute(0, 2, 1, 3).to(q_dtype_for_kernel_launch)
+
 
 def paged_attention(q,
                     k_pages,
@@ -655,7 +663,8 @@ def paged_attention(q,
       ], payload, [q.shape, output_shape, output_shape],
       [q_dtype_for_kernel_launch, torch.float32, torch.float32])
 
-  return output.reshape(batch_size, num_heads, head_dim).to(q_dtype_for_kernel_launch)
+  return output.reshape(batch_size, num_heads,
+                        head_dim).to(q_dtype_for_kernel_launch)
 
 
 def _calculate_num_tiles(x: int, tx: int) -> int:
