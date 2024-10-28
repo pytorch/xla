@@ -2,18 +2,35 @@ nightly_package_version = "2.6.0"
 
 # Built once a day from master.
 nightly_builds = [
-  { accelerator = "tpu" },
   {
     accelerator    = "tpu"
     python_version = "3.9"
+    cxx11_abi      = "0"
   },
   {
     accelerator    = "tpu"
     python_version = "3.10"
+    cxx11_abi      = "0"
   },
   {
     accelerator    = "tpu"
     python_version = "3.11"
+    cxx11_abi      = "0"
+  },
+  {
+    accelerator    = "tpu"
+    python_version = "3.9"
+    cxx11_abi      = "1"
+  },
+  {
+    accelerator    = "tpu"
+    python_version = "3.10"
+    cxx11_abi      = "1"
+  },
+  {
+    accelerator    = "tpu"
+    python_version = "3.11"
+    cxx11_abi      = "1"
   },
   {
     accelerator  = "cuda"
