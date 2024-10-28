@@ -585,9 +585,9 @@ def paged_attention(
       ),
       compiler_params=pltpu.TPUCompilerParams(
           dimension_semantics=(
-              "parallel",
-              "parallel",
-              "parallel",
+              "arbitrary",
+              "arbitrary",
+              "arbitrary",
               "arbitrary",
           )),
       out_shape=out_shape,
