@@ -99,19 +99,7 @@ void XLATensorImpl::set_tensor(XLATensorPtr xla_tensor) {
 }
 
 c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
-    const c10::VariableVersion& version_counter,
-    bool allow_tensor_metadata_change) const {
-  auto impl = c10::make_intrusive<XLATensorImpl>(tensor_);
-  copy_tensor_metadata(
-      /*src_impl=*/this,
-      /*dest_impl=*/impl.get(),
-      /*version_counter=*/version_counter,
-      /*allow_tensor_metadata_change=*/allow_tensor_metadata_change);
-  return impl;
-}
-
-c10::intrusive_ptr<c10::TensorImpl> XLATensorImpl::shallow_copy_and_detach(
-    c10::VariableVersion&& version_counter,
+    c10::VariableVersion version_counter,
     bool allow_tensor_metadata_change) const {
   auto impl = c10::make_intrusive<XLATensorImpl>(tensor_);
   copy_tensor_metadata(
