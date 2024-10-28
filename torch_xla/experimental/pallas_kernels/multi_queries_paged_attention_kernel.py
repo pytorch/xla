@@ -140,7 +140,7 @@ def _flash_attention(
   kv_seq_len_per_kv_compute_blk = num_kv_pages_per_compute_block * page_size
   assert k.shape == (kv_seq_len_per_kv_compute_blk, head_dim)
   s = jnp.einsum(
-      'hd,td->ht', q, k,
+      'qd,td->qt', q, k,
       preferred_element_type=jnp.float32)  # [block_q, block_k]
   assert s.shape == (num_queries_per_compute_block,
                      kv_seq_len_per_kv_compute_blk)
@@ -196,6 +196,7 @@ def _flash_attention(
   o_curr = jax.lax.dot(p.astype(v.dtype), v, preferred_element_type=jnp.float32)
   acc_scratch_ref[q_head_idx_per_kv] += o_curr * l_broadcast(l_next_inv_safe)
 
+  # TODO: To potentially improve the perf, consider not to update o_ref, l_ref, and m_ref at every kv_blk_idx. Instead, use a proper @pl.when(kv_blk_idx == ...) at the last kv_block.
   o_ref[0, q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
       o_ref.dtype)
   l_ref[0, q_head_idx_per_kv] = l_scratch_ref[q_head_idx_per_kv].astype(
@@ -250,6 +251,7 @@ def paged_flash_attention_kernel(
   compute_blk_size_kv = page_size * num_kv_pages_per_compute_block
   kv_len = lengths_ref[b]
 
+  # TODO: think about skip the work when we know the causal mask would mask all (e.g. when the whole kv_blk is after the whole q_blk)
   # Get the K and V for the current batch and current kv head.
   @pl.when(kv_blk_idx * compute_blk_size_kv < kv_len)
   def get_kv_and_run_flash_attention():
@@ -326,9 +328,6 @@ def paged_flash_attention_kernel(
 
     @pl.when(step == 0)
     def prefetch_first_block():  # pylint: disable=unused-variable
-      pl.debug_print(
-          'xw32 line318 prefetch_first_block b={}, kv_head_idx={}, kv_blk_idx={}',
-          b, kv_head_idx, kv_blk_idx)
       async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
           b, kv_head_idx, kv_blk_idx, buffer_index)
       async_copy_k.start()
@@ -493,7 +492,6 @@ def paged_attention(
 
   # in-spec. Note q.shape=[batch_size, num_q_heads, query_len, head_dim]
   # Map from grid idx.
-  print(f'xw32 line591 {num_q_heads_per_kv_head=}')
 
   def qo_index_map(batch_index, kv_head_index, q_seq_blk_idx, *_):
     return (batch_index, kv_head_index, q_seq_blk_idx, 0)
