@@ -91,7 +91,6 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
   def setUp(self):
     super().setUp()
 
-
 #   def test_paged_attention(
 #       self,
 #   ):
@@ -102,7 +101,6 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
 #     head_dim = 256
 #     num_queries_per_compute_block = 32
 #     block_kv_size = 256
-
   @parameterized.product(
       dtype=(jnp.float32, jnp.bfloat16),
       page_size=(16, 32, 64),
