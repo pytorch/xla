@@ -452,12 +452,8 @@ class Environment(contextlib.ContextDecorator):
 
     def _move_one_value(self, val):
       if isinstance(val, torch.nn.Module):
-        state_dict = self.to_xla(val.state_dict())
-        val.load_state_dict(state_dict, assign=True)
-        # Non-persistent buffers are not in state_dict
-        for b_name, buffer in val.named_buffers():
-          setattr(val, b_name, self.to_xla(buffer))
-        return val
+        with self:
+          return val.to('jax')
       if isinstance(val, XLATensor2):
         return val
       if isinstance(val, torch.Tensor):
