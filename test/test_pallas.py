@@ -680,19 +680,24 @@ class PallasTest(unittest.TestCase):
     kv_seq_lens_xla = kv_seq_lens.to("xla")
     page_indices_xla = page_indices.to("xla")
 
-    def multi_queries_paged_attention_wrapper(q, k_pages, v_pages, kv_seq_lens, page_indices, num_kv_pages_per_compute_block, num_queries_per_compute_block, use_kernel):
+    def multi_queries_paged_attention_wrapper(q, k_pages, v_pages, kv_seq_lens,
+                                              page_indices,
+                                              num_kv_pages_per_compute_block,
+                                              num_queries_per_compute_block,
+                                              use_kernel):
       return torch.ops.xla.multi_queries_paged_attention(
-        q,
-        k_pages,
-        v_pages,
-        kv_seq_lens,
-        page_indices,
-        num_kv_pages_per_compute_block,
-        num_queries_per_compute_block,
-        use_kernel=use_kernel,
+          q,
+          k_pages,
+          v_pages,
+          kv_seq_lens,
+          page_indices,
+          num_kv_pages_per_compute_block,
+          num_queries_per_compute_block,
+          use_kernel=use_kernel,
       )
-    
-    compiled_paged_attention = torch.compile(multi_queries_paged_attention_wrapper, backend="openxla")
+
+    compiled_paged_attention = torch.compile(
+        multi_queries_paged_attention_wrapper, backend="openxla")
 
     output = compiled_paged_attention(
         q_xla,
