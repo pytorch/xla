@@ -32,7 +32,7 @@ bool IsSparseGather(const xla::Shape& input_shape,
   // to avoid gather on a single float on TPU.
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
-  if (CheckTpuDevice(hw_type) || hw_type == XlaDeviceType::NEURON) {
+  if (CheckTpuDevice(hw_type) || CheckNeuronDevice(hw_type)) {
     // XLA_DENSE_GATHER_FACTOR can be used to finely control the
     // sparsity check.
     static int dense_gather_factor =
