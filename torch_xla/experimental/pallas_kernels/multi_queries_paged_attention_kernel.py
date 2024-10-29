@@ -475,9 +475,8 @@ def paged_attention(
   grid = (
       batch_size,
       num_kv_heads,
-      # what if query_len%num_queries_per_compute_block!=0?
-      query_len //
-      num_queries_per_compute_block,  # how many compute blocks we need to loop the query_len
+      pl.cdiv(query_len, num_queries_per_compute_block
+             ),  # how many compute blocks we need to loop the query_len
       pages_per_sequence //
       num_kv_pages_per_compute_block,  # how many compute blocks we need to loop the kv_len
   )
@@ -584,6 +583,7 @@ def paged_attention(
           scratch_shapes=scratch_shapes,
       ),
       compiler_params=pltpu.TPUCompilerParams(
+          # due to compute_block_indices, we loop batch, kv_head, q_blk, kv_blk, the order matters.
           dimension_semantics=(
               "arbitrary",
               "arbitrary",
