@@ -554,7 +554,6 @@ class PallasTest(unittest.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_paged_attention_multi_queries_wrapper(self):
-    print(f'line557 {xr.device_type()=}, {tpu.version()=}')
     from torch_xla.experimental.custom_kernel import multi_queries_paged_attention
     from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention as jax_multi_queries_paged_attention
 
