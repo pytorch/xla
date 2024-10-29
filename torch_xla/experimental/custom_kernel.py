@@ -528,7 +528,7 @@ def _multi_queries_paged_attention_nonkernel(
     attn = torch.einsum("qhd,khd->hqk", q[i],
                         k)  # [num_query_heads, query_len, kv_len]
     attn = attn.float()
-    empty_mask = torch.ones(query_len, kv_len)
+    empty_mask = torch.ones(query_len, kv_len, device=attn.device)
     mask = torch.triu(empty_mask, diagonal=kv_len - query_len + 1).bool()
     attn.masked_fill_(mask, float("-inf"))
     attn = torch.softmax(
@@ -1081,6 +1081,35 @@ def paged_attention_non_xla(q: torch.Tensor,
                             pages_per_compute_block: int,
                             megacore_mode: str = None,
                             attn_logits_soft_cap: float = None):
+  return non_xla_attetion(q, k_pages, v_pages, "paged")
+
+XLA_LIB.define(
+    "multi_queries_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int num_kv_pages_per_compute_block, int num_queries_per_compute_block, bool use_kernel) -> Tensor",
+)
+
+
+@impl(XLA_LIB, "multi_queries_paged_attention", "XLA")
+def multi_queries_paged_attention_xla(q: torch.Tensor,
+                        k_pages: torch.Tensor,
+                        v_pages: torch.Tensor,
+                        lengths: torch.Tensor,
+                        page_indices: torch.Tensor,
+                        num_kv_pages_per_compute_block: int,
+                        num_queries_per_compute_block: int,
+                        use_kernel: bool):
+  return multi_queries_paged_attention(q, k_pages, v_pages, lengths, page_indices,
+                         num_kv_pages_per_compute_block, num_queries_per_compute_block, use_kernel)
+
+
+@impl(XLA_LIB, "multi_queries_paged_attention", "CompositeExplicitAutograd")
+def multi_queries_paged_attention_non_xla(q: torch.Tensor,
+                            k_pages: torch.Tensor,
+                            v_pages: torch.Tensor,
+                            lengths: torch.Tensor,
+                            page_indices: torch.Tensor,
+                            num_kv_pages_per_compute_block: int,
+                            num_queries_per_compute_block: int,
+                            use_kernel: bool):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 
