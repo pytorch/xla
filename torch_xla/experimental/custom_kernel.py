@@ -138,10 +138,12 @@ def trace_pallas(kernel: Callable,
       return trace_pallas_arg_to_payload[hash_key], tensor_args
 
   # Here we ignore the kwargs for execution as most of the time, the kwargs is only used in traced code.
+  os.environ['USE_SINGLE_SLICE'] = 'true'
   ir = jax.jit(
       kernel, static_argnums=static_argnums,
       static_argnames=static_argnames).lower(*jax_args, **kwargs).compiler_ir()
   payload = _extract_backend_config(ir)
+  os.environ.pop('USE_SINGLE_SLICE', None)
 
   if use_cache:
     # if we reach here it means we have a cache miss.
