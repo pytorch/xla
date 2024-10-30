@@ -1309,10 +1309,9 @@ def send_cpu_data_to_device(
         if sharding and tensor.dim() > 0 and (tensor.size()[0] %
                                               local_runtime_device_count) != 0:
           raise RuntimeError(
-              "When minibatch is configured, batch dimension of the tensor " +
-              "must be divisible by local runtime device count.input data shape "
-              +
-              f"={tensor.size()}, local_runtime_device_count = {local_runtime_device_count}"
+              "When minibatch is configured, the per-host batch size must be divisible "
+              + "by local runtime device count. Per host input data shape " +
+              f"= {tensor.size()}, local_runtime_device_count = {local_runtime_device_count}"
           )
 
     xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices,
