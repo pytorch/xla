@@ -18,3 +18,5 @@ cache_suffix: ""
 build_cpp_tests: 0
 # Whether to tag wheels with git hash, e.g. X.Y.Z+git123abc
 git_versioned_xla_build: false
+# Whether to use C++11 ABI when building torch and torch_xla.
+cxx11_abi: 0

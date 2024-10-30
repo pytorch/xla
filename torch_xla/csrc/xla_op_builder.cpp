@@ -8,10 +8,10 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "xla/client/lib/logdet.h"
 #include "xla/client/lib/math.h"
 #include "xla/client/lib/matrix.h"
 #include "xla/client/lib/pooling.h"
+#include "xla/hlo/builder/lib/logdet.h"
 #include "xla/primitive_util.h"
 #include "xla/shape_util.h"
 

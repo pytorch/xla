@@ -72,9 +72,9 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 #include "tsl/platform/env.h"
 #include "tsl/profiler/lib/traceme.h"
+#include "xla/hlo/parser/hlo_parser.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
-#include "xla/service/hlo_parser.h"
 
 namespace torch_xla {
 namespace {
@@ -494,6 +494,7 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllToAll(
     const at::Tensor& input, const std::shared_ptr<torch::lazy::Value>& token,
     int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
     const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr result;
   torch::lazy::Value new_token;
   std::tie(result, new_token) = tensor_methods::all_to_all(
@@ -824,6 +825,7 @@ py::dict GetMemoryInfo(const std::string& device_str) {
   auto py_dict = py::dict();
   py_dict["bytes_used"] = mem_info.bytes_used;
   py_dict["bytes_limit"] = mem_info.bytes_limit;
+  py_dict["peak_bytes_used"] = mem_info.peak_bytes_used;
   return py_dict;
 }
 

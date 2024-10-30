@@ -81,18 +81,20 @@ function run_tests {
   #   export GPU_NUM_DEVICES=$num_devices
   #   pjrt_device="CUDA"
   # fi
-  for model in "${TORCHBENCH_MODELS[@]}"; do
-    echo "testing model: $model"
-    PJRT_DEVICE=$pjrt_device python -u benchmarks/experiment_runner.py \
-    --suite-name=torchbench \
-    --experiment-config='{"accelerator":"'"$pjrt_device"'","xla":"PJRT","dynamo":"openxla","test":"eval","torch_xla2":null,"xla_flags":null,"keep_model_data_on_cuda":false}' \
-    --model-config='{"model_name":"'"$model"'"}'
-    if [ $? -ne 0 ]; then
-      echo "ERROR: Failed to test $model. Exiting with failure." >&2
-      overall_status=1
-    else
-      success_count=$((success_count + 1))
-    fi
+  for functionalization in "true" "false"; do
+    for model in "${TORCHBENCH_MODELS[@]}"; do
+      echo "testing model: $model"
+      PJRT_DEVICE=$pjrt_device python -u benchmarks/experiment_runner.py \
+      --suite-name=torchbench \
+      --experiment-config='{"accelerator":"'"$pjrt_device"'","xla":"PJRT","dynamo":"openxla","test":"eval","torch_xla2":null,"xla_flags":null,"keep_model_data_on_cuda":false,"enable_functionalization": '"$functionalization"'}' \
+      --model-config='{"model_name":"'"$model"'"}'
+      if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to test $model. Exiting with failure." >&2
+        overall_status=1
+      else
+        success_count=$((success_count + 1))
+      fi
+    done
   done
   return $overall_status
 }

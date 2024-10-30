@@ -34,7 +34,9 @@ def _mp_fn(index):
     cpu_result = result.cpu()
     expected = torch.arange(0, world_size, dtype=torch.float)
     if not cpu_result.allclose(expected):
-      print('xm.all_gather() produced wrong reductions', file=sys.stderr)
+      print(
+          'xm.all_gather() produced wrong reductions (torch.compile)',
+          file=sys.stderr)
       print(f'[{index}] {cpu_result}', file=sys.stderr)
       sys.exit(1)
 

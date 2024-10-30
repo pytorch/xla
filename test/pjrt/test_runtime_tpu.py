@@ -259,6 +259,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     for usage in results.values():
       self.assertIn('bytes_used', usage)
       self.assertIn('bytes_limit', usage)
+      self.assertIn('peak_bytes_used', usage)
 
 
 if __name__ == '__main__':

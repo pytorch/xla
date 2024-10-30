@@ -126,7 +126,7 @@ ptxla_cc_test(
         "//torch_xla/csrc:aten_cuda_functions",
         "@com_google_googletest//:gtest_main",
         "@xla//xla:xla_data_proto_cc",
-        "@tsl//tsl/profiler/utils:session_manager",
+        "@xla//xla/tsl/profiler/utils:session_manager",
     ],
 )
 

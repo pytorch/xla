@@ -167,13 +167,16 @@ def debug_accuracy(func, args, kwargs, current_output):
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
       torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output))
 
-  expected_out = func(*args_torch, **kwargs_torch)
+  with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+    if 'device' in kwargs_torch:
+      kwargs_torch['device'] = 'cpu'  # do the torch native for comparison
+    expected_out = func(*args_torch, **kwargs_torch)
 
   flattened_current_out, _ = torch_pytree.tree_flatten(out_torch)
   flattened_expected_out, _ = torch_pytree.tree_flatten(expected_out)
 
   for ex, real in zip(flattened_expected_out, flattened_current_out):
-    if ex.dtype != real.dtype:
+    if isinstance(ex, torch.Tensor) and ex.dtype != real.dtype:
       ex = ex.to(real.dtype)
     try:
       if (isinstance(ex, torch.Tensor) and
@@ -205,6 +208,10 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
         return self.env.dispatch(func, types, args, kwargs)
       except OperatorNotFound:
         pass
+      if _name_of_func(func) in ('rot90'): # skip rot90 with k%4==0 due to no change
+        if len(args) >= 2 and type(args[1]) == int:
+          if ((args[1])%4 == 0):
+            return args[0]
       return func(*args, **(kwargs or {}))
 
 
@@ -218,7 +225,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
       if isinstance(func, torch._ops.OpOverloadPacket):
         with self:
           return func(*args, **kwargs)
-      if func.namespace not in ('aten', '_c10d_functional'):
+      if func.namespace not in ('aten', '_c10d_functional', 'torchvision'):
         return func(*args, **kwargs)
       return self.env.dispatch(func, types, args, kwargs)
 
@@ -290,7 +297,7 @@ class Environment(contextlib.ContextDecorator):
 
 
     def load_ops(self):
-      from torch_xla2.ops import jaten, jtorch, jc10d, ops_registry
+      from torch_xla2.ops import jaten, jtorch, jc10d, jtorchvision_nms, ops_registry
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
 
@@ -327,8 +334,8 @@ class Environment(contextlib.ContextDecorator):
             the_tensor = the_tensor.to(new_dtype)
         jax_device = self.get_as_jax_device(new_device)
         if jax_device:
-          with jax.default_device(jax_device):
-            arr = t2j(the_tensor)
+          arr = t2j(the_tensor)
+          arr = jax.device_put(arr, jax_device)
         else:
           with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
             return torch_tensor.to(new_device)
@@ -387,7 +394,7 @@ class Environment(contextlib.ContextDecorator):
       if func in (torch.Tensor.to, torch.ops.aten._to_copy, torch.ops.aten._to_copy.default):
         return self._torch_Tensor_to(args, kwargs)
 
-      # If the func don't act on XLATensor2, and is not a tensor constructor,
+      # If the func doesn't act on XLATensor2, and is not a tensor constructor,
       # We should skip and let torch handle it.
       tensor_args = [t for t in args if isinstance(t, torch.Tensor)]
       if tensor_args and all(not isinstance(t, XLATensor2) for t in tensor_args):
@@ -417,6 +424,8 @@ class Environment(contextlib.ContextDecorator):
         except AssertionError:
           if self.config.debug_mixed_tensor:
             import pdb; pdb.set_trace()
+          else:
+            raise
 
 
         if op.needs_env:
@@ -443,12 +452,8 @@ class Environment(contextlib.ContextDecorator):
 
     def _move_one_value(self, val):
       if isinstance(val, torch.nn.Module):
-        state_dict = self.to_xla(val.state_dict())
-        val.load_state_dict(state_dict, assign=True)
-        # Non-persistent buffers are not in state_dict
-        for b_name, buffer in val.named_buffers():
-          setattr(val, b_name, self.to_xla(buffer))
-        return val
+        with self:
+          return val.to('jax')
       if isinstance(val, XLATensor2):
         return val
       if isinstance(val, torch.Tensor):

@@ -64,10 +64,10 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_date = '20240913'
+_date = '20241020'
 _libtpu_version = f'0.1.dev{_date}'
 _libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}+nightly-py3-none-any.whl'
-_jax_version = f'0.4.33.dev{_date}'
+_jax_version = f'0.4.35.dev{_date}'
 
 
 def _get_build_mode():

@@ -1299,6 +1299,21 @@ def send_cpu_data_to_device(
     shardings = None
     if input_sharding:
       shardings = [input_sharding.xla_spec(t) for t in tensors]
+    if input_sharding and input_sharding.minibatch:
+      # when minibatch is configured we must make sure batch dimension of
+      # the tensor is divisible by the local runtime device count.
+      for tensor, sharding in zip(tensors, shardings):
+        # assume batch dimension is 0
+        local_runtime_device_count = torch_xla.runtime.addressable_runtime_device_count(
+        )
+        if sharding and tensor.dim() > 0 and (tensor.size()[0] %
+                                              local_runtime_device_count) != 0:
+          raise RuntimeError(
+              "When minibatch is configured, the per-host batch size must be divisible "
+              + "by local runtime device count. Per host input data shape " +
+              f"= {tensor.size()}, local_runtime_device_count = {local_runtime_device_count}"
+          )
+
     xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices,
                                                       shardings)
     return xtensors
@@ -1526,7 +1541,7 @@ def get_memory_info(device: Optional[torch.device] = None) -> MemoryInfo:
   Example:
 
     >>> xm.get_memory_info()
-    {'bytes_used': 290816, 'bytes_limit': 34088157184}
+    {'bytes_used': 290816, 'bytes_limit': 34088157184, 'peak_bytes_used': 500816}
   """
   if device == None:
     device = xla_device()

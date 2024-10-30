@@ -7,233 +7,85 @@ from torch.testing._internal.common_device_type import (
     instantiate_device_type_tests, ops)
 from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
+import torch_xla2
 
 
 skiplist = {
-    "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
-                 # such as 0 to negative power.
     "_segment_reduce",
-    "_upsample_bilinear2d_aa",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
-    "block_diag",
     "byte",
     "cat",
-    "cauchy",
-    "cdist",
     "cholesky",
-    "cholesky_inverse",
     "cholesky_solve",
-    "combinations",
-    "complex",
-    "diag_embed",
-    "diagflat",
     "diagonal_copy",
-    "diagonal_scatter",
-    "diff",
-    "digamma",
-    "erfc",
-    "erfinv",
-    "expand",
-    "exponential",
-    "floor_divide",
-    "gather",
-    "gcd",
-    "geometric",
     "geqrf",
-    "grid_sampler_2d",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
-    "igammac",
     "index_reduce",
     "kthvalue",
-    "lgamma",
     "linalg.cholesky",
     "linalg.cholesky_ex",
-    "linalg.cond",
     "linalg.det",
-    "linalg.eig",
-    "linalg.eigh",
-    "linalg.eigvalsh",
-    "linalg.householder_product",
-    "linalg.inv",
-    "linalg.inv_ex",
-    "linalg.ldl_factor",
-    "linalg.ldl_factor_ex",
     "linalg.ldl_solve",
-    "linalg.lstsq",
-    "linalg.lu",
-    "linalg.lu_factor",
-    "linalg.lu_factor_ex",
     "linalg.lu_solve",
-    "linalg.matrix_norm",
     "linalg.matrix_power",
-    "linalg.matrix_rank",
-    "linalg.multi_dot",
-    "linalg.norm",
-    "linalg.pinv",
-    "linalg.solve",
-    "linalg.solve_ex",
-    "linalg.solve_triangular",
-    "linalg.svd",
-    "linalg.svdvals",
-    "linalg.tensorinv",
-    "linalg.tensorsolve",
-    "linalg.vander",
-    "linalg.vector_norm",
-    "linspace",
-    "log_normal",
-    "logspace",
-    "lu",
-    "lu_solve",
-    "lu_unpack",
-    "masked.argmin",
-    "masked.median",
-    "masked_scatter",
-    "masked_select",
     "max_pool2d_with_indices_backward",
-    "min",
-    "mode",
-    "multinomial",
-    "mvlgamma",
-    "nanmedian",
-    "nanquantile",
-    "new_empty",
-    "new_empty_strided",
-    "nextafter",
-    "nn.functional.adaptive_avg_pool1d",
     "nn.functional.adaptive_avg_pool3d",
     "nn.functional.adaptive_max_pool1d",
     "nn.functional.adaptive_max_pool2d",
     "nn.functional.adaptive_max_pool3d",
     "nn.functional.alpha_dropout",
-    "nn.functional.avg_pool1d",
-    "nn.functional.avg_pool2d",
-    "nn.functional.avg_pool3d",
-    "nn.functional.batch_norm",
-    "nn.functional.bilinear",
-    "nn.functional.binary_cross_entropy",
-    "nn.functional.conv2d",
-    "nn.functional.conv3d",
     "nn.functional.conv_transpose1d",
     "nn.functional.conv_transpose2d",
     "nn.functional.conv_transpose3d",
     "nn.functional.cosine_embedding_loss",
-    "nn.functional.cosine_similarity",
-    "nn.functional.cross_entropy",
     "nn.functional.ctc_loss",
     "nn.functional.dropout2d",
     "nn.functional.dropout3d",
     "nn.functional.dropout",
     "nn.functional.embedding_bag",
-    "nn.functional.embedding",
     "nn.functional.fractional_max_pool2d",
     "nn.functional.fractional_max_pool3d",
     "nn.functional.group_norm",
     "nn.functional.hinge_embedding_loss",
-    "nn.functional.instance_norm",
     "nn.functional.interpolate",
-    "nn.functional.layer_norm",
     "nn.functional.margin_ranking_loss",
     "nn.functional.max_pool1d",
     "nn.functional.max_pool2d",
     "nn.functional.max_pool3d",
-    "nn.functional.max_unpool1d",
-    "nn.functional.max_unpool2d",
-    "nn.functional.max_unpool3d",
     "nn.functional.multi_head_attention_forward",
     "nn.functional.multi_margin_loss",
     "nn.functional.multilabel_margin_loss",
-    "nn.functional.multilabel_soft_margin_loss",
-    "nn.functional.nll_loss",
-    "nn.functional.normalize",
-    "nn.functional.one_hot",
-    "nn.functional.pad",
     "nn.functional.pairwise_distance",
-    "nn.functional.pixel_shuffle",
-    "nn.functional.pixel_unshuffle",
     "nn.functional.poisson_nll_loss",
     "nn.functional.rrelu",
-    "nn.functional.softmin",
-    "nn.functional.unfold",
+    "nn.functional.triplet_margin_loss",
+    "nn.functional.triplet_margin_with_distance_loss",
     "nn.functional.upsample_nearest",
     "nonzero",
     "nonzero_static",
-    "norm",
     "normal",
     "ormqr",
     "pca_lowrank",
-    "pinverse",
-    "polar",
-    "polygamma",
-    "prod",
-    "put",
-    "quantile",
-    "repeat_interleave",
-    "resize_",
-    "resize_as_",
-    "rot90",
-    "rsub",
-    "scatter_add",
-    "scatter",
-    "scatter_reduce",
     "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",
     "special.scaled_modified_bessel_k1",
     "special.spherical_bessel_j0",
     "special.zeta",
-    "stft",
-    "sub",
-    "svd",
     "svd_lowrank",
-    "take_along_dim",
-    "to_sparse", # We are not supporting sparse tensors yet.
-    "triu",
-    "unbind",
     "unfold_copy",
     "unfold",
-    "unique_consecutive",
-    "unique",
-    "unravel_index",
-    "var_mean",
-    "zero_",
-    "argwhere",
-    "cumulative_trapezoid",
-    "expand_as",
-    "nanmean",
-    "bmm",
-    "broadcast_shapes",
-    "cartesian_prod",
-    "cdouble",
-    "ceil",
-    "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
-    "nn.functional.smooth_l1_loss",
-    "nn.functional.soft_margin_loss",
-    "nn.functional.softplus",
-    "nn.functional.softshrink",
-    "nn.functional.softsign",
-    "nn.functional.tanhshrink",
-    "nn.functional.threshold",
-    "nn.functional.triplet_margin_loss",
-    "nn.functional.triplet_margin_with_distance_loss",
-    "nn.functional.upsample_bilinear",
-    "outer",
-    "permute",
-    "positive",
-    "rad2deg",
     "randint",
-    "ravel",
-    "reciprocal",
-    "remainder",
-    "repeat",
-    "true_divide",
-    "trunc",
-    "unflatten",
-    "unsafe_chunk",
-    "unsafe_split",
-    "unsqueeze",
-    "view_as_complex",
-    "view_as",
+}
+
+not_support_ops_list = {
+  "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
+  "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
+               # such as 0 to negative power.
+  "ceil", # only failed with python 3.9
+  "trunc", # only failed with python 3.9
+  "to_sparse", # We are not supporting sparse tensors yet.
 }
 
 # These inputs are themselves views
@@ -248,17 +100,31 @@ random_ops = {
   'empty_permuted',
   'empty_strided',
   'bernoulli',
+  'geometric',
+  'new_empty',
+  'new_empty_strided',
   'randint_like',
   'randn',
   'randn_like',
   'rand',
   'rand_like',
   'uniform',
+  'multinomial',
   # Dropout is not deterministic https://pytorch.org/docs/stable/generated/torch.nn.functional.feature_alpha_dropout.html
   'nn.functional.feature_alpha_dropout',
+  'cauchy',
+  'exponential',
+  'log_normal',
 }
 
-atol_dict = {"matrix_exp": (2e-1, 2e-4)}
+atol_dict = {"linalg.eig": (2e0, 3e0),
+             "linalg.eigh": (5e1, 3e0),
+             "linalg.eigvalsh": (5e1, 3e0),
+             "linalg.pinv": (8e-1, 2e0),
+             "linalg.svd": (1e0, 1e0),
+             "svd": (1e0, 1e0),
+             "matrix_exp": (2e-1, 2e-4),
+             "cdist": (5e1, 3e0)}
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):
@@ -293,7 +159,7 @@ def run_export_and_compare(testcase,
   atol, rtol = (1e-3, 1e-5)
   if func.name in atol_dict:
     atol, rtol = atol_dict[func.name]
-  
+
   with testcase.subTest("torch_eval"):
     res = func(sample_input.input, *sample_input.args, **sample_input.kwargs)
     with testcase.subTest("torch_xla2_eval"):
@@ -318,7 +184,7 @@ def run_export_and_compare(testcase,
 
 ops_to_test = [
     test for test in op_db
-    if (test.name not in skiplist and
+    if (test.name not in (skiplist | not_support_ops_list) and
         test.variant_test_name not in variant_test_name_to_skip)
 ]
 
@@ -326,7 +192,8 @@ ops_to_test = [
 # For example: sort( [1, 0, 0]) -> [0, 0, 1]
 # the correct index can be [1, 2, 0] or [2, 1, 0]
 should_ignore_indexes = {
-  "topk"
+  "topk",
+  "mode"
 }
 
 
@@ -337,7 +204,8 @@ class TestOpInfo(TestCase):
     print('op_db size: ', len(op_db), 'testing: ', len(ops_to_test))
 
   def setUp(self):
-    self.env = tensor.Environment()
+    self.env = torch_xla2.default_env()
+    torch_xla2.enable_accuracy_mode()
     #self.env.config.debug_accuracy_for_each_op = True 
     torch.manual_seed(0)
 
@@ -355,7 +223,16 @@ class TestOpInfo(TestCase):
         continue
       check_output = op.name not in random_ops
 
-      if op.name == "special.polygamma":
+      #print("[DEBUG] sample_input: ", sample_input)
+
+      # TODO: this is a workaround to skip int64 cast for linspace
+      # reference: https://github.com/pytorch/xla/issues/7505#issuecomment-2400895692 and subsequent comments
+      # we have opened a bug in pytorch: https://github.com/pytorch/pytorch/issues/137546
+      if op.name == "linspace":
+        if 'dtype' in sample_input.kwargs:
+          if sample_input.kwargs['dtype'] == torch.int64:
+            sample_input.kwargs['dtype'] = torch.float
+      if op.name == "polygamma" or op.name == "special.polygamma":
         # The polygamma function is inaccurate for values < 1.
         # To avoid errors during testing, replace values below 1 with 1.
         sample_input.input = self.replace_values_below_threshold(
@@ -369,7 +246,7 @@ class TestOpInfo(TestCase):
                              ignore_indices=ignore_index)
 
 
-instantiate_device_type_tests(TestOpInfo, globals())
+instantiate_device_type_tests(TestOpInfo, globals(), only_for='cpu')
 
 if __name__ == '__main__':
   unittest.main()

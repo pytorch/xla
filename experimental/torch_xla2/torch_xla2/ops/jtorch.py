@@ -1,4 +1,5 @@
 """Tensor constructor overrides"""
+import math
 import collections.abc
 import functools
 from typing import Optional, Sequence
@@ -98,13 +99,11 @@ def _einsum(equation, *operands):
   return jnp.einsum(equation, *filtered_operands)
 
 
-def _sdpa_reference(
-   query, key, value, attn_mask=None,
-   dropout_p=0.0, is_causal=False, scale=None) -> torch.Tensor:
+def _sdpa_reference(query, key, value, attn_mask=None, dropout_p=0.0,
+        is_causal=False, scale=None, enable_gqa=False) -> torch.Tensor:
     L, S = query.size(-2), key.size(-2)
-    scale_factor = 1 / np.sqrt(query.size(-1)) if scale is None else scale
+    scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
     attn_bias = torch.zeros(L, S, dtype=query.dtype)
-
     if is_causal:
         assert attn_mask is None
         temp_mask = torch.ones(L, S, dtype=torch.bool).tril(diagonal=0)
@@ -116,6 +115,10 @@ def _sdpa_reference(
             attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
         else:
             attn_bias += attn_mask
+    if enable_gqa:
+        key = key.repeat_interleave(query.size(-3)//key.size(-3), -3)
+        value = value.repeat_interleave(query.size(-3)//value.size(-3), -3)
+
     attn_weight = query @ key.transpose(-2, -1) * scale_factor
     attn_weight += attn_bias
     attn_weight = torch.softmax(attn_weight, dim=-1)
@@ -156,17 +159,67 @@ def _tpu_flash_attention(query, key, value, env):
   return wrap_flash_attention(query, key, value)
 
 
+@register_function(torch.nn.functional.pad)
+def pad(tensor, pad, mode="constant", value=None):
+  # For padding modes that have different names between Torch and NumPy, this
+  # dict provides a Torch-to-NumPy translation. Any string not in this dict will
+  # be passed through as-is.
+  MODE_NAME_TRANSLATION = {
+      "circular": "wrap",
+      "replicate": "edge",
+  }
+
+  numpy_mode = MODE_NAME_TRANSLATION.get(mode, mode)
+
+  num_prefix_dims = tensor.ndim - len(pad) // 2
+
+  numpy_pad_width = [(0, 0)] * num_prefix_dims
+  nd_slice = [slice(None)] * num_prefix_dims
+
+  for i in range(len(pad) - 2, -1, -2):
+    pad_start, pad_end = pad[i:i + 2]
+    slice_start, slice_end = None, None
+
+    if pad_start < 0:
+      slice_start = -pad_start
+      pad_start = 0
+
+    if pad_end < 0:
+      slice_end = pad_end
+      pad_end = 0
+
+    numpy_pad_width.append((pad_start, pad_end))
+    nd_slice.append(slice(slice_start, slice_end))
+
+  nd_slice = tuple(nd_slice)
+
+  # `jax.numpy.pad` complains if we provide an irrelevant `constant_values` arg,
+  # even if the value we pass in is `None`. (It treats `None` as `nan`.)
+  kwargs = dict()
+  if mode == "constant" and value is not None:
+    kwargs["constant_values"] = value
+
+  # The "replicate" mode pads first and then slices, whereas the "circular" mode
+  # slices first and then pads. The latter approach deals with smaller tensors,
+  # so we default to that option in modes where the order of operations doesn't
+  # affect the result.
+  if mode == "replicate":
+    return jnp.pad(tensor, numpy_pad_width, mode=numpy_mode, **kwargs)[nd_slice]
+  else:
+    return jnp.pad(tensor[nd_slice], numpy_pad_width, mode=numpy_mode, **kwargs)
+
+
 @register_function(torch.nn.functional.scaled_dot_product_attention, is_jax_function=False, needs_env=True)
 def scaled_dot_product_attention(
    query, key, value, attn_mask=None,
-   dropout_p=0.0, is_causal=False, scale=None, env=None) -> torch.Tensor:
+   dropout_p=0.0, is_causal=False, scale=None, enable_gqa=False, env=None) -> torch.Tensor:
 
    if env.config.use_tpu_flash_attention:
     jquery, jkey, jvalue = env.t2j_iso((query, key, value))
     res = _tpu_flash_attention(jquery, jkey, jvalue, env)
     return env.j2t_iso(res)
 
-   return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal, scale)
+   return _sdpa_reference(query, key, value, attn_mask, dropout_p, is_causal, scale, enable_gqa)
 
 @register_function(torch.Tensor.__getitem__)
 def getitem(self, indexes):
@@ -245,6 +298,11 @@ def empty_strided(
   return empty(size, dtype=dtype)
 
 
+@register_function(torch.unravel_index)
+def unravel_index(indices, shape):
+  return jnp.unravel_index(indices, shape)
+
+
 @register_function(torch.rand, is_jax_function=False)
 def rand(
   *size, **kwargs
@@ -283,3 +341,73 @@ def linalg_slogdet(input):
 @register_function(torch.tensor_split)
 def tensor_split(input, indices_or_sections, dim=0):
   return jnp.array_split(input, indices_or_sections, axis=dim)
+
+
+@register_function(torch.linalg.solve)
+def linalg_solve(a, b):
+  res, _ = jaten._aten__linalg_solve_ex(a, b)
+  return res
+
+
+@register_function(torch.linalg.solve_ex)
+def linalg_solve_ex(a, b):
+  res, info = jaten._aten__linalg_solve_ex(a, b)
+  return res, info
+
+@register_function(torch.linalg.svd)
+def linalg_svd(a, full_matrices=True, **kwargs):
+  return jaten._aten__linalg_svd(a, full_matrices=full_matrices, **kwargs)
+
+@register_function(torch.svd)
+def svd(a, some=True, compute_uv=True):
+  if not compute_uv:
+    S = jaten._aten__linalg_svd(a, full_matrices=False)[1]
+    U = jnp.zeros((a.shape[-2], a.shape[-2]), dtype=a.dtype)
+    V = jnp.zeros((a.shape[-1], a.shape[-1]), dtype=a.dtype)
+    return U, S, V
+  U, S, V = jaten._aten__linalg_svd(a, full_matrices=not some)
+  return U, S, jnp.matrix_transpose(V)
+
+@register_function(torch.cdist)
+def _cdist(x1, x2, p=2.0, compute_mode='use_mm_for_euclid_dist_if_necessary'):
+    return jaten._aten_cdist(x1, x2, p, compute_mode)
+
+@register_function(torch.lu)
+def lu(A, **kwargs):
+  lu,pivots,_ = jax.lax.linalg.lu(A)
+  # JAX pivots are offset by 1 compared to torch
+  _pivots = pivots + 1
+  info_shape = pivots.shape[:-1]
+  info = jnp.zeros(info_shape, dtype=mappings.t2j_dtype(torch.int32))
+  if kwargs['get_infos'] == True:
+    return lu, _pivots, info
+  return lu, _pivots
+
+@register_function(torch.lu_solve)
+def lu_solve(b, LU_data, LU_pivots, **kwargs):
+  # JAX pivots are offset by 1 compared to torch
+  _pivots = LU_pivots - 1
+  x = jax.scipy.linalg.lu_solve((LU_data, _pivots), b)
+  return x
+
+@register_function(torch.linalg.tensorsolve)
+def linalg_tensorsolve(A, b, dims=None):
+  # examples:
+  # A = torch.randn(2, 3, 6), b = torch.randn(3, 2)
+  # A = torch.randn(2, 3, 6), b = torch.randn(2, 3) -> torch.Size([3, 6])
+  # A = torch.randn(9, 2, 6, 3) b = torch.randn(6, 3) -> torch.Size([6, 3])
+  # A = torch.randn(9, 2, 3, 6) b = torch.randn(6, 3) -> torch.Size([3, 6])
+  # A = torch.randn(18, 6, 3) b = torch.randn(18) -> torch.Size([6, 3])
+  # A = torch.randn(3, 8, 4, 6) b = torch.randn(4, 6) -> torch.Size([4,6])
+  # A = torch.randn(3, 8, 1, 2, 2, 6) b = torch.randn(3, 4, 2) -> torch.Size([2, 2, 6])
+
+  # torch allows b to be shaped differently.
+  # especially when axes are moved using dims.
+  # ValueError: After moving axes to end, leading shape of a must match shape of b. got a.shape=(3, 2, 6), b.shape=(2, 3)
+  # So we are handling the moveaxis and forcing b's shape to match what jax expects
+  if dims is not None:
+    A = jnp.moveaxis(A, dims, len(dims) * (A.ndim - 1,))
+    dims = None
+  if A.shape[:b.ndim] != b.shape:
+    b = jnp.reshape(b, A.shape[:b.ndim])
+  return jnp.linalg.tensorsolve(A, b, axes=dims)

@@ -139,7 +139,7 @@ class TestXMCollectiveOpsTpu(parameterized.TestCase):
                                              list(range(world_size))]])
 
 
-@absltest.skipIf(lambda: tpu.num_logical_cores_per_chip() >= 2,
+@absltest.skipIf(tpu.num_logical_cores_per_chip() >= 2,
                  "Dynamo not supported on TPU v2/v3")
 class TestDistCollectiveOpsTpu(parameterized.TestCase):
   """Test for collective ops from torch.distributed"""
@@ -246,6 +246,32 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
       assert 'xla::reduce_scatter_tensor' in met.counter_names()
     return output.cpu()
 
+  @staticmethod
+  def _all_to_all_single(use_dynamo: bool):
+    met.clear_all()
+    dist.init_process_group("xla", init_method='xla://')
+    device = xm.xla_device()
+
+    def callable(output, input):
+      dist.all_to_all_single(output, input)
+      return output
+
+    # check https://github.com/pytorch/pytorch/blob/758d78790164bfb041555daed380de96e06f78a3/torch/distributed/distributed_c10d.py#L3880
+    # for input and output tensor example
+    tensor_in = torch.tensor(
+        [xr.local_ordinal()] * tpu.num_expected_global_devices(),
+        dtype=torch.float,
+        device=device)
+    tensor_out = torch.zeros_like(tensor_in)
+    f = torch.compile(callable, backend='openxla') if use_dynamo else callable
+    output = f(tensor_out, tensor_in)
+    torch_xla.sync()
+    if not use_dynamo:
+      assert 'xla::AllToAll' in met.counter_names()
+    else:
+      assert 'xla::all_to_all_single' in met.counter_names()
+    return output.cpu()
+
   @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
   def test_all_reduce(self, use_dynamo):
     results = pjrt.run_multiprocess(self._all_reduce, use_dynamo=use_dynamo)
@@ -286,6 +312,17 @@ class TestDistCollectiveOpsTpu(parameterized.TestCase):
     ]
     for index, val in results.items():
       torch.testing.assert_close(val, expected[index])
+
+  @parameterized.named_parameters(('dynamo', True), ('nondynamo', False))
+  def test_all_to_all_single(self, use_dynamo):
+    results = pjrt.run_multiprocess(
+        self._all_to_all_single, use_dynamo=use_dynamo)
+    expected = torch.arange(
+        tpu.num_expected_global_devices(), dtype=torch.float)
+    # Note: AllToAll xla op does not honor the order of the all_to_all, which means
+    # the rank may not follow the order.
+    for _, val in results.items():
+      self.assertTrue(torch.allclose(val.sort().values, expected.sort().values))
 
 
 if __name__ == '__main__':

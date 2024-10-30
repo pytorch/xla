@@ -17,13 +17,17 @@ from typing import Callable, Optional
 
 class InplaceOp:
 
-    def __init__(self, functional_op, position_to_mutate=0):
+    def __init__(self, functional_op, replace=False, position_to_mutate=0):
         self.functional = functional_op
+        self.replace = replace
         self.position_to_mutate = position_to_mutate
 
     def __call__(self, *args, **kwargs):
         to_mutate = args[0]
-        to_mutate.copy_(self.functional(*args, **kwargs))
+        if self.replace:
+          to_mutate._elem = self.functional(*args, **kwargs)._elem
+        else:
+          to_mutate.copy_(self.functional(*args, **kwargs))
         return to_mutate
 
 

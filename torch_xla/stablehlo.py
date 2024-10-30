@@ -320,7 +320,10 @@ _extra_decompositions = get_decompositions([torch.ops.aten.grid_sampler_2d])
 
 
 def _run_decompositions(exported_model):
-  decomp_table = core_aten_decompositions()
+  if hasattr(torch.export, 'default_decompositions'):
+    decomp_table = torch.export.default_decompositions()
+  else:
+    decomp_table = core_aten_decompositions()
   decomp_table.update(_extra_decompositions)
   decomp_table[torch.ops.aten._safe_softmax.default] = torch.softmax
   exported_model = exported_model.run_decompositions(decomp_table)

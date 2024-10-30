@@ -73,6 +73,11 @@ We recommend you to use our prebuilt Docker image to start your development work
   # Output: xla:0
   ```
 
+**Subsequent builds**: after setting up the source checkouts and building them
+for the first time, you may find the need to build everything again after e.g.
+`git pull`. You can run `scripts/build_developer.sh` which will build PyTorch,
+TorchVision, and PyTorch/XLA according to the above.
+
 ### Manually build in Docker container
 
 * Setup Development Docker Image
