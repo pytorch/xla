@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git89e47b3 )
+                  master (2.6.0+git3efe1eb )
                 </div>
               
             
@@ -486,8 +486,7 @@ your script.</p>
 <span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_backend</span>
 
 <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="p">):</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MASTER_ADDR&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;localhost&#39;</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;MASTER_PORT&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;12355&#39;</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;PJRT_DEVICE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;TPU&#39;</span>
 
     <span class="c1"># initialize the xla process group</span>
     <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="n">world_size</span><span class="p">)</span>
