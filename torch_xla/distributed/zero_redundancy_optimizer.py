@@ -433,7 +433,7 @@ class ZeroRedundancyOptimizer(Optimizer):
 
     # All gather the new weights across the ranks and assign them to the full parameters
     if sharding_scheme is None:
-        sharding_scheme = self._get_sharding_scheme({})
+      sharding_scheme = self._get_sharding_scheme({})
     sharded_data = []
     for param_group, sharded_param_group in zip(
         self.param_groups, self.base_optimizer.param_groups):
