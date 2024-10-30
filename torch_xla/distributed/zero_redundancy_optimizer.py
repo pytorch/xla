@@ -437,7 +437,6 @@ class ZeroRedundancyOptimizer(Optimizer):
 
     return loss
 
-
   def allgather_weights_and_update_full_parameter(self, sharding_scheme):
 
     # All gather the new weights across the ranks and assign them to the full parameters
