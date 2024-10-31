@@ -25,8 +25,9 @@ python3 test/pjrt/test_dtypes.py
 python3 test/pjrt/test_dynamic_plugin_tpu.py
 python3 test/test_while_loop.py
 python3 test/test_scan.py
-python3 test/test_pallas.py
+python3 test/test_pallas.py -v
 python3 test/test_pallas_spmd.py
+python3 test/test_tpu_paged_attention_kernel.py
 python3 test/test_input_output_aliases.py
 python3 test/test_gmm.py
 python3 test/eager/test_eager_spmd.py
