@@ -143,8 +143,14 @@ xla::PrimitiveType MaybeDowncastToXlaDeviceType(
       return CheckNeuronDevice(hw_type) ? xla::PrimitiveType::S32
                                         : xla::PrimitiveType::S16;
     case xla::PrimitiveType::S64:
+      if (CheckNeuronDevice(hw_type)) {
+        return xla::PrimitiveType::S32;
+      }
       return xla::PrimitiveType::S64;
     case xla::PrimitiveType::U64:
+      if (CheckNeuronDevice(hw_type)) {
+        return xla::PrimitiveType::U32;
+      }
       return xla::PrimitiveType::U64;
     case xla::PrimitiveType::C128:
       return xla::PrimitiveType::C128;
