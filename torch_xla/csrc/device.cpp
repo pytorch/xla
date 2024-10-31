@@ -116,4 +116,16 @@ bool CheckTpuDevice(XlaDeviceType hw_type) {
   return false;
 }
 
+bool CheckNeuronDevice(XlaDeviceType hw_type) {
+  if (hw_type == XlaDeviceType::NEURON) {
+    return true;
+  }
+
+  std::string pjrt_device = runtime::sys_util::GetEnvString("PJRT_DEVICE", "");
+  if (hw_type == XlaDeviceType::SPMD) {
+    return pjrt_device == "NEURON";
+  }
+  return false;
+}
+
 }  // namespace torch_xla

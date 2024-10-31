@@ -57,6 +57,9 @@ bool GetLockSpmdConfig();
 // TODO(yeounoh) - see if we need to check for AOT compilation device type.
 bool CheckTpuDevice(XlaDeviceType hw_type);
 
+// Return true if the physical device type is NEURON.
+bool CheckNeuronDevice(XlaDeviceType hw_type);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_DEVICE_H_
