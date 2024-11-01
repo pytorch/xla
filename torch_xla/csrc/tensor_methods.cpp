@@ -564,7 +564,8 @@ std::vector<XLATensorPtr> custom_call(
     const std::vector<XLATensorPtr>& inputs, const std::string& target,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes, bool has_side_effect,
-    const std::string& backend_config, const int api_version) {
+    const std::string& backend_config, const int api_version,
+    const std::unordered_map<std::string, std::string>& frontend_attributes) {
   XLA_CHECK(inputs.size() > 0) << "inputs are empty";
 
   std::vector<torch::lazy::Value> values;
@@ -584,7 +585,7 @@ std::vector<XLATensorPtr> custom_call(
 
   auto node = torch_xla::MakeNode<CustomCall>(
       values, target, xla::ShapeUtil::MakeTupleShape(output_xla_shapes),
-      has_side_effect, backend_config, api_version);
+      has_side_effect, backend_config, api_version, frontend_attributes);
 
   std::vector<XLATensorPtr> outputs;
   outputs.reserve(output_shapes.size());
