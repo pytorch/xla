@@ -113,12 +113,19 @@ bool IsTpuDevice(XlaDeviceType hw_type) {
   return (hw_type == XlaDeviceType::TPU) || spmd_device_is_tpu;
 }
 
+bool IsNeuronDevice(XlaDeviceType hw_type) {
+  static bool spmd_device_is_neuron =
+      (hw_type == XlaDeviceType::SPMD) &&
+      runtime::GetComputationClient()->GetDefaultDevice().find("NEURON") == 0;
+  return (hw_type == XlaDeviceType::NEURON) || spmd_device_is_neuron;
+}
+
 xla::PrimitiveType XlaTypeFromTensorType(
     at::ScalarType scalar_type, const torch::lazy::BackendDevice& device) {
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
   switch (scalar_type) {
     case at::ScalarType::Double:
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+      return !IsTpuDevice(hw_type) && !IsNeuronDevice(hw_type)
                  ? xla::PrimitiveType::F64
                  : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
@@ -138,7 +145,9 @@ xla::PrimitiveType XlaTypeFromTensorType(
     case at::ScalarType::Int:
       return xla::PrimitiveType::S32;
     case at::ScalarType::Long:
-      return xla::PrimitiveType::S64;
+      return !IsNeuronDevice(hw_type)
+                 ? xla::PrimitiveType::S64
+                 : xla::PrimitiveType::S32;
     case at::ScalarType::ComplexFloat:
       return xla::PrimitiveType::C64;
     case at::ScalarType::ComplexDouble:
@@ -1267,7 +1276,7 @@ xla::PrimitiveType GetDevicePrimitiveType(
       if (DowncastBF16() || DowncastF16()) {
         return xla::PrimitiveType::F32;
       }
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+      return !IsTpuDevice(hw_type) && !IsNeuronDevice(hw_type)
                  ? xla::PrimitiveType::F64
                  : xla::PrimitiveType::F32;
     case xla::PrimitiveType::F32:
@@ -1277,17 +1286,17 @@ xla::PrimitiveType GetDevicePrimitiveType(
       return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
                                          : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U16:
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+      return !IsTpuDevice(hw_type) && !IsNeuronDevice(hw_type)
                  ? xla::PrimitiveType::U16
                  : xla::PrimitiveType::U32;
     case xla::PrimitiveType::S16:
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+      return !IsTpuDevice(hw_type) && !IsNeuronDevice(hw_type)
                  ? xla::PrimitiveType::S16
                  : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S64:
-      return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
+      return Use32BitLong() || IsNeuronDevice(hw_type) ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
     case xla::PrimitiveType::U64:
-      return Use32BitLong() ? xla::PrimitiveType::U32 : xla::PrimitiveType::U64;
+      return Use32BitLong() || IsNeuronDevice(hw_type) ? xla::PrimitiveType::U32 : xla::PrimitiveType::U64;
     case xla::PrimitiveType::C128:
       return !IsTpuDevice(hw_type) ? xla::PrimitiveType::C128
                                    : xla::PrimitiveType::C64;
