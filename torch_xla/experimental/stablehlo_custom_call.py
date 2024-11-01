@@ -12,10 +12,10 @@ def stablehlo_custom_call(args,
                           backend_config="",
                           api_version=0,
                           frontend_attributes=None):
-  frontend_attributes = frontend_attributes or {}                      
+  frontend_attributes = frontend_attributes or {}
   res = torch_xla._XLAC._xla_custom_call(args, call_target, output_shapes,
                                          output_dtypes, has_side_effect,
-                                         backend_config, api_version, 
+                                         backend_config, api_version,
                                          frontend_attributes)
   if len(output_shapes) == 1:
     return res[0]
@@ -35,11 +35,16 @@ def extract_custom_call_outputs_shape_dtype(n: torch.fx.Node):
 
 
 def place_to_host(a: torch.Tensor):
-  return stablehlo_custom_call([a], "annotate_device_placement",
-                               [a.shape],[a.dtype], has_side_effect=True,
-                               frontend_attributes={"_xla_buffer_placement": "pinned_host"}) 
+  return stablehlo_custom_call(
+      [a],
+      "annotate_device_placement", [a.shape], [a.dtype],
+      has_side_effect=True,
+      frontend_attributes={"_xla_buffer_placement": "pinned_host"})
+
 
 def place_to_device(a: torch.Tensor):
-  return stablehlo_custom_call([a], "annotate_device_placement",
-                               [a.shape],[a.dtype], has_side_effect=True,
-                               frontend_attributes={"_xla_buffer_placement": "device"}) 
+  return stablehlo_custom_call(
+      [a],
+      "annotate_device_placement", [a.shape], [a.dtype],
+      has_side_effect=True,
+      frontend_attributes={"_xla_buffer_placement": "device"})
