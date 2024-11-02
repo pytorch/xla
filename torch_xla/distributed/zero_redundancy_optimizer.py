@@ -80,9 +80,10 @@ class ZeroRedundancyOptimizer(Optimizer):
       **defaults: Any,
   ):
     if not save_master_weights:
-      logging.warning(
-          'Not saving master weights may have accuracy issues when resuming training!'
-      )
+      if xm.is_master_ordinal(local=False):
+        logging.warning(
+            'Not saving master weights may have accuracy issues when resuming training!'
+        )
 
     super().__init__(params, defaults)
 
