@@ -358,6 +358,10 @@ def linalg_solve_ex(a, b):
 def linalg_svd(a, full_matrices=True, **kwargs):
   return jaten._aten__linalg_svd(a, full_matrices=full_matrices, **kwargs)
 
+@register_function(torch.linalg.matrix_power)
+def matrix_power(A, n, *, out=None):
+  return jnp.linalg.matrix_power(A, n)
+
 @register_function(torch.svd)
 def svd(a, some=True, compute_uv=True):
   if not compute_uv:
