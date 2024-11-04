@@ -624,12 +624,6 @@ def _zeros(size: Sequence[int], dtype=None, **kwargs):
   return jnp.zeros(size, dtype)
 
 
-@op(torch.ops.aten.eye)
-@op_base.convert_dtype()
-def _eye(n: int, m: Optional[int] = None, *, dtype=None, **kwargs):
-  return jnp.eye(n, m, dtype=dtype)
-
-
 @op(torch.ops.aten.full)
 @op_base.convert_dtype()
 def _full(size: Sequence[int], fill_value, *, dtype=None, **kwargs):
@@ -1892,7 +1886,6 @@ def _generate_indices(dims, skip_dim_indices = []):
       _helper(curr_dim_idx + 1, sofar[:])
       return
     if curr_dim_idx >= len(dims):
-      print(sofar)
       res.append(sofar)
       return
     for i in range(dims[curr_dim_idx]):
