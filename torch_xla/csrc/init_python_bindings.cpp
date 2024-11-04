@@ -2555,8 +2555,9 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<at::Tensor>& inputs, const std::string& target,
            const std::vector<std::vector<int64_t>>& output_shapes,
            const std::vector<py::object>& output_dtypes, bool has_side_effect,
-           const std::string& backend_config,
-           const int api_version) -> std::vector<at::Tensor> {
+           const std::string& backend_config, const int api_version,
+           const std::unordered_map<std::string, std::string>&
+               frontend_attributes) -> std::vector<at::Tensor> {
           std::vector<at::ScalarType> dtypes;
           dtypes.reserve(output_dtypes.size());
           for (auto& dtype : output_dtypes) {
@@ -2566,7 +2567,8 @@ void InitXlaModuleBindings(py::module m) {
 
           auto xtensors = tensor_methods::custom_call(
               bridge::GetXlaTensors(inputs), target, output_shapes, dtypes,
-              has_side_effect, backend_config, api_version);
+              has_side_effect, backend_config, api_version,
+              frontend_attributes);
           return bridge::AtenFromXlaTensors(std::move(xtensors));
         });
   m.def("_xla_tpu_custom_call",

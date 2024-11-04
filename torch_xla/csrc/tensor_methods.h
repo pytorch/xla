@@ -92,7 +92,8 @@ std::vector<XLATensorPtr> custom_call(
     const std::vector<XLATensorPtr>& inputs, const std::string& target,
     const std::vector<std::vector<int64_t>>& output_shapes,
     const std::vector<at::ScalarType>& output_dtypes, bool has_side_effect,
-    const std::string& backend_config, const int api_version);
+    const std::string& backend_config, const int api_version,
+    const std::unordered_map<std::string, std::string>& frontend_attributes);
 
 void custom_sharding_(
     const XLATensorPtr& input,
