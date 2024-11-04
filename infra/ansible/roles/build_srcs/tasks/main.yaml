@@ -125,7 +125,7 @@
   loop:
     - { dir: "{{ (src_root, 'pytorch/dist') | path_join }}", prefix: "torch" }
     - { dir: "{{ (src_root, 'pytorch/xla/dist') | path_join }}", prefix: "torch_xla" }
-  when: cxx11_abi
+  when: cxx11_abi | int > 0
 
 - name: Copy wheels to /dist
   ansible.builtin.shell: "cp {{ item }}/*.whl /dist"
@@ -173,7 +173,7 @@
   args:
     executable: /bin/bash
     chdir: "/dist"
-  when: cxx11_abi
+  when: cxx11_abi | int > 0
 
 - name: Find Torchvision *.whl files in /dist
   ansible.builtin.find:
