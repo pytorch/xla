@@ -45,6 +45,8 @@ mutation_ops_to_functional = {
   torch.ops.aten.squeeze_: (torch.ops.aten.squeeze, True),
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
   torch.ops.aten.clamp_min_: torch.ops.aten.clamp_min,
+  torch.ops.aten.sigmoid_: torch.ops.aten.sigmoid,
+  torch.ops.aten.tanh_: torch.ops.aten.tanh,
   torch.ops.aten.ceil_: torch.ops.aten.ceil,
   torch.ops.aten.logical_not_: torch.ops.aten.logical_not,
   torch.ops.aten.unsqueeze_: torch.ops.aten.unsqueeze,
