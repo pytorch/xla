@@ -105,40 +105,30 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
 #     num_queries_per_compute_block = 32
 #     block_kv_size = 256
 
-#   @parameterized.product(
-#       dtype=(jnp.float32, jnp.bfloat16),
-#       page_size=(16, 32, 64),
-#       num_kv_heads=(1, 8),
-#       q_kv_head_ratio=(1, 4, 8),
-#       head_dim=(128, 256),
-#       num_queries_per_compute_block=(16, 32),
-#       block_kv_size=(128, 256),
-#   )
-#   def test_paged_attention(
-#       self,
-#       dtype,
-#       page_size,
-#       num_kv_heads,
-#       q_kv_head_ratio,
-#       head_dim,
-#       num_queries_per_compute_block,
-#       block_kv_size,
-#   ):
+  @parameterized.product(
+      dtype=(jnp.float32, jnp.bfloat16),
+      page_size=(16, 32, 64),
+      num_kv_heads=(1, 8),
+      q_kv_head_ratio=(1, 4, 8),
+      head_dim=(128, 256),
+      num_queries_per_compute_block=(16, 32),
+      block_kv_size=(128, 256),
+  )
   def test_paged_attention(
       self,
+      dtype,
+      page_size,
+      num_kv_heads,
+      q_kv_head_ratio,
+      head_dim,
+      num_queries_per_compute_block,
+      block_kv_size,
   ):
-    dtype = jnp.bfloat16
-    page_size=16
-    num_kv_heads = 8
-    q_kv_head_ratio = 4
-    head_dim = 256
-    num_queries_per_compute_block = 32
-    block_kv_size = 256
 
     max_kv_len = 2048
-    query_len = 33
+    query_len = 64
     kv_seq_lens = jax.random.randint(
-        jax.random.key(0), (3,), 32, max_kv_len)
+        jax.random.key(0), (3,), query_len, max_kv_len)
 
     assert query_len <= max_kv_len
     for cur_kv_seq in kv_seq_lens:
