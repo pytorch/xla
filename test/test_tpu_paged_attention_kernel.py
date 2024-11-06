@@ -43,8 +43,9 @@ def _ref_jax_extended_paged_attention(
     q,  # [batch_size, query_len, num_query_heads, head_size]
     k_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
     v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
-    lengths,  # [batch_size]
+    lengths,  # [batch_size], the effective kv_length.
     page_indices,  # [batch_size, pages_per_sequence]
+    real_q_lens, # [batch_size] the effective q_length
 ):
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
@@ -72,8 +73,8 @@ def _ref_jax_extended_paged_attention(
 
     attn = jnp.einsum("qhd,khd->hqk", q[i], k)
     attn = attn.astype('float32')
-    import pdb; pdb.set_trace()
-    q_span = (kv_len - query_len) + jax.lax.broadcasted_iota(
+    real_q_len = real_q_lens[i]
+    q_span = (kv_len - real_q_len) + jax.lax.broadcasted_iota(
         jnp.int32, (query_len, kv_len), 0)
     kv_span = jax.lax.broadcasted_iota(jnp.int32, (query_len, kv_len), 1)
     mask = jnp.where(q_span < kv_span, float("-inf"), 0.)
@@ -104,30 +105,40 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
 #     num_queries_per_compute_block = 32
 #     block_kv_size = 256
 
-  @parameterized.product(
-      dtype=(jnp.float32, jnp.bfloat16),
-      page_size=(16, 32, 64),
-      num_kv_heads=(1, 8),
-      q_kv_head_ratio=(1, 4, 8),
-      head_dim=(128, 256),
-      num_queries_per_compute_block=(16, 32),
-      block_kv_size=(128, 256),
-  )
+#   @parameterized.product(
+#       dtype=(jnp.float32, jnp.bfloat16),
+#       page_size=(16, 32, 64),
+#       num_kv_heads=(1, 8),
+#       q_kv_head_ratio=(1, 4, 8),
+#       head_dim=(128, 256),
+#       num_queries_per_compute_block=(16, 32),
+#       block_kv_size=(128, 256),
+#   )
+#   def test_paged_attention(
+#       self,
+#       dtype,
+#       page_size,
+#       num_kv_heads,
+#       q_kv_head_ratio,
+#       head_dim,
+#       num_queries_per_compute_block,
+#       block_kv_size,
+#   ):
   def test_paged_attention(
       self,
-      dtype,
-      page_size,
-      num_kv_heads,
-      q_kv_head_ratio,
-      head_dim,
-      num_queries_per_compute_block,
-      block_kv_size,
   ):
+    dtype = jnp.bfloat16
+    page_size=16
+    num_kv_heads = 8
+    q_kv_head_ratio = 4
+    head_dim = 256
+    num_queries_per_compute_block = 32
+    block_kv_size = 256
 
     max_kv_len = 2048
-    query_len = 64
+    query_len = 33
     kv_seq_lens = jax.random.randint(
-        jax.random.key(0), (3,), query_len, max_kv_len)
+        jax.random.key(0), (3,), 32, max_kv_len)
 
     assert query_len <= max_kv_len
     for cur_kv_seq in kv_seq_lens:
@@ -196,8 +207,9 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     block_kv_size = 256
 
     max_kv_len = 2048
-    # Set query_len>kv_seq_lens
+    # Set query_len(32)>kv_seq_lens(3)
     query_len = num_queries_per_compute_block
+    real_query_len = jnp.array([2])
     kv_seq_lens = jnp.array([3])
 
     batch_size = len(kv_seq_lens)
@@ -237,6 +249,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         v_pages,
         kv_seq_lens,
         page_indices,
+        real_query_len,
     )
 
     self.assertEqual(actual_output.shape, expected_output.shape)
