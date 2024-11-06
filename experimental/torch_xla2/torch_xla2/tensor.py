@@ -391,7 +391,7 @@ class Environment(contextlib.ContextDecorator):
       kwargs = kwargs or {}
       if func in TENSOR_CONSTRUCTORS:
         return self._handle_tensor_constructor(func, args, kwargs)
-      if func in (torch.Tensor.to, torch.ops.aten._to_copy, torch.ops.aten._to_copy.default):
+      if func in (torch.Tensor.to, torch.ops.aten.lift_fresh.default ,torch.ops.aten._to_copy, torch.ops.aten._to_copy.default):
         return self._torch_Tensor_to(args, kwargs)
 
       # If the func doesn't act on XLATensor2, and is not a tensor constructor,
