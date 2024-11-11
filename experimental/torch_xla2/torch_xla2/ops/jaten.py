@@ -282,6 +282,10 @@ def _aten_mul(x, y):
   res = x * y
   if isinstance(x, float) or isinstance(y, float):
     res = res.astype(new_dtype)
+  else:
+    if (not isinstance(x, int)) and (not isinstance(y, int)):
+      if x.dtype == np.dtype(np.float64) or y.dtype == np.dtype(np.float64):
+        res = res.astype(new_dtype)
   return res
 
 
