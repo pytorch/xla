@@ -43,6 +43,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.relu_: torch.ops.aten.relu,
   # squeeze_ is expected to change tensor's shape. So replace with new value 
   torch.ops.aten.squeeze_: (torch.ops.aten.squeeze, True),
+  torch.ops.aten.sqrt_: torch.ops.aten.sqrt,
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
   torch.ops.aten.clamp_min_: torch.ops.aten.clamp_min,
   torch.ops.aten.sigmoid_: torch.ops.aten.sigmoid,
