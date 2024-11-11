@@ -135,7 +135,7 @@ def is_master_ordinal(local: bool = True) -> bool:
   return ordinal == 0
 
 
-def master_print(*args: Tuple[Any, ...],
+def master_print(*args: Any,
                  fd: TextIO = sys.stdout,
                  local: bool = False,
                  flush: bool = False):
@@ -984,7 +984,7 @@ def reduce_scatter_bucketized(reduce_type: str,
 
 
 def add_step_closure(closure: Callable[..., Any],
-                     args: Tuple[Any] = (),
+                     args: Tuple[Any, ...] = (),
                      run_async: bool = False):
   """Adds a closure to the list of the ones to be run at the end of the step.
 
