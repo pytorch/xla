@@ -37,7 +37,6 @@ skiplist = {
     "nn.functional.conv_transpose1d",
     "nn.functional.conv_transpose2d",
     "nn.functional.conv_transpose3d",
-    "nn.functional.cosine_embedding_loss",
     "nn.functional.ctc_loss",
     "nn.functional.dropout2d",
     "nn.functional.dropout3d",
