@@ -127,13 +127,13 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
 
     max_kv_len = 2048
     query_len = 64
+    batch_size = 3
     kv_seq_lens = jax.random.randint(
-        jax.random.key(0), (3,), query_len, max_kv_len)
+        jax.random.key(0), (batch_size,), query_len, max_kv_len)
 
     assert query_len <= max_kv_len
     for cur_kv_seq in kv_seq_lens:
       assert query_len <= cur_kv_seq, f'{query_len} should be less than or equal to the kv_len {cur_kv_seq} in the current sequence.'
-    batch_size = len(kv_seq_lens)
     pages_per_sequence = max_kv_len // page_size
     total_num_pages = batch_size * pages_per_sequence
     assert max_kv_len <= total_num_pages * page_size
@@ -152,7 +152,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
 
     print(f'Running paged_attention with {query_len=}')
     num_kv_pages_per_compute_block = block_kv_size // page_size
-    effective_q_lens = [query_len] * batch_size
+    effective_q_lens = jnp.full_like(kv_seq_lens, query_len)
     actual_output = paged_attention(
         q,
         k_pages,
@@ -202,15 +202,15 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     max_kv_len = 2048
     # Set query_len>kv_seq_lens
     query_len = max_kv_len
+    batch_size = 3
     kv_seq_lens = jax.random.randint(
-        jax.random.key(0), (3,), 0, max_kv_len)
+        jax.random.key(0), (batch_size,), 0, max_kv_len)
     effective_q_lens = jax.random.randint(
-        jax.random.key(0), (3,), 0, kv_seq_lens)
+        jax.random.key(0), (batch_size,), 0, kv_seq_lens)
     for cur_effec_q_len, cur_kv_seq_len in zip(effective_q_lens, kv_seq_lens):
       assert cur_effec_q_len <= cur_kv_seq_len, f'{cur_effec_q_len} should be less than or equal to the kv_len {cur_kv_seq_len} in the current sequence.'
     print(f'{kv_seq_lens=}, {effective_q_lens=}')
 
-    batch_size = len(kv_seq_lens)
     pages_per_sequence = max_kv_len // page_size
     total_num_pages = batch_size * pages_per_sequence
     assert max_kv_len <= total_num_pages * page_size
