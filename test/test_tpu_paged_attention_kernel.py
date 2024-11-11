@@ -45,7 +45,7 @@ def _ref_jax_extended_paged_attention(
     v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
     lengths,  # [batch_size], the effective kv_length.
     page_indices,  # [batch_size, pages_per_sequence]
-    real_q_lens, # [batch_size] the effective q_length
+    effective_q_lens, # [batch_size] the effective q_length
 ):
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
@@ -73,8 +73,8 @@ def _ref_jax_extended_paged_attention(
 
     attn = jnp.einsum("qhd,khd->hqk", q[i], k)
     attn = attn.astype('float32')
-    real_q_len = real_q_lens[i]
-    q_span = (kv_len - real_q_len) + jax.lax.broadcasted_iota(
+    effective_q_len = effective_q_lens[i]
+    q_span = (kv_len - effective_q_len) + jax.lax.broadcasted_iota(
         jnp.int32, (query_len, kv_len), 0)
     kv_span = jax.lax.broadcasted_iota(jnp.int32, (query_len, kv_len), 1)
     mask = jnp.where(q_span < kv_span, float("-inf"), 0.)
@@ -152,12 +152,14 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
 
     print(f'Running paged_attention with {query_len=}')
     num_kv_pages_per_compute_block = block_kv_size // page_size
+    effective_q_lens = [query_len] * batch_size
     actual_output = paged_attention(
         q,
         k_pages,
         v_pages,
         kv_seq_lens,
         page_indices,
+        effective_q_lens,
         num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
         num_queries_per_compute_block=num_queries_per_compute_block,
     )
@@ -170,6 +172,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         v_pages,
         kv_seq_lens,
         page_indices,
+        effective_q_lens,
     )
 
     self.assertEqual(actual_output.shape, expected_output.shape)
@@ -197,10 +200,15 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     block_kv_size = 256
 
     max_kv_len = 2048
-    # Set query_len(32)>kv_seq_lens(3)
-    query_len = num_queries_per_compute_block
-    real_query_len = jnp.array([2])
-    kv_seq_lens = jnp.array([3])
+    # Set query_len>kv_seq_lens
+    query_len = max_kv_len
+    kv_seq_lens = jax.random.randint(
+        jax.random.key(0), (3,), 0, max_kv_len)
+    effective_q_lens = jax.random.randint(
+        jax.random.key(0), (3,), 0, kv_seq_lens)
+    for cur_effec_q_len, cur_kv_seq_len in zip(effective_q_lens, kv_seq_lens):
+      assert cur_effec_q_len <= cur_kv_seq_len, f'{cur_effec_q_len} should be less than or equal to the kv_len {cur_kv_seq_len} in the current sequence.'
+    print(f'{kv_seq_lens=}, {effective_q_lens=}')
 
     batch_size = len(kv_seq_lens)
     pages_per_sequence = max_kv_len // page_size
@@ -227,6 +235,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         v_pages,
         kv_seq_lens,
         page_indices,
+        effective_q_lens,
         num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
         num_queries_per_compute_block=num_queries_per_compute_block,
     )
@@ -239,13 +248,19 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         v_pages,
         kv_seq_lens,
         page_indices,
-        real_query_len,
+        effective_q_lens,
     )
 
     self.assertEqual(actual_output.shape, expected_output.shape)
 
-    atol = 1e-2
-    rtol = 1e-2
+    if dtype == jnp.float32:
+      atol = 1e-2
+      rtol = 1e-2
+    elif dtype == jnp.bfloat16:
+      atol = 6e-1
+      rtol = 1e-1
+    else:
+      self.fail(f'Unsupported dtype: {dtype}')
     print(f'Output max diff: {jnp.max(jnp.abs(expected_output - actual_output))}')
     print(f'Output mean diff: {jnp.mean(jnp.abs(expected_output - actual_output))}')
     self.assertTrue(
