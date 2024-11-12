@@ -575,7 +575,8 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
 
 def mark_sharding(
     t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
+    partition_spec: Tuple[Union[Tuple, int, str, None],
+                          ...]) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
