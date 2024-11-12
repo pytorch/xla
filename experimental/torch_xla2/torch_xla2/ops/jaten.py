@@ -113,7 +113,11 @@ def _aten_add(x, y, *, alpha=1):
 
   assert x.dtype == y.dtype, (x.dtype, y.dtype)
   """
-  return x + y * alpha
+  res = x + y * alpha
+  if isinstance(x, float) or isinstance(y, float):
+    new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+    res = res.astype(new_dtype)
+  return res
 
 
 @op(torch.ops.aten.copy_, is_jax_function=False)
