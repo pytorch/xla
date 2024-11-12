@@ -567,7 +567,10 @@ class PallasTest(unittest.TestCase):
 
     max_kv_len = 2048
     query_len = 64
-    kv_seq_lens = torch.randint(query_len, max_kv_len, (3,), dtype=torch.int32)
+    batch_size = 3
+    kv_seq_lens = torch.randint(
+        query_len, max_kv_len, (batch_size,), dtype=torch.int32)
+    effective_q_lens = torch.full((batch_size,), query_len, dtype=torch.int32)
     assert query_len <= max_kv_len
     for cur_kv_seq in kv_seq_lens:
       assert query_len <= cur_kv_seq, f'{query_len} should be less than or equal to the kv_len {cur_kv_seq} in the current sequence.'
@@ -592,6 +595,7 @@ class PallasTest(unittest.TestCase):
     v_pages_xla = v_pages.to("xla")
     kv_seq_lens_xla = kv_seq_lens.to("xla")
     page_indices_xla = page_indices.to("xla")
+    effective_q_lens_xla = effective_q_lens.to("xla")
 
     output = multi_queries_paged_attention(
         q_xla,
@@ -599,6 +603,7 @@ class PallasTest(unittest.TestCase):
         v_pages_xla,
         kv_seq_lens_xla,
         page_indices_xla,
+        effective_q_lens_xla,
         num_kv_pages_per_compute_block=block_kv_size // page_size,
         num_queries_per_compute_block=num_queries_per_compute_block,
     )
@@ -609,6 +614,7 @@ class PallasTest(unittest.TestCase):
         v_pages_xla,
         kv_seq_lens_xla,
         page_indices_xla,
+        effective_q_lens_xla,
         num_kv_pages_per_compute_block=block_kv_size // page_size,
         num_queries_per_compute_block=num_queries_per_compute_block,
         use_kernel=False,
@@ -619,6 +625,7 @@ class PallasTest(unittest.TestCase):
     v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
     kv_seq_lens_jax = jnp.array(kv_seq_lens.numpy(), dtype=jnp.int32)
     page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    effective_q_lens_jax = jnp.array(effective_q_lens.numpy(), dtype=jnp.int32)
     expected_output = torch.from_numpy(
         np.array(
             jax_multi_queries_paged_attention(
@@ -627,6 +634,7 @@ class PallasTest(unittest.TestCase):
                 v_pages_jax,
                 kv_seq_lens_jax,
                 page_indices_jax,
+                effective_q_lens_jax,
                 num_kv_pages_per_compute_block=block_kv_size // page_size,
                 num_queries_per_compute_block=num_queries_per_compute_block,
             )))
@@ -654,7 +662,10 @@ class PallasTest(unittest.TestCase):
 
     max_kv_len = 2048
     query_len = 64
-    kv_seq_lens = torch.randint(query_len, max_kv_len, (3,), dtype=torch.int32)
+    batch_size = 3
+    kv_seq_lens = torch.randint(
+        query_len, max_kv_len, (batch_size,), dtype=torch.int32)
+    effective_q_lens = torch.full((batch_size,), query_len, dtype=torch.int32)
     assert query_len <= max_kv_len
     for cur_kv_seq in kv_seq_lens:
       assert query_len <= cur_kv_seq, f'{query_len} should be less than or equal to the kv_len {cur_kv_seq} in the current sequence.'
@@ -679,9 +690,10 @@ class PallasTest(unittest.TestCase):
     v_pages_xla = v_pages.to("xla")
     kv_seq_lens_xla = kv_seq_lens.to("xla")
     page_indices_xla = page_indices.to("xla")
+    effective_q_lens_xla = effective_q_lens.to("xla")
 
     def multi_queries_paged_attention_wrapper(q, k_pages, v_pages, kv_seq_lens,
-                                              page_indices,
+                                              page_indices, effective_q_lens,
                                               num_kv_pages_per_compute_block,
                                               num_queries_per_compute_block,
                                               use_kernel):
@@ -691,6 +703,7 @@ class PallasTest(unittest.TestCase):
           v_pages,
           kv_seq_lens,
           page_indices,
+          effective_q_lens,
           num_kv_pages_per_compute_block,
           num_queries_per_compute_block,
           use_kernel=use_kernel,
@@ -705,6 +718,7 @@ class PallasTest(unittest.TestCase):
         v_pages_xla,
         kv_seq_lens_xla,
         page_indices_xla,
+        effective_q_lens_xla,
         num_kv_pages_per_compute_block=block_kv_size // page_size,
         num_queries_per_compute_block=num_queries_per_compute_block,
         use_kernel=True,
@@ -716,6 +730,7 @@ class PallasTest(unittest.TestCase):
         v_pages_xla,
         kv_seq_lens_xla,
         page_indices_xla,
+        effective_q_lens_xla,
         num_kv_pages_per_compute_block=block_kv_size // page_size,
         num_queries_per_compute_block=num_queries_per_compute_block,
         use_kernel=False,
