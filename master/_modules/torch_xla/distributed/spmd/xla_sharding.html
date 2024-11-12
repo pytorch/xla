@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git5a4641b )
+                  master (2.6.0+gitc4f2771 )
                 </div>
               
             
@@ -988,7 +988,8 @@
 
 <div class="viewcode-block" id="mark_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.mark_sharding">[docs]</a><span class="k">def</span> <span class="nf">mark_sharding</span><span class="p">(</span>
     <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
-    <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
+    <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+                          <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Annotates the tensor provided with XLA partition spec. Internally,</span>
 <span class="sd">    it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.</span>

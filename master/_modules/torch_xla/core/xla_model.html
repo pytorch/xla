@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git5a4641b )
+                  master (2.6.0+gitc4f2771 )
                 </div>
               
             
@@ -548,7 +548,7 @@
   <span class="k">return</span> <span class="n">ordinal</span> <span class="o">==</span> <span class="mi">0</span></div>
 
 
-<span class="k">def</span> <span class="nf">master_print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+<span class="k">def</span> <span class="nf">master_print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
                  <span class="n">fd</span><span class="p">:</span> <span class="n">TextIO</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span>
                  <span class="n">local</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">flush</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
@@ -1397,7 +1397,7 @@
 
 
 <div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-                     <span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+                     <span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
                      <span class="n">run_async</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Adds a closure to the list of the ones to be run at the end of the step.</span>
 
