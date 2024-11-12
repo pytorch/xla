@@ -93,6 +93,17 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
   def setUp(self):
     super().setUp()
 
+  #   def test_paged_attention(
+  #       self,
+  #   ):
+  #     dtype = jnp.bfloat16
+  #     page_size=16
+  #     num_kv_heads = 8
+  #     q_kv_head_ratio = 4
+  #     head_dim = 256
+  #     num_queries_per_compute_block = 32
+  #     block_kv_size = 256
+
   @parameterized.product(
       dtype=(jnp.float32, jnp.bfloat16),
       page_size=(16, 32, 64),
@@ -218,7 +229,6 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         jax.random.key(0), (batch_size,), 0, kv_seq_lens)
     for cur_effec_q_len, cur_kv_seq_len in zip(effective_q_lens, kv_seq_lens):
       assert cur_effec_q_len <= cur_kv_seq_len, f'The effective query len {cur_effec_q_len} should be less than or equal to the kv_len {cur_kv_seq_len} in the current sequence.'
-    # print(f'{kv_seq_lens=}, {effective_q_lens=}')
 
     pages_per_sequence = max_kv_len // page_size
     total_num_pages = batch_size * pages_per_sequence
@@ -272,7 +282,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     else:
       self.fail(f'Unsupported dtype: {dtype}')
     for b in range(batch_size):
-      # N.B. For the output ([batch_size, query_len, num_q_heads, head_dim]) at query_len dim, all the value after the effective_q_len will be thrown away. The value after the effective_q_len may differ between the kernel and the ref impl because of the causal mask.
+      # N.B. For the output ([batch_size, query_len, num_q_heads, head_dim]) at query_len dim, all the value after the effective_q_len will be thrown away due to we padding the query seq len. The values after the effective_q_len may differ between the kernel and the ref impl because of the causal mask.
       effective_q_len = effective_q_lens[b]
       self.assertTrue(
           jnp.allclose(
