@@ -45,7 +45,6 @@ skiplist = {
     "nn.functional.fractional_max_pool2d",
     "nn.functional.fractional_max_pool3d",
     "nn.functional.interpolate",
-    "nn.functional.margin_ranking_loss",
     "nn.functional.max_pool1d",
     "nn.functional.max_pool2d",
     "nn.functional.max_pool3d",
