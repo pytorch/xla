@@ -174,6 +174,16 @@ def _aten_cauchy_(x, median=0, sigma=1):
   return x.at[:].set(samples)
 
 
+@op(torch.ops.aten.atleast_2d)
+def _aten_atleast_2d(inputs):
+  return jnp.atleast_2d(inputs)
+
+
+@op(torch.ops.aten.atleast_1d)
+def _aten_atleast_1d(inputs):
+  return jnp.atleast_1d(inputs)
+
+
 # aten.complex
 @op(torch.ops.aten.complex)
 def _aten_complex(real, imag):
