@@ -793,6 +793,28 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_a = t.to(xla_device).sgn()
     self.assertEqual(a.data, xla_a.data.cpu())
 
+  def test_view_as_real_c64(self):
+    xla_device = torch_xla.device()
+    x = torch.randn(4, dtype=torch.cfloat, device=xla_device)
+    real = torch.view_as_real(x)
+    self.assertEqual(real.dtype, torch.float32)
+    # XLA type of the real needs to be f32 as well
+    self.assertIn("f32[4,2]", torch_xla._XLAC._get_xla_tensor_debug_info(real))
+    # HLO generated needs to have type f32 as well
+    self.assertIn("f32[4,2]",
+                  torch_xla._XLAC._get_xla_tensors_text([real]).split('\n')[-3])
+
+  def test_view_as_real_c128(self):
+    xla_device = torch_xla.device()
+    x = torch.randn(4, dtype=torch.cdouble, device=xla_device)
+    real = torch.view_as_real(x)
+    self.assertEqual(real.dtype, torch.float64)
+    # XLA type of the real needs to be f32 as well
+    self.assertIn("f64[4,2]", torch_xla._XLAC._get_xla_tensor_debug_info(real))
+    # HLO generated needs to have type f32 as well
+    self.assertIn("f64[4,2]",
+                  torch_xla._XLAC._get_xla_tensors_text([real]).split('\n')[-3])
+
   def test_index_put(self):
     xla_device = xm.xla_device()
     a = torch.tensor([1, 1, 1, 1]).to(xla_device).to(dtype=torch.float32)
