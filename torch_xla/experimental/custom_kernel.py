@@ -489,7 +489,7 @@ def _multi_queries_paged_attention_nonkernel(
     v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
     lengths,  # seq_lengths, [batch_size]. nb batch_size = len(seq_lens), the effective kv_length.
     page_indices,  # [batch_size, pages_per_sequence]
-    effective_q_lens, # [batch_size], the effective q_length
+    effective_q_lens,  # [batch_size], the effective q_length
 ) -> torch.Tensor:  # [batch_size, query_len, num_heads, head_dim]
   print('Running the nonkernel version of multi-queries paged attention.')
   batch_size, query_len, num_query_heads, head_size = q.shape

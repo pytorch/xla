@@ -97,7 +97,7 @@ class MultiPageAsyncCopyDescriptor:
 def _flash_attention(
     q_head_idx_per_kv,  # scalar, ranges from 0 to num_query_heads_per_kv_head
     lengths_ref,  # [batch_size] jax.Array the length of each example
-    effective_q_lens_ref, # [batch_size] jax.Array the length of the effective query lengths
+    effective_q_lens_ref,  # [batch_size] jax.Array the length of the effective query lengths
     # input
     q_ref,  # [1, num_q_heads_per_kv_head, num_queries_per_compute_block, head_dim]
     k,  # [pages_per_compute_block*page_size,head_dim]
@@ -211,7 +211,7 @@ def paged_flash_attention_kernel(
     lengths_ref,  # [batch_size] jax.Array the length of each example
     # 1d vector, results from page_indices.reshape(-1) where originally page_indices.shape=[batch_size, pages_per_sequence]
     page_indices_ref,
-    effective_q_lens_ref, # [batch_size] jax.Array the length of the effective query lengths
+    effective_q_lens_ref,  # [batch_size] jax.Array the length of the effective query lengths
     buffer_index_ref,
     step_ref,
     # At caller, q.shape=[batch_size, num_q_heads query_len, head_dim]
@@ -410,10 +410,11 @@ def paged_attention(
     q: A [batch_size, query_len, num_q_heads, head_dim] jax.Array.
     k_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
     v_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
-    lengths: A i32[batch_size] jax.Array the length of each example.
+    lengths: A i32[batch_size] jax.Array the effective kv length of each example.
     page_indices: A i32[batch_size, pages_per_sequence] jax.Array. Each entry
       should be in the range of [0, total_num_pages), indicating where to locate
       the page in `k_pages` or `v_pages`.
+    effective_q_lens: A i32[batch_size] jax.Array the effective query length of each example.
     mask_value: The value used for padding in attention. By default it is a very
       negative floating point number.
     num_kv_pages_per_compute_block: how many kv pages to be processed in one flash
@@ -454,7 +455,8 @@ def paged_attention(
   if lengths.shape != (batch_size,):
     raise ValueError("`lengths` and `q` must have the same batch size")
   if lengths.shape != effective_q_lens.shape:
-    raise ValueError("`lengths` and `effective_q_lens` must have the same size: batch_size")
+    raise ValueError(
+        "`lengths` and `effective_q_lens` must have the same size: batch_size")
   if batch_size_paged_indices != batch_size:
     raise ValueError("`page_indices` and `q` must have the same batch size")
   if lengths.dtype != jnp.int32:
@@ -477,7 +479,6 @@ def paged_attention(
         "Number of Q heads must be divisible by number of KV heads. Got"
         f" {num_q_heads} and {num_kv_heads}.")
   num_q_heads_per_kv_head = num_q_heads // num_kv_heads
-  
 
   # grid
   grid = (

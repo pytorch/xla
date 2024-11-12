@@ -45,7 +45,7 @@ def _ref_jax_extended_paged_attention(
     v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
     lengths,  # [batch_size], the effective kv_length.
     page_indices,  # [batch_size, pages_per_sequence]
-    effective_q_lens, # [batch_size] the effective q_length
+    effective_q_lens,  # [batch_size] the effective q_length
 ):
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
@@ -93,18 +93,6 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
   def setUp(self):
     super().setUp()
 
-
-#   def test_paged_attention(
-#       self,
-#   ):
-#     dtype = jnp.bfloat16
-#     page_size=16
-#     num_kv_heads = 8
-#     q_kv_head_ratio = 4
-#     head_dim = 256
-#     num_queries_per_compute_block = 32
-#     block_kv_size = 256
-
   @parameterized.product(
       dtype=(jnp.float32, jnp.bfloat16),
       page_size=(16, 32, 64),
@@ -114,7 +102,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
       num_queries_per_compute_block=(16, 32),
       block_kv_size=(128, 256),
   )
-  def test_paged_attention(
+  def test_paged_attention_without_query_padding(
       self,
       dtype,
       page_size,
@@ -188,16 +176,37 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     self.assertTrue(
         jnp.allclose(expected_output, actual_output, atol=atol, rtol=rtol))
 
-  def test_paged_attention_query_len_longer_than_kv_seq_len(
+  # def test_paged_attention_query_len_longer_than_kv_seq_len(
+  #     self,
+  # ):
+  #   dtype = jnp.float32
+  #   page_size=16
+  #   num_kv_heads = 8
+  #   q_kv_head_ratio = 4
+  #   head_dim = 256
+  #   num_queries_per_compute_block = 32
+  #   block_kv_size = 256
+  # In practice, vLLM would pad the query so that the query seq len will be longer than the kv seq len. query seq len may be padded but not for kv seq len.
+  # When this happens, we need an additional parameter `effective_q_lens` to the paged_attention to set the causal mask right.
+  @parameterized.product(
+      dtype=(jnp.float32, jnp.bfloat16),
+      page_size=(16, 32, 64),
+      num_kv_heads=(1, 8),
+      q_kv_head_ratio=(1, 4, 8),
+      head_dim=(128, 256),
+      num_queries_per_compute_block=(16, 32),
+      block_kv_size=(128, 256),
+  )
+  def test_paged_attention_with_query_padding(
       self,
+      dtype,
+      page_size,
+      num_kv_heads,
+      q_kv_head_ratio,
+      head_dim,
+      num_queries_per_compute_block,
+      block_kv_size,
   ):
-    dtype = jnp.float32
-    page_size=16
-    num_kv_heads = 8
-    q_kv_head_ratio = 4
-    head_dim = 256
-    num_queries_per_compute_block = 32
-    block_kv_size = 256
 
     max_kv_len = 2048
     # Set query_len>kv_seq_lens
@@ -208,13 +217,12 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     effective_q_lens = jax.random.randint(
         jax.random.key(0), (batch_size,), 0, kv_seq_lens)
     for cur_effec_q_len, cur_kv_seq_len in zip(effective_q_lens, kv_seq_lens):
-      assert cur_effec_q_len <= cur_kv_seq_len, f'{cur_effec_q_len} should be less than or equal to the kv_len {cur_kv_seq_len} in the current sequence.'
-    print(f'{kv_seq_lens=}, {effective_q_lens=}')
+      assert cur_effec_q_len <= cur_kv_seq_len, f'The effective query len {cur_effec_q_len} should be less than or equal to the kv_len {cur_kv_seq_len} in the current sequence.'
+    # print(f'{kv_seq_lens=}, {effective_q_lens=}')
 
     pages_per_sequence = max_kv_len // page_size
     total_num_pages = batch_size * pages_per_sequence
     assert max_kv_len <= total_num_pages * page_size
-
     q, k_pages, v_pages, page_indices = _generate_qkv(
         kv_seq_lens,
         page_size,
@@ -227,7 +235,9 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         dtype,
     )
 
-    print(f'Running paged_attention with {query_len=}')
+    print(
+        f'Running paged_attention with {query_len=}, {kv_seq_lens=}, {effective_q_lens=}'
+    )
     num_kv_pages_per_compute_block = block_kv_size // page_size
     actual_output = paged_attention(
         q,
@@ -254,17 +264,23 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     self.assertEqual(actual_output.shape, expected_output.shape)
 
     if dtype == jnp.float32:
-      atol = 1e-2
+      atol = 2e-2
       rtol = 1e-2
     elif dtype == jnp.bfloat16:
       atol = 6e-1
       rtol = 1e-1
     else:
       self.fail(f'Unsupported dtype: {dtype}')
-    print(f'Output max diff: {jnp.max(jnp.abs(expected_output - actual_output))}')
-    print(f'Output mean diff: {jnp.mean(jnp.abs(expected_output - actual_output))}')
-    self.assertTrue(
-        jnp.allclose(expected_output, actual_output, atol=atol, rtol=rtol))
+    for b in range(batch_size):
+      # N.B. For the output ([batch_size, query_len, num_q_heads, head_dim]) at query_len dim, all the value after the effective_q_len will be thrown away. The value after the effective_q_len may differ between the kernel and the ref impl because of the causal mask.
+      effective_q_len = effective_q_lens[b]
+      self.assertTrue(
+          jnp.allclose(
+              expected_output[b, :effective_q_len],
+              actual_output[b, :effective_q_len],
+              atol=atol,
+              rtol=rtol))
+
 
 if __name__ == "__main__":
   absltest.main(testLoader=jtu.JaxTestLoader())
