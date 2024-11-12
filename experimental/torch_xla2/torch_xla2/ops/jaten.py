@@ -1287,10 +1287,10 @@ def _aten_native_group_norm(input, weight, bias, N, C, HxW, group, eps=1e-5):
     A tuple of (normalized_output, mean, rstd)
   """
 
-  if len(input) == 0:
-    return input, input, input
-
   input_shape = input.shape
+
+  if 0 in input_shape:
+    return input, input, input
 
   # Reshape for group-wise normalization
   reshaped_input = jnp.reshape(input, (1, N * group, -1))
