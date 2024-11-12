@@ -44,7 +44,6 @@ skiplist = {
     "nn.functional.embedding_bag",
     "nn.functional.fractional_max_pool2d",
     "nn.functional.fractional_max_pool3d",
-    "nn.functional.hinge_embedding_loss",
     "nn.functional.interpolate",
     "nn.functional.margin_ranking_loss",
     "nn.functional.max_pool1d",
