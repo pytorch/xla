@@ -793,6 +793,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_a = t.to(xla_device).sgn()
     self.assertEqual(a.data, xla_a.data.cpu())
 
+  @skipIfFunctionalizationDisabled("view_as_real unsupported")
   def test_view_as_real_c64(self):
     xla_device = torch_xla.device()
     x = torch.randn(4, dtype=torch.cfloat, device=xla_device)
@@ -804,6 +805,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertIn("f32[4,2]",
                   torch_xla._XLAC._get_xla_tensors_text([real]).split('\n')[-3])
 
+  @skipIfFunctionalizationDisabled("view_as_real unsupported")
   def test_view_as_real_c128(self):
     xla_device = torch_xla.device()
     x = torch.randn(4, dtype=torch.cdouble, device=xla_device)
