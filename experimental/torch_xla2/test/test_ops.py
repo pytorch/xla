@@ -57,7 +57,6 @@ skiplist = {
     "nn.functional.multilabel_margin_loss",
     "nn.functional.pairwise_distance",
     "nn.functional.poisson_nll_loss",
-    "nn.functional.rrelu",
     "nn.functional.triplet_margin_loss",
     "nn.functional.triplet_margin_with_distance_loss",
     "nn.functional.upsample_nearest",
@@ -84,6 +83,7 @@ not_support_ops_list = {
   "ceil", # only failed with python 3.9
   "trunc", # only failed with python 3.9
   "to_sparse", # We are not supporting sparse tensors yet.
+  "nn.functional.rrelu", # pure torch result match torch_xla2 test result, only OpInfo mismatch: https://gist.github.com/ManfeiBai/1a449b15f4e946bfcaa3e5ef86da20f4
 }
 
 # These inputs are themselves views
