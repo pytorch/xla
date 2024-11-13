@@ -284,6 +284,21 @@ def _aten_sub(x, y, alpha=1):
   return x - y*alpha
 
 
+@op(torch.ops.aten.numpy_T)
+def _aten_numpy_T(input):
+  """
+  Jax implementation of torch.numpy_T.
+
+  Args:
+    input: JAX array.
+
+  Returns:
+    Transposed JAX array.
+  """
+  return jnp.transpose(input)
+
+
+
 @op(torch.ops.aten.mm)
 def _aten_mm(x, y):
   res = x @ y
