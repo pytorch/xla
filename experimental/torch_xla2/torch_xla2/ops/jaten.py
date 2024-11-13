@@ -4559,8 +4559,8 @@ def _aten__linalg_slogdet(input):
 
 # torch.linalg.svd
 @op(torch.ops.aten._linalg_svd)
-def _aten__linalg_svd(a, full_matrices=True):
-  return jnp.linalg.svd(a, full_matrices=full_matrices)
+def _aten__linalg_svd(a, full_matrices=False, **kwargs):
+  return jnp.linalg.svd(a, full_matrices=full_matrices, **kwargs)
 
 
 # torch.linalg.pinv
