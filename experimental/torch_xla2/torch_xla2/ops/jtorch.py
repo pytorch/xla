@@ -355,8 +355,8 @@ def linalg_solve_ex(a, b):
   return res, info
 
 @register_function(torch.linalg.svd)
-def linalg_svd(a, full_matrices=True, **kwargs):
-  return jaten._aten__linalg_svd(a, full_matrices=full_matrices, **kwargs)
+def linalg_svd(a, full_matrices=True):
+  return jaten._aten__linalg_svd(a, full_matrices=full_matrices)
 
 @register_function(torch.linalg.matrix_power)
 def matrix_power(A, n, *, out=None):
