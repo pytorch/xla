@@ -53,7 +53,6 @@ skiplist = {
     "nn.functional.pairwise_distance",
     "nn.functional.poisson_nll_loss",
     "nn.functional.rrelu",
-    "nn.functional.triplet_margin_with_distance_loss",
     "nn.functional.upsample_nearest",
     "nonzero",
     "nonzero_static",
