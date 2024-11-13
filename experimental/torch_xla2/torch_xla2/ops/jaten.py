@@ -43,6 +43,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.relu_: torch.ops.aten.relu,
   # squeeze_ is expected to change tensor's shape. So replace with new value 
   torch.ops.aten.squeeze_: (torch.ops.aten.squeeze, True),
+  torch.ops.aten.sqrt_: torch.ops.aten.sqrt,
   torch.ops.aten.clamp_: torch.ops.aten.clamp,
   torch.ops.aten.clamp_min_: torch.ops.aten.clamp_min,
   torch.ops.aten.sigmoid_: torch.ops.aten.sigmoid,
@@ -112,7 +113,11 @@ def _aten_add(x, y, *, alpha=1):
 
   assert x.dtype == y.dtype, (x.dtype, y.dtype)
   """
-  return x + y * alpha
+  res = x + y * alpha
+  if isinstance(x, float) or isinstance(y, float):
+    new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+    res = res.astype(new_dtype)
+  return res
 
 
 @op(torch.ops.aten.copy_, is_jax_function=False)
@@ -167,6 +172,16 @@ def _aten_cauchy_(x, median=0, sigma=1):
   key = jax.random.PRNGKey(0)  # You should use a different key for each call
   samples = jax.random.cauchy(key, x.shape) * sigma + median
   return x.at[:].set(samples)
+
+
+@op(torch.ops.aten.atleast_2d)
+def _aten_atleast_2d(inputs):
+  return jnp.atleast_2d(inputs)
+
+
+@op(torch.ops.aten.atleast_1d)
+def _aten_atleast_1d(inputs):
+  return jnp.atleast_1d(inputs)
 
 
 # aten.complex
@@ -281,6 +296,10 @@ def _aten_mul(x, y):
   res = x * y
   if isinstance(x, float) or isinstance(y, float):
     res = res.astype(new_dtype)
+  else:
+    if (not isinstance(x, int)) and (not isinstance(y, int)):
+      if x.dtype == np.dtype(np.float64) or y.dtype == np.dtype(np.float64):
+        res = res.astype(new_dtype)
   return res
 
 
@@ -1283,6 +1302,9 @@ def _aten_native_group_norm(input, weight, bias, N, C, HxW, group, eps=1e-5):
   """
 
   input_shape = input.shape
+
+  if 0 in input_shape:
+    return input, input, input
 
   # Reshape for group-wise normalization
   reshaped_input = jnp.reshape(input, (1, N * group, -1))
