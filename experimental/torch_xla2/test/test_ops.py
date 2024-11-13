@@ -49,7 +49,6 @@ skiplist = {
     "nn.functional.max_pool2d",
     "nn.functional.max_pool3d",
     "nn.functional.multi_head_attention_forward",
-    "nn.functional.multilabel_margin_loss",
     "nn.functional.pairwise_distance",
     "nn.functional.poisson_nll_loss",
     "nn.functional.upsample_nearest",
