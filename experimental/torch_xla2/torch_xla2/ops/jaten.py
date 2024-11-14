@@ -273,8 +273,12 @@ def _torch_binary_scalar_type(scalar, tensor):
 
 
 @op(torch.ops.aten.searchsorted.Tensor)
-def _aten_searchsorted(sorted_sequence, values):
-  return jnp.searchsorted(sorted_sequence, values)
+def _aten_searchsorted(sorted_sequence, values): 
+  new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+  res = jnp.searchsorted(sorted_sequence, values)
+  if sorted_sequence.dtype == np.dtype(np.int32) or sorted_sequence.dtype == np.dtype(np.int32):
+    res = res.astype(new_dtype)
+  return res # jnp.searchsorted(sorted_sequence, values)
 
 
 @op(torch.ops.aten.sub.Tensor)
