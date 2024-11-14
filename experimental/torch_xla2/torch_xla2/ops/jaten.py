@@ -250,6 +250,11 @@ def _aten_cholesky_solve(input, input2, upper=False):
   return solution
 
 
+@op(torch.ops.aten.special_zeta)
+def _aten_special_zeta(x, q):
+  return jax.scipy.special.zeta(x, q)
+
+
 # aten.igammac
 @op(torch.ops.aten.igammac)
 def _aten_igammac(input, other):
