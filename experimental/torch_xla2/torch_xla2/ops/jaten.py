@@ -252,7 +252,11 @@ def _aten_cholesky_solve(input, input2, upper=False):
 
 @op(torch.ops.aten.special_zeta)
 def _aten_special_zeta(x, q):
-  return jax.scipy.special.zeta(x, q)
+  new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
+  res = jax.scipy.special.zeta(x, q)
+  if isinstance(x, float) or isinstance(q, float):
+    res = res.astype(new_dtype)
+  return res # jax.scipy.special.zeta(x, q)
 
 
 # aten.igammac
