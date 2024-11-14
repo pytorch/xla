@@ -97,6 +97,7 @@ class MultiPageAsyncCopyDescriptor:
 def _flash_attention(
     q_head_idx_per_kv,  # scalar, ranges from 0 to num_query_heads_per_kv_head
     lengths_ref,  # [batch_size] jax.Array the length of each example
+    effective_q_lens_ref,  # [batch_size] jax.Array the length of the effective query lengths
     # input
     q_ref,  # [1, num_q_heads_per_kv_head, num_queries_per_compute_block, head_dim]
     k,  # [pages_per_compute_block*page_size,head_dim]
@@ -148,7 +149,8 @@ def _flash_attention(
   q_index = q_blk_idx * num_queries_per_compute_block
   kv_index = kv_blk_idx * kv_seq_len_per_kv_compute_blk
   kv_len = lengths_ref[b]
-  row_ids = (kv_len - query_len) + q_index + jax.lax.broadcasted_iota(
+  effective_q_len = effective_q_lens_ref[b]
+  row_ids = (kv_len - effective_q_len) + q_index + jax.lax.broadcasted_iota(
       jnp.int32,
       (num_queries_per_compute_block, kv_seq_len_per_kv_compute_blk), 0)
   col_ids = kv_index + jax.lax.broadcasted_iota(
@@ -209,6 +211,7 @@ def paged_flash_attention_kernel(
     lengths_ref,  # [batch_size] jax.Array the length of each example
     # 1d vector, results from page_indices.reshape(-1) where originally page_indices.shape=[batch_size, pages_per_sequence]
     page_indices_ref,
+    effective_q_lens_ref,  # [batch_size] jax.Array the length of the effective query lengths
     buffer_index_ref,
     step_ref,
     # At caller, q.shape=[batch_size, num_q_heads query_len, head_dim]
@@ -355,6 +358,7 @@ def paged_flash_attention_kernel(
       _flash_attention(
           q_head_idx,
           lengths_ref,
+          effective_q_lens_ref,
           q_ref,  # [1, num_q_heads_per_kv_head, num_queries_per_compute_block, head_dim]
           k,
           v,
@@ -394,6 +398,7 @@ def paged_attention(
     v_pages: jax.Array | quantization_utils.QuantizedTensor,
     lengths: jax.Array,
     page_indices: jax.Array,
+    effective_q_lens: jax.Array,
     *,
     mask_value: float = DEFAULT_MASK_VALUE,
     num_kv_pages_per_compute_block: int,
@@ -405,10 +410,11 @@ def paged_attention(
     q: A [batch_size, query_len, num_q_heads, head_dim] jax.Array.
     k_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
     v_pages: A [num_kv_heads, total_num_pages, page_size, head_dim] jax.Array.
-    lengths: A i32[batch_size] jax.Array the length of each example.
+    lengths: A i32[batch_size] jax.Array the effective kv length of each example.
     page_indices: A i32[batch_size, pages_per_sequence] jax.Array. Each entry
       should be in the range of [0, total_num_pages), indicating where to locate
       the page in `k_pages` or `v_pages`.
+    effective_q_lens: A i32[batch_size] jax.Array the effective query length of each example.
     mask_value: The value used for padding in attention. By default it is a very
       negative floating point number.
     num_kv_pages_per_compute_block: how many kv pages to be processed in one flash
@@ -448,6 +454,9 @@ def paged_attention(
                      f" {head_dim} and {head_dim_k}.")
   if lengths.shape != (batch_size,):
     raise ValueError("`lengths` and `q` must have the same batch size")
+  if lengths.shape != effective_q_lens.shape:
+    raise ValueError(
+        "`lengths` and `effective_q_lens` must have the same size: batch_size")
   if batch_size_paged_indices != batch_size:
     raise ValueError("`page_indices` and `q` must have the same batch size")
   if lengths.dtype != jnp.int32:
@@ -576,7 +585,7 @@ def paged_attention(
           mask_value=mask_value,
           query_len=query_len),
       grid_spec=pltpu.PrefetchScalarGridSpec(
-          num_scalar_prefetch=4,
+          num_scalar_prefetch=5,
           in_specs=in_specs,
           out_specs=out_specs,
           grid=grid,
@@ -598,6 +607,7 @@ def paged_attention(
   outs = kernel(
       lengths,
       page_indices_1d,
+      effective_q_lens,
       buffer_index,
       step,
       q.astype(q_dtype_for_kernel_launch),

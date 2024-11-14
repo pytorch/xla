@@ -487,8 +487,9 @@ def _multi_queries_paged_attention_nonkernel(
     q,  # [batch_size, query_len, num_heads, head_size]
     k_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
     v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
-    lengths,  # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
+    lengths,  # seq_lengths, [batch_size]. nb batch_size = len(seq_lens), the effective kv_length.
     page_indices,  # [batch_size, pages_per_sequence]
+    effective_q_lens,  # [batch_size], the effective q_length
 ) -> torch.Tensor:  # [batch_size, query_len, num_heads, head_dim]
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
@@ -528,7 +529,8 @@ def _multi_queries_paged_attention_nonkernel(
                         k)  # [num_query_heads, query_len, kv_len]
     attn = attn.float()
     empty_mask = torch.ones(query_len, kv_len, device=attn.device)
-    mask = torch.triu(empty_mask, diagonal=kv_len - query_len + 1).bool()
+    effective_q_len = effective_q_lens[i]
+    mask = torch.triu(empty_mask, diagonal=kv_len - effective_q_len + 1).bool()
     attn.masked_fill_(mask, float("-inf"))
     attn = torch.softmax(
         attn, dim=-1).to(v.dtype)  # [num_query_heads, query_len, kv_len]
@@ -547,6 +549,7 @@ def multi_queries_paged_attention(
     v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
     lengths,  # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
     page_indices,  # [batch_size, pages_per_sequence]
+    effective_q_lens,  # [batch_size]
     num_kv_pages_per_compute_block,
     num_queries_per_compute_block,
     use_kernel=True,
@@ -559,6 +562,7 @@ def multi_queries_paged_attention(
         v_pages,
         lengths,
         page_indices,
+        effective_q_lens,
     )
 
   # Import JAX within the function such that we don't need to call the jax_import_guard()
@@ -572,6 +576,7 @@ def multi_queries_paged_attention(
       v_pages,
       lengths,
       page_indices,
+      effective_q_lens,
       num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
       num_queries_per_compute_block=num_queries_per_compute_block,
       static_argnames=[
@@ -592,6 +597,7 @@ def multi_queries_paged_attention(
       [
           lengths,
           page_indices_reshaped,
+          effective_q_lens,
           buffer_index,
           step,
           q.to(q_dtype_for_kernel_launch),
@@ -1081,7 +1087,7 @@ def paged_attention_non_xla(q: torch.Tensor,
 
 
 XLA_LIB.define(
-    "multi_queries_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, int num_kv_pages_per_compute_block, int num_queries_per_compute_block, bool use_kernel) -> Tensor",
+    "multi_queries_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, Tensor effective_q_lens, int num_kv_pages_per_compute_block, int num_queries_per_compute_block, bool use_kernel) -> Tensor",
 )
 
 
@@ -1089,10 +1095,10 @@ XLA_LIB.define(
 def multi_queries_paged_attention_xla(
     q: torch.Tensor, k_pages: torch.Tensor, v_pages: torch.Tensor,
     lengths: torch.Tensor, page_indices: torch.Tensor,
-    num_kv_pages_per_compute_block: int, num_queries_per_compute_block: int,
-    use_kernel: bool):
+    effective_q_lens: torch.Tensor, num_kv_pages_per_compute_block: int,
+    num_queries_per_compute_block: int, use_kernel: bool):
   return multi_queries_paged_attention(q, k_pages, v_pages, lengths,
-                                       page_indices,
+                                       page_indices, effective_q_lens,
                                        num_kv_pages_per_compute_block,
                                        num_queries_per_compute_block,
                                        use_kernel)
@@ -1102,8 +1108,8 @@ def multi_queries_paged_attention_xla(
 def multi_queries_paged_attention_non_xla(
     q: torch.Tensor, k_pages: torch.Tensor, v_pages: torch.Tensor,
     lengths: torch.Tensor, page_indices: torch.Tensor,
-    num_kv_pages_per_compute_block: int, num_queries_per_compute_block: int,
-    use_kernel: bool):
+    effective_q_lens: torch.Tensor, num_kv_pages_per_compute_block: int,
+    num_queries_per_compute_block: int, use_kernel: bool):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 
