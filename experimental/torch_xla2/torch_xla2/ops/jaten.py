@@ -2767,7 +2767,6 @@ def _aten_nonzero_static(input, size, fill_value = -1):
 @op(torch.ops.aten.nonzero)
 def _aten_nonzero(x, as_tuple=False):
   if jnp.ndim(x) == 0 and (as_tuple or x.item()==0):
-    print("arrive here")
     return torch.empty(0, 0, dtype=torch.int64)
   if jnp.ndim(x) == 0: # when x is scalar, return torch.tensor([], size=(1, 0), dtype=torch.int64)
     res = torch.empty(1, 0, dtype=torch.int64)
