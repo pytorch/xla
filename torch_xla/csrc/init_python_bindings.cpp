@@ -2504,6 +2504,8 @@ void InitXlaModuleBindings(py::module m) {
           FLAGS_torch_lazy_all_numbers_special_scalars =
               all_numbers_special_scalars;
         });
+  m.def("_get_xla_all_numbers_special_scalars",
+        []() { return FLAGS_torch_lazy_all_numbers_special_scalars; });
   m.def("_set_xla_handle_special_scalars", [](bool handle_special_scalars) {
     FLAGS_torch_lazy_handle_special_scalars = handle_special_scalars;
   });
