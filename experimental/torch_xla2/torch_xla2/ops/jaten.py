@@ -254,7 +254,7 @@ def _aten_cholesky_solve(input, input2, upper=False):
 def _aten_special_zeta(x, q):
   new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
   res = jax.scipy.special.zeta(x, q)
-  if isinstance(x, float) or isinstance(q, float):
+  if isinstance(x, int) or isinstance(q, int):
     res = res.astype(new_dtype)
   return res # jax.scipy.special.zeta(x, q)
 
