@@ -295,7 +295,8 @@ def _aten_searchsorted(sorted_sequence, values):
   new_dtype = mappings.t2j_dtype(torch.get_default_dtype())
   res = jnp.searchsorted(sorted_sequence, values)
   if sorted_sequence.dtype == np.dtype(np.int32) or sorted_sequence.dtype == np.dtype(np.int32):
-    res = res.astype(new_dtype)
+    # res = res.astype(new_dtype)
+    res = res.astype(np.dtype(np.int64))
   return res # jnp.searchsorted(sorted_sequence, values)
 
 
