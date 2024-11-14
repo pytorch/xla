@@ -13,8 +13,8 @@ import torch_xla2
 skiplist = {
     "_segment_reduce",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
-    # "byte",
-    # "cat",
+    "byte",
+    "cat",
     # "cholesky",
     # "cholesky_solve",
     # "diagonal_copy",
