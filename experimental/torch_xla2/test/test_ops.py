@@ -52,7 +52,7 @@ skiplist = {
     "normal",
     "ormqr",
     "pca_lowrank",
-    "searchsorted",
+    # "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",
     "special.scaled_modified_bessel_k1",
