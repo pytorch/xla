@@ -15,7 +15,7 @@ skiplist = {
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
     "cat",
-    # "cholesky_solve",
+    "cholesky_solve",
     "diagonal_copy",
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
@@ -57,7 +57,7 @@ skiplist = {
     "special.scaled_modified_bessel_k0",
     "special.scaled_modified_bessel_k1",
     "special.spherical_bessel_j0",
-    "special.zeta",
+    # "special.zeta",
     "unfold_copy",
     "unfold",
 }
