@@ -251,7 +251,10 @@ def _aten_linalg_cholesky_ex(input, upper=False, check_errors=False):
     )
 
   L = jax.scipy.linalg.cholesky(input, lower=not upper)
-  info = jnp.array(0)  # Placeholder for info, not functional in this version
+  if len(L.shape) >2:
+    info = jnp.zeros(shape=L.shape[:-2], dtype=jnp.int32)
+  else:
+    info = jnp.array(0, dtype=jnp.int32)
   return L, info
 
 
