@@ -2752,8 +2752,6 @@ def _aten_nextafter(input, other, *, out=None):
 
 @op(torch.ops.aten.nonzero_static)
 def _aten_nonzero_static(input, size, fill_value = -1):
-  # import pdb; pdb.set_trace()
-  # print("arrive here _aten_nonzero")
   indices = jnp.argwhere(input)
 
   if size < indices.shape[0]:
@@ -2770,7 +2768,7 @@ def _aten_nonzero_static(input, size, fill_value = -1):
 def _aten_nonzero(x, as_tuple=False):
   if jnp.ndim(x) == 0 and (as_tuple or x.item()==0):
     print("arrive here")
-    return torch.empty(0, 0, dtype=torch.int64) # x
+    return torch.empty(0, 0, dtype=torch.int64)
   if jnp.ndim(x) == 0: # when x is scalar, return torch.tensor([], size=(1, 0), dtype=torch.int64)
     res = torch.empty(1, 0, dtype=torch.int64)
     return jnp.array(res.numpy())
