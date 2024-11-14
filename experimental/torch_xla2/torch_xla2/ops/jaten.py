@@ -241,6 +241,20 @@ def _aten_cholesky(input, upper=False):
   return jax.scipy.linalg.cholesky(input, lower=(not upper))
 
 
+@op(torch.ops.aten.linalg_cholesky_ex)
+def _aten_linalg_cholesky_ex(input, upper=False, check_errors=False):
+  if check_errors:
+    raise NotImplementedError(
+        "check_errors=True is not supported in this JAX implementation. "
+        "Check for positive definiteness using jnp.linalg.eigvalsh before "
+        "calling this function."
+    )
+
+  L = jax.scipy.linalg.cholesky(input, lower=not upper)
+  info = jnp.array(0)  # Placeholder for info, not functional in this version
+  return L, info
+
+
 @op(torch.ops.aten.cholesky_solve)
 def _aten_cholesky_solve(input, input2, upper=False):
   # Ensure input2 is lower triangular for cho_solve
