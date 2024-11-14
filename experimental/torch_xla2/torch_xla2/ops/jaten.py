@@ -4434,3 +4434,54 @@ def _aten_upsample_bilinear2d_aa(input, output_size, align_corners, scale_factor
         translation=translation,
         antialias=antialias,
     )
+
+@op(torch.ops.aten.norm)
+def _norm(input, p='fro', dim=None, keepdim=False, dtype=None):
+  if p == 'fro':
+    p = 2
+  if dim is None:
+    return jnp.linalg.norm(input, ord=p)
+  return jnp.linalg.norm(input, ord=p, axis=dim, keepdims=keepdim)
+
+@op(torch.pca_lowrank)
+def _pca_lowrank(A, q=None, center=True, niter=2):
+  *batch_dims, m, n = A.shape
+  A = A.astype(jnp.float32)
+
+  if q is None:
+    q = min(6, m, n)
+
+  if center:
+    mean = jnp.mean(A, axis=-2, keepdims=True)
+    A = A - mean
+  key = jax.random.PRNGKey(0)
+
+  omega = jax.random.normal(key, (n, q), dtype=A.dtype)
+  Y = jnp.matmul(A, omega)
+  Q, _ = jnp.linalg.qr(Y, mode='reduced')
+
+  for _ in range(niter):
+    Z = jnp.matmul(A.T, Q)
+    Q, _ = jnp.linalg.qr(jnp.matmul(A, Z), mode='reduced')
+
+  B = jnp.matmul(Q.T, A)
+  U_tilde, S, Vt = jnp.linalg.svd(B, full_matrices=False)
+  U = jnp.matmul(Q, U_tilde)
+  # Enforce consistent signs by making the first element of each U column positive
+  signs = jnp.sign(U[0, :])
+  signs = jnp.where(signs == 0, 1, signs)  # Handle zeros to avoid NaNs
+  U *= signs
+  Vt *= signs[:, None]
+  V = Vt.T
+
+  U = U[..., :, :q]
+  S = S[..., :q]
+  V = V[..., :, :q]
+
+  U = U.astype(A.dtype)
+  S = S.astype(A.dtype)
+  V = V.astype(A.dtype)
+  return U, S, V
+
+
+

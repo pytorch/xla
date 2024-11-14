@@ -85,10 +85,10 @@ skiplist = {
     "nn.functional.upsample_nearest",
     "nonzero",
     "nonzero_static",
-    "norm",
+    #"norm",
     "normal",
     "ormqr",
-    "pca_lowrank",
+    #"pca_lowrank",
     "pinverse",
     "polar",
     "polygamma",
@@ -156,14 +156,14 @@ atol_dict = {"linalg.eig": (2e0, 3e0),
              "linalg.eigvalsh": (5e1, 3e0),
              "linalg.pinv": (8e-1, 2e0),
              "linalg.svd": (1e0, 1e0),
-             "matrix_exp": (2e-1, 2e-4)}
+             "matrix_exp": (2e-1, 2e-4),
+             "pca_lowrank" :(1e-6, 1e-5) }
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_output=True):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
     if output1.layout != torch.strided:
-      # We only compare dense tensors. We dont currently support sparse tensors
       output1 = output1.to_dense()
     if check_output:
       torch.testing.assert_close(
