@@ -61,7 +61,6 @@ skiplist = {
     "special.zeta",
     "unfold_copy",
     "unfold",
-    "randint",
 }
 
 not_support_ops_list = {
@@ -101,6 +100,7 @@ random_ops = {
   'cauchy',
   'exponential',
   'log_normal',
+  'randint',
 }
 
 atol_dict = {"linalg.eig": (2e0, 3e0),
