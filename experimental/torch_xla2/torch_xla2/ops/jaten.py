@@ -241,6 +241,15 @@ def _aten_cholesky(input, upper=False):
   return jax.scipy.linalg.cholesky(input, lower=(not upper))
 
 
+@op(torch.ops.aten.cholesky_solve)
+def _aten_cholesky_solve(input, input2, upper=False):
+  # Ensure input2 is lower triangular for cho_solve
+  L = input2 if not upper else input2.T 
+  # Use cho_solve to solve the linear system
+  solution = jax.scipy.linalg.cho_solve((L, True), input)
+  return solution
+
+
 # aten.igammac
 @op(torch.ops.aten.igammac)
 def _aten_igammac(input, other):
