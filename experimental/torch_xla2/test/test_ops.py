@@ -56,7 +56,7 @@ skiplist = {
     "special.scaled_modified_bessel_k0",
     "special.scaled_modified_bessel_k1",
     "special.spherical_bessel_j0",
-    # "special.zeta",
+    "special.zeta",
     "unfold_copy",
     "unfold",
 }
