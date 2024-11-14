@@ -3562,7 +3562,7 @@ XLATensorPtr view_symint(const XLATensorPtr& input,
 
 XLATensorPtr view_as_complex_copy(const XLATensorPtr& input) {
   return input->CreateFrom(ViewAsComplexCopy(input->GetIrValue()),
-                           at::ScalarType::ComplexFloat);
+                           /*logical_element_type=*/std::nullopt);
 }
 
 XLATensorPtr view_as_real_copy(const XLATensorPtr& input) {
