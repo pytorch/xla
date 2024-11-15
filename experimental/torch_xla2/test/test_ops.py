@@ -15,7 +15,6 @@ skiplist = {
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
     "cat",
-    "cholesky",
     "cholesky_solve",
     "diagonal_copy",
     "geqrf",
@@ -23,8 +22,6 @@ skiplist = {
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
     "index_reduce",
     "kthvalue",
-    "linalg.cholesky",
-    "linalg.cholesky_ex",
     "linalg.det",
     "linalg.ldl_solve",
     "linalg.lu_solve",
@@ -49,13 +46,7 @@ skiplist = {
     "nn.functional.max_pool2d",
     "nn.functional.max_pool3d",
     "nn.functional.multi_head_attention_forward",
-    "nn.functional.multilabel_margin_loss",
-    "nn.functional.pairwise_distance",
-    "nn.functional.poisson_nll_loss",
-    "nn.functional.rrelu",
     "nn.functional.upsample_nearest",
-    "nonzero",
-    "nonzero_static",
     "normal",
     "ormqr",
     "pca_lowrank",
@@ -67,7 +58,6 @@ skiplist = {
     "special.zeta",
     "unfold_copy",
     "unfold",
-    "randint",
 }
 
 not_support_ops_list = {
@@ -77,6 +67,7 @@ not_support_ops_list = {
   "ceil", # only failed with python 3.9
   "trunc", # only failed with python 3.9
   "to_sparse", # We are not supporting sparse tensors yet.
+  "nn.functional.rrelu", # pure torch result match torch_xla2 test result, only OpInfo mismatch: https://gist.github.com/ManfeiBai/1a449b15f4e946bfcaa3e5ef86da20f4
 }
 
 # These inputs are themselves views
@@ -106,6 +97,7 @@ random_ops = {
   'cauchy',
   'exponential',
   'log_normal',
+  'randint',
 }
 
 atol_dict = {"linalg.eig": (2e0, 3e0),
