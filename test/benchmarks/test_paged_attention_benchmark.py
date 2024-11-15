@@ -1,12 +1,64 @@
 import argparse
 import time
 
+import torch
+import torch_xla
+import torch_xla.core.xla_model as xm
+from torch_xla.experimental.custom_kernel import multi_queries_paged_attention
 import jax
 from jax._src import test_util as jtu
 from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention
 from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_single_query_paged_attention
 import jax.numpy as jnp
 import numpy as np
+
+def _ref_jax_extended_paged_attention(
+    q,  # [batch_size, query_len, num_query_heads, head_size]
+    k_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
+    v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
+    lengths,  # [batch_size], the effective kv_length.
+    page_indices,  # [batch_size, pages_per_sequence]
+    effective_q_lens,  # [batch_size] the effective q_length
+):
+  batch_size, query_len, num_query_heads, head_size = q.shape
+  num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
+  num_query_per_kv = num_query_heads // num_kv_heads
+
+  outputs = []
+  for i in range(batch_size):
+    kv_len = lengths[i]
+    num_pages = (kv_len + page_size - 1) // page_size
+    indices = page_indices[i, :num_pages]
+
+    k = k_pages[:, indices]
+    k = jnp.permute_dims(k, (1, 2, 0, 3))
+    k = jnp.reshape(k, (num_pages * page_size, num_kv_heads, head_size))
+    k = k[:kv_len]
+
+    v = v_pages[:, indices]
+    v = jnp.permute_dims(v, (1, 2, 0, 3))
+    v = jnp.reshape(v, (num_pages * page_size, num_kv_heads, head_size))
+    v = v[:kv_len]
+
+    if num_query_per_kv != 1:
+      k = jnp.repeat(k, num_query_per_kv, axis=1)
+      v = jnp.repeat(v, num_query_per_kv, axis=1)
+
+    attn = jnp.einsum("qhd,khd->hqk", q[i], k)
+    attn = attn.astype('float32')
+    effective_q_len = effective_q_lens[i]
+    q_span = (kv_len - effective_q_len) + jax.lax.broadcasted_iota(
+        jnp.int32, (query_len, kv_len), 0)
+    kv_span = jax.lax.broadcasted_iota(jnp.int32, (query_len, kv_len), 1)
+    mask = jnp.where(q_span < kv_span, float("-inf"), 0.)
+    with jax.numpy_rank_promotion("allow"):
+      attn = attn + mask
+    attn = jax.nn.softmax(attn, axis=-1).astype(v.dtype)
+    out = jnp.einsum("hqk,khd->qhd", attn, v)
+    outputs.append(out)
+  output = jnp.stack(outputs, axis=0)
+  return output
+
 
 # Set up paged_attention inputs.
 def _generate_qkv(
@@ -39,8 +91,7 @@ def _generate_qkv(
 
 def benchmark(args):
   # Shapes and dtypes used in the GPU benchmarking script: query.shape=torch.Size([36, 8, 256]), key_cache.shape=torch.Size([231746, 16, 1, 256]), value_cache.shape=torch.Size([231746, 16, 1, 256]), prefill_meta.query_start_loc=tensor([ 0,  9, 18, 27, 36], device='cuda:0', dtype=torch.int32), prefill_meta.max_query_len=9, prefill_meta.seq_start_loc=tensor([   0,  649, 1298, 1947, 2596], device='cuda:0', dtype=torch.int32), max_seq_len=649, softmax_scale=0.0625, window_size=[-1, -1], alibi_slopes=None, prefill_meta.block_tables.shape=torch.Size([4, 41]), logits_soft_cap=0.0
-  assert args.kernel == "multi-queries-paged-attn" or args.kernel == "single-query-flash-attn", f"invalid args.kernel: {args.kernel}"
-  dtype = jnp.bfloat16
+  dtype = jnp.float32
   page_size = 16
   num_kv_heads = 2
   q_kv_head_ratio = 4
@@ -60,7 +111,7 @@ def benchmark(args):
       kv_seq_lens,
       page_size,
       max_kv_len,
-      query_len if args.kernel == "multi-queries-paged-attn" else 1,
+      query_len if args.kernel == "multi-queries-paged-attn" or args.kernel.startswith("multi-queries-paged-attn-torch-xla") else 1,
       num_kv_heads,
       num_kv_heads * q_kv_head_ratio,
       head_dim,
@@ -68,6 +119,14 @@ def benchmark(args):
       dtype,
       total_num_pages,
   )
+
+  # import pdb; pdb.set_trace()
+  q_xla = torch.from_numpy(np.array(q)).to("xla")
+  k_pages_xla = torch.from_numpy(np.array(k_pages)).to("xla")
+  v_pages_xla = torch.from_numpy(np.array(v_pages)).to("xla")
+  kv_seq_lens_xla = torch.from_numpy(np.array(kv_seq_lens)).to("xla")
+  page_indices_xla = torch.from_numpy(np.array(page_indices)).to("xla")
+  effective_q_lens_xla = torch.from_numpy(np.array(effective_q_lens)).to("xla")
 
   def run_benchmark(num_iters: int, profile: bool = False) -> float:
     start_time = time.perf_counter()
@@ -87,6 +146,15 @@ def benchmark(args):
           num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
           num_queries_per_compute_block=num_queries_per_compute_block,
         )
+      if args.kernel == "multi-queries-paged-attn-jax-nonkernel":
+        actual_output = _ref_jax_extended_paged_attention(
+          q,
+          k_pages,
+          v_pages,
+          kv_seq_lens,
+          page_indices,
+          effective_q_lens,
+        )
       elif args.kernel == "single-query-flash-attn":
         actual_output = jax_single_query_paged_attention(
           jnp.squeeze(q, axis=1),
@@ -96,8 +164,42 @@ def benchmark(args):
           page_indices,
           pages_per_compute_block=16,
         )
+      elif args.kernel == "multi-queries-paged-attn-torch-xla-kernel":
+        num_queries_per_compute_block=16 # constraint: due to https://github.com/jax-ml/jax/issues/24486
+        num_kv_pages_per_compute_block = block_kv_size // page_size
+        actual_output = multi_queries_paged_attention(
+            q_xla,
+            k_pages_xla,
+            v_pages_xla,
+            kv_seq_lens_xla,
+            page_indices_xla,
+            effective_q_lens_xla,
+            num_kv_pages_per_compute_block=block_kv_size // page_size,
+            num_queries_per_compute_block=num_queries_per_compute_block,
+            use_kernel=True,
+        )
+      elif args.kernel == "multi-queries-paged-attn-torch-xla-nonkernel":
+        num_queries_per_compute_block=16 # constraint: due to https://github.com/jax-ml/jax/issues/24486
+        num_kv_pages_per_compute_block = block_kv_size // page_size
+        actual_output = multi_queries_paged_attention(
+            q_xla,
+            k_pages_xla,
+            v_pages_xla,
+            kv_seq_lens_xla,
+            page_indices_xla,
+            effective_q_lens_xla,
+            num_kv_pages_per_compute_block=block_kv_size // page_size,
+            num_queries_per_compute_block=num_queries_per_compute_block,
+            use_kernel=False,
+        )
 
-    jax.block_until_ready(actual_output)
+
+    if args.kernel != "multi-queries-paged-attn-torch-xla-kernel" or args.kernel != "multi-queries-paged-attn-torch-xla-nonkernel":
+      jax.block_until_ready(actual_output)
+    else:
+      # xm.mark_step()
+      xm.wait_device_ops()
+
     end_time = time.perf_counter()
     return (end_time - start_time) / num_iters
   
@@ -118,7 +220,7 @@ if __name__ == "__main__":
   parser.add_argument("--use-paged-attn-nonkernel", action="store_true")
   parser.add_argument("--kernel",
                 type=str,
-                choices=["single-query-paged-attn", "multi-queries-paged-attn"],
+                choices=["single-query-paged-attn", "multi-queries-paged-attn","multi-queries-paged-attn-jax-nonkernel", "multi-queries-paged-attn-torch-xla-kernel", "multi-queries-paged-attn-torch-xla-nonkernel"],
                 default="multi-queries-paged-attn")
   parser.add_argument("--profile", action="store_true")
   args = parser.parse_args()
