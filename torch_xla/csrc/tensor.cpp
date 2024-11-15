@@ -562,6 +562,7 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
     at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
     SetTensorData(coyped_tensor);
     data()->handle = nullptr;
+    data()->sharding = nullptr;
     AssignIrValue(torch::lazy::Value());
     if (data()->view != nullptr) {
       torch::lazy::Value ir_value = GetIrValueForTensor(coyped_tensor, device);
