@@ -1,3 +1,5 @@
+# python pytorch/xla/test/benchmarks/test_paged_attention_benchmark.py --kernel multi-queries-paged-attn-jax-nonkernel
+
 import argparse
 import time
 
@@ -12,6 +14,8 @@ from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel impo
 import jax.numpy as jnp
 import numpy as np
 
+@jax.profiler.annotate_function
+@jax.jit
 def _ref_jax_extended_paged_attention(
     q,  # [batch_size, query_len, num_query_heads, head_size]
     k_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
@@ -121,15 +125,18 @@ def benchmark(args):
   )
 
   # import pdb; pdb.set_trace()
-  q_xla = torch.from_numpy(np.array(q)).to("xla")
-  k_pages_xla = torch.from_numpy(np.array(k_pages)).to("xla")
-  v_pages_xla = torch.from_numpy(np.array(v_pages)).to("xla")
-  kv_seq_lens_xla = torch.from_numpy(np.array(kv_seq_lens)).to("xla")
-  page_indices_xla = torch.from_numpy(np.array(page_indices)).to("xla")
-  effective_q_lens_xla = torch.from_numpy(np.array(effective_q_lens)).to("xla")
+  # q_xla = torch.from_numpy(np.array(q)).to("xla")
+  # k_pages_xla = torch.from_numpy(np.array(k_pages)).to("xla")
+  # v_pages_xla = torch.from_numpy(np.array(v_pages)).to("xla")
+  # kv_seq_lens_xla = torch.from_numpy(np.array(kv_seq_lens)).to("xla")
+  # page_indices_xla = torch.from_numpy(np.array(page_indices)).to("xla")
+  # effective_q_lens_xla = torch.from_numpy(np.array(effective_q_lens)).to("xla")
+  profile_path = "/workspaces/persist/myprofiles/plugins/profile"
 
   def run_benchmark(num_iters: int, profile: bool = False) -> float:
     start_time = time.perf_counter()
+    if profile:
+      jax.profiler.start_trace(profile_path)
 
     actual_output=None
     for _ in range(num_iters):
@@ -201,6 +208,8 @@ def benchmark(args):
       xm.wait_device_ops()
 
     end_time = time.perf_counter()
+    if profile:
+      jax.profiler.stop_trace()
     return (end_time - start_time) / num_iters
   
   # Warmup.

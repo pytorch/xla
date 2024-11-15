@@ -384,7 +384,7 @@ def paged_flash_attention_kernel(
 
 MIN_BLOCK_SIZE = 128
 
-
+@jax.profiler.annotate_function
 @functools.partial(
     jax.jit,
     static_argnames=[
