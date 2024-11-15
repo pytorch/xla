@@ -197,7 +197,7 @@ def benchmark(args):
     if args.kernel != "multi-queries-paged-attn-torch-xla-kernel" or args.kernel != "multi-queries-paged-attn-torch-xla-nonkernel":
       jax.block_until_ready(actual_output)
     else:
-      # xm.mark_step()
+      xm.mark_step()
       xm.wait_device_ops()
 
     end_time = time.perf_counter()
