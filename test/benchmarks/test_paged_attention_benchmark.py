@@ -15,7 +15,6 @@ import jax.numpy as jnp
 import numpy as np
 
 @jax.profiler.annotate_function
-@jax.jit
 def _ref_jax_extended_paged_attention(
     q,  # [batch_size, query_len, num_query_heads, head_size]
     k_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
