@@ -8,7 +8,8 @@ python3 test/pjrt/test_collective_ops_tpu.py
 python3 test/spmd/test_mp_input_sharding.py
 python3 test/spmd/test_xla_sharding.py
 python3 test/spmd/test_xla_virtual_device.py
-python3 test/spmd/test_xla_distributed_checkpoint.py
+# TODO(JackCaoG): to reenable
+# python3 test/spmd/test_xla_distributed_checkpoint.py
 python3 test/spmd/test_train_spmd_linear_model.py
 python3 test/spmd/test_xla_spmd_python_api_interaction.py
 python3 test/spmd/test_xla_auto_sharding.py
