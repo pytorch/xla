@@ -1377,6 +1377,32 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     ):
       data, _ = iter(train_device_loader).__next__()
 
+  def test_fallback(self):
+    device = torch_xla.device()
+
+    theta: float = 10000
+    dim = 16
+    end = 2048
+
+    torch_xla.sync()
+    freqs = 1.0 / (
+        theta
+        **(torch.arange(0, dim, 2, device=device)[:(dim // 2)].float() / dim))
+    t = torch.arange(end, device=freqs.device)
+    freqs = torch.outer(t, freqs).float()
+    freqs_cis = torch.polar(torch.ones_like(freqs, device=device),
+                            freqs)  # complex64
+    # torch.polar will fallback on CPU, the result tensor should not have any sharding spec
+    self.assertIn("ShardingSpec: None",
+                  torch_xla._XLAC._get_xla_tensor_debug_info(freqs_cis))
+    # it will be on a CPU tensor, the sharding spec is not specified so it won't be move to device yet
+    self.assertIn("Tensor on host: with size [2048, 8]",
+                  torch_xla._XLAC._get_xla_tensor_debug_info(freqs_cis))
+    torch_xla.sync()
+    # data should be on device and replicated now
+    self.assertIn("Data Shape: c64[2048,8]\n  OpSharding: {replicated}",
+                  torch_xla._XLAC._get_xla_tensor_debug_info(freqs_cis))
+
 
 if __name__ == '__main__':
   test = unittest.main()
