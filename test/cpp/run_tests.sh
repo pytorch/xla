@@ -102,7 +102,6 @@ elif [[ "$RUN_CPP_TESTS2" == "cpp_tests2" ]]; then
               #"test_xla_backend_intf"
               "test_xla_sharding")
 fi
-
 for name in "${test_names[@]}"; do
   echo "Running $name cpp test..."
   if [ "$LOGFILE" != "" ]; then
