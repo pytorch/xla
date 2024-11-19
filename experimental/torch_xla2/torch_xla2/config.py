@@ -14,5 +14,5 @@ class Configuration:
 
     # device
     treat_cuda_as_jax_device: bool = True
-    use_torch_native_for_cpu_tensor: bool = False
+    use_torch_native_for_cpu_tensor: bool = True
     internal_respect_torch_return_dtypes: bool = False

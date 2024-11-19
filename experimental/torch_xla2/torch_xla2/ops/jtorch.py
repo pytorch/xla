@@ -130,21 +130,21 @@ from jax.sharding import PartitionSpec
 
 def _tpu_flash_attention(query, key, value, env):
   fsdp_partition = PartitionSpec('fsdp')
-  block_sizes = flash_attention.BlockSizes(
-    block_b=min(2, query.shape[0]),
-    block_q=min(512, query.shape[2]),
-    block_k_major=min(512, key.shape[2]),
-    block_k=min(512, key.shape[2]),
-    block_q_major_dkv=min(512, query.shape[2]),
-    block_k_major_dkv=min(512, key.shape[2]),
-    block_k_dkv=min(512, key.shape[2]),
-    block_q_dkv=min(512, query.shape[2]),
-    block_k_major_dq=min(512, key.shape[2]),
-    block_k_dq=min(256, key.shape[2]),
-    block_q_dq=min(1024, query.shape[2]),
-  )
   def wrap_flash_attention(query, key, value):
-     return flash_attention.flash_attention(
+    block_sizes = flash_attention.BlockSizes(
+      block_b=min(2, query.shape[0]),
+      block_q=min(512, query.shape[2]),
+      block_k_major=min(512, key.shape[2]),
+      block_k=min(512, key.shape[2]),
+      block_q_major_dkv=min(512, query.shape[2]),
+      block_k_major_dkv=min(512, key.shape[2]),
+      block_k_dkv=min(512, key.shape[2]),
+      block_q_dkv=min(512, query.shape[2]),
+      block_k_major_dq=min(512, key.shape[2]),
+      block_k_dq=min(256, key.shape[2]),
+      block_q_dq=min(1024, query.shape[2]),
+    )
+    return flash_attention.flash_attention(
         query, key, value, causal=True, block_sizes=block_sizes)
 
   if env.config.shmap_flash_attention:

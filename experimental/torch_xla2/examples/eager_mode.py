@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 import torch
 
-xla_env = torch_xla2.default_env()
+xla_env = torch_xla2.enable_globally()
 
 
 class MyModel(nn.Module):
@@ -21,28 +21,18 @@ class MyModel(nn.Module):
         return x
 
 m = MyModel()
-m = xla_env.to_xla(m)
+m = m.to('jax')
 
 # Execute this model using torch
-inputs = (torch.randn(3, 3, 28, 28), )
-inputs = xla_env.to_xla(inputs)
+inputs = torch.randn(3, 3, 28, 28, device='jax')
 
-print(m(*inputs))
+print(m(inputs))
 print('---=====')
 
-from torch_xla2.interop import jax_jit
+m_compiled = torch_xla2.compile(m)
 
-@jax_jit
-def model_func(param, inputs):
-  return torch.func.functional_call(m, param, inputs)
-
-print(model_func(m.state_dict(), inputs))
-
-print('---=====')
-with xla_env:
-  m2 = MyModel()
-  inputs = (torch.randn(3, 3, 28, 28), )
-  print(m2(*inputs))
+print(m_compiled(inputs))
 
 
+print('---')
 
