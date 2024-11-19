@@ -4,8 +4,6 @@ import logging
 from typing import Tuple
 from collections import defaultdict
 import functools
-from litgpt.tokenizer import Tokenizer
-from litgpt.data import Alpaca
 
 import torch
 import torch.nn.functional
@@ -91,7 +89,7 @@ class Module(torch.nn.Module):
 
     def __init__(self, inner):
         super().__init__()
-        self.inner = inner
+        self.inner = FSDPv2(inner)
 
     def training_step(self, data, batch_id):
         x, y = data
@@ -101,7 +99,7 @@ class Module(torch.nn.Module):
         y = y.reshape(-1)
         return torch.nn.functional.cross_entropy(
             logits, y)
-
+    
 
 class Trainer:
 
@@ -199,8 +197,8 @@ class Trainer:
         start = time.perf_counter()
         lowered = step.lower(
             jax_params, jax_buffers, opt_state, 
-            (jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding), 
-             jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding)),
+            (jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding), 
+             jax.ShapeDtypeStruct((BATCH, SEQLEN), jnp.dtype('int32'), sharding=self.x_sharding)),
             0
         )
         # print(lowered.as_text())
@@ -217,7 +215,7 @@ class Trainer:
         jax.profiler.start_trace('/tmp/tensorboard')
         print('start training')
         min_loop_time = 10000
-        for i, item in enumerate(group_data(data_loader, SEQLEN)):
+        for i, item in enumerate(data_loader):
             inputs, labels = sharded_device_put(jax_view(xla_env.to_xla(item)), 
                                             self.x_sharding)
             print('INPUT shape', inputs.shape)
@@ -274,16 +272,17 @@ transformer_configs = {
 }
             
 
+def fake_dataloader(size, seqlen, batch_size):
+  for _ in range(size):
+    x = torch.randint(0, 32000, (batch_size, seqlen), device='cpu')
+    yield x, (x + 1) % 32000
+
 
 def main(
     model_type='8B',
-    use_flash_attention=True,
-    seqlen=2048,
-    n_layers=32,
     batch_size=8,
-    checkpoint_dir='',
+    seqlen=2048,
     mode='regular', 
-    use_editted_model = False,
 ):
     logging.getLogger("jax").setLevel(logging.DEBUG)
     print(f"Running with parameters {locals()}")
@@ -305,15 +304,7 @@ def main(
     light_mod = Module(gpt)
     light_mod.to(torch.bfloat16)
 
-    tokenizer = Tokenizer(checkpoint_dir)
-    data = Alpaca(num_workers=1)
-    data.connect(
-        tokenizer=tokenizer, 
-        batch_size=batch_size,
-        max_seq_length=SEQLEN)
-    data.prepare_data()
-    data.setup()
-    train_loader = data.train_dataloader()
+    train_loader = fake_dataloader(10, seqlen, batch_size)
 
     with mesh:
         trainer = Trainer()
