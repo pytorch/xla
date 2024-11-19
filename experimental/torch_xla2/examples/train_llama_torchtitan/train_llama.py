@@ -18,6 +18,7 @@ from jax.experimental import shard_map
 from jax.experimental import mesh_utils
 import optax
 
+from torchtitan.models.llama import llama3_configs
 from torchtitan.models.llama import model as titan
 
 P = jax.sharding.PartitionSpec
@@ -235,42 +236,6 @@ class Trainer:
         return min_loop_time, compile_time
 
 
-transformer_configs = {
-    "8B": {
-        "dim": 4096,
-        "ffn_dim_multiplier": 1.3,
-        "multiple_of": 1024,
-        "n_heads": 32,
-        "n_kv_heads": 8,
-        "n_layers": 32,
-        "norm_eps": 1e-05,
-        "rope_theta": 500000.0,
-        "vocab_size": 128256
-    },
-    "70B": {
-        "dim": 8192,
-        "ffn_dim_multiplier": 1.3,
-        "multiple_of": 4096,
-        "n_heads": 64,
-        "n_kv_heads": 8,
-        "n_layers": 80,
-        "norm_eps": 1e-05,
-        "rope_theta": 500000.0,
-        "vocab_size": 128256
-    },
-    "405B": {
-        "dim": 16384,
-        "ffn_dim_multiplier": 1.2,
-        "multiple_of": 4096,
-        "n_heads": 128,
-        "n_kv_heads": 16,
-        "n_layers": 126,
-        "norm_eps": 1e-05,
-        "rope_theta": 500000.0,
-        "vocab_size": 128256
-    }
-}
-            
 
 def fake_dataloader(size, seqlen, batch_size):
   for _ in range(size):
@@ -295,9 +260,8 @@ def main(
     env = torch_xla2.default_env()
     env.config.use_tpu_flash_attention = use_flash_attention
     env.config.shmap_flash_attention = use_flash_attention
-    args = titan.ModelArgs(
-      **transformer_configs[model_type]
-    )
+
+    args = llama3_configs[model_type]
     #with torch.device('meta'):
     gpt = titan.Transformer(args)
 

@@ -394,7 +394,6 @@ class HybridMesh(Mesh):
         A np.ndarray of device logical ordinal with ici_mesh_shape * dcn_mesh_shape as its shape
         that can be fed into HybridMesh for hybrid parallelism.
     """
-    assert len(self.device_attributes) % 256 == 0, f"This custom mesh is not valid for {len(self.device_attributes)} devices"
     granule_dict = defaultdict(list)
     for d, dev in enumerate(self.device_attributes):
       granule_dict[dev['slice_index']].append(d)
@@ -409,20 +408,6 @@ class HybridMesh(Mesh):
         self._create_device_mesh(ici_mesh_shape, granule)
         for granule in granules
     ]
-    def reshape_mesh_to_rings(a):
-      b = []
-      for i in range(8):
-        b.append([])
-        for j in range(8):
-          a_i = i * 2
-          a_j = j * 2
-          # forms a ring of size 4
-          b[i].append([a[a_i, a_j], a[a_i, a_j + 1], a[a_i + 1, a_j + 1], a[a_i + 1, a_j]])
-      b = np.array(b)
-      b = np.reshape(b, (64, 4))
-      return b
-
-    per_granule_meshes = [np.reshape(reshape_mesh_to_rings(x), mesh_shape) for x in per_granule_meshes]
     granule_mesh = np.arange(len(granules)).reshape(dcn_mesh_shape)
     blocks = np.vectorize(
         lambda i: per_granule_meshes[i], otypes=[object])(
@@ -590,8 +575,7 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
 
 def mark_sharding(
     t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: Tuple[Union[Tuple, int, str, None],
-                          ...]) -> XLAShardedTensor:
+    partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
