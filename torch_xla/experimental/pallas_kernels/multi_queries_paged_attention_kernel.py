@@ -198,13 +198,14 @@ def _flash_attention(
   o_curr = jax.lax.dot(p.astype(v.dtype), v, preferred_element_type=jnp.float32)
   acc_scratch_ref[q_head_idx_per_kv] += o_curr * l_broadcast(l_next_inv_safe)
 
-  # TODO: To potentially improve the perf, consider not to update o_ref, l_ref, and m_ref at every kv_blk_idx. Instead, use a proper @pl.when(kv_blk_idx == ...) at the last kv_block.
-  o_ref[0, q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
-      o_ref.dtype)
-  l_ref[0, q_head_idx_per_kv] = l_scratch_ref[q_head_idx_per_kv].astype(
-      l_ref.dtype)
-  m_ref[0, q_head_idx_per_kv] = m_scratch_ref[q_head_idx_per_kv].astype(
-      m_ref.dtype)
+  @pl.when(kv_blk_idx == kv_len // kv_seq_len_per_kv_compute_blk)
+  def store_to_output():
+    o_ref[0, q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
+        o_ref.dtype)
+    l_ref[0, q_head_idx_per_kv] = l_scratch_ref[q_head_idx_per_kv].astype(
+        l_ref.dtype)
+    m_ref[0, q_head_idx_per_kv] = m_scratch_ref[q_head_idx_per_kv].astype(
+        m_ref.dtype)
 
 
 def paged_flash_attention_kernel(
