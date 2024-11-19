@@ -85,29 +85,23 @@ if [[ "$BAZEL_VERB" == "coverage" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
 fi
 
-  test_names1=("test_aten_xla_tensor_1"
-               "test_aten_xla_tensor_2"
-               "test_aten_xla_tensor_3"
-               "test_aten_xla_tensor_4"
-               "pjrt_computation_client_test")
-               # Disable IFRT test as it currently crashes
-               #"ifrt_computation_client_test")
-  test_names2=("test_aten_xla_tensor_5"
-               "test_aten_xla_tensor_6"
-               "test_ir"
-               "test_lazy"
-               "test_replication"
-               "test_tensor"
-               # disable test_xla_backend_intf since it is flaky on upstream
-               #"test_xla_backend_intf"
-               "test_xla_sharding")
-  if [[ "$RUN_CPP_TESTS1" == "cpp_tests1" ]]; then
-    test_names=("${test_names1[@]}")
-  elif [[ "$RUN_CPP_TESTS2" == "cpp_tests2" ]]; then
-    test_names=("${test_names2[@]}")
-  else
-    test_names=("${test_names1[@]}" "${test_names2[@]}")
-  fi
+test_names=("all")
+if [[ "$RUN_CPP_TESTS1" == "cpp_tests1" ]]; then
+  test_names=("test_aten_xla_tensor_1"
+              "test_aten_xla_tensor_2"
+              "test_aten_xla_tensor_3"
+              "test_aten_xla_tensor_4")
+elif [[ "$RUN_CPP_TESTS2" == "cpp_tests2" ]]; then
+  test_names=("test_aten_xla_tensor_5"
+              "test_aten_xla_tensor_6"
+              "test_ir"
+              "test_lazy"
+              "test_replication"
+              "test_tensor"
+              # disable test_xla_backend_intf since it is flaky on upstream
+              #"test_xla_backend_intf"
+              "test_xla_sharding")
+fi
 
 for name in "${test_names[@]}"; do
   echo "Running $name cpp test..."
