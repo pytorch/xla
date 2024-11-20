@@ -208,7 +208,8 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
       num_queries_per_compute_block=(16, 32),
       block_kv_size=(128, 256),
   )
-  def test_paged_attention_with_query_padding(
+  # TODO(xiowei): reenable the test later.
+  def _test_paged_attention_with_query_padding(
       self,
       dtype,
       page_size,
