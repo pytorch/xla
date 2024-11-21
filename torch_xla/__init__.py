@@ -234,6 +234,9 @@ _init_xla_lazy_backend()
 # keep PyTorch/XLA CI healthy.
 # TODO @wonjoo come up with a long term fix in Dynamo.
 torch._dynamo.config.automatic_dynamic_shapes = False
+# Unspecialized float is not friendly to XLA, set flag to False until XLA
+# can better compile F64 scalar tensors
+torch._dynamo.config.specialize_float = True
 
 # Activate view-replay on AOTAutograd.
 # See: https://github.com/pytorch/pytorch/pull/124488
