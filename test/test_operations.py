@@ -58,7 +58,7 @@ import test_utils
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
 XLA_DISABLE_FUNCTIONALIZATION = bool(
-    os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', False))
+    int(os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', '0')))
 
 
 def _is_on_tpu():
@@ -2833,6 +2833,66 @@ class TestGeneric(test_utils.XlaTestCase):
     xm.wait_device_ops()
     buf_ptr_3 = torch_xla._XLAC._unsafe_buffer_pointer(xla_tensor_3)
     self.assertGreaterEqual(buf_ptr_3, 0)
+
+  def test_consistent_strides(self):
+    # Tests whether the `is_contiguous()` method is consisten with the tensor's stride.
+    # In other words, if `is_contiguous()` is true, the tensor's stride should reflect
+    # in a contiguous storage.
+
+    def stride_is_contiguous(tensor):
+      # Order the sizes and strides tuple list in ascending stride order, so that the
+      # first element corresponds to the smallest stride.
+      sizes_and_strides = list(
+          sorted(zip(tensor.shape, tensor.stride()), key=lambda t: t[1]))
+
+      # A contiguous tensor's smallest stride should be 1.
+      if sizes_and_strides[0][1] != 1:
+        return False
+
+      # Check whether the next larger stride `stride[i + 1]` is equal the current
+      # one `stride[i]` multiplied by the current size `size[i]`.
+      for i, (size, stride) in enumerate(sizes_and_strides[:-1]):
+        if stride[i + 1] != stride[i] * size[i]:
+          return False
+
+      return True
+
+    def assert_strides_consistent(tensor):
+      self.assertEquals(tensor.is_contiguous(), stride_is_contiguous(tensor))
+
+    # Obviously contiguous, since it was created with random.
+    a = torch.rand(10).to(xm.xla_device())
+    assert_strides_consistent(a)
+
+    # Not contiguous, since we are skipping every other element.
+    b = a[::2]
+    assert_strides_consistent(b)
+
+    # Still not contiguous, since 'b' is not contiguous.
+    c = b[1:]
+    assert_strides_consistent(c)
+
+  def test_contiguity_on_different_memory_format(self):
+    # Create contiguous strided tensor.
+    a = torch.rand(2, 3, 4, 5).to(xm.xla_device())
+    self.assertTrue(a.is_contiguous())
+    # When functionalization is disabled, we fallback to the old behavior, where
+    # `is_contiguous()` calls always returns True.
+    self.assertEquals(
+        a.is_contiguous(memory_format=torch.channels_last),
+        XLA_DISABLE_FUNCTIONALIZATION)
+
+    # Make `a` contiguous in torch.channels_last memory format.
+    #
+    # This should, in theory, be a no-op, since we can't really change the strides
+    # of XLA tensors. However, `contiguous` is a composite operation that checks the
+    # tensor's metadata. Therefore, it shall clone the tensor whenever its strides
+    # do not conform to the given memory format.
+    b = a.contiguous(memory_format=torch.channels_last)
+    # When functionalization is disabled, we fallback to the old behavior, where
+    # `is_contiguous()` calls always returns True.
+    self.assertEquals(b.is_contiguous(), XLA_DISABLE_FUNCTIONALIZATION)
+    self.assertTrue(b.is_contiguous(memory_format=torch.channels_last))
 
 
 class TestDLPack(parameterized.TestCase):
