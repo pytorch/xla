@@ -1160,165 +1160,115 @@ def _aten_cat(tensors, dims=0):
   return jnp.concatenate(tensors, dims)
 
 def _ceil_mode_padding(
-    padding: list[int],
-    input_shape: list[int],
-    kernel_size: list[int],
-    stride: list[int],
-    ceil_mode: bool,
+    padding, input_shape, kernel_size, stride, dilation, ceil_mode
 ):
-  """Creates low and high padding specification for the given padding (which is symmetric) and ceil mode.
+    ceil_mode_padding = []
+    for i in range(len(padding)):
+        left_padding = padding[i]
+        right_padding = left_padding
 
-  Additional high padding could be required when ceil mode is set.
-  """
-  ceil_mode_padding = []
-  for i in range(len(padding)):
-    left_padding = padding[i]
-    right_padding = left_padding
+        input_size = input_shape[2 + i]
+        effective_kernel_size = (kernel_size[i] - 1) * dilation[i] + 1
+        output_size_rem = (input_size + 2 * left_padding - effective_kernel_size) % stride[i]
+        if ceil_mode and output_size_rem != 0:
+            extra_padding = stride[i] - output_size_rem
+            right_padding += extra_padding
 
-    input_size = input_shape[2 + i]
-    output_size_rem = (input_size + 2 * left_padding - kernel_size[i]) % stride[
-        i
-    ]
-    if ceil_mode and output_size_rem != 0:
-      extra_padding = stride[i] - output_size_rem
-      new_output_size = (
-          input_size
-          + left_padding
-          + right_padding
-          + extra_padding
-          - kernel_size[i]
-          + stride[i]
-          - 1
-      ) // stride[i] + 1
-      # Ensure that the last pooling starts inside the image.
-      size_to_compare = input_size + left_padding
+        ceil_mode_padding.append((left_padding, right_padding))
+    return ceil_mode_padding
 
-      if (new_output_size - 1) * stride[i] < size_to_compare:
-        right_padding += extra_padding
-
-    ceil_mode_padding.append((left_padding, right_padding))
-  return ceil_mode_padding
-
-
-def break_into_channels(input_tensor):
-    """
-    This function takes a 4D tensor (batch_size, channels, height, width) and returns
-    a list of 2D tensors, each representing one channel of the input.
+def create_indices(x):
+    batch_size, num_channels, height, width = x.shape
+    size_per_channel = height * width
+    indices_per_channel = jnp.arange(size_per_channel).reshape(height, width)
+    indices = indices_per_channel[None, None, :, :]
+    indices = jnp.tile(indices, (batch_size, num_channels, 1, 1))
     
-    Args:
-    input_tensor (torch.Tensor): A 4D tensor representing the input.
-    
-    Returns:
-    List of 2D tensors, where each tensor corresponds to one channel of the input.
-    """
-    batch_size, channels, height, width = input_tensor.shape
-    channel_list = []
-
-    for channel in range(channels):
-        channel_list.append(input_tensor[0, channel, :, :])  # Extracting each channel
-
-    return channel_list
+    return indices
 
 @op(torch.ops.aten.max_pool2d_with_indices)
 @op(torch.ops.aten.max_pool3d_with_indices)
 def _aten_max_pool2d_with_indices(
-  inputs, kernel_size, strides, padding=0, dilation=1, ceil_mode=False
+  inputs, kernel_size, strides=None, padding=0, dilation=1, ceil_mode=False
 ):
-  num_batch_dims = len(inputs.shape) - len(kernel_size) - 1
   kernel_size = tuple(kernel_size)
+  
+  # Set default strides to kernel_size if not provided
+  if not strides:
+      strides = kernel_size
   strides = tuple(strides)
+  
+  # Ensure padding is a list matching kernel dimensions
   if isinstance(padding, int):
-    padding = [padding for _ in range(len(kernel_size))]
+      padding = [padding for _ in range(len(kernel_size))]
+  else:
+      padding = list(padding)
+  
+  # If dilation is an int, make it a tuple
+  if isinstance(dilation, int):
+      dilation = (dilation,) * len(kernel_size)
+  else:
+      dilation = tuple(dilation)
+  
+  if inputs.ndim == 4:
+      pass
+  elif inputs.ndim == 3:
+      # Assuming inputs is (num_channels, height, width), missing batch dimension
+      inputs = inputs[None, :, :, :]
+  elif inputs.ndim == 2:
+      inputs = inputs[None, None, :, :]
+  else:
+      raise ValueError("Unsupported number of dimensions in inputs")
 
-  input_shape = inputs.shape
-  if num_batch_dims == 0:
-    input_shape = [1, *input_shape]
+  # Adjust paddin© for ceil mode, passing dilation
   padding = _ceil_mode_padding(
-      padding, input_shape, kernel_size, strides, ceil_mode
+      padding, inputs.shape, kernel_size, strides, dilation, ceil_mode
   )
+  # Prepare padding for reduce_window
+  if not isinstance(padding, str):
+      padding = tuple(map(tuple, padding))
+      padding = ((0, 0), (0, 0)) + padding
 
   window_shape = kernel_size
-  num_batch_dims = inputs.ndim - (len(window_shape) + 1)
-  strides = strides or (1,) * len(window_shape)
-  assert len(window_shape) == len(
-    strides
-  ), f"len({window_shape}) must equal len({strides})"
-  strides = (1,) * (1 + num_batch_dims) + strides
-  dims = (1,) * (1 + num_batch_dims) + window_shape
-
-  is_single_input = False
-  if num_batch_dims == 0:
-    # add singleton batch dimension because lax.reduce_window always
-    # needs a batch dimension.
-    inputs = inputs[None]
-    strides = (1,) + strides
-    dims = (1,) + dims
-    is_single_input = True
-
-  assert inputs.ndim == len(dims), f"len({inputs.shape}) != len({dims})"
-  if not isinstance(padding, str):
-    padding = tuple(map(tuple, padding))
-    assert len(padding) == len(window_shape), (
-      f"padding {padding} must specify pads for same number of dims as "
-      f"window_shape {window_shape}"
-    )
-    assert all(
-      [len(x) == 2 for x in padding]
-    ), f"each entry in padding {padding} must be length 2"
-    padding = ((0, 0), (0, 0)) + padding
-
-  inputs_per_channels = break_into_channels(inputs)
-  print(f"{inputs_per_channels=}")
-  indices = jnp.arange(np.prod(inputs.shape)).reshape(inputs.shape)
-  print(f"1- {indices=}")
-  print(f"1- {indices.shape=}")
-
-  indices_channels = []
-  for inputs_per_channel in inputs_per_channels:
-    indices_channels.append(jnp.arange(np.prod(inputs_per_channel.shape)).reshape(inputs_per_channel.shape))
+  strides_full = (1, 1) + strides  # Include batch and channel dimensions
+  window_shape_full = (1, 1) + window_shape
+  window_dilation = (1, 1) + dilation  # Include batch and channel dimensions
   
-  print(f"{indices_channels=}")
-
-  indices = jnp.stack(indices_channels, axis=0)
-  print(f"2- {indices=}")
-  print(f"2- {indices.shape=}")
-
-  indices = jnp.expand_dims(indices, axis=0)
-  print(f"3- {indices=}")
-  print(f"3- {indices.shape=}")
+  indices = create_indices(inputs)
   
-  import ipdb; ipdb.set_trace()
-
   def reduce_fn(a, b):
-    ai, av = a
-    bi, bv = b
-    which = av > bv
-    return jnp.where(which, ai, bi), jnp.where(which, av, bv)
-
-  init_val = -jnp.inf
-  if inputs.dtype in (jnp.int32, jnp.int64):
-    init_val = -(1 << 31)
+      ai, av = a
+      bi, bv = b
+      which = av >= bv
+      max_indices = jnp.where(which, ai, bi)
+      max_values = jnp.where(which, av, bv)
+      return max_indices, max_values
+  
+  init_val = -jnp.inf if inputs.dtype not in (jnp.int32, jnp.int64) else -(1 << 31)
   init_val = jnp.array(init_val).astype(inputs.dtype)
-
-  # Separate maxpool result and indices into two reduce_window ops. Since 
-  # the indices tensor is usually unused in inference, separating the two 
-  # can help DCE computations for argmax.
+    
+  # Apply max pooling with window_dilation
   y = jax.lax.reduce_window(
-      inputs, init_val, jax.lax.max, dims, strides, padding
+      inputs,
+      init_val,
+      jax.lax.max,
+      window_shape_full,
+      strides_full,
+      padding,
+      window_dilation=window_dilation
   )
+  
   indices, _ = jax.lax.reduce_window(
-      (indices, inputs), (0, init_val), reduce_fn, dims, strides, padding
+      (indices, inputs),
+      (0, init_val),
+      reduce_fn,
+      window_shape_full,
+      strides_full,
+      padding,
+      window_dilation=window_dilation
   )
-  print(f"2- {indices=}")
-  if is_single_input:
-    indices = jnp.squeeze(indices, axis=0)
-    y = jnp.squeeze(y, axis=0)
-    print(f"3- {indices=}")
 
-  import ipdb; ipdb.set_trace()
   return y, indices
-
-# TODO add more ops
 
 
 @op(torch.ops.aten.min)
