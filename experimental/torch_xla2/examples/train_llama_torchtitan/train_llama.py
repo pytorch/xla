@@ -5,6 +5,17 @@ from typing import Tuple
 from collections import defaultdict
 import functools
 
+def _setup_default_env():
+  os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '1')
+  os.environ.setdefault('GRPC_VERBOSITY', 'ERROR')
+  os.environ.setdefault('ALLOW_MULTIPLE_LIBTPU_LOAD', '1')
+  # only need for tpu v4
+  # os.environ.setdefault('TPU_MEGACORE', 'megacore_dense')
+  tpu_args = "--xla_tpu_enable_async_collective_fusion_fuse_all_gather=true --xla_tpu_megacore_fusion_allow_ags=false --xla_enable_async_collective_permute=true --xla_tpu_enable_ag_backward_pipelining=true --xla_tpu_enable_data_parallel_all_reduce_opt=true --xla_tpu_data_parallel_opt_different_sized_ops=true --xla_tpu_enable_async_collective_fusion=true --xla_tpu_enable_async_collective_fusion_multiple_steps=true --xla_tpu_overlap_compute_collective_tc=true --xla_enable_async_all_gather=true"
+  os.environ.setdefault('LIBTPU_INIT_ARGS', tpu_args)
+
+_setup_default_env()
+
 import torch
 import torch.nn.functional
 from torch.utils import _pytree as pytree
@@ -22,17 +33,6 @@ from torchtitan.models.llama import llama3_configs
 from torchtitan.models.llama import model as titan
 
 P = jax.sharding.PartitionSpec
-
-def _setup_default_env():
-  os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '1')
-  os.environ.setdefault('GRPC_VERBOSITY', 'ERROR')
-  os.environ.setdefault('ALLOW_MULTIPLE_LIBTPU_LOAD', '1')
-  # only need for tpu v4
-  # os.environ.setdefault('TPU_MEGACORE', 'megacore_dense')
-  tpu_args = "--xla_tpu_enable_async_collective_fusion_fuse_all_gather=true --xla_tpu_megacore_fusion_allow_ags=false --xla_enable_async_collective_permute=true --xla_tpu_enable_ag_backward_pipelining=true --xla_tpu_enable_data_parallel_all_reduce_opt=true --xla_tpu_data_parallel_opt_different_sized_ops=true --xla_tpu_enable_async_collective_fusion=true --xla_tpu_enable_async_collective_fusion_multiple_steps=true --xla_tpu_overlap_compute_collective_tc=true --xla_enable_async_all_gather=true"
-  os.environ.setdefault('LIBTPU_INIT_ARGS', tpu_args)
-
-_setup_default_env()
 
 
 
@@ -110,12 +110,7 @@ class Trainer:
             axis_names=global_axis,
         )
         self.x_sharding = jax.sharding.NamedSharding(self.mesh, P(global_axis))
-        self.y_sharding = jax.sharding.NamedSharding(self.mesh, P(*global_axis))
         self.replicated = jax.sharding.NamedSharding(self.mesh, P())
-
-    def torch_opt_to_jax_opt(self, torch_opt):
-        # TODO: Can convert optimizer instead of using a jax one
-        return optax.adamw(0.01)
 
     def _shard_fsdp_style(self, state_dict, sharding=None):
         if sharding is None:
@@ -155,7 +150,7 @@ class Trainer:
                         weights, buffers, data, batch_id)
                 return jax_view(loss)
 
-        jax_optimizer = self.torch_opt_to_jax_opt(None)
+        jax_optimizer = optax.adamw(0.001)
 
         opt_state = jax_optimizer.init(jax_params)
         grad_fn = jax.value_and_grad(lightning_mod_loss)
@@ -164,13 +159,9 @@ class Trainer:
 
         print('Begining training')
 
-        # NOTE: explicitly set sharding so the sharding of opt_state wont change
-        # if it changes, it would trigger recompile
         @functools.partial(
             jax.jit, 
             donate_argnums=(0, 2),
-            #in_shardings=(self.x_sharding, self.x_sharding, opt_state_sharding, self.x_sharding, self.replicated),
-            #out_shardings=(self.replicated, self.x_sharding, opt_state_sharding),
         )
         def step(jax_weights, jax_buffers, optimizer_state, xla_data, bid):
             print('Tracing inside of step')
@@ -187,12 +178,6 @@ class Trainer:
             total_param_size += v.size
 
         print('Total number of params: ', total_param_size)
-        # print(jax.jit(jax.grad(lightning_mod_loss)).lower(
-        #     jax_params, jax_buffers, 
-        #     (jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32')), 
-        #      jax.ShapeDtypeStruct((8, SEQLEN), jnp.dtype('int32'))),
-        #     0
-        # ).as_text())
 
         print('Start compiling')
         start = time.perf_counter()
