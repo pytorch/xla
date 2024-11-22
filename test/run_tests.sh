@@ -209,6 +209,7 @@ function run_xla_op_tests2 {
   run_test "$CDIR/pjrt/test_dtypes.py"
   run_test "$CDIR/test_while_loop.py"
   run_test "$CDIR/scan/test_scan.py"
+  run_test "$CDIR/scan/test_scan_spmd.py"
   run_test "$CDIR/scan/test_scan_layers.py"
   run_test "$CDIR/test_autocast.py"
   run_test "$CDIR/eager/test_eager.py"
