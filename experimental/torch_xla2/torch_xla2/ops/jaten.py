@@ -1186,6 +1186,7 @@ def create_indices(x):
     
     return indices
 
+#Todo - fix for 1153+1 test - returned tensor shape doesn't match the expected shape - the value matches
 @op(torch.ops.aten.max_pool2d_with_indices)
 @op(torch.ops.aten.max_pool3d_with_indices)
 def _aten_max_pool2d_with_indices(
