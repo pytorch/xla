@@ -212,7 +212,8 @@ class ExportFxPassTest(unittest.TestCase):
     after_decomp_out = native_layer_norm_impl(*args)
     self.assertTrue(
         torch.allclose(before_decomp_out, after_decomp_out, atol=1e-6))
-    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    ep_training = export(m, args, dynamic_shapes=dynamic_shapes)
+    ep = ep_training.run_decompositions({})
     decompose_dynamic_native_layer_norm(ep.graph_module)
     ep.graph_module.recompile()
     self.assertFalse('aten.native_layer_norm' in ep.graph_module.code)

@@ -1,3 +1,5 @@
+from typing import List, Dict, Any, Optional
+import dataclasses
 import jax
 import os
 import torch
@@ -79,7 +81,10 @@ torch.utils.generate_methods_for_privateuse1_backend(
   unsupported_dtype=unsupported_dtype)
 
 import jax
-torch._register_device_module('jax', jax)
+import torch_xla2.device_module
+torch._register_device_module('jax', torch_xla2.device_module)
+
+
 
 
 def enable_accuracy_mode():
@@ -92,3 +97,29 @@ def enable_performance_mode():
   jax.config.update('jax_enable_x64', False)
   jax.config.update('jax_default_matmul_precision', 'default')
   default_env().config.internal_respect_torch_return_dtypes = False
+
+
+
+@dataclasses.dataclass
+class CompileOptions:
+  # only valid if compiling nn.Module
+  methods_to_compile: List[str] = dataclasses.field(default_factory=lambda: ['forward'])  
+  jax_jit_kwargs: Dict[str, Any] = dataclasses.field(default_factory=dict)
+  mode: str = 'jax' # or dynamo or export
+
+
+def compile(fn, options: Optional[CompileOptions] = None):
+  options = options or CompileOptions()
+  if options.mode == 'jax':
+    from torch_xla2 import interop
+    if isinstance(fn, torch.nn.Module):
+      module = interop.JittableModule(fn, extra_jit_args=options.jax_jit_kwargs)
+      for n in options.methods_to_compile:
+        module.make_jitted(n)
+      return module
+    else:
+      return interop.jax_jit(fn)
+  elif options.mode == 'dynamo':
+    raise RuntimeError('dynamo mode is not supported yet')
+  elif options.mode == 'export':
+    raise RuntimeError('export mode is not supported yet')

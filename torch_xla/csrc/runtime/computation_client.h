@@ -255,6 +255,7 @@ class ComputationClient {
   struct MemoryInfo {
     int64_t bytes_used = 0;
     int64_t bytes_limit = 0;
+    int64_t peak_bytes_used = 0;
   };
 
   virtual ~ComputationClient() {}

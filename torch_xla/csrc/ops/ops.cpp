@@ -32,10 +32,10 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 #include "xla/client/lib/constants.h"
-#include "xla/client/lib/logdet.h"
 #include "xla/client/lib/math.h"
 #include "xla/client/lib/matrix.h"
 #include "xla/client/lib/slicing.h"
+#include "xla/hlo/builder/lib/logdet.h"
 #include "xla/shape_util.h"
 
 namespace torch_xla {
@@ -981,11 +981,24 @@ torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input) {
     return node.ReturnOp(xla::Complex(zero_dim, first_dim), loctx);
   };
 
-  xla::Shape result_shape = GetXlaShape(input);
-  result_shape.DeleteDimension(result_shape.rank() - 1);
+  xla::Shape input_shape = GetXlaShape(input);
+  xla::Shape res_shape;
+  switch (input_shape.element_type()) {
+    case xla::PrimitiveType::F32:
+      res_shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::C64,
+                                            input_shape.dimensions());
+      break;
+    case xla::PrimitiveType::F64:
+      res_shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::C128,
+                                            input_shape.dimensions());
+      break;
+    default:
+      XLA_ERROR() << "input shape type not supported: " << input_shape;
+  }
+  res_shape.DeleteDimension(res_shape.rank() - 1);
 
   return GenericOp(torch::lazy::OpKind(at::aten::view_as_complex_copy), {input},
-                   result_shape, std::move(lower_fn));
+                   res_shape, std::move(lower_fn));
 }
 
 torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input) {
@@ -998,11 +1011,24 @@ torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input) {
     return node.ReturnOp(BuildStack({real, imag}, input_shape.rank()), loctx);
   };
 
-  xla::Shape result_shape = GetXlaShape(input);
-  result_shape.add_dimensions(2);
+  xla::Shape input_shape = GetXlaShape(input);
+  xla::Shape res_shape;
+  switch (input_shape.element_type()) {
+    case xla::PrimitiveType::C64:
+      res_shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32,
+                                            input_shape.dimensions());
+      break;
+    case xla::PrimitiveType::C128:
+      res_shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F64,
+                                            input_shape.dimensions());
+      break;
+    default:
+      XLA_ERROR() << "input shape type not supported: " << input_shape;
+  }
+  res_shape.add_dimensions(2);
 
   return GenericOp(torch::lazy::OpKind(at::aten::view_as_real_copy), {input},
-                   result_shape, std::move(lower_fn));
+                   res_shape, std::move(lower_fn));
 }
 
 torch::lazy::NodePtr Rsub(const torch::lazy::Value& input,

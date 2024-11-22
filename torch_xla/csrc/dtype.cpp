@@ -129,7 +129,7 @@ xla::PrimitiveType MaybeDowncastToXlaDeviceType(
       if (UseBF16()) {
         return xla::PrimitiveType::BF16;
       }
-      if (DowncastBF16() || hw_type == XlaDeviceType::NEURON) {
+      if (DowncastBF16() || CheckNeuronDevice(hw_type)) {
         return xla::PrimitiveType::F32;
       }
       return xla::PrimitiveType::F64;
@@ -137,11 +137,11 @@ xla::PrimitiveType MaybeDowncastToXlaDeviceType(
       return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
                                          : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U16:
-      return hw_type != XlaDeviceType::NEURON ? xla::PrimitiveType::U16
-                                              : xla::PrimitiveType::U32;
+      return CheckNeuronDevice(hw_type) ? xla::PrimitiveType::U32
+                                        : xla::PrimitiveType::U16;
     case xla::PrimitiveType::S16:
-      return hw_type != XlaDeviceType::NEURON ? xla::PrimitiveType::S16
-                                              : xla::PrimitiveType::S32;
+      return CheckNeuronDevice(hw_type) ? xla::PrimitiveType::S32
+                                        : xla::PrimitiveType::S16;
     case xla::PrimitiveType::S64:
       return xla::PrimitiveType::S64;
     case xla::PrimitiveType::U64:

@@ -6,7 +6,9 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.stablehlo_custom_call
 from torch.library import Library, impl, impl_abstract
-from torch_xla.experimental.stablehlo_custom_call import stablehlo_custom_call
+from torch_xla.experimental.stablehlo_custom_call import (stablehlo_custom_call,
+                                                          place_to_host,
+                                                          place_to_device)
 from torch_xla.stablehlo import (StableHLOExportOptions,
                                  exported_program_to_stablehlo)
 
@@ -113,6 +115,24 @@ class StableHLOCustomCallExportTest(unittest.TestCase):
     self.assertTrue("has_side_effect = true" in shlo_text)
     # TODO: api version lost during conversion, or not shown in txt format.
     # self.assertTrue("api_version = 1" in shlo_text)
+
+  def test_place_to_host_device(self):
+    dev = xm.xla_device()
+    a = torch.ones(10, device=dev)
+    b = place_to_host(a)
+    shlo_text = xm.get_stablehlo([b])
+    self.assertTrue("has_side_effect = true" in shlo_text)
+    self.assertTrue(
+        "mhlo.frontend_attributes = {_xla_buffer_placement = \"pinned_host\"}}"
+        in shlo_text)
+
+    a = torch.ones(10, device=dev)
+    b = place_to_device(a)
+    shlo_text = xm.get_stablehlo([b])
+    self.assertTrue("has_side_effect = true" in shlo_text)
+    self.assertTrue(
+        "mhlo.frontend_attributes = {_xla_buffer_placement = \"device\"}}" in
+        shlo_text)
 
 
 if __name__ == "__main__":

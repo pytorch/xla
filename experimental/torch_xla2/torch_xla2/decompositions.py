@@ -297,4 +297,5 @@ EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten.nll_loss2d_backward,
     torch.ops.aten.bernoulli_.Tensor,
     torch.ops.aten.bernoulli_.float,
+    torch.ops.aten.log_normal,
 ])

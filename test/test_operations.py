@@ -793,6 +793,57 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xla_a = t.to(xla_device).sgn()
     self.assertEqual(a.data, xla_a.data.cpu())
 
+  @skipIfFunctionalizationDisabled("view_as_real unsupported")
+  def test_view_as_real_c64(self):
+    xla_device = torch_xla.device()
+    x = torch.randn(4, dtype=torch.cfloat, device=xla_device)
+    real = torch.view_as_real(x)
+    self.assertEqual(real.dtype, torch.float32)
+    # XLA type of the real needs to be f32 as well
+    self.assertIn("f32[4,2]", torch_xla._XLAC._get_xla_tensor_debug_info(real))
+    # HLO generated needs to have type f32 as well
+    self.assertIn("f32[4,2]",
+                  torch_xla._XLAC._get_xla_tensors_text([real]).split('\n')[-3])
+
+  @skipIfFunctionalizationDisabled("view_as_real unsupported")
+  def test_view_as_real_c128(self):
+    xla_device = torch_xla.device()
+    x = torch.randn(4, dtype=torch.cdouble, device=xla_device)
+    real = torch.view_as_real(x)
+    self.assertEqual(real.dtype, torch.float64)
+    # XLA type of the real needs to be f32 as well
+    self.assertIn("f64[4,2]", torch_xla._XLAC._get_xla_tensor_debug_info(real))
+    # HLO generated needs to have type f32 as well
+    self.assertIn("f64[4,2]",
+                  torch_xla._XLAC._get_xla_tensors_text([real]).split('\n')[-3])
+
+  @skipIfFunctionalizationDisabled("view_as_real unsupported")
+  def test_view_as_complex_f32(self):
+    xla_device = torch_xla.device()
+    x = torch.randn(4, 2, device=xla_device)
+    complex = torch.view_as_complex(x)
+    self.assertEqual(complex.dtype, torch.complex64)
+    # XLA type of the real needs to be f32 as well
+    self.assertIn("c64[4]", torch_xla._XLAC._get_xla_tensor_debug_info(complex))
+    # HLO generated needs to have type f32 as well
+    self.assertIn(
+        "c64[4]",
+        torch_xla._XLAC._get_xla_tensors_text([complex]).split('\n')[-3])
+
+  @skipIfFunctionalizationDisabled("view_as_real unsupported")
+  def test_view_as_complex_f64(self):
+    xla_device = torch_xla.device()
+    x = torch.randn(4, 2, dtype=torch.float64, device=xla_device)
+    complex = torch.view_as_complex(x)
+    self.assertEqual(complex.dtype, torch.complex128)
+    # XLA type of the real needs to be f32 as well
+    self.assertIn("c128[4]",
+                  torch_xla._XLAC._get_xla_tensor_debug_info(complex))
+    # HLO generated needs to have type f32 as well
+    self.assertIn(
+        "c128[4]",
+        torch_xla._XLAC._get_xla_tensors_text([complex]).split('\n')[-3])
+
   def test_index_put(self):
     xla_device = xm.xla_device()
     a = torch.tensor([1, 1, 1, 1]).to(xla_device).to(dtype=torch.float32)
@@ -2907,6 +2958,17 @@ class TestDLPack(parameterized.TestCase):
     xla_t1 = torch.arange(5).to(xm.xla_device())
     dlt1 = xdlpack.to_dlpack(xla_t1)
     cuda_t1 = torch.utils.dlpack.from_dlpack(dlt1)
+    self.assertEqual(cuda_t1.device.type, 'cuda')
+    self.assertEqual(cuda_t1.device.index, xla_t1.device.index)
+    cuda_t1[0] = cuda_t1[0] + 20
+    self.assertTrue(torch.allclose(xla_t1.cpu(), cuda_t1.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_dlpack_xla_to_pytorch_cuda_protocol_conversion(self):
+    xla_t1 = torch.arange(5).to(xm.xla_device())
+    caps_t1 = torch.utils.dlpack.to_dlpack(xla_t1)
+    cuda_t1 = torch.utils.dlpack.from_dlpack(caps_t1)
     self.assertEqual(cuda_t1.device.type, 'cuda')
     self.assertEqual(cuda_t1.device.index, xla_t1.device.index)
     cuda_t1[0] = cuda_t1[0] + 20

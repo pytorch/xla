@@ -483,6 +483,131 @@ def flash_attention(
                               sm_scale, ab, partition_spec, mesh)
 
 
+def _multi_queries_paged_attention_nonkernel(
+    q,  # [batch_size, query_len, num_heads, head_size]
+    k_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
+    v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
+    lengths,  # seq_lengths, [batch_size]. nb batch_size = len(seq_lens), the effective kv_length.
+    page_indices,  # [batch_size, pages_per_sequence]
+    effective_q_lens,  # [batch_size], the effective q_length
+) -> torch.Tensor:  # [batch_size, query_len, num_heads, head_dim]
+  batch_size, query_len, num_query_heads, head_size = q.shape
+  num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
+  num_query_per_kv = num_query_heads // num_kv_heads
+
+  lengths = lengths.cpu()
+  page_indices = page_indices.cpu()
+
+  outputs: List[torch.Tensor] = []
+  for i in range(batch_size):
+    kv_len = lengths[i]
+    num_pages = (kv_len + page_size - 1) // page_size
+    indices = page_indices[i, :num_pages]
+
+    k = k_pages[:, indices]  # [num_kv_heads, num_pages, page_size, head_size]
+    k = k.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_size]
+    k = k.reshape(num_pages * page_size, num_kv_heads, head_size)
+    k = k[:kv_len]  # [kv_len, num_kv_heads, head_size]
+
+    v = v_pages[:, indices]  # [num_kv_heads, num_pages, page_size, head_size]
+    v = v.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_size]
+    v = v.reshape(num_pages * page_size, num_kv_heads, head_size)
+    v = v[:kv_len]  # [kv_len, num_kv_heads, head_size]
+
+    if num_query_per_kv != 1:
+      # GQA/MQA
+      k = torch.repeat_interleave(
+          k, num_query_per_kv, dim=1)  # [kv_len, num_query_heads, head_size]
+      v = torch.repeat_interleave(
+          v, num_query_per_kv, dim=1)  # [kv_len, num_query_heads, head_size]
+
+    # NOTE: To balance efficiency and performance, we use the original dtype (e.g., bfloat16 or float16)
+    # for matrix multiplications (i.e., q @ k and attn @ v) while using float32 for softmax.
+    # However, the kernel doesn't have to strictly follow the dtypes here.
+    # For example, it can use bfloat16 instead of float32 or vice versa for performance or simplicity.
+    attn = torch.einsum("qhd,khd->hqk", q[i],
+                        k)  # [num_query_heads, query_len, kv_len]
+    attn = attn.float()
+    empty_mask = torch.ones(query_len, kv_len, device=attn.device)
+    effective_q_len = effective_q_lens[i]
+    mask = torch.triu(empty_mask, diagonal=kv_len - effective_q_len + 1).bool()
+    attn.masked_fill_(mask, float("-inf"))
+    attn = torch.softmax(
+        attn, dim=-1).to(v.dtype)  # [num_query_heads, query_len, kv_len]
+    out = torch.einsum("hqk,khd->qhd", attn,
+                       v)  # [query_len, num_query_heads, head_size]
+    outputs.append(out)
+
+  output = torch.stack(
+      outputs, dim=0)  # [batch_size, query_len, num_query_heads, head_size]
+  return output
+
+
+def multi_queries_paged_attention(
+    q,  # [batch_size, query_len, num_heads, head_size]
+    k_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
+    v_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
+    lengths,  # seq_lengths, [batch_size]. nb batch_size = len(seq_lens)
+    page_indices,  # [batch_size, pages_per_sequence]
+    effective_q_lens,  # [batch_size]
+    num_kv_pages_per_compute_block,
+    num_queries_per_compute_block,
+    use_kernel=True,
+):  # [batch_size, query_len, num_heads, head_dim]:
+  assert len(q.shape) == 4, "q should have 4 dimensions."
+  if not use_kernel:
+    return _multi_queries_paged_attention_nonkernel(
+        q,
+        k_pages,
+        v_pages,
+        lengths,
+        page_indices,
+        effective_q_lens,
+    )
+
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  jax_import_guard()
+  from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention
+  payload, tensor_args = trace_pallas(
+      paged_attention,
+      q,
+      k_pages,
+      v_pages,
+      lengths,
+      page_indices,
+      effective_q_lens,
+      num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
+      num_queries_per_compute_block=num_queries_per_compute_block,
+      static_argnames=[
+          "num_kv_pages_per_compute_block",
+          "num_queries_per_compute_block",
+      ],
+  )
+
+  q_dtype_for_kernel_launch = q.dtype
+  page_indices_reshaped = page_indices.reshape(-1)
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
+  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  q = q.permute(0, 2, 1, 3)
+  MIN_BLOCK_SIZE = 128
+  output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
+
+  output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
+      [
+          lengths,
+          page_indices_reshaped,
+          effective_q_lens,
+          buffer_index,
+          step,
+          q.to(q_dtype_for_kernel_launch),
+          k_pages,
+          v_pages,
+      ], payload, [q.shape, output_shape, output_shape],
+      [q_dtype_for_kernel_launch, torch.float32, torch.float32])
+  return output.permute(0, 2, 1, 3).to(q_dtype_for_kernel_launch)
+
+
 def paged_attention(q,
                     k_pages,
                     v_pages,
@@ -540,7 +665,8 @@ def paged_attention(q,
       ], payload, [q.shape, output_shape, output_shape],
       [q_dtype_for_kernel_launch, torch.float32, torch.float32])
 
-  return output.reshape(batch_size, num_heads, head_dim).to(q.dtype)
+  return output.reshape(batch_size, num_heads,
+                        head_dim).to(q_dtype_for_kernel_launch)
 
 
 def _calculate_num_tiles(x: int, tx: int) -> int:
@@ -957,6 +1083,33 @@ def paged_attention_non_xla(q: torch.Tensor,
                             pages_per_compute_block: int,
                             megacore_mode: str = None,
                             attn_logits_soft_cap: float = None):
+  return non_xla_attetion(q, k_pages, v_pages, "paged")
+
+
+XLA_LIB.define(
+    "multi_queries_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices, Tensor effective_q_lens, int num_kv_pages_per_compute_block, int num_queries_per_compute_block, bool use_kernel) -> Tensor",
+)
+
+
+@impl(XLA_LIB, "multi_queries_paged_attention", "XLA")
+def multi_queries_paged_attention_xla(
+    q: torch.Tensor, k_pages: torch.Tensor, v_pages: torch.Tensor,
+    lengths: torch.Tensor, page_indices: torch.Tensor,
+    effective_q_lens: torch.Tensor, num_kv_pages_per_compute_block: int,
+    num_queries_per_compute_block: int, use_kernel: bool):
+  return multi_queries_paged_attention(q, k_pages, v_pages, lengths,
+                                       page_indices, effective_q_lens,
+                                       num_kv_pages_per_compute_block,
+                                       num_queries_per_compute_block,
+                                       use_kernel)
+
+
+@impl(XLA_LIB, "multi_queries_paged_attention", "CompositeExplicitAutograd")
+def multi_queries_paged_attention_non_xla(
+    q: torch.Tensor, k_pages: torch.Tensor, v_pages: torch.Tensor,
+    lengths: torch.Tensor, page_indices: torch.Tensor,
+    effective_q_lens: torch.Tensor, num_kv_pages_per_compute_block: int,
+    num_queries_per_compute_block: int, use_kernel: bool):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 

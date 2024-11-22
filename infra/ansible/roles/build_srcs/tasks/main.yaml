@@ -82,7 +82,7 @@
     # group 1: prefix stop at first -: `torch_xla` or `torch`;
     # group 2: anything after first - before next + or -: `2.5.0`;
     # group 3 (can be empty): any thing after + before next -: `+gitac7fd44`;
-    # group 4 (can be empty): group 3 without +: `gitac7fd441`; 
+    # group 4 (can be empty): group 3 without +: `gitac7fd441`;
     # group 5: anything from next - to the end: `cp310-cp310-linux_x86_64.whl`.
     rename -v "s/^(.*?)\-(.*?)(\+([^ -]+))?\-(.+)/\1-\2.dev-\5/" *.whl
 
@@ -100,6 +100,32 @@
     - { dir: "{{ (src_root, 'pytorch/dist') | path_join }}", prefix: "torch" }
     - { dir: "{{ (src_root, 'pytorch/xla/dist') | path_join }}", prefix: "torch_xla" }
   when: nightly_release
+
+- name: Add cxx11 suffix to wheels built with C++11 ABI
+  ansible.builtin.shell: |
+    # Given names like
+    #
+    # torch_xla-2.5.0.dev20240819-cp310-cp310-linux_x86_64.whl
+    # torch_xla-2.4.0-cp311-cp311-manylinux_2_28_x86_64.whl
+    # torch-2.5.0+libtpu-cp310-cp310-linux_x86_64.whl
+    # torch-2.5.0-cp311-cp311-linux_x86_64.whl
+    #
+    # we want to rename it to
+    #
+    # torch_xla-2.5.0.dev20240819.cxx11-cp310-cp310-linux_x86_64.whl
+    # torch_xla-2.4.0.cxx11-cp311-cp311-manylinux_2_28_x86_64.whl
+    # torch-2.5.0+libtpu.cxx11-cp310-cp310-linux_x86_64.whl
+    # torch-2.5.0.cxx11-cp311-cp311-linux_x86_64.whl
+    #
+    # essentially adding .cxx11 before the -cp39, -cp310, -cp311 etc identifiers.
+    rename -v "s/^(.+?)(-cp\d+)/\1.cxx11\2/" *.whl
+  args:
+    executable: /bin/bash
+    chdir: "{{ item.dir }}"
+  loop:
+    - { dir: "{{ (src_root, 'pytorch/dist') | path_join }}", prefix: "torch" }
+    - { dir: "{{ (src_root, 'pytorch/xla/dist') | path_join }}", prefix: "torch_xla" }
+  when: cxx11_abi | int > 0
 
 - name: Copy wheels to /dist
   ansible.builtin.shell: "cp {{ item }}/*.whl /dist"
@@ -140,6 +166,14 @@
     cmd: pip wheel --no-build-isolation --no-deps "git+https://github.com/pytorch/vision.git@{{ torchvision_pin.stdout }}"
     chdir: /dist
   environment: "{{ env_vars }}"
+
+- name: Add cxx11 suffix to Torchvision wheels built with C++11 ABI
+  ansible.builtin.shell: |
+    rename -v "s/^torchvision(.+?)(-cp\d+)/torchvision\1.cxx11\2/" *.whl
+  args:
+    executable: /bin/bash
+    chdir: "/dist"
+  when: cxx11_abi | int > 0
 
 - name: Find Torchvision *.whl files in /dist
   ansible.builtin.find:

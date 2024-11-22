@@ -72,9 +72,9 @@
 #include "torch_xla/csrc/xla_sharding_util.h"
 #include "tsl/platform/env.h"
 #include "tsl/profiler/lib/traceme.h"
+#include "xla/hlo/parser/hlo_parser.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
-#include "xla/service/hlo_parser.h"
 
 namespace torch_xla {
 namespace {
@@ -825,6 +825,7 @@ py::dict GetMemoryInfo(const std::string& device_str) {
   auto py_dict = py::dict();
   py_dict["bytes_used"] = mem_info.bytes_used;
   py_dict["bytes_limit"] = mem_info.bytes_limit;
+  py_dict["peak_bytes_used"] = mem_info.peak_bytes_used;
   return py_dict;
 }
 
@@ -2503,6 +2504,8 @@ void InitXlaModuleBindings(py::module m) {
           FLAGS_torch_lazy_all_numbers_special_scalars =
               all_numbers_special_scalars;
         });
+  m.def("_get_xla_all_numbers_special_scalars",
+        []() { return FLAGS_torch_lazy_all_numbers_special_scalars; });
   m.def("_set_xla_handle_special_scalars", [](bool handle_special_scalars) {
     FLAGS_torch_lazy_handle_special_scalars = handle_special_scalars;
   });
@@ -2554,8 +2557,9 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<at::Tensor>& inputs, const std::string& target,
            const std::vector<std::vector<int64_t>>& output_shapes,
            const std::vector<py::object>& output_dtypes, bool has_side_effect,
-           const std::string& backend_config,
-           const int api_version) -> std::vector<at::Tensor> {
+           const std::string& backend_config, const int api_version,
+           const std::unordered_map<std::string, std::string>&
+               frontend_attributes) -> std::vector<at::Tensor> {
           std::vector<at::ScalarType> dtypes;
           dtypes.reserve(output_dtypes.size());
           for (auto& dtype : output_dtypes) {
@@ -2565,7 +2569,8 @@ void InitXlaModuleBindings(py::module m) {
 
           auto xtensors = tensor_methods::custom_call(
               bridge::GetXlaTensors(inputs), target, output_shapes, dtypes,
-              has_side_effect, backend_config, api_version);
+              has_side_effect, backend_config, api_version,
+              frontend_attributes);
           return bridge::AtenFromXlaTensors(std::move(xtensors));
         });
   m.def("_xla_tpu_custom_call",

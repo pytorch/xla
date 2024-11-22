@@ -17,6 +17,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.spmd as xs
 from torch_xla.distributed.spmd import XLAShardedTensor
+import torch_xla.distributed.parallel_loader as pl
 import test_xla_sharding_base
 
 import torch_xla.core.xla_env_vars as xenv
@@ -1309,6 +1310,98 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     mesh_without_name = xs.get_1d_mesh()
     self.assertEqual(mesh_without_name.mesh_shape,
                      (xr.global_runtime_device_count(),))
+
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for dataloader sharding test")
+  def test_data_loader_with_sharding(self):
+    device = torch_xla.device()
+    mesh = xs.get_1d_mesh("data")
+    batch_size = 8
+    train_loader = xu.SampleGenerator(
+        data=(torch.zeros(batch_size, 3, 64,
+                          64), torch.zeros(batch_size, dtype=torch.int64)),
+        sample_count=100)
+    train_device_loader = pl.MpDeviceLoader(
+        train_loader,
+        device,
+        # Shard the input's batch dimension along the `data` axis, no sharding along other dimensions
+        input_sharding=xs.ShardingSpec(mesh, ('data', None, None, None)))
+    data, _ = iter(train_device_loader).__next__()
+    self.assertEqual(data.size(), torch.Size([8, 3, 64, 64]))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(data),
+        f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
+    )
+
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for dataloader sharding test")
+  def test_data_loader_with_non_batch_size(self):
+    device = torch_xla.device()
+    mesh = xs.get_1d_mesh("data")
+    batch_size = mesh.size() - 1
+    train_loader = xu.SampleGenerator(
+        data=(torch.zeros(batch_size, 3, 64,
+                          64), torch.zeros(batch_size, dtype=torch.int64)),
+        sample_count=100)
+    train_device_loader = pl.MpDeviceLoader(
+        train_loader,
+        device,
+        # Shard the input's batch dimension along the `data` axis, no sharding along other dimensions
+        input_sharding=xs.ShardingSpec(mesh, ('data', None, None, None)))
+    data, _ = iter(train_device_loader).__next__()
+    self.assertEqual(data.size(), torch.Size([mesh.size() - 1, 3, 64, 64]))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(data),
+        f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
+    )
+
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for dataloader sharding test")
+  def test_data_loader_with_non_batch_size_and_mini_batch(self):
+    device = torch_xla.device()
+    mesh = xs.get_1d_mesh("data")
+    batch_size = mesh.size() - 1
+    train_loader = xu.SampleGenerator(
+        data=(torch.zeros(batch_size, 3, 64,
+                          64), torch.zeros(batch_size, dtype=torch.int64)),
+        sample_count=100)
+    train_device_loader = pl.MpDeviceLoader(
+        train_loader,
+        device,
+        # Shard the input's batch dimension along the `data` axis, no sharding along other dimensions
+        input_sharding=xs.ShardingSpec(
+            mesh, ('data', None, None, None), minibatch=True))
+    with self.assertRaisesRegex(
+        RuntimeError,
+        "When minibatch is configured, the per-host batch size must be divisible by local runtime device count. Per host input data shape *"
+    ):
+      data, _ = iter(train_device_loader).__next__()
+
+  def test_fallback(self):
+    device = torch_xla.device()
+
+    theta: float = 10000
+    dim = 16
+    end = 2048
+
+    torch_xla.sync()
+    freqs = 1.0 / (
+        theta
+        **(torch.arange(0, dim, 2, device=device)[:(dim // 2)].float() / dim))
+    t = torch.arange(end, device=freqs.device)
+    freqs = torch.outer(t, freqs).float()
+    freqs_cis = torch.polar(torch.ones_like(freqs, device=device),
+                            freqs)  # complex64
+    # torch.polar will fallback on CPU, the result tensor should not have any sharding spec
+    self.assertIn("ShardingSpec: None",
+                  torch_xla._XLAC._get_xla_tensor_debug_info(freqs_cis))
+    # it will be on a CPU tensor, the sharding spec is not specified so it won't be move to device yet
+    self.assertIn("Tensor on host: with size [2048, 8]",
+                  torch_xla._XLAC._get_xla_tensor_debug_info(freqs_cis))
+    torch_xla.sync()
+    # data should be on device and replicated now
+    self.assertIn("Data Shape: c64[2048,8]\n  OpSharding: {replicated}",
+                  torch_xla._XLAC._get_xla_tensor_debug_info(freqs_cis))
 
 
 if __name__ == '__main__':

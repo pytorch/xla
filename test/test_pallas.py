@@ -55,6 +55,7 @@ class PallasTest(unittest.TestCase):
       num_heads,
       head_dim,
       dtype=torch.float32,
+      query_len=None,
   ):
     assert max_seq_len % page_size == 0
     pages_per_sequence = max_seq_len // page_size
@@ -67,7 +68,10 @@ class PallasTest(unittest.TestCase):
     page_indices = torch.randperm(
         batch_size * pages_per_sequence, dtype=torch.int32)
     page_indices = page_indices.reshape(batch_size, pages_per_sequence)
-    q = torch.randn(batch_size, num_heads, head_dim, dtype=dtype)
+    if not query_len:
+      q = torch.randn(batch_size, num_heads, head_dim, dtype=dtype)
+    else:
+      q = torch.randn(batch_size, query_len, num_heads, head_dim, dtype=dtype)
     return q, k_pages, v_pages, page_indices
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
@@ -546,6 +550,195 @@ class PallasTest(unittest.TestCase):
             expected_output.cpu()[seq_lens > 0],
             atol=1e-5,
             rtol=1e-5))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_paged_attention_multi_queries_wrapper(self):
+    from torch_xla.experimental.custom_kernel import multi_queries_paged_attention
+    from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention as jax_multi_queries_paged_attention
+
+    dtype = torch.float32
+    page_size = 16
+    num_kv_heads = 8
+    q_kv_head_ratio = 4
+    head_dim = 256
+    num_queries_per_compute_block = 32
+    block_kv_size = 256
+
+    max_kv_len = 2048
+    query_len = 64
+    batch_size = 3
+    kv_seq_lens = torch.randint(
+        query_len, max_kv_len, (batch_size,), dtype=torch.int32)
+    effective_q_lens = torch.full((batch_size,), query_len, dtype=torch.int32)
+    assert query_len <= max_kv_len
+    for cur_kv_seq in kv_seq_lens:
+      assert query_len <= cur_kv_seq, f'{query_len} should be less than or equal to the kv_len {cur_kv_seq} in the current sequence.'
+    batch_size = len(kv_seq_lens)
+    pages_per_sequence = max_kv_len // page_size
+    total_num_pages = batch_size * pages_per_sequence
+    assert max_kv_len <= total_num_pages * page_size
+
+    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+        kv_seq_lens,
+        page_size,
+        max_kv_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+        dtype=dtype,
+        query_len=query_len,
+    )
+
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    kv_seq_lens_xla = kv_seq_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+    effective_q_lens_xla = effective_q_lens.to("xla")
+
+    output = multi_queries_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_seq_lens_xla,
+        page_indices_xla,
+        effective_q_lens_xla,
+        num_kv_pages_per_compute_block=block_kv_size // page_size,
+        num_queries_per_compute_block=num_queries_per_compute_block,
+    )
+
+    nonkernel_output = multi_queries_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_seq_lens_xla,
+        page_indices_xla,
+        effective_q_lens_xla,
+        num_kv_pages_per_compute_block=block_kv_size // page_size,
+        num_queries_per_compute_block=num_queries_per_compute_block,
+        use_kernel=False,
+    )
+
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    kv_seq_lens_jax = jnp.array(kv_seq_lens.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    effective_q_lens_jax = jnp.array(effective_q_lens.numpy(), dtype=jnp.int32)
+    expected_output = torch.from_numpy(
+        np.array(
+            jax_multi_queries_paged_attention(
+                q_jax,
+                k_pages_jax,
+                v_pages_jax,
+                kv_seq_lens_jax,
+                page_indices_jax,
+                effective_q_lens_jax,
+                num_kv_pages_per_compute_block=block_kv_size // page_size,
+                num_queries_per_compute_block=num_queries_per_compute_block,
+            )))
+
+    self.assertTrue(
+        torch.allclose(
+            output.cpu(), expected_output.cpu(), atol=1e-5, rtol=1e-5))
+    self.assertTrue(
+        torch.allclose(
+            output.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_paged_attention_multi_queries_wrapper_with_dynamo(self):
+    from torch_xla.experimental.custom_kernel import multi_queries_paged_attention
+    from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention as jax_multi_queries_paged_attention
+
+    dtype = torch.float32
+    page_size = 16
+    num_kv_heads = 8
+    q_kv_head_ratio = 4
+    head_dim = 256
+    num_queries_per_compute_block = 32
+    block_kv_size = 256
+
+    max_kv_len = 2048
+    query_len = 64
+    batch_size = 3
+    kv_seq_lens = torch.randint(
+        query_len, max_kv_len, (batch_size,), dtype=torch.int32)
+    effective_q_lens = torch.full((batch_size,), query_len, dtype=torch.int32)
+    assert query_len <= max_kv_len
+    for cur_kv_seq in kv_seq_lens:
+      assert query_len <= cur_kv_seq, f'{query_len} should be less than or equal to the kv_len {cur_kv_seq} in the current sequence.'
+    batch_size = len(kv_seq_lens)
+    pages_per_sequence = max_kv_len // page_size
+    total_num_pages = batch_size * pages_per_sequence
+    assert max_kv_len <= total_num_pages * page_size
+
+    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+        kv_seq_lens,
+        page_size,
+        max_kv_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+        dtype=dtype,
+        query_len=query_len,
+    )
+
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    kv_seq_lens_xla = kv_seq_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+    effective_q_lens_xla = effective_q_lens.to("xla")
+
+    def multi_queries_paged_attention_wrapper(q, k_pages, v_pages, kv_seq_lens,
+                                              page_indices, effective_q_lens,
+                                              num_kv_pages_per_compute_block,
+                                              num_queries_per_compute_block,
+                                              use_kernel):
+      return torch.ops.xla.multi_queries_paged_attention(
+          q,
+          k_pages,
+          v_pages,
+          kv_seq_lens,
+          page_indices,
+          effective_q_lens,
+          num_kv_pages_per_compute_block,
+          num_queries_per_compute_block,
+          use_kernel=use_kernel,
+      )
+
+    compiled_paged_attention = torch.compile(
+        multi_queries_paged_attention_wrapper, backend="openxla")
+
+    output = compiled_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_seq_lens_xla,
+        page_indices_xla,
+        effective_q_lens_xla,
+        num_kv_pages_per_compute_block=block_kv_size // page_size,
+        num_queries_per_compute_block=num_queries_per_compute_block,
+        use_kernel=True,
+    )
+
+    nonkernel_output = compiled_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_seq_lens_xla,
+        page_indices_xla,
+        effective_q_lens_xla,
+        num_kv_pages_per_compute_block=block_kv_size // page_size,
+        num_queries_per_compute_block=num_queries_per_compute_block,
+        use_kernel=False,
+    )
+
+    self.assertTrue(
+        torch.allclose(
+            output.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
                    "This test only works on TPUv4 and TPUv5p.")
