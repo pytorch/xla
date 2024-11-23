@@ -364,6 +364,7 @@ def _aten_mul(x, y):
 
 
 @op(torch.ops.aten.silu)
+@op(torch.ops.aten.silu.default)
 def _aten_silu(x):
   return jax.nn.silu(x)
 

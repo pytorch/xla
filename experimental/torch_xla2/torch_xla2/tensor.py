@@ -281,7 +281,7 @@ class Environment(contextlib.ContextDecorator):
 
     def get_as_jax_device(self, device: Any):
       if device is None:
-        return jax.devices()[0]
+        device = torch.get_default_device()
 
       if isinstance(device, torch.device):
         device = str(device)
