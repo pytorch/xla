@@ -93,21 +93,23 @@ def _generate_qkv(
   return q, k_pages, v_pages, page_indices
 
 def benchmark(args):
-  # Shapes and dtypes used in the GPU benchmarking script: query.shape=torch.Size([36, 8, 256]), key_cache.shape=torch.Size([231746, 16, 1, 256]), value_cache.shape=torch.Size([231746, 16, 1, 256]), prefill_meta.query_start_loc=tensor([ 0,  9, 18, 27, 36], device='cuda:0', dtype=torch.int32), prefill_meta.max_query_len=9, prefill_meta.seq_start_loc=tensor([   0,  649, 1298, 1947, 2596], device='cuda:0', dtype=torch.int32), max_seq_len=649, softmax_scale=0.0625, window_size=[-1, -1], alibi_slopes=None, prefill_meta.block_tables.shape=torch.Size([4, 41]), logits_soft_cap=0.0
-  dtype = jnp.float32
+  # Shapes and dtypes used in the GPU benchmarking script: xw32 line890, query.shape=torch.Size([36, 8, 256]), query.dtype=torch.bfloat16, key_cache.shape=torch.Size([231746, 16, 1, 256]), value_cache.shape=torch.Size([231746, 16, 1, 256]), prefill_meta.query_start_loc=tensor([ 0,  9, 18, 27, 36], device='cuda:0', dtype=torch.int32), prefill_meta.max_query_len=9, prefill_meta.seq_start_loc=tensor([   0,  649, 1298, 1947, 2596], device='cuda:0', dtype=torch.int32), max_seq_len=649, softmax_scale=0.0625, window_size=[-1, -1], alibi_slopes=None, prefill_meta.block_tables.shape=torch.Size([4, 41]), logits_soft_cap=0.0, query.dtype=torch.bfloat16
+  dtype = jnp.bfloat16
   page_size = 16
-  num_kv_heads = 2
+  num_kv_heads = 1
   q_kv_head_ratio = 4
-  head_dim = 128
+  head_dim = 256
   block_kv_size = 256
 
-  kv_seq_lens_lst = [1328, 18, 463]
-  q_seq_lens_lst = [1, 5, 129]
+  kv_seq_lens_lst = [649, 649, 649, 649]
+  q_seq_lens_lst = [16, 16, 16, 16] # num_queries_per_compute_block=16 should be smaller or equal to query_len=9
   kv_seq_lens = jnp.array(kv_seq_lens_lst)
   effective_q_lens = jnp.array(q_seq_lens_lst)
-  max_kv_len = 2048 # max(kv_seq_lens_lst), the change is needed to make pages_per_sequence a multiple of num_kv_pages_per_compute_block. TODO: adjust in CUDA
+  # num_kv_pages_per_compute_block = block_kv_size // page_size
+  # pages_per_sequence = max_kv_len // page_size
+  max_kv_len = 768 # max(kv_seq_lens_lst), the change is needed to make pages_per_sequence a multiple of num_kv_pages_per_compute_block. TODO: adjust in CUDA
   query_len = max(q_seq_lens_lst)
-  total_num_pages = 2048  # in vLLM CUDA flash_attention benchmarking script, this is tunable parameter.
+  total_num_pages = 231746  # in vLLM CUDA flash_attention benchmarking script, this is tunable parameter.
   assert max_kv_len <= total_num_pages * page_size
 
   q, k_pages, v_pages, page_indices = _generate_qkv(
