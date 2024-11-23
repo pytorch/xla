@@ -7,16 +7,16 @@ import torch.nn.functional as F
 from torch import nn
 
 
-# the default config is intentionally kept low to make it runable on a sigle tpu v2-8 core.
+# the default config is intentionally kept low to make it runnable on a single tpu v2-8 core.
 @dataclass
 class DecoderOnlyConfig:
   hidden_size: int = 1024
   num_hidden_layers: int = 2
   num_attention_heads: int = 8
   num_key_value_heads: int = 4
-  intermediate_size = 32 * 1024
-  vocab_size = 3200
-  use_flash_attention = False
+  intermediate_size: int = 32 * 1024
+  vocab_size: int = 3200
+  use_flash_attention: bool = False
 
 
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
