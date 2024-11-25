@@ -3,7 +3,7 @@ load(
     "ptxla_cc_test",
 )
 load(
-    "@tsl//tsl/platform/default:cuda_build_defs.bzl",
+    "@xla//xla/tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
 )
 
@@ -83,7 +83,7 @@ cc_library(
         ":tf_logging",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
-        "@tsl//tsl/platform/cloud:gcs_file_system",
+        "@xla//xla/tsl/platform/cloud:gcs_file_system",
         "@tsl//tsl/profiler/lib:traceme",
         "@xla//xla:literal",
         "@xla//xla:shape_util",
@@ -122,7 +122,7 @@ cc_library(
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:span",
         "@tsl//tsl/platform:env",
-        "@tsl//tsl/platform/cloud:gcs_file_system",
+        "@xla//xla/tsl/platform/cloud:gcs_file_system",
         "@tsl//tsl/profiler/lib:traceme",
         "@xla//xla:literal",
         "@xla//xla:shape_util",
