@@ -338,7 +338,7 @@ class Environment(contextlib.ContextDecorator):
           arr = jax.device_put(arr, jax_device)
         else:
           with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-            return torch_tensor.to(new_device)
+            return the_tensor.to(new_device)
 
       return XLATensor2(arr, self)
       
