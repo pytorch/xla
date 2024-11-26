@@ -33,6 +33,10 @@ class JaxInterpreter(torch.fx.Interpreter):
     op = ops_registry.all_aten_ops.get(target)
     if op is None:
       op = ops_registry.all_aten_ops.get(target.overloadpacket)
+    assert op is not None, target
+    assert op.is_jax_function, op
+    if op is None:
+      op = ops_registry.all_aten_ops.get(target.overloadpacket)
     if op is None:
       print(target.name(), target.tags)
       raise RuntimeError('No lowering found for', target.name())
@@ -226,5 +230,6 @@ def exported_program_to_stablehlo(exported_program):
   """
   weights, func = exported_program_to_jax(exported_program)
   jax_avals = extract_avals(exported_program)
+  print('avals', jax_avals)
   jax_export = jax.export.export(jax.jit(func))(weights, (jax_avals,))
   return jax_export
