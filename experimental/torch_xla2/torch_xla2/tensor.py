@@ -248,6 +248,7 @@ TENSOR_CONSTRUCTORS = {
   torch.rand,
   torch.randint,
   torch.full,
+  torch.as_tensor,
 }
 
 
