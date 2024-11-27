@@ -230,6 +230,5 @@ def exported_program_to_stablehlo(exported_program):
   """
   weights, func = exported_program_to_jax(exported_program)
   jax_avals = extract_avals(exported_program)
-  print('avals', jax_avals)
   jax_export = jax.export.export(jax.jit(func))(weights, (jax_avals,))
   return jax_export

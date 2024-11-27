@@ -133,7 +133,6 @@ def _aten_copy(x, y, memory_format=None):
 
 
 @op(torch.ops.aten.clone)
-@op(torch.ops.aten.clone.default)
 def _aten_clone(x, memory_format=None):
   return x
 
@@ -676,7 +675,6 @@ def _aten_dot(x, y):
 
 
 @op(torch.ops.aten._to_copy)
-@op(torch.ops.aten._to_copy.default)
 def _aten__to_copy(self, **kwargs):
   dtype = mappings.t2j_dtype(kwargs["dtype"])
   if dtype != self.dtype:
@@ -1474,7 +1472,6 @@ def _aten_reflection_pad1d(input, padding):
 
 # aten.alias
 @op(torch.ops.aten.alias)
-@op(torch.ops.aten.alias.default)
 def _aten_alias(self, *args):
   return self
 
