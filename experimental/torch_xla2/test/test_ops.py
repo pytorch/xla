@@ -192,6 +192,11 @@ class TestOpInfo(TestCase):
     torch_xla2.enable_accuracy_mode()
     #self.env.config.debug_accuracy_for_each_op = True 
     torch.manual_seed(0)
+    self.old_var = self.env.config.use_torch_native_for_cpu_tensor
+    self.env.config.use_torch_native_for_cpu_tensor = False
+
+  def tearDown(self):
+    self.env.config.use_torch_native_for_cpu_tensor = self.old_var
 
   # Replaces all values in the input torch_tensor that are less than the given threshold
   # with the threshold value itself.
