@@ -40,7 +40,7 @@ class PallasTest(unittest.TestCase):
       attn_weight = attn_weight.masked_fill(attn_mask,
                                             torch.finfo(attn_weight.dtype).min)
     if ab is not None:
-      attn_weight = attn_weight + ab    
+      attn_weight = attn_weight + ab
     attn_weight = nn.functional.softmax(attn_weight, dim=-1)
     attn_output = attn_weight @ v
     return attn_output
@@ -139,7 +139,7 @@ class PallasTest(unittest.TestCase):
         partition_spec=("data", None, None, None))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(o),
-        f"{{devices=[{xr.global_runtime_device_count()},1,1,1]0,1,2,3}}")        
+        f"{{devices=[{xr.global_runtime_device_count()},1,1,1]0,1,2,3}}")
 
     jax_q = jnp.array(q.numpy(), dtype=jnp.float32)
     jax_k = jnp.array(k.numpy(), dtype=jnp.float32)
@@ -175,12 +175,19 @@ class PallasTest(unittest.TestCase):
     k.retain_grad()
     v.retain_grad()
 
-    o = flash_attention(q, k, v, False, segment_ids, segment_ids, partition_spec=("data", None, None, None))  
+    o = flash_attention(
+        q,
+        k,
+        v,
+        False,
+        segment_ids,
+        segment_ids,
+        partition_spec=("data", None, None, None))
     loss = o.sum()
     loss.backward()
     q_grad = q.grad
     k_grad = k.grad
-    v_grad = v.grad       
+    v_grad = v.grad
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(o),
         f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
@@ -192,9 +199,8 @@ class PallasTest(unittest.TestCase):
         f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(v_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")                        
+        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
     torch_xla.sync()
-
 
     torch.manual_seed(42)
     q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
@@ -219,6 +225,7 @@ class PallasTest(unittest.TestCase):
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
       self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
     jax.config.update("jax_default_matmul_precision", "default")
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)
