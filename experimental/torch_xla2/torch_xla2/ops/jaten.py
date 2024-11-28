@@ -1068,7 +1068,7 @@ def _aten_convolution(
   if transposed:
     rhs = jnp.flip(weight, range(2, 1+num_shape_dim))
     if groups != 1:
-      # reshape kernels for tranposed depthwise convolution
+      # reshape filters for tranposed depthwise convolution
       assert rhs.shape[0] % groups == 0
       rhs_shape = [rhs.shape[0]//groups, rhs.shape[1]*groups]
       rhs_shape.extend(rhs.shape[2:])
