@@ -223,9 +223,8 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     # Set query_len>kv_seq_lens
     query_len = max_kv_len
     batch_size = 3
-    # kv_seq_lens = jax.random.randint(
-    #     jax.random.key(0), (batch_size,), 0, max_kv_len)
-    kv_seq_lens = jnp.array([256, 512, 512])
+    kv_seq_lens = jax.random.randint(
+        jax.random.key(0), (batch_size,), 0, max_kv_len)
     effective_q_lens = jax.random.randint(
         jax.random.key(0), (batch_size,), 0, kv_seq_lens)
     for cur_effec_q_len, cur_kv_seq_len in zip(effective_q_lens, kv_seq_lens):
@@ -292,12 +291,10 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
               atol=atol,
               rtol=rtol))
 
-  def test_paged_attention_store_to_output_correctly(
-      self,
-  ):
+  def test_paged_attention_store_to_output_correctly(self,):
     # Make sure the internal FA store_to_output correctly.
     dtype = jnp.float32
-    page_size=16
+    page_size = 16
     num_kv_heads = 8
     q_kv_head_ratio = 4
     head_dim = 256
@@ -308,7 +305,8 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     query_len = max_kv_len
     batch_size = 3
     # Set various edge case testing the internal flash attention can store_to_output correct
-    kv_seq_lens = jnp.array([block_kv_size-1, block_kv_size+1, 2*block_kv_size])
+    kv_seq_lens = jnp.array(
+        [block_kv_size - 1, block_kv_size + 1, 2 * block_kv_size])
     assert len(kv_seq_lens) == batch_size
     effective_q_lens = jax.random.randint(
         jax.random.key(0), (batch_size,), 0, kv_seq_lens)
@@ -365,6 +363,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
               actual_output[b, :effective_q_len],
               atol=atol,
               rtol=rtol))
+
 
 if __name__ == "__main__":
   absltest.main(testLoader=jtu.JaxTestLoader())
