@@ -254,7 +254,7 @@ the following resources:
 
 Take a look at:
 
-[examples/train_resnet_benchmark.py](https://github.com/pytorch/xla/blob/master/examples/train_resnet_benchmark.py)
+[examples/debug/train_resnet_benchmark.py](https://github.com/pytorch/xla/blob/master/examples/debug/train_resnet_benchmark.py)
 for how to benchmark a PyTorch/XLA model.
 
 ## Known Performance Caveats
