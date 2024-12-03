@@ -15,7 +15,6 @@ import numpy as np
 DEFAULT_MASK_VALUE = -0.7 * float(np.finfo(np.dtype("float32")).max)
 
 
-
 class MultiPageAsyncCopyDescriptor:
   """Descriptor for async copy of multiple K/V pages from HBM."""
 
@@ -193,20 +192,24 @@ def _flash_attention(
   l_scratch_ref[q_head_idx_per_kv] = l_next
   m_scratch_ref[q_head_idx_per_kv] = m_next
 
-  l_next_inv_safe = jnp.where(l_next == 0.0, 1.0, 1.0 / l_next)  # [block_q, 128]
+  l_next_inv_safe = jnp.where(l_next == 0.0, 1.0,
+                              1.0 / l_next)  # [block_q, 128]
 
   acc_scratch_ref[q_head_idx_per_kv] *= l_broadcast(l_corr * l_next_inv_safe)
   # Note Matmul operandlhs must have a shape divisible by (16, 1)
-  o_curr = jax.lax.dot(p.astype(v.dtype), v, preferred_element_type=jnp.float32)  # [block_q, 128]
+  o_curr = jax.lax.dot(
+      p.astype(v.dtype), v,
+      preferred_element_type=jnp.float32)  # [block_q, 128]
 
   acc_scratch_ref[q_head_idx_per_kv] += o_curr * l_broadcast(l_next_inv_safe)
-  # @pl.when(jnp.logical_and(q_blk_idx == 0, kv_blk_idx == 1))
-  # def _():
-  #   pl.debug_print('xw32 line201')
-  #   blk_debug_blkq_128_ref[:] = acc_scratch_ref[q_head_idx_per_kv]
 
-  #@pl.when(kv_blk_idx == pl.cdiv(kv_len, kv_seq_len_per_kv_compute_blk)-1)
-  @pl.when(jnp.logical_or(kv_blk_idx == pl.cdiv(kv_len, kv_seq_len_per_kv_compute_blk)-1, jnp.logical_not(_below_or_on_diag(q_blk_idx, num_queries_per_compute_block, kv_blk_idx+1, kv_seq_len_per_kv_compute_blk, effective_q_len, kv_len))))
+  is_last_kv_blk_idx = kv_blk_idx == pl.cdiv(kv_len,
+                                             kv_seq_len_per_kv_compute_blk) - 1
+  is_next_kv_blk_masked_out = jnp.logical_not(
+      _block_below_or_on_diag(q_blk_idx, num_queries_per_compute_block,
+                              kv_blk_idx + 1, kv_seq_len_per_kv_compute_blk,
+                              effective_q_len, kv_len))
+  @pl.when(jnp.logical_or(is_last_kv_blk_idx, is_next_kv_blk_masked_out))
   def store_to_output():
     o_ref[0, q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
         o_ref.dtype)
@@ -215,18 +218,12 @@ def _flash_attention(
     m_ref[0, q_head_idx_per_kv] = m_scratch_ref[q_head_idx_per_kv].astype(
         m_ref.dtype)
 
-# partially working
-# def _below_or_on_diag(q_blk_idx, q_blk_size, kv_blk_idx, kv_blk_size, effective_q_len, effective_kv_len):
-#   return ((q_blk_idx+1) * q_blk_size - 1) <= (q_blk_size-1) + (kv_blk_idx * kv_blk_size) + (effective_kv_len - effective_q_len)
 
-def _below_or_on_diag(q_blk_idx, q_blk_size, kv_blk_idx, kv_blk_size, effective_q_len, effective_kv_len):
-  return ((q_blk_idx+1) * q_blk_size - 1) >= (kv_blk_idx * kv_blk_size) - (effective_kv_len - effective_q_len)
+def _block_below_or_on_diag(q_blk_idx, q_blk_size, kv_blk_idx, kv_blk_size,
+                            effective_q_len, effective_kv_len):
+  return ((q_blk_idx + 1) * q_blk_size - 1) >= (kv_blk_idx * kv_blk_size) - (
+      effective_kv_len - effective_q_len)
 
-# Original version in FA
-# def below_or_on_diag(r, r_blk_size, c, c_blk_size):
-#   # A block is considered below or on diagonal as long as the bottom left
-#   # corner of the block is below or on diagonal.
-#   return ((r + 1) * r_blk_size - 1) > (c * c_blk_size)
 
 def paged_flash_attention_kernel(
     lengths_ref,  # [batch_size] jax.Array the length of each example
@@ -275,10 +272,12 @@ def paged_flash_attention_kernel(
   effective_q_len = effective_q_lens_ref[b]
 
   # Get the K and V for the current batch and current kv head.
-  should_run = jnp.logical_and(kv_blk_idx * compute_blk_size_kv < effective_kv_len, _below_or_on_diag(q_blk_idx, num_queries_per_compute_block, kv_blk_idx, compute_blk_size_kv, effective_q_len, effective_kv_len))
-  # pl.debug_print('xw32 line272 kv_blk_idx={}, compute_blk_size_kv={}, (kv_blk_idx * compute_blk_size_kv)={}, effective_kv_len={}', kv_blk_idx, compute_blk_size_kv, (kv_blk_idx * compute_blk_size_kv), effective_kv_len)
-  # pl.debug_print('xw32 line273 q_blk_idx={}, num_queries_per_compute_block={}, kv_blk_idx={}, compute_blk_size_kv={}, effective_q_len={}, effective_kv_len={}', q_blk_idx, num_queries_per_compute_block, kv_blk_idx, compute_blk_size_kv, effective_q_len, effective_kv_len)
-  #@pl.when(kv_blk_idx * compute_blk_size_kv < effective_kv_len)
+  should_run = jnp.logical_and(
+      kv_blk_idx * compute_blk_size_kv < effective_kv_len,
+      _block_below_or_on_diag(q_blk_idx, num_queries_per_compute_block,
+                              kv_blk_idx, compute_blk_size_kv, effective_q_len,
+                              effective_kv_len))
+
   @pl.when(should_run)
   def get_kv_and_run_flash_attention():
     # Loop over num_q_heads_per_kv_head and use the same K and V
@@ -316,10 +315,13 @@ def paged_flash_attention_kernel(
                              (b, next_kv_head_idx, 0), advance_b), lambda:
             (b, kv_head_idx, 0))
 
-      # return lax.cond(kv_blk_idx * compute_blk_size_kv < lengths_ref[b], lambda:
-      #                 (b, kv_head_idx, kv_blk_idx), advance_kv_head_idx)
-      return lax.cond(jnp.logical_and(kv_blk_idx * compute_blk_size_kv < lengths_ref[b], _below_or_on_diag(q_blk_idx,num_queries_per_compute_block,kv_blk_idx,compute_blk_size_kv, effective_q_lens_ref[b], lengths_ref[b])), lambda:
-                      (b, kv_head_idx, kv_blk_idx), advance_kv_head_idx)
+      return lax.cond(
+          jnp.logical_and(
+              kv_blk_idx * compute_blk_size_kv < lengths_ref[b],
+              _block_below_or_on_diag(q_blk_idx, num_queries_per_compute_block,
+                                      kv_blk_idx, compute_blk_size_kv,
+                                      effective_q_lens_ref[b], lengths_ref[b])),
+          lambda: (b, kv_head_idx, kv_blk_idx), advance_kv_head_idx)
 
     def create_kv_async_copy_descriptors(b, kv_head_idx, kv_blk_idx,
                                          buffer_index):
@@ -363,8 +365,12 @@ def paged_flash_attention_kernel(
 
     next_b, next_kv_head_idx, next_kv_blk_idx = compute_block_indices(
         b, kv_head_idx, q_blk_idx, kv_blk_idx + 1)
-    pl.debug_print('xw32 line354, working on b={}, kv_head_idx={}, q_blk_idx={},kv_blk_idx={}', b, kv_head_idx, q_blk_idx, kv_blk_idx)
-    pl.debug_print('xw32 line355, working on next_b={}, next_kv_head_idx={}, q_blk_idx={},next_kv_blk_idx={}', next_b, next_kv_head_idx, q_blk_idx, next_kv_blk_idx)
+    pl.debug_print(
+        'xw32 line354, working on b={}, kv_head_idx={}, q_blk_idx={},kv_blk_idx={}',
+        b, kv_head_idx, q_blk_idx, kv_blk_idx)
+    pl.debug_print(
+        'xw32 line355, working on next_b={}, next_kv_head_idx={}, q_blk_idx={},next_kv_blk_idx={}',
+        next_b, next_kv_head_idx, q_blk_idx, next_kv_blk_idx)
 
     @pl.when(next_b < batch_size)
     def prefetch_next_block():  # pylint: disable=unused-variable
@@ -392,7 +398,7 @@ def paged_flash_attention_kernel(
           o_ref,  # [1, num_q_heads_per_kv_head, num_queries_per_compute_block, head_dim]
           l_ref,
           m_ref,
-          l_scratch_ref, # [num_q_heads_per_kv_head, num_queries_per_compute_block, MIN_BLOCK_SIZE]
+          l_scratch_ref,  # [num_q_heads_per_kv_head, num_queries_per_compute_block, MIN_BLOCK_SIZE]
           m_scratch_ref,  # [num_q_heads_per_kv_head, num_queries_per_compute_block, MIN_BLOCK_SIZE]
           acc_scratch_ref,  # [num_q_heads_per_kv_head, num_queries_per_compute_block, head_dim]
           num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
