@@ -242,6 +242,7 @@ def paged_flash_attention_kernel(
     o_ref,
     l_ref,
     m_ref,
+    # scratch space
     k_vmem_buffer,  # (2, num_kv_pages_per_compute_block, num_kv_heads, head_dim)
     k_scales_vmem_buffer,
     v_vmem_buffer,  # (2, num_kv_pages_per_compute_block, num_kv_heads, head_dim)
@@ -307,7 +308,7 @@ def paged_flash_attention_kernel(
         )
 
       def advance_kv_head_idx():
-        # assumption: kv_blk_idx * compute_blk_size_kv >= lengths_ref[b], or the block is to the right of the mask.
+        # assumption: kv_blk_idx * compute_blk_size_kv >= lengths_ref[b], or the block is above the causal mask diagonal.
         next_kv_head_idx = kv_head_idx + 1
         return lax.cond(
             q_blk_idx == num_q_blks - 1,
@@ -365,12 +366,6 @@ def paged_flash_attention_kernel(
 
     next_b, next_kv_head_idx, next_kv_blk_idx = compute_block_indices(
         b, kv_head_idx, q_blk_idx, kv_blk_idx + 1)
-    pl.debug_print(
-        'xw32 line354, working on b={}, kv_head_idx={}, q_blk_idx={},kv_blk_idx={}',
-        b, kv_head_idx, q_blk_idx, kv_blk_idx)
-    pl.debug_print(
-        'xw32 line355, working on next_b={}, next_kv_head_idx={}, q_blk_idx={},next_kv_blk_idx={}',
-        next_b, next_kv_head_idx, q_blk_idx, next_kv_blk_idx)
 
     @pl.when(next_b < batch_size)
     def prefetch_next_block():  # pylint: disable=unused-variable
