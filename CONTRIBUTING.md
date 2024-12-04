@@ -63,7 +63,9 @@ We recommend you to use our prebuilt Docker image to start your development work
   cd pytorch/xla
   python setup.py develop
   # Optional: if you're using TPU, install libtpu
-  pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+  pip install torch_xla[tpu] \
+    -f https://storage.googleapis.com/libtpu-wheels/index.html \
+    -f https://storage.googleapis.com/libtpu-releases/index.html
   ```
 
 * Test your build
