@@ -138,6 +138,11 @@ Our comprehensive user guides are available at:
   VM](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm)
 * [GPU guide](docs/gpu.md)
 
+## Reference implementations
+
+The [AI-Hypercomputer/tpu-recipies](https://github.com/AI-Hypercomputer/tpu-recipes)
+repo. contains examples for training and serving many LLM and diffusion models.
+
 ## Available docker images and wheels
 
 ### Python packages
