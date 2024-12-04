@@ -220,12 +220,12 @@ def _flash_attention(
         m_ref.dtype)
 
 
-# If the inputs are 0, 0, 32, 256, 64, 257, the >= compares the x-coordinate of element (31, 0) and (-193, 0)
-# If the inputs are 0, 1, 32, 256, 64, 257, the >= compares the x-coordinate of element (31, 256) and (63, 256) where (63, 256) is the diagonal on row 63.
+# A block is considered below or on diagonal as long as the bottom left
+# corner of the block is below or on diagonal.
+# If the inputs are 0, 32, 0, 256, 64, 257, the block's bottom left corner is (31, 0). For that column(0), the diagonal element is (-193, 0). We check(>=) the x-coordinate of the corner and the diagonal element (31 and -193)
+# If the inputs are 0, 32, 1, 256, 64, 257, the block's bottom left corner is (31, 256). For that column(256), the diagonal element is (63, 256). We check(>=) the x-coordinate of the corner and the diagonal element (31 and 63).
 def _block_below_or_on_diag(q_blk_idx, q_blk_size, kv_blk_idx, kv_blk_size,
                             effective_q_len, effective_kv_len):
-  # A block is considered below or on diagonal as long as the bottom left
-  # corner of the block is below or on diagonal.
   return ((q_blk_idx + 1) * q_blk_size - 1) >= (kv_blk_idx * kv_blk_size) - (
       effective_kv_len - effective_q_len)
 
