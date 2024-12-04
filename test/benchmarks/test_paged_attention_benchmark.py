@@ -1,4 +1,5 @@
 # python pytorch/xla/test/benchmarks/test_paged_attention_benchmark.py --kernel multi-queries-paged-attn-jax-nonkernel
+# python pytorch/xla/test/benchmarks/test_paged_attention_benchmark.py --kernel multi-queries-paged-attn
 
 import argparse
 import time
@@ -172,41 +173,42 @@ def benchmark(args):
           page_indices,
           pages_per_compute_block=16,
         )
-      elif args.kernel == "multi-queries-paged-attn-torch-xla-kernel":
-        num_queries_per_compute_block=16 # constraint: due to https://github.com/jax-ml/jax/issues/24486
-        num_kv_pages_per_compute_block = block_kv_size // page_size
-        actual_output = multi_queries_paged_attention(
-            q_xla,
-            k_pages_xla,
-            v_pages_xla,
-            kv_seq_lens_xla,
-            page_indices_xla,
-            effective_q_lens_xla,
-            num_kv_pages_per_compute_block=block_kv_size // page_size,
-            num_queries_per_compute_block=num_queries_per_compute_block,
-            use_kernel=True,
-        )
-      elif args.kernel == "multi-queries-paged-attn-torch-xla-nonkernel":
-        num_queries_per_compute_block=16 # constraint: due to https://github.com/jax-ml/jax/issues/24486
-        num_kv_pages_per_compute_block = block_kv_size // page_size
-        actual_output = multi_queries_paged_attention(
-            q_xla,
-            k_pages_xla,
-            v_pages_xla,
-            kv_seq_lens_xla,
-            page_indices_xla,
-            effective_q_lens_xla,
-            num_kv_pages_per_compute_block=block_kv_size // page_size,
-            num_queries_per_compute_block=num_queries_per_compute_block,
-            use_kernel=False,
-        )
+      # elif args.kernel == "multi-queries-paged-attn-torch-xla-kernel":
+      #   num_queries_per_compute_block=16 # constraint: due to https://github.com/jax-ml/jax/issues/24486
+      #   num_kv_pages_per_compute_block = block_kv_size // page_size
+      #   actual_output = multi_queries_paged_attention(
+      #       q_xla,
+      #       k_pages_xla,
+      #       v_pages_xla,
+      #       kv_seq_lens_xla,
+      #       page_indices_xla,
+      #       effective_q_lens_xla,
+      #       num_kv_pages_per_compute_block=block_kv_size // page_size,
+      #       num_queries_per_compute_block=num_queries_per_compute_block,
+      #       use_kernel=True,
+      #   )
+      # elif args.kernel == "multi-queries-paged-attn-torch-xla-nonkernel":
+      #   num_queries_per_compute_block=16 # constraint: due to https://github.com/jax-ml/jax/issues/24486
+      #   num_kv_pages_per_compute_block = block_kv_size // page_size
+      #   actual_output = multi_queries_paged_attention(
+      #       q_xla,
+      #       k_pages_xla,
+      #       v_pages_xla,
+      #       kv_seq_lens_xla,
+      #       page_indices_xla,
+      #       effective_q_lens_xla,
+      #       num_kv_pages_per_compute_block=block_kv_size // page_size,
+      #       num_queries_per_compute_block=num_queries_per_compute_block,
+      #       use_kernel=False,
+      #   )
 
 
-    if args.kernel != "multi-queries-paged-attn-torch-xla-kernel" or args.kernel != "multi-queries-paged-attn-torch-xla-nonkernel":
-      jax.block_until_ready(actual_output)
-    else:
-      xm.mark_step()
-      xm.wait_device_ops()
+    # if args.kernel != "multi-queries-paged-attn-torch-xla-kernel" or args.kernel != "multi-queries-paged-attn-torch-xla-nonkernel":
+    #   jax.block_until_ready(actual_output)
+    # else:
+    #   xm.mark_step()
+    #   xm.wait_device_ops()
+    jax.block_until_ready(actual_output)
 
     end_time = time.perf_counter()
     if profile:
@@ -221,7 +223,7 @@ def benchmark(args):
   if args.profile:
     latency = run_benchmark(num_iters=1, profile=True)
   else:
-    latency = run_benchmark(num_iters=10, profile=False)
+    latency = run_benchmark(num_iters=20, profile=False)
   print(f"Kernel running time: {latency * 1000000:.3f} us")
   
 
