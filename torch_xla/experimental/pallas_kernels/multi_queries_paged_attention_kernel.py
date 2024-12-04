@@ -209,6 +209,7 @@ def _flash_attention(
       _block_below_or_on_diag(q_blk_idx, num_queries_per_compute_block,
                               kv_blk_idx + 1, kv_seq_len_per_kv_compute_blk,
                               effective_q_len, kv_len))
+
   @pl.when(jnp.logical_or(is_last_kv_blk_idx, is_next_kv_blk_masked_out))
   def store_to_output():
     o_ref[0, q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
@@ -219,8 +220,12 @@ def _flash_attention(
         m_ref.dtype)
 
 
+# If the inputs are 0, 0, 32, 256, 64, 257, the >= compares the x-coordinate of element (31, 0) and (-193, 0)
+# If the inputs are 0, 1, 32, 256, 64, 257, the >= compares the x-coordinate of element (31, 256) and (63, 256) where (63, 256) is the diagonal on row 63.
 def _block_below_or_on_diag(q_blk_idx, q_blk_size, kv_blk_idx, kv_blk_size,
                             effective_q_len, effective_kv_len):
+  # A block is considered below or on diagonal as long as the bottom left
+  # corner of the block is below or on diagonal.
   return ((q_blk_idx + 1) * q_blk_size - 1) >= (kv_blk_idx * kv_blk_size) - (
       effective_kv_len - effective_q_len)
 
