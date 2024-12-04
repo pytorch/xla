@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+gitb66c249 )
+                  master (2.6.0+gitae17298 )
                 </div>
               
             
@@ -487,7 +487,9 @@ and create a <a class="reference external" href="https://code.visualstudio.com/d
 environment</a>
 via the Command Palette (<code class="docutils literal notranslate"><span class="pre">Python:</span> <span class="pre">Create</span> <span class="pre">Environment</span></code>).</p>
 <p>Install the latest PyTorch and PyTorch/XLA releases:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>numpy<span class="w"> </span>torch<span class="w"> </span>torch_xla<span class="o">[</span>tpu<span class="o">]</span><span class="w"> </span>-f<span class="w"> </span>https://storage.googleapis.com/libtpu-releases/index.html
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>numpy<span class="w"> </span>torch<span class="w"> </span>torch_xla<span class="o">[</span>tpu<span class="o">]</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-f<span class="w"> </span>https://storage.googleapis.com/libtpu-wheels/index.html<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-f<span class="w"> </span>https://storage.googleapis.com/libtpu-releases/index.html
 </pre></div>
 </div>
 <p>Create a file <code class="docutils literal notranslate"><span class="pre">test.py</span></code>:</p>
