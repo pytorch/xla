@@ -169,9 +169,10 @@ def extract_avals(exported):
       symbol = sympy.Symbol(symbol_name)
       if torch_constraint.lower != 2:
         constraints.append(symbol >= torch_constraint.lower)
-      if not torch_constraint.upper.is_infinite:
+      from sympy.core.singleton import S
+      if not torch_constraint.upper.is_infinite and torch_constraint.upper is not S.IntInfinity:
         constraints.append(symbol <= torch_constraint.upper)
-      
+
       return tuple(sympy.pretty(c, use_unicode=False) for c in constraints)
 
     def _build_symbolic_shape(sym, constraint, free_symbols):
