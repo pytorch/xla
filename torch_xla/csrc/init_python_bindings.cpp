@@ -1096,10 +1096,39 @@ class PyLoweringContext {
     return results;
   }
 
+  // Returns a mapping from HLO parameter IDs to their corresponding
+  // device-backed Tensors. This version only returns parameters that were
+  // explicitly allocated on device data, accessible via GetTensorParameterId().
+  // Unlike GetParameterIdTensorMapping(), it avoids transferring data from
+  // device to host, making it more efficient especially for SPMD scenarios
+  // where data may be sharded.
+  std::unordered_map<int64_t, at::Tensor> GetDeviceParameterIdTensorMapping() {
+    // Find parameters in the lowering
+    const std::vector<torch::lazy::BackendDataPtr>& device_data =
+        lowering_ctx.GetParametersData();
+
+    // Create a mapping from parameter id to the tensor data
+    std::unordered_map<int64_t, at::Tensor> param_to_tensor;
+    param_to_tensor.reserve(device_data.size());
+
+    for (const auto& data : device_data) {
+      std::optional<int64_t> param_id = lowering_ctx.GetParameterId(data);
+      XLA_CHECK(param_id.has_value())
+          << "Parameter ID must exist for device data";
+
+      at::Tensor tensor =
+          bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(data));
+      param_to_tensor.emplace(param_id.value(), std::move(tensor));
+    }
+    return param_to_tensor;
+  }
+
   // Get the parameter identifier of a given tensor. If the tensor is not a
   // parameter this will always return -1. This is useful in conjunction with
   // GetParameterIdTensorMapping to identify which values can be baked into
-  // the graph and which values must remain parameters.
+  // the graph and which values must remain parameters. Note that in
+  // conjunction with GetDeviceParameterIdTensorMapping, all tensors are
+  // parameters with a valid parameter id.
   int64_t GetTensorParameterId(at::Tensor tensor) {
     // Convert tensor into the backing lazy node
     XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
@@ -1201,6 +1230,8 @@ void BuildLoweringContextSubmodule(py::module* m) {
       .def("hlo_json", &PyLoweringContext::GetHloJsonText)
       .def("parameter_id_tensor_mapping",
            &PyLoweringContext::GetParameterIdTensorMapping)
+      .def("device_parameter_id_tensor_mapping",
+           &PyLoweringContext::GetDeviceParameterIdTensorMapping)
       .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId)
       .def("set_name_string", &PyLoweringContext::SetNameString)
       .def("get_name_string", &PyLoweringContext::GetNameString);

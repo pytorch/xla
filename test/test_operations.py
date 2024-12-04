@@ -2642,14 +2642,14 @@ class TestLoweringContext(test_utils.XlaTestCase):
 
     ctx = torch_xla._XLAC.lowering.LoweringContext("MyCustomName")
     ctx.build([result])
-    hlo = ctx.hlo()
     hlo_text = ctx.hlo_text()
     self.assertIn('MyCustomName', hlo_text)
-    self.assertIn('opcode: "parameter"', hlo_text)
-    self.assertIn('opcode: "parameter"', hlo_text)
+    self.assertTrue(hlo_text.count('opcode: "parameter"'), 2)
     self.assertIn('opcode: "add"', hlo_text)
     mapping = ctx.parameter_id_tensor_mapping()
-    self.assertEqual(len(mapping), 2)
+    num_params = len(mapping)
+    self.assertEqual(num_params, 2)
+    self.assertTrue(met.metric_data("TransferFromDeviceTime"))
 
   def test_get_parameters_scalar(self):
     """Scalar tensors parameters may be shared in the HLO graph if their
