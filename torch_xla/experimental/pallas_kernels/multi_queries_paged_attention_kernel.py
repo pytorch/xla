@@ -204,6 +204,7 @@ def _flash_attention(
 
   acc_scratch_ref[q_head_idx_per_kv] += o_curr * l_broadcast(l_next_inv_safe)
 
+<<<<<<< HEAD
   # The condition comes from the check controlling if we should run the function get_kv_and_run_flash_attention.
   # If kv_len=512, kv_seq_len_per_kv_compute_blk=256, then last kv_blk_idx that we need to store_to_output is 1.
   # If kv_len=513, kv_seq_len_per_kv_compute_blk=256, then last kv_blk_idx that we need to store_to_output is 2.
@@ -222,6 +223,14 @@ def _flash_attention(
         l_ref.dtype)
     m_ref[0, q_head_idx_per_kv] = m_scratch_ref[q_head_idx_per_kv].astype(
         m_ref.dtype)
+=======
+  o_ref[0, q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
+      o_ref.dtype)
+  l_ref[0, q_head_idx_per_kv] = l_scratch_ref[q_head_idx_per_kv].astype(
+      l_ref.dtype)
+  m_ref[0, q_head_idx_per_kv] = m_scratch_ref[q_head_idx_per_kv].astype(
+      m_ref.dtype)
+>>>>>>> e726f0d33 (restore the kernel to the original version)
 
 
 # A block is considered below or on diagonal as long as the bottom left
