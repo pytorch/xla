@@ -112,14 +112,50 @@ function run_eager_debug {
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
-function run_save_tensor_ir {
+# Run a test with tensor saving enabled, using a specified graph format. The
+# graph dump files are cleaned after the test.
+#
+# Usage: run_save_tensor <format> [test arguments...]
+#
+# Arguments:
+#   format: The graph format to use with XLA_SAVE_TENSORS_FMT
+#   test arguments: Arguments to pass to the test
+#
+# Environment:
+#   Sets XLA_SAVE_TENSORS_FILE and XLA_SAVE_TENSORS_FMT
+function run_save_tensor {
+  local file_graph_format="$1" ; shift
+
   echo "Running in save tensor file mode: $@"
-  XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" XLA_SAVE_TENSORS_FMT="text" run_test "$@"
+  local base_file="/tmp/xla_test_save_ir.txt"
+
+  # Check if the file already exists, for any device ordinal number.
+  if ls "${base_file}"* 1> /dev/null 2>&1; then
+    echo "Error: File ${base_file} or a numbered version already exists. Please remove it before running the test."
+    return 1
+  fi
+
+  XLA_SAVE_TENSORS_FILE="$base_file" XLA_SAVE_TENSORS_FMT="$file_graph_format" run_test "$@"
+  local test_status=$?
+
+  # Clean up the file once the test finalizes.
+  local actual_file
+  actual_file=$(ls "${base_file}"* 2>/dev/null | head -n1)
+  if [ -f "$actual_file" ]; then
+    echo "Cleaning up temporary file: $actual_file"
+    rm "$actual_file"
+  else
+    echo "Warning: Expected output file not found"
+  fi
+  return $test_status
+}
+
+function run_save_tensor_ir {
+  run_save_tensor "text" "$@"
 }
 
 function run_save_tensor_hlo {
-  echo "Running in save tensor file mode: $@"
-  XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" XLA_SAVE_TENSORS_FMT="hlo" run_test "$@"
+  run_save_tensor "hlo" "$@"
 }
 
 function run_pt_xla_debug {

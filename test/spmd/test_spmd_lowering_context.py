@@ -33,13 +33,6 @@ class TestSPMDLoweringContext(test_xla_sharding_base.XlaShardingTest):
     save_file += '.0'  # Identify a single device
     assert save_format == 'hlo', "This test should be run with XLA_SAVE_TENSORS_FMT=hlo"
 
-    # Ensure that there is no existing file to begin with.
-    try:
-      os.remove(save_file)
-    except:
-      pass
-
-
     model_axis = min(8, self.n_devices)
     data_axis = self.n_devices // model_axis
     mesh_shape = (data_axis, model_axis)
@@ -108,10 +101,6 @@ class TestSPMDLoweringContext(test_xla_sharding_base.XlaShardingTest):
     assert expected_output[3] == f"f32[32,2048] {b_sharding_spec}"
     self.assertTrue(met.counter_value("ExecuteReplicated") == 1)
     self.assertTrue(met.counter_value("ExecuteComputation") is None)
-
-    # Remove the file once the test is complete.
-    # TODO(rpsilva-aws): Add a proper cleanup wrapper to avoid lingering files.
-    os.remove(save_file)
 
 
 if __name__ == '__main__':
