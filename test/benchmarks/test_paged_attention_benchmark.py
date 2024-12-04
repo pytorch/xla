@@ -1,5 +1,6 @@
 # python pytorch/xla/test/benchmarks/test_paged_attention_benchmark.py --kernel multi-queries-paged-attn-jax-nonkernel
 # python pytorch/xla/test/benchmarks/test_paged_attention_benchmark.py --kernel multi-queries-paged-attn
+# python pytorch/xla/test/benchmarks/test_paged_attention_benchmark.py --kernel multi-queries-paged-attn --profile
 
 import argparse
 import time
@@ -11,6 +12,7 @@ from torch_xla.experimental.custom_kernel import multi_queries_paged_attention
 import jax
 from jax._src import test_util as jtu
 from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention
+from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel_v1 import paged_attention as paged_attention_v1
 from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_single_query_paged_attention
 import jax.numpy as jnp
 import numpy as np
@@ -100,6 +102,10 @@ def benchmark(args):
   num_kv_heads = 1
   q_kv_head_ratio = 4
   head_dim = 256
+  # pages_per_sequence = (max_kv_len+page_size-1) // page_size=48
+  # num_kv_pages_per_compute_block = block_kv_size // page_size=16
+  # Because of the constraint pages_per_sequence % num_kv_pages_per_compute_block == 0,
+  # we need (max_kv_len+page_size-1) % block_kv_size == 0
   block_kv_size = 256
 
   kv_seq_lens_lst = [649, 649, 649, 649]
@@ -117,7 +123,7 @@ def benchmark(args):
       kv_seq_lens,
       page_size,
       max_kv_len,
-      query_len if args.kernel == "multi-queries-paged-attn" or args.kernel.startswith("multi-queries-paged-attn-torch-xla") else 1,
+      1 if args.kernel == "single-query-paged-attn" else query_len,
       num_kv_heads,
       num_kv_heads * q_kv_head_ratio,
       head_dim,
@@ -155,7 +161,20 @@ def benchmark(args):
           num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
           num_queries_per_compute_block=num_queries_per_compute_block,
         )
-      if args.kernel == "multi-queries-paged-attn-jax-nonkernel":
+      elif args.kernel == "multi-queries-paged-attn-v1":
+        num_queries_per_compute_block=16 # constraint: due to https://github.com/jax-ml/jax/issues/24486
+        num_kv_pages_per_compute_block = block_kv_size // page_size
+        actual_output = paged_attention_v1(
+          q,
+          k_pages,
+          v_pages,
+          kv_seq_lens,
+          page_indices,
+          effective_q_lens,
+          num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
+          num_queries_per_compute_block=num_queries_per_compute_block,
+        )
+      elif args.kernel == "multi-queries-paged-attn-jax-nonkernel":
         actual_output = _ref_jax_extended_paged_attention(
           q,
           k_pages,
@@ -217,13 +236,13 @@ def benchmark(args):
   
   # Warmup.
   print("Warming up...")
-  run_benchmark(num_iters=3, profile=False)
+  run_benchmark(num_iters=10, profile=False)
 
   print("Run benchmark...")
   if args.profile:
-    latency = run_benchmark(num_iters=1, profile=True)
+    latency = run_benchmark(num_iters=3, profile=True)
   else:
-    latency = run_benchmark(num_iters=20, profile=False)
+    latency = run_benchmark(num_iters=100, profile=False)
   print(f"Kernel running time: {latency * 1000000:.3f} us")
   
 
@@ -232,7 +251,7 @@ if __name__ == "__main__":
   parser.add_argument("--use-paged-attn-nonkernel", action="store_true")
   parser.add_argument("--kernel",
                 type=str,
-                choices=["single-query-paged-attn", "multi-queries-paged-attn","multi-queries-paged-attn-jax-nonkernel", "multi-queries-paged-attn-torch-xla-kernel", "multi-queries-paged-attn-torch-xla-nonkernel"],
+                choices=["single-query-paged-attn", "multi-queries-paged-attn", "multi-queries-paged-attn-v1","multi-queries-paged-attn-jax-nonkernel", "multi-queries-paged-attn-torch-xla-kernel", "multi-queries-paged-attn-torch-xla-nonkernel"],
                 default="multi-queries-paged-attn")
   parser.add_argument("--profile", action="store_true")
   args = parser.parse_args()
