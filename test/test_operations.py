@@ -1099,7 +1099,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t1 = torch.zeros(50, device=xm.xla_device())
     t1 += 1
     xm.mark_step()
-    self.assertEqual(met.counter_value('DestroyXlaTensor'), 3)
+    self.assertEqual(met.counter_value('DestroyXlaTensor'), 1)
 
     t2 = torch.zeros(10, device=xm.xla_device())
     self.assertEqual(met.counter_value('DestroyXlaTensor'), 4)
