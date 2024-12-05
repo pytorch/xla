@@ -562,7 +562,17 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
     at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
     SetTensorData(coyped_tensor);
     data()->handle = nullptr;
-    data()->sharding = nullptr;
+    // if shape is different,
+    if (data()->sharding) {
+      auto coyped_tensor_dims = XlaHelpers::I64List(coyped_tensor.sizes());
+      auto sharding_dims = data()->sharding->shape.dimensions();
+      if (coyped_tensor_dims != sharding_dims) {
+        // sharding shape from origional tensor is different from the new cpu
+        // tensor, we need to clear the sharding here.
+        ClearShardingSpec();
+      }
+    }
+    // ClearShardingSpec();
     AssignIrValue(torch::lazy::Value());
     if (data()->view != nullptr) {
       torch::lazy::Value ir_value = GetIrValueForTensor(coyped_tensor, device);

@@ -23,7 +23,9 @@ python3 setup.py develop
 
 # libtpu is needed to talk to the TPUs. If TPUs are not present,
 # installing this wouldn't hurt either.
-pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+pip install torch_xla[tpu] \
+  -f https://storage.googleapis.com/libtpu-wheels/index.html \
+  -f https://storage.googleapis.com/libtpu-releases/index.html
 
 # Test that the library is installed correctly.
 python3 -c 'import torch_xla as xla; print(xla.device())'

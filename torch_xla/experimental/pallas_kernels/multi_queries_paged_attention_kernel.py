@@ -198,7 +198,10 @@ def _flash_attention(
   o_curr = jax.lax.dot(p.astype(v.dtype), v, preferred_element_type=jnp.float32)
   acc_scratch_ref[q_head_idx_per_kv] += o_curr * l_broadcast(l_next_inv_safe)
 
-  @pl.when(kv_blk_idx == kv_len // kv_seq_len_per_kv_compute_blk)
+  # The condition comes from the one "@pl.when(kv_blk_idx * compute_blk_size_kv < kv_len)" controlling if we should run the function get_kv_and_run_flash_attention.
+  # If kv_len=512, kv_seq_len_per_kv_compute_blk=256, then last kv_blk_idx that we need to store_to_output is 1.
+  # If kv_len=513, kv_seq_len_per_kv_compute_blk=256, then last kv_blk_idx that we need to store_to_output is 2.
+  @pl.when(kv_blk_idx == pl.cdiv(kv_len, kv_seq_len_per_kv_compute_blk) - 1)
   def store_to_output():
     o_ref[0, q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
         o_ref.dtype)
@@ -385,6 +388,7 @@ def paged_flash_attention_kernel(
 MIN_BLOCK_SIZE = 128
 
 
+@jax.profiler.annotate_function
 @functools.partial(
     jax.jit,
     static_argnames=[

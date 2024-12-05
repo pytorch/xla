@@ -2993,8 +2993,7 @@ class TestDLPack(parameterized.TestCase):
   @onlyIfPJRTDeviceIsCUDA
   def test_dlpack_xla_to_pytorch_cuda_protocol_conversion(self):
     xla_t1 = torch.arange(5).to(xm.xla_device())
-    caps_t1 = torch.utils.dlpack.to_dlpack(xla_t1)
-    cuda_t1 = torch.utils.dlpack.from_dlpack(caps_t1)
+    cuda_t1 = torch.utils.dlpack.from_dlpack(xla_t1)
     self.assertEqual(cuda_t1.device.type, 'cuda')
     self.assertEqual(cuda_t1.device.index, xla_t1.device.index)
     cuda_t1[0] = cuda_t1[0] + 20

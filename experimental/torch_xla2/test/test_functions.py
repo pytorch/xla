@@ -10,6 +10,7 @@ class TestTorchFunctions(parameterized.TestCase):
 
   def setUp(self):
     self.env = torch_xla2.tensor.Environment()
+    self.env.config.use_torch_native_for_cpu_tensor = False
     torch_xla2.enable_accuracy_mode()
 
   @parameterized.named_parameters(

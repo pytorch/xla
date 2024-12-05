@@ -10,6 +10,13 @@ xla_env = tensor.Environment()
 
 class TestContext(unittest.TestCase):
 
+  def setUp(self):
+    self.old_var = xla_env.config.use_torch_native_for_cpu_tensor
+    xla_env.config.use_torch_native_for_cpu_tensor = False
+
+  def tearDown(self):
+    xla_env.config.use_torch_native_for_cpu_tensor = self.old_var
+
   def test_mode_context_manager(self):
     with xla_env:
       x = torch.full((3, 3), -1)

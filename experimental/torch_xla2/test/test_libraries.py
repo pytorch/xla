@@ -1,11 +1,9 @@
 import unittest
-import jax
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch.library import Library, impl, impl_abstract
 import torch_xla2
-from torch_xla2 import tensor
+import torch_xla2.export
 from torch_xla2.ops import jaten
 from torch_xla2.ops import jlibrary
 
@@ -56,6 +54,7 @@ class LibraryTest(unittest.TestCase):
 
   def setUp(self):
     torch.manual_seed(0)
+    torch_xla2.default_env().config.use_torch_native_for_cpu_tensor = False
 
   def test_basic_sdpa_library(self):
 
@@ -78,3 +77,7 @@ class LibraryTest(unittest.TestCase):
     ## stablehlo.composite ops.
     self.assertIn("call @mylib.scaled_dot_product_attention", module_str)
     self.assertIn("call @mylib.softmax", module_str)
+
+
+if __name__ == '__main__':
+  unittest.main()

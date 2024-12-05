@@ -11,7 +11,7 @@ jax.config.parse_flags_with_absl()
 
 # Set up paged_attention inputs.
 def _generate_qkv(
-    kv_seq_lens,
+    batch_size,
     page_size,
     max_kv_len,
     query_len,
@@ -23,7 +23,6 @@ def _generate_qkv(
 ):
   assert max_kv_len % page_size == 0
   pages_per_sequence = max_kv_len // page_size
-  batch_size = len(kv_seq_lens)
   total_pages = batch_size * pages_per_sequence
   k1, k2, k3, k4 = jax.random.split(prng_key, 4)
   k_pages = jax.random.normal(
@@ -138,7 +137,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     assert max_kv_len <= total_num_pages * page_size
 
     q, k_pages, v_pages, page_indices = _generate_qkv(
-        kv_seq_lens,
+        batch_size,
         page_size,
         max_kv_len,
         query_len,
@@ -235,7 +234,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     total_num_pages = batch_size * pages_per_sequence
     assert max_kv_len <= total_num_pages * page_size
     q, k_pages, v_pages, page_indices = _generate_qkv(
-        kv_seq_lens,
+        batch_size,
         page_size,
         max_kv_len,
         query_len,
@@ -284,6 +283,79 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
       self.fail(f'Unsupported dtype: {dtype}')
     for b in range(batch_size):
       # N.B. For the output ([batch_size, query_len, num_q_heads, head_dim]) at query_len dim, all the value after the effective_q_len will be thrown away due to we padding the query seq len. The values after the effective_q_len may differ between the kernel and the ref impl because of the causal mask.
+      effective_q_len = effective_q_lens[b]
+      self.assertTrue(
+          jnp.allclose(
+              expected_output[b, :effective_q_len],
+              actual_output[b, :effective_q_len],
+              atol=atol,
+              rtol=rtol))
+
+  def test_paged_attention_store_to_output_correctly(self,):
+    # Make sure the internal FA store_to_output correctly.
+    dtype = jnp.float32
+    page_size = 16
+    num_kv_heads = 8
+    q_kv_head_ratio = 4
+    head_dim = 256
+    num_queries_per_compute_block = 32
+    block_kv_size = 256
+
+    max_kv_len = 512
+    query_len = max_kv_len
+    batch_size = 3
+    # Set various edge case testing the internal flash attention can store_to_output correct
+    kv_seq_lens = jnp.array(
+        [block_kv_size - 1, block_kv_size + 1, 2 * block_kv_size])
+    assert len(kv_seq_lens) == batch_size
+    effective_q_lens = jax.random.randint(
+        jax.random.key(0), (batch_size,), 0, kv_seq_lens)
+    for cur_effec_q_len, cur_kv_seq_len in zip(effective_q_lens, kv_seq_lens):
+      assert cur_effec_q_len <= cur_kv_seq_len, f'The effective query len {cur_effec_q_len} should be less than or equal to the kv_len {cur_kv_seq_len} in the current sequence.'
+
+    pages_per_sequence = max_kv_len // page_size
+    total_num_pages = batch_size * pages_per_sequence
+    assert max_kv_len <= total_num_pages * page_size
+    q, k_pages, v_pages, page_indices = _generate_qkv(
+        batch_size,
+        page_size,
+        max_kv_len,
+        query_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+        jax.random.key(0),
+        dtype,
+    )
+
+    num_kv_pages_per_compute_block = block_kv_size // page_size
+    actual_output = paged_attention(
+        q,
+        k_pages,
+        v_pages,
+        kv_seq_lens,
+        page_indices,
+        effective_q_lens,
+        num_kv_pages_per_compute_block=block_kv_size // page_size,
+        num_queries_per_compute_block=num_queries_per_compute_block,
+    )
+    actual_output = jax.block_until_ready(actual_output)
+
+    # Run the ref impl.
+    expected_output = _ref_jax_extended_paged_attention(
+        q,
+        k_pages,
+        v_pages,
+        kv_seq_lens,
+        page_indices,
+        effective_q_lens,
+    )
+
+    self.assertEqual(actual_output.shape, expected_output.shape)
+
+    atol = 2e-2
+    rtol = 1e-2
+    for b in range(batch_size):
       effective_q_len = effective_q_lens[b]
       self.assertTrue(
           jnp.allclose(

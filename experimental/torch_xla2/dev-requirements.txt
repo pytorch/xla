@@ -1,4 +1,4 @@
 -f https://download.pytorch.org/whl/torch
-torch==2.4.0; sys_platform == 'darwin'  # macOS
-torch==2.4.0+cpu; sys_platform != 'darwin' # Non-macOS (CPU-only), like on TPU
+torch==2.5.1; sys_platform == 'darwin'  # macOS
+torch==2.5.1+cpu; sys_platform != 'darwin' # Non-macOS (CPU-only), like on TPU
 ruff~=0.3.5
