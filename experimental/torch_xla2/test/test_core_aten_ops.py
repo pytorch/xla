@@ -66,6 +66,11 @@ class TestCoreAtenOps(unittest.TestCase):
     super().setUp()
     torch.manual_seed(0)
     self.env = tensor.Environment()
+    self.old_var = self.env.config.use_torch_native_for_cpu_tensor
+    self.env.config.use_torch_native_for_cpu_tensor = False
+
+  def tearDown(self):
+    self.env.config.use_torch_native_for_cpu_tensor = self.old_var
 
   def test_aten_abs_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)

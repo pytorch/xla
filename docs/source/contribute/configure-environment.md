@@ -87,7 +87,9 @@ via the Command Palette (`Python: Create Environment`).
 Install the latest PyTorch and PyTorch/XLA releases:
 
 ``` bash
-pip install numpy torch torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+pip install numpy torch torch_xla[tpu] \
+  -f https://storage.googleapis.com/libtpu-wheels/index.html \
+  -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
 
 Create a file `test.py`:

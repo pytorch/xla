@@ -247,6 +247,8 @@ TENSOR_CONSTRUCTORS = {
   torch.randn,
   torch.rand,
   torch.randint,
+  torch.full,
+  torch.as_tensor,
 }
 
 
@@ -285,7 +287,8 @@ class Environment(contextlib.ContextDecorator):
 
       if isinstance(device, torch.device):
         device = str(device)
-      if self.config.use_torch_native_for_cpu_tensor and device.startswith('cpu'):
+      if (self.config.use_torch_native_for_cpu_tensor and 
+          not device.startswith('jax') and not device.startswith('cuda')):
         return None
 
       if not self.config.treat_cuda_as_jax_device and device.startswith('cuda'):
@@ -338,7 +341,7 @@ class Environment(contextlib.ContextDecorator):
           arr = jax.device_put(arr, jax_device)
         else:
           with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-            return torch_tensor.to(new_device)
+            return the_tensor.to(new_device)
 
       return XLATensor2(arr, self)
       
@@ -358,7 +361,6 @@ class Environment(contextlib.ContextDecorator):
         # let torch handle it
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
           return func(*args, **kwargs)
-      
       with jax.default_device(jax_device):
         op = self._ops.get(func)
         res = op.func(*args, **kwargs)
@@ -396,7 +398,8 @@ class Environment(contextlib.ContextDecorator):
 
       # If the func doesn't act on XLATensor2, and is not a tensor constructor,
       # We should skip and let torch handle it.
-      tensor_args = [t for t in args if isinstance(t, torch.Tensor)]
+      
+      tensor_args = [t for t in torch_pytree.tree_flatten(args)[0] if isinstance(t, torch.Tensor)]
       if tensor_args and all(not isinstance(t, XLATensor2) for t in tensor_args):
         return func(*args, **kwargs)
 
@@ -444,11 +447,13 @@ class Environment(contextlib.ContextDecorator):
     def __enter__(self):
       self._dispatch_mode.__enter__()
       self._function_mode.__enter__()
+      self.enabled = True
       return self
 
     def __exit__(self, *exc):
       self._function_mode.__exit__(*exc)
       self._dispatch_mode.__exit__(*exc)
+      self.enabled = False
 
     def _move_one_value(self, val):
       if isinstance(val, torch.nn.Module):

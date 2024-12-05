@@ -33,6 +33,10 @@ class JaxInterpreter(torch.fx.Interpreter):
     op = ops_registry.all_aten_ops.get(target)
     if op is None:
       op = ops_registry.all_aten_ops.get(target.overloadpacket)
+    assert op is not None, target
+    assert op.is_jax_function, op
+    if op is None:
+      op = ops_registry.all_aten_ops.get(target.overloadpacket)
     if op is None:
       print(target.name(), target.tags)
       raise RuntimeError('No lowering found for', target.name())
@@ -165,9 +169,10 @@ def extract_avals(exported):
       symbol = sympy.Symbol(symbol_name)
       if torch_constraint.lower != 2:
         constraints.append(symbol >= torch_constraint.lower)
-      if not torch_constraint.upper.is_infinite:
+      from sympy.core.singleton import S
+      if not torch_constraint.upper.is_infinite and torch_constraint.upper is not S.IntInfinity:
         constraints.append(symbol <= torch_constraint.upper)
-      
+
       return tuple(sympy.pretty(c, use_unicode=False) for c in constraints)
 
     def _build_symbolic_shape(sym, constraint, free_symbols):

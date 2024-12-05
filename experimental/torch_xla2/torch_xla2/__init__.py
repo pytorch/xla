@@ -1,3 +1,4 @@
+import contextlib
 from typing import List, Dict, Any, Optional
 import dataclasses
 import jax
@@ -72,6 +73,15 @@ def enable_globally():
 def disable_globally():
   global env 
   default_env().__exit__(None, None, None)
+
+@contextlib.contextmanager
+def disable_temporarily():
+  prev = default_env().enabled
+  if prev:
+    disable_globally()
+  yield()
+  if prev:
+    enable_globally()
 
 
 torch.utils.rename_privateuse1_backend('jax')

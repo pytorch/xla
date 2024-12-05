@@ -175,6 +175,11 @@ sudo apt-get install libopenblas-dev -y
 sudo apt-get update && sudo apt-get install libgl1 -y # diffusion specific
 ```
 
+## Reference implementations
+
+The [AI-Hypercomputer/tpu-recipies](https://github.com/AI-Hypercomputer/tpu-recipes)
+repo. contains examples for training and serving many LLM and diffusion models.
+
 ## Converting code to PyTorch XLA
 
 General guidelines to modify your code:

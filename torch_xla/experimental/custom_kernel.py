@@ -266,7 +266,15 @@ class FlashAttention(torch.autograd.Function):
         dtypes.append(torch.float32)
 
     with torch.no_grad():
-      segment_ids, q_segment_ids, kv_segment_ids = FlashAttention.prepare_segment_ids(
+      if partition_spec is not None and q_segment_ids is not None and kv_segment_ids is not None:
+        # partition_spec is for q,k,v with shape [batch, num_head, seq_len, head_dim], segment id
+        # is of shape [batch, seq_len], hence we need to tweak it a bit
+        segment_id_partition_spec = (partition_spec[0], partition_spec[2])
+        q_segment_ids = xs.enable_manual_sharding(
+            q_segment_ids, segment_id_partition_spec, mesh=mesh).global_tensor
+        kv_segment_ids = xs.enable_manual_sharding(
+            kv_segment_ids, segment_id_partition_spec, mesh=mesh).global_tensor
+      segment_ids, q_segment_ids_fa, kv_segment_ids_fa = FlashAttention.prepare_segment_ids(
           q_segment_ids, kv_segment_ids)
       ctx.segment_ids = segment_ids
 
@@ -297,7 +305,7 @@ class FlashAttention(torch.autograd.Function):
       if ab is not None:
         args += [ab]
       if segment_ids is not None:
-        args += [q_segment_ids, kv_segment_ids]
+        args += [q_segment_ids_fa, kv_segment_ids_fa]
       o = torch_xla._XLAC._xla_tpu_custom_call(args, payload, shapes, dtypes)
 
       if not save_residuals:
@@ -319,20 +327,23 @@ class FlashAttention(torch.autograd.Function):
       m = xs.disable_manual_sharding(
           m, partition_spec[0:3], ctx.full_shape[0:3], mesh=mesh).global_tensor
 
-    ctx.save_for_backward(full_q, full_k, full_v, o, l, m, q_segment_ids,
-                          kv_segment_ids, full_ab)
+    # q_segment_ids and kv_segment_ids are sharded here if partition_spec is provided
+    # but it should be OK as the backward will use the same partition_spec
+    ctx.save_for_backward(full_q, full_k, full_v, o, l, m, q_segment_ids_fa,
+                          kv_segment_ids_fa, full_ab)
     return o
 
   @staticmethod
   def backward(ctx, grad_output):
     from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq, _flash_attention_bwd_dkv
 
-    q, k, v, o, l, m, q_segment_ids, kv_segment_ids, ab = ctx.saved_tensors
+    q, k, v, o, l, m, q_segment_ids_fa, kv_segment_ids_fa, ab = ctx.saved_tensors
     causal = ctx.causal
     sm_scale = ctx.sm_scale
     partition_spec = ctx.partition_spec
     mesh = ctx.mesh
     full_shape = ctx.full_shape
+    # this segment_ids only reflects the local shape of segment_ids
     segment_ids = ctx.segment_ids
     grad_q = grad_k = grad_v = grad_ab = None
 
@@ -398,7 +409,7 @@ class FlashAttention(torch.autograd.Function):
       if ab is not None:
         args += [ab]
       if segment_ids is not None:
-        args += [q_segment_ids, kv_segment_ids]
+        args += [q_segment_ids_fa, kv_segment_ids_fa]
       args += [expanded_l, expanded_m, grad_output, expanded_grad_i]
 
       outputs = [q]

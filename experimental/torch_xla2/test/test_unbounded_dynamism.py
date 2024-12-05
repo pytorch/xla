@@ -2,10 +2,10 @@ import re
 import sys
 import unittest
 
-import numpy as np
 import torch
 from torch.export import Dim, export
 from torch_xla2.export import exported_program_to_stablehlo as exp2shlo
+import torch_xla2
 
 ## This file is copied from `xla/test/stablehlo/test_unbounded_dynamism.py`
 ## To test that torch_xla2 has identical behavior.
@@ -43,6 +43,14 @@ def wrap_func_as_nn_module(f):
   return M().eval()
 
 class UnboundedDynamismExportTest(unittest.TestCase):
+
+  def setUp(self):
+    self.env = torch_xla2.default_env()
+    self.env.config.use_torch_native_for_cpu_tensor = False
+    torch_xla2.enable_accuracy_mode()
+
+  def tearDown(self):
+    self.env.config.use_torch_native_for_cpu_tensor = True
 
   def test_add(self):
     args = (torch.rand((10, 197, 768)), torch.rand((10, 197, 768)))
