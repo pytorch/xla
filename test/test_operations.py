@@ -2634,6 +2634,7 @@ class RegisterXLAKeyTest(test_utils.XlaTestCase):
 class TestLoweringContext(test_utils.XlaTestCase):
 
   def test_api(self):
+    met.clear_all()
     device = xm.xla_device()
     a = torch.tensor([1.0, 2.0, 3.0], device=device)
     b = torch.tensor([4.0, 5.0, 6.0], device=device)
@@ -2642,14 +2643,19 @@ class TestLoweringContext(test_utils.XlaTestCase):
 
     ctx = torch_xla._XLAC.lowering.LoweringContext("MyCustomName")
     ctx.build([result])
-    hlo = ctx.hlo()
+    _ = ctx.hlo()
     hlo_text = ctx.hlo_text()
     self.assertIn('MyCustomName', hlo_text)
-    self.assertIn('opcode: "parameter"', hlo_text)
-    self.assertIn('opcode: "parameter"', hlo_text)
+    self.assertTrue(hlo_text.count('opcode: "parameter"'), 2)
     self.assertIn('opcode: "add"', hlo_text)
+    num_expected_params = 2
     mapping = ctx.parameter_id_tensor_mapping()
-    self.assertEqual(len(mapping), 2)
+    self.assertEqual(len(mapping), num_expected_params)
+    self.assertTrue(met.metric_data("TransferFromDeviceTime"))
+    met.clear_all()
+    device_mapping = ctx.device_parameter_id_tensor_mapping()
+    self.assertEqual(len(device_mapping), num_expected_params)
+    self.assertFalse(met.metric_data("TransferFromDeviceTime"))
 
   def test_get_parameters_scalar(self):
     """Scalar tensors parameters may be shared in the HLO graph if their
