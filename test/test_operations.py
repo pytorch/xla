@@ -2634,6 +2634,7 @@ class RegisterXLAKeyTest(test_utils.XlaTestCase):
 class TestLoweringContext(test_utils.XlaTestCase):
 
   def test_api(self):
+    met.clear_all()
     device = xm.xla_device()
     a = torch.tensor([1.0, 2.0, 3.0], device=device)
     b = torch.tensor([4.0, 5.0, 6.0], device=device)
