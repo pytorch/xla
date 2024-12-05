@@ -106,7 +106,7 @@ def benchmark(args):
   # num_kv_pages_per_compute_block = block_kv_size // page_size=16
   # Because of the constraint pages_per_sequence % num_kv_pages_per_compute_block == 0,
   # we need (max_kv_len+page_size-1) % block_kv_size == 0
-  block_kv_size = 256
+  block_kv_size = 512
 
   kv_seq_lens_lst = [649, 649, 649, 649]
   q_seq_lens_lst = [16, 16, 16, 16] # num_queries_per_compute_block=16 should be smaller or equal to query_len=9
