@@ -111,23 +111,31 @@ LoweringContext::LoweringContext(
 static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
 
 xla::XlaOp LoweringContext::GetParameter(
-    const std::shared_ptr<torch::lazy::BackendData>& data,
+    const std::shared_ptr<torch::lazy::BackendData>& backend_data,
     const std::unordered_set<uint32_t>& unbounded_dynamic_dims) {
-  torch::lazy::BackendData::Handle handle = data->GetHandle();
+  torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
-    xla::Shape shape =
-        std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
-            ->shape();
+    auto data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+        backend_data);
+    XLA_CHECK(data != nullptr);
+    xla::Shape shape = data->shape();
     for (const int dim : unbounded_dynamic_dims) {
       shape.set_dynamic_dimension(dim, true);
       shape.set_dimensions(dim, kUnboundedSize);
     }
-    xla::XlaOp param = xla::Parameter(builder(), parameters_.size(), shape,
-                                      absl::StrCat("p", parameters_.size()));
-    it = parameters_map_.emplace(handle, Parameter{param, parameters_.size()})
-             .first;
-    parameters_.push_back(data);
+    size_t param_index = parameters_.size();
+    std::string param_name = absl::StrCat("p", param_index);
+    xla::XlaOp param;
+    if (data->HasSharding()) {
+      xla::OpSharding sharding = data->GetSharding();
+      xla::XlaScopedShardingAssignment scoped_sharding(builder(), sharding);
+      param = xla::Parameter(builder(), param_index, shape, param_name);
+    } else {
+      param = xla::Parameter(builder(), param_index, shape, param_name);
+    }
+    it = parameters_map_.emplace(handle, Parameter{param, param_index}).first;
+    parameters_.push_back(backend_data);
   } else {
     XLA_CHECK(unbounded_dynamic_dims.empty())
         << "The unbounded dynamic dims can only be set when Parameter is "
@@ -138,8 +146,8 @@ xla::XlaOp LoweringContext::GetParameter(
 }
 
 std::optional<size_t> LoweringContext::GetParameterId(
-    const std::shared_ptr<torch::lazy::BackendData>& data) const {
-  torch::lazy::BackendData::Handle handle = data->GetHandle();
+    const std::shared_ptr<torch::lazy::BackendData>& backend_data) const {
+  torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
     return std::nullopt;
