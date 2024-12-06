@@ -196,8 +196,8 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
                                     const XLATensorPtr& indices,
                                     int64_t num_weights, int64_t padding_idx,
                                     bool scale_grad_by_freq) {
-  XLA_CHECK_EQ(indices->dtype(), at::ScalarType::Long)
-      << "Embedding indices are expected to be of scalar type Long";
+  XLA_CHECK(indices->dtype() == at::ScalarType::Long ||
+            indices->dtype() == at::ScalarType::Int);
   auto indices_shape_ref = indices->shape();
   // The weight must be of rank 2, which means the rank of grad_output is one
   // more than the indices.
@@ -245,7 +245,8 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
 XLATensorPtr Embedding(const XLATensorPtr& weight,
                        const XLATensorPtr& indices) {
   XLA_CHECK_EQ(weight->shape().get().rank(), 2);
-  XLA_CHECK(indices->dtype() == at::kLong || indices->dtype() == at::kInt);
+  XLA_CHECK(indices->dtype() == at::ScalarType::Long ||
+            indices->dtype() == at::ScalarType::Int);
 
   if (indices->shape().get().rank() == 1) {
     return tensor_methods::index_select(weight, 0, indices);
