@@ -508,10 +508,6 @@ def paged_attention(
     raise ValueError(
         f"{num_kv_pages_per_compute_block=} should be smaller or equal to {pages_per_sequence=}"
     )
-  if pages_per_sequence % num_kv_pages_per_compute_block != 0:
-    raise ValueError(
-        "num_kv_pages_per_compute_block must be divisible by pages per sequence. Got"
-        f" {pages_per_sequence=} and {num_kv_pages_per_compute_block=}.")
   if num_q_heads % num_kv_heads != 0:
     raise ValueError(
         "Number of Q heads must be divisible by number of KV heads. Got"
@@ -524,8 +520,8 @@ def paged_attention(
       num_kv_heads,
       pl.cdiv(query_len, num_queries_per_compute_block
              ),  # how many compute blocks we need to loop the query_len
-      pages_per_sequence //
-      num_kv_pages_per_compute_block,  # how many compute blocks we need to loop the kv_len
+      pl.cdiv(pages_per_sequence, num_kv_pages_per_compute_block
+             ),  # how many compute blocks we need to loop the kv_len
   )
 
   # out_shape
