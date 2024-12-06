@@ -2968,7 +2968,7 @@ class IndexOpsAtenXlaTensorTest
   torch::ScalarType GetValueType() const { return std::get<1>(GetParam()); }
 };
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexSelect) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexSelect) {
   torch::ScalarType scalar_type = GetValueType();
   torch::Tensor a =
       isFloatingType(scalar_type)
@@ -2991,7 +2991,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexSelect) {
   ExpectCounterChanged("xla::index_select", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexSelectRank0) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexSelectRank0) {
   torch::ScalarType scalar_type = GetValueType();
   torch::Tensor a =
       isFloatingType(scalar_type)
@@ -3011,7 +3011,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexSelectRank0) {
   });
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexPutImpl) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexPutImpl) {
   torch::Tensor indices =
       torch::randint(-3, 3, {2, 4, 3}, torch::TensorOptions(GetIndexType()));
   torch::ScalarType scalar_type = GetValueType();
@@ -3041,7 +3041,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexPutImpl) {
   }
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillWithScalar) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexFillWithScalar) {
   torch::Tensor index =
       torch::tensor({0, 2}, torch::TensorOptions(GetIndexType()));
   torch::ScalarType scalar_type = GetValueType();
@@ -3066,7 +3066,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillWithScalar) {
   }
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillWithScalarInPlace) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexFillWithScalarInPlace) {
   torch::Tensor index =
       torch::tensor({0, 2}, torch::TensorOptions(GetIndexType()));
   torch::ScalarType scalar_type = GetValueType();
@@ -3092,7 +3092,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillWithScalarInPlace) {
   }
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillWithTensor) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexFillWithTensor) {
   torch::Tensor index =
       torch::tensor({0, 2}, torch::TensorOptions(GetIndexType()));
   torch::ScalarType scalar_type = GetValueType();
@@ -3119,7 +3119,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillWithTensor) {
   }
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillWithTensorInPlace) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexFillWithTensorInPlace) {
   torch::Tensor index =
       torch::tensor({0, 2}, torch::TensorOptions(GetIndexType()));
   torch::ScalarType scalar_type = GetValueType();
@@ -3148,7 +3148,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillWithTensorInPlace) {
   }
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillRank0) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexFillRank0) {
   torch::Tensor index =
       torch::scalar_tensor(2, torch::TensorOptions(GetIndexType()));
   torch::ScalarType scalar_type = GetValueType();
@@ -3175,7 +3175,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexFillRank0) {
   }
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexAdd) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexAdd) {
   int index_size = 10;
   torch::ScalarType scalar_type = GetValueType();
   torch::Tensor base =
@@ -3208,7 +3208,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexAdd) {
   }
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexAddInPlace) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexAddInPlace) {
   int index_size = 10;
   int rank = 3;
   std::vector<double> alphas{0.0, 1.0, 2.0};
@@ -3248,7 +3248,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexAddInPlace) {
   ExpectCounterChanged("xla::index_add", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexAddRank0) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexAddRank0) {
   torch::ScalarType scalar_type = GetValueType();
   torch::Tensor base =
       isFloatingType(scalar_type)
@@ -3281,7 +3281,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexAddRank0) {
   }
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexCopy) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexCopy) {
   torch::ScalarType scalar_type = GetValueType();
   torch::Tensor base =
       isFloatingType(scalar_type)
@@ -3310,7 +3310,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexCopy) {
   ExpectCounterChanged("xla::index_copy", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexCopyInPlace) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexCopyInPlace) {
   int index_size = 10;
   int rank = 3;
   torch::ScalarType scalar_type = GetValueType();
@@ -3351,7 +3351,7 @@ TEST_F(IndexOpsAtenXlaTensorTest, TestIndexCopyInPlace) {
   }
 }
 
-TEST_F(IndexOpsAtenXlaTensorTest, TestIndexCopyRank0) {
+TEST_P(IndexOpsAtenXlaTensorTest, TestIndexCopyRank0) {
   torch::ScalarType scalar_type = GetValueType();
   torch::Tensor base =
       isFloatingType(scalar_type)
