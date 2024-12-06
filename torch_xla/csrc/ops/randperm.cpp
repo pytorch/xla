@@ -4,6 +4,7 @@
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "tsl/platform/stacktrace.h"
+#include "tsl/platform/statusor.h"
 #include "xla/hlo/builder/lib/loops.h"
 #include "xla/shape_util.h"
 
@@ -26,8 +27,9 @@ XlaOp Swap(XlaOp input, XlaOp i, XlaOp j) {
   return write_j;
 }
 
-StatusOr<std::vector<XlaOp>> LoopBodyFn(XlaOp i, absl::Span<const XlaOp> values,
-                                        XlaBuilder* builder) {
+absl::StatusOr<std::vector<XlaOp>> LoopBodyFn(XlaOp i,
+                                              absl::Span<const XlaOp> values,
+                                              XlaBuilder* builder) {
   XlaOp input_array = values[0];
   XlaOp upper_bound_exclusive = values[1];
 

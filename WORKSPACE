@@ -50,7 +50,7 @@ new_local_repository(
 #    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
 
-xla_hash = '30422ba2564eb108e12fb8a01629b2d0cf1f4393'
+xla_hash = '0020d6a56274c8893517adb22b46a3fcb5fa340a'
 
 http_archive(
     name = "xla",

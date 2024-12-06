@@ -64,10 +64,11 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_date = '20241122'
-_libtpu_version = f'0.0.5.dev{_date}'
-_libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu/libtpu-{_libtpu_version}+nightly-py3-none-linux_x86_64.whl'
-_jax_version = f'0.4.36.dev{_date}'
+# libtpu 0.0.5 and JAX 0.4.36 are cut on Dec 5, 2024. If we're switching to a nightly build,
+# we should not regress to an earlier version.
+_libtpu_version = f'0.0.5'
+_libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu/libtpu-{_libtpu_version}-py3-none-linux_x86_64.whl'
+_jax_version = f'0.4.36'
 
 
 def _get_build_mode():
