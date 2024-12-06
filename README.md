@@ -140,7 +140,7 @@ Our comprehensive user guides are available at:
 
 ## Reference implementations
 
-The [AI-Hypercomputer/tpu-recipies](https://github.com/AI-Hypercomputer/tpu-recipes)
+The [AI-Hypercomputer/tpu-recipes](https://github.com/AI-Hypercomputer/tpu-recipes)
 repo. contains examples for training and serving many LLM and diffusion models.
 
 ## Available docker images and wheels
@@ -195,6 +195,25 @@ pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/to
 
 The torch wheel version `2.6.0.dev20240925+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
 
+#### Use nightly build with C++11 ABI after 10/28/2024
+
+By default, `torch` is built with pre-C++11 version of ABI (see https://github.com/pytorch/pytorch/issues/51039).
+`torch_xla` follows that and ships pre-C++11 builds by default. However, the lazy
+tensor tracing performance can be improved by building the code with C++11 ABI.
+As a result, we provide C++11 ABI builds for interested users to try, especially
+if you find your model performance bottlenecked in Python lazy tensor tracing.
+
+You can add `.cxx11` after `yyyymmdd` to get the C++11 ABI variant of a
+specific nightly wheel.  Here is an example to install nightly builds from
+10/28/2024:
+
+```
+pip3 install torch==2.6.0.dev20241028+cpu.cxx11.abi --index-url https://download.pytorch.org/whl/nightly
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0.dev20241028.cxx11-cp310-cp310-linux_x86_64.whl
+```
+
+The torch wheel version `2.6.0.dev20241028+cpu.cxx11.abi` can be found at https://download.pytorch.org/whl/nightly/torch/.
+
 <details>
 
 <summary>older versions</summary>
@@ -240,6 +259,7 @@ The torch wheel version `2.6.0.dev20240925+cpu` can be found at https://download
 | 2.2 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.2.0_3.10_tpuvm` |
 | 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm` |
 | nightly python | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm` |
+| nightly python (C++11 ABI) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm_cxx11` |
 
 To use the above dockers, please pass `--privileged --net host --shm-size=16G` along. Here is an example:
 ```bash
