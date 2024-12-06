@@ -231,6 +231,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/test_devices.py"
 
   run_test "$CDIR/neuron/test_neuron_utils.py"
+  run_test "$CDIR/neuron/test_neuron_data_types.py"
 
   #python3 examples/data_parallel/train_resnet_xla_ddp.py # compiler error
   #python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py
