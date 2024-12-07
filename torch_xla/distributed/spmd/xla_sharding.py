@@ -14,6 +14,7 @@ import itertools
 from typing import Tuple, Union, List, Sequence, Any, Optional, Set
 from enum import IntEnum
 
+from torch.amp import custom_fwd, custom_bwd
 
 class Mesh:
   """Describe the logical XLA device topology mesh and the underlying resources.
@@ -738,6 +739,7 @@ class XLAPatchedLinear(torch.autograd.Function):
   """
 
   @staticmethod
+  @custom_fwd(device_type='xla', cast_inputs=torch.get_autocast_dtype('xla'))
   def forward(ctx, input, weight, bias=None):
     # bias is an optional argument
     ctx.save_for_backward(input, weight, bias)
@@ -748,6 +750,7 @@ class XLAPatchedLinear(torch.autograd.Function):
       return product + bias
 
   @staticmethod
+  @custom_bwd(device_type='xla')
   def backward(ctx, grad_output):
     input, weight, bias = ctx.saved_tensors
     grad_input = grad_weight = grad_bias = None
