@@ -64,11 +64,18 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-# libtpu 0.0.5 and JAX 0.4.36 are cut on Dec 5, 2024. If we're switching to a nightly build,
-# we should not regress to an earlier version.
+USE_NIGHTLY = False  # whether to use nightly or stable libtpu and jax
+_date = '20241205'
 _libtpu_version = f'0.0.5'
-_libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu/libtpu-{_libtpu_version}-py3-none-linux_x86_64.whl'
 _jax_version = f'0.4.36'
+_libtpu_wheel_name = f'libtpu-{_libtpu_version}'
+
+if USE_NIGHTLY:
+  _libtpu_version += f".dev{_date}"
+  _jax_version += f".dev{_date}"
+  _libtpu_wheel_name += f".dev{_date}+nightly"
+
+_libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_x86_64.whl'
 
 
 def _get_build_mode():
