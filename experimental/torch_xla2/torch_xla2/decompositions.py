@@ -276,7 +276,13 @@ def _grid_sampler_3d(
         return get_summand(ix_nearest, iy_nearest, iz_nearest, 1)
 
 EXTRA_DECOMP = decomp.get_decompositions([
+    torch.ops.aten.upsample_bicubic2d,
+    torch.ops.aten.upsample_nearest1d,
     torch.ops.aten.upsample_nearest2d,
+    torch.ops.aten.upsample_nearest3d,
+    torch.ops.aten._upsample_nearest_exact1d,
+    torch.ops.aten._upsample_nearest_exact2d,
+    torch.ops.aten._upsample_nearest_exact3d,
     torch.ops.aten._native_batch_norm_legit.no_stats,
     torch.ops.aten._adaptive_avg_pool2d,
     torch.ops.aten._adaptive_avg_pool3d,

@@ -46,7 +46,6 @@ skiplist = {
     "nn.functional.max_pool2d",
     "nn.functional.max_pool3d",
     "nn.functional.multi_head_attention_forward",
-    "nn.functional.upsample_nearest",
     "normal",
     "ormqr",
     "pca_lowrank",
