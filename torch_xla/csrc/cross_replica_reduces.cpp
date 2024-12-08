@@ -557,7 +557,7 @@ void SetAllReduceToken(const torch::lazy::BackendDevice& device,
   g_all_reduce_tokens[device.ordinal()] = token;
 }
 
-AllReduceType GetReduceType(c10::string_view reduce_type) {
+AllReduceType GetReduceType(std::string_view reduce_type) {
   if (reduce_type == "sum") {
     return AllReduceType::kSum;
   } else if (reduce_type == "mul") {
