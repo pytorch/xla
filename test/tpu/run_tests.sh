@@ -6,10 +6,10 @@ python3 test/test_operations.py -v
 python3 test/pjrt/test_runtime_tpu.py
 python3 test/pjrt/test_collective_ops_tpu.py
 python3 test/spmd/test_mp_input_sharding.py
+python3 test/spmd/test_spmd_lowering_context.py
 python3 test/spmd/test_xla_sharding.py
 python3 test/spmd/test_xla_virtual_device.py
-# TODO(JackCaoG): to reenable
-# python3 test/spmd/test_xla_distributed_checkpoint.py
+python3 test/spmd/test_xla_distributed_checkpoint.py
 python3 test/spmd/test_train_spmd_linear_model.py
 python3 test/spmd/test_xla_spmd_python_api_interaction.py
 python3 test/spmd/test_xla_auto_sharding.py
@@ -26,6 +26,7 @@ python3 test/pjrt/test_dtypes.py
 python3 test/pjrt/test_dynamic_plugin_tpu.py
 python3 test/test_while_loop.py
 python3 test/scan/test_scan.py
+python3 test/scan/test_scan_spmd.py
 python3 test/scan/test_scan_layers.py
 python3 test/test_pallas.py -v
 python3 test/test_pallas_spmd.py

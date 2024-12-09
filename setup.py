@@ -64,10 +64,11 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_date = '20241122'
-_libtpu_version = f'0.1.dev{_date}'
-_libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}+nightly-py3-none-any.whl'
-_jax_version = f'0.4.36.dev{_date}'
+# libtpu 0.0.5 and JAX 0.4.36 are cut on Dec 5, 2024. If we're switching to a nightly build,
+# we should not regress to an earlier version.
+_libtpu_version = f'0.0.5'
+_libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu/libtpu-{_libtpu_version}-py3-none-linux_x86_64.whl'
+_jax_version = f'0.4.36'
 
 
 def _get_build_mode():
@@ -312,8 +313,14 @@ setup(
     },
     extras_require={
         # On Cloud TPU VM install with:
-        # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
-        'tpu': [f'libtpu-nightly=={_libtpu_version}', 'tpu-info'],
+        # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
+        'tpu': [
+            f'libtpu=={_libtpu_version}',
+            'tpu-info',
+            # This special version removes `libtpu.so` from any `libtpu-nightly` installations,
+            # since we have migrated to using the `libtpu.so` from the `libtpu` package.
+            "libtpu-nightly==0.1.dev20241010+nightly.cleanup"
+        ],
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
         'pallas': [f'jaxlib=={_jax_version}', f'jax=={_jax_version}'],
     },

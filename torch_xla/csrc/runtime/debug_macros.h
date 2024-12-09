@@ -4,7 +4,7 @@
 #include "absl/status/status.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "tsl/platform/stacktrace.h"
-#include "xla/statusor.h"
+#include "tsl/platform/statusor.h"
 
 #define XLA_ERROR() TF_ERROR_STREAM()
 #define XLA_CHECK(c) TF_CHECK(c) << "\n" << tsl::CurrentStackTrace()

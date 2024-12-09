@@ -162,7 +162,7 @@ cc_library(
     deps = [
         ":tf_logging",
         "@tsl//tsl/platform:stacktrace",
-        "@xla//xla:statusor",
+        "@tsl//tsl/platform:statusor",
     ],
 )
 
@@ -296,10 +296,10 @@ cc_library(
     deps = [
         ":tf_logging",
         ":profiler_backends",
+        "@com_google_absl//absl/status",
         "@xla//xla/backends/profiler/plugin:profiler_c_api_hdrs",
         "@xla//xla/backends/profiler/plugin:plugin_tracer",
         "@xla//xla/pjrt/c:pjrt_c_api_profiler_extension_hdrs",
-        "@xla//xla:status",
         "@tsl//tsl/profiler/lib:profiler_factory",
         "@xla//xla/tsl/profiler/rpc:profiler_server_impl",
         "@xla//xla/tsl/profiler/rpc/client:capture_profile",
@@ -380,7 +380,7 @@ cc_library(
     srcs = ["tf_logging.cc"],
     hdrs = ["tf_logging.h"],
     deps = [
-        "@xla//xla:statusor",
+        "@tsl//tsl/platform:statusor",
         "@xla//xla/service:platform_util",
         "@com_google_absl//absl/base:log_severity",
     ],
@@ -416,7 +416,7 @@ cc_library(
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@tsl//tsl/platform:hash",
-        "@xla//xla:statusor",
+        "@tsl//tsl/platform:statusor",
         "@xla//xla:types",
     ],
 )
@@ -479,17 +479,17 @@ ptxla_cc_test(
         ":computation_client",
         ":pjrt_computation_client",
         ":tensor_source",
+        "@com_google_absl//absl/status",
         "@xla//xla/tsl/lib/core:status_test_util",
         "@tsl//tsl/platform:env",
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/platform:logging",
         "@tsl//tsl/platform:test",
         "@tsl//tsl/platform:test_main",
+        "@tsl//tsl/platform:statusor",
         "@xla//xla:literal",
         "@xla//xla:literal_util",
         "@xla//xla:shape_util",
-        "@xla//xla:status",
-        "@xla//xla:statusor",
         "@xla//xla/client:xla_builder",
         "@xla//xla/client:xla_computation",
         "@xla//xla/tests:literal_test_util",

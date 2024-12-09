@@ -209,6 +209,7 @@ function run_xla_op_tests2 {
   run_test "$CDIR/pjrt/test_dtypes.py"
   run_test "$CDIR/test_while_loop.py"
   run_test "$CDIR/scan/test_scan.py"
+  run_test "$CDIR/scan/test_scan_spmd.py"
   run_test "$CDIR/scan/test_scan_layers.py"
   run_test "$CDIR/test_autocast.py"
   run_test "$CDIR/eager/test_eager.py"
@@ -247,6 +248,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_xla_auto_sharding.py"
   run_test "$CDIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$CDIR/spmd/test_mp_input_sharding.py"
+  run_test "$CDIR/spmd/test_spmd_lowering_context.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"

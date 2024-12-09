@@ -280,7 +280,9 @@ function build_and_install_torch_xla() {
   python setup.py bdist_wheel
   pip install dist/*.whl
   if [ "$TPUVM_MODE" == "1" ]; then
-    pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+    pip install torch_xla[tpu] \
+      -f https://storage.googleapis.com/libtpu-wheels/index.html \
+      -f https://storage.googleapis.com/libtpu-releases/index.html
     sudo apt-get install -y google-perftools
   fi
 
