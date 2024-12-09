@@ -33,7 +33,7 @@ class TestSPMDLoweringContext(test_xla_sharding_base.XlaShardingTest):
     save_file += '.0'  # Identify a single device
     assert save_format == 'hlo', "This test should be run with XLA_SAVE_TENSORS_FMT=hlo"
 
-    model_axis = min(8, self.n_devices)
+    model_axis = max(1, self.n_devices // 2)
     data_axis = self.n_devices // model_axis
     mesh_shape = (data_axis, model_axis)
     spmd_mesh = self._get_mesh(mesh_shape, axis_names=('x', 'y'))
@@ -105,7 +105,7 @@ class TestSPMDLoweringContext(test_xla_sharding_base.XlaShardingTest):
   def test_device_parameter_id_tensor_mapping(self):
     met.clear_all()
 
-    model_axis = min(8, self.n_devices)
+    model_axis = max(1, self.n_devices // 2)
     data_axis = self.n_devices // model_axis
     mesh_shape = (data_axis, model_axis)
     spmd_mesh = self._get_mesh(mesh_shape, axis_names=('x', 'y'))

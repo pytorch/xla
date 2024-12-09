@@ -6,6 +6,9 @@ MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
 
+# Utils file
+source "${CDIR}/utils/run_tests_utils.sh"
+
 # Note [Keep Going]
 #
 # Set the `CONTINUE_ON_ERROR` flag to `true` to make the CI tests continue on error.
@@ -112,55 +115,6 @@ function run_eager_debug {
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
-# Run a test with tensor saving enabled, using a specified graph format. The
-# graph dump files are cleaned after the test. In case the test crashes, the
-# file is retained.
-#
-# Usage: run_save_tensor <format> [test arguments...]
-#
-# Arguments:
-#   format: The graph format to use with XLA_SAVE_TENSORS_FMT
-#   test arguments: Arguments to pass to the test
-#
-# Environment:
-#   Sets XLA_SAVE_TENSORS_FILE and XLA_SAVE_TENSORS_FMT
-function run_save_tensor {
-  local file_graph_format="$1" ; shift
-
-  echo "Running in save tensor file mode: $@"
-  local base_file="/tmp/xla_test_save_ir.txt"
-
-  # Check if the file already exists, for any device ordinal number.
-  if ls "${base_file}"* 1> /dev/null 2>&1; then
-    echo "Error: File ${base_file} or a numbered version already exists. Please remove it before running the test."
-    return 1
-  fi
-
-  XLA_SAVE_TENSORS_FILE="$base_file" XLA_SAVE_TENSORS_FMT="$file_graph_format" run_test "$@"
-  local test_status=$?
-
-  # Clean up the file once the test finalizes.
-  local actual_file
-  actual_file=$(ls "${base_file}"* 2>/dev/null | head -n1)
-  if [ -f "$actual_file" ]; then
-    echo "Cleaning up temporary file: $actual_file"
-    rm "$actual_file"
-  else
-    echo "Warning: Expected output file not found"
-  fi
-  return $test_status
-}
-
-function run_save_tensor_ir {
-  echo "Running in save tensor file mode: $@"
-  run_save_tensor "text" "$@"
-}
-
-function run_save_tensor_hlo {
-  echo "Running in save tensor file mode: $@"
-  run_save_tensor "hlo" "$@"
-}
-
 function run_pt_xla_debug {
   echo "Running in save tensor file mode: $@"
   PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
@@ -232,7 +186,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/dynamo/test_num_output.py"
   run_test "$CDIR/dynamo/test_graph_input_matcher.py"
   run_test "$CDIR/dynamo/test_dynamo_config.py"
-  run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
+  run_save_tensor_ir run_test "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_test "$CDIR/test_data_type.py"
   run_use_bf16 "$CDIR/test_data_type.py"
   run_downcast_bf16 "$CDIR/test_data_type.py"
@@ -240,8 +194,8 @@ function run_xla_op_tests1 {
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
-  run_save_tensor_ir "$CDIR/spmd/test_spmd_graph_dump.py"
-  run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
+  run_save_tensor_ir run_test "$CDIR/spmd/test_spmd_graph_dump.py"
+  run_save_tensor_hlo run_test "$CDIR/spmd/test_spmd_graph_dump.py"
 }
 
 function run_xla_op_tests2 {
@@ -287,7 +241,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_xla_auto_sharding.py"
   run_test "$CDIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$CDIR/spmd/test_mp_input_sharding.py"
-  run_save_tensor_hlo "$CDIR/spmd/test_spmd_lowering_context.py"
+  run_save_tensor_hlo run_test "$CDIR/spmd/test_spmd_lowering_context.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
