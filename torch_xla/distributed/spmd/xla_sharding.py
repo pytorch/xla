@@ -16,6 +16,7 @@ from enum import IntEnum
 
 from torch.amp import custom_fwd, custom_bwd
 
+
 class Mesh:
   """Describe the logical XLA device topology mesh and the underlying resources.
 

@@ -10,7 +10,6 @@ device = xm.xla_device()
 
 
 class TestAutocastXla(unittest.TestCase):
-
   def test_cross_entropy_loss(self):
     data = torch.randn(16, 10).to(torch.bfloat16).to(device)
     target = torch.randn(16, 10).to(torch.bfloat16).to(device)
@@ -52,7 +51,9 @@ class TestAutocastXla(unittest.TestCase):
     # Verify more bf16->f32 conversions than f32->bf16, since this is expected during backward pass for grad computation
     self.assertTrue(bf16_to_f32 == 11)
     self.assertTrue(f32_to_bf16 == 8)
-    self.assertTrue(bf16_to_f32 > f32_to_bf16)  #redundant given the above two, but this is what we actually want to verify
+    self.assertTrue(
+        bf16_to_f32 > f32_to_bf16
+    )  #redundant given the above two, but this is what we actually want to verify
 
 
 if __name__ == "__main__":
