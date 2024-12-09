@@ -8,7 +8,6 @@ device = xm.xla_device()
 
 
 class TestAutocastXla(unittest.TestCase):
-
   def test_cross_entropy_loss(self):
     data = torch.randn(16, 10).to(torch.bfloat16).to(device)
     target = torch.randn(16, 10).to(torch.bfloat16).to(device)
@@ -21,9 +20,9 @@ class TestAutocastXla(unittest.TestCase):
       self.assertRegex(hlo, r".*log.*f32.*log.*f32")
 
   def test_einsum(self):
-    # irrespective of input dtype, output dtype will depend on autocast policy. 
+    # irrespective of input dtype, output dtype will depend on autocast policy.
     # Tests for bf16 and f32 given below.
-    
+
     # input data of type bf16
     data = torch.randn(16, 10).to(torch.bfloat16).to(device)
     target = torch.randn(5, 10).to(torch.bfloat16).to(device)
