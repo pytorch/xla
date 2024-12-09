@@ -11,7 +11,7 @@ bool ShouldUseBF16() {
   bool use_bf16 = runtime::sys_util::GetEnvBool("XLA_USE_BF16", false);
   if (use_bf16) {
     std::cout
-        << "XLA_USE_BF16 will be deprecated after the 2.5 release, please "
+        << "XLA_USE_BF16 will be deprecated after the 2.6 release, please "
            "convert your model to bf16 directly\n";
     TF_LOG(INFO) << "Using BF16 data type for floating point values";
   }
@@ -23,7 +23,7 @@ bool ShouldDowncastToBF16() {
       runtime::sys_util::GetEnvBool("XLA_DOWNCAST_BF16", false);
   if (downcast_bf16) {
     std::cout
-        << "XLA_DOWNCAST_BF16 will be deprecated after the 2.5 release, please "
+        << "XLA_DOWNCAST_BF16 will be deprecated after the 2.6 release, please "
            "downcast your model directly\n";
     TF_LOG(INFO) << "Downcasting floating point values, F64->F32, F32->BF16";
   }
