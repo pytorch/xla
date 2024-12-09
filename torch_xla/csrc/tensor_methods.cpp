@@ -3049,7 +3049,7 @@ XLATensorPtr slice(const XLATensorPtr& input, int64_t dim, int64_t start,
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> eigh(const XLATensorPtr& input,
-                                            c10::string_view uplo) {
+                                            std::string_view uplo) {
   torch::lazy::NodePtr node =
       torch_xla::MakeNode<Eigh>(input->GetIrValue(), uplo);
   // Here we explictly pass std::nullopt as logical_element_type because

@@ -867,7 +867,7 @@ XLATensorPtr slice(const XLATensorPtr& input, int64_t dim, int64_t start,
                    int64_t end, int64_t step);
 
 std::tuple<XLATensorPtr, XLATensorPtr> eigh(const XLATensorPtr& input,
-                                            c10::string_view uplo);
+                                            std::string_view uplo);
 
 std::tuple<XLATensorPtr, XLATensorPtr> slogdet(const XLATensorPtr& input);
 

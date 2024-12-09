@@ -10,7 +10,7 @@ namespace torch_xla {
 
 class Eigh : public XlaNode {
  public:
-  Eigh(const torch::lazy::Value& input, c10::string_view uplo);
+  Eigh(const torch::lazy::Value& input, std::string_view uplo);
 
   std::string ToString() const override;
 

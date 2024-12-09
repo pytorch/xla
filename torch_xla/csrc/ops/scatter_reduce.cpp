@@ -10,7 +10,7 @@ namespace torch_xla {
 ScatterReduce::ScatterReduce(const torch::lazy::Value& input,
                              const torch::lazy::Value& index,
                              const torch::lazy::Value& src,
-                             c10::string_view reduce, bool include_self,
+                             std::string_view reduce, bool include_self,
                              int64_t dim)
     : XlaNode(torch::lazy::OpKind(at::aten::scatter_reduce),
               {input, index, src}, GetXlaShape(input),
