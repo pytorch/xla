@@ -1006,6 +1006,9 @@ class PyLoweringContext {
           torch::lazy::Output(ir_value.node.get(), ir_value.index));
       lowering_ctx.AddResult(root);
     }
+
+    ShardingUtil::SetHloSharding(&lowering_ctx);
+
     computation = ConsumeValue(lowering_ctx.BuildXla());
   }
 
@@ -1048,21 +1051,26 @@ class PyLoweringContext {
       }
     }
 
+    ShardingUtil::SetHloSharding(&lowering_ctx);
+
     computation = ConsumeValue(lowering_ctx.BuildXla());
 
     // wrap inputs of cond/body_computation
     if ((GetNameString() == "condctx") || (GetNameString() == "bodyctx")) {
       std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-      std::vector<size_t> buffer_donor_indices;
+      std::vector<xla::HloSharding> param_shardings;
+      // If sharded, then extract all input Op shardings.
+      if (UseVirtualDevice()) {
+        param_shardings = XlaHelpers::ExtractInputShardings(computation);
+      }
       xla::ProgramShape program_shape =
           ConsumeValue(computation.GetProgramShape());
       // TODO(@manfei): please confirm whether we check for more than two or use
       // default value true
       bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
       if (should_wrap_parameter) {
-        // For now we assume that we for i loop input is not sharded.
         computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-            computation, program_shape.parameters(), {}, buffer_donor_indices));
+            computation, program_shape.parameters(), param_shardings, {}));
       }
     }
   }
