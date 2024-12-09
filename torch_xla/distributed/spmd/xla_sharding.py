@@ -735,6 +735,14 @@ class XLAPatchedLinear(torch.autograd.Function):
   dimensions. The torch.matmul default behavior makes it very hard for XLA compiler
   to propagate the sharding annotation.
 
+  Autocast decorators @custom_fwd and @custom_bwd used as per autocast docs [1] to bring this class/layer within 
+  autocast context, when autocast is enabled.
+  torch.get_autocast_dtype() fetches datatype for ops run in autocast [2], with the specified device (here, 'xla').
+  
+  References: 
+  [1] https://pytorch.org/docs/stable/notes/amp_examples.html#functions-with-multiple-inputs-or-autocastable-ops 
+  [2] https://github.com/pytorch/pytorch/blob/2cc01cc6d3ad2aff47e8460667ba654b2e4c9f21/torch/amp/autocast_mode.py#L500
+
   TODO (alanwaketan): Let's patch it on the dispatcher level.
   """
 
