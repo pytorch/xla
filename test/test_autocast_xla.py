@@ -8,7 +8,7 @@ device = xm.xla_device()
 
 
 class TestAutocastXla(unittest.TestCase):
-  
+
   def test_cross_entropy_loss(self):
     data = torch.randn(16, 10).to(torch.bfloat16).to(device)
     target = torch.randn(16, 10).to(torch.bfloat16).to(device)
