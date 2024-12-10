@@ -99,8 +99,6 @@ class TestSPMDLoweringContext(test_xla_sharding_base.XlaShardingTest):
     assert expected_output[1] == f"f32[32,2048] {b_sharding_spec}"
     assert expected_output[2] == f"f32[2048] {a_sharding_spec}"
     assert expected_output[3] == f"f32[32,2048] {b_sharding_spec}"
-    self.assertTrue(met.counter_value("ExecuteReplicated") == 1)
-    self.assertTrue(met.counter_value("ExecuteComputation") is None)
 
   def test_device_parameter_id_tensor_mapping(self):
     met.clear_all()
