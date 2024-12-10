@@ -1,3 +1,4 @@
+import sys
 import re
 import unittest
 
@@ -133,6 +134,50 @@ class StableHLOCustomCallExportTest(unittest.TestCase):
     self.assertTrue(
         "mhlo.frontend_attributes = {_xla_buffer_placement = \"device\"}}" in
         shlo_text)
+
+  def test_place_to_host_device_autograd(self):
+    # Test that gradient can flow through place_to_host and place_to_device ops.
+    dev = xm.xla_device()
+    a = torch.ones(10, device=dev, requires_grad=True)
+    b = place_to_host(a)
+    c = b.sum()
+    c.backward()
+    self.assertIsNotNone(a.grad)
+
+    a = torch.ones(10, device=dev, requires_grad=True)
+    b = place_to_device(a)
+    c = b.sum()
+    c.backward()
+    self.assertIsNotNone(a.grad)
+
+  def test_place_to_host_device_aot_autograd(self):
+    # Test that we can trace place_to_host and place_to_host via AOTAutograd,
+    # specifically `aot_function`.
+    from functorch.compile import aot_function, make_boxed_func  # type: ignore
+
+    dev = xm.xla_device()
+    a = torch.ones(10, device=dev, requires_grad=True)
+
+    def my_fn(x):
+      return place_to_device(place_to_host(x)).sum()
+
+    graphs = []
+
+    def get_graph(gm: torch.fx.GraphModule, _):
+      graphs.append(gm)
+      return make_boxed_func(gm)
+
+    c = aot_function(my_fn, get_graph)(a)
+    c.backward()
+    self.assertIsNotNone(a.grad)
+
+    # Check the AOT captured graph.
+    self.assertEqual(len(graphs), 2)
+    fw, bw = graphs
+    self.assertIn("place_to_host", fw.code)
+    self.assertIn("place_to_device", fw.code)
+    self.assertNotIn("place_to_host", bw.code)
+    self.assertNotIn("place_to_device", bw.code)
 
 
 if __name__ == "__main__":
