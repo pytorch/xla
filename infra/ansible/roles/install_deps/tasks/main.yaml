@@ -28,7 +28,7 @@
 - name: Install pip packages
   ansible.builtin.pip:
     name: "{{ pip_pkgs }}"
-    extra_args: -f https://storage.googleapis.com/libtpu-releases/index.html
+    extra_args: -f https://storage.googleapis.com/libtpu-releases/index.html -f https://storage.googleapis.com/libtpu-wheels/index.html
 
 - name: Install pip packages without deps (--no-deps)
   ansible.builtin.pip:
