@@ -1351,7 +1351,7 @@ XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
 }
 
 XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
-                 const std::optional<c10::string_view>& rounding_mode,
+                 const std::optional<std::string_view>& rounding_mode,
                  std::optional<at::ScalarType> logical_element_type) {
   at::ScalarType scalar_type =
       at::typeMetaToScalarType(c10::get_default_dtype());
@@ -1702,7 +1702,7 @@ XLATensorPtr ge(const XLATensorPtr& input, const XLATensorPtr& other) {
 }
 
 XLATensorPtr gelu(const XLATensorPtr& input,
-                  const c10::string_view approximate) {
+                  const std::string_view approximate) {
   if (approximate == "none") {
     return input->CreateFrom(Gelu(input->GetIrValue()));
   } else if (approximate == "tanh") {
@@ -1713,7 +1713,7 @@ XLATensorPtr gelu(const XLATensorPtr& input,
 }
 
 XLATensorPtr gelu_backward(const XLATensorPtr& grad, const XLATensorPtr& input,
-                           const c10::string_view approximate) {
+                           const std::string_view approximate) {
   if (approximate == "none") {
     return input->CreateFrom(
         GeluBackward(grad->GetIrValue(), input->GetIrValue()));
@@ -2992,7 +2992,7 @@ XLATensorPtr scatter_add(const XLATensorPtr& input, int64_t dim,
 
 XLATensorPtr scatter_reduce(const XLATensorPtr& input, int64_t dim,
                             const XLATensorPtr& index, const XLATensorPtr& src,
-                            c10::string_view reduce, bool include_self) {
+                            std::string_view reduce, bool include_self) {
   return input->CreateFrom(torch_xla::MakeNode<ScatterReduce>(
       input->GetIrValue(), index->GetIrValue(), src->GetIrValue(), reduce,
       include_self,
@@ -3049,7 +3049,7 @@ XLATensorPtr slice(const XLATensorPtr& input, int64_t dim, int64_t start,
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> eigh(const XLATensorPtr& input,
-                                            c10::string_view uplo) {
+                                            std::string_view uplo) {
   torch::lazy::NodePtr node =
       torch_xla::MakeNode<Eigh>(input->GetIrValue(), uplo);
   // Here we explictly pass std::nullopt as logical_element_type because

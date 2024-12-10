@@ -34,7 +34,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
 
 }  // namespace
 
-Eigh::Eigh(const torch::lazy::Value& input, c10::string_view uplo)
+Eigh::Eigh(const torch::lazy::Value& input, std::string_view uplo)
     : XlaNode(
           torch::lazy::OpKind(at::aten::_linalg_eigh), {input},
           [&]() { return NodeOutputShape(input); },

@@ -522,7 +522,7 @@ TEST_F(AtenXlaTensorTest, TestLinalgEigh) {
       {complex64(2, 7), complex64(3, 0), complex64(5, -9)},
       {complex64(4, 8), complex64(5, 9), complex64(6, 0)},
   });
-  for (c10::string_view uplo : {"U", "L"}) {
+  for (std::string_view uplo : {"U", "L"}) {
     auto [eigenvalues, eigenvectors] = torch::linalg_eigh(input, uplo);
     ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
