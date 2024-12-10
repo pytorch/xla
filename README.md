@@ -212,6 +212,11 @@ pip3 install torch==2.6.0.dev20241028+cpu.cxx11.abi --index-url https://download
 pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0.dev20241028.cxx11-cp310-cp310-linux_x86_64.whl
 ```
 
+**As of 12/11/2024, the torch_xla C++11 ABI wheel is named differently and can be installed as follows:**
+```
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0.dev20241211+cxx11-cp310-cp310-linux_x86_64.whl
+```
+
 The torch wheel version `2.6.0.dev20241028+cpu.cxx11.abi` can be found at https://download.pytorch.org/whl/nightly/torch/.
 
 <details>

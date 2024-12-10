@@ -144,13 +144,17 @@
     #
     # we want to rename it to
     #
-    # torch_xla-2.5.0.dev20240819.cxx11-cp310-cp310-linux_x86_64.whl
-    # torch_xla-2.4.0.cxx11-cp311-cp311-manylinux_2_28_x86_64.whl
+    # torch_xla-2.5.0.dev20240819+cxx11-cp310-cp310-linux_x86_64.whl
+    # torch_xla-2.4.0+cxx11-cp311-cp311-manylinux_2_28_x86_64.whl
     # torch-2.5.0+libtpu.cxx11-cp310-cp310-linux_x86_64.whl
-    # torch-2.5.0.cxx11-cp311-cp311-linux_x86_64.whl
+    # torch-2.5.0+cxx11-cp311-cp311-linux_x86_64.whl
     #
-    # essentially adding .cxx11 before the -cp39, -cp310, -cp311 etc identifiers.
-    rename -v "s/^(.+?)(-cp\d+)/\1.cxx11\2/" *.whl
+    # essentially adding +cxx11 before the -cp39, -cp310, -cp311 etc identifiers.
+    if [[ "$f" == *"+libtpu"* ]]; then
+      rename -v "s/^(.+?)(-cp\d+)/\1.cxx11\2/" *.whl
+    else
+      rename -v "s/^(.+?)(-cp\d+)/\1+cxx11\2/" *.whl
+    fi
   args:
     executable: /bin/bash
     chdir: "/tmp/staging-wheels"
