@@ -65,14 +65,16 @@ import build_util
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = False  # whether to use nightly or stable libtpu and jax
-_date = '20241205'
-_libtpu_version = f'0.0.5'
-_jax_version = f'0.4.36'
+_date = '20241209'
+_libtpu_version = f'0.0.6'
+_jax_version = f'0.4.37'
+_jaxlib_version = f'0.4.36'
 _libtpu_wheel_name = f'libtpu-{_libtpu_version}'
 
 if USE_NIGHTLY:
   _libtpu_version += f".dev{_date}"
   _jax_version += f".dev{_date}"
+  _jaxlib_version += f".dev{_date}"
   _libtpu_wheel_name += f".dev{_date}+nightly"
 
 _libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_x86_64.whl'
@@ -329,7 +331,7 @@ setup(
             "libtpu-nightly==0.1.dev20241010+nightly.cleanup"
         ],
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-        'pallas': [f'jaxlib=={_jax_version}', f'jax=={_jax_version}'],
+        'pallas': [f'jaxlib=={_jaxlib_version}', f'jax=={_jax_version}'],
     },
     cmdclass={
         'build_ext': BuildBazelExtension,
