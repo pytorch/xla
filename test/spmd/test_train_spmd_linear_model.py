@@ -121,6 +121,7 @@ def train():
         optimizer.step()
       xm.mark_step()
       if step % 10 == 0:
+        assert loss != 0, "Loss should not 0 here"
         print(f"Epoch {epoch} step {step} loss {loss}")
 
   for epoch in range(FLAGS.num_epochs):
