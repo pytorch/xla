@@ -252,6 +252,7 @@ function run_xla_op_tests3 {
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
   run_test "$CDIR/test_pallas.py"
+  XLA_DISABLE_FUNCTIONALIZATION=0 run_test "$CDIR/test_functionalization.py"
 
   # CUDA tests
   if [ -x "$(command -v nvidia-smi)" ]; then
