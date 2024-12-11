@@ -1,0 +1,963 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Bazel in Pytorch/XLA &mdash; PyTorch/XLA master documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Custom Hardware Plugins" href="plugins.html" />
+  <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','');</script>
+    <!-- End Google Tag Manager -->
+  
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+
+          <li class="main-menu-item">
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Learn
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/get-started">
+                  <span class=dropdown-title>Get Started</span>
+                  <p>Run PyTorch locally or get started quickly with one of the supported cloud platforms</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials">
+                  <span class="dropdown-title">Tutorials</span>
+                  <p>Whats new in PyTorch tutorials</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/basics/intro.html">
+                  <span class="dropdown-title">Learn the Basics</span>
+                  <p>Familiarize yourself with PyTorch concepts and modules</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/recipes/recipes_index.html">
+                  <span class="dropdown-title">PyTorch Recipes</span>
+                  <p>Bite-size, ready-to-deploy PyTorch code examples</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tutorials/beginner/introyt.html">
+                  <span class="dropdown-title">Intro to PyTorch - YouTube Series</span>
+                  <p>Master PyTorch basics with our engaging YouTube tutorial series</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Ecosystem
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem">
+                  <span class="dropdown-title">Tools</span>
+                  <p>Learn about the tools and frameworks in the PyTorch Ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class=dropdown-title>Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class=dropdown-title>Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class=dropdown-title>Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
+                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                  <p>Award winners announced at this year's PyTorch Conference</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+          <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Edge
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/edge">
+                  <span class="dropdown-title">About PyTorch Edge</span>
+                  <p>Build innovative and privacy-aware AI experiences for edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
+                  <span class="dropdown-title">ExecuTorch</span>
+                  <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+              </div>
+            </div>  
+          </li>
+
+          <li class="main-menu-item">
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p>Explore the documentation for comprehensive guidance on how to use PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/pytorch-domains">
+                  <span class="dropdown-title">PyTorch Domains</span>
+                  <p>Read the PyTorch Domains documentation to learn more about domain-specific libraries</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                Blogs & News 
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/blog/">
+                  <span class="dropdown-title">PyTorch Blog</span>
+                  <p>Catch up on the latest technical news and happenings</p>
+                </a>
+                 <a class="nav-dropdown-item" href="https://pytorch.org/community-blog">
+                  <span class="dropdown-title">Community Blog</span>
+                  <p>Stories from the PyTorch ecosystem</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/videos">
+                  <span class="dropdown-title">Videos</span>
+                  <p>Learn about the latest PyTorch tutorials, new, and more </p>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="with-down-arrow">
+                About
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn more about the PyTorch Foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
+                  <span class="dropdown-title">Governing Board</span>
+                  <p></p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li class="main-menu-item">
+            <div class="no-dropdown">
+              <a href="https://pytorch.org/join" data-cta="join">
+                Become a Member
+              </a>
+            </div>
+          </li>
+          <li>
+           <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="github-icon">
+             </a>
+           </div>
+          </li>
+          <!--- TODO: This block adds the search icon to the nav bar. We will enable it later. 
+          <li>
+            <div class="main-menu-item">
+             <a href="https://github.com/pytorch/pytorch" class="search-icon">
+             </a>
+            </div>
+          </li>
+          --->
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  master (2.6.0+git7261c79 )
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Learn about Pytorch/XLA</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../learn/xla-overview.html">Pytorch/XLA overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/pytorch-on-xla-devices.html">PyTorch on XLA Devices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/api-guide.html">PyTorch/XLA API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/dynamic_shape.html">Dynamic shape</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/eager.html">Eager Mode + Compile API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/pjrt.html">PJRT Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../learn/troubleshoot.html">Troubleshoot</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Learn about accelerators</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/tpu.html">Learn about TPUs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">How to do DistributedDataParallel(DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="configure-environment.html">Configure a development environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codegen_migration.html">Codegen migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plugins.html">Custom Hardware Plugins</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Bazel in Pytorch/XLA</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="../index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+      <li>Bazel in Pytorch/XLA</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/contribute/bazel.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          <!-- Google Tag Manager (noscript) -->
+          <noscript><iframe src="https://www.googletagmanager.com/ns.html?id="
+          height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+          <!-- End Google Tag Manager (noscript) -->
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <div class="section" id="bazel-in-pytorch-xla">
+<h1>Bazel in Pytorch/XLA<a class="headerlink" href="#bazel-in-pytorch-xla" title="Permalink to this heading">¶</a></h1>
+<p><a class="reference external" href="https://bazel.build/">Bazel</a> is a free software tool used for the
+automation of building and testing software.
+<a class="reference external" href="https://www.tensorflow.org/http">TensorFlow</a> and
+<a class="reference external" href="https://github.com/openxla/xla">OpenXLA</a> both use it, which makes it a
+good fit for PyTorch/XLA as well.</p>
+<div class="section" id="bazel-dependencies">
+<h2>Bazel dependencies<a class="headerlink" href="#bazel-dependencies" title="Permalink to this heading">¶</a></h2>
+<p>Tensorflow is a <a class="reference external" href="https://bazel.build/external/overview">bazel external dependency</a> for PyTorch/XLA,
+which can be seen in the <code class="docutils literal notranslate"><span class="pre">WORKSPACE</span></code> file:</p>
+<p><code class="docutils literal notranslate"><span class="pre">WORKSPACE</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">http_archive</span><span class="p">(</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;org_tensorflow&quot;</span><span class="p">,</span>
+    <span class="n">strip_prefix</span> <span class="o">=</span> <span class="s2">&quot;tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef&quot;</span><span class="p">,</span>
+    <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>TensorFlow pin can be updated by pointing this repository to a different
+revision. Patches may be added as needed. Bazel will resolve the
+dependency, prepare the code and patch it hermetically.</p>
+<p>For PyTorch, a different dependency mechanism is deployed because a
+local <a class="reference external" href="https://github.com/pytorch/pytorch">PyTorch</a> checkout is used,
+and this local checkout has to be <code class="docutils literal notranslate"><span class="pre">built</span></code> from source and ideally
+installed on the system for version compatibility (e.g codegen in
+PyTorch/XLA uses <code class="docutils literal notranslate"><span class="pre">torchgen</span></code> python module that should be installed in
+the system).</p>
+<p>The local directory can either set in <code class="docutils literal notranslate"><span class="pre">bazel/dependencies.bzl</span></code>, or
+overriden on the command line:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span>build<span class="w"> </span>--override_repository<span class="o">=</span><span class="nv">org_tensorflow</span><span class="o">=</span>/path/to/exported/tf_repo<span class="w"> </span>//...
+</pre></div>
+</div>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span>build<span class="w"> </span>--override_repository<span class="o">=</span><span class="nv">torch</span><span class="o">=</span>/path/to/exported/and/built/torch_repo<span class="w"> </span>//...
+</pre></div>
+</div>
+<p>Please make sure that the overridden repositories are at the appropriate
+revisions and in case of <code class="docutils literal notranslate"><span class="pre">torch</span></code>, that it has been built with
+<code class="docutils literal notranslate"><span class="pre">USE_CUDA=0</span> <span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">bdist_wheel</span></code> to make sure that all expected
+build objects are present; ideally installed into the system.</p>
+<p><code class="docutils literal notranslate"><span class="pre">WORKSPACE</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">new_local_repository</span><span class="p">(</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;torch&quot;</span><span class="p">,</span>
+    <span class="n">build_file</span> <span class="o">=</span> <span class="s2">&quot;//bazel:torch.BUILD&quot;</span><span class="p">,</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">PYTORCH_LOCAL_DIR</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>PyTorch headers are directly sourced from the <code class="docutils literal notranslate"><span class="pre">torch</span></code> dependency, the
+local checkout of PyTorch. The shared libraries (e.g. <code class="docutils literal notranslate"><span class="pre">libtorch.so</span></code>) are
+sourced from the same local checkout where the code has been built and
+<code class="docutils literal notranslate"><span class="pre">build/lib/</span></code> contains the built objects. For this to work, it’s required
+to pass <code class="docutils literal notranslate"><span class="pre">-isystemexternal/torch</span></code> to the compiler so it can find <code class="docutils literal notranslate"><span class="pre">system</span></code>
+libraries and satisfy them from the local checkout. Some are included as
+<code class="docutils literal notranslate"><span class="pre">&lt;system&gt;</span></code> and some as <code class="docutils literal notranslate"><span class="pre">&quot;user&quot;</span></code> headers.</p>
+<p>Bazel brings in <a class="reference external" href="https://github.com/pybind/pybind11">pybind11</a> embeded
+python and links against it to provide <code class="docutils literal notranslate"><span class="pre">libpython</span></code> to the plugin using
+this mechanism. Python headers are also sourced from there instead of
+depending on the system version. These are satisfied from the
+<code class="docutils literal notranslate"><span class="pre">&quot;&#64;pybind11//:pybind11_embed&quot;</span></code>, which sets up compiler options for
+linking with <code class="docutils literal notranslate"><span class="pre">libpython</span></code> transitively.</p>
+</div>
+<div class="section" id="how-to-build-xla-libraries">
+<h2>How to build XLA libraries<a class="headerlink" href="#how-to-build-xla-libraries" title="Permalink to this heading">¶</a></h2>
+<p>Building the libraries is simple:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span>build<span class="w"> </span>//torch_xla/csrc/runtime/...
+</pre></div>
+</div>
+<p>Bazel is configred via <code class="docutils literal notranslate"><span class="pre">.bazelrc</span></code>, but it can also take flags on the
+command line.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span>build<span class="w"> </span>--config<span class="o">=</span>remote_cache<span class="w"> </span>//torch_xla/csrc/runtime/...
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">remote_cache</span></code> configurations use gcloud for caching and usually
+faster, but require authentication with gcloud. See <code class="docutils literal notranslate"><span class="pre">.bazelrc</span></code> for the
+configuration.</p>
+<p>Using bazel makes it easy to express complex dependencies and there is a
+lot of gain from having a single build graph with everything expressed
+in the same way. Therefore, there is no need to build the XLA libraries
+separately from the rest of the pluing as used to be the case, building
+the whole repository, or the plugin shared object that links everythin
+else in, is enough.</p>
+</div>
+<div class="section" id="how-to-build-the-torch-xla-plugin">
+<h2>How to build the Torch/XLA plugin<a class="headerlink" href="#how-to-build-the-torch-xla-plugin" title="Permalink to this heading">¶</a></h2>
+<p>The normal build can be achieved by the invoking the standard
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">bdist_wheel</span></code>, but C++ bindings can be built simply
+with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span>build<span class="w"> </span>//:_XLAC.so
+</pre></div>
+</div>
+<p>This will build the XLA client and the PyTorch plugin and link it all
+together. This can be useful when testing changes, to be able to compile
+the C++ code without building the python plugin faster iteration cycles.</p>
+</div>
+<div class="section" id="remote-caching">
+<h2>Remote caching<a class="headerlink" href="#remote-caching" title="Permalink to this heading">¶</a></h2>
+<p>Bazel comes with <a class="reference external" href="https://bazel.build/remote/caching">remote caching</a>
+built in. There are plenty of cache backends that can be used; we deploy
+our caching on
+(GCS)[<a class="reference external" href="https://bazel.build/remote/caching#cloud-storage">https://bazel.build/remote/caching#cloud-storage</a>]. You can see
+the configuration in <code class="docutils literal notranslate"><span class="pre">.bazelrc</span></code>, under config name <code class="docutils literal notranslate"><span class="pre">remote_cache</span></code>.</p>
+<p>Remote caching is disabled by default but because it speeds up
+incremental builds by a huge margin, it is almost always recommended,
+and it is enabled by default in the CI automation and on Cloud Build.</p>
+<p>To authenticate on a machine, please ensure that you have the
+credentials present with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>gcloud<span class="w"> </span>auth<span class="w"> </span>application-default<span class="w"> </span>login<span class="w"> </span>--no-launch-browser
+</pre></div>
+</div>
+<p>Using the remote cache configured by <code class="docutils literal notranslate"><span class="pre">remote_cache</span></code> configuration setup
+requires authentication with GCP. There are various ways to authenticate
+with GCP. For individual developers who have access to the development
+GCP project, one only needs to specify the <code class="docutils literal notranslate"><span class="pre">--config=remote_cache</span></code> flag
+to bazel, and the default <code class="docutils literal notranslate"><span class="pre">--google_default_credentials</span></code> will be used
+and if the gcloud token is present on the machine, it will work out of
+the box, using the logged in user for authentication. The user needs to
+have remote build permissions in GCP (add new developers into the
+<code class="docutils literal notranslate"><span class="pre">Remote</span> <span class="pre">Bazel</span></code> role). In the CI, the service account key is used for
+authentication and is passed to bazel using
+<code class="docutils literal notranslate"><span class="pre">--config=remote_cache</span> <span class="pre">--google_credentials=path/to/service.key</span></code>. On
+<a class="reference external" href="https://cloud.google.com/build">Cloud Build</a>,
+<code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">build</span> <span class="pre">--network=cloudbuild</span></code> is used to pass the authentication
+from the service account running the cloud build down into the docker
+image doing the compilation: <a class="reference external" href="https://cloud.google.com/docs/authentication/provide-credentials-adc">Application Default
+Credentials</a>
+does the work there and authenticates as the service account. All
+accounts, both user and service accounts, need to have remote cache
+read/write permissions.</p>
+<p>Remote cache uses cache silos. Each unique machine and build should
+specify a unique silo key to benefit from consistent caching. The silo
+key can be passed using a flag:
+<code class="docutils literal notranslate"><span class="pre">-remote_default_exec_properties=cache-silo-key=SOME_SILO_KEY'</span></code>.</p>
+<p>Running the build with remote cache:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">&quot;cache-silo-YOUR-USER&quot;</span><span class="w"> </span><span class="nv">TPUVM_MODE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>bdist_wheel
+</pre></div>
+</div>
+<p>Adding</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">GCLOUD_SERVICE_KEY_FILE</span><span class="o">=</span>~/.config/gcloud/application_default_credentials.json
+</pre></div>
+</div>
+<p>might help too if <code class="docutils literal notranslate"><span class="pre">bazel</span></code> cannot find the auth token.</p>
+<p><code class="docutils literal notranslate"><span class="pre">YOUR-USER</span></code> here can the author’s username or machine name, a unique
+name that ensures good cache behavior. Other <code class="docutils literal notranslate"><span class="pre">setup.py</span></code> functionality
+works as intended too (e.g. <code class="docutils literal notranslate"><span class="pre">develop</span></code>).</p>
+<p>The first time the code is compiled using a new cached key will be slow
+because it will compile everything from scratch, but incremental
+compilations will be very fast. On updating the TensorFlow pin, it will
+once again be a bit slower the first time per key, and then until the
+next update quite fast again.</p>
+</div>
+<div class="section" id="running-tests">
+<h2>Running tests<a class="headerlink" href="#running-tests" title="Permalink to this heading">¶</a></h2>
+<p>Currently C++ code is built and tested by bazel. Python code will be
+migrated in the future.</p>
+<p>Bazel is a test plafrom too, making it easy to run tests:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span><span class="nb">test</span><span class="w"> </span>//test/cpp:main
+</pre></div>
+</div>
+<p>Of course the XLA and PJRT configuration have to be present in the
+environment to run the tests. Not all environmental variables are passed
+into the bazel test environment to make sure that the remote cache
+misses are not too common (environment is part of the cache key), see
+<code class="docutils literal notranslate"><span class="pre">.bazelrc</span></code> test configuration to see which ones are passed in, and add
+new ones as required.</p>
+<p>You can run the tests using the helper script too:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">&quot;cache-silo-YOUR-USER&quot;</span><span class="w"> </span>./test/cpp/run_tests.sh<span class="w"> </span>-R
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">xla_client</span></code> tests are pure hermetic tests that can be easily
+executed. The <code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> plugin tests are more complex: they require
+<code class="docutils literal notranslate"><span class="pre">torch</span></code> and <code class="docutils literal notranslate"><span class="pre">torch_xla</span></code> to be installed, and they cannot run in
+parallel, since they are using either XRT server/client on the same
+port, or because they use a GPU or TPU device and there’s only one
+available at the time. For that reason, all tests under
+<code class="docutils literal notranslate"><span class="pre">torch_xla/csrc/</span></code> are bundled into a single target <code class="docutils literal notranslate"><span class="pre">:main</span></code> that runs
+them all sequentially.</p>
+</div>
+<div class="section" id="code-coverage">
+<h2>Code coverage<a class="headerlink" href="#code-coverage" title="Permalink to this heading">¶</a></h2>
+<p>When running tests, it can be useful to calculate code coverage.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bazel<span class="w"> </span>coverage<span class="w"> </span>//torch_xla/csrc/runtime/...
+</pre></div>
+</div>
+<p>Coverage can be visualized using <code class="docutils literal notranslate"><span class="pre">lcov</span></code> as described in <a class="reference external" href="https://bazel.build/configure/coverage">Bazel’s
+documentation</a>, or in your
+editor of choice with lcov plugins, e.g. <a class="reference external" href="https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters">Coverage
+Gutters</a>
+for VSCode.</p>
+</div>
+<div class="section" id="language-server">
+<h2>Language Server<a class="headerlink" href="#language-server" title="Permalink to this heading">¶</a></h2>
+<p>Bazel can power a language server like <a class="reference external" href="https://clangd.llvm.org/">clangd</a> that brings code references,
+autocompletion and semantic understanding of the underlying code to your
+editor of choice. For VSCode, one can use <a class="reference external" href="https://github.com/stackb/bazel-stack-vscode-cc">Bazel Stack</a>
+that can be combined with <a class="reference external" href="https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd">Visual Studio clangd extension</a>
+functionality to bring powerful features to assist code editing.</p>
+</div>
+<div class="section" id="building-pytorch-xla">
+<h2>Building PyTorch/XLA<a class="headerlink" href="#building-pytorch-xla" title="Permalink to this heading">¶</a></h2>
+<p>As always, PyTorch/XLA can be built using Python <code class="docutils literal notranslate"><span class="pre">distutils</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BAZEL_REMOTE_CACHE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">SILO_NAME</span><span class="o">=</span><span class="s2">&quot;cache-silo-YOUR-USER&quot;</span><span class="w"> </span><span class="nv">TPUVM_MODE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>setup.py<span class="w"> </span>bdist_wheel
+</pre></div>
+</div>
+</div>
+</div>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="plugins.html" class="btn btn-neutral" title="Custom Hardware Plugins" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">Bazel in Pytorch/XLA</a><ul>
+<li><a class="reference internal" href="#bazel-dependencies">Bazel dependencies</a></li>
+<li><a class="reference internal" href="#how-to-build-xla-libraries">How to build XLA libraries</a></li>
+<li><a class="reference internal" href="#how-to-build-the-torch-xla-plugin">How to build the Torch/XLA plugin</a></li>
+<li><a class="reference internal" href="#remote-caching">Remote caching</a></li>
+<li><a class="reference internal" href="#running-tests">Running tests</a></li>
+<li><a class="reference internal" href="#code-coverage">Code coverage</a></li>
+<li><a class="reference internal" href="#language-server">Language Server</a></li>
+<li><a class="reference internal" href="#building-pytorch-xla">Building PyTorch/XLA</a></li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+         <script src="../_static/doctools.js"></script>
+         <script src="../_static/sphinx_highlight.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">Stay up to date</li>
+            <li><a href="https://www.facebook.com/pytorch" target="_blank">Facebook</a></li>
+            <li><a href="https://twitter.com/pytorch" target="_blank">Twitter</a></li>
+            <li><a href="https://www.youtube.com/pytorch" target="_blank">YouTube</a></li>
+            <li><a href="https://www.linkedin.com/company/pytorch" target="_blank">LinkedIn</a></li>
+          </ul>  
+          </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">PyTorch Podcasts</li>
+            <li><a href="https://open.spotify.com/show/6UzHKeiy368jKfQMKKvJY5" target="_blank">Spotify</a></li>
+            <li><a href="https://podcasts.apple.com/us/podcast/pytorch-developer-podcast/id1566080008" target="_blank">Apple</a></li>
+            <li><a href="https://www.google.com/podcasts?feed=aHR0cHM6Ly9mZWVkcy5zaW1wbGVjYXN0LmNvbS9PQjVGa0lsOA%3D%3D" target="_blank">Google</a></li>
+            <li><a href="https://music.amazon.com/podcasts/7a4e6f0e-26c2-49e9-a478-41bd244197d0/PyTorch-Developer-Podcast?" target="_blank">Amazon</a></li>
+          </ul>
+         </div>
+        </div>
+        
+        <div class="privacy-policy">
+          <ul>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/terms/" target="_blank">Terms</a></li>
+            <li class="privacy-policy-links">|</li>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/privacy-policy/" target="_blank">Privacy</a></li>
+          </ul>
+        </div>
+        <div class="copyright">
+        <p>© Copyright The Linux Foundation. The PyTorch Foundation is a project of The Linux Foundation.
+          For web site terms of use, trademark policy and other policies applicable to The PyTorch Foundation please see
+          <a href="https://www.linuxfoundation.org/policies/">www.linuxfoundation.org/policies/</a>. The PyTorch Foundation supports the PyTorch open source
+          project, which has been established as PyTorch Project a Series of LF Projects, LLC. For policies applicable to the PyTorch Project a Series of LF Projects, LLC,
+          please see <a href="https://www.lfprojects.org/policies/">www.lfprojects.org/policies/</a>.</p>
+      </div>
+     </div>
+
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+           <li class="resources-mobile-menu-title">
+             <a>Learn</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/get-started">Get Started</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials">Tutorials</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/basics/intro.html">Learn the Basics</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/recipes/recipes_index.html">PyTorch Recipes</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/tutorials/beginner/introyt.html">Introduction to PyTorch - YouTube Series</a>
+             </li>
+           </ul>
+           <li class="resources-mobile-menu-title">
+             <a>Ecosystem</a>
+           </li>
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/ecosystem">Tools</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/#community-module">Community</a>
+             </li>
+             <li>
+               <a href="https://discuss.pytorch.org/">Forums</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/resources">Developer Resources</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Edge</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+             <li>
+               <a href="https://pytorch.org/edge">About PyTorch Edge</a>
+             </li>
+             
+             <li>
+               <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+           </ul>
+
+           <li class="resources-mobile-menu-title">
+             <a>Docs</a>
+           </li>
+
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/pytorch-domains">PyTorch Domains</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            <a>Blog & News</a>
+          </li>
+            
+           <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/blog/">PyTorch Blog</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/community-blog">Community Blog</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/videos">Videos</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/community-stories">Community Stories</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/events">Events</a>
+            </li>
+          </ul>
+          
+          <li class="resources-mobile-menu-title">
+            <a>About</a>
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
+            </li>
+            <li>
+              <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+          </ul>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>
