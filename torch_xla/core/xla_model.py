@@ -1281,6 +1281,9 @@ def _maybe_convert_to_cpu(data: Any, convert: bool = True) -> ToXlaTensorArena:
         tensors, devices=[], wait=True, sync_xla_data=True)
     if not convert:
       return tensors
+    for t in tensors:
+      if torch._is_functional_tensor(t):
+        torch._functionalize_sync(t)
     return torch_xla._XLAC._xla_get_cpu_tensors(tensors)
 
   def select_fn(v):
