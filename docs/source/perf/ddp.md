@@ -40,10 +40,10 @@ device](../API_GUIDE.md#running-on-a-single-xla-device).
     world_size = xr.world_size()
     ```
 
-4.  Pass `gradient_as_bucket_view=True` to the DDP wrapper.
+4.  Wrap the model with DDP.
 
     ``` python
-    ddp_model = DDP(model, gradient_as_bucket_view=True)
+    ddp_model = DDP(model)
     ```
 
 5.  Finally launch your model with xla specific launcher.
@@ -107,8 +107,7 @@ def demo_basic(rank):
     # create model and move it to XLA device
     device = xm.xla_device()
     model = ToyModel().to(device)
-    # currently, graident_as_bucket_view is needed to make DDP work for xla
-    ddp_model = DDP(model, gradient_as_bucket_view=True)
+    ddp_model = DDP(model)
 
     loss_fn = nn.MSELoss()
     optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)
@@ -246,6 +245,6 @@ the native xla data parallel approach, here is the
 [tutorial](../API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing).
 
 Here are some of the known issues that are under investigation: \*
-`gradient_as_bucket_view=True` needs to be enforced. \* There are some
+`gradient_as_bucket_view=False` needs to be enforced. \* There are some
 issues while being used with `torch.utils.data.DataLoader`.
 `test_train_mp_mnist.py` with real data crashes before exiting.
