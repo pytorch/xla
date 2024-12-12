@@ -8,6 +8,8 @@ import sys
 import tempfile
 import time
 
+from torch.utils.data.dataloader import DataLoader
+
 
 class Cleaner(object):
 
@@ -38,7 +40,7 @@ class TmpFolder(object):
     self.cleaner = Cleaner(lambda: shutil.rmtree(self.name))
 
 
-class SampleGenerator(object):
+class SampleGenerator(DataLoader):
   """Iterator which returns multiple samples of a given input data.
 
   Can be used in place of a PyTorch `DataLoader` to generate synthetic data.
@@ -54,7 +56,7 @@ class SampleGenerator(object):
     self._count = 0
 
   def __iter__(self):
-    return SampleGenerator(self._data, self._sample_count)
+    return self
 
   def __len__(self):
     return self._sample_count
@@ -67,6 +69,9 @@ class SampleGenerator(object):
       raise StopIteration
     self._count += 1
     return self._data
+
+  def __getitem__(self, index):
+      return self.next()
 
 
 class FnDataGenerator(object):
