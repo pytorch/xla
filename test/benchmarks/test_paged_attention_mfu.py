@@ -1,5 +1,5 @@
 # This file uses pl.estimate_cost to calculate the FLOPs and memory usage. To run, do
-# root@t1v-n-408567d9-w-0:/workspaces/persist# python pytorch/xla/test/benchmarks/test_paged_attention_mfu.py  --kernel multi-queries-paged-attn
+# root@t1v-n-408567d9-w-0:/workspaces/persist# python pytorch/xla/test/benchmarks/test_paged_attention_mfu.py  --kernel multi-queries-paged-attn-v1
 
 import argparse
 import time
@@ -149,7 +149,7 @@ def benchmark(args):
   # num_kv_pages_per_compute_block = block_kv_size // page_size=16
   # Because of the constraint pages_per_sequence % num_kv_pages_per_compute_block == 0,
   # we need (max_kv_len+page_size-1) % block_kv_size == 0
-  block_kv_size = 256
+  block_kv_size = 256  # this can be 768, but the FLOP/s utilization remains to be 2.4896%
 
   max_kv_len = 768 # max(kv_seq_lens_lst), the change is needed to make pages_per_sequence a multiple of num_kv_pages_per_compute_block. TODO: adjust in CUDA
   kv_seq_lens_lst = [max_kv_len, max_kv_len, max_kv_len, max_kv_len]
@@ -235,6 +235,15 @@ def benchmark(args):
           page_indices,
           pages_per_compute_block=16,
         )
+      elif args.kernel == "multi-queries-paged-attn-jax-nonkernel":
+        actual_output = _ref_jax_extended_paged_attention_static(
+          q,
+          k_pages,
+          v_pages,
+          kv_seq_lens,
+          page_indices,
+          effective_q_lens,
+        )
 
     jax.block_until_ready(actual_output)
 
@@ -253,6 +262,10 @@ def benchmark(args):
   else:
     latency = run_benchmark(num_iters=100, profile=False)
   print(f"Kernel running time: {latency * 1000000:.3f} us")
+  ref_paged_attention_flops = cost.flops / latency
+  print("ref_paged_attention FLOP/s: ", ref_paged_attention_flops)
+  v5e_flops = 197e12
+  print(f"FLOP/s utilization: {ref_paged_attention_flops / v5e_flops * 100:.4f}%")
   
 
 if __name__ == "__main__":
