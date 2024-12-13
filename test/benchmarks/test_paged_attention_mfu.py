@@ -1,5 +1,6 @@
 # This file uses pl.estimate_cost to calculate the FLOPs and memory usage. To run, do
 # root@t1v-n-408567d9-w-0:/workspaces/persist# python pytorch/xla/test/benchmarks/test_paged_attention_mfu.py  --kernel multi-queries-paged-attn-v1
+# To get profile, run root@t1v-n-408567d9-w-0:/workspaces/persist# python pytorch/xla/test/benchmarks/test_paged_attention_mfu.py  --kernel multi-queries-paged-attn-v1 --profile
 
 import argparse
 import time
