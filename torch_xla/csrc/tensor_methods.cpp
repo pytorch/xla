@@ -40,6 +40,7 @@
 #include "torch_xla/csrc/ops/convolution_backward_overrideable.h"
 #include "torch_xla/csrc/ops/convolution_overrideable.h"
 #include "torch_xla/csrc/ops/count_nonzero.h"
+#include "torch_xla/csrc/ops/cummax.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/custom_call.h"
@@ -1292,6 +1293,18 @@ XLATensorPtr count_nonzero(const XLATensorPtr& input,
 XLATensorPtr cross(const XLATensorPtr& input, const XLATensorPtr& other,
                    std::optional<int64_t> dim) {
   return tensor_ops::Cross(input, other, dim);
+}
+
+XLATensorPtr cummax(const XLATensorPtr& input, int64_t dim,
+                    std::optional<at::ScalarType> dtype) {
+  int64_t canonical_dim =
+      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank());
+  if (!dtype) {
+    dtype = input->dtype_optional();
+  }
+  return input->CreateFrom(
+      torch_xla::MakeNode<CumMax>(input->GetIrValue(), canonical_dim, dtype),
+      dtype);
 }
 
 XLATensorPtr cumprod(const XLATensorPtr& input, int64_t dim,

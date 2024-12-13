@@ -361,6 +361,10 @@ XLATensorPtr count_nonzero(const XLATensorPtr& input,
 XLATensorPtr cross(const XLATensorPtr& input, const XLATensorPtr& other,
                    std::optional<int64_t> dim);
 
+// Returns the cumulative max of elements of input in the given dimension.
+XLATensorPtr cummax(const XLATensorPtr& input, int64_t dim,
+                    std::optional<at::ScalarType> dtype);
+
 // Returns the cumulative product of elements of input in the given dimension.
 XLATensorPtr cumprod(const XLATensorPtr& input, int64_t dim,
                      std::optional<at::ScalarType> dtype);

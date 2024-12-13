@@ -1308,6 +1308,14 @@ at::Tensor XLANativeFunctions::cross(const at::Tensor& self,
       XlaHelpers::I64Optional(dim)));
 }
 
+at::Tensor XLANativeFunctions::cummax(const at::Tensor& self, int64_t dim,
+                                      std::optional<at::ScalarType> dtype) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::cummax(self_tensor, dim, dtype));
+}
+
 at::Tensor XLANativeFunctions::cumprod(const at::Tensor& self, int64_t dim,
                                        std::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
