@@ -80,7 +80,8 @@ XLATensorImpl* GetXlaTensorImpl(const at::Tensor& tensor) {
 }  // namespace
 
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
-  if (tensor.defined() && at::functionalization::impl::isFunctionalTensor(t)) {
+  if (tensor.defined() &&
+      at::functionalization::impl::isFunctionalTensor(tensor)) {
     // To make sure we have the most updated version of tensor.
     at::functionalization::impl::sync(tensor);
   }
