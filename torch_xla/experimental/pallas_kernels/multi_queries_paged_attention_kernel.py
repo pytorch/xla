@@ -204,33 +204,12 @@ def _flash_attention(
 
   acc_scratch_ref[q_head_idx_per_kv] += o_curr * l_broadcast(l_next_inv_safe)
 
-<<<<<<< HEAD
-  # The condition comes from the check controlling if we should run the function get_kv_and_run_flash_attention.
-  # If kv_len=512, kv_seq_len_per_kv_compute_blk=256, then last kv_blk_idx that we need to store_to_output is 1.
-  # If kv_len=513, kv_seq_len_per_kv_compute_blk=256, then last kv_blk_idx that we need to store_to_output is 2.
-  is_last_kv_blk_idx = kv_blk_idx == pl.cdiv(effective_kv_len,
-                                             kv_seq_len_per_kv_compute_blk) - 1
-  is_next_kv_blk_masked_out = jnp.logical_not(
-      _block_below_or_on_diag(q_blk_idx, num_queries_per_compute_block,
-                              kv_blk_idx + 1, kv_seq_len_per_kv_compute_blk,
-                              effective_q_len, effective_kv_len))
-
-  @pl.when(jnp.logical_or(is_last_kv_blk_idx, is_next_kv_blk_masked_out))
-  def store_to_output():
-    o_ref[0, q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
-        o_ref.dtype)
-    l_ref[0, q_head_idx_per_kv] = l_scratch_ref[q_head_idx_per_kv].astype(
-        l_ref.dtype)
-    m_ref[0, q_head_idx_per_kv] = m_scratch_ref[q_head_idx_per_kv].astype(
-        m_ref.dtype)
-=======
   o_ref[0, q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
       o_ref.dtype)
   l_ref[0, q_head_idx_per_kv] = l_scratch_ref[q_head_idx_per_kv].astype(
       l_ref.dtype)
   m_ref[0, q_head_idx_per_kv] = m_scratch_ref[q_head_idx_per_kv].astype(
       m_ref.dtype)
->>>>>>> e726f0d33 (restore the kernel to the original version)
 
 
 # A block is considered below or on diagonal as long as the bottom left
