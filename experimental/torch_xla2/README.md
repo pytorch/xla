@@ -2,7 +2,7 @@
 
 ## Install
 
-Currently this is only source-installable. Requires Python version >= 3.9.
+Currently this is only source-installable. Requires Python version >= 3.10.
 
 ### NOTE:
 
