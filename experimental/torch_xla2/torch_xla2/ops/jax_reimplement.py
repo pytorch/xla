@@ -86,7 +86,7 @@ def _scale_and_translate(x, output_shape: core.Shape,
 def scale_and_translate(image, shape: core.Shape,
                         spatial_dims: Sequence[int],
                         scale, translation,
-                        # (barney-s) use string, python 3.9 throws: E   TypeError: unsupported operand type(s) for |: 'type' and 'EnumMeta'
+                        # (barney-s) use string
                         method: str, #(barney-s) | ResizeMethod,
                         antialias: bool = True,
                         precision=lax.Precision.HIGHEST):
