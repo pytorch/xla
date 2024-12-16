@@ -56,7 +56,7 @@ def save(data, path, master_only=True, global_master=False):
     data: The input data to be saved. Any nested combination of Python objects
       (list, tuples, sets, dicts, ...).
     path: The destination file for the data saving operation. If `master_only`
-      is ``False`` the path must point to different destinations as otherwise
+      is ``False`` the path must point to different destinations or otherwise
       all the writes from the same host will override each other.
     master_only (bool, optional): Whether only the master device should save the
       data. If False, the `path` argument should be a different path for each of
