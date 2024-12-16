@@ -115,6 +115,9 @@ class XLAShardedTensor(torch.Tensor):
   # which results from the sharding.
   @property
   def local_shards(self) -> List[XLAShard]:
+    import traceback,inspect
+    print(f"Current line: {inspect.currentframe().f_lineno}")
+    traceback.print_stack()
     shard_dev = torch_xla._XLAC._get_local_shards([self.global_tensor])[0]
     replica_ind = torch_xla._XLAC._get_local_shard_replica_and_indices(
         [self.global_tensor])[0]
@@ -128,6 +131,9 @@ class XLAShardedTensor(torch.Tensor):
   def load_local_shards_(self, shards: List[XLAShard]):
     data = [s.data for s in shards]
     devices = [s.shard_device for s in shards]
+    import traceback,inspect
+    print(f"Current line: {inspect.currentframe().f_lineno}")
+    traceback.print_stack()
     torch_xla._XLAC._load_local_shards(self.global_tensor, data, devices)
 
   @property

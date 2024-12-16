@@ -61,6 +61,9 @@ def clear_all():
 
 def metrics_report():
   """Retrieves a string containing the full metrics and counters report."""
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   return torch_xla._XLAC._xla_metrics_report()
 
 
@@ -78,6 +81,10 @@ def short_metrics_report(counter_names: list = None, metric_names: list = None):
         'CompileTime', 'ExecuteTime', 'ExecuteReplicatedTime',
         'TransferToDeviceTime', 'TransferFromDeviceTime'
     ]
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
+  
   return torch_xla._XLAC._short_xla_metrics_report(counter_names, metric_names)
 
 
