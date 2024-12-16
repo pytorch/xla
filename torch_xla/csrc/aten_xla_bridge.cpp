@@ -3,6 +3,7 @@
 #include <ATen/FunctionalTensorWrapper.h>
 #include <torch/csrc/lazy/core/tensor_util.h>
 
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
@@ -102,6 +103,18 @@ bool IsXlaTensor(const at::Tensor& tensor) {
 
 XLATensorPtr GetXlaTensor(const at::Tensor& tensor) {
   auto xtensor = TryGetXlaTensor(tensor);
+  auto inner_tensor = torch::lazy::maybe_unwrap_functional(tensor);
+  auto* impl = inner_tensor.unsafeGetTensorImpl();
+  const auto& impl_ref = *impl;
+  if (!xtensor) {
+    std::cerr << "Input tensor is not an XLA tensor: " << tensor.toString()
+              << ", impl: " << impl->device() << " " << typeid(impl_ref).name()
+              << ", is_xla: " << impl->is_xla()
+              << ", is_lazy: " << impl->is_lazy()
+              << ", is_cpu: " << impl->is_cpu()
+              << ", we will panic soon! -----------" << std::endl;
+    std::cerr << std::endl;
+  }
   XLA_CHECK(xtensor) << "Input tensor is not an XLA tensor: "
                      << tensor.toString();
   return xtensor;

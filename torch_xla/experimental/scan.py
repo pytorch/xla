@@ -35,8 +35,11 @@ The `Scan.backward` method scans the backward graph over the gradients and
 activations.
 """
 
+import pickle
 import itertools
-from typing import Callable, Dict, Sequence, TypeVar, Tuple, List, Optional, overload
+import functools
+from typing import Any, Callable, Dict, Protocol, Sequence, TypeVar, Tuple, List, Optional, overload, runtime_checkable
+from dataclasses import dataclass
 
 import torch
 import torch.autograd
@@ -45,6 +48,7 @@ from functorch.compile import aot_function, make_boxed_func, default_partition  
 
 import torch_xla
 import torch_xla.core.xla_builder as xb
+import torch_xla.debug.profiler as xp
 from torch_xla.experimental.pytreeify import pytreeify
 
 Carry = TypeVar('Carry')
@@ -160,11 +164,53 @@ def scan(
   return carry, ys
 
 
+def pytree_to_hashable(x: PyTree):
+  to_shape = lambda v: v.shape if v is not None else None
+  flat, spec = tree_flatten(tree_map(to_shape, x))
+  return (tuple(flat), str(spec))
+
+
+def lru_cached(decorated):
+  CACHE = {}
+
+  def inner(fn: Callable[[Carry, X], tuple[Carry, Y]],
+            init: Carry,
+            xs: X,
+            partition_fn=default_partition) -> tuple[Callable, Callable]:
+    key = (decorated, pytree_to_hashable(init), pytree_to_hashable(xs),
+           partition_fn)
+    if key not in CACHE:
+      print(f"Running AOTAutograd partitioner for key {hash(key)}")
+      CACHE[key] = decorated(fn, init, xs, partition_fn)
+    return CACHE[key]
+
+  return inner
+
+
+@runtime_checkable
+class AOTFunction(Protocol):
+  """A function that wraps an AOTAutograd graph."""
+
+  _aot_graph_hash: int
+  """Hash of the underlying AOTAutograd graph."""
+
+  _input_activation_aliases: Dict[int, int]
+  """Which input is aliased to which intermediate activation.
+  
+  A mapping from index into the flatttened input pytree to the index
+  into the list of intermediate activations.
+  """
+
+  def __call__(self, *args) -> Any:
+    ...
+
+
+@lru_cached
 def value_and_grad_partitioned(
     fn: Callable[[Carry, X], tuple[Carry, Y]],
     init: Carry,
     xs: X,
-    partition_fn=default_partition) -> tuple[Callable, Callable]:
+    partition_fn=default_partition) -> tuple[AOTFunction, AOTFunction]:
   """
   Given a user `fn` to be scanned over the leading dimension of the input `xs`
   PyTree and an initial carry object `init`, symbolically traces `fn` and
@@ -219,11 +265,24 @@ def value_and_grad_partitioned(
   fake_x_pytree = tree_map(
       lambda v: make_fake_tensor(v[0], requires_grad=v.requires_grad), xs)
 
+  # If an output of `fn` aliases the input, `aot_function` will hide those
+  # variables from the captured graph with an epilogue inside its generated
+  # autograd.Function that we can't access. In other words, the captured
+  # graph won't contain those variables. See description in
+  # https://github.com/pytorch/pytorch/issues/85036.
+  #
+  # Because we're abusing AOTAutograd to capture the graph, we need AOTAutograd
+  # to handle all variables in the graph as opposed to in the opaque epilogue.
+  # This wrapper clones an output if it aliases an input.
+  def fn_no_output_aliasing(*args):
+    inputs = set(tree_iter(args))
+    return tree_map(lambda v: v.clone() if v in inputs else v, fn(*args))
+
   with torch.enable_grad():
     fw_compiler, get_fwd = _make_get_graph_compiler()
     bw_compiler, get_bwd = _make_get_graph_compiler()
     fn_compiled = aot_function(
-        fn,
+        fn_no_output_aliasing,
         fw_compiler=fw_compiler,
         bw_compiler=bw_compiler,
         partition_fn=partition_fn)
@@ -239,24 +298,70 @@ def value_and_grad_partitioned(
   fwd_graph = get_fwd()
   bwd_graph = get_bwd()
 
+  # Figure out which activations are alises to the inputs.
+  flat_carry, _ = tree_flatten(fake_carry_pytree)
+  flat_x, _ = tree_flatten(fake_x_pytree)
+  _actual_out, activations = split(fwd_graph(*flat_carry, *flat_x), num_out)
+  input_ids = (id(v) for v in tree_iter(flat_x))
+  activation_ids = (id(v) for v in activations)
+  input_id_to_index = dict((v, i) for i, v in enumerate(input_ids))
+  input_activation_aliases = {}
+  for idx, i in enumerate(activation_ids):
+    if i in input_id_to_index:
+      input_activation_aliases[input_id_to_index[i]] = idx
+      print(
+          f"Detected input {input_id_to_index[i]} aliases to activation {idx}. "
+          f"Input shape: {flat_x[input_id_to_index[i]].shape}. "
+          f"Activation shape: {activations[idx].shape}")
+  aliased_activations = set(input_activation_aliases.values())
+
   def forward(carry, x):
     flat_carry, _ = tree_flatten(carry)
     flat_x, _ = tree_flatten(x)
-    out = fwd_graph(*flat_carry, *flat_x)
+    with xp.Trace('aot_forward'):
+      out = fwd_graph(*flat_carry, *flat_x)
     actual_out, activations = split(out, num_out)
     carry, y = unflatten_fwd_out(actual_out)
+
+    # Remove activations that alias to inputs. Those will be
+    # added back in the autograd implementation before calling backward.
+    activations = tuple(
+        v for i, v in enumerate(activations) if i not in aliased_activations)
+
     y = (y, activations)
     return carry, y
+
+  forward._aot_graph_hash = hash(  # type: ignore
+      (_aot_graph_hash(fwd_graph), torch_xla._XLAC._get_graph_hash(out)))
+  forward._input_activation_aliases = input_activation_aliases  # type: ignore
+  assert isinstance(forward, AOTFunction)
 
   def backward(carry, x):
     grad_new_carry, _ = tree_flatten(carry)
     (grad_y, activations) = x
     grad_y, _ = tree_flatten_none(grad_y)
-    out = bwd_graph(*activations, *grad_new_carry, *grad_y)
+    with xp.Trace('aot_backward'):
+      out = bwd_graph(*activations, *grad_new_carry, *grad_y)
     grad_carry, grad_x = unflatten_bwd_out(out)
     return grad_carry, grad_x
 
+  grads, _ = tree_flatten_none(
+      tree_map(lambda v: v.grad, (fake_carry_pytree, fake_x_pytree)))
+  backward._aot_graph_hash = hash(  # type: ignore
+      (_aot_graph_hash(bwd_graph), torch_xla._XLAC._get_graph_hash(grads)))
+  backward._input_activation_aliases = input_activation_aliases  # type: ignore
+  assert isinstance(backward, AOTFunction)
+
   return forward, backward
+
+
+def _aot_graph_hash(g: torch.fx.GraphModule) -> int:
+  """Compute the hash of an AOTAutograd graph. Note that this hash is
+  independent of node metadata such as shape and dtype.
+  """
+  reduce_graph_module, (dict_without_graph, import_block) = g.__reduce__()
+  return hash(
+      (reduce_graph_module, pickle.dumps(dict_without_graph), import_block))
 
 
 def _make_get_graph_compiler():
@@ -283,19 +388,32 @@ def _make_get_graph_compiler():
 class Scan(torch.autograd.Function):
 
   @staticmethod
-  def forward(ctx, forward, backward, init, xs):
+  def forward(ctx, forward: AOTFunction, backward: AOTFunction, init, xs):
     # Forward pass, save activations for backward
     ctx._backward = backward
     with torch.no_grad():
       carry, ys = _scan_impl_pytree(forward, init, xs)
       ys, activations = ys
-    ctx.save_for_backward(*activations)
+
+    inputs_to_save = [
+        v for i, v in enumerate(tree_iter(xs))
+        if i in forward._input_activation_aliases
+    ]
+    ctx.save_for_backward(*inputs_to_save, *activations)
     return carry, ys
 
   @staticmethod
-  def backward(ctx, grad_carry, grad_ys):
-    activations = ctx.saved_tensors
-    backward = ctx._backward
+  def backward(ctx, grad_carry, grad_ys):  # type: ignore
+    backward: AOTFunction = ctx._backward
+    saved_inputs, activations = split(ctx.saved_tensors,
+                                      len(backward._input_activation_aliases))
+    activations = list(activations)
+
+    # Add back aliased inputs into activations at the specified indices.
+    for (i, activation_idx) in enumerate(
+        backward._input_activation_aliases.values()):
+      activations.insert(activation_idx, saved_inputs[i])
+
     with torch.no_grad():
       # Reverse loop to propagate gradients from last iteration to first.
       grad_init, grad_xs = _scan_impl_pytree(
@@ -303,7 +421,10 @@ class Scan(torch.autograd.Function):
     return None, None, grad_init, grad_xs
 
 
-def _scan_impl_pytree(fn, init, xs, reverse: bool = False):
+_hacky_cache2 = {}
+
+
+def _scan_impl_pytree(fn: AOTFunction, init, xs, reverse: bool = False):
   """Forward logic of scan without gradient tracking. `fn` operates on
   PyTrees. `init` and `xs` are also PyTrees.
   
@@ -312,7 +433,7 @@ def _scan_impl_pytree(fn, init, xs, reverse: bool = False):
   """
   flat_init, unflatten_carry = tree_flatten_none(init)
   flat_xs, unflatten_xs = tree_flatten_none(xs)
-  unflatten_y: Callable[..., PyTree] = lambda _: ()  # Set by `flat_fn`.
+  unflatten_y: Optional[Callable[..., PyTree]] = None  # Set by `flat_fn`.
 
   def flat_fn(
       carry: Sequence[torch.Tensor], x: Sequence[torch.Tensor]
@@ -325,8 +446,12 @@ def _scan_impl_pytree(fn, init, xs, reverse: bool = False):
     flat_y, unflatten_y = tree_flatten_none(y_pytree)
     return flat_carry, flat_y
 
-  flat_carry, flat_y = _scan_impl_flat(
-      flat_fn, flat_init, flat_xs, reverse=reverse)
+  flat_carry, flat_y = _scan_impl_flat_cached(
+      flat_fn, flat_init, flat_xs, fn._aot_graph_hash, reverse=reverse)
+  if unflatten_y is None:
+    unflatten_y = _hacky_cache2[(fn._aot_graph_hash, reverse)]
+  assert unflatten_y is not None
+  _hacky_cache2[(fn._aot_graph_hash, reverse)] = unflatten_y
   return unflatten_carry(flat_carry), unflatten_y(flat_y)
 
 
@@ -414,10 +539,91 @@ class Builder:
     return len(self._params)
 
 
-def _scan_impl_flat(fn,
-                    init: Sequence[torch.Tensor],
-                    xs: Sequence[torch.Tensor],
-                    reverse: bool = False):
+class CachingLoweringContext:
+  """
+  This lowering context returns a cached XlaComputation based on the hash of the
+  LazyTensor graph roots. Its purpose is to workaround the IR hash of
+  `torch_xla::UserComputation` depending on the serialized XLA computation proto,
+  thus depending on the trace scope and unstable when XLA_HLO_DEBUG=1.
+  
+  TODO: we should fix `UserComputation` hash to not be scope dependent.
+  """
+
+  def __init__(self, name: str, outputs: List[torch.Tensor],
+               aot_graph_hash: int):
+    ctx = torch_xla._XLAC.lowering.LoweringContext(name)
+    ctx.set_name_string(name)
+    ctx.build(outputs)
+    self.name = name
+    self.ctx = ctx
+    self.aot_graph_hash = aot_graph_hash
+
+  def __eq__(self, other):
+    return self.name == other.name and self.aot_graph_hash == other.aot_graph_hash
+
+  def __hash__(self):
+    return hash((self.name, self.aot_graph_hash))
+
+  @functools.lru_cache(maxsize=32, typed=True)
+  def get_xla_computation(self) -> torch_xla._XLAC.XlaComputation:
+    hlo = self.ctx.hlo()
+    computation = xb.computation_from_module_proto(self.name, hlo)
+    return computation
+
+
+@dataclass
+class CacheEntry:
+  ys: List[Tuple[torch.Size, torch.dtype]]
+  computation: torch_xla._XLAC.XlaComputation
+  hoisted_vars: List[torch.Tensor]
+  pack: Callable
+  unpack: Callable
+
+
+_hacky_cache: Dict[Tuple[int, bool], CacheEntry] = {}
+
+
+def _scan_impl_flat_cached(fn,
+                           init: Sequence[torch.Tensor],
+                           xs: Sequence[torch.Tensor],
+                           aot_graph_hash: int,
+                           reverse: bool = False):
+  key = (aot_graph_hash, reverse)
+  if key in _hacky_cache:
+    device = torch_xla.device()
+    cache_entry = _hacky_cache[key]
+    num_iters = next(iter(tree_iter(xs))).size(0)
+    zero = torch.tensor(0, device=device)
+    ys = [
+        torch.zeros((num_iters, *shape), device=device, dtype=dtype)
+        for (shape, dtype) in cache_entry.ys
+    ]
+    param_tensors = cache_entry.pack(zero, init, xs, ys,
+                                     cache_entry.hoisted_vars)
+    outputs = torch_xla._XLAC._xla_user_computation('xla::scan', param_tensors,
+                                                    cache_entry.computation)
+    _curr_iter, carry, xs, ys, hoisted_vars = cache_entry.unpack(outputs)
+    return carry, ys
+
+  pack, unpack, computation, param_tensors = _scan_impl_flat(
+      fn, init, xs, aot_graph_hash, reverse)
+  outputs = torch_xla._XLAC._xla_user_computation('xla::scan', param_tensors,
+                                                  computation)
+  _curr_iter, carry, xs, ys, hoisted_vars = unpack(outputs)
+
+  cache_entry = CacheEntry(
+      ys=[(y.shape[1:], y.dtype) for y in ys],
+      computation=computation,
+      hoisted_vars=hoisted_vars,
+      pack=pack,
+      unpack=unpack,
+  )
+  _hacky_cache[key] = cache_entry
+
+  return carry, ys
+
+
+def _scan_impl_flat(fn, init, xs, aot_graph_hash, reverse):
   """Forward logic of scan without gradient tracking. `fn` operates on
   two flat list of tensors. `init` and `xs` are also flat lists of tensors. None
   of the tensors will be `None`.
@@ -466,8 +672,13 @@ def _scan_impl_flat(fn,
   # Abstractly trace and lower `fn`.
   # Later we will include `fn_computation` within the while loop body.
   def make_fake_tensor(v: torch.Tensor) -> torch.Tensor:
+    # TODO: this will transfer data to the device when `fn` is traced with
+    # such a tensor. However, if we tried to avoid that via
+    # `torch.empty(v.size(), dtype=v.dtype, device=v.device)`, then that lowers
+    # into a constant IR node instead of a device data IR node.
     return torch.empty(
-        v.size(), dtype=v.dtype).to(device).requires_grad_(v.requires_grad)
+        v.size(),
+        dtype=v.dtype).to(device=v.device).requires_grad_(v.requires_grad)
 
   device = torch_xla.device()
   fake_carry = tree_map(make_fake_tensor, init)
@@ -476,18 +687,14 @@ def _scan_impl_flat(fn,
 
   y_len = len(fake_output_y)
   fn_outputs = fake_output_carry + fake_output_y
-
-  fn_ctx = torch_xla._XLAC.lowering.LoweringContext("FnComputation")
-  fn_ctx.set_name_string("fn_ctx")
-  fn_ctx.build(list(fn_outputs))
-  fn_hlo = fn_ctx.hlo()
-  fn_computation = xb.computation_from_module_proto("fn_computation", fn_hlo)
+  fn_outputs = list(fn_outputs)
+  fn_ctx = CachingLoweringContext("FnComputation", fn_outputs, aot_graph_hash)
+  fn_computation = fn_ctx.get_xla_computation()
 
   # Figure out the shape of `ys` from the abstract tracing.
   fn_carry_out, fn_y_out = split(fn_outputs, carry_len)
   assert carry_len + y_len == len(fn_outputs)
   fn_carry_shapes = [v.shape for v in fn_carry_out]
-  fn_y_shapes = [v.shape for v in fn_y_out]
   for fn_carry_shape, init_leaf in zip(fn_carry_shapes, init):
     assert fn_carry_shape == init_leaf.shape, f"`fn` must keep the `carry` shape unchanged. \
       Got {fn_carry_shape} but expected {init_leaf.shape}"
@@ -495,8 +702,8 @@ def _scan_impl_flat(fn,
   builder = Builder('scan')
   num_iters = next(iter(tree_iter(xs))).size(0)
   ys = [
-      torch.zeros((num_iters, *fn_y_shape), device=device)
-      for fn_y_shape in fn_y_shapes
+      torch.empty((num_iters, *v.shape), device=device, dtype=v.dtype)
+      for v in fn_y_out
   ]
   # Start the `curr_iter` loop variable at zero.
   zero = torch.tensor(0, device=device)
@@ -511,7 +718,7 @@ def _scan_impl_flat(fn,
   for real, fake in ((init, fake_carry), (xs, fake_x)):
     for val, fake_val in zip(real, fake):
       idx = builder.add_param(val)
-      param_id = fn_ctx.tensor_parameter_id(fake_val)
+      param_id = fn_ctx.ctx.tensor_parameter_id(fake_val)
       if param_id != -1:
         fn_param_id_to_while_param_id[param_id] = idx
 
@@ -521,9 +728,10 @@ def _scan_impl_flat(fn,
     builder.add_param(val)
 
   # Detect hoisted variables.
-  hoisted_vars: Dict[int, torch.Tensor] = fn_ctx.parameter_id_tensor_mapping()
+  hoisted_vars: Dict[
+      int, torch.Tensor] = fn_ctx.ctx.device_parameter_id_tensor_mapping()
   for v in itertools.chain(fake_carry, fake_x):
-    param_id = fn_ctx.tensor_parameter_id(v)
+    param_id = fn_ctx.ctx.tensor_parameter_id(v)
     if param_id != -1:
       del hoisted_vars[param_id]
 
@@ -533,7 +741,7 @@ def _scan_impl_flat(fn,
   seed_parameter_id = None
   if seed_info_id in ids:
     seed_idx = ids.index(seed_info_id)
-    seed_parameter_id = fn_ctx.tensor_parameter_id(i_values[seed_idx])
+    seed_parameter_id = fn_ctx.ctx.tensor_parameter_id(i_values[seed_idx])
     assert seed_parameter_id != -1, "`fn` uses random seed, but random seed is not \
       a parameter to the traced HLO graph"
 
@@ -615,11 +823,8 @@ def _scan_impl_flat(fn,
 
   res = xb.Op.mkwhile(builder.params(), cond_fn, body_fn)
   computation = res.build('scan')
-  outputs = torch_xla._XLAC._xla_user_computation('xla::scan',
-                                                  builder.param_tensors(),
-                                                  computation)
-  _curr_iter, carry, xs, ys, _hoisted_vars = unpack(outputs)
-  return carry, ys
+  param_tensors = builder.param_tensors()
+  return pack, unpack, computation, param_tensors
 
 
 U = TypeVar('U')

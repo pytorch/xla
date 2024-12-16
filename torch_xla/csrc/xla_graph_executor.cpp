@@ -602,6 +602,8 @@ void XLAGraphExecutor::ClearPendingIrs(
           torch::lazy::BackendDataPtr handle =
               runtime::GetComputationClient()->CreateDataPlaceholder(
                   device.toString(), std::move(shape));
+          // When a tensor only has data and no IR, a device IR will be created
+          // to wrap the data.
           tensors[i]->data()->handle = handle;
           TF_VLOG(4) << "Replacing the IR " << ir_value.node.get()->ToString()
                      << " of Tensor with ID " << tensors[i]->GetUniqueId()

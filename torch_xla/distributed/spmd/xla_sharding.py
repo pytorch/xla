@@ -7,6 +7,9 @@ import torch_xla.core.xla_model as xm
 import torch_xla._internal.utils as _utils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
+from torch import Tensor
+from typing import Optional
+from torch.library import impl, custom_op
 
 import numpy as np
 import functools
@@ -729,48 +732,111 @@ class ShardingSpec:
     mark_sharding(t, self.mesh, self.partition_spec)
 
 
+# Custom forward op: uses einsum internally
+@custom_op(
+    "xla::custom_linear_forward",
+    schema="(Tensor input, Tensor weight, Tensor? bias) -> Tensor",
+    mutates_args=())
+def custom_linear_forward(input: Tensor, weight: Tensor,
+                          bias: Optional[Tensor]):
+  product = torch.einsum('...n,mn->...m', input, weight)
+  if bias is not None:
+    return product + bias
+  return product
+
+
+@custom_linear_forward.register_fake
+def custom_linear_forward_fake(input: Tensor, weight: Tensor,
+                               bias: Optional[Tensor]):
+  product = torch.einsum('...n,mn->...m', input, weight)
+  if bias is not None:
+    return product + bias
+  return product
+
+
+@custom_op(
+    "xla::custom_linear_backward",
+    schema="(Tensor grad_output, Tensor input, Tensor weight, Tensor? bias, bool needs_input_grad_input, bool needs_input_grad_weight, bool needs_input_grad_bias) -> (Tensor, Tensor, Tensor)",
+    mutates_args=())
+def custom_linear_backward(grad_output: Tensor, input: Tensor, weight: Tensor,
+                           bias: Optional[Tensor], needs_input_grad_input: bool,
+                           needs_input_grad_weight: bool,
+                           needs_input_grad_bias: bool):
+  grad_input = grad_weight = grad_bias = None
+
+  if needs_input_grad_input:
+    grad_input = torch.einsum('...m,mn->...n', grad_output, weight)
+  else:
+    grad_input = None
+
+  if needs_input_grad_weight:
+    grad_weight = torch.einsum('...m,...n->mn', grad_output, input)
+  else:
+    grad_weight = None
+
+  if bias is not None and needs_input_grad_bias:
+    grad_bias = torch.einsum('...m->m', grad_output)
+  else:
+    grad_bias = None
+
+  return grad_input, grad_weight, grad_bias
+
+
+@custom_linear_backward.register_fake
+def custom_linear_backward_fake(grad_output: Tensor, input: Tensor,
+                                weight: Tensor, bias: Optional[Tensor],
+                                needs_input_grad_input: bool,
+                                needs_input_grad_weight: bool,
+                                needs_input_grad_bias: bool):
+  grad_input = grad_weight = grad_bias = None
+
+  if needs_input_grad_input:
+    grad_input = torch.einsum('...m,mn->...n', grad_output, weight)
+  else:
+    grad_input = None
+
+  if needs_input_grad_weight:
+    grad_weight = torch.einsum('...m,...n->mn', grad_output, input)
+  else:
+    grad_weight = None
+
+  if bias is not None and needs_input_grad_bias:
+    grad_bias = torch.einsum('...m->m', grad_output)
+  else:
+    grad_bias = None
+
+  return grad_input, grad_weight, grad_bias
+
+
+# Now define the XLAPatchedLinear function that uses the custom ops
 class XLAPatchedLinear(torch.autograd.Function):
   """
-  A patched version of `torch.nn.functional.linear` that uses einsum instead
-  of torch.matmul which will flatten the tensors to 2D and collide the sharded
-  dimensions. The torch.matmul default behavior makes it very hard for XLA compiler
-  to propagate the sharding annotation.
-
-  Autocast decorators @custom_fwd and @custom_bwd used as per autocast docs [1] to bring this class/layer within 
-  autocast context, when autocast is enabled.
-  torch.get_autocast_dtype() fetches datatype for ops run in autocast [2], with the specified device (here, 'xla').
-  
-  References: 
-  [1] https://pytorch.org/docs/stable/notes/amp_examples.html#functions-with-multiple-inputs-or-autocastable-ops 
-  [2] https://github.com/pytorch/pytorch/blob/2cc01cc6d3ad2aff47e8460667ba654b2e4c9f21/torch/amp/autocast_mode.py#L500
-
-  TODO (alanwaketan): Let's patch it on the dispatcher level.
-  """
+    A patched version of `torch.nn.functional.linear` that uses einsum via custom ops.
+    By wrapping these calls in custom ops, AOTAutograd won't decompose einsum.
+    """
 
   @staticmethod
-  @custom_fwd(device_type='xla', cast_inputs=torch.get_autocast_dtype('xla'))
-  def forward(ctx, input, weight, bias=None):
-    # bias is an optional argument
+  def forward(ctx,
+              input: Tensor,
+              weight: Tensor,
+              bias: Optional[Tensor] = None):
     ctx.save_for_backward(input, weight, bias)
-    with torch.no_grad():
-      product = torch.einsum('...n,mn->...m', input, weight)
-      if bias is None:
-        return product
-      return product + bias
+    # Call our custom forward op
+    return torch.ops.xla.custom_linear_forward(input, weight, bias)
 
   @staticmethod
-  @custom_bwd(device_type='xla')
-  def backward(ctx, grad_output):
+  def backward(ctx, grad_output: Tensor):
     input, weight, bias = ctx.saved_tensors
-    grad_input = grad_weight = grad_bias = None
+    needs_input_grad_input = ctx.needs_input_grad[0]
+    needs_input_grad_weight = ctx.needs_input_grad[1]
+    needs_input_grad_bias = False
+    if bias is not None:
+      needs_input_grad_bias = ctx.needs_input_grad[2]
 
-    if ctx.needs_input_grad[0]:
-      grad_input = torch.einsum('...m,mn->...n', grad_output, weight)
-    if ctx.needs_input_grad[1]:
-      grad_weight = torch.einsum('...m,...n->mn', grad_output, input)
-    if bias is not None and ctx.needs_input_grad[2]:
-      grad_bias = torch.einsum('...m->m', grad_output)
-
+    # Call our custom backward op with the boolean flags
+    grad_input, grad_weight, grad_bias = torch.ops.xla.custom_linear_backward(
+        grad_output, input, weight, bias, needs_input_grad_input,
+        needs_input_grad_weight, needs_input_grad_bias)
     return grad_input, grad_weight, grad_bias
 
 

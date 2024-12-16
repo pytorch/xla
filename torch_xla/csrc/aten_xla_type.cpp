@@ -889,6 +889,36 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   const at::Tensor& base = bridge::GetXlaTensor(self)->Base();
   at::Tensor tensor = base.defined() ? base : self;
 
+  // aten::native::slice() is implemented with as_strided, see
+  // pytorch/aten/src/ATen/native/TensorShape.cpp.
+  //
+  // Here we pattern-match and dispatch to slice again, which is
+  // more efficient.
+  if (tensor.dim() == 4 && size.size() == 4 && stride.size() == 4) {
+    if (!storage_offset.has_value() || (*storage_offset) == 0) {
+      // Fast path: if the as_strided can be implemented with select,
+      // do that instead.
+      if (size[size.size() - 1] == 1 && stride[stride.size() - 1] == 1) {
+        size_t multiples[4] = {1, 1, 1, 1};
+        for (size_t i = 3; i > 0; i--) {
+          multiples[i - 1] = multiples[i] * tensor.size(i);
+        }
+        bool equals = true;
+        for (size_t i = 0; i < 4; i++) {
+          if (multiples[i] != stride[i]) {
+            equals = false;
+          }
+        }
+        if (equals) {
+          // Fast path implementation.
+          // slice(tensor, dim=3, start=0, end=1, step=1)
+          return bridge::AtenFromXlaTensor(
+              tensor_methods::slice(bridge::GetXlaTensor(tensor), 3, 0, 1, 1));
+        }
+      }
+    }
+  }
+
   // Fast path: PyTorch/XLA implementation for as_strided works only with
   // non-overlapping and dense tensors.
   if (c10::_compute_non_overlapping_and_dense(size, stride)) {

@@ -294,6 +294,7 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToDevice",
       tsl::profiler::TraceMeLevel::kInfo);
+
   // TODO(jonbolin): Consider using CopyToDevice when sharding is REPLICATED.
   // We are opting out of CopyToDevice for now due to the synchronization
   // issues observed in ShardingUtil::InputHandler, but because CopyToDevice

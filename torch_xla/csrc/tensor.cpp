@@ -8,12 +8,14 @@
 #include <torch/csrc/lazy/core/metrics.h>
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
+#include <torch/csrc/lazy/python/python_util.h>
 
 #include <algorithm>
 #include <cmath>
 #include <condition_variable>
 #include <exception>
 #include <functional>
+#include <iostream>
 #include <mutex>
 #include <set>
 #include <stdexcept>
@@ -428,6 +430,36 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
     read_only = true;
   } else {
     TORCH_LAZY_TIMED("IrValueTensorToXlaData");
+
+    // Dump python stack when enabled.
+    const char* val = std::getenv("DEBUG_TRANSFER_IR_VALUE_TENSOR_TO_XLA_DATA");
+    if (val) {
+      std::cerr << std::endl;
+      std::cerr << "==================================================="
+                << std::endl;
+      std::cerr << "======== Unexpected IrValueTensorToXlaData ========"
+                << std::endl;
+      std::cerr << "==================================================="
+                << std::endl;
+      std::vector<torch::lazy::SourceLocation> frames =
+          torch::lazy::GetPythonFrames();
+      const char* debug_output_prefix = "Unexpected Transfer: ";
+      int remain_frame_count = 50;
+      std::cerr << debug_output_prefix
+                << "Python Frame Triggered Execution: \n";
+      for (auto& location : frames) {
+        remain_frame_count--;
+        if (remain_frame_count < 0) {
+          std::cerr << debug_output_prefix << "  ..........\n";
+          break;
+        } else {
+          std::cerr << debug_output_prefix << "  " << location.function << " ("
+                    << location.file << ":" << location.line << ")\n";
+        }
+      }
+      std::cerr << std::endl;
+    }
+
     data = TensorToXlaData(tensor, device);
   }
   return CreateTensorNode(std::move(data), read_only);

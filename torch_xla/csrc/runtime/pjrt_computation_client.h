@@ -29,6 +29,8 @@ class PjRtComputationClient : public ComputationClient {
   PjRtComputationClient();
   ~PjRtComputationClient();
 
+  // TODO: buffer ptr is null.
+
   DataPtr CreateDataPlaceholder(
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
