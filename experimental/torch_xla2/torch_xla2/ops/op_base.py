@@ -7,12 +7,7 @@ from torch_xla2.ops import mappings
 from torch_xla2 import types
 import sys
 
-if sys.version_info < (3, 10):
-  from typing_extensions import ParamSpec, Concatenate
-else:
-  from typing import ParamSpec, Concatenate
-
-from typing import Callable, Optional
+from typing import Callable, Optional, ParamSpec, Concatenate
 
 
 class InplaceOp:
