@@ -471,6 +471,58 @@ class ValueAndGradPartitionedTest(TestBase):
     self.compare_pytree(grad_init, expected_grads['init'])
     self.compare_pytree(grad_x, expected_grads['x'])
 
+  def test_graph_hash_differs_by_shape(self):
+
+    def fn(carry, x):
+      new_carry = carry + x
+      y = torch.sin(new_carry)
+      return new_carry, y
+
+    init = torch.randn(16, requires_grad=True, device=self.device)
+    x = torch.randn(16, requires_grad=True, device=self.device)
+    forward_16, backward_16 = value_and_grad_partitioned(
+        fn, init, x.unsqueeze(0))
+
+    init = torch.randn(32, requires_grad=True, device=self.device)
+    x = torch.randn(32, requires_grad=True, device=self.device)
+    forward_32, backward_32 = value_and_grad_partitioned(
+        fn, init, x.unsqueeze(0))
+
+    self.assertNotEqual(forward_16._aot_graph_hash, forward_32._aot_graph_hash)
+    self.assertNotEqual(backward_16._aot_graph_hash,
+                        backward_32._aot_graph_hash)
+
+    self.assertNotEqual(forward_16._aot_graph_hash, backward_16._aot_graph_hash)
+    self.assertNotEqual(forward_32._aot_graph_hash, backward_32._aot_graph_hash)
+
+  def test_graph_hash_is_same_for_same_computation(self):
+
+    def fn_1(carry, x):
+      new_carry = carry + x
+      y = torch.sin(new_carry)
+      return new_carry, y
+    
+    def fn_2(carry, x):
+      new_carry = carry + x
+      y = torch.sin(new_carry)
+      return new_carry, y
+
+    init = torch.randn(16, requires_grad=True, device=self.device)
+    x = torch.randn(16, requires_grad=True, device=self.device)
+    forward_1, backward_1 = value_and_grad_partitioned(
+        fn_1, init, x.unsqueeze(0))
+
+    init = torch.randn(16, requires_grad=True, device=self.device)
+    x = torch.randn(16, requires_grad=True, device=self.device)
+    forward_2, backward_2 = value_and_grad_partitioned(
+        fn_2, init, x.unsqueeze(0))
+
+    self.assertEqual(forward_1._aot_graph_hash, forward_2._aot_graph_hash)
+    self.assertEqual(backward_1._aot_graph_hash, backward_2._aot_graph_hash)
+
+    self.assertNotEqual(forward_1._aot_graph_hash, backward_1._aot_graph_hash)
+    self.assertNotEqual(forward_2._aot_graph_hash, backward_2._aot_graph_hash)
+
 
 if __name__ == '__main__':
   test = unittest.main()

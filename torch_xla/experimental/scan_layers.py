@@ -1,3 +1,4 @@
+import functools
 from typing import Iterable, Mapping, Sequence, Dict, Tuple
 
 import torch
@@ -77,6 +78,16 @@ def scan_layers(layers: Iterable[torch.nn.Module],
   stacked_buffers = tree_map(lambda *tensors: torch.stack(tensors, dim=0),
                              *buffers_list)
 
+  one_layer = _layer_to_function(first_layer)
+  stacked_params_buffers = (stacked_params, stacked_buffers)
+  final_carry, _ = scan(
+      one_layer, input_data, stacked_params_buffers, partition_fn=partition_fn)
+
+  return final_carry
+
+
+@functools.lru_cache
+def _layer_to_function(first_layer):
   # Use the first layer as the example/template layer.
   from copy import deepcopy
   example_layer = deepcopy(first_layer)
@@ -89,11 +100,7 @@ def scan_layers(layers: Iterable[torch.nn.Module],
         example_layer, params_buffers, carry, strict=True)
     return output, None
 
-  stacked_params_buffers = (stacked_params, stacked_buffers)
-  final_carry, _ = scan(
-      one_layer, input_data, stacked_params_buffers, partition_fn=partition_fn)
-
-  return final_carry
+  return one_layer
 
 
 def _extract_weights_and_buffers(
