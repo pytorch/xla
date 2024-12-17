@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git0121444 )
+                  master (2.7.0+gitb1869a8 )
                 </div>
               
             
@@ -452,8 +452,8 @@ and gloo.</p>
 </pre></div>
 </div>
 </li>
-<li><p>Pass <code class="docutils literal notranslate"><span class="pre">gradient_as_bucket_view=True</span></code> to the DDP wrapper.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">gradient_as_bucket_view</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<li><p>Wrap the model with DDP.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
 </pre></div>
 </div>
 </li>
@@ -516,8 +516,7 @@ your script.</p>
     <span class="c1"># create model and move it to XLA device</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">ToyModel</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-    <span class="c1"># currently, graident_as_bucket_view is needed to make DDP work for xla</span>
-    <span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">gradient_as_bucket_view</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
 
     <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">MSELoss</span><span class="p">()</span>
     <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">ddp_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
@@ -645,7 +644,7 @@ repo</a>. For those who are interested in
 the native xla data parallel approach, here is the
 <a class="reference external" href="../API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing">tutorial</a>.</p>
 <p>Here are some of the known issues that are under investigation: *
-<code class="docutils literal notranslate"><span class="pre">gradient_as_bucket_view=True</span></code> needs to be enforced. * There are some
+<code class="docutils literal notranslate"><span class="pre">gradient_as_bucket_view=False</span></code> needs to be enforced. * There are some
 issues while being used with <code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code>.
 <code class="docutils literal notranslate"><span class="pre">test_train_mp_mnist.py</span></code> with real data crashes before exiting.</p>
 </div>
