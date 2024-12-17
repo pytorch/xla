@@ -1,4 +1,5 @@
 import collections
+from contextlib import contextmanager
 import itertools
 import math
 import os
@@ -390,3 +391,32 @@ class XlaTestCase(unittest.TestCase):
     results = xu.as_list(fn(*tensors))
     xla_results = xu.as_list(fn(*xla_tensors))
     self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
+
+
+@contextmanager
+def temporary_env(**kwargs):
+  """
+    Temporarily set environment variables within the context.
+    
+    Args:
+        **kwargs: Key-value pairs representing environment variables to set.
+                  For example: temporary_env(PATH='/new/path', DEBUG='1')
+    """
+  original_env = {}
+
+  # Store original values and set new ones
+  for key, value in kwargs.items():
+    original_env[key] = os.environ.get(key, None)
+    os.environ[key] = value
+
+  try:
+    yield
+  finally:
+    # Restore original environment variables
+    for key, old_value in original_env.items():
+      if old_value is None:
+        # The variable was not originally set
+        del os.environ[key]
+      else:
+        # Restore the original value
+        os.environ[key] = old_value
