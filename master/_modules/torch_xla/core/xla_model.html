@@ -265,7 +265,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git0154850 )
+                  master (2.7.0+git0121444 )
                 </div>
               
             
@@ -615,6 +615,21 @@
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">real_device</span> <span class="o">=</span> <span class="n">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">real_device</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<span class="k">def</span> <span class="nf">xla_device_kind</span><span class="p">(</span><span class="n">device</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns vendor-dependent string that uniquely identifies the kind of</span>
+<span class="sd">     device.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    device (string or torch.device): The xla device</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A vendor-dependent device kind string.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_device_kind</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
 
 
 <span class="k">def</span> <span class="nf">xla_replication_devices</span><span class="p">(</span>
