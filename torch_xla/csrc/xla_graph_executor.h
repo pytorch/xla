@@ -356,12 +356,13 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec,
       bool warm_up_cache_only);
 
-  std::vector<size_t> SetBufferDonors(const std::vector<XLATensorPtr>& tensors,
-                                      absl::Span<const size_t> indices,
-                                      LoweringContext* lowering_ctx);
+  std::vector<size_t> GetBufferDonors(
+      const std::vector<XLATensorPtr>& tensors,
+      const SyncTensorCollection& coll,
+      const std::vector<torch::lazy::BackendDataPtr>& parameters_data);
 
-  std::vector<size_t> SetBufferDonorsFromUserConfig(
-      LoweringContext* lowering_ctx);
+  void SetBufferDonors(LoweringContext* lowering_ctx,
+                       const std::vector<size_t>& buffer_donor_indices);
 
   // TODO(yeounoh) auto-sharding can change tensors shardings, which needs to be
   // accounted for in Dynamo integration.
@@ -369,7 +370,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                             absl::Span<const std::string> devices,
                             const SyncTensorCollection& coll,
                             PostOrderData* po_data,
-                            const std::vector<torch::lazy::Value>& ir_values);
+                            const std::vector<torch::lazy::Value>& ir_values,
+                            const std::vector<size_t>& buffer_donor_indices);
 
   // We don't use the upstream SyncTensorsGraphInternal since
   // our CachedComputation is different from upstream.
