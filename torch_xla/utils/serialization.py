@@ -25,7 +25,7 @@ def _rewrite_data(path, data, save_tensors):
 
   def convert_fn(tensors):
     torch_xla._XLAC._xla_sync_multi(
-        tensors, devices=[], wait=True, sync_xla_data=True)
+        tensors, devices=[], wait=True, sync_xla_data=False)
     rewritten_tensors = []
     for i, t in enumerate(tensors):
       if save_tensors:
