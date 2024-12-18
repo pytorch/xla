@@ -18,7 +18,7 @@ class TrainResNetDDP(TrainResNetBase):
     dist.init_process_group('xla', init_method='xla://')
     super().__init__()
     self.model = DDP(
-        self.model, gradient_as_bucket_view=True, broadcast_buffers=False)
+        self.model, broadcast_buffers=False)
     self.optimizer = optim.SGD(self.model.parameters(), weight_decay=1e-4)
 
 

@@ -111,18 +111,15 @@ def ddp_correctness(init_method: str = 'env://',
       steps = 5  # To save test time.
       cpu_model = LargeNet()
 
-  # TODO(@alanwaketan): Investigate whether we can omit the gradient_as_bucket_view option.
+  # TODO: There're issues in the captured graph when gradient_as_bucket_view is True
   # bucket_cap_mb is set to 1 mb such that we can still have multiple all_reduces while avoiding
   # using models that are too larger (25 mb).
   # To be noted, DDP currently uses one bucket for the first iteration. See pytorch#73732.
-  ddp_model = DDP(
-      copy.deepcopy(cpu_model).to(device),
-      gradient_as_bucket_view=True,
-      bucket_cap_mb=1)
+  ddp_model = DDP(copy.deepcopy(cpu_model).to(device), bucket_cap_mb=1)
   # ddp_model.register_comm_hook(state=None, hook=comp_hook)
 
-  cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1e-4)
-  ddp_optimizer = optim.SGD(ddp_model.parameters(), lr=1e-4)
+  cpu_optimizer = optim.SGD(cpu_model.parameters(), lr=1e-1)
+  ddp_optimizer = optim.SGD(ddp_model.parameters(), lr=1e-1)
   loss_fn = nn.MSELoss()
 
   local_batch_size = 2

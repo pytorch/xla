@@ -82,7 +82,7 @@ def _mp_fn(index):
 
 +  # Optional for TPU v4 and GPU
 +  xm.broadcast_master_param(model)
-  model = DDP(model, gradient_as_bucket_view=True)
+  model = DDP(model)
 
   loss_fn = nn.MSELoss()
   optimizer = optim.SGD(model.parameters(), lr=.001)
