@@ -88,8 +88,9 @@ xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, int64_t dim,
                                       const xla::XlaComputation& reducer,
                                       xla::XlaOp init);
 
-// Compute the cumulative computation specified by "reducer" and "init" in the
+// Computes the cumulative computation specified by "reducer" and "init" in the
 // given dimension "dim".
+// Returns a tuple XlaOp (values, indices).
 xla::XlaOp BuildCumulativeComputationWithIndices(
     xla::XlaOp value_input, xla::XlaOp index_input, int64_t dim,
     const xla::XlaComputation& reducer, xla::XlaOp value_init,
