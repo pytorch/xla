@@ -1,9 +1,10 @@
+#include "torch_xla/csrc/ops/cumsum.h"
+
 #include <torch/csrc/lazy/core/tensor_util.h>
 
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/ops/cummax.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/shape_helper.h"
@@ -13,14 +14,14 @@
 namespace torch_xla {
 namespace {
 
-xla::XlaOp LowerCumMax(xla::XlaOp input, int64_t dim,
+xla::XlaOp LowerCumSum(xla::XlaOp input, int64_t dim,
                        std::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input = CastToScalarType(input, dtype);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(casted_input);
   xla::XlaOp init = XlaHelpers::ScalarValue<float>(
       0, input_shape.element_type(), casted_input.builder());
   xla::XlaComputation reducer =
-      XlaHelpers::CreateMaxComputation(input_shape.element_type());
+      XlaHelpers::CreateAddComputation(input_shape.element_type());
   return BuildCumulativeComputation(casted_input, dim, reducer, init);
 }
 
@@ -35,26 +36,26 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 }  // namespace
 
-CumMax::CumMax(const torch::lazy::Value& input, int64_t dim,
+CumSum::CumSum(const torch::lazy::Value& input, int64_t dim,
                std::optional<at::ScalarType> dtype)
     : XlaNode(
-          torch::lazy::OpKind(at::aten::cummax), {input},
+          torch::lazy::OpKind(at::aten::cumsum), {input},
           [&]() { return NodeOutputShape(input, dtype); },
           /*num_outputs=*/1,
           torch::lazy::MHash(dim, torch::lazy::OptionalOr<int>(dtype, -1))),
       dim_(dim),
       dtype_(dtype) {}
 
-torch::lazy::NodePtr CumMax::Clone(torch::lazy::OpList operands) const {
-  return torch_xla::MakeNode<CumMax>(operands.at(0), dim_, dtype_);
+torch::lazy::NodePtr CumSum::Clone(torch::lazy::OpList operands) const {
+  return torch_xla::MakeNode<CumSum>(operands.at(0), dim_, dtype_);
 }
 
-XlaOpVector CumMax::Lower(LoweringContext* loctx) const {
+XlaOpVector CumSum::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(LowerCumMax(input, dim_, dtype_), loctx);
+  return ReturnOp(LowerCumSum(input, dim_, dtype_), loctx);
 }
 
-std::string CumMax::ToString() const {
+std::string CumSum::ToString() const {
   std::stringstream ss;
   ss << XlaNode::ToString() << ", dim=" << dim_;
   if (dtype_) {

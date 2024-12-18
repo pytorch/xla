@@ -105,9 +105,9 @@ fi
 for name in "${test_names[@]}"; do
   echo "Running $name cpp test..."
   if [ "$LOGFILE" != "" ]; then
-    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:${name} --test_timeout 1200 ${FILTER:+"$FILTER"} 2> $LOGFILE
+    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:${name} --test_timeout 1200 --test_output=all ${FILTER:+"$FILTER"} 2> $LOGFILE
   else
-    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:${name} --test_timeout 1200 ${FILTER:+"$FILTER"}
+    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:${name} --test_timeout 1200 --test_output=all ${FILTER:+"$FILTER"}
   fi
 done
 
