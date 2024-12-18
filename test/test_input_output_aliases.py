@@ -143,6 +143,25 @@ class InputOutputAliasesTest(unittest.TestCase):
         alias_count == 1.0
     ), f"Expect 1 input-output alias pair for gradient accumulation, got {alias_count}"
 
+  def test_separate_graphs(self):
+    """
+    Test that paramater aliasing differences should produce different graphs.
+    """
+    xla_device = xm.xla_device()
+    t0 = torch.tensor([1], device=xla_device)
+    t1 = torch.tensor([2], device=xla_device)
+    xm.mark_step()
+
+    t1.add_(t0)
+    xm.mark_step()
+
+    # This needs to be a separate graph, otherwise t1 can be corrupted
+    # or result in PJRT error.
+    t2 = t1 + t0
+    xm.mark_step()
+
+    self.assertEqual(t1.item(), 3)
+
 
 if __name__ == '__main__':
   test = unittest.main()
