@@ -11,7 +11,7 @@ dependencies = [
     # Developers should install `dev-requirements.txt` first
     "torch>=2.3.0",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {file = "LICENSE"}
 dynamic = ["version"]
 
