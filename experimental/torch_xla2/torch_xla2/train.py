@@ -41,10 +41,13 @@ def make_train_step(model_fn,
   def loss(weights, buffers, args, label): # inputs are XLATensor
     with env, jax.named_scope('compute_loss'):
       if mark_fsdp_sharding_axis is not None:
-        args = (mark_sharding(args[0], P(mark_fsdp_sharding_axis)), *args[1:])
+        args = mark_sharding(
+            args, 
+            jax.sharding.PartitionSpec(mark_fsdp_sharding_axis))
       res = model_fn(weights, buffers, args)
       if mark_fsdp_sharding_axis is not None:
-        res = mark_sharding(res, P(mark_fsdp_sharding_axis))
+        res = mark_sharding(res, jax.sharding.PartitionSpec(mark_fsdp_sharding_axis))
+        label = mark_sharding(label, jax.sharding.PartitionSpec(mark_fsdp_sharding_axis))
       l = loss_fn(res, label)
       return l
 
@@ -61,4 +64,4 @@ def make_train_step(model_fn,
         weights = interop.call_jax(optax.apply_updates, weights, updates)
     return loss, weights, opt_state
 
-  return step
+  return interop.jax_jit(step, {'donate_argnums': (0, 2)})

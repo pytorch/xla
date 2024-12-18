@@ -155,6 +155,14 @@ class XLATensor2(torch.Tensor):
   def jax_device(self):
     return self._elem.device
 
+  def apply(self, jax_function, *args, **kwargs):
+    # Call a jax function on _elem
+    res = jax_function(self._elem, *args, **kwargs)
+    return self._env.j2t_iso(res)
+
+  def apply_(self, jax_function, *args, **kwargs):
+    self._elem = jax_function(self._elem, *args, **kwargs)
+
   def tolist(self):
     return self._elem.tolist()
   
@@ -294,7 +302,7 @@ class Environment(contextlib.ContextDecorator):
       if not self.config.treat_cuda_as_jax_device and device.startswith('cuda'):
         return None
       
-      if device in ('jax_cpu', 'cpu'):
+      if device == 'cpu':
         return jax.devices('cpu')[0]
       return jax.devices()[0]
 
