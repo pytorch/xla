@@ -3,6 +3,8 @@ This is the script from this tutorial:
 https://pytorch.org/tutorials/beginner/introyt/trainingyt.html
 """
 
+import functools
+from torch_xla2 import train, interop
 import torch
 from torch.utils import _pytree as pytree
 import torchvision
@@ -16,6 +18,8 @@ import numpy as np
 # PyTorch TensorBoard support
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+
+env = torch_xla2.enable_globally()
 
 
 transform = transforms.Compose(
@@ -38,29 +42,7 @@ classes = ('T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
 print('Training set has {} instances'.format(len(training_set)))
 print('Validation set has {} instances'.format(len(validation_set)))
 
-import matplotlib.pyplot as plt
 import numpy as np
-
-# Helper function for inline image display
-def matplotlib_imshow(img, one_channel=False):
-    if one_channel:
-        img = img.mean(dim=0)
-    img = img / 2 + 0.5     # unnormalize
-    npimg = img.numpy()
-    if one_channel:
-        plt.imshow(npimg, cmap="Greys")
-    else:
-        plt.imshow(np.transpose(npimg, (1, 2, 0)))
-
-dataiter = iter(training_loader)
-images, labels = next(dataiter)
-
-# Create a grid from the images and show them
-img_grid = torchvision.utils.make_grid(images)
-matplotlib_imshow(img_grid, one_channel=True)
-print('  '.join(classes[labels[j]] for j in range(4)))
-
-
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -83,35 +65,30 @@ class GarmentClassifier(nn.Module):
 model = GarmentClassifier()
 loss_fn = torch.nn.CrossEntropyLoss()
 
-jax_weights, jax_func = torch_xla2.extract_jax(model)
-jax_func = jax.jit(jax_func, inline=True)
 jax_optimizer = optax.adam(0.01)
-opt_state = jax_optimizer.init(jax_weights)
 
+model.to('jax') # move the model to jax device
+model_jittable = interop.JittableModule(model)
+weights = model_jittable.params  # these are trainable parameters
+buffers = model_jittable.buffers # these are non-trainable parameters
 
-def jax_loss(weights, data, label):
-    pred = jax_func(weights, data)
-    loss = torch_xla2.interop.call_torch(loss_fn, pred, label)
-    return loss
+opt_state = interop.call_jax(jax_optimizer.init, weights)
+model_fn = functools.partial(model_jittable.functional_call, 'forward')
 
-grad_fn = jax.jit(jax.value_and_grad(jax_loss))
+train_step = train.make_train_step(model_fn, loss_fn, jax_optimizer)
 
+train_step = interop.jax_jit(train_step, kwargs_for_jax_jit={'donate_argnums': (0, 2)})
 
 # NB: Loss functions expect data in batches, so we're creating batches of 4
 # Represents the model's confidence in each of the 10 classes for a given input
-dummy_outputs = torch.rand(4, 10)
+dummy_inputs = torch.rand(4, 28, 28).to('jax')
+dummy_outputs = torch.rand(4, 10).to('jax')
 # Represents the correct class among the 10 being tested
-dummy_labels = torch.tensor([1, 5, 3, 7])
+dummy_labels = torch.tensor([1, 5, 3, 7]).to('jax')
 
-print(dummy_outputs)
-print(dummy_labels)
+# test train_step
 
-loss = loss_fn(dummy_outputs, dummy_labels)
-print('Total loss for this batch: {}'.format(loss.item()))
-
-
-def train_one_epoch(jax_weights, opt_state, epoch_index, tb_writer):
-
+def train_one_epoch(weights, buffers, opt_state, epoch_index, tb_writer):
     running_loss = 0.
     last_loss = 0.
 
@@ -119,18 +96,16 @@ def train_one_epoch(jax_weights, opt_state, epoch_index, tb_writer):
     # iter(training_loader) so that we can track the batch
     # index and do some intra-epoch reporting
     for i, data in enumerate(training_loader):
-        # Every data instance is an input + label pair
-        # NEW: Move model to XLA device
-        data = pytree.tree_map_only(torch.Tensor, 
-                                    torch_xla2.tensor.t2j, data)
         inputs, labels = data
 
-        val, grads = grad_fn(jax_weights, (inputs, ), labels)
-        updates, opt_state = jax_optimizer.update(grads, opt_state)
-        jax_weights = optax.apply_updates(jax_weights, updates)
+        inputs = inputs.to('jax')
+        labels = labels.to('jax')
+
+        loss, weights, opt_state = train_step(
+            weights, buffers, opt_state, inputs, labels)
 
         # Gather data and report
-        running_loss += val.item()
+        running_loss += loss.item()
         if i % 1000 == 999:
             last_loss = running_loss / 1000 # loss per batch
             print('  batch {} loss: {}'.format(i + 1, last_loss))
@@ -138,7 +113,7 @@ def train_one_epoch(jax_weights, opt_state, epoch_index, tb_writer):
             tb_writer.add_scalar('Loss/train', last_loss, tb_x)
             running_loss = 0.
 
-    return last_loss, opt_state
+    return last_loss, weights, opt_state
 
 
 
@@ -152,39 +127,5 @@ best_vloss = 1_000_000.
 for epoch in range(EPOCHS):
     print('EPOCH {}:'.format(epoch_number + 1))
 
-    # Make sure gradient tracking is on, and do a pass over the data
-    model.train(True)
-
-    avg_loss, opt_state = train_one_epoch(jax_weights, opt_state, epoch_number, writer)
-
-    running_vloss = 0.0
-    # Set the model to evaluation mode, disabling dropout and using population
-    # statistics for batch normalization.
-    model.eval()
-
-    # Disable gradient computation and reduce memory consumption.
-    with torch.no_grad():
-        for i, vdata in enumerate(validation_loader):
-
-            vinputs, vlabels = pytree.tree_map_only(torch.Tensor, torch_xla2.tensor.t2j, vdata)
-            voutputs = jax_func(jax_weights, (vinputs, )) # call model's forward
-            vloss = torch_xla2.interop.call_torch(loss_fn, voutputs, vlabels)
-            running_vloss += vloss
-
-    avg_vloss = running_vloss / (i + 1)
-    print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
-
-    # Log the running loss averaged per batch
-    # for both training and validation
-    writer.add_scalars('Training vs. Validation Loss',
-                    { 'Training' : np.asarray(avg_loss), 'Validation' : np.asarray(avg_vloss) },
-                    epoch_number + 1)
-    writer.flush()
-
-    # Track best performance, and save the model's state
-    if avg_vloss < best_vloss:
-        best_vloss = avg_vloss
-        model_path = 'model_{}_{}'.format(timestamp, epoch_number)
-        torch.save(model.state_dict(), model_path)
-
-    epoch_number += 1
+    avg_loss, weights, opt_state = train_one_epoch(weights, buffers, opt_state, epoch_number, writer)
+    print(avg_loss)
