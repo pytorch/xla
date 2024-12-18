@@ -659,9 +659,13 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
             // XlaData from the DeviceData Node and reset the IR. We also want
             // to update XlaData's tensorID to make it match with the current
             // XLATensor.
+            auto* data_info =
+                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
+                    device_data->data()->info());
+            bool read_only = data_info != nullptr && data_info->read_only;
             tensors[i]->GetXlaData()->SetInfo(
                 std::make_shared<LazyGraphExecutor::DeviceDataInfo>(
-                    tensors[i]->GetUniqueId(), /*=read_only=*/false));
+                    tensors[i]->GetUniqueId(), read_only));
           } else {
             // Add only tensors which need to be synced.
             coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
