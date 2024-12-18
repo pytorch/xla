@@ -2120,19 +2120,12 @@ TEST_F(AtenXlaTensorTest, TestCumProdCastLong) {
 TEST_F(AtenXlaTensorTest, TestCumMax) {
   torch::Tensor input = torch::rand({4, 3, 4});
   int rank = input.dim();
-  LOG(INFO) << "input: " << input;
   for (int dim = -rank; dim < rank; ++dim) {
     std::tuple<torch::Tensor, torch::Tensor> result = torch::cummax(input, dim);
-    LOG(INFO) << "torch::cummax: [values]: " << std::get<0>(result)
-              << " [indices]: " << std::get<1>(result);
     ForEachDevice([&](const torch::Device& device) {
-      LOG(INFO) << "device: " << device;
       torch::Tensor xla_input = CopyToDevice(input, device);
       std::tuple<torch::Tensor, torch::Tensor> xla_result =
           torch::cummax(xla_input, dim);
-      LOG(INFO) << "xla_input: " << xla_input;
-      LOG(INFO) << "xla_result: [values]: " << std::get<0>(xla_result)
-                << " [indices]: " << std::get<1>(xla_result);
       AllClose(std::get<0>(result), std::get<0>(xla_result));
       AllClose(std::get<1>(result), std::get<1>(xla_result));
     });
