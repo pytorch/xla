@@ -638,6 +638,10 @@ int IfrtComputationClient::GetNumProcesses() const {
   return max_process_index + 1;
 };
 
+std::string IfrtComputationClient::GetDeviceKind(const std::string& device) {
+  return std::string(StringToIfrtDevice(device)->Kind());
+}
+
 const absl::flat_hash_map<
     std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 IfrtComputationClient::GetDeviceAttributes(const std::string& device) {

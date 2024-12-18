@@ -1497,6 +1497,13 @@ void InitXlaModuleBindings(py::module m) {
         return xla_devices;
       },
       py::arg("devices") = std::nullopt);
+  m.def(
+      "_xla_device_kind",
+      [](const std::string& device) {
+        auto xla_device = bridge::AtenDeviceToXlaDevice(device).toString();
+        return runtime::GetComputationClient()->GetDeviceKind(xla_device);
+      },
+      py::arg("device") = "");
   m.def("_xla_set_replication_devices",
         [](const std::vector<std::string>& devices) {
           auto replication_devices =

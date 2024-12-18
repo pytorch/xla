@@ -358,6 +358,8 @@ class ComputationClient {
 
   virtual torch_xla::DeviceType GetDeviceType() const = 0;
 
+  virtual std::string GetDeviceKind(const std::string& device) = 0;
+
   virtual xla::PjRtPlatformId GetPlatformID() const = 0;
 
   virtual absl::StatusOr<xla::PjRtDevice*> LookupAddressableDevice(
