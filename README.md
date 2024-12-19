@@ -96,8 +96,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 +  dist.init_process_group("xla", init_method='xla://')
 +
 +  model.to(xm.xla_device())
-+  # `gradient_as_bucket_view=True` required for XLA
-+  ddp_model = DDP(model, gradient_as_bucket_view=True)
++  ddp_model = DDP(model)
 
 -  model = model.to(rank)
 -  ddp_model = DDP(model, device_ids=[rank])

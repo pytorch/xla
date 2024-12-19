@@ -138,7 +138,7 @@ def train_mnist(flags, **kwargs):
   xm.broadcast_master_param(model)
 
   if flags.ddp:
-    model = DDP(model, gradient_as_bucket_view=True)
+    model = DDP(model)
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)

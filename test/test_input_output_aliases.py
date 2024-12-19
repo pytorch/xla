@@ -185,7 +185,6 @@ class InputOutputAliasesTest(unittest.TestCase):
 
     self.assertEqual(t2.item(), 3)
 
-
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
