@@ -95,6 +95,8 @@ class PjRtComputationClient : public ComputationClient {
         absl::AsciiStrToUpper(client_->platform_name()));
   };
 
+  std::string GetDeviceKind(const std::string& device) override;
+
   xla::PjRtPlatformId GetPlatformID() const override {
     return client_->platform_id();
   }
