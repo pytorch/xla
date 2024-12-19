@@ -1,3 +1,4 @@
+import os
 import sys
 
 import torch
@@ -162,6 +163,27 @@ class InputOutputAliasesTest(unittest.TestCase):
 
     self.assertEqual(t1.item(), 3)
 
+  def test_xm_save_no_aliasing(self):
+    """
+    Test that xm.save() does not perform aliasing.
+    """
+    xla_device = xm.xla_device()
+    t0 = torch.tensor([1], device=xla_device)
+    t1 = torch.tensor([2], device=xla_device)
+    xm.mark_step()
+
+    t2 = t0 + t1
+    t1.add_(1)
+
+    # Save the new value of t1 should not result in the old value
+    # being donated...
+    xm.save(t1, os.devnull)
+
+    # otherwise this mark_step could crash, or compute the wrong value
+    # for t2.
+    xm.mark_step()
+
+    self.assertEqual(t2.item(), 3)
 
 if __name__ == '__main__':
   test = unittest.main()
