@@ -692,7 +692,22 @@ torch::lazy::NodePtr Gelu(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    return node.ReturnOp(BuildGelu(xla_input), loctx);
+
+    // Building composite computation.
+    const std::string name = "composite.gelu";
+    const std::string attr = "{approximate = \"none\"}";
+    xla::XlaBuilder builder(name);
+    xla::XlaOp arg = xla::Parameter(
+        &builder, 0, ShapeHelper::ShapeOfXlaOp(xla_input), "arg");
+    xla::XlaOp ret = BuildGelu(arg);
+    xla::XlaComputation computation = ConsumeValue(builder.Build(ret));
+
+    // Building call to computation.
+    std::vector<xla::XlaOp> inputs{xla_input};
+    xla::XlaOp output = xla::CompositeCall(loctx->builder(), computation, inputs, name,
+                                           attr, /*version=*/1);
+
+    return node.ReturnOp(output, loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::gelu), {input},
                    GetXlaShape(input), std::move(lower_fn));
@@ -704,7 +719,25 @@ torch::lazy::NodePtr GeluBackward(const torch::lazy::Value& grad_output,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_grad_output = loctx->GetOutputOp(node.operand(0));
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
-    return node.ReturnOp(BuildGeluBackward(xla_grad_output, xla_input), loctx);
+
+    // Building composite computation.
+    const std::string name = "composite.gelu_backward";
+    const std::string attr = "{approximate = \"none\"}";
+    xla::XlaBuilder builder(name);
+    xla::XlaOp arg_grad_output =
+        xla::Parameter(&builder, 0, ShapeHelper::ShapeOfXlaOp(xla_grad_output),
+                       "arg_grad_output");
+    xla::XlaOp arg_input = xla::Parameter(
+        &builder, 1, ShapeHelper::ShapeOfXlaOp(xla_input), "arg_input");
+    xla::XlaOp ret = BuildGeluBackward(arg_grad_output, arg_input);
+    xla::XlaComputation computation = ConsumeValue(builder.Build(ret));
+
+    // Building call to computation.
+    std::vector<xla::XlaOp> inputs{xla_grad_output, xla_input};
+    xla::XlaOp output = xla::CompositeCall(loctx->builder(), computation, inputs, name,
+                                           attr, /*version=*/1);
+
+    return node.ReturnOp(output, loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::gelu_backward),
                    {grad_output, input}, GetXlaShape(input),
