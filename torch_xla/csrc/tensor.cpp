@@ -386,7 +386,11 @@ torch::lazy::Value XLATensor::GetIrValue() const {
     // will still collapse them all into a single XLA parameter op). So call
     // which wants the XLA data will still find it, w/out having to fetch it
     // via a computation client from-server call.
-    AssignIrValue(CreateTensorNode(handle, /*read_only=*/false));
+    auto* data_info =
+        static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
+            handle->info());
+    bool read_only = data_info != nullptr && data_info->read_only;
+    AssignIrValue(CreateTensorNode(handle, read_only));
     // CreateTensorNode will set the data info of the tensor to the current
     // unique_id. Here the alias id needs to be updated so that input output
     // alias can correctly work on the xla's custom inplace operation.

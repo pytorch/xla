@@ -185,6 +185,32 @@ class InputOutputAliasesTest(unittest.TestCase):
 
     self.assertEqual(t2.item(), 3)
 
+  def test_device_data_cache_no_aliasing(self):
+    """
+    Test that device data in DataCache are not aliased.
+    """
+    xla_device = xm.xla_device()
+
+    t0 = torch.tensor(42, device=xla_device)
+    # drops the read-only bit on t0's device_data
+    xm.mark_step()
+
+    # cached value of 42 is donated
+    t0.add_(1)
+    xm.mark_step()
+
+    # t1 get the cached device_data, which was donated
+    t1 = torch.tensor(42, device=xla_device)
+    xm.mark_step()
+
+    t1.add_(1)
+    # XLA crashes here because parameter is donated buffer...
+    xm.mark_step()
+
+    # ...if it doesn't crash, the value here would be 44.
+    self.assertEqual(t1.item(), 43)
+
+
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
