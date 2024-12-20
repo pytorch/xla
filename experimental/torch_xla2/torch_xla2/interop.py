@@ -203,3 +203,7 @@ def jax_shard_map(torch_function, kwargs_for_jax_shard_map=None):
 def jax_value_and_grad(torch_function, kwargs_for_value_and_grad=None):
     return wrap_jax_jit(torch_function, jax_jit_func=jax.value_and_grad,
                         kwargs_for_jax=kwargs_for_value_and_grad)
+
+def gradient_checkpoint(torch_function, kwargs=None):
+    return wrap_jax_jit(torch_function, jax_jit_func=jax.checkpoint,
+                        kwargs_for_jax=kwargs)

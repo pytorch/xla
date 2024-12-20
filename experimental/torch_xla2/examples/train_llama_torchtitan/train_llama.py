@@ -4,18 +4,6 @@ import logging
 from typing import Tuple
 from collections import defaultdict
 import functools
-
-
-def _setup_default_env():
-  os.environ.setdefault('GRPC_VERBOSITY', 'ERROR')
-  os.environ.setdefault('ALLOW_MULTIPLE_LIBTPU_LOAD', '1')
-  # only need for tpu v4
-  # os.environ.setdefault('TPU_MEGACORE', 'megacore_dense')
-  tpu_args = "--xla_tpu_enable_async_collective_fusion_fuse_all_gather=true --xla_tpu_megacore_fusion_allow_ags=false --xla_enable_async_collective_permute=true --xla_tpu_enable_ag_backward_pipelining=true --xla_tpu_enable_data_parallel_all_reduce_opt=true --xla_tpu_data_parallel_opt_different_sized_ops=true --xla_tpu_enable_async_collective_fusion=true --xla_tpu_enable_async_collective_fusion_multiple_steps=true --xla_tpu_overlap_compute_collective_tc=true --xla_enable_async_all_gather=true"
-  os.environ.setdefault('LIBTPU_INIT_ARGS', tpu_args)
-
-_setup_default_env()
-
 import torch
 import torch.nn.functional
 from torch.utils import _pytree as pytree
@@ -35,21 +23,23 @@ from torchtitan.models.llama import model as titan
 
 P = jax.sharding.PartitionSpec
 
-global_axis: Tuple[str, str] = ('fsdp', )
 num_global_devices = jax.device_count()
 num_local_devices = jax.local_device_count()
-num_partitions = (num_global_devices, )
 
 
-def sharded_device_put(tensor, sharding):
+def sharded_device_put(tensor: jax.Array, sharding) -> jax.Array:
     if isinstance(tensor, tuple):
         return tuple(sharded_device_put(t, sharding) for t in tensor)
 
     if num_global_devices == num_local_devices:
         return jax.device_put(tensor, sharding)
 
+    # NOTE: at here, num_global_devices != num_local_devices
+    # meaning we are in multi-host setup. Each host will run the same process
+    # and each process only need to handle the devices accessible to this host.
     shape = tensor.shape
-    x_split = [jax.device_put(tensor[i], device) for device, i in sharding.addressable_devices_indices_map(shape).items()]
+    x_split = [jax.device_put(tensor[i], device) 
+               for device, i in sharding.addressable_devices_indices_map(shape).items()]
     return jax.make_array_from_single_device_arrays(shape, sharding, x_split)
 
 
@@ -57,7 +47,7 @@ class Trainer:
 
     def __init__(self, mesh):
         self.mesh = mesh
-        self.x_sharding = jax.sharding.NamedSharding(self.mesh, P(global_axis))
+        self.x_sharding = jax.sharding.NamedSharding(self.mesh, P('fsdp'))
         self.replicated = jax.sharding.NamedSharding(self.mesh, P())
 
     def fit(self, model, loss_fn, data_loader):
@@ -78,7 +68,7 @@ class Trainer:
 
         train_step = torch_xla2.train.make_train_step(
             model_fn, loss_fn, jax_optimizer,
-            remat_policy=jax.checkpoint_policies.nothing_saveable,
+            remat_policy=jax.checkpoint_policies.offload_dot_with_no_batch_dims('device', 'pinned_host'),
             mark_fsdp_sharding_axis='fsdp')
 
         print('Begining training')
@@ -93,8 +83,8 @@ class Trainer:
             labels = labels.to('jax')
 
             # Shard them on batch dim for fsdp
-            inputs.apply_(sharded_device_put, self.x_sharding)
-            labels.apply_(sharded_device_put, self.x_sharding)
+            inputs.apply_jax_(sharded_device_put, self.x_sharding)
+            labels.apply_jax_(sharded_device_put, self.x_sharding)
 
             print('INPUT shape', inputs.shape)
             step_start = time.perf_counter()
@@ -147,10 +137,11 @@ def main(
     use_scan = True,
 ):
     torch_xla2.enable_globally()
+    torch_xla2.enable_performance_mode()
     #logging.getLogger("jax").setLevel(logging.DEBUG)
     print(f"Running with parameters {locals()}")
 
-    mesh = jax.make_mesh((len(jax.local_devices()), ), ('fsdp', ))
+    mesh = jax.make_mesh((num_global_devices, ), ('fsdp', ))
     if use_scan:
         # using scan the individial weights will have shape (num_layers, w, h)
         sharding = jax.sharding.NamedSharding(mesh, P(None, 'fsdp'))
@@ -165,6 +156,7 @@ def main(
     args = llama3_configs[model_type]
     # Note: torchtitan's upstream config did not specify this value
     args.vocab_size = 128256
+    args.max_seq_len = seqlen
     if override_num_layers > 0:
         args.n_layers = override_num_layers
 
@@ -174,11 +166,20 @@ def main(
     torch.set_default_dtype(torch.bfloat16)
     with torch.device('meta'):
         gpt = titan.Transformer(args)
+        
+    with torch.device('cpu'):
+        # need actual value for freqs_cis
+        freqs_cis = gpt._precompute_freqs_cis()
 
     if use_scan:
         gpt = TransfomerWithScan(gpt) 
 
+    state_dict = dict(gpt.state_dict())
+    state_dict.pop('freqs_cis') # dont shard freqs_cis
     state_dict = create_sharded_weights(gpt.state_dict(), sharding)
+    replicated = jax.sharding.NamedSharding(mesh, P())
+
+    state_dict['freqs_cis'] = freqs_cis.to('jax').apply_jax(jax.device_put, replicated)
     gpt.load_state_dict(state_dict, assign=True)
     
     train_loader = fake_dataloader(10, seqlen, batch_size)

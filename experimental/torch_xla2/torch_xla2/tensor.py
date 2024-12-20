@@ -155,12 +155,12 @@ class XLATensor2(torch.Tensor):
   def jax_device(self):
     return self._elem.device
 
-  def apply(self, jax_function, *args, **kwargs):
+  def apply_jax(self, jax_function, *args, **kwargs):
     # Call a jax function on _elem
     res = jax_function(self._elem, *args, **kwargs)
     return self._env.j2t_iso(res)
 
-  def apply_(self, jax_function, *args, **kwargs):
+  def apply_jax_(self, jax_function, *args, **kwargs):
     self._elem = jax_function(self._elem, *args, **kwargs)
 
   def tolist(self):
