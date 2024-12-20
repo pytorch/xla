@@ -12,19 +12,19 @@ import torch_xla2
 
 skiplist = {
     "_segment_reduce",
-    "bincount", # NOTE: dtype for int input torch gives float. This is weird.
-    "byte",
-    "cat",
-    "cholesky_solve",
-    "diagonal_copy",
-    "geqrf",
-    "histogram", # hard op: AssertionError: Tensor-likes are not close!
-    "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
-    "index_reduce",
-    "kthvalue",
-    "linalg.det",
-    "linalg.ldl_solve",
-    "linalg.lu_solve",
+    # "bincount", # NOTE: dtype for int input torch gives float. This is weird.
+    # "byte",
+    # "cat",
+    # "cholesky_solve",
+    # "diagonal_copy",
+    # "geqrf",
+    # "histogram", # hard op: AssertionError: Tensor-likes are not close!
+    # "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
+    # "index_reduce",
+    # "kthvalue",
+    # "linalg.det",
+    # "linalg.ldl_solve",
+    # "linalg.lu_solve",
     "max_pool2d_with_indices_backward",
     "nn.functional.adaptive_avg_pool3d",
     "nn.functional.adaptive_max_pool1d",
@@ -45,19 +45,19 @@ skiplist = {
     "nn.functional.max_pool1d",
     "nn.functional.max_pool2d",
     "nn.functional.max_pool3d",
-    "nn.functional.multi_head_attention_forward",
-    "nn.functional.upsample_nearest",
-    "normal",
-    "ormqr",
-    "pca_lowrank",
-    "searchsorted",
-    "special.airy_ai",
-    "special.scaled_modified_bessel_k0",
-    "special.scaled_modified_bessel_k1",
-    "special.spherical_bessel_j0",
-    "special.zeta",
-    "unfold_copy",
-    "unfold",
+    # "nn.functional.multi_head_attention_forward",
+    # "nn.functional.upsample_nearest",
+    # "normal",
+    # "ormqr",
+    # "pca_lowrank",
+    # "searchsorted",
+    # "special.airy_ai",
+    # "special.scaled_modified_bessel_k0",
+    # "special.scaled_modified_bessel_k1",
+    # "special.spherical_bessel_j0",
+    # "special.zeta",
+    # "unfold_copy",
+    # "unfold",
 }
 
 not_support_ops_list = {
@@ -98,6 +98,32 @@ random_ops = {
   'exponential',
   'log_normal',
   'randint',
+  "nn.functional.multi_head_attention_forward",
+  "nn.functional.upsample_nearest",
+  "normal",
+  "ormqr",
+  "pca_lowrank",
+  "searchsorted",
+  "special.airy_ai",
+  "special.scaled_modified_bessel_k0",
+  "special.scaled_modified_bessel_k1",
+  "special.spherical_bessel_j0",
+  "special.zeta",
+  "unfold_copy",
+  "unfold",
+  "bincount", # NOTE: dtype for int input torch gives float. This is weird.
+  "byte",
+  "cat",
+  "cholesky_solve",
+  "diagonal_copy",
+  "geqrf",
+  "histogram", # hard op: AssertionError: Tensor-likes are not close!
+  "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
+  "index_reduce",
+  "kthvalue",
+  "linalg.det",
+  "linalg.ldl_solve",
+  "linalg.lu_solve",
 }
 
 atol_dict = {"linalg.eig": (2e0, 3e0),
