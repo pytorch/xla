@@ -30,15 +30,12 @@ def make_train_step(model_fn,
         loss is loaded from the dataloader.
   optax_optimizer: the optimizer from optax library. for example, optax.adam
   remat_policy: One of jax.ad_checkpoint.checkpoint_policies, specifies how
-      to do gradient checkpointing. If None, then it means no checkpointing.
+      to do gradient checkpointing. If None, then it means checkpoint everything.
   mark_fsdp_sharding_axis: str. A string name for marking sharding for 
       fsdp. It must be an axis that exists in the current mesh.
       if None, then no sharding is specified (i.e. for single device)
   """
   env = torch_xla2.default_env()
-  @functools.partial(
-    remat,
-    policy=remat_policy)
   def loss(weights, buffers, args, label): # inputs are XLATensor
     with env, jax.named_scope('compute_loss'):
       if mark_fsdp_sharding_axis is not None:
@@ -52,6 +49,7 @@ def make_train_step(model_fn,
       l = loss_fn(res, label)
       return l
 
+  loss = interop.gradient_checkpoint(loss, kwargs={'policy': remat_policy})
   grad_fn = interop.jax_value_and_grad(loss)
 
   def step(weights, buffers, opt_state, args, label): #inputs are array
