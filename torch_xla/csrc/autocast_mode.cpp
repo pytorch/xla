@@ -57,6 +57,9 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   // Commented out ops are included in the AutoCastCPU Policy,
   // but not lowered. Enable if op is lowered.
   KERNEL_XLA(batch_norm, fp32)
+  KERNEL_XLA(_softmax, fp32)
+  KERNEL_XLA2(softmax, int, fp32)
+  KERNEL_XLA2(softmax, Dimname, fp32)
   KERNEL_XLA2(log_softmax, int, fp32)
   KERNEL_XLA2(log_softmax, Dimname, fp32)
   KERNEL_XLA(binary_cross_entropy, fp32)

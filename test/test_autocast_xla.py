@@ -22,6 +22,15 @@ class TestAutocastXla(unittest.TestCase):
       self.assertRegex(hlo, r".*exponential.*f32.*exponential.*f32")
       self.assertRegex(hlo, r".*log.*f32.*log.*f32")
 
+  def test_softmax(self):
+    data = torch.randn(16, 20).to(torch.bfloat16).to(device)
+
+    with torch.autocast("xla"):
+      output = torch.nn.Softmax(dim=1)(data)
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+      self.assertRegex(hlo, r".*convert.*f32.*convert.*bf16")
+      self.assertRegex(hlo, r".*exponential.*f32.*exponential.*f32")
+
   def test_patchedlinear_autocast(self):
     hidden_size = 10
     intermediate_size = 15
