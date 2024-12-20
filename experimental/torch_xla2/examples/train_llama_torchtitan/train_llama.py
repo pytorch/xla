@@ -20,7 +20,7 @@ import torch
 import torch.nn.functional
 from torch.utils import _pytree as pytree
 
-import torch_xla2
+import torch_xla2 as tx
 import torch_xla2.interop
 import torch_xla2.train
 from torch_xla2.interop import jax_view, torch_view, JittableModule
@@ -66,8 +66,6 @@ class Trainer:
         xla_env._mesh = self.mesh
         xla_env.use_flash_attention = True
 
-        
-        model.to('jax')
         jittable_mod = JittableModule(model)
 
         # split the params to the n devices
@@ -103,7 +101,7 @@ class Trainer:
             loss, jittable_mod.params, opt_state = train_step(
                 jittable_mod.params, jittable_mod.buffers, opt_state, inputs, labels)
             # wait for iteration to finish to measure time 
-            jax.block_until_ready((loss, jittable_mod.params))
+            torch_xla2.interop.call_jax(jax.block_until_ready, (loss, jittable_mod.params))
             step_end = time.perf_counter()
             print(i, 'loss', loss, 'step latency: ', step_end - step_start)
             loop_time = step_end - step_start
@@ -125,8 +123,12 @@ def create_sharded_weights(state_dict, sharding):
               dtype=weight_meta.dtype)
             # weight_jax is jax array
             weight_jax = env.to_xla(weight_torch).jax()
+        if weight_jax.ndim < 2:
+            s = jax.sharding.NamedSharding(sharding.mesh, P('fsdp'))
+        else:
+            s = sharding
         res[name] = env.j2t_iso(jax.make_array_from_callback(
-          weight_jax.shape, sharding, lambda a: weight_jax[a]
+          weight_jax.shape, s, lambda a: weight_jax[a]
         ))
     return res
 
@@ -142,13 +144,18 @@ def main(
     batch_size=8,
     seqlen=2048,
     override_num_layers=-1,
+    use_scan = True,
 ):
     torch_xla2.enable_globally()
     #logging.getLogger("jax").setLevel(logging.DEBUG)
     print(f"Running with parameters {locals()}")
 
     mesh = jax.make_mesh((len(jax.local_devices()), ), ('fsdp', ))
-    sharding = jax.sharding.NamedSharding(mesh, P('fsdp')) 
+    if use_scan:
+        # using scan the individial weights will have shape (num_layers, w, h)
+        sharding = jax.sharding.NamedSharding(mesh, P(None, 'fsdp'))
+    else:
+        sharding = jax.sharding.NamedSharding(mesh, P('fsdp')) 
 
     env = torch_xla2.default_env()
     env.config.use_tpu_flash_attention = True
@@ -167,7 +174,9 @@ def main(
     torch.set_default_dtype(torch.bfloat16)
     with torch.device('meta'):
         gpt = titan.Transformer(args)
-        gpt.to(torch.bfloat16)
+
+    if use_scan:
+        gpt = TransfomerWithScan(gpt) 
 
     state_dict = create_sharded_weights(gpt.state_dict(), sharding)
     gpt.load_state_dict(state_dict, assign=True)
@@ -182,12 +191,47 @@ def main(
             logits, y)
 
     with mesh:
-        trainer = Trainer()
+        trainer = Trainer(mesh)
         return trainer.fit(
             gpt, 
             loss_fn,
             train_loader 
         )
+
+        
+class TransfomerWithScan(torch.nn.Module):
+    
+    def __init__(self, old_transformer):
+        super().__init__()
+        self.tok_embeddings = old_transformer.tok_embeddings
+        self.norm = old_transformer.norm
+        self.output = old_transformer.output
+        self.scan_layer = torch_xla2.train.ScannedModule(list(old_transformer.layers.values()))
+
+        self.register_buffer('freqs_cis', old_transformer.freqs_cis)
+
+    def forward(self, tokens: torch.Tensor):
+        """
+        Perform a forward pass through the Transformer model.
+
+        Args:
+            tokens (torch.Tensor): Input token indices.
+
+        Returns:
+            torch.Tensor: Output logits after applying the Transformer model.
+
+        """
+        # passthrough for nonexistent layers, allows easy configuration of pipeline parallel stages
+        h = self.tok_embeddings(tokens) if self.tok_embeddings else tokens
+
+        # for layer in self.layers.values():
+        #     h = layer(h, self.freqs_cis)
+
+        h = self.scan_layer(h, self.freqs_cis)
+
+        h = self.norm(h) if self.norm else h
+        output = self.output(h) if self.output else h
+        return output
 
 
 if __name__ == '__main__':
