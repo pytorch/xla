@@ -30,7 +30,7 @@ class TestAutocastXla(unittest.TestCase):
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
       self.assertRegex(hlo, r".*convert.*f32.*convert.*bf16")
       self.assertRegex(hlo, r".*exponential.*f32.*exponential.*f32")
-      
+
   def test_patchedlinear_autocast(self):
     hidden_size = 10
     intermediate_size = 15
