@@ -704,8 +704,8 @@ torch::lazy::NodePtr Gelu(const torch::lazy::Value& input) {
 
     // Building call to computation.
     std::vector<xla::XlaOp> inputs{xla_input};
-    xla::XlaOp output = xla::CompositeCall(loctx->builder(), computation, inputs, name,
-                                           attr, /*version=*/1);
+    xla::XlaOp output = xla::CompositeCall(loctx->builder(), computation,
+                                           inputs, name, attr);
 
     return node.ReturnOp(output, loctx);
   };
@@ -734,8 +734,8 @@ torch::lazy::NodePtr GeluBackward(const torch::lazy::Value& grad_output,
 
     // Building call to computation.
     std::vector<xla::XlaOp> inputs{xla_grad_output, xla_input};
-    xla::XlaOp output = xla::CompositeCall(loctx->builder(), computation, inputs, name,
-                                           attr, /*version=*/1);
+    xla::XlaOp output = xla::CompositeCall(loctx->builder(), computation,
+                                           inputs, name, attr);
 
     return node.ReturnOp(output, loctx);
   };
