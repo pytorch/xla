@@ -1,3 +1,4 @@
+import collections
 import functools
 import torch
 import jax
@@ -65,3 +66,66 @@ def make_train_step(model_fn,
     return loss, weights, opt_state
 
   return interop.jax_jit(step, {'donate_argnums': (0, 2)})
+
+  
+  
+  
+class Container:
+  pass
+
+class ScannedModule(torch.nn.Module):
+
+  def __init__(self, module_list):
+    super().__init__()
+
+    self.c = None
+    assert module_list
+    self.c = Container()
+    self.c.one_mod = module_list[0]
+
+    weights = self._stack_layer_weights(module_list)
+    self.layer_weights_keys = list(self.c.one_mod.state_dict().keys())
+    self.params = torch.nn.ParameterDict({
+      self._param_name_new(k): v for k, v in weights.items()
+    })
+  
+  def _stack_layer_weights(self, module_list):
+    # Create weights such that, for every [n, m] weights
+    # becomes [k, n, m] where k is number of layer
+    # i.e. stacking layer weights together
+    temp = collections.defaultdict(list)
+    for m in module_list:
+      for k, v in m.state_dict().items():
+          temp[k].append(v)
+    res = {k: torch.stack(v) for k, v in temp.items()}
+    return res
+
+
+  def _param_name_new(self, old):
+      return '___'.join(old.split('.'))
+
+  def _param_name_old(self, new):
+      return '.'.join(new.split('___'))
+
+  def forward(self, *args, **kwargs):
+      assert not kwargs
+      weights = {k: self.params[self._param_name_new(k)] for k in self.layer_weights_keys}
+      scan = interop.torch_view(jax.lax.scan)
+
+      def eval_one_layer(args, weight):
+          # unpack args
+          h, *rest = args
+          newh = torch.func.functional_call(self.c.one_mod, weight, args)
+          # next layer's input; and residual to be added to list
+          return (newh, *rest), torch.ones(1, device='jax')
+
+      _eval_one_layer = interop.call_jax(
+          jax.checkpoint, 
+          eval_one_layer
+      )
+      h, _ = scan(
+          _eval_one_layer,
+          args,
+          weights,
+      )
+      return h[0]
