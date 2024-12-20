@@ -23,7 +23,7 @@ class TestAutocastXla(unittest.TestCase):
       self.assertRegex(hlo, r".*log.*f32.*log.*f32")
 
   def test_softmax(self):
-    data = torch.randn(16, 10).to(torch.bfloat16).to(device)
+    data = torch.randn(16, 20).to(torch.bfloat16).to(device)
 
     with torch.autocast("xla"):
       output = torch.nn.Softmax(dim=1)(data)
