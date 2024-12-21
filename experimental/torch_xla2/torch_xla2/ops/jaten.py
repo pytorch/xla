@@ -1863,47 +1863,29 @@ def pool(inputs, init, reduce_fn, window_shape, strides, padding):
 
 @op(torch.ops.aten._adaptive_avg_pool3d)
 def _aten_adaptive_avg_pool3d(x, output_shape):
-  return _aten_adaptive_avg_pool(x, output_shape, 3)
+  assert len(x.shape) in (4,5), f'Expected 4D or 5D input but got {len(x.shape)} dimensions'
+  assert len(output_shape) == 3, f'Expected 3D output but got {len(output_shape)} dimensions'
 
+  output_shape = x.shape[:-3] + tuple(output_shape)
+  output = jnp.zeros(output_shape, dtype = x.dtype)
+  stride_d = x.shape[-3] / output_shape[-3]
+  stride_h = x.shape[-2] / output_shape[-2]
+  stride_w = x.shape[-1] / output_shape[-1]
 
-@op(torch.ops.aten._adaptive_avg_pool2d)
-def _aten_adaptive_avg_pool3d(x, output_shape):
-  return _aten_adaptive_avg_pool(x, output_shape, 2)
+  def avg_pool_batch(d, h, w):
+    start_d = int(jnp.floor(d * stride_d))
+    end_d = int(jnp.ceil((d+1) * stride_d))
+    start_h = int(jnp.floor(h * stride_h))
+    end_h = int(jnp.ceil((h+1) * stride_h))
+    start_w = int(jnp.floor(w * stride_w))
+    end_w = int(jnp.ceil((w+1) * stride_w))
+    return jnp.mean(x[..., start_d:end_d, start_h:end_h, start_w:end_w], axis=(-3, -2, -1))
 
-
-def _aten_adaptive_avg_pool(x, output_shape, pool_dim):
-  def adaptive_kernel_size(input_shape, output_shape):
-    sizes = [1, 1]
-    spatial_dim_off = len(input_shape) - pool_dim
-    for spatial_dim in range(pool_dim):
-      sizes.append(
-        input_shape[spatial_dim_off + spatial_dim] // output_shape[spatial_dim]
-      )
-    return tuple(sizes)
-
-  kernel_sizes = adaptive_kernel_size(x.shape, output_shape)
-  if all(kernel_sizes):
-    y = pool(x, 0.0, jax.lax.add, kernel_sizes, kernel_sizes, padding="VALID")
-
-    div_shape = list(x.shape)
-    num_batch_dims = len(x.shape) - pool_dim - 1
-    div_shape[num_batch_dims] = 1
-    div_shape = tuple(div_shape)
-    if len(div_shape) - 2 == len(kernel_sizes):
-      div_shape = (1,) + div_shape[1:]
-    y = y / pool(
-      jnp.ones(div_shape, dtype=x.dtype),
-      0.0,
-      jax.lax.add,
-      kernel_sizes,
-      kernel_sizes,
-      "VALID"
-    )
-  else:
-    resize_shape = list(x.shape)
-    resize_shape[len(resize_shape)-pool_dim:] = output_shape
-    return jax.image.resize(x, resize_shape, 'linear')
-  return y
+  for d in range(output_shape[-3]):
+    for h in range(output_shape[-2]):
+      for w in range(output_shape[-1]):
+        output = output.at[..., d, h, w].set(avg_pool_batch(d, h, w))
+  return output
 
 
 @op(torch.ops.aten.avg_pool1d)
