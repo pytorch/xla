@@ -110,7 +110,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
       q_kv_head_ratio=(1, 4, 8),
       head_dim=(128, 256),
       num_queries_per_compute_block=(16, 32),
-      block_kv_size=(128, 256),
+      block_kv_size=(128, 192, 256),
   )
   def test_paged_attention_without_query_padding(
       self,
@@ -206,7 +206,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
       q_kv_head_ratio=(1, 4, 8),
       head_dim=(128, 256),
       num_queries_per_compute_block=(16, 32),
-      block_kv_size=(128, 256),
+      block_kv_size=(128, 192, 256),
   )
   def test_paged_attention_with_query_padding(
       self,
