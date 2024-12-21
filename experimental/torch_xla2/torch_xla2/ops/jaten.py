@@ -4853,10 +4853,7 @@ def _aten_upsample_bilinear2d_aa(input, output_size, align_corners, scale_factor
     scale = jnp.array([(shape[i] - 1.0) / (image.shape[i] - 1.0) for i in spatial_dims])
 
   translation = jnp.array([0 for i in spatial_dims])
-  #translation = (scale / 2.0 - 0.5)
 
-  #return jax.image.scale_and_translate(
-  # local copied fixed implentation of scale_and_translate
   return jax_reimplement.scale_and_translate(
       image,
       shape,
