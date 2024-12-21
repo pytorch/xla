@@ -451,20 +451,6 @@ std::vector<size_t> GetBufferDonorIndexFromUserConfig(
   return buffer_donor_indexs;
 }
 
-std::vector<size_t> XLAGraphExecutor::SetBufferDonorsFromUserConfig(
-    LoweringContext* lowering_ctx) {
-  const std::vector<torch::lazy::BackendDataPtr>& parameters_data =
-      lowering_ctx->GetParametersData();
-  std::vector<size_t> buffer_donor_indexs =
-      GetBufferDonorIndexFromUserConfig(parameters_data);
-  for (size_t i : buffer_donor_indexs) {
-    lowering_ctx->builder()->AddBufferDonor(/*param_number=*/i,
-                                            /*param_index=*/{});
-  }
-  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", buffer_donor_indexs.size());
-  return buffer_donor_indexs;
-}
-
 void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
   std::set<torch::lazy::BackendDevice> wait_devices;
   if (!devices.empty()) {
@@ -673,9 +659,13 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
             // XlaData from the DeviceData Node and reset the IR. We also want
             // to update XlaData's tensorID to make it match with the current
             // XLATensor.
+            auto* data_info =
+                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
+                    device_data->data()->info());
+            bool read_only = data_info != nullptr && data_info->read_only;
             tensors[i]->GetXlaData()->SetInfo(
                 std::make_shared<LazyGraphExecutor::DeviceDataInfo>(
-                    tensors[i]->GetUniqueId(), /*=read_only=*/false));
+                    tensors[i]->GetUniqueId(), read_only));
           } else {
             // Add only tensors which need to be synced.
             coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
@@ -1262,9 +1252,9 @@ XLAGraphExecutor::TryRunCachedSync(
                            std::move(cached_computation), tensor_data_vec));
 }
 
-std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
+std::vector<size_t> GetBufferDonorIndexForStepMarker(
     const std::vector<XLATensorPtr>& tensors, absl::Span<const size_t> indices,
-    LoweringContext* lowering_ctx) {
+    const std::vector<torch::lazy::BackendDataPtr>& parameters_data) {
   std::unordered_map<int64_t, size_t> output_tensor_id_map;
   std::vector<size_t> buffer_donor_indexs;
   // tensors[indices] represent all tensors that needs to be updated after
@@ -1275,7 +1265,6 @@ std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
     int64_t tensor_id = tensors[tensor_index]->data()->alias_id;
     output_tensor_id_map[tensor_id] = i;
   }
-  const auto& parameters_data = lowering_ctx->GetParametersData();
   std::vector<ssize_t> alias_map(indices.size(), -1);
   for (size_t i = 0; i < parameters_data.size(); ++i) {
     auto* data_info =
@@ -1287,45 +1276,19 @@ std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
       // this buffer is not needed after execution since XLATensor will get a
       // new buffer.
       if (it != output_tensor_id_map.end()) {
-        lowering_ctx->builder()->AddBufferDonor(/*param_number=*/i,
-                                                /*param_index=*/{});
         buffer_donor_indexs.push_back(i);
       }
     }
   }
-  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", buffer_donor_indexs.size());
   return buffer_donor_indexs;
 }
 
-XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
-    std::vector<XLATensorPtr>& tensors, absl::Span<const std::string> devices,
-    const SyncTensorCollection& coll, PostOrderData* po_data,
-    const std::vector<torch::lazy::Value>& ir_values) {
-  tsl::profiler::TraceMe activity(
-      [&] {
-        return tsl::profiler::TraceMeEncode(
-            "XLAGraphExecutor::Compile",
-            {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
-      },
-      tsl::profiler::TraceMeLevel::kInfo);
+std::vector<size_t> XLAGraphExecutor::GetBufferDonors(
+    const std::vector<XLATensorPtr>& tensors, const SyncTensorCollection& coll,
+    const std::vector<torch::lazy::BackendDataPtr>& parameters_data) {
   static const bool enable_aliasing =
       runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
-  static const size_t parameter_wrapping_threadshold =
-      runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
   static const bool use_autosharding = ShardingUtil::GetAutoSharding();
-  std::string graph_name =
-      (CurrentGraphName() != "") ? CurrentGraphName() : "SyncTensorsGraph";
-  LoweringContext lowering_ctx(graph_name, coll.device, po_data->post_order,
-                               std::move(po_data->emission_map));
-  for (auto ir_value : ir_values) {
-    xla::XlaOp root = lowering_ctx.GetOutputOp(
-        torch::lazy::Output(ir_value.node.get(), ir_value.index));
-    lowering_ctx.AddResult(root);
-  }
-  // Always execute sharded when running in SPMD mode
-  bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
-  // Annotate HLO sharding selectively in the compuation.
-  ShardingUtil::SetHloSharding(&lowering_ctx);
 
   std::vector<size_t> buffer_donor_indices;
   // TODO(yeounoh) enable aliasing is disabled for partitioned computation,
@@ -1357,14 +1320,59 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       // will later fetch the new value of A, which is incorrect.
       // But, when we issue a step barrier (force_ltc_data == true) we have to
       // turn everything into DEVICE_DATA, so we can activate aliasing.
-      buffer_donor_indices =
-          SetBufferDonors(tensors, coll.indices, &lowering_ctx);
+      buffer_donor_indices = GetBufferDonorIndexForStepMarker(
+          tensors, coll.indices, parameters_data);
     } else if (GetAliasWithBufferDonorConfig()) {
       // only alias based on buffer donor if LTC can't auto infer the input
       // output aliasing.
-      buffer_donor_indices = SetBufferDonorsFromUserConfig(&lowering_ctx);
+      buffer_donor_indices = GetBufferDonorIndexFromUserConfig(parameters_data);
     }
   }
+  return buffer_donor_indices;
+}
+
+void XLAGraphExecutor::SetBufferDonors(
+    LoweringContext* lowering_ctx,
+    const std::vector<size_t>& buffer_donor_indexs) {
+  const std::vector<torch::lazy::BackendDataPtr>& parameters_data =
+      lowering_ctx->GetParametersData();
+  for (size_t i : buffer_donor_indexs) {
+    lowering_ctx->builder()->AddBufferDonor(/*param_number=*/i,
+                                            /*param_index=*/{});
+  }
+  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", buffer_donor_indexs.size());
+}
+
+XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
+    std::vector<XLATensorPtr>& tensors, absl::Span<const std::string> devices,
+    const SyncTensorCollection& coll, PostOrderData* po_data,
+    const std::vector<torch::lazy::Value>& ir_values,
+    const std::vector<size_t>& buffer_donor_indices) {
+  tsl::profiler::TraceMe activity(
+      [&] {
+        return tsl::profiler::TraceMeEncode(
+            "XLAGraphExecutor::Compile",
+            {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
+      },
+      tsl::profiler::TraceMeLevel::kInfo);
+  static const size_t parameter_wrapping_threadshold =
+      runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
+  static const bool use_autosharding = ShardingUtil::GetAutoSharding();
+  std::string graph_name =
+      (CurrentGraphName() != "") ? CurrentGraphName() : "SyncTensorsGraph";
+  LoweringContext lowering_ctx(graph_name, coll.device, po_data->post_order,
+                               std::move(po_data->emission_map));
+  for (auto ir_value : ir_values) {
+    xla::XlaOp root = lowering_ctx.GetOutputOp(
+        torch::lazy::Output(ir_value.node.get(), ir_value.index));
+    lowering_ctx.AddResult(root);
+  }
+  // Always execute sharded when running in SPMD mode
+  bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
+  // Annotate HLO sharding selectively in the compuation.
+  ShardingUtil::SetHloSharding(&lowering_ctx);
+
+  SetBufferDonors(&lowering_ctx, buffer_donor_indices);
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
@@ -1499,14 +1507,13 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
   coll.hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
-  if (GetAliasWithBufferDonorConfig()) {
-    std::vector<size_t> buffer_donor_index =
-        GetBufferDonorIndexFromUserConfig(po_data.parameters_data);
-    if (buffer_donor_index.size() > 0) {
-      // Do not include hash on a empty vector.
-      coll.hash = torch::lazy::HashCombine(
-          coll.hash, torch::lazy::Hash(buffer_donor_index));
-    }
+
+  std::vector<size_t> buffer_donor_indices =
+      GetBufferDonors(*tensors, coll, po_data.parameters_data);
+  if (buffer_donor_indices.size() > 0) {
+    // Do not include hash on a empty vector.
+    coll.hash = torch::lazy::HashCombine(
+        coll.hash, torch::lazy::Hash(buffer_donor_indices));
   }
   {
     // Auto-sharding configs
@@ -1529,8 +1536,8 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
     // we have a cache hit, execution has been scheduled by TryRunCachedSync.
     return cache_res.second;
   }
-  CompilationResult compile_result =
-      Compile(*tensors, devices, coll, &po_data, ir_values);
+  CompilationResult compile_result = Compile(*tensors, devices, coll, &po_data,
+                                             ir_values, buffer_donor_indices);
 
   TORCH_LAZY_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);
   TF_VLOG(5) << "TensorsGraphSize=" << compile_result.emitted_nodes;

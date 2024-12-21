@@ -941,6 +941,10 @@ int PjRtComputationClient::GetNumProcesses() const {
   return max_process_index + 1;
 };
 
+std::string PjRtComputationClient::GetDeviceKind(const std::string& device) {
+  return std::string(StringToPjRtDevice(device)->device_kind());
+}
+
 const absl::flat_hash_map<
     std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>
 PjRtComputationClient::GetDeviceAttributes(const std::string& device) {

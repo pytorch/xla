@@ -14,6 +14,8 @@ import itertools
 from typing import Tuple, Union, List, Sequence, Any, Optional, Set
 from enum import IntEnum
 
+from torch.amp import custom_fwd, custom_bwd
+
 
 class Mesh:
   """Describe the logical XLA device topology mesh and the underlying resources.
@@ -734,10 +736,19 @@ class XLAPatchedLinear(torch.autograd.Function):
   dimensions. The torch.matmul default behavior makes it very hard for XLA compiler
   to propagate the sharding annotation.
 
+  Autocast decorators @custom_fwd and @custom_bwd used as per autocast docs [1] to bring this class/layer within 
+  autocast context, when autocast is enabled.
+  torch.get_autocast_dtype() fetches datatype for ops run in autocast [2], with the specified device (here, 'xla').
+  
+  References: 
+  [1] https://pytorch.org/docs/stable/notes/amp_examples.html#functions-with-multiple-inputs-or-autocastable-ops 
+  [2] https://github.com/pytorch/pytorch/blob/2cc01cc6d3ad2aff47e8460667ba654b2e4c9f21/torch/amp/autocast_mode.py#L500
+
   TODO (alanwaketan): Let's patch it on the dispatcher level.
   """
 
   @staticmethod
+  @custom_fwd(device_type='xla', cast_inputs=torch.get_autocast_dtype('xla'))
   def forward(ctx, input, weight, bias=None):
     # bias is an optional argument
     ctx.save_for_backward(input, weight, bias)
@@ -748,6 +759,7 @@ class XLAPatchedLinear(torch.autograd.Function):
       return product + bias
 
   @staticmethod
+  @custom_bwd(device_type='xla')
   def backward(ctx, grad_output):
     input, weight, bias = ctx.saved_tensors
     grad_input = grad_weight = grad_bias = None

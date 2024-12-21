@@ -81,9 +81,6 @@ bool ShouldUseVirtualDevice() {
   bool use_virtual_device =
       runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false) ||
       runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false);
-  if (use_virtual_device) {
-    TF_LOG(INFO) << "Using SPMD virtual device optimization";
-  }
   return use_virtual_device;
 }
 

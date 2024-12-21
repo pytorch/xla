@@ -28,5 +28,5 @@
 - name: Install libtpu
   ansible.builtin.pip:
     name: torch_xla[tpu]
-    extra_args: -f https://storage.googleapis.com/libtpu-releases/index.html
+    extra_args: -f https://storage.googleapis.com/libtpu-releases/index.html -f https://storage.googleapis.com/libtpu-wheels/index.html
   when: accelerator == "tpuvm"

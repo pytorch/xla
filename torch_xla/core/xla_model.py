@@ -204,6 +204,21 @@ def xla_device_hw(device: Union[str, torch.device]) -> str:
   return real_device.split(':')[0]
 
 
+def xla_device_kind(device: Optional[Union[str, torch.device]] = None) -> str:
+  """Returns vendor-dependent string that uniquely identifies the kind of
+     device.
+
+  Args:
+    device (string or torch.device): The xla device
+
+  Returns:
+    A vendor-dependent device kind string.
+  """
+  if device is None:
+    device = torch_xla._XLAC._xla_get_default_device()
+  return torch_xla._XLAC._xla_device_kind(str(device))
+
+
 def xla_replication_devices(
     local_devices: Optional[List[torch.device]] = None) -> List[str]:
   real_devices = xla_real_devices(local_devices)
@@ -1278,7 +1293,7 @@ def _maybe_convert_to_cpu(data: Any, convert: bool = True) -> ToXlaTensorArena:
 
   def convert_fn(tensors):
     torch_xla._XLAC._xla_sync_multi(
-        tensors, devices=[], wait=True, sync_xla_data=True)
+        tensors, devices=[], wait=True, sync_xla_data=False)
     if not convert:
       return tensors
     return torch_xla._XLAC._xla_get_cpu_tensors(tensors)

@@ -1,82 +1,104 @@
 # Contribute To PyTorch/XLA
 
-We appreciate all contributions. If you are planning to contribute a bug fix for an open issue, please comment on the thread and we're happy to provide any guidance.
-You are very welcome to pick issues from [good first issue](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) and [help wanted](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) labels.
+We appreciate all contributions. If you are planning to contribute a bug fix for 
+an open issue, please comment on the thread and we're happy to provide guidance.
+You are welcome to pick issues with [good first issue](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) 
+and [help wanted](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) 
+labels to get started.
 
-If you plan to contribute new features, utility functions or extensions to the core, please first open an issue and discuss the feature with us.
-Sending a PR without discussion might end up resulting in a rejected PR, because we might be taking the core in a different direction than you might be aware of.
+If you plan to contribute new features or extensions to this repository, first 
+open an issue and discuss the feature with us. Sending a PR without discussion 
+might result in a rejected PR, because we might be taking the repository in a 
+different direction.
 
 ## Building from source
 
-We recommend you to use our prebuilt Docker image to start your development work using one of the two following methods.
+We recommend you use our prebuilt Docker image to start your development work 
+using either VS Code or a local container:
 
 ### Visual Studio Code Dev Container
 
-* Create an empty directory (optionally on a remote host via SSH) and open it in VSCode. Then, clone
-  PyTorch, TorchVision, and PyTorch/XLA:
+* Create an empty directory for your workspace on your development host. These 
+  instructions assume you are using a remote host and are connecting to it over 
+  SSH.
+  
+* Clone PyTorch, TorchVision, and PyTorch/XLA into your workspace directory:
 
-  ```bash
+```bash
   git clone --recursive --depth=1 https://github.com/pytorch/pytorch.git
-  # Optional: install TorchVision if you need to run tests that involve vision modules
+
+  # Install TorchVision if you need to run tests that involve vision modules
   git clone --recursive --depth=1 https://github.com/pytorch/vision.git
+
+  # Clone with HTTPS if you use a GitHub a personal access token
   git clone https://github.com/pytorch/xla.git pytorch/xla
-  # Optional: use git@github.com:pytorch/xla.git instead if you prefer to use SSH with key forwarding
-  ```
 
-* Link (or copy) VSCode configuration to your workspace directory:
+  # Or clone with SSH if you prefer:
+  git clone git@github.com:pytorch/xla.git pytorch/xla
+```
 
-  ```bash
+* Create links to VS Code configuration files in your workspace directory:
+
+```bash
   ln -s pytorch/xla/.devcontainer/ .devcontainer
   ln -s pytorch/xla/contrib/vscode/ .vscode
   ln -s pytorch/xla/.style.yapf .style.yapf
   ln -s pytorch/xla/.clang-format .clang-format
-  ```
+```
 
-* From VSCode's command menu, run `Reopen in Container` from the command palette
-  (F1 key) to open your workspace in one of our pre-built Docker containers.
-  Select the correct container config based on your local accelerator (default to
-  `tpu-contributor` if you are not sure).
+* Start VS Code and ensure you have the [`Remote Development` Extension Pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack)
+  installed. It includes the [`Remote - SSH`](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) and
+  [`Dev Containers`](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+  extensions.
 
-  * If you cannot find `Reopen in Container`, make sure the `Dev Containers`
-    VSCode extension is installed, then open the `pytorch/xla` folder in VSCode.
+* From VS Code, connect to your remote host and open your workspace directory. 
+  You will be prompted to reopen your workspace in container. Choose the 
+  appropriate container. Use `tpu-contributor` if you are unsure of which to use. 
+  If you are not prompted to reopen in a container, in the VS Code command 
+  pallete, type `Dev Containers: Reopen in Container` to open your workspace in 
+  one of our pre-built Docker containers. Select the correct container based on 
+  your local accelerator. If you are unsure, use `tpu-contributor`.
 
-* Since you are running as root in this container, teach `git` to recognize the
-  repositories you just cloned (outside of docker) as safe:
+* Open a new terminal window in VS Code. Since you are running as root in this 
+  container, mark the repository directories as safe. The commands below assume
+  your workspace directory is `torch`, update the commands to use your workspace
+  directory.
 
-  ```bash
+```bash
   git config --global --add safe.directory /workspaces/torch/pytorch
   git config --global --add safe.directory /workspaces/torch/pytorch/xla
   git config --global --add safe.directory /workspaces/torch/vision
-  ```
+```
+* In the terminal window, run the following commands to build PyTorch, 
+  TorchVision, and  PyTorch/XLA:
 
-* Build PyTorch, TorchVision, and PyTorch/XLA:
-
-  ```bash
+```bash
   cd pytorch
   # pytorch/xla requires pytorch wheel to be presented under pytorch/dist
   python setup.py bdist_wheel
   python setup.py install
-  cd ..
-  cd vision
+  cd ../vision
   python setup.py develop
-  cd ..
-  cd pytorch/xla
+  cd ../pytorch/xla
   python setup.py develop
   # Optional: if you're using TPU, install libtpu
-  pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+  pip install torch_xla[tpu] \
+    -f https://storage.googleapis.com/libtpu-wheels/index.html \
+    -f https://storage.googleapis.com/libtpu-releases/index.html
   ```
 
-* Test your build
+* If you are running on a TPU VM, ensure `torch` and `torch_xla` were built and 
+  installed correctly:
 
-  ```bash
+```bash
   python -c 'import torch_xla as xla; print(xla.device())'
   # Output: xla:0
-  ```
+```
 
-**Subsequent builds**: after setting up the source checkouts and building them
-for the first time, you may find the need to build everything again after e.g.
-`git pull`. You can run `scripts/build_developer.sh` which will build PyTorch,
-TorchVision, and PyTorch/XLA according to the above.
+**Subsequent builds**: after building the packages from source code for the 
+first time, you may need to build everything again, for example, after a
+`git pull`. You can run `scripts/build_developer.sh` which will rebuild PyTorch,
+TorchVision, and PyTorch/XLA.
 
 ### Manually build in Docker container
 
@@ -183,4 +205,4 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 ### Sharp Edges
 
 * If local changes aren't visible, uninstall existing pytorch/xla with `pip uninstall torch_xla` and `pip uninstall torch`, then rebuild PyTorch and PyTorch/XLA with `python setup.py develop` or `python setup.py install`.
-* PJRT errors when running on TPU such as `The PJRT plugin has PJRT API version 0.34. The framework PJRT API version is 0.40`. You need to update your `libtpu.so` and ensure it's in your `LD_LIBRARY_PATH` environmental directory. You can download a new `libtpu.so` at [Google Cloud](https://storage.googleapis.com/libtpu-releases/index.html), which are sorted by date. Download the newest one and install it at `pip install libtpu...whl`.
+* PJRT errors when running on TPU such as `The PJRT plugin has PJRT API version 0.34. The framework PJRT API version is 0.40`. You need to update your `libtpu.so` and ensure it's in your `LD_LIBRARY_PATH` environmental directory. You can download a new `libtpu.so` at [Google Cloud](https://storage.googleapis.com/libtpu-wheels/index.html), which are sorted by date. Download the newest one and install it at `pip install libtpu...whl`.

@@ -34,7 +34,12 @@ def extract_custom_call_outputs_shape_dtype(n: torch.fx.Node):
   return output_shape, output_dtype
 
 
-def place_to_host(a: torch.Tensor):
+#
+# Host offloading ops
+#
+
+
+def _place_to_host_impl(a: torch.Tensor):
   return stablehlo_custom_call(
       [a],
       "annotate_device_placement", [a.shape], [a.dtype],
@@ -42,9 +47,51 @@ def place_to_host(a: torch.Tensor):
       frontend_attributes={"_xla_buffer_placement": "pinned_host"})
 
 
-def place_to_device(a: torch.Tensor):
+def _place_to_device_impl(a: torch.Tensor):
   return stablehlo_custom_call(
       [a],
       "annotate_device_placement", [a.shape], [a.dtype],
       has_side_effect=True,
       frontend_attributes={"_xla_buffer_placement": "device"})
+
+
+@torch.library.custom_op("xla::place_to_host", mutates_args=())
+def place_to_host(t: torch.Tensor) -> torch.Tensor:
+  if t is None:
+    return None
+  return _place_to_host_impl(t)
+
+
+@place_to_host.register_fake
+def _(t: torch.Tensor) -> torch.Tensor:
+  if t is None:
+    return None
+  return torch.empty_like(t)
+
+
+def to_host_backward(ctx, grad):
+  return grad
+
+
+place_to_host.register_autograd(to_host_backward)
+
+
+@torch.library.custom_op("xla::place_to_device", mutates_args=())
+def place_to_device(t: torch.Tensor) -> torch.Tensor:
+  if t is None:
+    return None
+  return _place_to_device_impl(t)
+
+
+@place_to_device.register_fake
+def _(t: torch.Tensor) -> torch.Tensor:
+  if t is None:
+    return None
+  return torch.empty_like(t)
+
+
+def to_device_backward(ctx, grad):
+  return grad
+
+
+place_to_device.register_autograd(to_device_backward)

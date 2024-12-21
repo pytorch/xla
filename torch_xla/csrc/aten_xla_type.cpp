@@ -743,7 +743,7 @@ at::Tensor& XLANativeFunctions::_index_put_impl_(
 }
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_linalg_eigh(
-    const at::Tensor& self, c10::string_view uplo, bool compute_v) {
+    const at::Tensor& self, std::string_view uplo, bool compute_v) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (!compute_v) {
     // Fallback to aten in case of `eigvalsh`.
@@ -1377,7 +1377,7 @@ at::Tensor XLANativeFunctions::div(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::div(
     const at::Tensor& self, const at::Tensor& other,
-    std::optional<c10::string_view> rounding_mode) {
+    std::optional<std::string_view> rounding_mode) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   at::ScalarType dtype = at::result_type(self, other);
   auto operands = GetBinaryOperands(self, UnwrapNumber(other, dtype));
@@ -1415,7 +1415,7 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(tensor)));
 }
 
-at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
+at::Tensor XLANativeFunctions::einsum(std::string_view equation,
                                       at::TensorList tensors,
                                       at::OptionalIntArrayRef path) {
   std::string cleansed_equation = std::string(equation);
@@ -1710,7 +1710,7 @@ at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
 }
 
 at::Tensor XLANativeFunctions::gelu(const at::Tensor& self,
-                                    c10::string_view approximate) {
+                                    std::string_view approximate) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::gelu(bridge::GetXlaTensor(self), approximate));
@@ -1718,7 +1718,7 @@ at::Tensor XLANativeFunctions::gelu(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::gelu_backward(const at::Tensor& grad,
                                              const at::Tensor& self,
-                                             c10::string_view approximate) {
+                                             std::string_view approximate) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   at::ScalarType result_type = at::result_type(grad, self);
   return bridge::AtenFromXlaTensor(tensor_methods::gelu_backward(
@@ -3019,7 +3019,7 @@ at::Tensor XLANativeFunctions::roll(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::rrelu_with_noise(
-    const at::Tensor& self, const at::Tensor& noise, const at::Scalar& lower,
+    const at::Tensor& self, at::Tensor& noise, const at::Scalar& lower,
     const at::Scalar& upper, bool training,
     std::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
@@ -3075,7 +3075,7 @@ at::Tensor XLANativeFunctions::rsub(const at::Tensor& self,
 
 at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index, const at::Tensor& src,
-                                 std::optional<c10::string_view> reduce) {
+                                 std::optional<std::string_view> reduce) {
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   if (!reduce.has_value()) {
     return bridge::AtenFromXlaTensor(
@@ -3096,7 +3096,7 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
 at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
                                  const at::Tensor& index,
                                  const at::Scalar& value,
-                                 std::optional<c10::string_view> reduce) {
+                                 std::optional<std::string_view> reduce) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   if (!reduce.has_value()) {
@@ -3130,7 +3130,7 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Tensor& index,
                                        const at::Tensor& src,
-                                       c10::string_view reduce) {
+                                       std::string_view reduce) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return scatter_reduce_helper(self, dim, index, src, reduce);
 }
@@ -3138,7 +3138,7 @@ at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Tensor& index,
                                        const at::Scalar& value,
-                                       c10::string_view reduce) {
+                                       std::string_view reduce) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return scatter_reduce_helper(self, dim, index, value, reduce);
 }
@@ -3154,7 +3154,7 @@ at::Tensor XLANativeFunctions::scatter_add(const at::Tensor& self, int64_t dim,
 // supported
 at::Tensor XLANativeFunctions::scatter_reduce(
     const at::Tensor& self, int64_t dim, const at::Tensor& index,
-    const at::Tensor& src, c10::string_view reduce, bool include_self) {
+    const at::Tensor& src, std::string_view reduce, bool include_self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if ((reduce == "sum" || reduce == "prod" || reduce == "amin" ||
        reduce == "amax") &&
@@ -3783,7 +3783,7 @@ at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor> XLANativeFunctions::_linalg_svd(
     const at::Tensor& self, bool full_matrices, bool compute_uv,
-    std::optional<c10::string_view> /* driver */) {
+    std::optional<std::string_view> /* driver */) {
   // The optional driver string is only for CUDA with a cuSOLVER backend.
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // As per https://pytorch.org/docs/stable/generated/torch.svd.html,

@@ -22,7 +22,7 @@ bool IsNonTrivialDilation(at::IntArrayRef dilation) {
 namespace aten_autograd_ops {
 
 torch::Tensor EinsumAutogradFunction::forward(
-    torch::autograd::AutogradContext* ctx, const c10::string_view equation,
+    torch::autograd::AutogradContext* ctx, const std::string_view equation,
     at::TensorList tensors) {
   std::string eq_str = std::string(equation);
   ctx->saved_data["equation"] = eq_str;

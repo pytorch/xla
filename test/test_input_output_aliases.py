@@ -1,3 +1,4 @@
+import os
 import sys
 
 import torch
@@ -142,6 +143,72 @@ class InputOutputAliasesTest(unittest.TestCase):
     assert (
         alias_count == 1.0
     ), f"Expect 1 input-output alias pair for gradient accumulation, got {alias_count}"
+
+  def test_separate_graphs(self):
+    """
+    Test that paramater aliasing differences should produce different graphs.
+    """
+    xla_device = xm.xla_device()
+    t0 = torch.tensor([1], device=xla_device)
+    t1 = torch.tensor([2], device=xla_device)
+    xm.mark_step()
+
+    t1.add_(t0)
+    xm.mark_step()
+
+    # This needs to be a separate graph, otherwise t1 can be corrupted
+    # or result in PJRT error.
+    t2 = t1 + t0
+    xm.mark_step()
+
+    self.assertEqual(t1.item(), 3)
+
+  def test_xm_save_no_aliasing(self):
+    """
+    Test that xm.save() does not perform aliasing.
+    """
+    xla_device = xm.xla_device()
+    t0 = torch.tensor([1], device=xla_device)
+    t1 = torch.tensor([2], device=xla_device)
+    xm.mark_step()
+
+    t2 = t0 + t1
+    t1.add_(1)
+
+    # Save the new value of t1 should not result in the old value
+    # being donated...
+    xm.save(t1, os.devnull)
+
+    # otherwise this mark_step could crash, or compute the wrong value
+    # for t2.
+    xm.mark_step()
+
+    self.assertEqual(t2.item(), 3)
+
+  def test_device_data_cache_no_aliasing(self):
+    """
+    Test that device data in DataCache are not aliased.
+    """
+    xla_device = xm.xla_device()
+
+    t0 = torch.tensor(42, device=xla_device)
+    # drops the read-only bit on t0's device_data
+    xm.mark_step()
+
+    # cached value of 42 is donated
+    t0.add_(1)
+    xm.mark_step()
+
+    # t1 get the cached device_data, which was donated
+    t1 = torch.tensor(42, device=xla_device)
+    xm.mark_step()
+
+    t1.add_(1)
+    # XLA crashes here because parameter is donated buffer...
+    xm.mark_step()
+
+    # ...if it doesn't crash, the value here would be 44.
+    self.assertEqual(t1.item(), 43)
 
 
 if __name__ == '__main__':

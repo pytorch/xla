@@ -48,6 +48,7 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   KERNEL_XLA(prelu, lower_precision_fp)
   KERNEL_XLA(relu, lower_precision_fp)
   KERNEL_XLA(max_pool2d, lower_precision_fp)
+  KERNEL_XLA(einsum, lower_precision_fp)
   // Disable `scaled_dot_product_attention` for now since it causes
   // undefined symbol with official torch whl.
   // KERNEL_XLA(scaled_dot_product_attention, lower_precision_fp)
@@ -56,6 +57,9 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   // Commented out ops are included in the AutoCastCPU Policy,
   // but not lowered. Enable if op is lowered.
   KERNEL_XLA(batch_norm, fp32)
+  KERNEL_XLA(_softmax, fp32)
+  KERNEL_XLA2(softmax, int, fp32)
+  KERNEL_XLA2(softmax, Dimname, fp32)
   KERNEL_XLA2(log_softmax, int, fp32)
   KERNEL_XLA2(log_softmax, Dimname, fp32)
   KERNEL_XLA(binary_cross_entropy, fp32)
