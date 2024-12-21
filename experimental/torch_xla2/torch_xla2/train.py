@@ -63,7 +63,7 @@ def make_train_step(model_fn,
         weights = interop.call_jax(optax.apply_updates, weights, updates)
     return loss, weights, opt_state
 
-  return interop.jax_jit(step, {'donate_argnums': (0, 2)})
+  return step
 
   
   
@@ -73,13 +73,14 @@ class Container:
 
 class ScannedModule(torch.nn.Module):
 
-  def __init__(self, module_list):
+  def __init__(self, module_list, checkpoint_policy=None):
     super().__init__()
 
     self.c = None
     assert module_list
     self.c = Container()
     self.c.one_mod = module_list[0]
+    self.checkpoint_policy = checkpoint_policy
 
     weights = self._stack_layer_weights(module_list)
     self.layer_weights_keys = list(self.c.one_mod.state_dict().keys())
@@ -117,9 +118,9 @@ class ScannedModule(torch.nn.Module):
           # next layer's input; and residual to be added to list
           return (newh, *rest), torch.ones(1, device='jax')
 
-      _eval_one_layer = interop.call_jax(
-          jax.checkpoint, 
-          eval_one_layer
+      _eval_one_layer = interop.gradient_checkpoint(
+          eval_one_layer,
+          kwargs={'policy': self.checkpoint_policy},
       )
       h, _ = scan(
           _eval_one_layer,
