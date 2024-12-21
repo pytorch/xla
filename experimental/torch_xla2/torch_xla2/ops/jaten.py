@@ -1866,6 +1866,8 @@ def _aten_adaptive_avg_pool3d(x, output_shape):
   assert len(x.shape) in (4,5), f'Expected 4D or 5D input but got {len(x.shape)} dimensions'
   assert len(output_shape) == 3, f'Expected 3D output but got {len(output_shape)} dimensions'
 
+  # Reference PyTorch implementation:
+  # https://github.com/pytorch/pytorch/blob/ef4475f9025b3c46a13bdd054b6adfbcb5f8ab8c/aten/src/ATen/native/AdaptiveAveragePooling.cpp
   output_shape = x.shape[:-3] + tuple(output_shape)
   output = jnp.zeros(output_shape, dtype = x.dtype)
   stride_d = x.shape[-3] / output_shape[-3]
@@ -1881,6 +1883,8 @@ def _aten_adaptive_avg_pool3d(x, output_shape):
     end_w = int(jnp.ceil((w+1) * stride_w))
     return jnp.mean(x[..., start_d:end_d, start_h:end_h, start_w:end_w], axis=(-3, -2, -1))
 
+  # TODO: Replace this with more performant implementation.
+  # Related JAX issue requiring adaptive pooling: https://github.com/jax-ml/jax/issues/20098
   for d in range(output_shape[-3]):
     for h in range(output_shape[-2]):
       for w in range(output_shape[-1]):
