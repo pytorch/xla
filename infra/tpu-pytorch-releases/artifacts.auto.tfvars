@@ -52,52 +52,52 @@ nightly_builds = [
 versioned_builds = [
   # Remove libtpu from PyPI builds, pre-C++11 ABI builds
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
   },
   # Remove libtpu from PyPI builds, C++11 ABI builds
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
     cxx11_abi       = "1"
   },
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
     cxx11_abi       = "1"
   },
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
@@ -105,59 +105,59 @@ versioned_builds = [
   }, 
   # Bundle libtpu for Kaggle
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1+libtpu"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3+libtpu"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "1"
   },
   # CUDA 12.4, see PyTorch decision: https://github.com/pytorch/pytorch/issues/138609
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "cuda"
     cuda_version    = "12.4"
     python_version  = "3.9"
   },
   {
-    git_tag         = "v2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
     accelerator     = "cuda"
     cuda_version    = "12.4"
     python_version  = "3.10"
   },
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "cuda"
     cuda_version    = "12.4"
     python_version  = "3.11"
   },
   # CUDA 12.6, see PyTorch decision: https://github.com/pytorch/pytorch/issues/138609
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "cuda"
     cuda_version    = "12.6"
     python_version  = "3.9"
   },
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "cuda"
     cuda_version    = "12.6"
     python_version  = "3.10"
   },
   {
-    git_tag         = "v2.6.0-rc1"
-    package_version = "2.6.0-rc1"
-    pytorch_git_rev = "v2.6.0-rc1"
+    git_tag         = "v2.6.0-rc3"
+    package_version = "2.6.0-rc3"
+    pytorch_git_rev = "v2.6.0-rc3"
     accelerator     = "cuda"
     cuda_version    = "12.6"
     python_version  = "3.11"
