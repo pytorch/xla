@@ -1888,40 +1888,35 @@ def pool(inputs, init, reduce_fn, window_shape, strides, padding):
     y = jnp.squeeze(y, axis=0)
   return y
 
-
 @op(torch.ops.aten._adaptive_avg_pool3d)
 def _aten_adaptive_avg_pool3d(x, output_shape):
-  return _aten_adaptive_avg_pool(x, output_shape, 3)
+  assert len(x.shape) in (4,5), f'Expected 4D or 5D input but got {len(x.shape)} dimensions'
+  assert len(output_shape) == 3, f'Expected 3D output but got {len(output_shape)} dimensions'
 
+  # Reference PyTorch implementation:
+  # https://github.com/pytorch/pytorch/blob/ef4475f9025b3c46a13bdd054b6adfbcb5f8ab8c/aten/src/ATen/native/AdaptiveAveragePooling.cpp
+  output_shape = x.shape[:-3] + tuple(output_shape)
+  output = jnp.zeros(output_shape, dtype = x.dtype)
+  stride_d = x.shape[-3] / output_shape[-3]
+  stride_h = x.shape[-2] / output_shape[-2]
+  stride_w = x.shape[-1] / output_shape[-1]
 
-@op(torch.ops.aten._adaptive_avg_pool2d)
-def _aten_adaptive_avg_pool3d(x, output_shape):
-  return _aten_adaptive_avg_pool(x, output_shape, 2)
+  def avg_pool_batch(d, h, w):
+    start_d = int(jnp.floor(d * stride_d))
+    end_d = int(jnp.ceil((d+1) * stride_d))
+    start_h = int(jnp.floor(h * stride_h))
+    end_h = int(jnp.ceil((h+1) * stride_h))
+    start_w = int(jnp.floor(w * stride_w))
+    end_w = int(jnp.ceil((w+1) * stride_w))
+    return jnp.mean(x[..., start_d:end_d, start_h:end_h, start_w:end_w], axis=(-3, -2, -1))
 
-
-def _aten_adaptive_avg_pool(x, output_shape, pool_dim):
-  def adaptive_kernel_size(input_shape, output_shape):
-    sizes = [1, 1]
-    spatial_dim_off = len(input_shape) - pool_dim
-    for spatial_dim in range(pool_dim):
-      sizes.append(
-        input_shape[spatial_dim_off + spatial_dim] // output_shape[spatial_dim]
-      )
-    return tuple(sizes)
-
-  kernel_sizes = adaptive_kernel_size(x.shape, output_shape)
-  y = pool(x, 0.0, jax.lax.add, kernel_sizes, kernel_sizes, padding="VALID")
-
-  div_shape = list(x.shape)
-  num_batch_dims = len(x.shape) - pool_dim - 1
-  div_shape[num_batch_dims] = 1
-  div_shape = tuple(div_shape)
-  if len(div_shape) - 2 == len(kernel_sizes):
-    div_shape = (1,) + div_shape[1:]
-  y = y / pool(
-    jnp.ones(div_shape), 0.0, jax.lax.add, kernel_sizes, kernel_sizes, "VALID"
-  )
-  return y
+  # TODO: Replace this with more performant implementation.
+  # Related JAX issue requiring adaptive pooling: https://github.com/jax-ml/jax/issues/20098
+  for d in range(output_shape[-3]):
+    for h in range(output_shape[-2]):
+      for w in range(output_shape[-1]):
+        output = output.at[..., d, h, w].set(avg_pool_batch(d, h, w))
+  return output
 
 
 @op(torch.ops.aten.avg_pool1d)
@@ -4821,87 +4816,84 @@ def _aten_trilinear(i1, i2, i3, expand1, expand2, expand3, sumdim, unroll_dim=1)
 @op(torch.ops.aten.max_unpool2d)
 @op(torch.ops.aten.max_unpool3d)
 def _aten_max_unpoolxd(input, indices, output_size, stride=None, padding=0):
-    if output_size is None:
-      raise ValueError("output_size value is not set correctly. It cannot be None or empty.")
+  if output_size is None:
+    raise ValueError("output_size value is not set correctly. It cannot be None or empty.")
 
-    output_size = [input.shape[0], input.shape[1]] + output_size
-    output = jnp.zeros(output_size, dtype=input.dtype)
+  output_size = [input.shape[0], input.shape[1]] + output_size
+  output = jnp.zeros(output_size, dtype=input.dtype)
 
-    for idx in np.ndindex(input.shape):
-        max_index = indices[idx]
-        spatial_dims = output_size[2:]  # (D, H, W)
-        unpooled_spatial_idx = np.unravel_index(max_index, spatial_dims)
-        full_idx = idx[:2] + unpooled_spatial_idx
-        output = output.at[full_idx].set(input[idx])
+  for idx in np.ndindex(input.shape):
+      max_index = indices[idx]
+      spatial_dims = output_size[2:]  # (D, H, W)
+      unpooled_spatial_idx = np.unravel_index(max_index, spatial_dims)
+      full_idx = idx[:2] + unpooled_spatial_idx
+      output = output.at[full_idx].set(input[idx])
 
-    return output
+  return output
 
 @op(torch.ops.aten._upsample_bilinear2d_aa)
 def _aten_upsample_bilinear2d_aa(input, output_size, align_corners, scale_factors=None, scales_h=None, scales_w=None):
-    # input: is of type jaxlib.xla_extension.ArrayImpl
-    image = input
-    method = "bilinear"
-    antialias = True # ignored for upsampling
+  # input: is of type jaxlib.xla_extension.ArrayImpl
+  image = input
+  method = "bilinear"
+  antialias = True # ignored for upsampling
 
-    # https://jax.readthedocs.io/en/latest/_autosummary/jax.image.resize.html
-    # Resize does not distinguish batch, channel size.
-    # We need to leave them as is
-    # https://pytorch.org/vision/stable/transforms.html#supported-input-types-and-conventions
-    # pytorch image shape is (C,H,W) or (N,C,H,W)
-    # N - batch size
-    # C - no of channels
-    # H,W - heigth, width
+  # https://jax.readthedocs.io/en/latest/_autosummary/jax.image.resize.html
+  # Resize does not distinguish batch, channel size.
+  # We need to leave them as is
+  # https://pytorch.org/vision/stable/transforms.html#supported-input-types-and-conventions
+  # pytorch image shape is (C,H,W) or (N,C,H,W)
+  # N - batch size
+  # C - no of channels
+  # H,W - heigth, width
 
-    shape = list(image.shape)
-    # overriding output_size
-    if scale_factors:
-      shape[-1] = int(math.floor(shape[-1]*scale_factors[-1]))
-      shape[-2] = int(math.floor(shape[-2]*scale_factors[-2]))
-    if scales_h:
-      shape[-2] = int(math.floor(shape[-2]*scales_h))
-    if scales_w:
-      shape[-1] = int(math.floor(shape[-1]*scales_w))
-    # output_size overrides scale_factors, scales_*
-    if output_size:
-      shape[-1] = output_size[-1]
-      shape[-2] = output_size[-2]
+  shape = list(image.shape)
+  # overriding output_size
+  if scale_factors:
+    shape[-1] = int(math.floor(shape[-1]*scale_factors[-1]))
+    shape[-2] = int(math.floor(shape[-2]*scale_factors[-2]))
+  if scales_h:
+    shape[-2] = int(math.floor(shape[-2]*scales_h))
+  if scales_w:
+    shape[-1] = int(math.floor(shape[-1]*scales_w))
+  # output_size overrides scale_factors, scales_*
+  if output_size:
+    shape[-1] = output_size[-1]
+    shape[-2] = output_size[-2]
 
-    # pytorch upsample_bilinear returns the input as is when the shape is the same as input
-    if shape == list(image.shape):
-      return image
+  # pytorch upsample_bilinear returns the input as is when the shape is the same as input
+  if shape == list(image.shape):
+    return image
 
-    spatial_dims = (2,3)
-    if len(shape) == 3:
-      spatial_dims = (1,2)
+  spatial_dims = (2,3)
+  if len(shape) == 3:
+    spatial_dims = (1,2)
 
-    scale = list([shape[i] / image.shape[i]  for i in spatial_dims])
-    if scale_factors:
-      scale = scale_factors
-    if scales_h:
-      scale[0] = scales_h
-    if scales_w:
-      scale[1] = scales_w
-    scale = jnp.array(scale)
+  scale = list([shape[i] / image.shape[i]  for i in spatial_dims])
+  if scale_factors:
+    scale = scale_factors
+  if scales_h:
+    scale[0] = scales_h
+  if scales_w:
+    scale[1] = scales_w
+  scale = jnp.array(scale)
 
-    # align_corners is not supported in resize()
-    # https://github.com/jax-ml/jax/issues/11206
-    if align_corners:
-      scale = jnp.array([(shape[i] - 1.0) / (image.shape[i] - 1.0) for i in spatial_dims])
+  # align_corners is not supported in resize()
+  # https://github.com/jax-ml/jax/issues/11206
+  if align_corners:
+    scale = jnp.array([(shape[i] - 1.0) / (image.shape[i] - 1.0) for i in spatial_dims])
 
-    translation = jnp.array([0 for i in spatial_dims])
-    #translation = (scale / 2.0 - 0.5)
+  translation = jnp.array([0 for i in spatial_dims])
 
-    #return jax.image.scale_and_translate(
-    # local copied fixed implentation of scale_and_translate
-    return jax_reimplement.scale_and_translate(
-        image,
-        shape,
-        method=method,
-        scale=scale,
-        spatial_dims=spatial_dims,
-        translation=translation,
-        antialias=antialias,
-    )
+  return jax_reimplement.scale_and_translate(
+      image,
+      shape,
+      method=method,
+      scale=scale,
+      spatial_dims=spatial_dims,
+      translation=translation,
+      antialias=antialias,
+  )
 
 @op(torch.ops.aten.polar)
 def _aten_polar(abs, angle, *, out=None):
