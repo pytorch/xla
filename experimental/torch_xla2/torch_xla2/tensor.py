@@ -12,7 +12,7 @@ import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
 
 from torch_xla2 import config
-from torch_xla2.ops import mappings
+from torch_xla2.ops import mappings, ops_registry
 
 
 class OperatorNotFound(Exception):
@@ -308,7 +308,7 @@ class Environment(contextlib.ContextDecorator):
 
 
     def load_ops(self):
-      from torch_xla2.ops import jaten, jtorch, jc10d, jtorchvision_nms, ops_registry
+      from torch_xla2.ops import jaten, jtorch, jc10d, jtorchvision_nms
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
 
@@ -494,3 +494,12 @@ class Environment(contextlib.ContextDecorator):
 
     def j2t_copy(self, args):
       pass
+
+    def override_op_definition(self, op_to_override, op_impl):
+      self._ops[op_to_override] = ops_registry.Operator(
+        op_to_override,
+        op_impl,
+        is_jax_function=False,
+        is_user_defined=True,
+        needs_env=False
+      )

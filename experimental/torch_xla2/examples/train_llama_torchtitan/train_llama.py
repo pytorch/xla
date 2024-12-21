@@ -7,6 +7,8 @@ import functools
 import torch
 import torch.nn.functional
 from torch.utils import _pytree as pytree
+import splash_attn
+import helper
 
 import torch_xla2 as tx
 import torch_xla2.interop
@@ -16,6 +18,7 @@ import jax
 import jax.numpy as jnp
 from jax.experimental import shard_map
 from jax.experimental import mesh_utils
+from jax.sharding import NamedSharding
 import optax
 
 from torchtitan.models.llama import llama3_configs
@@ -43,6 +46,57 @@ def sharded_device_put(tensor: jax.Array, sharding) -> jax.Array:
     return jax.make_array_from_single_device_arrays(shape, sharding, x_split)
 
 
+sharding_map_original = {
+  "freqs_cis" : (), #  torch.complex64 (2048, 64)
+  "tok_embeddings.weight" : ('fsdp', 'tp'), #  torch.float32 (vocab_size, 4096)
+  "layers.*.attention.wo.weight" : ('fsdp', 'tp'), #  torch.int8 (4096, 4096)
+  "layers.*.attention.wq.weight" : ('tp', 'fsdp'), #  torch.int8 (4096, 4096)
+  "layers.*.attention.wk.weight" : ('tp', 'fsdp'), #  torch.int8 (4096, 4096)
+  "layers.*.attention.wv.weight" : ('tp', 'fsdp'), #  torch.int8 (4096, 4096)
+  "layers.*.feed_forward.w1.weight" : ('tp', 'fsdp'), #  torch.float32 (11008, 4096)
+  "layers.*.feed_forward.w2.weight" : ('fsdp', 'tp'), #  torch.float32 (4096, 11008)
+  "layers.*.feed_forward.w3.weight": ('tp', 'fsdp'), #  torch.float32 (11008, 4096)
+  "layers.*.attention_norm.weight" : ('fsdp', ), #  torch.float32 (4096,)
+  "layers.*.ffn_norm.weight" : ('fsdp', ), #  torch.float32 (4096,)
+  "norm.weight" : ('fsdp', ), #  torch.float32 (4096,)
+  "output.weight" : ('tp', 'fsdp'), #  torch.float32 (vocab_size, 4096)
+}
+
+sharding_map_scan = {
+  "freqs_cis" : (), #  torch.complex64 (2048, 64)
+  # ParallelEmbedding for llama2; VocabParallelEmbedding for 3
+  "tok_embeddings.weight" : ('tp', 'fsdp'), #  torch.float32 (vocab_size, 4096)
+  "layers.params.attention___wo___weight" : (None, 'fsdp', 'tp'), #  torch.int8 (n, 4096, 4096)
+  "layers.params.attention___wq___weight" : (None, 'tp', 'fsdp'), #  torch.int8 (n, 4096, 4096)
+  "layers.params.attention___wk___weight" : (None, 'tp', 'fsdp'), #  torch.int8 (n, 4096, 4096)
+  "layers.params.attention___wv___weight" : (None, 'tp', 'fsdp'), #  torch.int8 (n, 4096, 4096)
+  "layers.params.feed_forward___w1___weight" : (None, 'tp', 'fsdp'), #  torch.float32 (n, 11008, 4096)
+  "layers.params.feed_forward___w2___weight" : (None, 'fsdp', 'tp'), #  torch.float32 (n, 4096, 11008)
+  "layers.params.feed_forward___w3___weight": (None, 'tp', 'fsdp'), #  torch.float32 (n, 11008, 4096)
+  "layers.params.attention_norm___weight" : (None, 'fsdp', ), #  torch.float32 (n, 4096,)
+  "layers.params.ffn_norm___weight" : (None, 'fsdp', ), #  torch.float32 (n, 4096,)
+  "norm.weight" : ('fsdp', ), #  torch.float32 (4096,)
+  "output.weight" : ('tp', 'fsdp'), #  torch.float32 (vocab_size, 4096)
+}
+
+sharding_map_scan_fsdp = {
+  "freqs_cis" : (), #  torch.complex64 (2048, 64)
+  # ParallelEmbedding for llama2; VocabParallelEmbedding for 3
+  "tok_embeddings.weight" : ('fsdp',), #  torch.float32 (vocab_size, 4096)
+  "layers.params.attention___wo___weight" : (None, 'fsdp'), #  torch.int8 (n, 4096, 4096)
+  "layers.params.attention___wq___weight" : (None, 'fsdp'), #  torch.int8 (n, 4096, 4096)
+  "layers.params.attention___wk___weight" : (None, 'fsdp'), #  torch.int8 (n, 4096, 4096)
+  "layers.params.attention___wv___weight" : (None, 'fsdp'), #  torch.int8 (n, 4096, 4096)
+  "layers.params.feed_forward___w1___weight" : (None, 'fsdp'), #  torch.float32 (n, 11008, 4096)
+  "layers.params.feed_forward___w2___weight" : (None, 'fsdp'), #  torch.float32 (n, 4096, 11008)
+  "layers.params.feed_forward___w3___weight": (None, 'fsdp'), #  torch.float32 (n, 11008, 4096)
+  "layers.params.attention_norm___weight" : (None, 'fsdp', ), #  torch.float32 (n, 4096,)
+  "layers.params.ffn_norm___weight" : (None, 'fsdp', ), #  torch.float32 (n, 4096,)
+  "norm.weight" : ('fsdp', ), #  torch.float32 (4096,)
+  "output.weight" : ('fsdp', ), #  torch.float32 (vocab_size, 4096)
+}
+
+
 class Trainer:
 
     def __init__(self, mesh):
@@ -63,8 +117,11 @@ class Trainer:
         def model_fn(weights, buffers, args):
             return jittable_mod.functional_call('forward', weights, buffers, args)
 
-        jax_optimizer = optax.adamw(0.001)
-        opt_state = torch_xla2.interop.call_jax(jax_optimizer.init, jittable_mod.params)
+
+        jax_optimizer = optax.sgd(0.01)
+        opt_state = torch_view(jax_optimizer.init(jax_view(jittable_mod.params)))
+        
+        #opt_state = torch_xla2.interop.call_jax(jax_optimizer.init, jittable_mod.params)
 
         train_step = torch_xla2.train.make_train_step(
             model_fn, loss_fn, jax_optimizer,
@@ -86,6 +143,13 @@ class Trainer:
             inputs.apply_jax_(sharded_device_put, self.x_sharding)
             labels.apply_jax_(sharded_device_put, self.x_sharding)
 
+            if i == 0:
+                train_step = helper.compile_step_func(
+                    train_step, 
+                    jittable_mod.params, jittable_mod.buffers, opt_state, inputs, labels,
+                    self.mesh
+                )
+
             print('INPUT shape', inputs.shape)
             step_start = time.perf_counter()
             loss, jittable_mod.params, opt_state = train_step(
@@ -103,22 +167,44 @@ class Trainer:
         return min_loop_time
 
 
-def create_sharded_weights(state_dict, sharding):
+def _process_sharding_name(name):
+    """Replace integers in param name with *.
+
+  Presumably all layers should have the same sharding.
+  """
+
+    def is_integer(t):
+        try:
+            int(t)
+            return True
+        # pylint: disable-next=all
+        except:  # noqa: E722
+            return False
+
+    tokens = name.split(".")
+    for i, t in enumerate(tokens):
+        if is_integer(t):
+            tokens[i] = "*"
+    return ".".join(tokens)
+
+
+def create_sharded_weights(model, mesh, sharding_map):
     res = {}
     env = torch_xla2.default_env()
-    for name, weight_meta in state_dict.items():
+    for name, weight_meta in model.state_dict().items():
+        sharding_spec = sharding_map.get(_process_sharding_name(name))
+        if sharding_spec is None:
+            print('Skipping weight:', name)
+            continue
+        sharding = NamedSharding(mesh, P(*sharding_spec))
         with jax.default_device(jax.devices('cpu')[0]):
             weight_torch = torch.randn(
               weight_meta.shape,
               dtype=weight_meta.dtype)
-            # weight_jax is jax array
-            weight_jax = env.to_xla(weight_torch).jax()
-        if weight_jax.ndim < 2:
-            s = jax.sharding.NamedSharding(sharding.mesh, P('fsdp'))
-        else:
-            s = sharding
+            weight_jax = torch_xla2.default_env().to_xla(weight_torch).jax()
+        #print(name, weight.shape, weight.dtype)
         res[name] = env.j2t_iso(jax.make_array_from_callback(
-          weight_jax.shape, s, lambda a: weight_jax[a]
+          weight_jax.shape, sharding, lambda a: weight_jax[a]
         ))
     return res
 
@@ -135,18 +221,20 @@ def main(
     seqlen=2048,
     override_num_layers=-1,
     use_scan = True,
+    tp_parallelism=1,
 ):
     torch_xla2.enable_globally()
     torch_xla2.enable_performance_mode()
     #logging.getLogger("jax").setLevel(logging.DEBUG)
     print(f"Running with parameters {locals()}")
 
-    mesh = jax.make_mesh((num_global_devices, ), ('fsdp', ))
+    fsdp = num_global_devices // tp_parallelism
+    mesh = jax.make_mesh((fsdp, tp_parallelism), ('fsdp', 'tp'))
     if use_scan:
         # using scan the individial weights will have shape (num_layers, w, h)
-        sharding = jax.sharding.NamedSharding(mesh, P(None, 'fsdp'))
+        sharding_map = sharding_map_scan_fsdp
     else:
-        sharding = jax.sharding.NamedSharding(mesh, P('fsdp')) 
+        sharding_map = sharding_map_original
 
     env = torch_xla2.default_env()
     env.config.use_tpu_flash_attention = True
@@ -172,17 +260,36 @@ def main(
         freqs_cis = gpt._precompute_freqs_cis()
 
     if use_scan:
-        gpt = TransfomerWithScan(gpt) 
+        checkpoint_policy=jax.checkpoint_policies.offload_dot_with_no_batch_dims('device', 'pinned_host')
+        gpt = TransfomerWithScan(gpt, checkpoint_policy) 
 
     state_dict = dict(gpt.state_dict())
     state_dict.pop('freqs_cis') # dont shard freqs_cis
-    state_dict = create_sharded_weights(gpt.state_dict(), sharding)
+    state_dict = create_sharded_weights(gpt, mesh, sharding_map)
     replicated = jax.sharding.NamedSharding(mesh, P())
 
     state_dict['freqs_cis'] = freqs_cis.to('jax').apply_jax(jax.device_put, replicated)
     gpt.load_state_dict(state_dict, assign=True)
     
     train_loader = fake_dataloader(10, seqlen, batch_size)
+
+    
+    # NOTE: overriding attention to capture mesh and sharding info
+    partition = P('fsdp', 'tp', None, None)
+    attention = functools.partial(
+      splash_attn.tpu_splash_attention, 
+      mesh, partition, True)
+    attention = jax.jit(attention)
+
+    def custom_attention(
+        query, key, value, attn_mask=None,
+        dropout_p=0.0, is_causal=False,
+        scale=None, enable_gqa=False):
+                  #  batch, num of head, seq, dim
+      jk, jq, jv = jax_view((query, key, value))
+      res =  attention(jk, jq, jv, None)
+      return torch_view(res)
+    env.override_op_definition(torch.nn.functional.scaled_dot_product_attention, custom_attention)
 
     def loss_fn(logits, y):
         num_tokens = logits.shape[-1]
@@ -202,12 +309,12 @@ def main(
         
 class TransfomerWithScan(torch.nn.Module):
     
-    def __init__(self, old_transformer):
+    def __init__(self, old_transformer, checkpoint_policy):
         super().__init__()
         self.tok_embeddings = old_transformer.tok_embeddings
         self.norm = old_transformer.norm
         self.output = old_transformer.output
-        self.scan_layer = torch_xla2.train.ScannedModule(list(old_transformer.layers.values()))
+        self.layers = torch_xla2.train.ScannedModule(list(old_transformer.layers.values()), checkpoint_policy)
 
         self.register_buffer('freqs_cis', old_transformer.freqs_cis)
 
@@ -228,7 +335,7 @@ class TransfomerWithScan(torch.nn.Module):
         # for layer in self.layers.values():
         #     h = layer(h, self.freqs_cis)
 
-        h = self.scan_layer(h, self.freqs_cis)
+        h = self.layers(h, self.freqs_cis)
 
         h = self.norm(h) if self.norm else h
         output = self.output(h) if self.output else h
@@ -238,3 +345,5 @@ class TransfomerWithScan(torch.nn.Module):
 if __name__ == '__main__':
     import fire
     fire.Fire(main)
+
+
