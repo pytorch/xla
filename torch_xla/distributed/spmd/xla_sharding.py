@@ -6,6 +6,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla._internal.utils as _utils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
+import torch_xla.debug.profiler as xp
 import torch_xla.runtime as xr
 from torch import Tensor
 from typing import Optional
@@ -739,10 +740,11 @@ class ShardingSpec:
     mutates_args=())
 def custom_linear_forward(input: Tensor, weight: Tensor,
                           bias: Optional[Tensor]):
-  product = torch.einsum('...n,mn->...m', input, weight)
-  if bias is not None:
-    return product + bias
-  return product
+  with xp.Trace('custom_linear_forward'):
+    product = torch_xla._XLAC._xla_einsum('...n,mn->...m', (input, weight))
+    if bias is not None:
+      return product + bias
+    return product
 
 
 @custom_linear_forward.register_fake
@@ -762,24 +764,27 @@ def custom_linear_backward(grad_output: Tensor, input: Tensor, weight: Tensor,
                            bias: Optional[Tensor], needs_input_grad_input: bool,
                            needs_input_grad_weight: bool,
                            needs_input_grad_bias: bool):
-  grad_input = grad_weight = grad_bias = None
+  with xp.Trace('custom_linear_backward'):
+    grad_input = grad_weight = grad_bias = None
 
-  if needs_input_grad_input:
-    grad_input = torch.einsum('...m,mn->...n', grad_output, weight)
-  else:
-    grad_input = None
+    if needs_input_grad_input:
+      grad_input = torch_xla._XLAC._xla_einsum('...m,mn->...n',
+                                               (grad_output, weight))
+    else:
+      grad_input = None
 
-  if needs_input_grad_weight:
-    grad_weight = torch.einsum('...m,...n->mn', grad_output, input)
-  else:
-    grad_weight = None
+    if needs_input_grad_weight:
+      grad_weight = torch_xla._XLAC._xla_einsum('...m,...n->mn',
+                                                (grad_output, input))
+    else:
+      grad_weight = None
 
-  if bias is not None and needs_input_grad_bias:
-    grad_bias = torch.einsum('...m->m', grad_output)
-  else:
-    grad_bias = None
+    if bias is not None and needs_input_grad_bias:
+      grad_bias = torch_xla._XLAC._xla_einsum('...m->m', (grad_output,))
+    else:
+      grad_bias = None
 
-  return grad_input, grad_weight, grad_bias
+    return grad_input, grad_weight, grad_bias
 
 
 @custom_linear_backward.register_fake

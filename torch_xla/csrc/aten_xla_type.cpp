@@ -894,6 +894,14 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   //
   // Here we pattern-match and dispatch to slice again, which is
   // more efficient.
+  //
+  // The fancier `aten.take` lowering sends a large indexing tensor to the
+  // device and confuses the XLA compiler when used under scan for some reason.
+  // See the transfer to device in a trace: http://shortn/_4zOQhGezCS. As a
+  // result, we get a `!IsManual()` assertion in HLO sharding propgation.
+  // Therefore, we spell it as a permute + index into the first dim. However,
+  // that causes NaN loss for some reason. So we'll perform the slicing after
+  // disabling manual sharding below.
   if (tensor.dim() == 4 && size.size() == 4 && stride.size() == 4) {
     if (!storage_offset.has_value() || (*storage_offset) == 0) {
       // Fast path: if the as_strided can be implemented with select,

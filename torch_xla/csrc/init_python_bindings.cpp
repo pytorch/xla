@@ -1834,6 +1834,15 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_optimization_barrier_",
         [](std::vector<at::Tensor>& inputs) { OptimizationBarrier_(inputs); });
+
+  // TODO: torch.einsum is getting decomposed into transposes. Fix that.
+  m.def("_xla_einsum",
+        [](const std::string& equation, const std::vector<at::Tensor>& inputs) {
+          std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(inputs);
+          XLATensorPtr output = tensor_methods::einsum(equation, xla_tensors);
+          return bridge::AtenFromXlaTensor(output);
+        });
+
   m.def("_xla_set_default_device", [](const std::string& device) {
     return SetCurrentThreadDevice(device);
   });
