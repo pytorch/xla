@@ -19,8 +19,7 @@ def t2j(t):
     t = t.contiguous()
 
   try:
-    dl = torchdl.to_dlpack(t)
-    res = jaxdl.from_dlpack(dl)
+    res = jaxdl.from_dlpack(t)
   except Exception:
     # https://github.com/google/jax/issues/7657
     # https://github.com/google/jax/issues/17784

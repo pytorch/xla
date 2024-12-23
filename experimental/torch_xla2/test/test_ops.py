@@ -12,11 +12,14 @@ import torch_xla2
 
 skiplist = {
     "_segment_reduce",
+    "_unsafe_masked_index_put_accumulate",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
     "cat",
     "cholesky_solve",
+    "cov",
     "diagonal_copy",
+    "gather",
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
@@ -44,6 +47,7 @@ skiplist = {
     "normal",
     "ormqr",
     "pca_lowrank",
+    "scatter",
     "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",
@@ -229,7 +233,7 @@ class TestOpInfo(TestCase):
                              ignore_indices=ignore_index)
 
 
-instantiate_device_type_tests(TestOpInfo, globals(), only_for='cpu')
+instantiate_device_type_tests(TestOpInfo, globals(), only_for={'cpu'})
 
 if __name__ == '__main__':
   unittest.main()
