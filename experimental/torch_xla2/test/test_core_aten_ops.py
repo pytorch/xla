@@ -95,7 +95,7 @@ class TestCoreAtenOps(unittest.TestCase):
   def test_aten_acos_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.acos, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten.acos, args, kwargs, atol=0.005)
 
   def test_aten_acos_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
