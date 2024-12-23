@@ -62,8 +62,6 @@ not_support_ops_list = {
   "chalf", # Skip due to jax not support complex32 with backend: https://github.com/google/jax/issues/14180
   "__rpow__",  # NOTE: cannot fix because torch test case has undefined behavior
                # such as 0 to negative power.
-  "ceil", # only failed with python 3.9
-  "trunc", # only failed with python 3.9
   "to_sparse", # We are not supporting sparse tensors yet.
   "nn.functional.rrelu", # pure torch result match torch_xla2 test result, only OpInfo mismatch: https://gist.github.com/ManfeiBai/1a449b15f4e946bfcaa3e5ef86da20f4
 }
