@@ -5,12 +5,16 @@ import torch_xla.distributed.parallel_loader as pl
 
 import time
 import itertools
+import threading
+from functools import partial
 
 import torch
 import torch_xla
 import torchvision
 import torch.optim as optim
 import torch.nn as nn
+
+from torch_xla.experimental.callback import on_ready_callback, on_ready_event
 
 
 class TrainResNetBase():
@@ -36,8 +40,10 @@ class TrainResNetBase():
     self.compiled_step_fn = torch_xla.compile(
         self.step_fn, full_graph=True, name="resnet_step_fn")
 
-  def _train_update(self, step, loss, tracker, epoch):
-    print(f'epoch: {epoch}, step: {step}, loss: {loss}, rate: {tracker.rate()}')
+  def _train_update(self, loss, step=0, tracker=None, epoch=0):
+    print(
+        f'epoch: {epoch}, step: {step}, loss: {loss.cpu()}, rate: {tracker.rate()}'
+    )
 
   def run_optimizer(self):
     self.optimizer.step()
@@ -52,14 +58,30 @@ class TrainResNetBase():
 
   def train_loop_fn(self, loader, epoch):
     tracker = xm.RateTracker()
+
+    def _update_tracker(t: torch.Tensor):
+      tracker.add(self.batch_size)
+
+    def _wait_and_update(event: threading.Event, fn):
+      event.wait()
+      fn()
+
     self.model.train()
     loader = itertools.islice(loader, self.num_steps)
     for step, (data, target) in enumerate(loader):
       loss = self.compiled_step_fn(data, target)
-      tracker.add(self.batch_size)
+      # only update the tracker when the device execution to calculate the loss
+      # is finished.
+      on_ready_callback(loss, _update_tracker)
       if step % 10 == 0:
-        xm.add_step_closure(
-            self._train_update, args=(step, loss, tracker, epoch))
+        event = on_ready_event(loss)
+        _local_train_update = partial(
+            self._train_update, loss, step=step, tracker=tracker, epoch=epoch)
+        update_thread = threading.Thread(
+            target=_wait_and_update, args=(event, _local_train_update))
+        update_thread.start()
+        #xm.add_step_closure(
+        #    self._train_update, args=(loss, step, tracker, epoch))
 
   def start_training(self):
 
