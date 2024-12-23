@@ -1148,13 +1148,19 @@ class PyLoweringContext {
 
     // Convert lazy node data into opaque handle id
     torch::lazy::BackendDataPtr data = DeviceData::Cast(node)->data();
-    torch::lazy::BackendData::Handle handle = data->GetHandle();
+    torch::lazy::BackendData::Handle handle =
+        data->HasValue() ? data->GetHandle()
+                         : reinterpret_cast<std::uintptr_t>(&*data);
 
     // Linearly search parameters and compare opaque handles
     const std::vector<torch::lazy::BackendDataPtr>& device_data =
         lowering_ctx.GetParametersData();
     for (int i = 0; i < device_data.size(); ++i) {
-      if (device_data[i]->GetHandle() == handle) {
+      torch::lazy::BackendData::Handle device_handle =
+          device_data[i]->HasValue()
+              ? device_data[i]->GetHandle()
+              : reinterpret_cast<std::uintptr_t>(&*device_data[i]);
+      if (device_handle == handle) {
         std::optional param_id = lowering_ctx.GetParameterId(device_data[i]);
         XLA_CHECK(param_id.has_value());
         return param_id.value();
@@ -1842,6 +1848,19 @@ void InitXlaModuleBindings(py::module m) {
           XLATensorPtr output = tensor_methods::einsum(equation, xla_tensors);
           return bridge::AtenFromXlaTensor(output);
         });
+
+  // Creates a placeholder tensor that does not hold any device buffer.
+  // This is primarily useful for staging out the HLO of a user computation.
+  // Accessing the value of the tensor will panic.
+  //
+  // TODO: write tests.
+  m.def("_xla_create_placeholder_tensor", [](py::object py_shape) {
+    xla::Shape shape = op_builder::PyShapeToShape(py_shape);
+    auto xla_tensor = XLATensor::Create(
+        torch_xla::runtime::GetComputationClient()->CreateDataPlaceholder(
+            bridge::GetCurrentDevice().toString(), std::move(shape)));
+    return bridge::AtenFromXlaTensor(xla_tensor);
+  });
 
   m.def("_xla_set_default_device", [](const std::string& device) {
     return SetCurrentThreadDevice(device);
@@ -2884,7 +2903,10 @@ void InitXlaModuleBindings(py::module m) {
             }
 
             // Dedup by handle
-            torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
+            torch::lazy::BackendData::Handle handle =
+                backend_data->HasValue()
+                    ? backend_data->GetHandle()
+                    : reinterpret_cast<std::uintptr_t>(&*backend_data);
             if (!data_handles.insert(handle).second) {
               continue;
             }

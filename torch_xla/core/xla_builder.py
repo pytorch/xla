@@ -38,6 +38,21 @@ _XLA_PT_TYPE_MAP = {
     Type.PRED: torch.bool,
 }
 
+_PT_XLA_TYPE_MAP = {
+    torch.float32: Type.F32,
+    torch.float64: Type.F64,
+    torch.bfloat16: Type.BF16,
+    torch.float16: Type.F16,
+    torch.uint8: Type.U8,
+    torch.int8: Type.S8,
+    torch.int16: Type.S16,
+    torch.int32: Type.S32,
+    torch.int64: Type.S64,
+    torch.complex64: Type.C64,
+    torch.complex128: Type.C128,
+    torch.bool: Type.PRED,
+}
+
 
 class Shape(object):
   """Wraps a core XLA shape object to provide a more friendly API."""
@@ -748,6 +763,10 @@ class Op(object):
   @classmethod
   def to_torch_type(cls, dtype):
     return _XLA_PT_TYPE_MAP[dtype] if dtype else torch.float32
+
+  @classmethod
+  def from_torch_type(cls, dtype):
+    return _PT_XLA_TYPE_MAP[dtype]
 
 
 def create_builder(name):

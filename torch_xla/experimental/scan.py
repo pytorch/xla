@@ -672,13 +672,10 @@ def _scan_impl_flat(fn, init, xs, aot_graph_hash, reverse):
   # Abstractly trace and lower `fn`.
   # Later we will include `fn_computation` within the while loop body.
   def make_fake_tensor(v: torch.Tensor) -> torch.Tensor:
-    # TODO: this will transfer data to the device when `fn` is traced with
-    # such a tensor. However, if we tried to avoid that via
-    # `torch.empty(v.size(), dtype=v.dtype, device=v.device)`, then that lowers
-    # into a constant IR node instead of a device data IR node.
-    return torch.empty(
-        v.size(),
-        dtype=v.dtype).to(device=v.device).requires_grad_(v.requires_grad)
+    dtype = xb.Op.from_torch_type(v.dtype)
+    shape = xb.mkshape(dtype, v.shape)
+    t = torch_xla._XLAC._xla_create_placeholder_tensor(shape.shape)
+    return t.requires_grad_(v.requires_grad)
 
   device = torch_xla.device()
   fake_carry = tree_map(make_fake_tensor, init)

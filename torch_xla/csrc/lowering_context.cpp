@@ -113,7 +113,10 @@ static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
 xla::XlaOp LoweringContext::GetParameter(
     const std::shared_ptr<torch::lazy::BackendData>& backend_data,
     const std::unordered_set<uint32_t>& unbounded_dynamic_dims) {
-  torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
+  torch::lazy::BackendData::Handle handle =
+      backend_data->HasValue()
+          ? backend_data->GetHandle()
+          : reinterpret_cast<std::uintptr_t>(&*backend_data);
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
     auto data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
@@ -147,7 +150,10 @@ xla::XlaOp LoweringContext::GetParameter(
 
 std::optional<size_t> LoweringContext::GetParameterId(
     const std::shared_ptr<torch::lazy::BackendData>& backend_data) const {
-  torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
+  torch::lazy::BackendData::Handle handle =
+      backend_data->HasValue()
+          ? backend_data->GetHandle()
+          : reinterpret_cast<std::uintptr_t>(&*backend_data);
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
     return std::nullopt;
