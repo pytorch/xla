@@ -54,6 +54,9 @@ def _extract_backend_config(
 
 def jax_import_guard():
   # Somehow, we need to grab the TPU before JAX locks it. Otherwise, any pt-xla TPU operations will hang.
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   torch_xla._XLAC._init_computation_client()
 
 
