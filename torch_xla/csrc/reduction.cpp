@@ -284,6 +284,22 @@ xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, int64_t dim,
       /*base_dilations=*/{}, /*window_dilations=*/{}, padding);
 }
 
+xla::XlaOp BuildCumulativeComputationWithIndices(
+    xla::XlaOp value_input, xla::XlaOp index_input, int64_t dim,
+    const xla::XlaComputation& reducer, xla::XlaOp value_init,
+    xla::XlaOp index_init) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(value_input);
+  std::vector<int64_t> window_strides(input_shape.rank(), 1);
+  std::vector<int64_t> window_dims(input_shape.rank(), 1);
+  window_dims[dim] = input_shape.dimensions(dim);
+  std::vector<std::pair<int64_t, int64_t>> padding(input_shape.rank());
+  padding[dim].first = input_shape.dimensions(dim) - 1;
+  return xla::ReduceWindowWithGeneralPadding(
+      {value_input, index_input}, {value_init, index_init}, reducer,
+      window_dims, window_strides,
+      /*base_dilations=*/{}, /*window_dilations=*/{}, padding);
+}
+
 xla::XlaOp BuildMean(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                      bool keep_reduced_dimensions) {
   return CreateSummation(input, dimensions, keep_reduced_dimensions,

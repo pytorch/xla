@@ -44,6 +44,31 @@ xla::XlaComputation CreateComputation(
   return ConsumeValue(builder.Build(op(x, y)));
 }
 
+xla::XlaComputation CreateMinMaxComputation(const std::string& name,
+                                            xla::PrimitiveType value_type,
+                                            xla::PrimitiveType index_type,
+                                            bool is_min) {
+  xla::XlaBuilder builder(name);
+  xla::XlaOp lhs_value = xla::Parameter(
+      &builder, 0, xla::ShapeUtil::MakeShape(value_type, {}), "lhs_value");
+  xla::XlaOp lhs_index = xla::Parameter(
+      &builder, 1, xla::ShapeUtil::MakeShape(index_type, {}), "lhs_index");
+  xla::XlaOp rhs_value = xla::Parameter(
+      &builder, 2, xla::ShapeUtil::MakeShape(value_type, {}), "rhs_value");
+  xla::XlaOp rhs_index = xla::Parameter(
+      &builder, 3, xla::ShapeUtil::MakeShape(index_type, {}), "rhs_index");
+
+  xla::XlaOp cmp =
+      is_min ? xla::Le(lhs_value, rhs_value) : xla::Ge(lhs_value, rhs_value);
+  xla::XlaOp max = xla::Select(cmp, lhs_value, rhs_value);
+  xla::XlaOp arg_max = xla::Select(cmp, lhs_index, rhs_index);
+  xla::XlaOp eq = xla::Eq(lhs_value, rhs_value);
+  xla::XlaOp tie_id = xla::Min(lhs_index, rhs_index);
+  arg_max = xla::Select(eq, tie_id, arg_max);
+  xla::Tuple(&builder, {max, arg_max});
+  return ConsumeValue(builder.Build());
+}
+
 }  // namespace
 
 xla::PrecisionConfig::Precision XlaHelpers::s_mat_mul_precision =
@@ -227,6 +252,12 @@ xla::XlaComputation XlaHelpers::CreateOrComputation(xla::PrimitiveType type) {
   return CreateComputation(
       "OrComputation", type,
       [&](xla::XlaOp x, xla::XlaOp y) { return xla::Or(x, y); });
+}
+
+xla::XlaComputation XlaHelpers::CreateMaxAndArgMaxComputation(
+    xla::PrimitiveType value_type, xla::PrimitiveType index_type) {
+  return CreateMinMaxComputation("MaxAndArgMaxComputation", value_type,
+                                 index_type, /*is_min=*/false);
 }
 
 std::vector<int64_t> XlaHelpers::SizesOfXlaOp(xla::XlaOp op) {
