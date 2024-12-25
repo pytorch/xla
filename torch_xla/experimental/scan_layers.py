@@ -7,6 +7,7 @@ from torch.utils._pytree import tree_map
 from functorch.compile import default_partition
 
 from torch_xla.experimental.scan import scan
+import torch_xla.distributed.spmd as xs
 
 
 def scan_layers(layers: Iterable[torch.nn.Module],
@@ -77,6 +78,23 @@ def scan_layers(layers: Iterable[torch.nn.Module],
                             *params_list)
   stacked_buffers = tree_map(lambda *tensors: torch.stack(tensors, dim=0),
                              *buffers_list)
+
+  # HACK
+  spmd_mesh = xs.get_global_mesh()
+  for name, param in stacked_params.items():
+    # Here we intentionally skip layernorm and moe.gate weights given they are small.
+    if 'embed_tokens' in name:
+      xs.mark_sharding(param, spmd_mesh, (None, 'tensor', 'fsdp'))
+    elif 'q_proj' in name or 'k_proj' in name or 'v_proj' in name:
+      xs.mark_sharding(param, spmd_mesh, (None, 'tensor', 'fsdp'))
+    elif 'o_proj' in name:
+      xs.mark_sharding(param, spmd_mesh, (None, 'fsdp', 'tensor'))
+    elif 'gate_proj' in name or 'up_proj' in name:
+      xs.mark_sharding(param, spmd_mesh, (None, 'tensor', 'fsdp'))
+    elif 'down_proj' in name:
+      xs.mark_sharding(param, spmd_mesh, (None, 'fsdp', 'tensor'))
+    elif 'lm_head' in name:
+      xs.mark_sharding(param, spmd_mesh, (None, 'tensor', 'fsdp'))
 
   one_layer = _layer_to_function(first_layer)
   stacked_params_buffers = (stacked_params, stacked_buffers)

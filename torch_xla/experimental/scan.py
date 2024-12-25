@@ -49,11 +49,15 @@ from functorch.compile import aot_function, make_boxed_func, default_partition  
 import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.debug.profiler as xp
+import torch_xla.distributed
+import torch_xla.distributed.spmd
 from torch_xla.experimental.pytreeify import pytreeify
 
 Carry = TypeVar('Carry')
 X = TypeVar('X')
 Y = TypeVar('Y')
+
+scan_bw_output_sharder = [None]
 
 
 def scan(
@@ -298,7 +302,8 @@ def value_and_grad_partitioned(
   fwd_graph = get_fwd()
   bwd_graph = get_bwd()
 
-  # Figure out which activations are alises to the inputs.
+  # Figure out which activations are alises to the inputs. We don't need to
+  # pass them through the scan logic unchanged. That would use more memory.
   flat_carry, _ = tree_flatten(fake_carry_pytree)
   flat_x, _ = tree_flatten(fake_x_pytree)
   _actual_out, activations = split(fwd_graph(*flat_carry, *flat_x), num_out)
@@ -698,10 +703,29 @@ def _scan_impl_flat(fn, init, xs, aot_graph_hash, reverse):
 
   builder = Builder('scan')
   num_iters = next(iter(tree_iter(xs))).size(0)
-  ys = [
-      torch.empty((num_iters, *v.shape), device=device, dtype=v.dtype)
-      for v in fn_y_out
-  ]
+  print(
+      f"scan reverse={reverse} num_iters={num_iters} has {len(fn_y_out)} outputs"
+  )
+
+  # TODO: how to shard this thing?
+  # Backward pass outputs tensors like `[32, 14336, 4096]`.
+  # This seems like a gradient and should be sharded in the FSDP dimension.
+  def _make_output(v: torch.Tensor):
+    global scan_bw_output_sharder
+    empty = torch.empty((num_iters, *v.shape), device=device, dtype=v.dtype)
+    # HACK: shard based on shape
+    if not reverse:
+      return empty
+    if not len(v.shape) == 2:
+      return empty
+    if scan_bw_output_sharder[0] is not None:
+      empty = scan_bw_output_sharder[0](empty)
+    return empty
+
+  ys = [_make_output(v) for v in fn_y_out]
+  for v in ys:
+    print(f"shape: {v.shape}, dtype: {v.dtype}")
+
   # Start the `curr_iter` loop variable at zero.
   zero = torch.tensor(0, device=device)
   builder.add_param(zero)

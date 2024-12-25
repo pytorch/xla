@@ -113,6 +113,9 @@ static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
 xla::XlaOp LoweringContext::GetParameter(
     const std::shared_ptr<torch::lazy::BackendData>& backend_data,
     const std::unordered_set<uint32_t>& unbounded_dynamic_dims) {
+  // TODO: why does this code dedup parameters by handle? This is added
+  // in https://github.com/pytorch/xla/pull/1080/files.
+  // When will two `torch::lazy::BackendData` share the same data handle?
   torch::lazy::BackendData::Handle handle =
       backend_data->HasValue()
           ? backend_data->GetHandle()
