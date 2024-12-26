@@ -486,6 +486,9 @@ class TestAutocastTPU(TestAutocastBase):
 
 class TestOtherOps(unittest.TestCase):
 
+  @unittest.skipIf(not (xm.get_xla_supported_devices("TPU") or
+                        xm.get_xla_supported_devices("GPU")),
+                   f"bfloat16 is only enabled for TPU and GPU")
   def test_batch_norm(self):
     device = xm.xla_device()
     data = torch.randn(4, 16, 32, 32, device=device, dtype=torch.bfloat16)
