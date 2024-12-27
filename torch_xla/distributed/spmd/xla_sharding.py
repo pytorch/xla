@@ -758,12 +758,13 @@ def custom_linear_forward_fake(input: Tensor, weight: Tensor,
 
 @custom_op(
     "xla::custom_linear_backward",
-    schema="(Tensor grad_output, Tensor input, Tensor weight, Tensor? bias, bool needs_input_grad_input, bool needs_input_grad_weight, bool needs_input_grad_bias) -> (Tensor, Tensor, Tensor)",
+    schema="(Tensor grad_output, Tensor input, Tensor weight, Tensor? bias, bool needs_input_grad_input, bool needs_input_grad_weight, bool needs_input_grad_bias, str weight_sharding_spec) -> (Tensor, Tensor, Tensor)",
     mutates_args=())
 def custom_linear_backward(grad_output: Tensor, input: Tensor, weight: Tensor,
                            bias: Optional[Tensor], needs_input_grad_input: bool,
                            needs_input_grad_weight: bool,
-                           needs_input_grad_bias: bool):
+                           needs_input_grad_bias: bool,
+                           weight_sharding_spec: str):
   with xp.Trace('custom_linear_backward'):
     grad_input = grad_weight = grad_bias = None
 
@@ -776,6 +777,10 @@ def custom_linear_backward(grad_output: Tensor, input: Tensor, weight: Tensor,
     if needs_input_grad_weight:
       grad_weight = torch_xla._XLAC._xla_einsum('...m,...n->mn',
                                                 (grad_output, input))
+      if weight_sharding_spec:
+        import ast
+        partition_spec_eval = ast.literal_eval(weight_sharding_spec)
+        mark_sharding(grad_weight, get_global_mesh(), partition_spec_eval)
     else:
       grad_weight = None
 
@@ -792,7 +797,8 @@ def custom_linear_backward_fake(grad_output: Tensor, input: Tensor,
                                 weight: Tensor, bias: Optional[Tensor],
                                 needs_input_grad_input: bool,
                                 needs_input_grad_weight: bool,
-                                needs_input_grad_bias: bool):
+                                needs_input_grad_bias: bool,
+                                weight_sharding_spec: str):
   grad_input = grad_weight = grad_bias = None
 
   if needs_input_grad_input:
@@ -816,16 +822,18 @@ def custom_linear_backward_fake(grad_output: Tensor, input: Tensor,
 # Now define the XLAPatchedLinear function that uses the custom ops
 class XLAPatchedLinear(torch.autograd.Function):
   """
-    A patched version of `torch.nn.functional.linear` that uses einsum via custom ops.
-    By wrapping these calls in custom ops, AOTAutograd won't decompose einsum.
-    """
+  A patched version of `torch.nn.functional.linear` that uses einsum via custom ops.
+  By wrapping these calls in custom ops, AOTAutograd won't decompose einsum.
+  """
 
   @staticmethod
   def forward(ctx,
               input: Tensor,
               weight: Tensor,
-              bias: Optional[Tensor] = None):
+              bias: Optional[Tensor] = None,
+              weight_sharding_spec: Optional[str] = None):
     ctx.save_for_backward(input, weight, bias)
+    ctx.weight_sharding_spec = weight_sharding_spec
     # Call our custom forward op
     return torch.ops.xla.custom_linear_forward(input, weight, bias)
 
@@ -841,12 +849,15 @@ class XLAPatchedLinear(torch.autograd.Function):
     # Call our custom backward op with the boolean flags
     grad_input, grad_weight, grad_bias = torch.ops.xla.custom_linear_backward(
         grad_output, input, weight, bias, needs_input_grad_input,
-        needs_input_grad_weight, needs_input_grad_bias)
-    return grad_input, grad_weight, grad_bias
+        needs_input_grad_weight, needs_input_grad_bias,
+        ctx.weight_sharding_spec or "")
+    return grad_input, grad_weight, grad_bias, None
 
 
-def xla_patched_nn_linear_forward(m, input):
-  return XLAPatchedLinear.apply(input, m.weight, m.bias)
+def xla_patched_nn_linear_forward(m,
+                                  input,
+                                  weight_sharding_spec: Optional[str] = None):
+  return XLAPatchedLinear.apply(input, m.weight, m.bias, weight_sharding_spec)
 
 
 def apply_backward_optimization_barrier(m: torch.nn.Module):
