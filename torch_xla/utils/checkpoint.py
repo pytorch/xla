@@ -87,7 +87,7 @@ class CheckpointFunction(torch.autograd.Function):
     check_backward_validity(args)
     ctx.run_function = run_function
     ctx.preserve_rng_state = preserve_rng_state
-    
+
     # Accommodates the (remote) possibility that autocast is enabled for cpu AND gpu.
     ctx.gpu_autocast_kwargs = {
         "device_type": "cuda",
