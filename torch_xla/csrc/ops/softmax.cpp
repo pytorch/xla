@@ -4,6 +4,7 @@
 
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/softmax_builder.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -44,7 +45,22 @@ torch::lazy::NodePtr Softmax::Clone(torch::lazy::OpList operands) const {
 
 XlaOpVector Softmax::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(LowerSoftmax(input, dim_, dtype_), loctx);
+
+  // Build computation.
+  const std::string name = "composite.softmax";
+  const std::string attr = "{dim = " + std::to_string(dim_) + " : i64}";
+  xla::XlaBuilder builder(name);
+  xla::XlaOp arg =
+      xla::Parameter(&builder, 0, ShapeHelper::ShapeOfXlaOp(input), "arg");
+  xla::XlaOp ret = LowerSoftmax(arg, dim_, dtype_);
+  xla::XlaComputation computation = ConsumeValue(builder.Build(ret));
+
+  // Build call to computation.
+  std::vector<xla::XlaOp> inputs{input};
+  xla::XlaOp output =
+      xla::CompositeCall(loctx->builder(), computation, inputs, name, attr);
+
+  return ReturnOp(output, loctx);
 }
 
 std::string Softmax::ToString() const {
