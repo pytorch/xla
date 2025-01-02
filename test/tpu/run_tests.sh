@@ -33,6 +33,7 @@ python3 "$TEST_CDIR/test_while_loop.py"
 python3 "$TEST_CDIR/scan/test_scan.py"
 python3 "$TEST_CDIR/scan/test_scan_spmd.py"
 python3 "$TEST_CDIR/scan/test_scan_layers.py"
+XLA_HLO_DEBUG=1 python3 "$CDIR/scan/test_scan_debug.py"
 python3 "$TEST_CDIR/test_pallas.py" -v
 python3 "$TEST_CDIR/test_pallas_spmd.py"
 python3 "$TEST_CDIR/test_tpu_paged_attention_kernel.py"
