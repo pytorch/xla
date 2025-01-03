@@ -6,6 +6,7 @@ import torch
 from torch.utils import _pytree as pytree
 from torch_xla2 import tensor
 from torch_xla2.ops import ops_registry
+from torch_xla2 import decompositions
 import jax
 import jax.export
 import sympy
@@ -82,7 +83,7 @@ def exported_program_to_jax(exported_program, export_raw: bool = False):
   if torch.__version__ >= '2.2':
     # torch version 2.1 didn't expose this yet
     exported_program = exported_program.run_decompositions()
-    exported_program = exported_program.run_decompositions(_extra_decomp)
+    exported_program = exported_program.run_decompositions(decompositions.EXTRA_DECOMP)
   if DEBUG:
     print(exported_program.graph_module.code)
 
