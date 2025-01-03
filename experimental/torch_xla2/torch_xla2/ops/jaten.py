@@ -1902,6 +1902,7 @@ def _aten_adaptive_avg_pool3d(x, output_shape):
   stride_d = x.shape[-3] / output_shape[-3]
   stride_h = x.shape[-2] / output_shape[-2]
   stride_w = x.shape[-1] / output_shape[-1]
+
   def avg_pool_batch(d, h, w):
     start_d = int(jnp.floor(d * stride_d))
     end_d = int(jnp.ceil((d+1) * stride_d))
@@ -1919,73 +1920,106 @@ def _aten_adaptive_avg_pool3d(x, output_shape):
   return output
 
 @op(torch.ops.aten._adaptive_avg_pool2d)
-def _aten_adaptive_avg_pool2d(x, output_shape):
-  # https://github.com/patrick-kidger/equinox/blob/fe4121d96e3cb246d8acc1647c9c7a5b73d753dc/equinox/nn/_pool.py#L525
-  assert len(x.shape) in (3,4), f'Expected 3D or 4D input but got {len(x.shape)} dimensions'
-  assert len(output_shape) == 2, f'Expected 2D output but got {len(output_shape)} dimensions'
-
-  if np.prod(x.shape) == 0:
-    return jnp.zeros((*x.shape[:-len(output_shape)], *output_shape), dtype=x.dtype)
-  
-  batch_dims = None
-  if x.ndim == 4:
-    batch_dims = x.shape[:2]
-    x = x.reshape(-1, *x.shape[2:]) 
-  res = _adaptive_poolnd(x, output_shape, 2, jnp.mean)
-  if batch_dims is not None:
-    res = res.reshape((*batch_dims, *output_shape))
-  return res
-
-def _adaptive_pool1d(
-    x: jax.Array, target_size: int, operation: Callable[[jax.Array], jax.Array]
-) -> jax.Array:
-    """**Arguments:**
-
-    - `x`: The input. Should be a JAX array of shape `(dim,)`.
-    - `target_size`: The shape of the output after the pooling operation
-        `(target_size,)`.
-    - `operation`: The pooling operation to be performed on the input array.
-
-    **Returns:**
-
-    A JAX array of shape `(1, target_shape)`.
+def adaptive_avg_pool2d(input: jnp.ndarray, output_size: Tuple[int, int]) -> jnp.ndarray:
     """
-    dims = jnp.size(x)
-    num_head_arrays = dims % target_size
-    if num_head_arrays != 0:
-        head_end_index = num_head_arrays * (dims // target_size + 1)
-        head_op = jax.vmap(operation)(x[:head_end_index].reshape(num_head_arrays, -1))
-        tail_op = jax.vmap(operation)(
-            x[head_end_index:].reshape(-1, dims // target_size)
+    Applies a 2D adaptive average pooling over an input signal composed of several input planes.
+
+    See :class:`~torch.nn.AdaptiveAvgPool2d` for details and output shape.
+
+    Args:
+        input: input tensor
+        output_size: the target output size (single integer or double-integer tuple)
+
+    Context:
+      https://github.com/pytorch/pytorch/blob/main/torch/_decomp/decompositions.py#L2401
+    """
+    shape = input.shape
+    ndim = len(shape)
+
+    # Preconditions
+    assert ndim in (3, 4), f"adaptive_avg_pool2d(): Expected 3D or 4D tensor, but got {ndim}"
+    for d in input.shape[-2:]:
+        assert d != 0, "adaptive_avg_pool2d(): Expected input to have non-zero size for " \
+                       f"non-batch dimensions, but input has shape {tuple(shape)}."
+
+    # Optimisation (we should also do this in the kernel implementation)
+    if shape[-2] % output_size[-2] == 0 and shape[-1] % output_size[-1] == 0:
+        stride = tuple(i // o for i, o in zip(shape[-2:], output_size))
+        kernel = tuple(i - (o - 1) * s for i, o, s in zip(shape[-2:], output_size, stride))
+        return _aten_avg_pool(
+          input,
+          kernel,
+          strides=stride,
         )
-        outputs = jnp.concatenate([head_op, tail_op])
-    else:
-        outputs = jax.vmap(operation)(
-            jax.vmap(operation)(x.reshape(-1, dims // target_size))
-        )
-    return outputs
 
+    def start_index(a, b, c):
+        return (a * c) // b
 
-def _adaptive_poolnd(
-    x: jax.Array, target_size: int, num_spatial_dims: int, 
-    operation: Callable[[jax.Array], jax.Array]):
+    def end_index(a, b, c):
+        return ((a + 1) * c + b - 1) // b
 
-  if x.ndim - 1 != len(target_size):
-    raise ValueError(
-        f"Expected input with {len(target_size)} dimensions, "
-        f"received {x.ndim-1} instead."
-    )
-  for i in range(1, x.ndim):
-      op = jax.vmap(
-          _adaptive_pool1d, (0, None, None), 0
-      )  # batching over channels by default
-      for j in range(1, x.ndim):
-          if i == j:
-              continue
-          op = jax.vmap(op, in_axes=(j, None, None), out_axes=j)
-      x = op(x, target_size[i - 1], operation)
-  return x
-    
+    def compute_idx(in_size, out_size):
+        orange = jnp.arange(out_size, dtype=jnp.int64)
+        i0 = start_index(orange, out_size, in_size)
+        # Let length = end_index - start_index, i.e. the length of the pooling kernels
+        # length.max() can be computed analytically as follows:
+        maxlength = in_size // out_size + 1
+        in_size_mod = in_size % out_size
+        # adaptive = True iff there are kernels with different lengths
+        adaptive = not (in_size_mod == 0 or out_size % in_size_mod == 0)
+        if adaptive:
+            maxlength += 1
+        elif in_size_mod == 0:
+            maxlength -= 1
+
+        range_max = jnp.arange(maxlength, dtype=jnp.int64)
+        idx = i0[:, None] + range_max
+        if adaptive:
+            # Need to clamp to avoid accessing out-of-bounds memory
+            idx = jnp.minimum(idx, in_size - 1)
+
+            # Compute the length
+            i1 = end_index(orange, out_size, in_size)
+            length = i1 - i0
+        else:
+            length = maxlength
+        return idx, length, range_max, adaptive
+
+    # length is not None if it's constant, otherwise we'll need to compute it
+    idxh, length_h, range_max_h, adaptive_h = compute_idx(shape[-2], output_size[-2])
+    idxw, length_w, range_max_w, adaptive_w = compute_idx(shape[-1], output_size[-1])
+
+    def _unsqueeze_to_dim(x, dim):
+        ndim = len(x.shape)
+        return jax.lax.expand_dims(x, tuple(range(dim - ndim, 0)))
+
+    vals = input[..., _unsqueeze_to_dim(idxh, 4), idxw]
+    # Shortcut for the simpler case
+    if not adaptive_h and not adaptive_w:
+        return jnp.mean(vals, axis=(-3, -1))
+
+    def maybe_mask(vals, length, range_max, adaptive, dim):
+        if isinstance(length, int):
+            return vals, length
+        else:
+            # zero-out the things we didn't really want to select
+            assert dim < 0
+            # hack
+            mask = range_max >= length[:, None]
+            if dim == -2:
+                mask = _unsqueeze_to_dim(mask, 4)
+            vals = jnp.where(mask, 0.0, vals)
+            # Compute the length of each window
+            length = _unsqueeze_to_dim(length, -dim)
+            return vals, length
+
+    vals, length_h = maybe_mask(vals, length_h, range_max_h, adaptive=adaptive_h, dim=-2)
+    vals, length_w = maybe_mask(vals, length_w, range_max_w, adaptive=adaptive_w, dim=-1)
+
+    # We unroll the sum as we assume that the kernels are going to be small
+    ret = jnp.sum(vals, axis=(-3, -1))
+    return ret / (length_h * length_w)
+  
 
 @op(torch.ops.aten.avg_pool1d)
 @op(torch.ops.aten.avg_pool2d)
