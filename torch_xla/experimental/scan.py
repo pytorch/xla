@@ -487,7 +487,6 @@ def _scan_impl_flat(fn,
   fn_carry_out, fn_y_out = split(fn_outputs, carry_len)
   assert carry_len + y_len == len(fn_outputs)
   fn_carry_shapes = [v.shape for v in fn_carry_out]
-  fn_y_shapes = [v.shape for v in fn_y_out]
   for fn_carry_shape, init_leaf in zip(fn_carry_shapes, init):
     assert fn_carry_shape == init_leaf.shape, f"`fn` must keep the `carry` shape unchanged. \
       Got {fn_carry_shape} but expected {init_leaf.shape}"
@@ -495,8 +494,8 @@ def _scan_impl_flat(fn,
   builder = Builder('scan')
   num_iters = next(iter(tree_iter(xs))).size(0)
   ys = [
-      torch.zeros((num_iters, *fn_y_shape), device=device)
-      for fn_y_shape in fn_y_shapes
+      torch.zeros((num_iters, *v.shape), device=device, dtype=v.dtype)
+      for v in fn_y_out
   ]
   # Start the `curr_iter` loop variable at zero.
   zero = torch.tensor(0, device=device)

@@ -371,6 +371,32 @@ class ScanTest(TestBase):
         count_number_of_sines(min_cut_rematerialization_partition), 10)
     self.assertEqual(count_number_of_sines(default_partition), 0)
 
+  def test_scan_different_dtypes(self):
+    """Test that the combine function can output different dtypes."""
+
+    def fn(carry, x):
+      bf16_value, f32_value = x
+      y = (torch.sin(bf16_value), torch.sin(f32_value))
+      return torch.sin(carry), y
+
+    init = torch.tensor([0.0, 0.0],
+                        requires_grad=True,
+                        device=self.device,
+                        dtype=torch.float16)
+    bf16_xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                           requires_grad=True,
+                           device=self.device,
+                           dtype=torch.bfloat16)
+    f32_xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                          requires_grad=True,
+                          device=self.device,
+                          dtype=torch.float32)
+    final_carry, ys = self.run_test(fn, init, (bf16_xs, f32_xs))
+    bf16_ys, f32_ys = ys
+    self.assertEqual(final_carry.dtype, torch.float16)
+    self.assertEqual(bf16_ys.dtype, torch.bfloat16)
+    self.assertEqual(f32_ys.dtype, torch.float32)
+
 
 class PyTreeTest(TestBase):
 
