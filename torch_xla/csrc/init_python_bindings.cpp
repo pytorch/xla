@@ -304,6 +304,9 @@ void AllReduceInPlace(const std::string& reduce_type,
       GetXlaTensors(tensors, /*want_all=*/true);
   tensor_methods::all_reduce(xtensors, GetReduceType(reduce_type), scale,
                              replica_groups, pin_layout);
+  std::vector<XLATensorPtr> new_xtensors =
+      GetXlaTensors(tensors, /*want_all=*/true);
+  bridge::ReplaceXlaTensor(tensors, new_xtensors);
 }
 
 at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
