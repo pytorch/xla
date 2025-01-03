@@ -521,7 +521,8 @@ def _scan_impl_flat(fn,
     builder.add_param(val)
 
   # Detect hoisted variables.
-  hoisted_vars: Dict[int, torch.Tensor] = fn_ctx.parameter_id_tensor_mapping()
+  hoisted_vars: Dict[
+      int, torch.Tensor] = fn_ctx.device_parameter_id_tensor_mapping()
   for v in itertools.chain(fake_carry, fake_x):
     param_id = fn_ctx.tensor_parameter_id(v)
     if param_id != -1:
