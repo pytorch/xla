@@ -184,6 +184,7 @@ function run_xla_op_tests2 {
   run_test "$CDIR/test_scan.py"
   run_test "$CDIR/test_autocast.py"
   run_test "$CDIR/test_grad_checkpoint.py"
+  run_test "$CDIR/test_grad_checkpoint.py" "$@" --test_autocast
   #run_test "$CDIR/eager/test_eager.py"
   run_test "$CDIR/eager/test_eager_with_xla_compile.py"
   run_test "$CDIR/eager/test_eager_with_torch_compile.py"

@@ -22,6 +22,7 @@ XLA_EXPERIMENTAL=nonzero:masked_select:nms python3 "$TEST_CDIR/ds/test_dynamic_s
 python3 "$TEST_CDIR/test_autocast.py"
 python3 "$TEST_CDIR/test_fp8.py"
 python3 "$TEST_CDIR/test_grad_checkpoint.py"
+python3 "$TEST_CDIR/test_grad_checkpoint.py" "$@" --test_autocast
 python3 "$TEST_CDIR/dynamo/test_dynamo.py"
 python3 "$TEST_CDIR/dynamo/test_dynamo_dynamic_shape.py"
 python3 "$TEST_CDIR/spmd/test_spmd_debugging.py"

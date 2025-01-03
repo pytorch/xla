@@ -87,15 +87,24 @@ class CheckpointFunction(torch.autograd.Function):
     check_backward_validity(args)
     ctx.run_function = run_function
     ctx.preserve_rng_state = preserve_rng_state
+
     # Accommodates the (remote) possibility that autocast is enabled for cpu AND gpu.
     ctx.gpu_autocast_kwargs = {
-        "enabled": torch.is_autocast_enabled(),
-        "dtype": torch.get_autocast_gpu_dtype(),
+        "device_type": "cuda",
+        "enabled": torch.is_autocast_enabled("cuda"),
+        "dtype": torch.get_autocast_dtype("cuda"),
         "cache_enabled": torch.is_autocast_cache_enabled()
     }
     ctx.cpu_autocast_kwargs = {
-        "enabled": torch.is_autocast_cpu_enabled(),
-        "dtype": torch.get_autocast_cpu_dtype(),
+        "device_type": "cpu",
+        "enabled": torch.is_autocast_enabled("cpu"),
+        "dtype": torch.get_autocast_dtype("cpu"),
+        "cache_enabled": torch.is_autocast_cache_enabled()
+    }
+    ctx.xla_autocast_kwargs = {
+        "device_type": "xla",
+        "enabled": torch.is_autocast_enabled("xla"),
+        "dtype": torch.get_autocast_dtype("xla"),
         "cache_enabled": torch.is_autocast_cache_enabled()
     }
     if preserve_rng_state:
@@ -180,8 +189,9 @@ class CheckpointFunction(torch.autograd.Function):
             set_device_states(ctx.fwd_gpu_devices, ctx.fwd_gpu_states)
         detached_inputs = detach_variable(tuple(inputs))
         with torch.enable_grad(), \
-            torch.cuda.amp.autocast(**ctx.gpu_autocast_kwargs), \
-            torch.cpu.amp.autocast(**ctx.cpu_autocast_kwargs):
+            torch.autocast(**ctx.gpu_autocast_kwargs), \
+            torch.autocast(**ctx.cpu_autocast_kwargs), \
+            torch.autocast(**ctx.xla_autocast_kwargs):
           outputs = ctx.run_function(*detached_inputs)
 
     if isinstance(outputs, torch.Tensor):
