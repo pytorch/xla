@@ -219,11 +219,25 @@ def value_and_grad_partitioned(
   fake_x_pytree = tree_map(
       lambda v: make_fake_tensor(v[0], requires_grad=v.requires_grad), xs)
 
+  # If an output of `fn` aliases the input, `aot_function` will handle that
+  # pair of variables with an epilogue inside its generated autograd.Function
+  # that we can't access. In other words, the captured graph won't contain
+  # those variables. See description in
+  # https://github.com/pytorch/pytorch/issues/85036.
+  #
+  # Because we're abusing AOTAutograd to capture the graph, we need AOTAutograd
+  # to handle all variables in the graph as opposed to in the opaque epilogue.
+  # This wrapper clones an output if it aliases an input. This hack can go away
+  # if scan is instead implemented as a Dynamo compiler pass.
+  def fn_no_output_aliasing(*args):
+    inputs = set(tree_iter(args))
+    return tree_map(lambda v: v.clone() if v in inputs else v, fn(*args))
+
   with torch.enable_grad():
     fw_compiler, get_fwd = _make_get_graph_compiler()
     bw_compiler, get_bwd = _make_get_graph_compiler()
     fn_compiled = aot_function(
-        fn,
+        fn_no_output_aliasing,
         fw_compiler=fw_compiler,
         bw_compiler=bw_compiler,
         partition_fn=partition_fn)
@@ -293,7 +307,7 @@ class Scan(torch.autograd.Function):
     return carry, ys
 
   @staticmethod
-  def backward(ctx, grad_carry, grad_ys):
+  def backward(ctx, grad_carry, grad_ys):  # type: ignore
     activations = ctx.saved_tensors
     backward = ctx._backward
     with torch.no_grad():

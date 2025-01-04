@@ -220,6 +220,53 @@ class ScanTest(TestBase):
                       device=self.device)
     self.run_test(fn, init, xs)
 
+  def test_scan_input_output_aliases_carry(self):
+    """
+    Test scan still works when a fn output aliases its carry input.
+    """
+
+    def fn(carry, x):
+      return carry, x + 1
+
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=True,
+                      device=self.device)
+    self.run_test(fn, init, xs)
+
+  def test_scan_input_output_aliases_x(self):
+    """
+    Test scan still works when a fn output aliases its x input.
+    """
+
+    def fn(carry, x):
+      return carry + 1, x
+
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=True,
+                      device=self.device)
+    self.run_test(fn, init, xs)
+
+  def test_scan_input_in_place_mutation(self):
+    """
+    Test that fn cannot mutate its input. The semantics of that in a `scan`
+    is unclear and should be disallowed.
+    """
+
+    def fn(carry, x):
+      carry.add_(x)
+      y = x.clone()
+      y.add_(42)
+      return carry, y
+
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=True,
+                      device=self.device)
+    with self.assertRaisesRegex(RuntimeError, 'in-place operation'):
+      self.run_test(fn, init, xs)
+
   def test_scan_external_in_place_mutation(self):
     """
     Test that external in-place mutations raise an exception instead of silently
