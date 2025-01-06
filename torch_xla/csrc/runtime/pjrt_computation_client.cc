@@ -62,8 +62,7 @@ std::unordered_map<int, int> build_index_map(
 xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
   xla::Shape shape = xla::ShapeUtil::MakeShape(
       buffer->element_type(), buffer->logical_dimensions().value());
-  *shape.mutable_layout() = xla::GetXlaLayoutUnsafe(buffer->layout());
-
+  *shape.mutable_layout() = buffer->layout()->xla_layout();
   return xla::ShapeUtil::DeviceShapeToHostShape(shape);
 }
 

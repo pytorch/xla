@@ -154,7 +154,7 @@ DLManagedTensor* toDLPack(const at::Tensor& input) {
 
   pack->shape = std::vector<int64_t>(pjrt_buffer->dimensions().begin(),
                                      pjrt_buffer->dimensions().end());
-  xla::Layout xla_layout = xla::GetXlaLayoutUnsafe(pjrt_buffer->layout());
+  xla::Layout xla_layout = pjrt_buffer->layout()->xla_layout();
   pack->strides = StridesForShape(pjrt_buffer->element_type(),
                                   pjrt_buffer->dimensions(), xla_layout);
   dt.shape = reinterpret_cast<std::int64_t*>(pack->shape.data());
