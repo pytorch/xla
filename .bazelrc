@@ -171,6 +171,13 @@ build --define=allow_oversize_protos=true
 # Enable XLA support by default.
 build --define=with_xla_support=true
 
+# Disable some xnnpack compilation flags which are not supported before gcc-13.
+build:linux --define=xnn_enable_avxvnni=false
+build:linux --define=xnn_enable_avx256vnni=false
+build:linux --define=xnn_enable_avxvnniint8=false
+build:linux --define=xnn_enable_avx512amx=false
+build:linux --define=xnn_enable_avx512fp16=false
+
 # See https://github.com/bazelbuild/bazel/issues/7362 for information on what
 # --incompatible_remove_legacy_whole_archive flag does.
 # This flag is set to true in Bazel 1.0 and newer versions. We tried to migrate
