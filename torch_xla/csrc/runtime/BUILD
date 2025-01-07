@@ -50,6 +50,7 @@ cc_library(
         ":types",
         ":util",
         ":xla_coordinator",
+        ":xla_util",
         "//torch_xla/csrc:device",
         "//torch_xla/csrc:dtype",
         "@com_google_absl//absl/memory",
@@ -460,6 +461,7 @@ ptxla_cc_test(
     size = "small",
     srcs = ["xla_util_test.cc"],
     deps = [
+        ":debug_macros",
         ":xla_util",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
