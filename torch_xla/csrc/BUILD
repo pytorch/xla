@@ -146,6 +146,7 @@ ptxla_cc_library(
         "@xla//xla/client/lib:constants",
         "@xla//xla/client/lib:logdet",
         "@xla//xla/client/lib:math",
+        "@xla//xla/client/lib:matrix",
         "@xla//xla/client/lib:pooling",
         "@xla//xla/client/lib:self_adjoint_eig",
         "@xla//xla/client/lib:slicing",
