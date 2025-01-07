@@ -253,7 +253,7 @@ class FlashAttention(torch.autograd.Function):
       q = xs.enable_manual_sharding(q, partition_spec, mesh=mesh).global_tensor
       k = xs.enable_manual_sharding(k, partition_spec, mesh=mesh).global_tensor
       v = xs.enable_manual_sharding(v, partition_spec, mesh=mesh).global_tensor
-      if ab:
+      if ab is not None:
         ab = xs.enable_manual_sharding(
             ab, partition_spec, mesh=mesh).global_tensor
 
@@ -376,7 +376,7 @@ class FlashAttention(torch.autograd.Function):
           grad_output, partition_spec, mesh=mesh).global_tensor
       expanded_grad_i = xs.enable_manual_sharding(
           expanded_grad_i, partition_spec, mesh=mesh).global_tensor
-      if ab:
+      if ab is not None:
         ab = xs.enable_manual_sharding(
             ab, partition_spec, mesh=mesh).global_tensor
 
