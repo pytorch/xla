@@ -14,6 +14,7 @@
 #include "tsl/platform/errors.h"
 #include "tsl/platform/stacktrace.h"
 #include "xla/shape_util.h"
+#include "xla/tsl/lib/strings/proto_serialization.h"
 #include "xla/util.h"
 
 namespace torch_xla {
@@ -113,6 +114,26 @@ torch::lazy::hash_t ShapeHash(const xla::Shape& shape) {
         hash = SingleShapeHash(subshape, hash);
       });
   return hash;
+}
+
+absl::StatusOr<std::string> GetDeterministicSerializedModuleProto(
+    const xla::HloModuleProto& hlo_proto) {
+  const size_t size = hlo_proto.ByteSizeLong();
+  if (size == 0) {
+    return std::string();
+  }
+  std::string serialized;
+  // Pre-allocate the string buffer for the serialized result.
+  serialized.resize(size);
+
+  // Perform deterministic serialization ensuring consistent ordering
+  // of map fields and repeated elements
+  if (!tsl::SerializeToBufferDeterministic(hlo_proto, serialized.data(),
+                                           size)) {
+    return absl::InvalidArgumentError("Could not serialize module proto");
+  }
+
+  return serialized;
 }
 
 }  // namespace util

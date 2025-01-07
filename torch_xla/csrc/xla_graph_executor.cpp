@@ -1200,12 +1200,13 @@ XLAGraphExecutor::LookupCachedCompile(const torch::lazy::hash_t& hash) {
     TORCH_LAZY_COUNTER("UncachedCompile", 1);
     return nullptr;
   }
+  std::string serialized_computation =
+      ConsumeValue(runtime::util::GetDeterministicSerializedModuleProto(
+          cached_computation->computation->computation().proto()));
   TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(hash)
              << " is computation hash "
-             << torch::lazy::HashToString(torch::lazy::Hash(
-                    cached_computation->computation->computation()
-                        .proto()
-                        .SerializeAsString()));
+             << torch::lazy::HashToString(
+                    torch::lazy::Hash(serialized_computation));
   TORCH_LAZY_COUNTER("CachedCompile", 1);
   return cached_computation;
 }
@@ -1443,11 +1444,13 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
              << coll.device << " done!";
   TF_VLOG(5) << "Compiled program shape "
              << computations.front()->program_shape().ToString() << std::endl;
-  TF_VLOG(5)
-      << "Graph hash " << torch::lazy::HashToString(coll.hash)
-      << " is computation hash "
-      << torch::lazy::HashToString(torch::lazy::Hash(
-             computations.front()->computation().proto().SerializeAsString()));
+  std::string serialized_computation =
+      ConsumeValue(runtime::util::GetDeterministicSerializedModuleProto(
+          computations.front()->computation().proto()));
+  TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(coll.hash)
+             << " is computation hash "
+             << torch::lazy::HashToString(
+                    torch::lazy::Hash(serialized_computation));
 
   if (use_autosharding) {
     const xla::HloModuleProto& computation_proto =
