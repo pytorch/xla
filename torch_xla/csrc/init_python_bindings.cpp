@@ -1166,9 +1166,8 @@ class PyLoweringContext {
   // Create a serialized HloModule protobuf from a lowered graph
   py::bytes GetHlo() {
     const xla::HloModuleProto& proto = computation.proto();
-    std::string result;
-    proto.SerializeToString(&result);
-    return result;
+    return ConsumeValue(
+        runtime::util::GetDeterministicSerializedModuleProto(proto));
   }
 
   // Create human-readable HloModule protobuf text from a lowered graph
