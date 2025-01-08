@@ -11,20 +11,11 @@ from jax.experimental.pallas.ops.tpu import flash_attention
 from jax.experimental.shard_map import shard_map
 
 import torch
+
+from torch_xla2.ops.mappings import t2j_dtype
 from torch_xla2.ops.ops_registry import register_torch_function_op
 from torch_xla2.ops import op_base, mappings, jaten
 import torch_xla2.tensor
-
-TORCH_TO_JAX_DTYPE = {
-    torch.bool: jnp.bool_,
-    torch.float32: jnp.float32,
-    torch.float64: jnp.float64,
-    torch.int64: jnp.int64,
-    torch.int32: jnp.int32,
-    torch.complex64: jnp.complex64,
-    # add more as needed
-}
-
 
 def register_function(torch_func, **kwargs):
   return functools.partial(register_torch_function_op, torch_func, **kwargs)
@@ -430,17 +421,14 @@ def linspace(start, end, steps=100, *, dtype=None, device=None, **kwargs):
     env = kwargs.get("env")
 
     if dtype is None:
-        dtype = torch.float32
+        dtype = torch.get_default_dtype()
 
-    jdtype = TORCH_TO_JAX_DTYPE.get(dtype)
-    if jdtype is None:
-        raise RuntimeError(f"Attempting to convert unknown type: {dtype} to jax type")
-
+    jdtype = t2j_dtype(dtype)
     start_j = jnp.array(start, dtype=jdtype)
-    end_j   = jnp.array(end,   dtype=jdtype)
+    end_j = jnp.array(end, dtype=jdtype)
 
     result = jnp.linspace(start_j, end_j, num=steps, dtype=jdtype)
-    return torch_xla2.tensor.XLATensor2(result, env)
+    return result
 
 
 @register_function(torch.logspace)
@@ -452,15 +440,11 @@ def logspace(start, end, steps=100, base=10.0, *, dtype=None, device=None, **kwa
     env = kwargs.get("env")
 
     if dtype is None:
-        dtype = torch.float32
+        dtype = torch.get_default_dtype()
 
-    jdtype = TORCH_TO_JAX_DTYPE.get(dtype)
-    if jdtype is None:
-        raise RuntimeError(f"Attempting to convert unknown type: {dtype} to jax type")
-
+    jdtype = t2j_dtype(dtype)
     start_j = jnp.array(start, dtype=jdtype)
-    end_j   = jnp.array(end,   dtype=jdtype)
+    end_j = jnp.array(end, dtype=jdtype)
 
     result = jnp.logspace(start_j, end_j, num=steps, base=base, dtype=jdtype)
-
-    return torch_xla2.tensor.XLATensor2(result, env)
+    return result
