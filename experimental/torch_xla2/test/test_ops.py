@@ -34,9 +34,6 @@ skiplist = {
     "nn.functional.adaptive_max_pool3d",
     "nn.functional.alpha_dropout",
     "nn.functional.ctc_loss",
-    "nn.functional.dropout2d",
-    "nn.functional.dropout3d",
-    "nn.functional.dropout",
     "nn.functional.embedding_bag",
     "nn.functional.fractional_max_pool2d",
     "nn.functional.fractional_max_pool3d",
@@ -94,6 +91,9 @@ random_ops = {
   'exponential',
   'log_normal',
   'randint',
+  'nn.functional.dropout2d',
+  'nn.functional.dropout3d',
+  'nn.functional.dropout',
 }
 
 atol_dict = {"linalg.eig": (2e0, 3e0),

@@ -29,6 +29,9 @@ XLATensorPtr GetXlaTensor(const at::Tensor& tensor);
 // version.
 void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor);
 
+void ReplaceXlaTensor(const std::vector<at::Tensor>& tensor,
+                      const std::vector<XLATensorPtr> new_xla_tensor);
+
 // Same as above, applied to a list of tensors.
 std::vector<XLATensorPtr> GetXlaTensors(const at::ITensorListRef& tensors);
 

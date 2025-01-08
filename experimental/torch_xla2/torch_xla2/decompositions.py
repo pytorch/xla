@@ -284,6 +284,7 @@ EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten._upsample_nearest_exact2d,
     torch.ops.aten._upsample_nearest_exact3d,
     torch.ops.aten._native_batch_norm_legit.no_stats,
+    torch.ops.aten._native_batch_norm_legit_functional.default,
     torch.ops.aten._adaptive_avg_pool2d,
     torch.ops.aten._adaptive_avg_pool3d,
     torch.ops.aten.grid_sampler_2d,

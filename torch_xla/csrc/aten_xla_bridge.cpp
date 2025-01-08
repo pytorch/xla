@@ -121,6 +121,16 @@ void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor) {
   impl->set_tensor(std::move(new_xla_tensor));
 }
 
+void ReplaceXlaTensor(const std::vector<at::Tensor>& tensors,
+                      const std::vector<XLATensorPtr> new_xla_tensors) {
+  XLA_CHECK(tensors.size() == new_xla_tensors.size())
+      << "The size of tensors and new_xla_tensors are not equal: "
+      << tensors.size() << " vs. " << new_xla_tensors.size();
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    ReplaceXlaTensor(tensors[i], new_xla_tensors[i]);
+  }
+}
+
 std::vector<XLATensorPtr> GetXlaTensors(const at::ITensorListRef& tensors) {
   std::vector<XLATensorPtr> xla_tensors;
   xla_tensors.reserve(tensors.size());

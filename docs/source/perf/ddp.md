@@ -244,7 +244,6 @@ repo](https://github.com/pytorch/xla/). For those who are interested in
 the native xla data parallel approach, here is the
 [tutorial](../API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing).
 
-Here are some of the known issues that are under investigation: \*
-`gradient_as_bucket_view=False` needs to be enforced. \* There are some
-issues while being used with `torch.utils.data.DataLoader`.
-`test_train_mp_mnist.py` with real data crashes before exiting.
+Here are some of the known issues that are under investigation: \* There are some
+issues while being used with `torch.utils.data.DataLoader`. `test_train_mp_mnist.py`
+with real data crashes before exiting.

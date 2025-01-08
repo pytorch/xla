@@ -9,6 +9,7 @@ from functorch.compile import default_partition, min_cut_rematerialization_parti
 from torch.utils._pytree import tree_map, tree_flatten, tree_iter, tree_leaves, PyTree
 
 import torch_xla
+import torch_xla.debug.metrics as met
 from torch_xla.experimental.scan import scan, value_and_grad_partitioned, tree_flatten_none
 
 parent_folder = os.path.dirname(os.path.dirname(__file__))
@@ -178,6 +179,29 @@ class ScanTest(TestBase):
                       device=self.device)
     self.run_test(fn, init, xs)
 
+  def test_scan_create_tensors_no_transfers_from_device(self):
+    """Test that scanning over a function that internally creates tensors
+    will not transfer those tensor to host, which can be potentially expensive.
+    """
+
+    def fn(carry, x):
+      a = torch.tensor([1.0, 2.0], device=self.device)
+      b = torch.tensor([3.0, 4.0], device=self.device)
+      return carry + a, x + b
+
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=True,
+                      device=self.device)
+    met.clear_all()
+    self.assertFalse(met.metric_data("TransferFromDeviceTime"))
+    # Use `scan` to lower `fn` into HLO and run it. Doing so should not
+    # transfer anything from the device to host. `carry` and `ys` still
+    # reference data on the device.
+    carry, ys = scan(fn, init, xs)
+    torch_xla.sync(wait=True)
+    self.assertFalse(met.metric_data("TransferFromDeviceTime"))
+
   def test_scan_internal_in_place_mutation(self):
     """
     Test internal in-place mutations inside the `fn` to be scanned over.
@@ -195,6 +219,53 @@ class ScanTest(TestBase):
                       requires_grad=True,
                       device=self.device)
     self.run_test(fn, init, xs)
+
+  def test_scan_input_output_aliases_carry(self):
+    """
+    Test scan still works when a fn output aliases its carry input.
+    """
+
+    def fn(carry, x):
+      return carry, x + 1
+
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=True,
+                      device=self.device)
+    self.run_test(fn, init, xs)
+
+  def test_scan_input_output_aliases_x(self):
+    """
+    Test scan still works when a fn output aliases its x input.
+    """
+
+    def fn(carry, x):
+      return carry + 1, x
+
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=True,
+                      device=self.device)
+    self.run_test(fn, init, xs)
+
+  def test_scan_input_in_place_mutation(self):
+    """
+    Test that fn cannot mutate its input. The semantics of that in a `scan`
+    is unclear and should be disallowed.
+    """
+
+    def fn(carry, x):
+      carry.add_(x)
+      y = x.clone()
+      y.add_(42)
+      return carry, y
+
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=True,
+                      device=self.device)
+    with self.assertRaisesRegex(RuntimeError, 'in-place operation'):
+      self.run_test(fn, init, xs)
 
   def test_scan_external_in_place_mutation(self):
     """
@@ -346,6 +417,32 @@ class ScanTest(TestBase):
     self.assertGreater(
         count_number_of_sines(min_cut_rematerialization_partition), 10)
     self.assertEqual(count_number_of_sines(default_partition), 0)
+
+  def test_scan_different_dtypes(self):
+    """Test that the combine function can output different dtypes."""
+
+    def fn(carry, x):
+      bf16_value, f32_value = x
+      y = (torch.sin(bf16_value), torch.sin(f32_value))
+      return torch.sin(carry), y
+
+    init = torch.tensor([0.0, 0.0],
+                        requires_grad=True,
+                        device=self.device,
+                        dtype=torch.float16)
+    bf16_xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                           requires_grad=True,
+                           device=self.device,
+                           dtype=torch.bfloat16)
+    f32_xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                          requires_grad=True,
+                          device=self.device,
+                          dtype=torch.float32)
+    final_carry, ys = self.run_test(fn, init, (bf16_xs, f32_xs))
+    bf16_ys, f32_ys = ys
+    self.assertEqual(final_carry.dtype, torch.float16)
+    self.assertEqual(bf16_ys.dtype, torch.bfloat16)
+    self.assertEqual(f32_ys.dtype, torch.float32)
 
 
 class PyTreeTest(TestBase):
