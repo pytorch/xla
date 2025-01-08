@@ -70,7 +70,7 @@ class LibraryTest(unittest.TestCase):
     args = (arg, arg, arg, )
 
     exported = torch.export.export(model, args=args)
-    stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
+    weights, stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
     module_str = str(stablehlo.mlir_module())
 
     ## TODO Update this machinery from producing function calls to producing
