@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+gitc673809 )
+                  master (2.7.0+git004845f )
                 </div>
               
             
@@ -418,155 +418,64 @@
 <h1>Torch Export to StableHLO<a class="headerlink" href="#torch-export-to-stablehlo" title="Permalink to this heading">¶</a></h1>
 <p>This document describes how to use torch export + torch xla to export to
 <a class="reference external" href="https://github.com/openxla/stablehlo">StableHLO</a> format.</p>
+<p>There are 2 ways to accomplish this:</p>
+<ol class="arabic simple">
+<li><p>First do torch.export to create a ExportedProgram, which contains the program
+in torch.fx graph. Then use <code class="docutils literal notranslate"><span class="pre">exported_program_to_stablehlo</span></code> to convert it into an object that contains
+stablehlo MLIR code.</p></li>
+<li><p>First convert pytorch model to a jax function, then use jax utilities to convert it
+to stablehlo</p></li>
+</ol>
+<div class="section" id="using-torch-export">
+<h2>Using <code class="docutils literal notranslate"><span class="pre">torch.export</span></code><a class="headerlink" href="#using-torch-export" title="Permalink to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch.export</span> <span class="kn">import</span> <span class="n">export</span>
-<span class="kn">from</span> <span class="nn">torch_xla.stablehlo</span> <span class="kn">import</span> <span class="n">exported_program_to_stablehlo</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 <span class="kn">import</span> <span class="nn">torchvision</span>
 <span class="kn">import</span> <span class="nn">torch</span>
-
-<span class="n">xla_device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+<span class="kn">import</span> <span class="nn">torch_xla2</span> <span class="k">as</span> <span class="nn">tx</span>
+<span class="kn">import</span> <span class="nn">torch_xla2.export</span>
 
 <span class="n">resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span>
 <span class="c1"># Sample input is a tuple</span>
 <span class="n">sample_input</span> <span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">),</span> <span class="p">)</span>
 <span class="n">output</span> <span class="o">=</span> <span class="n">resnet18</span><span class="p">(</span><span class="o">*</span><span class="n">sample_input</span><span class="p">)</span>
 <span class="n">exported</span> <span class="o">=</span> <span class="n">export</span><span class="p">(</span><span class="n">resnet18</span><span class="p">,</span> <span class="n">sample_input</span><span class="p">)</span>
-<span class="n">stablehlo_program</span> <span class="o">=</span> <span class="n">exported_program_to_stablehlo</span><span class="p">(</span><span class="n">exported</span><span class="p">)</span>
 
-<span class="c1"># Now stablehlo_program is a callable backed by stablehlo IR.</span>
+<span class="n">weights</span><span class="p">,</span> <span class="n">stablehlo</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="n">export</span><span class="o">.</span><span class="n">exported_program_to_stablehlo</span><span class="p">(</span><span class="n">exported</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stablehlo</span><span class="o">.</span><span class="n">mlir_module</span><span class="p">())</span>
+<span class="c1"># Can store weights and/or stablehlo object however you like</span>
+</pre></div>
+</div>
+<p>The stablehlo object is of type <code class="docutils literal notranslate"><span class="pre">jax.export.Exported</span></code>.
+Feel free to explore: <a class="reference external" href="https://openxla.org/stablehlo/tutorials/jax-export">https://openxla.org/stablehlo/tutorials/jax-export</a>
+for more details on how to use the MLIR code generated from it.</p>
+</div>
+<div class="section" id="using-extract-jax">
+<h2>Using <code class="docutils literal notranslate"><span class="pre">extract_jax</span></code><a class="headerlink" href="#using-extract-jax" title="Permalink to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch.export</span> <span class="kn">import</span> <span class="n">export</span>
+<span class="kn">import</span> <span class="nn">torchvision</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_xla2</span> <span class="k">as</span> <span class="nn">tx</span>
+<span class="kn">import</span> <span class="nn">torch_xla2.export</span>
+<span class="kn">import</span> <span class="nn">jax</span>
+<span class="kn">import</span> <span class="nn">jax.numpy</span> <span class="k">as</span> <span class="nn">jnp</span>
 
-<span class="c1"># we can see it&#39;s stablehlo code with</span>
-<span class="c1">#   here &#39;forward&#39; is the name of function. Currently we only support</span>
-<span class="c1">#   one entry point per program, but in the future we will support</span>
-<span class="c1">#   multiple entry points in a program.</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">stablehlo_program</span><span class="o">.</span><span class="n">get_stablehlo_text</span><span class="p">(</span><span class="s1">&#39;forward&#39;</span><span class="p">))</span>
+<span class="n">resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span>
+<span class="c1"># Sample input is a tuple</span>
+<span class="n">sample_input</span> <span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">),</span> <span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">resnet18</span><span class="p">(</span><span class="o">*</span><span class="n">sample_input</span><span class="p">)</span>
 
-<span class="c1"># we can also print out the bytecode</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">stablehlo_program</span><span class="o">.</span><span class="n">get_stablehlo_bytecode</span><span class="p">(</span><span class="s1">&#39;forward&#39;</span><span class="p">))</span>
+<span class="n">weights</span><span class="p">,</span> <span class="n">jfunc</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="n">extract_jax</span><span class="p">(</span><span class="n">resnet18</span><span class="p">)</span>
 
-<span class="c1"># we can also run the module, to run the stablehlo module, we need to move</span>
-<span class="c1"># our tensors to XLA device.</span>
-<span class="n">sample_input_xla</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xla_device</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sample_input</span><span class="p">)</span>
+<span class="c1"># Below are APIs from jax</span>
 
-<span class="n">output2</span> <span class="o">=</span> <span class="n">stablehlo_program</span><span class="p">(</span><span class="o">*</span><span class="n">sample_input_xla</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">output2</span><span class="o">.</span><span class="n">cpu</span><span class="p">(),</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">))</span>
-</pre></div>
-</div>
-<div class="section" id="saving-stablehlo-bytecodes-to-disk">
-<h2>Saving StableHLO bytecodes to disk<a class="headerlink" href="#saving-stablehlo-bytecodes-to-disk" title="Permalink to this heading">¶</a></h2>
-<p>One can now save stablehlo to disk with</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">stablehlo_program</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s1">&#39;/tmp/stablehlo_dir&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>The path should be path to an empty directory. If it doesn’t exist, it
-will be created. This directory can be loaded again as another
-stablehlo_program:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.stablehlo</span> <span class="kn">import</span> <span class="n">StableHLOGraphModule</span>
-<span class="n">stablehlo_program2</span> <span class="o">=</span> <span class="n">StableHLOGraphModule</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;/tmp/stablehlo_dir&#39;</span><span class="p">)</span>
-<span class="n">output3</span> <span class="o">=</span> <span class="n">stablehlo_program2</span><span class="p">(</span><span class="o">*</span><span class="n">sample_input_xla</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="section" id="convert-saved-stablehlo-for-serving">
-<h2>Convert saved StableHLO for serving<a class="headerlink" href="#convert-saved-stablehlo-for-serving" title="Permalink to this heading">¶</a></h2>
-<p>StableHLO is an open format and it is supported for serving in
-<a class="reference external" href="https://github.com/tensorflow/serving">tensorflow.serving</a> model
-server. However, before giving it to tf.serving, we need to first wrap
-the generated StableHLO bytecode into a <code class="docutils literal notranslate"><span class="pre">tf.saved_model</span></code> format.</p>
-<p>For that, first ensure that you have the latest <code class="docutils literal notranslate"><span class="pre">tensorflow</span></code> install in
-the current python env, if not, install with</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>tf-nightly
-</pre></div>
-</div>
-<p>Now, you can run a converter (provided in the torch/xla installation)</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">stablehlo</span><span class="o">-</span><span class="n">to</span><span class="o">-</span><span class="n">saved</span><span class="o">-</span><span class="n">model</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">stablehlo_dir</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">resnet_tf</span><span class="o">/</span><span class="mi">1</span>
-</pre></div>
-</div>
-<p>After that, you can run your model server on the newly generated
-<code class="docutils literal notranslate"><span class="pre">tf.saved_model</span></code> with tf serving binary.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>pull<span class="w"> </span>tensorflow/serving
-docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">8500</span>:8500<span class="w"> </span><span class="se">\</span>
---mount<span class="w"> </span><span class="nv">type</span><span class="o">=</span>bind,source<span class="o">=</span>/tmp/resnet_tf,target<span class="o">=</span>/models/resnet_tf<span class="w"> </span><span class="se">\</span>
--e<span class="w"> </span><span class="nv">MODEL_NAME</span><span class="o">=</span>resnet_tf<span class="w"> </span>-t<span class="w"> </span>tensorflow/serving<span class="w"> </span><span class="p">&amp;</span>
-</pre></div>
-</div>
-<p>You can also use the <code class="docutils literal notranslate"><span class="pre">tf.serving</span></code> binary directly without docker. For
-more details, please follow the <a class="reference external" href="https://www.tensorflow.org/tfx/serving/serving_basic">tf serving
-guide</a>.</p>
-</div>
-<div class="section" id="common-wrappers">
-<h2>Common wrappers<a class="headerlink" href="#common-wrappers" title="Permalink to this heading">¶</a></h2>
-<div class="section" id="i-want-to-save-directly-tf-saved-model-format-without-needing-to-run-an-separate-command">
-<h3>I want to save directly tf.saved_model format without needing to run an separate command.<a class="headerlink" href="#i-want-to-save-directly-tf-saved-model-format-without-needing-to-run-an-separate-command" title="Permalink to this heading">¶</a></h3>
-<p>You can accomplish this by using this helper function:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.tf_saved_model_integration</span> <span class="kn">import</span> <span class="n">save_torch_module_as_tf_saved_model</span>
+<span class="n">stablehlo</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">export</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">jfunc</span><span class="p">))(</span><span class="n">weights</span><span class="p">,</span> <span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">ShapedDtypeStruct</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">float32</span><span class="o">.</span><span class="n">dtype</span><span class="p">)))</span>
 
-<span class="n">save_torch_module_as_tf_saved_model</span><span class="p">(</span>
-    <span class="n">resnet18</span><span class="p">,</span>  <span class="c1"># original pytorch torch.nn.Module</span>
-    <span class="n">sample_inputs</span><span class="p">,</span> <span class="c1"># sample inputs used to trace</span>
-    <span class="s1">&#39;/tmp/resnet_tf&#39;</span>   <span class="c1"># directory for tf.saved_model</span>
-<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stablehlo</span><span class="o">.</span><span class="n">mlir_module</span><span class="p">())</span>
+<span class="c1"># Can store weights and/or stablehlo object however you like</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="other-common-wrappers">
-<h2>Other common wrappers<a class="headerlink" href="#other-common-wrappers" title="Permalink to this heading">¶</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">save_as_stablehlo</span><span class="p">(</span><span class="n">exported_model</span><span class="p">:</span> <span class="s1">&#39;ExportedProgram&#39;</span><span class="p">,</span>
-                      <span class="n">stablehlo_dir</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
-                      <span class="n">options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StableHLOExportOptions</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">save_as_stablehlo</span></code> (also aliased as <code class="docutils literal notranslate"><span class="pre">torch_xla.save_as_stablehlo</span></code>)
-takes ExportedProgram and saves StableHLO on disk. i.e. same as
-exported_program_to_stablehlo(…).save(…)</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">save_torch_model_as_stablehlo</span><span class="p">(</span>
-    <span class="n">torchmodel</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
-    <span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
-    <span class="n">path</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
-    <span class="n">options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StableHLOExportOptions</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="s2">&quot;&quot;&quot;Convert a torch model to a callable backed by StableHLO.</span>
-</pre></div>
-</div>
-<p>takes <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code> and saves StableHLO on disk. i.e. same as
-torch.export.export followed by save_as_stablehlo</p>
-</div>
-<div class="section" id="files-produced-by-save-as-stablehlo">
-<h2>Files produced by <code class="docutils literal notranslate"><span class="pre">save_as_stablehlo</span></code>.<a class="headerlink" href="#files-produced-by-save-as-stablehlo" title="Permalink to this heading">¶</a></h2>
-<p>Inside of <code class="docutils literal notranslate"><span class="pre">/tmp/stablehlo_dir</span></code> in the example above, you will find 3
-directories: <code class="docutils literal notranslate"><span class="pre">data</span></code>, <code class="docutils literal notranslate"><span class="pre">constants</span></code>, <code class="docutils literal notranslate"><span class="pre">functions</span></code>. Both data and constants
-will consist of tensors used by the program saved as <code class="docutils literal notranslate"><span class="pre">numpy.ndarray</span></code>
-using <code class="docutils literal notranslate"><span class="pre">numpy.save</span></code>.</p>
-<p>The functions directory will contain StableHLO bytecode, here named
-<code class="docutils literal notranslate"><span class="pre">forward.bytecode</span></code>, human readable StableHLO code (MLIR form)
-<code class="docutils literal notranslate"><span class="pre">forward.mlir</span></code>, and a JSON file specifying which weights and original
-user’s input become the which positional arguments of this StableHLO
-function; as well as the dtypes and shapes of every argument.</p>
-<p>Example:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>find<span class="w"> </span>/tmp/stablehlo_dir
-./functions
-./functions/forward.mlir
-./functions/forward.bytecode
-./functions/forward.meta
-./constants
-./constants/3
-./constants/1
-./constants/0
-./constants/2
-./data
-./data/L__fn___layers_15_feed_forward_w2.weight
-./data/L__fn___layers_13_feed_forward_w1.weight
-./data/L__fn___layers_3_attention_wo.weight
-./data/L__fn___layers_12_ffn_norm_weight
-./data/L__fn___layers_25_attention_wo.weight
-...
-</pre></div>
-</div>
-<p>The JSON file is serialized form of the
-<code class="docutils literal notranslate"><span class="pre">torch_xla.stablehlo.StableHLOFunc</span></code> class.</p>
-<p>This format is currently also in prototype stage and there are no
-backward compatibility guarantees. The future plan is to standardize a
-format that the major frameworks (PyTorch, JAX, TensorFlow) can agree.</p>
+<p>The second to last line we used <code class="docutils literal notranslate"><span class="pre">jax.ShapedDtypeStruct</span></code> to specify the input shape.
+You can also pass a numpy array here.</p>
 </div>
 <div class="section" id="preserving-high-level-pytorch-operations-in-stablehlo-by-generating-stablehlo-composite">
 <h2>Preserving High-Level PyTorch Operations in StableHLO by generating <code class="docutils literal notranslate"><span class="pre">stablehlo.composite</span></code><a class="headerlink" href="#preserving-high-level-pytorch-operations-in-stablehlo-by-generating-stablehlo-composite" title="Permalink to this heading">¶</a></h2>
@@ -579,83 +488,100 @@ challenging and error-prone, we offer a more robust method to outline
 the high-level PyTorch op in StableHLO program - by generating
 <a class="reference external" href="https://github.com/openxla/stablehlo/blob/main/docs/spec.md#composite">stablehlo.composite</a>
 for the high level PyTorch ops.</p>
-<p>With <code class="docutils literal notranslate"><span class="pre">StableHLOCompositeBuilder</span></code>, user can outline an arbitary region
-within the <code class="docutils literal notranslate"><span class="pre">forward</span></code> function of a <code class="docutils literal notranslate"><span class="pre">torch.nn.Module</span></code>. Then in the
-exported StableHLO program, a composite op for the outlined region will
-be produced.</p>
-<p><strong>NOTE:</strong> Because the value of non-tensor inputs to the outlined region
-will be hardcoded in the exported graph, please store those values as
-composite attributes, if retrieving from the downstream compiler is
-desired.</p>
 <p>The following example shows a pratical use case - capturing
 <code class="docutils literal notranslate"><span class="pre">scaled_product_attention</span></code></p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<p>For using <code class="docutils literal notranslate"><span class="pre">composite</span></code> we need to use the jax-centric export now. (i.e. no torch.export)
+We are working in adding support for torch.export now.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
-<span class="kn">from</span> <span class="nn">torch_xla</span> <span class="kn">import</span> <span class="n">stablehlo</span>
-<span class="kn">from</span> <span class="nn">torch_xla.experimental.mark_pattern_utils</span> <span class="kn">import</span> <span class="n">StableHLOCompositeBuilder</span>
+<span class="kn">from</span> <span class="nn">torch.library</span> <span class="kn">import</span> <span class="n">Library</span><span class="p">,</span> <span class="n">impl</span><span class="p">,</span> <span class="n">impl_abstract</span>
+<span class="kn">import</span> <span class="nn">torch_xla2</span>
+<span class="kn">import</span> <span class="nn">torch_xla2.export</span>
+<span class="kn">from</span> <span class="nn">torch_xla2.ops</span> <span class="kn">import</span> <span class="n">jaten</span>
+<span class="kn">from</span> <span class="nn">torch_xla2.ops</span> <span class="kn">import</span> <span class="n">jlibrary</span>
 
 
-<span class="k">class</span> <span class="nc">M</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="c1"># Create a `mylib` library which has a basic SDPA op.</span>
+<span class="n">m</span> <span class="o">=</span> <span class="n">Library</span><span class="p">(</span><span class="s2">&quot;mylib&quot;</span><span class="p">,</span> <span class="s2">&quot;DEF&quot;</span><span class="p">)</span>
+<span class="n">m</span><span class="o">.</span><span class="n">define</span><span class="p">(</span><span class="s2">&quot;scaled_dot_product_attention(Tensor q, Tensor k, Tensor v) -&gt; Tensor&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">q_proj</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">k_proj</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">v_proj</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="c1"># Initialize the StableHLOCompositeBuilder with the name of the composite op and its attributes</span>
-        <span class="c1"># Note: To capture the value of non-tensor inputs, please pass them as attributes to the builder</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">StableHLOCompositeBuilder</span><span class="p">(</span><span class="s2">&quot;test.sdpa&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;scale&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s2">&quot;other_attr&quot;</span><span class="p">:</span> <span class="s2">&quot;val&quot;</span><span class="p">})</span>
+<span class="nd">@impl</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="s2">&quot;scaled_dot_product_attention&quot;</span><span class="p">,</span> <span class="s2">&quot;CompositeExplicitAutograd&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_mylib_scaled_dot_product_attention</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Basic scaled dot product attention without all the flags/features.&quot;&quot;&quot;</span>
+  <span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+  <span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+  <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+  <span class="n">y</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">scaled_dot_product_attention</span><span class="p">(</span>
+      <span class="n">q</span><span class="p">,</span>
+      <span class="n">k</span><span class="p">,</span>
+      <span class="n">v</span><span class="p">,</span>
+      <span class="n">dropout_p</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+      <span class="n">is_causal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+      <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+  <span class="p">)</span>
+  <span class="k">return</span> <span class="n">y</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
-        <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_proj</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_proj</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">v_proj</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">mark_inputs</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
-        <span class="n">attn_out</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">scaled_dot_product_attention</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.25</span><span class="p">)</span>
-        <span class="n">attn_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">mark_outputs</span><span class="p">(</span><span class="n">attn_out</span><span class="p">)</span>
-        <span class="n">attn_out</span> <span class="o">=</span> <span class="n">attn_out</span> <span class="o">+</span> <span class="n">x</span>
-        <span class="k">return</span> <span class="n">attn_out</span>
+<span class="nd">@impl_abstract</span><span class="p">(</span><span class="s2">&quot;mylib::scaled_dot_product_attention&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_mylib_scaled_dot_product_attention_meta</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
 
-<span class="n">input_args</span> <span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">128</span><span class="p">)),</span> <span class="p">)</span>
-<span class="c1"># torch.export to Exported Program</span>
-<span class="n">exported</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">export</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">M</span><span class="p">(),</span> <span class="n">input_args</span><span class="p">)</span>
-<span class="c1"># Exported Program to StableHLO</span>
-<span class="n">stablehlo_gm</span> <span class="o">=</span> <span class="n">stablehlo</span><span class="o">.</span><span class="n">exported_program_to_stablehlo</span><span class="p">(</span><span class="n">exported</span><span class="p">)</span>
-<span class="n">stablehlo</span> <span class="o">=</span> <span class="n">stablehlo_gm</span><span class="o">.</span><span class="n">get_stablehlo_text</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">stablehlo</span><span class="p">)</span>
+<span class="c1"># Register library op as a composite for export using the `@impl` method</span>
+<span class="c1"># for a torch decomposition.</span>
+<span class="n">jlibrary</span><span class="o">.</span><span class="n">register_torch_composite</span><span class="p">(</span>
+  <span class="s2">&quot;mylib.scaled_dot_product_attention&quot;</span><span class="p">,</span>
+  <span class="n">_mylib_scaled_dot_product_attention</span><span class="p">,</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">mylib</span><span class="o">.</span><span class="n">scaled_dot_product_attention</span><span class="p">,</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">mylib</span><span class="o">.</span><span class="n">scaled_dot_product_attention</span><span class="o">.</span><span class="n">default</span>
+<span class="p">)</span>
+
+<span class="c1"># Also register ATen softmax as a composite for export in the `mylib` library</span>
+<span class="c1"># using the JAX ATen decomposition from `jaten`.</span>
+<span class="n">jlibrary</span><span class="o">.</span><span class="n">register_jax_composite</span><span class="p">(</span>
+  <span class="s2">&quot;mylib.softmax&quot;</span><span class="p">,</span>
+  <span class="n">jaten</span><span class="o">.</span><span class="n">_aten_softmax</span><span class="p">,</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">aten</span><span class="o">.</span><span class="n">_softmax</span><span class="p">,</span>
+  <span class="n">static_argnums</span><span class="o">=</span><span class="mi">1</span>  <span class="c1"># Required by JAX jit</span>
+<span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">LibraryTest</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">torch_xla2</span><span class="o">.</span><span class="n">default_env</span><span class="p">()</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">use_torch_native_for_cpu_tensor</span> <span class="o">=</span> <span class="kc">False</span>
+
+  <span class="k">def</span> <span class="nf">test_basic_sdpa_library</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+    <span class="k">class</span> <span class="nc">CustomOpExample</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+      <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">mylib</span><span class="o">.</span><span class="n">scaled_dot_product_attention</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+    <span class="c1"># Export and check for composite operations</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">CustomOpExample</span><span class="p">()</span>
+    <span class="n">arg</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">arg</span><span class="p">,</span> <span class="n">arg</span><span class="p">,</span> <span class="p">)</span>
+
+    <span class="n">exported</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">export</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">)</span>
+    <span class="n">stablehlo</span> <span class="o">=</span> <span class="n">torch_xla2</span><span class="o">.</span><span class="n">export</span><span class="o">.</span><span class="n">exported_program_to_stablehlo</span><span class="p">(</span><span class="n">exported</span><span class="p">)</span>
+    <span class="n">module_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">stablehlo</span><span class="o">.</span><span class="n">mlir_module</span><span class="p">())</span>
+
+    <span class="c1">## TODO Update this machinery from producing function calls to producing</span>
+    <span class="c1">## stablehlo.composite ops.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="s2">&quot;call @mylib.scaled_dot_product_attention&quot;</span><span class="p">,</span> <span class="n">module_str</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="s2">&quot;call @mylib.softmax&quot;</span><span class="p">,</span> <span class="n">module_str</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>The main StableHLO graph is shown below:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module @IrToHlo.56 attributes {mhlo.cross_program_prefetches = [], mhlo.input_output_alias = [], mhlo.is_dynamic = false, mhlo.use_auto_spmd_partitioning = false} {
-  func.func @main(%arg0: tensor&lt;10x8x128xf32&gt;, %arg1: tensor&lt;128x128xf32&gt;, %arg2: tensor&lt;128x128xf32&gt;, %arg3: tensor&lt;128x128xf32&gt;) -&gt; tensor&lt;10x8x128xf32&gt; {
-    ...
-    %10 = stablehlo.composite &quot;test.sdpa&quot; %3, %6, %9 {composite_attributes = {other_attr = &quot;val&quot;, scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl} : (tensor&lt;10x8x128xf32&gt;, tensor&lt;10x8x128xf32&gt;, tensor&lt;10x8x128xf32&gt;) -&gt; tensor&lt;10x8x128xf32&gt;
-    %11 = stablehlo.add %10, %arg0 : tensor&lt;10x8x128xf32&gt;
-    return %11 : tensor&lt;10x8x128xf32&gt;
-  }
-
-  func.func private @test.sdpa.impl(%arg0: tensor&lt;10x8x128xf32&gt;, %arg1: tensor&lt;10x8x128xf32&gt;, %arg2: tensor&lt;10x8x128xf32&gt;) -&gt; tensor&lt;10x8x128xf32&gt; {
-    // Actual implementation of the composite
-    ...
-    return %11 : tensor&lt;10x8x128xf32&gt;
-  }
-</pre></div>
-</div>
-<p>The sdpa operation is encapsulated as a stablehlo composite call within
-the main graph. The name and attributes specified in the torch.nn.Module
-are propagated.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>%10 = stablehlo.composite &quot;test.sdpa&quot; %3, %6, %9 {composite_attributes = {other_attr = &quot;val&quot;, scale = 2.500000e-01 : f32}, decomposition = @test.sdpa.impl}
-</pre></div>
-</div>
-<p>The reference PyTorch decomposition of the sdpa operation is captured in
-a StableHLO function:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>func.func private @test.sdpa.impl(%arg0: tensor&lt;10x8x128xf32&gt;, %arg1: tensor&lt;10x8x128xf32&gt;, %arg2: tensor&lt;10x8x128xf32&gt;) -&gt; tensor&lt;10x8x128xf32&gt; {
-    // Actual implementation of the composite
-    ...
-    return %11 : tensor&lt;10x8x128xf32&gt;
-  }
-</pre></div>
-</div>
+<p>As we see, to emit a stablehlo function into composite, first we make a python function
+representing the region of code that we want to call, then, we register it
+so that pytorch and jlibrary understands it’s a custom region. Then, th
+emitted Stablehlo will have <code class="docutils literal notranslate"><span class="pre">mylib.scaled_dot_product_attention</span></code> and <code class="docutils literal notranslate"><span class="pre">mylib.softmax</span></code>
+outlined stablehlo functions.</p>
 </div>
 </div>
 
@@ -703,14 +629,8 @@ a StableHLO function:</p>
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
 <li><a class="reference internal" href="#">Torch Export to StableHLO</a><ul>
-<li><a class="reference internal" href="#saving-stablehlo-bytecodes-to-disk">Saving StableHLO bytecodes to disk</a></li>
-<li><a class="reference internal" href="#convert-saved-stablehlo-for-serving">Convert saved StableHLO for serving</a></li>
-<li><a class="reference internal" href="#common-wrappers">Common wrappers</a><ul>
-<li><a class="reference internal" href="#i-want-to-save-directly-tf-saved-model-format-without-needing-to-run-an-separate-command">I want to save directly tf.saved_model format without needing to run an separate command.</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#other-common-wrappers">Other common wrappers</a></li>
-<li><a class="reference internal" href="#files-produced-by-save-as-stablehlo">Files produced by <code class="docutils literal notranslate"><span class="pre">save_as_stablehlo</span></code>.</a></li>
+<li><a class="reference internal" href="#using-torch-export">Using <code class="docutils literal notranslate"><span class="pre">torch.export</span></code></a></li>
+<li><a class="reference internal" href="#using-extract-jax">Using <code class="docutils literal notranslate"><span class="pre">extract_jax</span></code></a></li>
 <li><a class="reference internal" href="#preserving-high-level-pytorch-operations-in-stablehlo-by-generating-stablehlo-composite">Preserving High-Level PyTorch Operations in StableHLO by generating <code class="docutils literal notranslate"><span class="pre">stablehlo.composite</span></code></a></li>
 </ul>
 </li>
