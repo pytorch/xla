@@ -40,7 +40,7 @@ class SymbolicShapeTest(test_base.TestCase):
 
     with torch.no_grad():
       exported = torch.export.export(model, args=args, dynamic_shapes=dynamic_shapes)
-    stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
+    weights, stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
     module_str = str(stablehlo.mlir_module())
 
     self.assertRegex(module_str, r"stablehlo.constant.*3")
@@ -62,7 +62,7 @@ class SymbolicShapeTest(test_base.TestCase):
 
     with torch.no_grad():
       exported = torch.export.export(model, args=args, dynamic_shapes=dynamic_shapes)
-    stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
+    weights, stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
     module_str = str(stablehlo.mlir_module())
 
     self.assertRegex(module_str, r"stablehlo.constant.*10")
@@ -84,7 +84,7 @@ class SymbolicShapeTest(test_base.TestCase):
 
     with torch.no_grad():
       exported = torch.export.export(model, args=args, dynamic_shapes=dynamic_shapes)
-    stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
+    weights, stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
     module_str = str(stablehlo.mlir_module())
 
     self.assertRegex(module_str, r"shape_assertion.*s[0-9]+ <= 10")

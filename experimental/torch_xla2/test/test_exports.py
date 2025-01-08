@@ -52,7 +52,7 @@ class ExportTest(unittest.TestCase):
     self.assertTrue(torch.allclose(ans, ans2, atol=1e-3))
 
     # Convert to StableHLO
-    stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
+    weights, stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
     module_str = str(stablehlo.mlir_module())
     self.assertIn("func.func public @main", module_str)
     self.assertIn("func.func private @clip(%arg0: tensor<500xf32>", module_str)
@@ -75,7 +75,7 @@ class ExportTest(unittest.TestCase):
     self.assertTrue(torch.allclose(ans, ans2, atol=1e-5))
 
     # Convert to StableHLO
-    stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
+    weights, stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
     module_str = str(stablehlo.mlir_module())
     self.assertIn("func.func public @main", module_str)
     self.assertIn("stablehlo.divide", module_str)
@@ -89,7 +89,7 @@ class ExportTest(unittest.TestCase):
 
     with torch.no_grad():
       exported = torch.export.export(model, arg, dynamic_shapes=dynamic_shapes)
-    stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
+    weights, stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
     module_str = str(stablehlo.mlir_module())
 
     # Look for dynamic shape artifacts
@@ -139,7 +139,7 @@ class ExportTest(unittest.TestCase):
       arg = (torch.randn(10).to(torch_dtype),)
       with torch.no_grad():
         exported = torch.export.export(model, arg)
-      stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
+      weights, stablehlo = torch_xla2.export.exported_program_to_stablehlo(exported)
       module_str = str(stablehlo.mlir_module())
       self.assertIn(DTYPE_TO_MLIR_STR[torch_dtype], module_str)
 

@@ -31,7 +31,7 @@ class ExportAdapter():
     return self.export.mlir_module()
 
 def exported_program_to_stablehlo(exported):
-  return ExportAdapter(exp2shlo(exported))
+  return ExportAdapter(exp2shlo(exported)[1])
 
 def wrap_func_as_nn_module(f):
   class M(torch.nn.Module):
