@@ -195,9 +195,11 @@ def benchmark(args):
   profile_path = "/workspaces/persist/myprofiles/plugins/profile"
 
   def run_benchmark(num_iters: int, profile: bool = False) -> float:
+    (jax.device_put(0.) + 0).block_until_ready()
     start_time = time.perf_counter()
-    if profile:
-      jax.profiler.start_trace(profile_path)
+    # if profile:
+    #  jax.profiler.start_trace(profile_path)
+    # time.sleep(2)
 
     actual_output=None
     for _ in range(num_iters):
@@ -246,14 +248,15 @@ def benchmark(args):
           effective_q_lens,
         )
 
-    jax.block_until_ready(actual_output)
-
+      # jax.block_until_ready(actual_output)
+    (jax.device_put(0.) + 0).block_until_ready()
     end_time = time.perf_counter()
-    if profile:
-      jax.profiler.stop_trace()
+    # if profile:
+    #   jax.profiler.stop_trace()
     return (end_time - start_time) / num_iters
   
   # Warmup.
+  #jax.profiler.start_trace(profile_path)
   print("Warming up...")
   run_benchmark(num_iters=10, profile=False)
 
@@ -262,6 +265,7 @@ def benchmark(args):
     latency = run_benchmark(num_iters=3, profile=True)
   else:
     latency = run_benchmark(num_iters=100, profile=False)
+  #jax.profiler.stop_trace()
   print(f"Kernel running time: {latency * 1000000:.3f} us")
   ref_paged_attention_flops = cost.flops / latency
   print("ref_paged_attention FLOP/s: ", ref_paged_attention_flops)

@@ -1,6 +1,6 @@
 # This file uses the real data input as in the vllm prefix caching benchmark script on GPU. To run, do
-# root@t1v-n-408567d9-w-0:/workspaces/persist# python pytorch/xla/test/benchmarks/test_paged_attention_mfu_real_data.py  --kernel multi-queries-paged-attn-v1
-# To get profile, run root@t1v-n-408567d9-w-0:/workspaces/persist# python pytorch/xla/test/benchmarks/test_paged_attention_mfu_real_data.py  --kernel multi-queries-paged-attn-v1 --profile
+# root@t1v-n-408567d9-w-0:/workspaces/persist# LIBTPU_INIT_ARGS=--xla_tpu_scoped_vmem_limit_kib=65536 python pytorch/xla/test/benchmarks/test_paged_attention_mfu_real_data.py  --kernel multi-queries-paged-attn-v1
+# To get profile, run root@t1v-n-408567d9-w-0:/workspaces/persist# LIBTPU_INIT_ARGS=--xla_tpu_scoped_vmem_limit_kib=65536 python pytorch/xla/test/benchmarks/test_paged_attention_mfu_real_data.py  --kernel multi-queries-paged-attn-v1 --profile
 
 import argparse
 import time
@@ -104,7 +104,7 @@ def benchmark(args):
   # num_kv_pages_per_compute_block = block_kv_size // page_size=16
   # Because of the constraint pages_per_sequence % num_kv_pages_per_compute_block == 0,
   # we need (max_kv_len+page_size-1) % block_kv_size == 0
-  block_kv_size = 256  # this can be 768, but the FLOP/s utilization remains to be 2.4896%
+  block_kv_size = 768  # this can be 768, but the FLOP/s utilization remains to be 2.4896%
 
   total_num_pages = 231746
   kv_seq_lens_lst = [1248] + [1]*93
@@ -114,7 +114,7 @@ def benchmark(args):
   # num_kv_pages_per_compute_block = block_kv_size // page_size
   # pages_per_sequence = max_kv_len // page_size
   query_len = 1280 # max(q_seq_lens_lst), it's supposed to be max(q_seq_lens_lst). But I need to use a larger  num_queries_per_compute_block
-  max_kv_len = 1280 # max(kv_seq_lens_lst), it's supposed to be 1248, but then paged_per_sequence will become max_kv_len/page_size=78, violating the constraints that pages_per_sequence should be a multiple of num_kv_pages_per_compute_block. TODO: adjust in CUDA
+  max_kv_len = 1536 # max(kv_seq_lens_lst), it's supposed to be 1248, but then paged_per_sequence will become max_kv_len/page_size=78, violating the constraints that pages_per_sequence should be a multiple of num_kv_pages_per_compute_block. TODO: adjust in CUDA
   
   assert max_kv_len <= total_num_pages * page_size
 
