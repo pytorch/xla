@@ -186,9 +186,9 @@ doc will talk about the device independent bits of multi-host training
 and will use the TPU + PJRT runtime(currently available on 1.13 and 2.x
 releases) as an example.
 
-Before you being, please take a look at our user guide at
+Before you begin, please take a look at our user guide at
 [here](https://cloud.google.com/tpu/docs/run-calculation-pytorch) which
-will explain some Google Cloud basis like how to use `gcloud` command
+will explain some Google Cloud basics like how to use `gcloud` command
 and how to setup your project. You can also check
 [here](https://cloud.google.com/tpu/docs/how-to) for all Cloud TPU
 Howto. This doc will focus on the PyTorch/XLA perspective of the Setup.
