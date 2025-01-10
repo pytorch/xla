@@ -287,6 +287,9 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
   switch (mode) {
     case EmitMode::kHloReadable:
       return ConsumeValue(runtime::util::GetComputationHloText(computation));
+    case EmitMode::kHloProto:
+      return ConsumeValue(runtime::util::GetDeterministicSerializedModuleProto(
+          computation.proto()));
     case EmitMode::kStableHloReadable:
       return hloToStablehlo(&computation.proto(),
                             /* emit_bytecode = */ false);
