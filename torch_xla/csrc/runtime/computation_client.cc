@@ -196,8 +196,13 @@ metrics::Metric* ComputationClient::OutboundDataMetric() {
 }
 
 ::absl::StatusOr<torch::lazy::hash_t>
-ComputationClient::Computation::ComputeHash(const xla::HloModuleProto& proto,
+ComputationClient::Computation::ComputeHash(xla::HloModuleProto proto,
                                             const std::string& name) {
+  for (auto& computation : *proto.mutable_computations()) {
+    for (auto& instruction : *computation.mutable_instructions()) {
+      instruction.mutable_metadata()->Clear();
+    }
+  }
   TF_ASSIGN_OR_RETURN(auto serialized_status,
                       util::GetDeterministicSerializedModuleProto(proto));
   return torch::lazy::MHash(name, serialized_status);
