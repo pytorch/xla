@@ -171,6 +171,7 @@ supported:
   - count_nonzero
   - count_nonzero.dim_IntList
   - cross
+  - cummax
   - cumprod
   - cumsum
   - detach_copy

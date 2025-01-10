@@ -40,6 +40,7 @@
 #include "torch_xla/csrc/ops/convolution_backward_overrideable.h"
 #include "torch_xla/csrc/ops/convolution_overrideable.h"
 #include "torch_xla/csrc/ops/count_nonzero.h"
+#include "torch_xla/csrc/ops/cummax.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/custom_call.h"
@@ -1294,6 +1295,25 @@ XLATensorPtr cross(const XLATensorPtr& input, const XLATensorPtr& other,
   return tensor_ops::Cross(input, other, dim);
 }
 
+std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
+                                              int64_t dim) {
+  torch::lazy::NodePtr node = torch_xla::MakeNode<CumMax>(
+      input->GetIrValue(), torch::lazy::GetCanonicalDimensionIndex(
+                               dim, input->shape().get().rank()));
+  XLATensorPtr t_value = input->CreateFrom(torch::lazy::Value(node, 0),
+                                           /*delay_eager_executation=*/true);
+  XLATensorPtr t_index =
+      input->CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Long,
+                        /*delay_eager_executation=*/true);
+  XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
+  if (graph_executor->UseEagerMode()) {
+    // Execute the HLO that will run the `kthvalue` and in one hlo
+    std::vector<XLATensorPtr> tensors_to_sync = {t_value, t_index};
+    graph_executor->ApplyEagerSync(tensors_to_sync);
+  }
+  return std::make_tuple(t_value, t_index);
+}
+
 XLATensorPtr cumprod(const XLATensorPtr& input, int64_t dim,
                      std::optional<at::ScalarType> dtype) {
   int64_t canonical_dim =
@@ -1364,8 +1384,8 @@ XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
   } else if (!input_is_float && other_is_float) {
     scalar_type = MaybeUpcastToHostTorchType(other_type);
   }
-  // We need to cast both input and other to float to perform true divide, floor
-  // divide and trunc divide.
+  // We need to cast both input and other to float to perform true divide,
+  // floor divide and trunc divide.
   torch::lazy::Value input_value = GetFloatingIrValue(input, scalar_type);
   torch::lazy::Value other_value = GetFloatingIrValue(other, scalar_type);
   torch::lazy::Value res = Div(input_value, other_value);
@@ -1381,9 +1401,9 @@ XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
   }
 
   // Promote the result to the logical_element_type if one of the
-  // input and the other is float. If that is not the case logical_element_type
-  // will be non-floating-point type, we should only promote the result to that
-  // when rounding_mode is not nullopt.
+  // input and the other is float. If that is not the case
+  // logical_element_type will be non-floating-point type, we should only
+  // promote the result to that when rounding_mode is not nullopt.
   if (input_is_float || other_is_float || rounding_mode.has_value()) {
     if (logical_element_type.has_value()) {
       xla::PrimitiveType res_intended_type =
@@ -1872,7 +1892,8 @@ XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
                                 const at::Scalar& ord,
                                 std::vector<int64_t> dimensions, bool keep_dim,
                                 std::optional<at::ScalarType> dtype) {
-  // If the input is a scalar, we have to manually create the dimensions vector.
+  // If the input is a scalar, we have to manually create the dimensions
+  // vector.
   auto input_rank = input->shape().get().rank();
   std::vector<int64_t> canonical_dims;
   if (input_rank != 0) {
@@ -1988,8 +2009,8 @@ XLATensorPtr logsumexp(const XLATensorPtr& input,
 XLATensorPtr xlogy(const XLATensorPtr& input, const XLATensorPtr& other) {
   // Here we explictly pass std::nullopt as logical_element_type because
   // otherwise result will inherit the input's logical_element_type. In the
-  // case of xlogy(int,int) -> float, we want to derive the dtype from IR value
-  // instead of input's logical_element_type.
+  // case of xlogy(int,int) -> float, we want to derive the dtype from IR
+  // value instead of input's logical_element_type.
   return input->CreateFrom(
       XLogY(input->GetIrValue(),
             GetFloatingIrValue(other, at::ScalarType::Float)),
@@ -2016,9 +2037,9 @@ XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
   auto input_value = input->GetIrValue();
   // This ensures that input tensor is at least the same shape as mask tensor.
   // Note that we can't use the existing MaybeExpand function since
-  // input tensor may sometimes be bigger than the mask tensor, and MaybeExpand
-  // requires the first parameter to always be less or equal to the second
-  // parameter.
+  // input tensor may sometimes be bigger than the mask tensor, and
+  // MaybeExpand requires the first parameter to always be less or equal to
+  // the second parameter.
   if (input->shape().get().dimensions() < mask->shape().get().dimensions()) {
     input_value = MaybeExpand(input->GetIrValue(), mask->shape());
   }
@@ -2335,7 +2356,8 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm(
       running_var->SetIrValue(
           torch_xla::MakeNode<LinearInterpolation>(
               torch::lazy::Value(node, 2), running_var->GetIrValue(), momentum),
-          /*inplace=*/true, /*delay_eager_executation=*/true);
+          /*inplace=*/true,
+          /*delay_eager_executation=*/true);
     }
   } else {
     at::Tensor at_input = bridge::AtenFromXlaTensor(input);
@@ -2381,8 +2403,8 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm_backward(
                                              /*delay_eager_executation=*/true);
   XLAGraphExecutor* graph_executor = XLAGraphExecutor::Get();
   if (graph_executor->UseEagerMode()) {
-    // Execute the HLO that will run the `native_batch_norm_backward` and in one
-    // hlo
+    // Execute the HLO that will run the `native_batch_norm_backward` and in
+    // one hlo
     std::vector<XLATensorPtr> tensors_to_sync = {grad_input, grad_weight,
                                                  grad_bias};
     graph_executor->ApplyEagerSync(tensors_to_sync);
@@ -2489,8 +2511,8 @@ XLATensorPtr norm(const XLATensorPtr& input, const std::optional<at::Scalar>& p,
   }
   auto out = Norm(input->GetIrValue(), p, dtype, canonical_dims, keepdim);
   if (dtype.has_value()) {
-    // The returned tensor is actually of type `dtype`. Therefore, it should not
-    // inherit the data-type from the input, when creating the XLATensor.
+    // The returned tensor is actually of type `dtype`. Therefore, it should
+    // not inherit the data-type from the input, when creating the XLATensor.
     return input->CreateFrom(out, dtype);
   } else {
     return input->CreateFrom(out);
@@ -3058,7 +3080,8 @@ std::tuple<XLATensorPtr, XLATensorPtr> eigh(const XLATensorPtr& input,
   // from IR value instead of input's dtype.
   return std::make_tuple(
       input->CreateFrom(torch::lazy::Value(node, 0), std::nullopt),
-      // From https://pytorch.org/docs/stable/generated/torch.linalg.eigh.html,
+      // From
+      // https://pytorch.org/docs/stable/generated/torch.linalg.eigh.html,
       // eigenvectors will have the same dtype as A.
       input->CreateFrom(torch::lazy::Value(node, 1)));
 }
@@ -3137,8 +3160,8 @@ std::vector<XLATensorPtr> split(const XLATensorPtr& input, int64_t split_size,
       torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   int64_t dim_size = input_shape.get().dimensions(split_dim);
   if (dim_size == 0) {
-    // Deal with dim_size=0, it's a corner case which only return 1 0-dim tensor
-    // no matter what split_size is.
+    // Deal with dim_size=0, it's a corner case which only return 1 0-dim
+    // tensor no matter what split_size is.
     xla::Literal literal(input_shape.get());
     return {
         input->CreateFrom(torch_xla::MakeNode<Constant>(std::move(literal)))};
@@ -3403,7 +3426,8 @@ XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
                            GetXlaShape(ir_value));
     } else {
       std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
-          /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
+          /*dim0=*/dim0, /*dim1=*/dim1,
+          /*rank=*/input_shape.get().rank());
       view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
     }
     return input->CreateViewTensor(std::move(view_info));
