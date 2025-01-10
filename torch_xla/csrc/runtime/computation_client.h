@@ -212,7 +212,7 @@ class ComputationClient {
     // elements during during serialization. The resulting hash combines the
     // serialized module with its computation name.
     static ::absl::StatusOr<torch::lazy::hash_t> ComputeHash(
-        const xla::HloModuleProto& proto, const std::string& name);
+        xla::HloModuleProto proto, const std::string& name);
   };
 
   using ComputationPtr = std::shared_ptr<Computation>;
