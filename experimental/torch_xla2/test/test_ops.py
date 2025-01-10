@@ -12,14 +12,11 @@ import torch_xla2
 
 skiplist = {
     "_segment_reduce",
-    "_unsafe_masked_index_put_accumulate",
     "bincount", # NOTE: dtype for int input torch gives float. This is weird.
     "byte",
     "cat",
     "cholesky_solve",
-    "cov",
     "diagonal_copy",
-    "gather",
     "geqrf",
     "histogram", # hard op: AssertionError: Tensor-likes are not close!
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
@@ -44,7 +41,6 @@ skiplist = {
     "normal",
     "ormqr",
     "pca_lowrank",
-    "scatter",
     "searchsorted",
     "special.airy_ai",
     "special.scaled_modified_bessel_k0",
@@ -96,7 +92,8 @@ random_ops = {
   'nn.functional.dropout',
 }
 
-atol_dict = {"linalg.eig": (2e0, 3e0),
+atol_dict = {"cov": (2e-1, 2e-4),
+             "linalg.eig": (2e0, 3e0),
              "linalg.eigh": (5e1, 3e0),
              "linalg.eigvalsh": (5e1, 3e0),
              "linalg.pinv": (8e-1, 2e0),
