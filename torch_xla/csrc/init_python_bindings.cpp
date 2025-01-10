@@ -1315,6 +1315,10 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<at::Tensor>& tensors) -> std::string {
           return GetTensorsHloGraph(tensors, EmitMode::kHloReadable);
         });
+  m.def("_get_xla_tensors_hlo_proto",
+        [](const std::vector<at::Tensor>& tensors) -> py::bytes {
+          return py::bytes(GetTensorsHloGraph(tensors, EmitMode::kHloProto));
+        });
   m.def("_get_xla_tensor_debug_info",
         [](const at::Tensor& tensor) -> std::string {
           return GetXLATensorDebugInfo(tensor);
