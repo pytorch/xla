@@ -47,7 +47,7 @@ XlaOpVector Softmax::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
 
   // Build computation.
-  const std::string name = "composite.softmax";
+  const std::string name = std::string(GetCompositeNamespace()) + "softmax";
   const std::string attr = "{dim = " + std::to_string(dim_) + " : i64}";
   xla::XlaBuilder builder(name);
   xla::XlaOp arg =

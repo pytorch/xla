@@ -5,6 +5,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/softmax_builder.h"
+#include "torch_xla/csrc/torch_util.h"
 
 namespace torch_xla {
 
@@ -26,7 +27,8 @@ XlaOpVector SoftmaxBackward::Lower(LoweringContext* loctx) const {
   xla::XlaOp output = loctx->GetOutputOp(operand(1));
 
   // Build computation.
-  const std::string name = "composite.softmax_backward";
+  const std::string name =
+      std::string(GetCompositeNamespace()) + "softmax_backward";
   const std::string attr = "{dim = " + std::to_string(dim_) + " : i64}";
   xla::XlaBuilder builder(name);
   xla::XlaOp arg_grad_output = xla::Parameter(
