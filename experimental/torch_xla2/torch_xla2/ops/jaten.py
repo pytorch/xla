@@ -1745,9 +1745,8 @@ def _aten_atan(self):
 @op(torch.ops.aten.scatter)
 @op(torch.ops.aten.scatter_reduce)
 def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
-  if isinstance(src, float):
-    dtype = _torch_binary_scalar_type(src, input)
-    src = jnp.array(src, dtype=dtype)
+  if not isinstance(src, jnp.ndarray):
+    src = jnp.array(src, dtype=input.dtype)
   input_indexes, source_indexes = _scatter_index(dim, index)
   # "Zero out" target elements when not included
   if not include_self:
@@ -2596,6 +2595,9 @@ def _aten_frexp(input):
 def _aten_gather(input, dim, index):
   if input.ndim == 0:
     return jnp.broadcast_to(input, index.shape)
+  # short circuit for empty outputs
+  if not all(index.shape):
+    return jnp.zeros(index.shape, dtype=input.dtype)
   if dim < 0:
     dim += input.ndim
   input_indexes, source_indexes = _scatter_index(dim, index)
@@ -4732,9 +4734,9 @@ def _new_empty_strided(self, size, stride, dtype=None, **kwargs):
     return jnp.empty(size, dtype=jax_dtype)
 
 
-@op(torch.ops.aten._unsafe_index_put, is_jax_function=False)
+@op(torch.ops.aten._unsafe_index_put)
 def _aten_unsafe_index_put(self, indices, values, accumulate=False):
-  return self.index_put_(indices, values, accumulate)
+  return _aten_index_put(self, indices, values, accumulate)
 
 
 @op(torch.ops.aten.conj_physical,
