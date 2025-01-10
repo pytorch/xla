@@ -206,6 +206,13 @@ class ComputationClient {
 
     torch::lazy::hash_t hash_;
     std::string name_;
+
+    // Computes a hash for an HLO module using deterministic proto
+    // serialization. It ensures consistent ordering of Map fields and repeated
+    // elements during during serialization. The resulting hash combines the
+    // serialized module with its computation name.
+    static ::absl::StatusOr<torch::lazy::hash_t> ComputeHash(
+        xla::HloModuleProto proto, const std::string& name);
   };
 
   using ComputationPtr = std::shared_ptr<Computation>;

@@ -85,11 +85,6 @@ function run_test_without_functionalization {
   XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
 }
 
-function run_xla_ir_debug {
-  echo "Running with XLA_IR_DEBUG: $@"
-  XLA_IR_DEBUG=1 run_test "$@"
-}
-
 function run_use_bf16 {
   echo "Running with XLA_USE_BF16: $@"
   XLA_USE_BF16=1 run_test "$@"
@@ -98,11 +93,6 @@ function run_use_bf16 {
 function run_downcast_bf16 {
   echo "Running with XLA_DOWNCAST_BF16: $@"
   XLA_DOWNCAST_BF16=1 run_test "$@"
-}
-
-function run_xla_hlo_debug {
-  echo "Running with XLA_IR_DEBUG: $@"
-  XLA_HLO_DEBUG=1 run_test "$@"
 }
 
 function run_dynamic {
@@ -191,9 +181,9 @@ function run_xla_op_tests1 {
   run_use_bf16 "$CDIR/test_data_type.py"
   run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/test_fp8.py"
-  run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
-  run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
-  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
+  run_xla_ir_debug run_test "$CDIR/test_env_var_mapper.py"
+  run_xla_hlo_debug run_test "$CDIR/test_env_var_mapper.py"
+  run_xla_hlo_debug run_test "$CDIR/stablehlo/test_stablehlo_save_load.py"
   run_save_tensor_ir run_test "$CDIR/spmd/test_spmd_graph_dump.py"
   run_save_tensor_hlo run_test "$CDIR/spmd/test_spmd_graph_dump.py"
 }
@@ -224,7 +214,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/stablehlo/test_composite.py"
   run_test "$CDIR/stablehlo/test_pt2e_qdq.py"
   run_test "$CDIR/stablehlo/test_stablehlo_custom_call.py"
-  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
+  run_xla_hlo_debug run_test "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_test "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/stablehlo/test_unbounded_dynamism.py"
   run_test "$CDIR/quantized_ops/test_quantized_matmul.py"
@@ -252,6 +242,7 @@ function run_xla_op_tests3 {
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
   run_test "$CDIR/test_pallas.py"
+  run_xla_ir_hlo_debug run_test "$CDIR/test_user_computation_debug_cache.py"
 
   # CUDA tests
   if [ -x "$(command -v nvidia-smi)" ]; then

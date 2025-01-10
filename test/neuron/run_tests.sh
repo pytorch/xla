@@ -6,6 +6,9 @@ MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
 
+# Utils file
+source "${CDIR}/utils/run_tests_utils.sh"
+
 # Note [Keep Going]
 #
 # Set the `CONTINUE_ON_ERROR` flag to `true` to make the CI tests continue on error.
@@ -230,6 +233,7 @@ function run_xla_op_tests3 {
   run_torchrun "$CDIR/pjrt/test_torchrun.py"
   run_test "$CDIR/test_persistent_cache.py"
   run_test "$CDIR/test_devices.py"
+  run_xla_ir_hlo_debug run_test "$CDIR/test_user_computation_debug_cache.py"
 
   #python3 examples/data_parallel/train_resnet_xla_ddp.py # compiler error
   #python3 examples/fsdp/train_resnet_fsdp_auto_wrap.py
