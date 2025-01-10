@@ -484,6 +484,17 @@ class TestAutocastTPU(TestAutocastBase):
       assert not torch.is_autocast_xla_enabled()
 
 
+class TestOtherOps(unittest.TestCase):
+
+  def test_batch_norm(self):
+    device = xm.xla_device()
+    data = torch.randn(4, 16, 32, 32, device=device, dtype=torch.bfloat16)
+    with autocast(device, dtype=torch.bfloat16):
+      output = torch.nn.BatchNorm2d(16)(data)
+    xm.mark_step()
+    self.assertEqual(output.dtype, torch.bfloat16)
+
+
 if __name__ == "__main__":
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   sys.exit(0 if test.result.wasSuccessful() else 1)
