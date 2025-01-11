@@ -12,6 +12,7 @@ namespace torch_xla {
 
 enum class EmitMode {
   kHloReadable,
+  kHloProto,
   kStableHloReadable,
   kStableHloBytecode,
 };
