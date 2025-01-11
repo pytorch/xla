@@ -54,3 +54,24 @@ function run_save_tensor_hlo {
   echo "Running in save tensor file mode: $@"
   run_save_tensor "$run_test_func" "hlo" "$@"
 }
+
+function run_xla_ir_debug {
+  local run_test_func="$1"
+  shift
+  echo "Running with XLA_IR_DEBUG: $@"
+  XLA_IR_DEBUG=1 "$run_test_func" "$@"
+}
+
+function run_xla_hlo_debug {
+  local run_test_func="$1"
+  shift
+  echo "Running with XLA_HLO_DEBUG: $@"
+  XLA_HLO_DEBUG=1 "$run_test_func" "$@"
+}
+
+function run_xla_ir_hlo_debug {
+  local run_test_func="$1"
+  shift
+  echo "Running with XLA_IR_DEBUG and XLA_HLO_DEBUG: $@"
+  XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 "$run_test_func" "$@"
+}
