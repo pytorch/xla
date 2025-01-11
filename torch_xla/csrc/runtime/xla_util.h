@@ -40,6 +40,12 @@ void CheckComputationStatus(
 
 torch::lazy::hash_t ShapeHash(const xla::Shape& shape);
 
+// Return the serialized module proto, using deterministic proto serialization.
+// It ensures consistent ordering of Map fields and repeated elements during
+// serialization.
+absl::StatusOr<std::string> GetDeterministicSerializedModuleProto(
+    const xla::HloModuleProto& hlo_proto);
+
 }  // namespace util
 }  // namespace runtime
 }  // namespace torch_xla

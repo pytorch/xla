@@ -13,6 +13,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "tsl/platform/stacktrace_handler.h"
 #include "xla/status_macros.h"
 
@@ -192,6 +193,14 @@ metrics::Metric* ComputationClient::OutboundDataMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("OutboundData", metrics::MetricFnBytes);
   return metric;
+}
+
+::absl::StatusOr<torch::lazy::hash_t>
+ComputationClient::Computation::ComputeHash(const xla::HloModuleProto& proto,
+                                            const std::string& name) {
+  TF_ASSIGN_OR_RETURN(auto serialized_status,
+                      util::GetDeterministicSerializedModuleProto(proto));
+  return torch::lazy::MHash(name, serialized_status);
 }
 
 }  // namespace runtime

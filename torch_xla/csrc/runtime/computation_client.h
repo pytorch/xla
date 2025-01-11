@@ -115,8 +115,8 @@ class ComputationClient {
           computation_(std::move(computation)),
           devices_(std::move(devices)) {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
-      hash_ =
-          torch::lazy::MHash(name, computation_.proto().SerializeAsString());
+      const xla::HloModuleProto& proto = computation_.proto();
+      hash_ = ConsumeValue(ComputeHash(proto, name));
     }
 
     Computation(std::string name, xla::XlaComputation computation,
@@ -159,7 +159,7 @@ class ComputationClient {
     // here.
     xla::XlaComputation move_computation() {
       if (computation_moved_) {
-        XLA_ERROR() << "Compuation has been moved\n";
+        XLA_ERROR() << "Computation has been moved\n";
       }
       computation_moved_ = true;
       return std::move(const_cast<Computation*>(this)->computation_);
@@ -206,6 +206,13 @@ class ComputationClient {
 
     torch::lazy::hash_t hash_;
     std::string name_;
+
+    // Computes a hash for an HLO module using deterministic proto
+    // serialization. It ensures consistent ordering of Map fields and repeated
+    // elements during during serialization. The resulting hash combines the
+    // serialized module with its computation name.
+    static ::absl::StatusOr<torch::lazy::hash_t> ComputeHash(
+        const xla::HloModuleProto& proto, const std::string& name);
   };
 
   using ComputationPtr = std::shared_ptr<Computation>;
