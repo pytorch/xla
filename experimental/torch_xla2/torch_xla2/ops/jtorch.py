@@ -11,10 +11,11 @@ from jax.experimental.pallas.ops.tpu import flash_attention
 from jax.experimental.shard_map import shard_map
 
 import torch
+
+from torch_xla2.ops.mappings import t2j_dtype
 from torch_xla2.ops.ops_registry import register_torch_function_op
 from torch_xla2.ops import op_base, mappings, jaten
 import torch_xla2.tensor
-
 
 def register_function(torch_func, **kwargs):
   return functools.partial(register_torch_function_op, torch_func, **kwargs)
@@ -280,7 +281,7 @@ def empty(*size: Sequence[int], dtype=None, **kwargs):
 
 @register_function(torch.arange, is_jax_function=False)
 def arange(
-  start, end=None, step=None, 
+  start, end=None, step=None,
   out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False,
   pin_memory=None,
 ):
@@ -414,3 +415,36 @@ def linalg_tensorsolve(A, b, dims=None):
   if A.shape[:b.ndim] != b.shape:
     b = jnp.reshape(b, A.shape[:b.ndim])
   return jnp.linalg.tensorsolve(A, b, axes=dims)
+
+@register_function(torch.linspace)
+def linspace(start, end, steps=100, *, dtype=None, device=None, **kwargs):
+    env = kwargs.get("env")
+
+    if dtype is None:
+        dtype = torch.get_default_dtype()
+
+    jdtype = t2j_dtype(dtype)
+    start_j = jnp.array(start, dtype=jdtype)
+    end_j = jnp.array(end, dtype=jdtype)
+
+    result = jnp.linspace(start_j, end_j, num=steps, dtype=jdtype)
+    return result
+
+
+@register_function(torch.logspace)
+def logspace(start, end, steps=100, base=10.0, *, dtype=None, device=None, **kwargs):
+    """
+    Generates a sequence of numbers spaced evenly on a log scale, from
+    base**start to base**end in `steps` points.
+    """
+    env = kwargs.get("env")
+
+    if dtype is None:
+        dtype = torch.get_default_dtype()
+
+    jdtype = t2j_dtype(dtype)
+    start_j = jnp.array(start, dtype=jdtype)
+    end_j = jnp.array(end, dtype=jdtype)
+
+    result = jnp.logspace(start_j, end_j, num=steps, base=base, dtype=jdtype)
+    return result
