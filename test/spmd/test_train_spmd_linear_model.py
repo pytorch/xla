@@ -125,7 +125,7 @@ def train():
           loss.backward()
         optimizer.step()
       xm.mark_step()
-      if step % 10 == 0:
+      if step % FLAGS.log_steps == 0:
         print(f"Epoch {epoch} step {step} loss {loss}")
 
   losses = []
@@ -139,6 +139,7 @@ def train_and_evaluate():
       'batch_size': 128,
       'num_epochs': 1,
       'lr': 0.1,
+      'log_steps': 8,
       'opts': MODEL_OPTS.items()
   }
 
