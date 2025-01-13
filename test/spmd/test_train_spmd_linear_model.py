@@ -118,16 +118,17 @@ def train():
           else:
             output = model(x)
           loss = loss_fn(output, y)
+          losses.append(loss.clone().detach())
           loss.backward()
         optimizer.step()
       xm.mark_step()
       if step % 10 == 0:
-        assert loss != 0, "Loss should not 0 here"
         print(f"Epoch {epoch} step {step} loss {loss}")
 
+  losses = []
   for epoch in range(FLAGS.num_epochs):
     train_loop_fn(train_loader, epoch)
-  return model
+  return losses, model
 
 
 def train_and_evaluate():
@@ -144,12 +145,14 @@ def train_and_evaluate():
     PROFILER_SERVER = xp.start_server(FLAGS.profiler_port)
   xr.use_spmd(auto=FLAGS.auto_spmd)
   print('Start training loop...')
-  m = train()
+  losses, m = train()
   t = torch.randn(10, FLAGS.input_dim).to(xm.xla_device())
-  return m(t).cpu()
+  return [loss.cpu().item() for loss in losses], m(t).cpu()
 
 
 if __name__ == '__main__':
-  result = train_and_evaluate()
-  # Verify that the model produces non-zero outputs
+  losses, result = train_and_evaluate()
+  # Verify that the model losses are not zero.
+  assert all(loss != 0 for loss in losses)
+  # Verify that the model produces non-zero outputs.
   assert torch.all(result != 0)
