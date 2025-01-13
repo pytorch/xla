@@ -43,7 +43,7 @@ device](../API_GUIDE.md#running-on-a-single-xla-device).
 4.  Wrap the model with DDP.
 
     ``` python
-    ddp_model = DDP(model)
+    ddp_model = DDP(model, gradient_as_bucket_view=True)
     ```
 
 5.  Finally launch your model with xla specific launcher.
@@ -107,7 +107,7 @@ def demo_basic(rank):
     # create model and move it to XLA device
     device = xm.xla_device()
     model = ToyModel().to(device)
-    ddp_model = DDP(model)
+    ddp_model = DDP(model, gradient_as_bucket_view=True)
 
     loss_fn = nn.MSELoss()
     optimizer = optim.SGD(ddp_model.parameters(), lr=0.001)

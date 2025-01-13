@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+gitfda4eca )
+                  master (2.7.0+git2fdf721 )
                 </div>
               
             
@@ -501,7 +501,7 @@ def _mp_fn(index):
 
 <span class="gi">+  # Optional for TPU v4 and GPU</span>
 <span class="gi">+  xm.broadcast_master_param(model)</span>
-<span class="w"> </span> model = DDP(model)
+<span class="w"> </span> model = DDP(model, gradient_as_bucket_view=True)
 
 <span class="w"> </span> loss_fn = nn.MSELoss()
 <span class="w"> </span> optimizer = optim.SGD(model.parameters(), lr=.001)

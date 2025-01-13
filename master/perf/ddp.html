@@ -267,7 +267,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+gitfda4eca )
+                  master (2.7.0+git2fdf721 )
                 </div>
               
             
@@ -453,7 +453,7 @@ and gloo.</p>
 </div>
 </li>
 <li><p>Wrap the model with DDP.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">gradient_as_bucket_view</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </li>
@@ -516,7 +516,7 @@ your script.</p>
     <span class="c1"># create model and move it to XLA device</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">ToyModel</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-    <span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">gradient_as_bucket_view</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">MSELoss</span><span class="p">()</span>
     <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">ddp_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
