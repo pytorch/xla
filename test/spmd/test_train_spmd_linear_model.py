@@ -146,8 +146,10 @@ def train_and_evaluate():
   print('Start training loop...')
   m = train()
   t = torch.randn(10, FLAGS.input_dim).to(xm.xla_device())
-  m(t).cpu()
+  return m(t).cpu()
 
 
 if __name__ == '__main__':
-  train_and_evaluate()
+  result = train_and_evaluate()
+  # Verify that the model produces non-zero outputs
+  assert torch.all(result != 0)
