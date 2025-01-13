@@ -258,7 +258,9 @@ def train_imagenet():
   xm.broadcast_master_param(model)
 
   if FLAGS.ddp:
-    model = DDP(model, broadcast_buffers=False)
+    # gradient_as_bucket_view=True saves memory and can be used so long as
+    # we are not calling `detach_()` on the gradients.
+    model = DDP(model, broadcast_buffers=False, gradient_as_bucket_view=True)
 
   writer = None
   if xm.is_master_ordinal():
