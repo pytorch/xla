@@ -1,3 +1,5 @@
+import os
+import sys
 import args_parse
 import numpy as np
 import torch
@@ -13,6 +15,10 @@ import torch_xla.utils.utils as xu
 from torch_xla.distributed.spmd import Mesh
 import torch.optim as optim
 from torch import nn
+from typing import Optional
+
+parent_folder = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(parent_folder)
 
 MODEL_OPTS = {
     '--sharding': {
@@ -33,10 +39,8 @@ MODEL_OPTS = {
     }
 }
 
-FLAGS = args_parse.parse_common_options(
-    batch_size=128, num_epochs=1, opts=MODEL_OPTS.items())
-
-xr.use_spmd(auto=FLAGS.auto_spmd)
+FLAGS = {}
+PROFILER_SERVER = None
 
 
 class SimpleLinear(nn.Module):
@@ -56,10 +60,8 @@ class SimpleLinear(nn.Module):
     return self.fc3(z)
 
 
-device = xm.xla_device()
-
-
 def train():
+  device = xm.xla_device()
   print('===> Preparing data..')
   lr = 0.1
   train_loader = xu.SampleGenerator(
@@ -126,14 +128,26 @@ def train():
 
   for epoch in range(FLAGS.num_epochs):
     train_loop_fn(train_loader, epoch)
-
   return model
 
 
-if FLAGS.profile:
-  server = xp.start_server(FLAGS.profiler_port)
+def train_and_evaluate():
+  default_config = {
+      'batch_size': 128,
+      'num_epochs': 1,
+      'opts': MODEL_OPTS.items()
+  }
 
-print('Start training loop...')
-m = train()
-t = torch.randn(10, FLAGS.input_dim).to(device)
-m(t).cpu()
+  global PROFILER_SERVER, FLAGS
+  FLAGS = args_parse.parse_common_options(**default_config)
+  if FLAGS.profile:
+    PROFILER_SERVER = xp.start_server(FLAGS.profiler_port)
+  xr.use_spmd(auto=FLAGS.auto_spmd)
+  print('Start training loop...')
+  m = train()
+  t = torch.randn(10, FLAGS.input_dim).to(xm.xla_device())
+  m(t).cpu()
+
+
+if __name__ == '__main__':
+  train_and_evaluate()
