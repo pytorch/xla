@@ -1,21 +1,22 @@
 import os
 import sys
-import args_parse
+from typing import Optional
+
 import numpy as np
 import torch
 from torch import nn
+import torch.optim as optim
+
+import args_parse
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.spmd as xs
-from torch_xla.utils.checkpoint import checkpoint
+import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 from torch_xla.distributed.spmd import Mesh
-import torch.optim as optim
-from torch import nn
-from typing import Optional
+from torch_xla.utils.checkpoint import checkpoint
 
 parent_folder = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(parent_folder)
