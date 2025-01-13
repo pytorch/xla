@@ -10,7 +10,7 @@ import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.spmd as xs
-import torch_xla.utils.checkpoint as checkpoint
+from torch_xla.utils.checkpoint import checkpoint
 import torch_xla.utils.utils as xu
 from torch_xla.distributed.spmd import Mesh
 import torch.optim as optim
@@ -46,18 +46,28 @@ PROFILER_SERVER = None
 class SimpleLinear(nn.Module):
 
   def __init__(self):
-    super(SimpleLinear, self).__init__()
-    self.fc1 = nn.Linear(FLAGS.input_dim, FLAGS.input_dim // 2)
-    self.relu = nn.ReLU()
-    self.fc2 = nn.Linear(FLAGS.input_dim // 2, 3)
-    # Add an additional 3x3 layer at the end to ensure the final layer
-    # is not sharded.
-    self.fc3 = nn.Linear(3, 3)
+    super().__init__()
+    self.layers = torch.nn.Sequential(
+        nn.Linear(FLAGS.input_dim, FLAGS.input_dim // 2),
+        nn.ReLU(),
+        nn.Linear(FLAGS.input_dim // 2, 3),
+        # # Add an additional 3x3 layer at the end to ensure the final layer
+        # # is not sharded.
+        nn.Linear(3, 3),
+    )
 
   def forward(self, x):
-    y = self.relu(self.fc1(x))
-    z = self.fc2(y)
-    return self.fc3(z)
+    if FLAGS.use_gradient_checkpointing:
+      for n_l, layer in enumerate(self.layers):
+        # Apply gradient checkpointing for reduced memory footprint.
+        # This would result in increased computation cost.
+        if n_l > 0:
+          x = checkpoint(layer, x)
+        else:
+          x = layer(x)
+    else:
+      x = self.layers(x)
+    return x
 
 
 def train():
@@ -86,15 +96,15 @@ def train():
         train_loader, device, input_sharding=xs.ShardingSpec(mesh, (0, 1)))
     print('Sharding model weights')
     # Shard the weights according to their 0th dim
-    xs.mark_sharding(model.fc1.weight, mesh, (0, 1))
-    xs.mark_sharding(model.fc2.weight, mesh, (0, 1))
+    xs.mark_sharding(model.layers[0].weight, mesh, (0, 1))
+    xs.mark_sharding(model.layers[2].weight, mesh, (0, 1))
 
   if 'megatron-lm' in FLAGS.sharding:
     print('Sharding model weights')
     # Shard the first layer's weights row-wise
-    xs.mark_sharding(model.fc1.weight, mesh, (0, 1))
+    xs.mark_sharding(model.layers[0].weight, mesh, (0, 1))
     # Shard the second layer's weights column-wise
-    xs.mark_sharding(model.fc2.weight, mesh, (1, 0))
+    xs.mark_sharding(model.layers[2].weight, mesh, (1, 0))
 
   optimizer = optim.SGD(model.parameters(), lr=FLAGS.lr)
 
@@ -108,15 +118,7 @@ def train():
           x = data.to(device)
           y = target.to(device)
           optimizer.zero_grad()
-          if FLAGS.use_gradient_checkpointing:
-            for n_l, layer in enumerate(model):
-              # Apply gradient checkpointing for reduced memory footprint.
-              # This would result in increased computation cost.
-              if n_l > 0:
-                x = torch_xla.utils.checkpoint.checkpoint(layer, x)
-            output = x
-          else:
-            output = model(x)
+          output = model(x)
           loss = loss_fn(output, y)
           losses.append(loss.clone().detach())
           loss.backward()
