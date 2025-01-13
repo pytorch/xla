@@ -214,6 +214,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_xla_auto_sharding.py"
   #run_test "$CDIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$CDIR/spmd/test_train_spmd_linear_model.py"
+  run_test "$CDIR/spmd/test_train_spmd_linear_model.py" "$@" --use_gradient_checkpointing
   run_test "$CDIR/spmd/test_xla_spmd_python_api_interaction.py"
   run_test "$CDIR/spmd/test_xla_auto_sharding.py"
   run_test "$CDIR/spmd/test_fsdp_v2.py"

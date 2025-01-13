@@ -33,7 +33,7 @@ MODEL_OPTS = {
     },
     '--train_dataset_len': {
         'type': int,
-        'default': 1024 * 1024,
+        'default': 1024 * 8,
     },
     '--use_gradient_checkpointing': {
         'action': 'store_true',
