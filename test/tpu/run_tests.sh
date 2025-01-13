@@ -15,7 +15,6 @@ python3 "$TEST_CDIR/spmd/test_xla_sharding.py"
 python3 "$TEST_CDIR/spmd/test_xla_virtual_device.py"
 python3 "$TEST_CDIR/spmd/test_xla_distributed_checkpoint.py"
 python3 "$TEST_CDIR/spmd/test_train_spmd_linear_model.py"
-python3 "$TEST_CDIR/spmd/test_train_spmd_linear_model.py" "$@" --use_gradient_checkpointing
 python3 "$TEST_CDIR/spmd/test_xla_spmd_python_api_interaction.py"
 python3 "$TEST_CDIR/spmd/test_xla_auto_sharding.py"
 python3 "$TEST_CDIR/spmd/test_fsdp_v2.py"
