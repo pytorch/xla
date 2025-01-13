@@ -484,6 +484,34 @@ class TestAutocastTPU(TestAutocastBase):
       assert not torch.is_autocast_xla_enabled()
 
 
+class TestOtherOps(unittest.TestCase):
+
+  @unittest.skipIf(
+      not xm.get_xla_supported_devices("GPU"),
+      "the behavior of batch_norm autocast on GPU is different from others")
+  def test_batch_norm_gpu(self):
+    device = xm.xla_device()
+    data = torch.randn(4, 16, 32, 32, device=device, dtype=torch.bfloat16)
+    batch_norm = torch.nn.BatchNorm2d(16)
+    with autocast(device, dtype=torch.bfloat16):
+      output = batch_norm(data)
+    xm.mark_step()
+    self.assertEqual(output.dtype, torch.bfloat16)
+
+  # On TPU, the input of batch norm is casted into fp32, see torch_xla/csrc/autocast_mode.cpp
+  @unittest.skipIf(
+      not xm.get_xla_supported_devices("TPU"),
+      "the behavior of batch_norm autocast on TPU is different from others")
+  def test_batch_norm_tpu(self):
+    device = xm.xla_device()
+    data = torch.randn(4, 16, 32, 32, device=device, dtype=torch.bfloat16)
+    batch_norm = torch.nn.BatchNorm2d(16)
+    with autocast(device, dtype=torch.bfloat16):
+      output = batch_norm(data)
+    xm.mark_step()
+    self.assertEqual(output.dtype, torch.float32)
+
+
 if __name__ == "__main__":
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   sys.exit(0 if test.result.wasSuccessful() else 1)
