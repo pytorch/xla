@@ -63,7 +63,6 @@ class SimpleLinear(nn.Module):
 def train():
   device = xm.xla_device()
   print('===> Preparing data..')
-  lr = 0.1
   train_loader = xu.SampleGenerator(
       data=(torch.zeros(FLAGS.batch_size, FLAGS.input_dim),
             torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
@@ -97,7 +96,7 @@ def train():
     # Shard the second layer's weights column-wise
     xs.mark_sharding(model.fc2.weight, mesh, (1, 0))
 
-  optimizer = optim.SGD(model.parameters(), lr=lr)
+  optimizer = optim.SGD(model.parameters(), lr=FLAGS.lr)
 
   loss_fn = nn.CrossEntropyLoss()
 
@@ -135,6 +134,7 @@ def train_and_evaluate():
   default_config = {
       'batch_size': 128,
       'num_epochs': 1,
+      'lr': 0.1,
       'opts': MODEL_OPTS.items()
   }
 
