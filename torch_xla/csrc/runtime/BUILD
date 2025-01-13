@@ -63,6 +63,7 @@ cc_library(
         "@xla//xla:literal_util",
         "@xla//xla/client:xla_computation",
         "@xla//xla/hlo/ir:hlo",
+        "@xla//xla/pjrt:pjrt_client",
     ],
 )
 

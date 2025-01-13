@@ -513,8 +513,6 @@ TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDimsKeepDtype) {
 }
 
 TEST_F(AtenXlaTensorTest, TestLinalgEigh) {
-  // TODO: Broken by XLA pin update on 20250106.
-  GTEST_SKIP();
   // Hardcode the test input to avoid numerical instability from randomness,
   // which is a problem in eigenvalue decomposition.
   auto complex64 = [](float real, float imag) {
