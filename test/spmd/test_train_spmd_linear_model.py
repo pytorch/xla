@@ -45,6 +45,7 @@ PROFILER_SERVER = None
 
 
 class SimpleLinear(nn.Module):
+  NUM_CLASSES = 3
 
   def __init__(self):
     super().__init__()
@@ -54,7 +55,7 @@ class SimpleLinear(nn.Module):
         nn.Linear(FLAGS.input_dim // 2, 3),
         # # Add an additional 3x3 layer at the end to ensure the final layer
         # # is not sharded.
-        nn.Linear(3, 3),
+        nn.Linear(3, self.NUM_CLASSES),
     )
 
   def forward(self, x):
@@ -73,13 +74,14 @@ class SimpleLinear(nn.Module):
 
 def train():
   device = xm.xla_device()
-  print('===> Preparing data..')
-  train_loader = xu.SampleGenerator(
-      data=(torch.zeros(FLAGS.batch_size, FLAGS.input_dim),
-            torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
-      sample_count=FLAGS.train_dataset_len // FLAGS.batch_size)
   torch.manual_seed(42)
   model = SimpleLinear().to(device)
+  print('===> Preparing data..')
+  train_loader = xu.SampleGenerator(
+      data=(torch.randn(FLAGS.batch_size, FLAGS.input_dim),
+            torch.randint(
+                0, model.NUM_CLASSES, (FLAGS.batch_size,), dtype=torch.int64)),
+      sample_count=FLAGS.train_dataset_len // FLAGS.batch_size)
 
   num_devices = xr.global_runtime_device_count()
   print(f'num_devices: {num_devices}')
