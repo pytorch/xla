@@ -127,8 +127,8 @@
                   <span class=dropdown-title>Developer Resources</span>
                   <p>Find resources and get questions answered</p>
                 </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
-                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
                   <p>Award winners announced at this year's PyTorch Conference</p>
                 </a>
               </div>
@@ -148,6 +148,9 @@
                 <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
                   <span class="dropdown-title">ExecuTorch</span>
                   <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
                 </a>
               </div>
             </div>  
@@ -196,6 +199,10 @@
                   <span class="dropdown-title">Events</span>
                   <p>Find events, webinars, and podcasts</p>
                 </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
             </div>
           </li>
 
@@ -211,7 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
                 </a>
               </div>
             </div>
@@ -267,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git1c89675 )
+                  master (2.7.0+git4edbf61 )
                 </div>
               
             
@@ -451,7 +469,7 @@
 <div class="section" id="hybrid-mesh">
 <h3>Hybrid Mesh<a class="headerlink" href="#hybrid-mesh" title="Permalink to this heading">¶</a></h3>
 <p>Mesh nicely abstracts how the physical device mesh is constructed. Users can arrange devices in any shape and order using the logical mesh. However, one can define a more performant mesh based on the physical topology, especially when it involves Data Center Network (DCN) cross slice connections. HybridMesh creates a mesh which gives good performance out of the box for such multislice environments. It accepts ici_mesh_shape and dcn_mesh_shape which denote logical mesh shapes of inner and outer network.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">HybridMesh</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">HybridMesh</span>
 
 <span class="c1"># This example is assuming 2 slices of v4-8.</span>
 <span class="c1"># - ici_mesh_shape: shape of the logical mesh for inner connected devices.</span>
@@ -486,8 +504,8 @@
 <h2>DTensor Integration<a class="headerlink" href="#dtensor-integration" title="Permalink to this heading">¶</a></h2>
 <p>PyTorch has prototype-released <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/_tensor/README.md">DTensor</a> in 2.1.
 We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>. We have a proof-of-concept integration for <code class="docutils literal notranslate"><span class="pre">distribute_tensor</span></code>, which calls <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> annotation API to shard a tensor and its computation using XLA:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">from</span> <span class="nn">torch.distributed</span> <span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">Shard</span><span class="p">,</span> <span class="n">distribute_tensor</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.distributed</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">Shard</span><span class="p">,</span> <span class="n">distribute_tensor</span>
 
 <span class="c1"># distribute_tensor now works with `xla` backend using PyTorch/XLA SPMD.</span>
 <span class="n">mesh</span> <span class="o">=</span> <span class="n">DeviceMesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">world_size</span><span class="p">)))</span>
@@ -515,14 +533,14 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <ul class="simple">
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">rich</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">rich</span>
 
 <span class="c1"># Here, mesh is a 2x2 mesh with axes &#39;x&#39; and &#39;y&#39;</span>
 <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
 <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
 
 <span class="c1"># A tensor&#39;s sharding can be visualized using the `visualize_tensor_sharding` method</span>
-<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd.debugging</span> <span class="kn">import</span> <span class="n">visualize_tensor_sharding</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd.debugging</span><span class="w"> </span><span class="kn">import</span> <span class="n">visualize_tensor_sharding</span>
 <span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_tensor_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -532,7 +550,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 </picture><ul class="simple">
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> and visualization result:</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd.debugging</span> <span class="kn">import</span> <span class="n">visualize_sharding</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd.debugging</span><span class="w"> </span><span class="kn">import</span> <span class="n">visualize_sharding</span>
 <span class="n">sharding</span> <span class="o">=</span> <span class="s1">&#39;{devices=[2,2]0,1,2,3}&#39;</span>
 <span class="n">generated_table</span> <span class="o">=</span> <span class="n">visualize_sharding</span><span class="p">(</span><span class="n">sharding</span><span class="p">,</span> <span class="n">use_color</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </pre></div>
@@ -550,16 +568,16 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <li><p>Setting envvar <code class="docutils literal notranslate"><span class="pre">XLA_AUTO_SPMD=1</span></code></p></li>
 <li><p>Calling the SPMD API in the beginning of your code:</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">(</span><span class="n">auto</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 <ul class="simple">
 <li><p>Calling <code class="docutils literal notranslate"><span class="pre">pytorch.distributed._tensor.distribute_module</span></code> with <code class="docutils literal notranslate"><span class="pre">auto-policy</span></code> and <code class="docutils literal notranslate"><span class="pre">xla</span></code>:</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
-<span class="kn">from</span> <span class="nn">torch.distributed._tensor</span> <span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">distribute_module</span>
-<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">auto_policy</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.distributed._tensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">distribute_module</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">auto_policy</span>
 
 <span class="n">device_count</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
 <span class="n">device_mesh</span> <span class="o">=</span> <span class="n">DeviceMesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">device_count</span><span class="p">)))</span>
@@ -828,7 +846,7 @@ a default device mesh shape of <code class="docutils literal notranslate"><span 
                <a href="https://pytorch.org/resources">Developer Resources</a>
              </li>
              <li>
-               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
              </li>
            </ul>
 
@@ -843,6 +861,9 @@ a default device mesh shape of <code class="docutils literal notranslate"><span 
              
              <li>
                <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
              </li>
            </ul>
 
@@ -882,6 +903,9 @@ a default device mesh shape of <code class="docutils literal notranslate"><span 
             <li>
               <a href="https://pytorch.org/events">Events</a>
             </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
           </ul>
           
           <li class="resources-mobile-menu-title">
@@ -894,6 +918,18 @@ a default device mesh shape of <code class="docutils literal notranslate"><span 
             </li>
             <li>
               <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
             </li>
           </ul>
         </ul>

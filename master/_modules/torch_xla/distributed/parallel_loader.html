@@ -125,8 +125,8 @@
                   <span class=dropdown-title>Developer Resources</span>
                   <p>Find resources and get questions answered</p>
                 </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
-                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
                   <p>Award winners announced at this year's PyTorch Conference</p>
                 </a>
               </div>
@@ -146,6 +146,9 @@
                 <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
                   <span class="dropdown-title">ExecuTorch</span>
                   <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
                 </a>
               </div>
             </div>  
@@ -194,6 +197,10 @@
                   <span class="dropdown-title">Events</span>
                   <p>Find events, webinars, and podcasts</p>
                 </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
             </div>
           </li>
 
@@ -209,7 +216,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
                 </a>
               </div>
             </div>
@@ -265,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git1c89675 )
+                  master (2.7.0+git4edbf61 )
                 </div>
               
             
@@ -411,45 +429,45 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.distributed.parallel_loader</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">itertools</span>
-<span class="kn">import</span> <span class="nn">queue</span>
-<span class="kn">import</span> <span class="nn">threading</span>
-<span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla.debug.profiler</span> <span class="k">as</span> <span class="nn">xp</span>
-<span class="kn">import</span> <span class="nn">torch_xla.utils.keyd_queue</span> <span class="k">as</span> <span class="nn">kq</span>
-<span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla.debug.profiler</span> <span class="k">as</span> <span class="nn">xp</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">queue</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.debug.profiler</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.utils.keyd_queue</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">kq</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.utils.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xu</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.debug.profiler</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xp</span>
 
 
-<span class="k">class</span> <span class="nc">PerDeviceQueue</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">PerDeviceQueue</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">loader_prefetch_size</span><span class="p">,</span> <span class="n">device_prefetch_size</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">loader_prefetch_size</span><span class="p">,</span> <span class="n">device_prefetch_size</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">cpu_loader_queue</span> <span class="o">=</span> <span class="n">kq</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">loader_prefetch_size</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="n">kq</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">device_prefetch_size</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">close_queue_count</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
 
 
-<span class="k">class</span> <span class="nc">PerDeviceLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">PerDeviceLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="n">device</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_mark_step_batch_count</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">batches_per_execution</span> <span class="o">-</span> <span class="mi">1</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_batches_yielded</span> <span class="o">=</span> <span class="mi">0</span>
 
-  <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span>
 
-  <span class="k">def</span> <span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
 
-  <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="o">.</span><span class="n">per_device_samples</span><span class="p">()</span>
 
-  <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">xp</span><span class="o">.</span><span class="n">get_tracer_marked_step</span><span class="p">():</span>
       <span class="n">xp</span><span class="o">.</span><span class="n">set_tracer_marked_step</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_batches_yielded</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -469,7 +487,7 @@
     <span class="k">return</span> <span class="n">item</span>
 
 
-<span class="k">class</span> <span class="nc">ParallelLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ParallelLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
 
 <span class="sd">  Args:</span>
@@ -495,7 +513,7 @@
 <span class="sd">      spec to apply to compatible input tensors after loading.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                <span class="n">cpu_loader</span><span class="p">,</span>
                <span class="n">devices</span><span class="p">,</span>
                <span class="n">batchdim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -532,7 +550,7 @@
         <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">thread</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">per_device_loader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">per_device_loader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieves the loader iterator object for the given device.</span>
 
 <span class="sd">    Args:</span>
@@ -546,14 +564,14 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">PerDeviceLoader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
 
-  <span class="k">def</span> <span class="nf">per_device_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">per_device_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cpu_loader</span><span class="p">)</span> <span class="o">//</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_devices</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">next_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">next_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
     <span class="n">dqueue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="p">[</span><span class="n">device</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 
-  <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
       <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -563,10 +581,10 @@
       <span class="n">thread</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
 
   <span class="nd">@property</span>
-  <span class="k">def</span> <span class="nf">batches_per_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">batches_per_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batches_per_execution</span>
 
-  <span class="k">def</span> <span class="nf">_loader_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_loader_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">queues</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
     <span class="n">data_iter</span> <span class="o">=</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cpu_loader</span><span class="p">)</span>
     <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
@@ -587,7 +605,7 @@
       <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="n">queues</span><span class="p">:</span>
         <span class="n">dqueue</span><span class="o">.</span><span class="n">cpu_loader_queue</span><span class="o">.</span><span class="n">close_write</span><span class="p">()</span>
 
-  <span class="k">def</span> <span class="nf">_get_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dqueue</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_get_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dqueue</span><span class="p">):</span>
     <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">max_size</span><span class="p">():</span>
       <span class="n">item</span> <span class="o">=</span> <span class="n">dqueue</span><span class="o">.</span><span class="n">cpu_loader_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
@@ -596,7 +614,7 @@
       <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">batch</span>
 
-  <span class="k">def</span> <span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batches</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batches</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Move batch to device.</span>
 <span class="sd">    Args:</span>
 <span class="sd">      batch -&gt; List(torch.Tensor), List(Dict(str: torch.Tensor)): Input batch</span>
@@ -637,7 +655,7 @@
       <span class="n">result</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">batches</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_sharding</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span>
 
-  <span class="k">def</span> <span class="nf">_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dqueue</span><span class="p">,</span> <span class="n">host_to_device_transfer_threads</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_worker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dqueue</span><span class="p">,</span> <span class="n">host_to_device_transfer_threads</span><span class="p">):</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">dqueue</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
@@ -663,7 +681,7 @@
         <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">close_write</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="MpDeviceLoader"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.distributed.parallel_loader.MpDeviceLoader">[docs]</a><span class="k">class</span> <span class="nc">MpDeviceLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="MpDeviceLoader"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.distributed.parallel_loader.MpDeviceLoader">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">MpDeviceLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
 
 <span class="sd">  This class should only be using with multi-processing data parallelism. It will wrap</span>
@@ -682,13 +700,13 @@
 <span class="sd">    &gt;&gt;&gt; train_device_loader = MpDeviceLoader(train_loader, device)</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loader</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_device</span> <span class="o">=</span> <span class="n">device</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader_kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span> <span class="o">=</span> <span class="kc">None</span>
 
-  <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span> <span class="o">=</span> <span class="kc">None</span>
@@ -696,7 +714,7 @@
                                            <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader_kwargs</span><span class="p">)</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parallel_loader</span><span class="o">.</span><span class="n">per_device_loader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_device</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader</span><span class="p">)</span></div>
 </pre></div>
 
@@ -922,7 +940,7 @@
                <a href="https://pytorch.org/resources">Developer Resources</a>
              </li>
              <li>
-               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
              </li>
            </ul>
 
@@ -937,6 +955,9 @@
              
              <li>
                <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
              </li>
            </ul>
 
@@ -976,6 +997,9 @@
             <li>
               <a href="https://pytorch.org/events">Events</a>
             </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
           </ul>
           
           <li class="resources-mobile-menu-title">
@@ -988,6 +1012,18 @@
             </li>
             <li>
               <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
             </li>
           </ul>
         </ul>

@@ -125,8 +125,8 @@
                   <span class=dropdown-title>Developer Resources</span>
                   <p>Find resources and get questions answered</p>
                 </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
-                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
                   <p>Award winners announced at this year's PyTorch Conference</p>
                 </a>
               </div>
@@ -146,6 +146,9 @@
                 <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
                   <span class="dropdown-title">ExecuTorch</span>
                   <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
                 </a>
               </div>
             </div>  
@@ -194,6 +197,10 @@
                   <span class="dropdown-title">Events</span>
                   <p>Find events, webinars, and podcasts</p>
                 </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
             </div>
           </li>
 
@@ -209,7 +216,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
                 </a>
               </div>
             </div>
@@ -265,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git1c89675 )
+                  master (2.7.0+git4edbf61 )
                 </div>
               
             
@@ -427,33 +445,33 @@
 <h3>non-Dynamo case<a class="headerlink" href="#non-dynamo-case" title="Permalink to this heading">¶</a></h3>
 <p>Collective ops are lowered through registering the <code class="docutils literal notranslate"><span class="pre">ProcessGroupXla</span></code>, which is derived from <code class="docutils literal notranslate"><span class="pre">ProcessGroup</span></code>:</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># torch_xla/distributed/xla_backend.py</span>
-<span class="k">def</span> <span class="nf">_create_xla_process_group</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_create_xla_process_group</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
   <span class="k">assert</span> <span class="ow">not</span> <span class="n">xr</span><span class="o">.</span><span class="n">is_spmd</span><span class="p">(</span>
   <span class="p">),</span> <span class="s2">&quot;XLA backend is not supported with SPMD. Please use a CPU process group instead.&quot;</span>
   <span class="k">return</span> <span class="n">ProcessGroupXla</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_register_xla_backend</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_register_xla_backend</span><span class="p">():</span>
   <span class="n">dist</span><span class="o">.</span><span class="n">Backend</span><span class="o">.</span><span class="n">register_backend</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">_create_xla_process_group</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">ProcessGroupXla</span><span class="p">(</span><span class="n">ProcessGroup</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProcessGroupXla</span><span class="p">(</span><span class="n">ProcessGroup</span><span class="p">):</span>
   <span class="o">...</span>
-  <span class="k">def</span> <span class="nf">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensors</span><span class="p">,</span> <span class="n">all_reduce_options</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensors</span><span class="p">,</span> <span class="n">all_reduce_options</span><span class="p">):</span>
     <span class="o">...</span>
-  <span class="k">def</span> <span class="nf">allgather</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_tensors_list</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">opts</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">allgather</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_tensors_list</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">opts</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="o">...</span>
 </pre></div>
 </div>
 <p>The corresponding xla dist backend is initialized when we call:</p>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">_mp_fn</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_mp_fn</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
   <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
 
 <span class="n">In</span> <span class="n">this</span> <span class="n">way</span><span class="p">,</span> <span class="n">collective</span> <span class="n">ops</span> <span class="n">will</span> <span class="n">be</span> <span class="n">called</span> <span class="n">based</span> <span class="n">on</span> <span class="n">the</span> <span class="n">progress</span> <span class="n">group</span> <span class="n">instance</span><span class="p">:</span>
 
   <span class="c1"># E.g., pytorch/pytorch/blob/main/torch/distributed/distributed_c10d.py</span>
   <span class="nd">@_exception_logger</span>
-  <span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">tensor_list</span><span class="p">,</span> <span class="n">tensor</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">async_op</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">all_gather</span><span class="p">(</span><span class="n">tensor_list</span><span class="p">,</span> <span class="n">tensor</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">async_op</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="o">...</span>
     <span class="n">group</span> <span class="o">=</span> <span class="n">group</span> <span class="ow">or</span> <span class="n">_get_default_group</span><span class="p">()</span>
     <span class="n">work</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">allgather</span><span class="p">([</span><span class="n">tensor_list</span><span class="p">],</span> <span class="p">[</span><span class="n">tensor</span><span class="p">])</span> <span class="c1"># uses ProcessGroupXla.allgather instead</span>
@@ -733,7 +751,7 @@ Below are the details for each operation:</p>
                <a href="https://pytorch.org/resources">Developer Resources</a>
              </li>
              <li>
-               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
              </li>
            </ul>
 
@@ -748,6 +766,9 @@ Below are the details for each operation:</p>
              
              <li>
                <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
              </li>
            </ul>
 
@@ -787,6 +808,9 @@ Below are the details for each operation:</p>
             <li>
               <a href="https://pytorch.org/events">Events</a>
             </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
           </ul>
           
           <li class="resources-mobile-menu-title">
@@ -799,6 +823,18 @@ Below are the details for each operation:</p>
             </li>
             <li>
               <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
             </li>
           </ul>
         </ul>

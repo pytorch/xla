@@ -125,8 +125,8 @@
                   <span class=dropdown-title>Developer Resources</span>
                   <p>Find resources and get questions answered</p>
                 </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
-                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
                   <p>Award winners announced at this year's PyTorch Conference</p>
                 </a>
               </div>
@@ -146,6 +146,9 @@
                 <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
                   <span class="dropdown-title">ExecuTorch</span>
                   <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
                 </a>
               </div>
             </div>  
@@ -194,6 +197,10 @@
                   <span class="dropdown-title">Events</span>
                   <p>Find events, webinars, and podcasts</p>
                 </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
             </div>
           </li>
 
@@ -209,7 +216,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
                 </a>
               </div>
             </div>
@@ -265,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git1c89675 )
+                  master (2.7.0+git4edbf61 )
                 </div>
               
             
@@ -411,26 +429,26 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.distributed.spmd.xla_sharding</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-<span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla._internal.utils</span> <span class="k">as</span> <span class="nn">_utils</span>
-<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">XLAShardedTensor</span><span class="p">,</span> <span class="n">XLAShard</span>
-<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla._internal.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_utils</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">XLAShardedTensor</span><span class="p">,</span> <span class="n">XLAShard</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">functools</span>
-<span class="kn">import</span> <span class="nn">itertools</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Set</span>
-<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">IntEnum</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Set</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntEnum</span>
 
-<span class="kn">from</span> <span class="nn">torch.amp</span> <span class="kn">import</span> <span class="n">custom_fwd</span><span class="p">,</span> <span class="n">custom_bwd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.amp</span><span class="w"> </span><span class="kn">import</span> <span class="n">custom_fwd</span><span class="p">,</span> <span class="n">custom_bwd</span>
 
 
-<div class="viewcode-block" id="Mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.Mesh">[docs]</a><span class="k">class</span> <span class="nc">Mesh</span><span class="p">:</span>
+<div class="viewcode-block" id="Mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.Mesh">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Mesh</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Describe the logical XLA device topology mesh and the underlying resources.</span>
 
 <span class="sd">  Args:</span>
@@ -463,7 +481,7 @@
   <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
   <span class="n">axis_names</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                <span class="n">device_ids</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">],</span>
                <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
                <span class="n">axis_names</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
@@ -478,26 +496,26 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span> <span class="o">=</span> <span class="n">axis_names</span>
     <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">d</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">device_ids</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span>
           <span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span> <span class="k">for</span> <span class="n">dim</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">OrderedDict</span><span class="p">(</span>
         <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">))</span>
 
-  <span class="k">def</span> <span class="nf">get_logical_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">get_logical_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_ids</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">get_axis_name_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">get_axis_name_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span><span class="p">:</span>
       <span class="k">return</span> <span class="kc">None</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
 
   <span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-  <span class="k">def</span> <span class="nf">_get_op_sharding_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_get_op_sharding_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">):</span>
     <span class="n">partition_spec</span> <span class="o">=</span> <span class="n">_translate_named_partition_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
     <span class="n">flat_specs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">partition_spec</span><span class="p">])</span>
     <span class="n">specs</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">flat_specs</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
@@ -521,7 +539,7 @@
     <span class="k">return</span> <span class="n">tile_assignment</span><span class="p">,</span> <span class="n">group_assignment</span><span class="p">,</span> <span class="n">replication_groups</span><span class="p">,</span> <span class="n">sharding_type</span>
 
   <span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-  <span class="k">def</span> <span class="nf">get_op_sharding</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">get_op_sharding</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                       <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">OpSharding</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return the OpSharding for the given partition spec. This is an expensive</span>
@@ -542,7 +560,7 @@
 <span class="n">_GLOBAL_MESH</span><span class="p">:</span> <span class="n">Mesh</span> <span class="o">=</span> <span class="kc">None</span>
 
 
-<div class="viewcode-block" id="set_global_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.set_global_mesh">[docs]</a><span class="k">def</span> <span class="nf">set_global_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">):</span>
+<div class="viewcode-block" id="set_global_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.set_global_mesh">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">set_global_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Set the global mesh that can be used for the current process.</span>
 
@@ -559,7 +577,7 @@
   <span class="n">_GLOBAL_MESH</span> <span class="o">=</span> <span class="n">mesh</span></div>
 
 
-<div class="viewcode-block" id="get_global_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.get_global_mesh">[docs]</a><span class="k">def</span> <span class="nf">get_global_mesh</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mesh</span><span class="p">]:</span>
+<div class="viewcode-block" id="get_global_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.get_global_mesh">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_global_mesh</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mesh</span><span class="p">]:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Get the global mesh for the current process.</span>
 
@@ -575,7 +593,7 @@
   <span class="k">return</span> <span class="n">_GLOBAL_MESH</span></div>
 
 
-<div class="viewcode-block" id="get_1d_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.get_1d_mesh">[docs]</a><span class="k">def</span> <span class="nf">get_1d_mesh</span><span class="p">(</span><span class="n">axis_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
+<div class="viewcode-block" id="get_1d_mesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.get_1d_mesh">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_1d_mesh</span><span class="p">(</span><span class="n">axis_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mesh</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Helper function to return the mesh with all devices in one dimension.</span>
 
@@ -605,7 +623,7 @@
 
 
 <span class="c1"># HybridDevice class has been inspired from jax&#39;s mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ</span>
-<div class="viewcode-block" id="HybridMesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.HybridMesh">[docs]</a><span class="k">class</span> <span class="nc">HybridMesh</span><span class="p">(</span><span class="n">Mesh</span><span class="p">):</span>
+<div class="viewcode-block" id="HybridMesh"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.HybridMesh">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">HybridMesh</span><span class="p">(</span><span class="n">Mesh</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Creates a hybrid device mesh of devices connected with ICI and DCN networks.</span>
 <span class="sd">    The shape of logical mesh should be ordered by increasing network-intensity</span>
 <span class="sd">    e.g. [replica, data, model] where mdl has the most network communication</span>
@@ -627,7 +645,7 @@
   <span class="n">ici_mesh_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
   <span class="n">dcn_mesh_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                <span class="o">*</span><span class="p">,</span>
                <span class="n">ici_mesh_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
                <span class="n">dcn_mesh_shape</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -658,7 +676,7 @@
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="n">axis_names</span><span class="p">)</span>
 
   <span class="c1"># This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L172</span>
-  <span class="k">def</span> <span class="nf">_get_physical_tpu_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_get_physical_tpu_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Rearrange TPU devices in a slice into a physical mesh.</span>
 
 <span class="sd">      Args:</span>
@@ -678,7 +696,7 @@
     <span class="k">return</span> <span class="n">out</span>
 
   <span class="c1"># This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L64.</span>
-  <span class="k">def</span> <span class="nf">_create_device_mesh_for_nd_torus</span><span class="p">(</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_create_device_mesh_for_nd_torus</span><span class="p">(</span>
       <span class="bp">self</span><span class="p">,</span> <span class="n">physical_mesh</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
       <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Assigns logical parallelism axes to physical axes of an N-D torus network.</span>
@@ -766,7 +784,7 @@
         <span class="n">transpose</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">physical_mesh</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">transpose</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">),</span> <span class="n">assignment</span>
 
-  <span class="k">def</span> <span class="nf">_create_device_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_create_device_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                           <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
                           <span class="n">devices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a performant device mesh.</span>
@@ -793,7 +811,7 @@
     <span class="k">return</span> <span class="n">device_mesh</span>
 
   <span class="c1"># This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L288.</span>
-  <span class="k">def</span> <span class="nf">_create_hybrid_device_mesh</span><span class="p">(</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_create_hybrid_device_mesh</span><span class="p">(</span>
       <span class="bp">self</span><span class="p">,</span> <span class="n">ici_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
       <span class="n">dcn_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a device mesh for hybrid (e.g., ICI and DCN) parallelism.</span>
@@ -831,7 +849,7 @@
     <span class="k">return</span> <span class="n">device_mesh</span></div>
 
 
-<span class="k">class</span> <span class="nc">ShardingType</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ShardingType</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
   <span class="c1"># ShardingType enum ID maps to OpSharidng.Type (https://shorturl.at/pvAJX)</span>
   <span class="n">REPLICATED</span> <span class="o">=</span> <span class="mi">0</span>
   <span class="n">MAXIMAL</span> <span class="o">=</span> <span class="mi">1</span>
@@ -842,7 +860,7 @@
   <span class="n">UNKNOWN</span> <span class="o">=</span> <span class="mi">6</span>  <span class="c1"># implicit replication. TODO(yeounoh) wait for auto-sharding support</span>
 
 
-<span class="k">def</span> <span class="nf">_get_sharding_type</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]],</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_sharding_type</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]],</span>
                        <span class="n">num_devices</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ShardingType</span><span class="p">:</span>
   <span class="n">sharding_type</span> <span class="o">=</span> <span class="n">ShardingType</span><span class="o">.</span><span class="n">TILED</span>
   <span class="k">if</span> <span class="n">num_devices</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
@@ -854,7 +872,7 @@
   <span class="k">return</span> <span class="n">sharding_type</span>
 
 
-<span class="k">def</span> <span class="nf">_get_tile_assignment</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_tile_assignment</span><span class="p">(</span>
     <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span>
                                             <span class="kc">None</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
@@ -892,7 +910,7 @@
 <span class="c1"># The tile_assignment should be the result of `_get_tile_assignment` so that all</span>
 <span class="c1"># tiled dimensions are in the first axes and replicated dimensions are in the</span>
 <span class="c1"># remaining axes.</span>
-<span class="k">def</span> <span class="nf">_get_group_assignment</span><span class="p">(</span><span class="n">sharding_type</span><span class="p">:</span> <span class="n">ShardingType</span><span class="p">,</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_group_assignment</span><span class="p">(</span><span class="n">sharding_type</span><span class="p">:</span> <span class="n">ShardingType</span><span class="p">,</span>
                           <span class="n">tile_assignment</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tensor_rank</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                           <span class="n">replicate_dims</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">,</span> <span class="n">List</span><span class="p">]:</span>
   <span class="n">group_assignment</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
@@ -922,7 +940,7 @@
   <span class="k">return</span> <span class="n">group_assignment</span><span class="p">,</span> <span class="n">replication_groups</span>
 
 
-<span class="k">def</span> <span class="nf">_translate_named_partition_spec</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_translate_named_partition_spec</span><span class="p">(</span><span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">):</span>
   <span class="n">_partition_spec</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
   <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">partition_spec</span><span class="p">:</span>
     <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">tuple</span><span class="p">:</span>
@@ -942,7 +960,7 @@
   <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_partition_spec</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_mark_manual_sharding</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_mark_manual_sharding</span><span class="p">(</span>
     <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  This API is meant to be paired with the upcoming pause_spmd&amp;resume_spmd APIs.</span>
@@ -954,7 +972,7 @@
   <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">enable_manual_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">enable_manual_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span>
                            <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]],</span>
                            <span class="o">*</span><span class="p">,</span>
                            <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
@@ -971,7 +989,7 @@
   <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">disable_manual_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">disable_manual_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span>
                             <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]],</span>
                             <span class="n">full_shape</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">,</span>
                             <span class="o">*</span><span class="p">,</span>
@@ -988,7 +1006,7 @@
   <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="mark_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.mark_sharding">[docs]</a><span class="k">def</span> <span class="nf">mark_sharding</span><span class="p">(</span>
+<div class="viewcode-block" id="mark_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.mark_sharding">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">mark_sharding</span><span class="p">(</span>
     <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
     <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
                           <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
@@ -1041,7 +1059,7 @@
   <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="clear_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.clear_sharding">[docs]</a><span class="k">def</span> <span class="nf">clear_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<div class="viewcode-block" id="clear_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.clear_sharding">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">clear_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Clear sharding annotation from the input tensor and return a `cpu` casted tensor. This</span>
 <span class="sd">  is a in place operation but will also return the same torch.Tensor back.</span>
@@ -1067,21 +1085,21 @@
   <span class="k">return</span> <span class="n">t</span></div>
 
 
-<span class="k">def</span> <span class="nf">wrap_as_sharded_tensor</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">wrap_as_sharded_tensor</span><span class="p">(</span>
     <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
   <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">XLAShardedTensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">t</span>
 
 
-<span class="k">def</span> <span class="nf">unwrap_sharded_tensor</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">unwrap_sharded_tensor</span><span class="p">(</span>
     <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
   <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">global_tensor</span>
   <span class="k">return</span> <span class="n">t</span>
 
 
-<span class="k">def</span> <span class="nf">wrap_if_sharded</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">wrap_if_sharded</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  If the input is a sharded tensor, return an XLAShardedTensor wrapping it.</span>
 <span class="sd">  Otherwise, returns the input.</span>
@@ -1094,7 +1112,7 @@
 
 
 <span class="nd">@dataclass</span>
-<span class="k">class</span> <span class="nc">ShardingSpec</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ShardingSpec</span><span class="p">:</span>
   <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span>
   <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]]</span>
   <span class="n">minibatch</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
@@ -1105,7 +1123,7 @@
   <span class="n">_replication_groups</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
   <span class="n">_sharding_type</span><span class="p">:</span> <span class="n">ShardingType</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">init</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span>
     <span class="n">partition_spec</span> <span class="o">=</span> <span class="n">_translate_named_partition_spec</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_spec</span><span class="p">)</span>
     <span class="n">tile_assignment</span> <span class="o">=</span> <span class="n">_get_tile_assignment</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
@@ -1117,7 +1135,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_sharding_type</span><span class="p">,</span> <span class="n">tile_assignment</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span>
         <span class="n">replicate_dims</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">xla_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;XlaShardingSpec&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">xla_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s1">&#39;XlaShardingSpec&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create an XlaShardingSpec for the given tensor. If the tensor is</span>
 <span class="sd">    incompatible with the ShardingSpec, returns None.</span>
@@ -1130,19 +1148,19 @@
                                            <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sharding_type</span><span class="p">),</span>
                                            <span class="bp">self</span><span class="o">.</span><span class="n">minibatch</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">can_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">can_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Test whether the ShardingSpec is compatible with the given torch.Tensor.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">partition_spec</span><span class="p">)</span>
 
-  <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="c1"># TODO(yeounoh) use virtual device interface when available.</span>
     <span class="k">assert</span> <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">device</span> <span class="o">==</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
     <span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mesh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_spec</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">XLAPatchedLinear</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">XLAPatchedLinear</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  A patched version of `torch.nn.functional.linear` that uses einsum instead</span>
 <span class="sd">  of torch.matmul which will flatten the tensors to 2D and collide the sharded</span>
@@ -1162,7 +1180,7 @@
 
   <span class="nd">@staticmethod</span>
   <span class="nd">@custom_fwd</span><span class="p">(</span><span class="n">device_type</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">cast_inputs</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">get_autocast_dtype</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">))</span>
-  <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="c1"># bias is an optional argument</span>
     <span class="n">ctx</span><span class="o">.</span><span class="n">save_for_backward</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span><span class="p">)</span>
     <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
@@ -1173,7 +1191,7 @@
 
   <span class="nd">@staticmethod</span>
   <span class="nd">@custom_bwd</span><span class="p">(</span><span class="n">device_type</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
-  <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">):</span>
     <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">saved_tensors</span>
     <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">grad_bias</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -1187,19 +1205,19 @@
     <span class="k">return</span> <span class="n">grad_input</span><span class="p">,</span> <span class="n">grad_weight</span><span class="p">,</span> <span class="n">grad_bias</span>
 
 
-<span class="k">def</span> <span class="nf">xla_patched_nn_linear_forward</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="nb">input</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">xla_patched_nn_linear_forward</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="nb">input</span><span class="p">):</span>
   <span class="k">return</span> <span class="n">XLAPatchedLinear</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">m</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="n">m</span><span class="o">.</span><span class="n">bias</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">apply_backward_optimization_barrier</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_backward_optimization_barrier</span><span class="p">(</span><span class="n">m</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">  Register a full backward hook that apply an optimization barrier to the given module.</span>
 <span class="sd">  This will prevent the XLA compiler from fusing the module&#39;s backward pass with others.</span>
 <span class="sd">  It&#39;s useful to prevent gigantic buffers being allocated to synchronize the gradients.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
-  <span class="k">def</span> <span class="nf">optimization_barrier</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">grad_input</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">):</span>
-    <span class="kn">from</span> <span class="nn">torch_xla.utils.checkpoint</span> <span class="kn">import</span> <span class="n">CheckpointFunction</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">optimization_barrier</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">grad_input</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.utils.checkpoint</span><span class="w"> </span><span class="kn">import</span> <span class="n">CheckpointFunction</span>
     <span class="n">gradients</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">module</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
       <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">grad</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
@@ -1433,7 +1451,7 @@
                <a href="https://pytorch.org/resources">Developer Resources</a>
              </li>
              <li>
-               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
              </li>
            </ul>
 
@@ -1448,6 +1466,9 @@
              
              <li>
                <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
              </li>
            </ul>
 
@@ -1487,6 +1508,9 @@
             <li>
               <a href="https://pytorch.org/events">Events</a>
             </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
           </ul>
           
           <li class="resources-mobile-menu-title">
@@ -1499,6 +1523,18 @@
             </li>
             <li>
               <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
             </li>
           </ul>
         </ul>

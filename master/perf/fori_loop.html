@@ -127,8 +127,8 @@
                   <span class=dropdown-title>Developer Resources</span>
                   <p>Find resources and get questions answered</p>
                 </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
-                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
                   <p>Award winners announced at this year's PyTorch Conference</p>
                 </a>
               </div>
@@ -148,6 +148,9 @@
                 <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
                   <span class="dropdown-title">ExecuTorch</span>
                   <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
                 </a>
               </div>
             </div>  
@@ -196,6 +199,10 @@
                   <span class="dropdown-title">Events</span>
                   <p>Find events, webinars, and podcasts</p>
                 </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
             </div>
           </li>
 
@@ -211,7 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
                 </a>
               </div>
             </div>
@@ -267,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git1c89675 )
+                  master (2.7.0+git4edbf61 )
                 </div>
               
             
@@ -425,8 +443,8 @@ PyTorch/XLA provide experimental XLA backend support for
 <code class="docutils literal notranslate"><span class="pre">torch._higher_order_ops.while_loop</span></code> via <code class="docutils literal notranslate"><span class="pre">XLA::While</span></code>.</p>
 <div class="section" id="usage">
 <h3>Usage:<a class="headerlink" href="#usage" title="Permalink to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.experimental.fori_loop</span>
-<span class="kn">from</span> <span class="nn">torch._higher_order_ops.while_loop</span> <span class="kn">import</span> <span class="n">while_loop</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.fori_loop</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch._higher_order_ops.while_loop</span><span class="w"> </span><span class="kn">import</span> <span class="n">while_loop</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">while_loop</span><span class="p">(</span><span class="n">cond_fn</span><span class="p">,</span> <span class="n">body_fn</span><span class="p">,</span> <span class="n">init</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -472,9 +490,9 @@ with similar logic: cumulative plus 1 for ten times:</p>
 <div class="section" id="control-group-example-with-pure-python-while-loop">
 <h2>Control group example with pure python <code class="docutils literal notranslate"><span class="pre">while</span></code> loop<a class="headerlink" href="#control-group-example-with-pure-python-while-loop" title="Permalink to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=TPU python</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">torch</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 <span class="o">&gt;&gt;&gt;</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
 <span class="o">&gt;&gt;&gt;</span>
@@ -742,7 +760,7 @@ currently we only should force define <code class="docutils literal notranslate"
                <a href="https://pytorch.org/resources">Developer Resources</a>
              </li>
              <li>
-               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
              </li>
            </ul>
 
@@ -757,6 +775,9 @@ currently we only should force define <code class="docutils literal notranslate"
              
              <li>
                <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
              </li>
            </ul>
 
@@ -796,6 +817,9 @@ currently we only should force define <code class="docutils literal notranslate"
             <li>
               <a href="https://pytorch.org/events">Events</a>
             </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
           </ul>
           
           <li class="resources-mobile-menu-title">
@@ -808,6 +832,18 @@ currently we only should force define <code class="docutils literal notranslate"
             </li>
             <li>
               <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
             </li>
           </ul>
         </ul>

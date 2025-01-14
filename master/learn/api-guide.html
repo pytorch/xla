@@ -127,8 +127,8 @@
                   <span class=dropdown-title>Developer Resources</span>
                   <p>Find resources and get questions answered</p>
                 </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
-                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
                   <p>Award winners announced at this year's PyTorch Conference</p>
                 </a>
               </div>
@@ -148,6 +148,9 @@
                 <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
                   <span class="dropdown-title">ExecuTorch</span>
                   <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
                 </a>
               </div>
             </div>  
@@ -196,6 +199,10 @@
                   <span class="dropdown-title">Events</span>
                   <p>Find events, webinars, and podcasts</p>
                 </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
             </div>
           </li>
 
@@ -211,7 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
                 </a>
               </div>
             </div>
@@ -267,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git1c89675 )
+                  master (2.7.0+git4edbf61 )
                 </div>
               
             
@@ -491,10 +509,10 @@ is exceeded.</p></li>
 <p>Example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># usage 1</span>
 <span class="nd">@torch_xla</span><span class="o">.</span><span class="n">compile</span><span class="p">()</span>
-<span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">foo</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
   <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">foo2</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">foo2</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
   <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 <span class="c1"># usage 2</span>
 <span class="n">compiled_foo2</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">foo2</span><span class="p">)</span>
@@ -871,7 +889,7 @@ See <cite>xm.all_reduce</cite> for details.</p></li>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xm</span><span class="o">.</span><span class="n">optimizer_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -908,7 +926,7 @@ Default: False</p></li>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xm</span><span class="o">.</span><span class="n">wait_device_ops</span><span class="p">()</span> <span class="c1"># wait for all pending operations to finish.</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xm</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">obj_to_save</span><span class="p">,</span> <span class="n">path_to_save</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xm</span><span class="o">.</span><span class="n">rendezvous</span><span class="p">(</span><span class="s1">&#39;torch_xla.core.xla_model.save&#39;</span><span class="p">)</span> <span class="c1"># multi process context only</span>
@@ -938,7 +956,7 @@ ordinal <cite>i</cite> at position <cite>i</cite> in the returned tuple.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xm</span><span class="o">.</span><span class="n">rendezvous</span><span class="p">(</span><span class="s1">&#39;example&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -964,8 +982,8 @@ objects and returns the reduced result.</p></li>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">accuracy</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">mesh_reduce</span><span class="p">(</span><span class="s1">&#39;test_accuracy&#39;</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -1147,8 +1165,8 @@ to make itself recognizeable and traceable by dynamo.</p></li>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
@@ -1178,7 +1196,7 @@ is a in place operation but will also return the same torch.Tensor back.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">torch_xla</span><span class="o">.</span><span class="n">runtime</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">t1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">device</span><span class="p">())</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">get_1d_mesh</span><span class="p">()</span>
@@ -1198,7 +1216,7 @@ is a in place operation but will also return the same torch.Tensor back.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">get_1d_mesh</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">set_global_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
 </pre></div>
@@ -1218,7 +1236,7 @@ is a in place operation but will also return the same torch.Tensor back.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xs</span><span class="o">.</span><span class="n">get_global_mesh</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -1241,7 +1259,7 @@ is a in place operation but will also return the same torch.Tensor back.</p>
 </dl>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># This example is assuming 1 TPU v4-8</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">get_1d_mesh</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">)</span>
 <span class="go">(4,)</span>
@@ -1704,7 +1722,7 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
                <a href="https://pytorch.org/resources">Developer Resources</a>
              </li>
              <li>
-               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
              </li>
            </ul>
 
@@ -1719,6 +1737,9 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
              
              <li>
                <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
              </li>
            </ul>
 
@@ -1758,6 +1779,9 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
             <li>
               <a href="https://pytorch.org/events">Events</a>
             </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
           </ul>
           
           <li class="resources-mobile-menu-title">
@@ -1770,6 +1794,18 @@ The <cite>SAMPLES</cite> is a list of (TIME, VALUE) tuples.</p>
             </li>
             <li>
               <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
             </li>
           </ul>
         </ul>

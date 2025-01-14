@@ -125,8 +125,8 @@
                   <span class=dropdown-title>Developer Resources</span>
                   <p>Find resources and get questions answered</p>
                 </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
-                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
                   <p>Award winners announced at this year's PyTorch Conference</p>
                 </a>
               </div>
@@ -146,6 +146,9 @@
                 <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
                   <span class="dropdown-title">ExecuTorch</span>
                   <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
                 </a>
               </div>
             </div>  
@@ -194,6 +197,10 @@
                   <span class="dropdown-title">Events</span>
                   <p>Find events, webinars, and podcasts</p>
                 </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
             </div>
           </li>
 
@@ -209,7 +216,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
                 </a>
               </div>
             </div>
@@ -265,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git1c89675 )
+                  master (2.7.0+git4edbf61 )
                 </div>
               
             
@@ -411,15 +429,15 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.debug.metrics</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">torch_xla</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
 
 
-<div class="viewcode-block" id="counter_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_names">[docs]</a><span class="k">def</span> <span class="nf">counter_names</span><span class="p">():</span>
+<div class="viewcode-block" id="counter_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">counter_names</span><span class="p">():</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves all the currently active counter names.&quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_counter_names</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="counter_value"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_value">[docs]</a><span class="k">def</span> <span class="nf">counter_value</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+<div class="viewcode-block" id="counter_value"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.counter_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">counter_value</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the value of an active counter.</span>
 
 <span class="sd">  Args:</span>
@@ -431,18 +449,18 @@
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_counter_value</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
 
 
-<span class="k">def</span> <span class="nf">clear_counters</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">clear_counters</span><span class="p">():</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all counters.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_clear_xla_counters</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="metric_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_names">[docs]</a><span class="k">def</span> <span class="nf">metric_names</span><span class="p">():</span>
+<div class="viewcode-block" id="metric_names"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metric_names</span><span class="p">():</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves all the currently active metric names.&quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metric_names</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="metric_data"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_data">[docs]</a><span class="k">def</span> <span class="nf">metric_data</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+<div class="viewcode-block" id="metric_data"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metric_data">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metric_data</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the data of an active metric.</span>
 
 <span class="sd">  Args:</span>
@@ -459,25 +477,25 @@
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metric_data</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
 
 
-<span class="k">def</span> <span class="nf">clear_metrics</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">clear_metrics</span><span class="p">():</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all metrics.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_clear_xla_metrics</span><span class="p">()</span>
 
 
-<span class="k">def</span> <span class="nf">clear_all</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">clear_all</span><span class="p">():</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Clear the value of all metrics and all counters.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">clear_metrics</span><span class="p">()</span>
   <span class="n">clear_counters</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metrics_report">[docs]</a><span class="k">def</span> <span class="nf">metrics_report</span><span class="p">():</span>
+<div class="viewcode-block" id="metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.metrics_report">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">metrics_report</span><span class="p">():</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a string containing the full metrics and counters report.&quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_metrics_report</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="short_metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.short_metrics_report">[docs]</a><span class="k">def</span> <span class="nf">short_metrics_report</span><span class="p">(</span><span class="n">counter_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">metric_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="short_metrics_report"><a class="viewcode-back" href="../../../learn/api-guide.html#torch_xla.debug.metrics.short_metrics_report">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">short_metrics_report</span><span class="p">(</span><span class="n">counter_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">metric_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a string containing the full metrics and counters report.</span>
 
 <span class="sd">  Args:</span>
@@ -494,7 +512,7 @@
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_short_xla_metrics_report</span><span class="p">(</span><span class="n">counter_names</span><span class="p">,</span> <span class="n">metric_names</span><span class="p">)</span></div>
 
 
-<span class="k">def</span> <span class="nf">executed_fallback_ops</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">executed_fallback_ops</span><span class="p">():</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves a list of operations that were run in fallback mode.&quot;&quot;&quot;</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_executed_fallback_ops</span><span class="p">()</span>
 </pre></div>
@@ -721,7 +739,7 @@
                <a href="https://pytorch.org/resources">Developer Resources</a>
              </li>
              <li>
-               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
              </li>
            </ul>
 
@@ -736,6 +754,9 @@
              
              <li>
                <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
              </li>
            </ul>
 
@@ -775,6 +796,9 @@
             <li>
               <a href="https://pytorch.org/events">Events</a>
             </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
           </ul>
           
           <li class="resources-mobile-menu-title">
@@ -787,6 +811,18 @@
             </li>
             <li>
               <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
             </li>
           </ul>
         </ul>

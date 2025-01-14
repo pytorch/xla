@@ -127,8 +127,8 @@
                   <span class=dropdown-title>Developer Resources</span>
                   <p>Find resources and get questions answered</p>
                 </a>
-                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2023">
-                  <span class="dropdown-title">Contributor Awards - 2023</span>
+                <a class="nav-dropdown-item" href="https://pytorch.org/ecosystem/contributor-awards-2024">
+                  <span class="dropdown-title">Contributor Awards - 2024</span>
                   <p>Award winners announced at this year's PyTorch Conference</p>
                 </a>
               </div>
@@ -148,6 +148,9 @@
                 <a class="nav-dropdown-item" href="https://pytorch.org/executorch-overview">
                   <span class="dropdown-title">ExecuTorch</span>
                   <p>End-to-end solution for enabling on-device inference capabilities across mobile and edge devices</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/executorch/stable/index.html">
+                  <span class="dropdown-title">ExecuTorch Docs</span>
                 </a>
               </div>
             </div>  
@@ -196,6 +199,10 @@
                   <span class="dropdown-title">Events</span>
                   <p>Find events, webinars, and podcasts</p>
                 </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/newsletter">
+                  <span class="dropdown-title">Newsletter</span>
+                  <p>Stay up-to-date with the latest updates</p>
+                </a>
             </div>
           </li>
 
@@ -211,7 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/credits">
+                  <span class="dropdown-title">Cloud Credit Program</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/tac">
+                  <span class="dropdown-title">Technical Advisory Council</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/staff">
+                  <span class="dropdown-title">Staff</span>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
+                  <span class="dropdown-title">Contact Us</span>
                 </a>
               </div>
             </div>
@@ -267,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git1c89675 )
+                  master (2.7.0+git4edbf61 )
                 </div>
               
             
@@ -443,9 +461,9 @@ both eager mode and Dynamo, with regular PyTorch CPU tensor and XLA
 tensor.</p>
 <p><strong>Note</strong> Please check the docstring of the quantized ops for the layout
 of the quantized weights.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla.experimental.xla_quantized_matmul</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.xla_quantized_matmul</span>
 
 <span class="n">N_INPUT_FEATURES</span><span class="o">=</span><span class="mi">10</span>
 <span class="n">N_OUTPUT_FEATURES</span><span class="o">=</span><span class="mi">20</span>
@@ -465,7 +483,7 @@ of the quantized weights.</p>
 <span class="n">matmul_output_xla</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">quantized_matmul</span><span class="p">(</span><span class="n">x_xla</span><span class="p">,</span> <span class="n">w_int_xla</span><span class="p">,</span> <span class="n">scaler_xla</span><span class="p">)</span>
 
 <span class="c1"># Use with torch.compile(backend=&#39;openxla&#39;)</span>
-<span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
   <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">quantized_matmul</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
 
 <span class="n">f_dynamo</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;openxla&quot;</span><span class="p">)</span>
@@ -474,12 +492,12 @@ of the quantized weights.</p>
 </div>
 <p>It’s common to wrap the quantized op into a custom <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> in model
 developers model code:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyQLinearForXLABackend</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyQLinearForXLABackend</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="o">...</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">scaler</span> <span class="o">=</span> <span class="o">...</span>
 
-  <span class="k">def</span> <span class="nf">load_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">scaler</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">load_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">scaler</span><span class="p">):</span>
     <span class="c1"># Load quantized Linear weights</span>
     <span class="c1"># Customized way to preprocess the weights</span>
     <span class="o">...</span>
@@ -487,7 +505,7 @@ developers model code:</p>
     <span class="bp">self</span><span class="o">.</span><span class="n">scaler</span> <span class="o">=</span> <span class="n">processed_scaler</span>
 
 
-  <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
     <span class="c1"># Do some random stuff with x</span>
     <span class="o">...</span>
     <span class="n">matmul_output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">quantized_matmul</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scaler</span><span class="p">)</span>
@@ -825,7 +843,7 @@ If <code class="docutils literal notranslate"><span class="pre">X/Y</span></code
                <a href="https://pytorch.org/resources">Developer Resources</a>
              </li>
              <li>
-               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2023</a>
+               <a href="https://pytorch.org/ecosystem/contributor-awards-2023">Contributor Awards - 2024</a>
              </li>
            </ul>
 
@@ -840,6 +858,9 @@ If <code class="docutils literal notranslate"><span class="pre">X/Y</span></code
              
              <li>
                <a href="https://pytorch.org/executorch-overview">ExecuTorch</a>
+             </li>
+             <li>
+               <a href="https://pytorch.org/executorch/stable/index.html">ExecuTorch Documentation</a>
              </li>
            </ul>
 
@@ -879,6 +900,9 @@ If <code class="docutils literal notranslate"><span class="pre">X/Y</span></code
             <li>
               <a href="https://pytorch.org/events">Events</a>
             </li>
+            <li>
+               <a href="https://pytorch.org/newsletter">Newsletter</a>
+             </li>
           </ul>
           
           <li class="resources-mobile-menu-title">
@@ -891,6 +915,18 @@ If <code class="docutils literal notranslate"><span class="pre">X/Y</span></code
             </li>
             <li>
               <a href="https://pytorch.org/governing-board">Governing Board</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/credits">Cloud Credit Program</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/tac">Technical Advisory Council</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/staff">Staff</a>
+            </li>
+            <li>
+               <a href="https://pytorch.org/contact-us">Contact Us</a>
             </li>
           </ul>
         </ul>
