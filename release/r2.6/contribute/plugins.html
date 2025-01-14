@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -489,9 +484,9 @@ components:</p>
 <li><p>An implementation of <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code> that (at the very least)
 provides the path to your plugin binary. For example:</p></li>
 </ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CpuPlugin</span><span class="p">(</span><span class="n">plugins</span><span class="o">.</span><span class="n">DevicePlugin</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">CpuPlugin</span><span class="p">(</span><span class="n">plugins</span><span class="o">.</span><span class="n">DevicePlugin</span><span class="p">):</span>
 
-  <span class="k">def</span> <span class="nf">library_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">library_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
         <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;lib&#39;</span><span class="p">,</span> <span class="s1">&#39;pjrt_c_api_cpu_plugin.so&#39;</span><span class="p">)</span>
 </pre></div>

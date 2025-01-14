@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -441,11 +436,11 @@
 <h1>Torch Export to StableHLO<a class="headerlink" href="#torch-export-to-stablehlo" title="Permalink to this heading">¶</a></h1>
 <p>This document describes how to use torch export + torch xla to export to
 <a class="reference external" href="https://github.com/openxla/stablehlo">StableHLO</a> format.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch.export</span> <span class="kn">import</span> <span class="n">export</span>
-<span class="kn">from</span> <span class="nn">torch_xla.stablehlo</span> <span class="kn">import</span> <span class="n">exported_program_to_stablehlo</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torchvision</span>
-<span class="kn">import</span> <span class="nn">torch</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch.export</span><span class="w"> </span><span class="kn">import</span> <span class="n">export</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.stablehlo</span><span class="w"> </span><span class="kn">import</span> <span class="n">exported_program_to_stablehlo</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchvision</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
 <span class="n">xla_device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
 
@@ -484,7 +479,7 @@
 <p>The path should be path to an empty directory. If it doesn’t exist, it
 will be created. This directory can be loaded again as another
 stablehlo_program:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.stablehlo</span> <span class="kn">import</span> <span class="n">StableHLOGraphModule</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.stablehlo</span><span class="w"> </span><span class="kn">import</span> <span class="n">StableHLOGraphModule</span>
 <span class="n">stablehlo_program2</span> <span class="o">=</span> <span class="n">StableHLOGraphModule</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;/tmp/stablehlo_dir&#39;</span><span class="p">)</span>
 <span class="n">output3</span> <span class="o">=</span> <span class="n">stablehlo_program2</span><span class="p">(</span><span class="o">*</span><span class="n">sample_input_xla</span><span class="p">)</span>
 </pre></div>
@@ -522,7 +517,7 @@ guide</a>.</p>
 <div class="section" id="i-want-to-save-directly-tf-saved-model-format-without-needing-to-run-an-separate-command">
 <h3>I want to save directly tf.saved_model format without needing to run an separate command.<a class="headerlink" href="#i-want-to-save-directly-tf-saved-model-format-without-needing-to-run-an-separate-command" title="Permalink to this heading">¶</a></h3>
 <p>You can accomplish this by using this helper function:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.tf_saved_model_integration</span> <span class="kn">import</span> <span class="n">save_torch_module_as_tf_saved_model</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.tf_saved_model_integration</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_torch_module_as_tf_saved_model</span>
 
 <span class="n">save_torch_module_as_tf_saved_model</span><span class="p">(</span>
     <span class="n">resnet18</span><span class="p">,</span>  <span class="c1"># original pytorch torch.nn.Module</span>
@@ -535,7 +530,7 @@ guide</a>.</p>
 </div>
 <div class="section" id="other-common-wrappers">
 <h2>Other common wrappers<a class="headerlink" href="#other-common-wrappers" title="Permalink to this heading">¶</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">save_as_stablehlo</span><span class="p">(</span><span class="n">exported_model</span><span class="p">:</span> <span class="s1">&#39;ExportedProgram&#39;</span><span class="p">,</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">save_as_stablehlo</span><span class="p">(</span><span class="n">exported_model</span><span class="p">:</span> <span class="s1">&#39;ExportedProgram&#39;</span><span class="p">,</span>
                       <span class="n">stablehlo_dir</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
                       <span class="n">options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StableHLOExportOptions</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 </pre></div>
@@ -543,7 +538,7 @@ guide</a>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">save_as_stablehlo</span></code> (also aliased as <code class="docutils literal notranslate"><span class="pre">torch_xla.save_as_stablehlo</span></code>)
 takes ExportedProgram and saves StableHLO on disk. i.e. same as
 exported_program_to_stablehlo(…).save(…)</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">save_torch_model_as_stablehlo</span><span class="p">(</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">save_torch_model_as_stablehlo</span><span class="p">(</span>
     <span class="n">torchmodel</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
     <span class="n">args</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
     <span class="n">path</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span>
@@ -612,15 +607,15 @@ composite attributes, if retrieving from the downstream compiler is
 desired.</p>
 <p>The following example shows a pratical use case - capturing
 <code class="docutils literal notranslate"><span class="pre">scaled_product_attention</span></code></p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
-<span class="kn">from</span> <span class="nn">torch_xla</span> <span class="kn">import</span> <span class="n">stablehlo</span>
-<span class="kn">from</span> <span class="nn">torch_xla.experimental.mark_pattern_utils</span> <span class="kn">import</span> <span class="n">StableHLOCompositeBuilder</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla</span><span class="w"> </span><span class="kn">import</span> <span class="n">stablehlo</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.mark_pattern_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">StableHLOCompositeBuilder</span>
 
 
-<span class="k">class</span> <span class="nc">M</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">M</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_proj</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">k_proj</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -629,7 +624,7 @@ desired.</p>
         <span class="c1"># Note: To capture the value of non-tensor inputs, please pass them as attributes to the builder</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">StableHLOCompositeBuilder</span><span class="p">(</span><span class="s2">&quot;test.sdpa&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;scale&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s2">&quot;other_attr&quot;</span><span class="p">:</span> <span class="s2">&quot;val&quot;</span><span class="p">})</span>
 
-    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
         <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_proj</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_proj</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">v_proj</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>

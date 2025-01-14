@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -524,7 +519,7 @@ def _mp_fn(index):
 
 <span class="gi">+  # Optional for TPU v4 and GPU</span>
 <span class="gi">+  xm.broadcast_master_param(model)</span>
-<span class="w"> </span> model = DDP(model)
+<span class="w"> </span> model = DDP(model, gradient_as_bucket_view=True)
 
 <span class="w"> </span> loss_fn = nn.MSELoss()
 <span class="w"> </span> optimizer = optim.SGD(model.parameters(), lr=.001)
@@ -810,16 +805,16 @@ chips, so expect this alternative to be less reliable than using
 we strongly recommend using the new <code class="docutils literal notranslate"><span class="pre">xla://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code>, which
 automatically finds the replica IDs, world size, and master IP by
 querying the runtime. For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.distributed</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dist</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental</span><span class="w"> </span><span class="kn">import</span> <span class="n">pjrt</span>
 
 <span class="c1"># Required for `xla://` init_method and `xla` backend</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_backend</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.xla_backend</span>
 
-<span class="k">def</span> <span class="nf">_all_gather</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_all_gather</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
   <span class="c1"># No need to pass in `rank` or `world_size`</span>
   <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
 

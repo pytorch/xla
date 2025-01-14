@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -457,9 +452,9 @@ model. We assume that you already know how to use XLA <a class="reference extern
 device</a>.</p>
 <ol class="arabic">
 <li><p>Import xla specific distributed packages:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_backend</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.xla_backend</span>
 </pre></div>
 </div>
 </li>
@@ -476,7 +471,7 @@ and gloo.</p>
 </div>
 </li>
 <li><p>Wrap the model with DDP.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">gradient_as_bucket_view</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </li>
@@ -492,42 +487,42 @@ tutorial</a>).
 The way you code it is pretty similar to the eager experience. Just with
 xla specific touches on a single device plus the above five changes to
 your script.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">tempfile</span>
-<span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
-<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
-<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="k">as</span> <span class="nn">optim</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.distributed</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dist</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.optim</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">optim</span>
 
-<span class="kn">from</span> <span class="nn">torch.nn.parallel</span> <span class="kn">import</span> <span class="n">DistributedDataParallel</span> <span class="k">as</span> <span class="n">DDP</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.nn.parallel</span><span class="w"> </span><span class="kn">import</span> <span class="n">DistributedDataParallel</span> <span class="k">as</span> <span class="n">DDP</span>
 
 <span class="c1"># additional imports for xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_backend</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.xla_backend</span>
 
-<span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="p">):</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;PJRT_DEVICE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;TPU&#39;</span>
 
     <span class="c1"># initialize the xla process group</span>
     <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">rank</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="n">world_size</span><span class="p">)</span>
 
-<span class="k">def</span> <span class="nf">cleanup</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">cleanup</span><span class="p">():</span>
     <span class="n">dist</span><span class="o">.</span><span class="n">destroy_process_group</span><span class="p">()</span>
 
-<span class="k">class</span> <span class="nc">ToyModel</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ToyModel</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">ToyModel</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">net1</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">1000000</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">relu</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">net2</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">1000000</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">net2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net1</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
 
-<span class="k">def</span> <span class="nf">demo_basic</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">demo_basic</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
     <span class="c1"># xla specific APIs to get rank, world_size.</span>
     <span class="n">new_rank</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
     <span class="k">assert</span> <span class="n">new_rank</span> <span class="o">==</span> <span class="n">rank</span>
@@ -539,7 +534,7 @@ your script.</p>
     <span class="c1"># create model and move it to XLA device</span>
     <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">ToyModel</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-    <span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="n">ddp_model</span> <span class="o">=</span> <span class="n">DDP</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">gradient_as_bucket_view</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">MSELoss</span><span class="p">()</span>
     <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optim</span><span class="o">.</span><span class="n">SGD</span><span class="p">(</span><span class="n">ddp_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
@@ -555,7 +550,7 @@ your script.</p>
     <span class="n">cleanup</span><span class="p">()</span>
 
 
-<span class="k">def</span> <span class="nf">run_demo</span><span class="p">(</span><span class="n">demo_fn</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_demo</span><span class="p">(</span><span class="n">demo_fn</span><span class="p">):</span>
     <span class="c1"># xla specific launcher</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">demo_fn</span><span class="p">)</span>
 

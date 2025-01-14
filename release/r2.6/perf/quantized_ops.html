@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -466,9 +461,9 @@ both eager mode and Dynamo, with regular PyTorch CPU tensor and XLA
 tensor.</p>
 <p><strong>Note</strong> Please check the docstring of the quantized ops for the layout
 of the quantized weights.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla.experimental.xla_quantized_matmul</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.xla_quantized_matmul</span>
 
 <span class="n">N_INPUT_FEATURES</span><span class="o">=</span><span class="mi">10</span>
 <span class="n">N_OUTPUT_FEATURES</span><span class="o">=</span><span class="mi">20</span>
@@ -488,7 +483,7 @@ of the quantized weights.</p>
 <span class="n">matmul_output_xla</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">quantized_matmul</span><span class="p">(</span><span class="n">x_xla</span><span class="p">,</span> <span class="n">w_int_xla</span><span class="p">,</span> <span class="n">scaler_xla</span><span class="p">)</span>
 
 <span class="c1"># Use with torch.compile(backend=&#39;openxla&#39;)</span>
-<span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
   <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">quantized_matmul</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
 
 <span class="n">f_dynamo</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">&quot;openxla&quot;</span><span class="p">)</span>
@@ -497,12 +492,12 @@ of the quantized weights.</p>
 </div>
 <p>It’s common to wrap the quantized op into a custom <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> in model
 developers model code:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyQLinearForXLABackend</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyQLinearForXLABackend</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="o">...</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">scaler</span> <span class="o">=</span> <span class="o">...</span>
 
-  <span class="k">def</span> <span class="nf">load_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">scaler</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">load_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">scaler</span><span class="p">):</span>
     <span class="c1"># Load quantized Linear weights</span>
     <span class="c1"># Customized way to preprocess the weights</span>
     <span class="o">...</span>
@@ -510,7 +505,7 @@ developers model code:</p>
     <span class="bp">self</span><span class="o">.</span><span class="n">scaler</span> <span class="o">=</span> <span class="n">processed_scaler</span>
 
 
-  <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
     <span class="c1"># Do some random stuff with x</span>
     <span class="o">...</span>
     <span class="n">matmul_output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">quantized_matmul</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scaler</span><span class="p">)</span>

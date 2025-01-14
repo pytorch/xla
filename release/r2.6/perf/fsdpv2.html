@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -449,10 +444,10 @@ design doc is <a class="reference external" href="https://github.com/pytorch/xla
 proceeding. You can also find a minimum runnable example
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py">here</a>.</p>
 <p>Example usage:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
-<span class="kn">from</span> <span class="nn">torch_xla.experimental.spmd_fully_sharded_data_parallel</span> <span class="kn">import</span> <span class="n">SpmdFullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDPv2</span>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.spmd_fully_sharded_data_parallel</span><span class="w"> </span><span class="kn">import</span> <span class="n">SpmdFullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDPv2</span>
 
 <span class="c1"># Define the mesh following common SPMD practice</span>
 <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
@@ -476,7 +471,7 @@ proceeding. You can also find a minimum runnable example
 <p>It is also possible to shard individual layers separately and have an
 outer wrapper handle any leftover parameters. Here is an example to
 autowrap each <code class="docutils literal notranslate"><span class="pre">DecoderLayer</span></code>.</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp.wrap</span> <span class="kn">import</span> <span class="n">transformer_auto_wrap_policy</span>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp.wrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">transformer_auto_wrap_policy</span>
 
 <span class="c1"># Apply FSDP sharding on each DecoderLayer layer.</span>
 <span class="n">auto_wrap_policy</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span>
@@ -498,7 +493,7 @@ vary, we offer shard_output to shard activations in cases where your
 module output doesn’t fall into one of these categories: 1. A single
 tensor 2. A tuple of tensors where the 0th element is the activation.</p>
 <p>Example usage:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">shard_output</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">shard_output</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
     <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">logits</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
 
 <span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">my_module</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">shard_output</span><span class="p">)</span>
@@ -512,7 +507,7 @@ before the FSDP wrapper. Otherwise, recursively loop into children
 modules will end up with infinite loop. We will fix this issue in the
 future releases.</p>
 <p>Example usage:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">checkpoint_module</span>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp</span><span class="w"> </span><span class="kn">import</span> <span class="n">checkpoint_module</span>
 
 <span class="n">model</span> <span class="o">=</span> <span class="n">FSDPv2</span><span class="p">(</span><span class="n">checkpoint_module</span><span class="p">(</span><span class="n">my_module</span><span class="p">),</span> <span class="n">mesh</span><span class="p">)</span>
 </pre></div>

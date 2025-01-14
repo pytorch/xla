@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -449,19 +444,19 @@ provide the feature parity in the TPU world, Google has introduced
 PyTorch/XLA to continue pushing the performance in TPU, we have to
 support custom kernels, and the best way is through Pallas.</p>
 <p>Let’s assume you have a Pallas kernel defined as follow:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.experimental.custom_kernel</span> <span class="kn">import</span> <span class="n">jax_import_guard</span>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.custom_kernel</span><span class="w"> </span><span class="kn">import</span> <span class="n">jax_import_guard</span>
 <span class="n">jax_import_guard</span><span class="p">()</span>
 
-<span class="kn">import</span> <span class="nn">jax</span>
-<span class="kn">from</span> <span class="nn">jax.experimental</span> <span class="kn">import</span> <span class="n">pallas</span> <span class="k">as</span> <span class="n">pl</span>
-<span class="kn">import</span> <span class="nn">jax.numpy</span> <span class="k">as</span> <span class="nn">jnp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">jax.experimental</span><span class="w"> </span><span class="kn">import</span> <span class="n">pallas</span> <span class="k">as</span> <span class="n">pl</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">jax.numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">jnp</span>
 
-<span class="k">def</span> <span class="nf">add_vectors_kernel</span><span class="p">(</span><span class="n">x_ref</span><span class="p">,</span> <span class="n">y_ref</span><span class="p">,</span> <span class="n">o_ref</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add_vectors_kernel</span><span class="p">(</span><span class="n">x_ref</span><span class="p">,</span> <span class="n">y_ref</span><span class="p">,</span> <span class="n">o_ref</span><span class="p">):</span>
   <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">x_ref</span><span class="p">[</span><span class="o">...</span><span class="p">],</span> <span class="n">y_ref</span><span class="p">[</span><span class="o">...</span><span class="p">]</span>
   <span class="n">o_ref</span><span class="p">[</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>
 
 <span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
-<span class="k">def</span> <span class="nf">add_vectors</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add_vectors</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jax</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
   <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">pallas_call</span><span class="p">(</span><span class="n">add_vectors_kernel</span><span class="p">,</span>
                         <span class="n">out_shape</span><span class="o">=</span><span class="n">jax</span><span class="o">.</span><span class="n">ShapeDtypeStruct</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
                         <span class="p">)(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
@@ -478,7 +473,7 @@ jax will lock the TPU and torch-xla cannot access it.</p>
 <span class="n">v</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">)</span>
 
 <span class="c1"># Adopts any Pallas kernel</span>
-<span class="kn">from</span> <span class="nn">torch_xla.experimental.custom_kernel</span> <span class="kn">import</span> <span class="n">make_kernel_from_pallas</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.custom_kernel</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_kernel_from_pallas</span>
 <span class="n">pt_kernel</span> <span class="o">=</span> <span class="n">make_kernel_from_pallas</span><span class="p">(</span><span class="n">add_vectors</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="p">[(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)])</span>
 <span class="n">output</span> <span class="o">=</span> <span class="n">pt_kernel</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
 </pre></div>
@@ -498,7 +493,7 @@ built-in kernels that are suppored are: - FlashAttention -PagedAttention</p>
 <div class="section" id="example-usage">
 <h4>Example usage<a class="headerlink" href="#example-usage" title="Permalink to this heading">¶</a></h4>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use built-in kernels</span>
-<span class="kn">import</span> <span class="nn">torch_xla.experimental.custom_kernel</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.custom_kernel</span>
 <span class="n">output</span> <span class="o">=</span> <span class="n">flash_attention</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -515,7 +510,7 @@ in our training test script.</p>
 <div class="section" id="id3">
 <h4>Example usage<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h4>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use built-in kernels</span>
-<span class="kn">import</span> <span class="nn">torch_xla.experimental.custom_kernel</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.custom_kernel</span>
 <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">xla</span><span class="o">.</span><span class="n">paged_attention</span><span class="p">(</span>
     <span class="n">query</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
     <span class="n">key_cache</span><span class="p">,</span>

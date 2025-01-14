@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -450,8 +445,8 @@ the shards of an <code class="docutils literal notranslate"><span class="pre">XL
 distributed checkpointing in SPMD training.</p>
 <p>Here is a demonstration of the synchronous distributed checkpointing
 API:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.distributed.checkpoint</span> <span class="k">as</span> <span class="nn">dist_cp</span>
-<span class="kn">import</span> <span class="nn">torch_xla.experimental.distributed_checkpoint</span> <span class="k">as</span> <span class="nn">xc</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch.distributed.checkpoint</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dist_cp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.distributed_checkpoint</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xc</span>
 
 <span class="c1"># Saving a state_dict</span>
 <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span>
@@ -510,7 +505,7 @@ backend to enable checkpointing directly to any fsspec-compatible
 filesystem, including GCS.</p></li>
 </ul>
 <p>Example usage of the CheckpointManager is below:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.experimental.distributed_checkpoint</span> <span class="kn">import</span> <span class="n">CheckpointManager</span><span class="p">,</span> <span class="n">prime_optimizer</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.distributed_checkpoint</span><span class="w"> </span><span class="kn">import</span> <span class="n">CheckpointManager</span><span class="p">,</span> <span class="n">prime_optimizer</span>
 
 <span class="c1"># Create a CheckpointManager to checkpoint every 10 steps into GCS.</span>
 <span class="n">chkpt_mgr</span> <span class="o">=</span> <span class="n">CheckpointManager</span><span class="p">(</span><span class="s1">&#39;gs://my-bucket/my-experiment&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
@@ -557,10 +552,10 @@ supported since the compiler is responsible for all collectives.</p>
 <p>Instead, a CPU process group such as <code class="docutils literal notranslate"><span class="pre">gloo</span></code> must be used. On TPUs, the
 <code class="docutils literal notranslate"><span class="pre">xla://</span></code> init_method is still supported to discover the master IP,
 global world size, and host rank. An example initialization is below:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch.distributed</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dist</span>
 <span class="c1"># Import to register the `xla://` init_method</span>
-<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_backend</span>
-<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.xla_backend</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 
 <span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
 

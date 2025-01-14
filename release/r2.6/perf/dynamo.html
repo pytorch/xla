@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -454,10 +449,10 @@ compiled function.</p>
 <h2>Integration<a class="headerlink" href="#integration" title="Permalink to this heading">¶</a></h2>
 <p>Support for PyTorch/XLA and Dynamo currently exists by adding the
 <code class="docutils literal notranslate"><span class="pre">backend='openxla'</span></code> argument to <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code>. For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
-<span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
   <span class="n">a_xla</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
   <span class="n">b_xla</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
   <span class="k">return</span> <span class="n">a_xla</span> <span class="o">+</span> <span class="n">b_xla</span>
@@ -470,11 +465,11 @@ compiled function.</p>
 <div class="section" id="inference">
 <h2>Inference<a class="headerlink" href="#inference" title="Permalink to this heading">¶</a></h2>
 <p>Here is a small code example of running resnet18 with <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torchvision</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchvision</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
-<span class="k">def</span> <span class="nf">eval_model</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">eval_model</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
   <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
   <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
@@ -546,11 +541,11 @@ and Lazy using torch bench on Cloud TPU v4-8</p>
 and we are working with the PyTorch Compiler team to iterate on the
 implementation. Here is an example of training a resnet18 with
 <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torchvision</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torchvision</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 
-<span class="k">def</span> <span class="nf">train_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">train_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">):</span>
   <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">()</span>
   <span class="n">pred</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
   <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
@@ -558,7 +553,7 @@ implementation. Here is an example of training a resnet18 with
   <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
   <span class="k">return</span> <span class="n">pred</span>
 
-<span class="k">def</span> <span class="nf">train_model_main</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">train_model_main</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
   <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
   <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>

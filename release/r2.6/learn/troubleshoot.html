@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -596,7 +591,7 @@ metrics report.</p>
 <div class="section" id="get-a-metrics-report">
 <h2>Get A Metrics Report<a class="headerlink" href="#get-a-metrics-report" title="Permalink to this heading">¶</a></h2>
 <p>Put the following line in your program to generate a report:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.debug.metrics</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">met</span>
 
 <span class="c1"># For short report that only contains a few key metrics.</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">short_metrics_report</span><span class="p">())</span>
@@ -645,7 +640,7 @@ issues</a>.</p>
 <div class="section" id="clear-the-metrics-report">
 <h2>Clear The Metrics Report<a class="headerlink" href="#clear-the-metrics-report" title="Permalink to this heading">¶</a></h2>
 <p>If you want to clear the metrics between steps/epochs, you can use</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.debug.metrics</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">met</span>
 
 <span class="n">met</span><span class="o">.</span><span class="n">clear_all</span><span class="p">()</span>
 </pre></div>

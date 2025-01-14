@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -448,8 +443,8 @@ PyTorch/XLA provide experimental XLA backend support for
 <code class="docutils literal notranslate"><span class="pre">torch._higher_order_ops.while_loop</span></code> via <code class="docutils literal notranslate"><span class="pre">XLA::While</span></code>.</p>
 <div class="section" id="usage">
 <h3>Usage:<a class="headerlink" href="#usage" title="Permalink to this heading">¶</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.experimental.fori_loop</span>
-<span class="kn">from</span> <span class="nn">torch._higher_order_ops.while_loop</span> <span class="kn">import</span> <span class="n">while_loop</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.fori_loop</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch._higher_order_ops.while_loop</span><span class="w"> </span><span class="kn">import</span> <span class="n">while_loop</span>
 <span class="n">result</span> <span class="o">=</span> <span class="n">while_loop</span><span class="p">(</span><span class="n">cond_fn</span><span class="p">,</span> <span class="n">body_fn</span><span class="p">,</span> <span class="n">init</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -495,9 +490,9 @@ with similar logic: cumulative plus 1 for ten times:</p>
 <div class="section" id="control-group-example-with-pure-python-while-loop">
 <h2>Control group example with pure python <code class="docutils literal notranslate"><span class="pre">while</span></code> loop<a class="headerlink" href="#control-group-example-with-pure-python-while-loop" title="Permalink to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=TPU python</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">torch</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 <span class="o">&gt;&gt;&gt;</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
 <span class="o">&gt;&gt;&gt;</span>

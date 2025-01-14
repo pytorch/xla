@@ -216,23 +216,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -288,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -450,33 +445,33 @@
 <h3>non-Dynamo case<a class="headerlink" href="#non-dynamo-case" title="Permalink to this heading">¶</a></h3>
 <p>Collective ops are lowered through registering the <code class="docutils literal notranslate"><span class="pre">ProcessGroupXla</span></code>, which is derived from <code class="docutils literal notranslate"><span class="pre">ProcessGroup</span></code>:</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="c1"># torch_xla/distributed/xla_backend.py</span>
-<span class="k">def</span> <span class="nf">_create_xla_process_group</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_create_xla_process_group</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
   <span class="k">assert</span> <span class="ow">not</span> <span class="n">xr</span><span class="o">.</span><span class="n">is_spmd</span><span class="p">(</span>
   <span class="p">),</span> <span class="s2">&quot;XLA backend is not supported with SPMD. Please use a CPU process group instead.&quot;</span>
   <span class="k">return</span> <span class="n">ProcessGroupXla</span><span class="p">(</span><span class="n">prefix_store</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_register_xla_backend</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_register_xla_backend</span><span class="p">():</span>
   <span class="n">dist</span><span class="o">.</span><span class="n">Backend</span><span class="o">.</span><span class="n">register_backend</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">_create_xla_process_group</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">ProcessGroupXla</span><span class="p">(</span><span class="n">ProcessGroup</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProcessGroupXla</span><span class="p">(</span><span class="n">ProcessGroup</span><span class="p">):</span>
   <span class="o">...</span>
-  <span class="k">def</span> <span class="nf">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensors</span><span class="p">,</span> <span class="n">all_reduce_options</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">allreduce</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensors</span><span class="p">,</span> <span class="n">all_reduce_options</span><span class="p">):</span>
     <span class="o">...</span>
-  <span class="k">def</span> <span class="nf">allgather</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_tensors_list</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">opts</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">allgather</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_tensors_list</span><span class="p">,</span> <span class="n">input_tensors</span><span class="p">,</span> <span class="n">opts</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="o">...</span>
 </pre></div>
 </div>
 <p>The corresponding xla dist backend is initialized when we call:</p>
-<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">_mp_fn</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_mp_fn</span><span class="p">(</span><span class="n">rank</span><span class="p">):</span>
   <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
 
 <span class="n">In</span> <span class="n">this</span> <span class="n">way</span><span class="p">,</span> <span class="n">collective</span> <span class="n">ops</span> <span class="n">will</span> <span class="n">be</span> <span class="n">called</span> <span class="n">based</span> <span class="n">on</span> <span class="n">the</span> <span class="n">progress</span> <span class="n">group</span> <span class="n">instance</span><span class="p">:</span>
 
   <span class="c1"># E.g., pytorch/pytorch/blob/main/torch/distributed/distributed_c10d.py</span>
   <span class="nd">@_exception_logger</span>
-  <span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">tensor_list</span><span class="p">,</span> <span class="n">tensor</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">async_op</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">all_gather</span><span class="p">(</span><span class="n">tensor_list</span><span class="p">,</span> <span class="n">tensor</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">async_op</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="o">...</span>
     <span class="n">group</span> <span class="o">=</span> <span class="n">group</span> <span class="ow">or</span> <span class="n">_get_default_group</span><span class="p">()</span>
     <span class="n">work</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">allgather</span><span class="p">([</span><span class="n">tensor_list</span><span class="p">],</span> <span class="p">[</span><span class="n">tensor</span><span class="p">])</span> <span class="c1"># uses ProcessGroupXla.allgather instead</span>

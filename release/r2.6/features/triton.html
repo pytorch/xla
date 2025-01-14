@@ -218,23 +218,18 @@
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/governing-board">
                   <span class="dropdown-title">Governing Board</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/credits">
                   <span class="dropdown-title">Cloud Credit Program</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/tac">
                   <span class="dropdown-title">Technical Advisory Council</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/staff">
                   <span class="dropdown-title">Staff</span>
-                  <p></p>
                 </a>
                 <a class="nav-dropdown-item" href="https://pytorch.org/contact-us">
                   <span class="dropdown-title">Contact Us</span>
-                  <p></p>
                 </a>
               </div>
             </div>
@@ -290,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.6.0+git31b2b3b )
+                  master (2.6.0+gitc2e6fd3 )
                 </div>
               
             
@@ -446,7 +441,7 @@ empowers developers to write custom kernels that leverage the full
 potential of GPUs for various operations in deep learning models.</p>
 <p>Given a Triton kernel defined as follows:</p>
 <div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="nd">@triton</span><span class="o">.</span><span class="n">jit</span>
-<span class="k">def</span> <span class="nf">add_kernel</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">add_kernel</span><span class="p">(</span>
     <span class="n">x_ptr</span><span class="p">,</span>  <span class="c1"># *Pointer* to first input vector.</span>
     <span class="n">y_ptr</span><span class="p">,</span>  <span class="c1"># *Pointer* to second input vector.</span>
     <span class="n">output_ptr</span><span class="p">,</span>  <span class="c1"># *Pointer* to output vector.</span>
@@ -467,13 +462,13 @@ potential of GPUs for various operations in deep learning models.</p>
 </div>
 <p>We can run make this kernel a part of the PyTorch/XLA execution graph as
 follows:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
-<span class="kn">import</span> <span class="nn">torch_xla.experimental.triton</span> <span class="k">as</span> <span class="nn">xla_triton</span>
-<span class="kn">import</span> <span class="nn">torch_xla</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.experimental.triton</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xla_triton</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
 
-<span class="kn">import</span> <span class="nn">triton</span>
-<span class="kn">import</span> <span class="nn">triton.language</span> <span class="k">as</span> <span class="nn">tl</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">triton</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">triton.language</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tl</span>
 
 <span class="n">size</span> <span class="o">=</span> <span class="mi">16</span>
 <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">)</span>
