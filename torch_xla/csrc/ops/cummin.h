@@ -7,7 +7,7 @@
 
 namespace torch_xla {
 
-class CumMax : public XlaNode {
+class CumMin : public XlaNode {
  public:
   CumMin(const torch::lazy::Value& input, int64_t dim);
 
