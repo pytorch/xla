@@ -41,6 +41,7 @@
 #include "torch_xla/csrc/ops/convolution_overrideable.h"
 #include "torch_xla/csrc/ops/count_nonzero.h"
 #include "torch_xla/csrc/ops/cummax.h"
+#include "torch_xla/csrc/ops/cummin.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/custom_call.h"
