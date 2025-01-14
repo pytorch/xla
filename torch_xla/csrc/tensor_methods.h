@@ -366,6 +366,11 @@ XLATensorPtr cross(const XLATensorPtr& input, const XLATensorPtr& other,
 std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
                                               int64_t dim);
 
+// Returns a tuple of the cumulative min of elements and the corresponding
+// indices of input in the given dimension.
+std::tuple<XLATensorPtr, XLATensorPtr> cummin(const XLATensorPtr& input,
+                                              int64_t dim);
+
 // Returns the cumulative product of elements of input in the given dimension.
 XLATensorPtr cumprod(const XLATensorPtr& input, int64_t dim,
                      std::optional<at::ScalarType> dtype);

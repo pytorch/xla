@@ -2134,6 +2134,23 @@ TEST_F(AtenXlaTensorTest, TestCumMax) {
   ExpectCounterChanged("xla::cummax", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestCumMin) {
+  torch::Tensor input = torch::rand({4, 3, 4});
+  int rank = input.dim();
+  for (int dim = -rank; dim < rank; ++dim) {
+    std::tuple<torch::Tensor, torch::Tensor> result = torch::cummin(input, dim);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      std::tuple<torch::Tensor, torch::Tensor> xla_result =
+          torch::cummin(xla_input, dim);
+      AllClose(std::get<0>(result), std::get<0>(xla_result));
+      AllClose(std::get<1>(result), std::get<1>(xla_result));
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::cummin", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestArgMin) {
   torch::Tensor a = torch::rand({4, 4, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::argmin(a, std::nullopt, /*keepdim=*/false);

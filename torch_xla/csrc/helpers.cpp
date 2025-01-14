@@ -260,6 +260,12 @@ xla::XlaComputation XlaHelpers::CreateMaxAndArgMaxComputation(
                                  index_type, /*is_min=*/false);
 }
 
+xla::XlaComputation CreateMinAndArgMinComputation(
+    xla::PrimitiveType value_type, xla::PrimitiveType index_type) {
+  return CreateMinMaxComputation("MinAndArgMinComputation", value_type,
+                                 index_type, /*is_min=*/true);
+}
+
 std::vector<int64_t> XlaHelpers::SizesOfXlaOp(xla::XlaOp op) {
   const xla::Shape& op_shape = ShapeHelper::ShapeOfXlaOp(op);
   return std::vector<int64_t>(op_shape.dimensions().begin(),
