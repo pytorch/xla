@@ -1,5 +1,4 @@
 import logging
-import os
 import unittest
 
 import torch
@@ -606,6 +605,7 @@ class PallasTest(unittest.TestCase):
         effective_q_lens_xla,
         num_kv_pages_per_compute_block=block_kv_size // page_size,
         num_queries_per_compute_block=num_queries_per_compute_block,
+        attn_logits_soft_cap=0.3,
     )
 
     nonkernel_output = multi_queries_paged_attention(
@@ -822,7 +822,6 @@ class PallasTest(unittest.TestCase):
     num_kv_heads = 8
     q_kv_head_ratio = 8
     head_dim = 256
-    dtype = torch.float32
     seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
 
     q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
@@ -899,7 +898,6 @@ class PallasTest(unittest.TestCase):
     num_kv_heads = 8
     q_kv_head_ratio = 8
     head_dim = 256
-    dtype = torch.float32
     seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
 
     q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
