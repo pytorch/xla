@@ -729,8 +729,7 @@ class PallasTest(unittest.TestCase):
                                               page_indices, effective_q_lens,
                                               num_kv_pages_per_compute_block,
                                               num_queries_per_compute_block,
-                                              use_kernel,
-                                              attn_logits_soft_cap):
+                                              use_kernel, attn_logits_soft_cap):
       return torch.ops.xla.multi_queries_paged_attention(
           q,
           k_pages,
