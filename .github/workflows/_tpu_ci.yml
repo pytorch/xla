@@ -12,7 +12,8 @@ on:
 jobs:
   tpu-test:
     # Use dynamic runner based on TPU version
-    runs-on: ${{ inputs.runner-label }}-runner-set
+    name: TPU ${{ inputs.tpu-version }} Tests
+    runs-on: ${{ inputs.runner-label }}
     steps:
       - name: Checkout actions
         uses: actions/checkout@v4
@@ -41,7 +42,7 @@ jobs:
       - name: Run Tests
         env:
           PJRT_DEVICE: TPU
-          TPU_LOG_DIR: tpu_logs
+          TPU_LOG_DIR: tpu_logs/${{ inputs.tpu-version }}
           TPU_VERSION: ${{ inputs.tpu-version }}
         run: |
           cd pytorch/xla

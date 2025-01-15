@@ -100,7 +100,7 @@ jobs:
   #     torch-commit: ${{needs.get-torch-commit.outputs.torch_commit}}
 
   test-tpu:
-    name: "TPU tests"
+    name: TPU tests (${{ matrix.tpu-version }})
     uses: ./.github/workflows/_tpu_ci.yml
     needs: build-torch-xla
     if: github.event_name == 'push' || github.event_name == 'pull_request'
@@ -108,9 +108,10 @@ jobs:
       matrix:
         tpu-version: ['v4', 'v5p', 'v6e']
       fail-fast: false  # Continue running other TPU versions if one fails
+      max-parallel: 3
     with:
       tpu-version: ${{ matrix.tpu-version }}
-      runner-label: ${{ format('tpu-{0}', matrix.tpu-version) }}
+      runner-label: tpu-${{ matrix.tpu-version }}-runner-set
 
   push-docs:
     name: "Build docs"
