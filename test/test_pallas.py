@@ -729,22 +729,8 @@ class PallasTest(unittest.TestCase):
                                               page_indices, effective_q_lens,
                                               num_kv_pages_per_compute_block,
                                               num_queries_per_compute_block,
-<<<<<<< HEAD
                                               use_kernel,
                                               attn_logits_soft_cap):
-=======
-<<<<<<< HEAD
-                                              use_kernel,
-                                              attn_logits_soft_cap):
-=======
-<<<<<<< HEAD
-                                              use_kernel,
-                                              attn_logits_soft_cap):
-=======
-                                              use_kernel, attn_logits_soft_cap):
->>>>>>> 0a91471da (Implements attn_logits_soft_cap and pass it through multi_queries_paged_attention)
->>>>>>> 47e8d1d00 (Implements attn_logits_soft_cap and pass it through multi_queries_paged_attention)
->>>>>>> d430cb4e9 (Implements attn_logits_soft_cap and pass it through multi_queries_paged_attention)
       return torch.ops.xla.multi_queries_paged_attention(
           q,
           k_pages,
