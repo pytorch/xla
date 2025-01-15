@@ -695,7 +695,6 @@ torch::lazy::NodePtr Gelu(const torch::lazy::Value& input) {
 
     // Building composite computation.
     const std::string name = std::string(GetCompositeNamespace()) + "gelu";
-    const std::string attr = "{approximate = \"none\"}";
     xla::XlaBuilder builder(name);
     xla::XlaOp arg = xla::Parameter(
         &builder, 0, ShapeHelper::ShapeOfXlaOp(xla_input), "arg");
@@ -705,7 +704,7 @@ torch::lazy::NodePtr Gelu(const torch::lazy::Value& input) {
     // Building call to computation.
     std::vector<xla::XlaOp> inputs{xla_input};
     xla::XlaOp output =
-        xla::CompositeCall(loctx->builder(), computation, inputs, name, attr);
+        xla::CompositeCall(loctx->builder(), computation, inputs, name);
 
     return node.ReturnOp(output, loctx);
   };
@@ -723,7 +722,6 @@ torch::lazy::NodePtr GeluBackward(const torch::lazy::Value& grad_output,
     // Building composite computation.
     const std::string name =
         std::string(GetCompositeNamespace()) + "gelu_backward";
-    const std::string attr = "{approximate = \"none\"}";
     xla::XlaBuilder builder(name);
     xla::XlaOp arg_grad_output =
         xla::Parameter(&builder, 0, ShapeHelper::ShapeOfXlaOp(xla_grad_output),
@@ -736,7 +734,7 @@ torch::lazy::NodePtr GeluBackward(const torch::lazy::Value& grad_output,
     // Building call to computation.
     std::vector<xla::XlaOp> inputs{xla_grad_output, xla_input};
     xla::XlaOp output =
-        xla::CompositeCall(loctx->builder(), computation, inputs, name, attr);
+        xla::CompositeCall(loctx->builder(), computation, inputs, name);
 
     return node.ReturnOp(output, loctx);
   };
