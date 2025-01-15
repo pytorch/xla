@@ -600,6 +600,7 @@ def multi_queries_paged_attention(
       static_argnames=[
           "num_kv_pages_per_compute_block",
           "num_queries_per_compute_block",
+          "attn_logits_soft_cap",
       ],
   )
 
