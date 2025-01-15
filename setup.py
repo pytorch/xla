@@ -70,14 +70,16 @@ _libtpu_version = f'0.0.6'
 _jax_version = f'0.4.37'
 _jaxlib_version = f'0.4.36'
 _libtpu_wheel_name = f'libtpu-{_libtpu_version}'
+_libtpu_storage_directory = 'libtpu-lts-releases'
 
 if USE_NIGHTLY:
   _libtpu_version += f".dev{_date}"
   _jax_version += f".dev{_date}"
   _jaxlib_version += f".dev{_date}"
   _libtpu_wheel_name += f".dev{_date}+nightly"
+  _libtpu_storage_directory = 'libtpu-nightly-releases'
 
-_libtpu_storage_path = f'https://storage.googleapis.com/libtpu-nightly-releases/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_x86_64.whl'
+_libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_x86_64.whl'
 
 
 def _get_build_mode():
