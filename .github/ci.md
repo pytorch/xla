@@ -57,7 +57,7 @@ For the C++ test groups in either case, the test binaries are pre-built during t
 
 The TPU CI runs only a subset of our tests due to capacity constraints, defined in `_tpu_ci.yml` `test/tpu/run_tests.sh`. The runners themselves are containers in GKE managed by [ARC](https://github.com/actions/actions-runner-controller). The container image is also based on our dev images, with some changes for ARC compatibility. The Dockerfile for this image lives in `test/tpu/Dockerfile`.
 
-The actual ARC cluster is defined in Terraform at `infra/tpu-pytorch/tpu_ci.yml`.
+The actual ARC cluster is defined in Terraform at `infra/tpu-pytorch-releases/tpu_ci.yml`.
 
 ### Reproducing test failures
 
@@ -95,7 +95,7 @@ If the TPU CI won't run, try to debug using the following steps:
 On your cloudtop:
 
 ```
-gcloud config set project tpu-pytorch
+gcloud config set project tpu-pytorch-releases
 gcloud container clusters get-credentials tpu-ci --location=us-central2
 ```
 

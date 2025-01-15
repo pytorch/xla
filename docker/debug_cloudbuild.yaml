@@ -1,5 +1,5 @@
 # Cloud Build Configuration which:
-# Builds and pushes gcr.io/tpu-pytorch/xla_debug image.
+# Builds and pushes gcr.io/tpu-pytorch-releases/xla_debug image.
 steps:
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
   args: ['bash', 'docker/debug_image_cleanup.sh']
@@ -11,16 +11,16 @@ steps:
           '--build-arg', 'python_version=${_PYTHON_VERSION}',
           '--build-arg', 'cloud_build=true',
           '--build-arg', 'release_version=${_RELEASE_VERSION}',
-          '-t', 'gcr.io/tpu-pytorch/xla_debug:${_TAG_NAME}',
-          '--cache-from', 'gcr.io/tpu-pytorch/xla_debug:nightly_3.6',
+          '-t', 'gcr.io/tpu-pytorch-releases/xla_debug:${_TAG_NAME}',
+          '--cache-from', 'gcr.io/tpu-pytorch-releases/xla_debug:nightly_3.6',
           '-f', 'docker/Dockerfile', '.'
         ]
   timeout: 14400s
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: bash
-  args: ['-c', 'docker tag gcr.io/tpu-pytorch/xla_debug:${_TAG_NAME} gcr.io/tpu-pytorch/xla_debug:${_TAG_NAME}_$(date -u +%Y%m%d_%H_%M)']
+  args: ['-c', 'docker tag gcr.io/tpu-pytorch-releases/xla_debug:${_TAG_NAME} gcr.io/tpu-pytorch-releases/xla_debug:${_TAG_NAME}_$(date -u +%Y%m%d_%H_%M)']
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/tpu-pytorch/xla_debug']
+  args: ['push', 'gcr.io/tpu-pytorch-releases/xla_debug']
   timeout: 1800s
 
 options:
