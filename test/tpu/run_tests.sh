@@ -36,6 +36,7 @@ python3 "$TEST_CDIR/scan/test_scan_layers.py"
 run_xla_hlo_debug python3 "$TEST_CDIR/scan/test_scan_debug.py"
 python3 "$TEST_CDIR/test_pallas.py" -v
 python3 "$TEST_CDIR/test_pallas_spmd.py"
+XLA_DISABLE_FUNCTIONALIZATION=1 python3 "$TEST_CDIR/test_pallas_spmd.py"
 python3 "$TEST_CDIR/test_tpu_paged_attention_kernel.py"
 python3 "$TEST_CDIR/test_input_output_aliases.py"
 python3 "$TEST_CDIR/test_gmm.py"
