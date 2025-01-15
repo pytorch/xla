@@ -30,12 +30,9 @@ bool ShouldDowncastToBF16() {
   return downcast_bf16;
 }
 
-std::optional<bool> ShouldUse32BitLong() {
-  const char* env_name = "XLA_USE_32BIT_LONG";
-  if (std::getenv(env_name) == nullptr) {
-    return std::nullopt;
-  }
-  bool use_32bit_long = runtime::sys_util::GetEnvBool(env_name, false);
+bool ShouldUse32BitLong() {
+  bool use_32bit_long =
+      runtime::sys_util::GetEnvBool("XLA_USE_32BIT_LONG", false);
   if (use_32bit_long) {
     std::cout
         << "XLA_USE_32BIT_LONG will be deprecated after the 2.6 release\n";
@@ -54,8 +51,8 @@ bool DowncastBF16() {
   return downcast_bf16;
 }
 
-std::optional<bool> Use32BitLong() {
-  static std::optional<bool> use_32bit_long = ShouldUse32BitLong();
+bool Use32BitLong() {
+  static bool use_32bit_long = ShouldUse32BitLong();
   return use_32bit_long;
 }
 
@@ -161,24 +158,10 @@ xla::PrimitiveType MaybeDowncastToXlaDeviceType(
     case xla::PrimitiveType::S16:
       return CheckNeuronDevice(hw_type) ? xla::PrimitiveType::S32
                                         : xla::PrimitiveType::S16;
-    case xla::PrimitiveType::S64: {
-      std::optional<bool> use_32bit_long = Use32BitLong();
-      if (use_32bit_long.has_value()) {
-        return *use_32bit_long ? xla::PrimitiveType::S32
-                               : xla::PrimitiveType::S64;
-      }
-      return CheckNeuronDevice(hw_type) ? xla::PrimitiveType::S32
-                                        : xla::PrimitiveType::S64;
-    }
-    case xla::PrimitiveType::U64: {
-      std::optional<bool> use_32bit_long = Use32BitLong();
-      if (use_32bit_long.has_value()) {
-        return *use_32bit_long ? xla::PrimitiveType::U32
-                               : xla::PrimitiveType::U64;
-      }
-      return CheckNeuronDevice(hw_type) ? xla::PrimitiveType::U32
-                                        : xla::PrimitiveType::U64;
-    }
+    case xla::PrimitiveType::S64:
+      return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
+    case xla::PrimitiveType::U64:
+      return Use32BitLong() ? xla::PrimitiveType::U32 : xla::PrimitiveType::U64;
     case xla::PrimitiveType::C128:
       return xla::PrimitiveType::C128;
     default:
