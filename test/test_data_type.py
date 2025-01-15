@@ -14,8 +14,6 @@ class XlaDataTypeTest(unittest.TestCase):
     cls.original_env = {
         'XLA_USE_BF16': os.environ.get('XLA_USE_BF16'),
         'XLA_DOWNCAST_BF16': os.environ.get('XLA_DOWNCAST_BF16'),
-        'XLA_USE_FP16': os.environ.get('XLA_USE_FP16'),
-        'XLA_DOWNCAST_FP16': os.environ.get('XLA_DOWNCAST_FP16'),
         'XLA_USE_32BIT_LONG': os.environ.get('XLA_USE_32BIT_LONG')
     }
 
@@ -46,20 +44,10 @@ class XlaDataTypeTest(unittest.TestCase):
     self._test_datatype(torch.double, 'bf16', torch.floor_divide)
     self._test_datatype(torch.float, 'bf16', torch.floor_divide)
 
-  def test_datatype_use_fp16(self):
-    self._set_env(XLA_USE_FP16='1')
-    self._test_datatype(torch.double, 'bf16', torch.floor_divide)
-    self._test_datatype(torch.float, 'f16', torch.floor_divide)
-
   def test_datatype_downcast_bf16(self):
     self._set_env(XLA_DOWNCAST_BF16='1')
     self._test_datatype(torch.double, 'bf16', torch.floor_divide)
     self._test_datatype(torch.float, 'bf16', torch.floor_divide)
-
-  def test_datatype_downcast_fp16(self):
-    self._set_env(XLA_DOWNCAST_FP16='1')
-    self._test_datatype(torch.double, 'f16', torch.floor_divide)
-    self._test_datatype(torch.float, 'f16', torch.floor_divide)
 
   def test_datatype_use_32bit_long(self):
     self._set_env(XLA_USE_32BIT_LONG='1')
@@ -86,9 +74,7 @@ class XlaDataTypeTest(unittest.TestCase):
 if __name__ == '__main__':
   suite = unittest.TestSuite()
   suite.addTest(XlaDataTypeTest("test_datatype_use_bf16"))
-  suite.addTest(XlaDataTypeTest("test_datatype_use_fp16"))
   suite.addTest(XlaDataTypeTest("test_datatype_downcast_bf16"))
-  suite.addTest(XlaDataTypeTest("test_datatype_downcast_fp16"))
   suite.addTest(XlaDataTypeTest("test_datatype_use_32bit_long"))
   suite.addTest(XlaDataTypeTest("test_module_to_dtype"))
   runner = unittest.TextTestRunner(failfast=True)
