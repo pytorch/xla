@@ -6,4 +6,5 @@ module "terraform_apply" {
   config_directory = "infra/tpu-pytorch-releases"
 
   worker_pool_id = module.worker_pool.id
+  location       = "global"
 }
