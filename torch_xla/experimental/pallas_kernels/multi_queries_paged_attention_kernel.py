@@ -116,7 +116,7 @@ def _flash_attention(
     query_len: int,
     page_size: int,
     head_dim: int,
-    attn_logits_soft_cap: float = None,
+    attn_logits_soft_cap: float | None,
 ):
   b, kv_head_idx, q_blk_idx, kv_blk_idx = (
       pl.program_id(0),

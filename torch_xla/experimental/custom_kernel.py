@@ -1121,7 +1121,7 @@ def multi_queries_paged_attention_xla(q: torch.Tensor,
                                       num_kv_pages_per_compute_block: int,
                                       num_queries_per_compute_block: int,
                                       use_kernel: bool,
-                                      attn_logits_soft_cap: float = None):
+                                      attn_logits_soft_cap: float | None):
   return multi_queries_paged_attention(q, k_pages, v_pages, lengths,
                                        page_indices, effective_q_lens,
                                        num_kv_pages_per_compute_block,
@@ -1135,7 +1135,7 @@ def multi_queries_paged_attention_non_xla(
     lengths: torch.Tensor, page_indices: torch.Tensor,
     effective_q_lens: torch.Tensor, num_kv_pages_per_compute_block: int,
     num_queries_per_compute_block: int, use_kernel: bool,
-    attn_logits_soft_cap: float = None):
+    attn_logits_soft_cap: float | None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 
