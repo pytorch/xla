@@ -729,7 +729,8 @@ class PallasTest(unittest.TestCase):
                                               page_indices, effective_q_lens,
                                               num_kv_pages_per_compute_block,
                                               num_queries_per_compute_block,
-                                              use_kernel):
+                                              use_kernel,
+                                              attn_logits_soft_cap):
       return torch.ops.xla.multi_queries_paged_attention(
           q,
           k_pages,
@@ -740,39 +741,42 @@ class PallasTest(unittest.TestCase):
           num_kv_pages_per_compute_block,
           num_queries_per_compute_block,
           use_kernel=use_kernel,
-          attn_logits_soft_cap=1.0,
+          attn_logits_soft_cap=attn_logits_soft_cap,
       )
 
     compiled_paged_attention = torch.compile(
         multi_queries_paged_attention_wrapper, backend="openxla")
 
-    output = compiled_paged_attention(
-        q_xla,
-        k_pages_xla,
-        v_pages_xla,
-        kv_seq_lens_xla,
-        page_indices_xla,
-        effective_q_lens_xla,
-        num_kv_pages_per_compute_block=block_kv_size // page_size,
-        num_queries_per_compute_block=num_queries_per_compute_block,
-        use_kernel=True,
-    )
+    for attn_logits_soft_cap in (1.0, None):
+      output = compiled_paged_attention(
+          q_xla,
+          k_pages_xla,
+          v_pages_xla,
+          kv_seq_lens_xla,
+          page_indices_xla,
+          effective_q_lens_xla,
+          num_kv_pages_per_compute_block=block_kv_size // page_size,
+          num_queries_per_compute_block=num_queries_per_compute_block,
+          use_kernel=True,
+          attn_logits_soft_cap=attn_logits_soft_cap,
+      )
 
-    nonkernel_output = compiled_paged_attention(
-        q_xla,
-        k_pages_xla,
-        v_pages_xla,
-        kv_seq_lens_xla,
-        page_indices_xla,
-        effective_q_lens_xla,
-        num_kv_pages_per_compute_block=block_kv_size // page_size,
-        num_queries_per_compute_block=num_queries_per_compute_block,
-        use_kernel=False,
-    )
+      nonkernel_output = compiled_paged_attention(
+          q_xla,
+          k_pages_xla,
+          v_pages_xla,
+          kv_seq_lens_xla,
+          page_indices_xla,
+          effective_q_lens_xla,
+          num_kv_pages_per_compute_block=block_kv_size // page_size,
+          num_queries_per_compute_block=num_queries_per_compute_block,
+          use_kernel=False,
+          attn_logits_soft_cap=attn_logits_soft_cap,
+      )
 
-    self.assertTrue(
-        torch.allclose(
-            output.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
+      self.assertTrue(
+          torch.allclose(
+              output.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
                    "This test only works on TPUv4 and TPUv5p.")
