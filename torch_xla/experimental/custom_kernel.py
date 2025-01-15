@@ -506,6 +506,7 @@ def _multi_queries_paged_attention_nonkernel(
     lengths,  # seq_lengths, [batch_size]. nb batch_size = len(seq_lens), the effective kv_length.
     page_indices,  # [batch_size, pages_per_sequence]
     effective_q_lens,  # [batch_size], the effective q_length
+    attn_logits_soft_cap: float | None = None,
 ) -> torch.Tensor:  # [batch_size, query_len, num_heads, head_dim]
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
@@ -543,6 +544,9 @@ def _multi_queries_paged_attention_nonkernel(
     # For example, it can use bfloat16 instead of float32 or vice versa for performance or simplicity.
     attn = torch.einsum("qhd,khd->hqk", q[i],
                         k)  # [num_query_heads, query_len, kv_len]
+    if attn_logits_soft_cap is not None:
+      capped_attn = torch.tanh(attn / attn_logits_soft_cap)
+      attn = capped_attn * attn_logits_soft_cap
     attn = attn.float()
     empty_mask = torch.ones(query_len, kv_len, device=attn.device)
     effective_q_len = effective_q_lens[i]
@@ -580,6 +584,7 @@ def multi_queries_paged_attention(
         lengths,
         page_indices,
         effective_q_lens,
+        attn_logits_soft_cap=attn_logits_soft_cap,
     )
 
   # Import JAX within the function such that we don't need to call the jax_import_guard()
@@ -1112,16 +1117,12 @@ XLA_LIB.define(
 
 
 @impl(XLA_LIB, "multi_queries_paged_attention", "XLA")
-def multi_queries_paged_attention_xla(q: torch.Tensor,
-                                      k_pages: torch.Tensor,
-                                      v_pages: torch.Tensor,
-                                      lengths: torch.Tensor,
-                                      page_indices: torch.Tensor,
-                                      effective_q_lens: torch.Tensor,
-                                      num_kv_pages_per_compute_block: int,
-                                      num_queries_per_compute_block: int,
-                                      use_kernel: bool,
-                                      attn_logits_soft_cap: float | None):
+def multi_queries_paged_attention_xla(
+    q: torch.Tensor, k_pages: torch.Tensor, v_pages: torch.Tensor,
+    lengths: torch.Tensor, page_indices: torch.Tensor,
+    effective_q_lens: torch.Tensor, num_kv_pages_per_compute_block: int,
+    num_queries_per_compute_block: int, use_kernel: bool,
+    attn_logits_soft_cap: float | None):
   return multi_queries_paged_attention(q, k_pages, v_pages, lengths,
                                        page_indices, effective_q_lens,
                                        num_kv_pages_per_compute_block,

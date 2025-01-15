@@ -740,6 +740,7 @@ class PallasTest(unittest.TestCase):
           num_kv_pages_per_compute_block,
           num_queries_per_compute_block,
           use_kernel=use_kernel,
+          attn_logits_soft_cap=1.0,
       )
 
     compiled_paged_attention = torch.compile(
