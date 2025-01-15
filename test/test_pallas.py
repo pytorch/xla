@@ -671,7 +671,10 @@ class PallasTest(unittest.TestCase):
             output.cpu(), expected_output_no_cap.cpu(), atol=1e-5, rtol=1e-5))
     self.assertTrue(
         torch.allclose(
-            output_no_cap.cpu(), expected_output_no_cap.cpu(), atol=1e-5, rtol=1e-5))
+            output_no_cap.cpu(),
+            expected_output_no_cap.cpu(),
+            atol=1e-5,
+            rtol=1e-5))
     self.assertTrue(
         torch.allclose(
             output_no_cap.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
