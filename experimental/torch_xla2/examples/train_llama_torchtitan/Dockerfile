@@ -28,7 +28,6 @@ RUN pip install .
 WORKDIR /
 RUN git clone https://github.com/pytorch/xla.git
 WORKDIR xla/experimental/torch_xla2
-RUN git checkout hanq_hybrid_mesh
 RUN pip install -e .
 
 ENTRYPOINT ["python", "examples/train_llama_torchtitan/train_llama.py"]

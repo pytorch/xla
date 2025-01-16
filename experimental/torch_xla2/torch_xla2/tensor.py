@@ -165,11 +165,10 @@ class XLATensor2(torch.Tensor):
 
   def tolist(self):
     return self._elem.tolist()
+
+  def shard_(self, sharding):
+    self.apply_(jax.lax.with_sharding_constraint, sharding)
   
-
- 
-
-
 
 def debug_accuracy(func, args, kwargs, current_output):
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(

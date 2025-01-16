@@ -114,6 +114,9 @@ class Trainer:
 
         # split the params to the n devices
 
+        # model_fn is responsible to shard if needed
+        # to do FSDP one shards the first input args and output 
+        # on the batch dimension
         def model_fn(weights, buffers, args):
             return jittable_mod.functional_call('forward', weights, buffers, args)
 
