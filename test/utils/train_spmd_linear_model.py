@@ -93,8 +93,7 @@ def train():
       data=(torch.randn(batch_size, FLAGS.input_dim),
             torch.randint(
                 0, model.NUM_CLASSES, (batch_size,), dtype=torch.int64)),
-      sample_count=FLAGS.train_dataset_len //
-      (batch_size * FLAGS.gradient_accumulation_steps))
+      sample_count=FLAGS.train_dataset_len // batch_size)
 
   if 'batch' in FLAGS.sharding:
     train_loader = pl.MpDeviceLoader(
@@ -130,7 +129,7 @@ def train():
                                             None)
     else:
       for i in range(FLAGS.gradient_accumulation_steps):
-        loss = train_step(x[i], y[i])
+        loss = train_step(data[i], target[i])
         loss /= FLAGS.gradient_accumulation_steps
         running_loss += loss.detach()
         loss.backward()
@@ -176,7 +175,7 @@ def train_and_evaluate():
       'log_steps': 8,
       'opts': MODEL_OPTS.items()
   }
-
+  torch.manual_seed(42)
   global PROFILER_SERVER, FLAGS
   FLAGS = args_parse.parse_common_options(**default_config)
   if FLAGS.profile:
