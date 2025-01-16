@@ -27,10 +27,10 @@ class NeuronXlaDataTypeTest(unittest.TestCase):
                   (torch.double, "f32", torch.floor_divide),
                   (torch.int16, "s32", torch.add),
                   (torch.int32, "s32", torch.add),
-                  (torch.int64, "s32", torch.add),
+                  (torch.int64, "s64", torch.add),
                   (torch.uint16, "u32", torch.add),
                   (torch.uint32, "u32", torch.add),
-                  (torch.uint64, "u32", torch.add)]
+                  (torch.uint64, "u64", torch.add)]
 
     for dtype, op_xla_dtype, op in test_cases:
       with self.subTest(dtype=dtype, op_xla_dtype=op_xla_dtype, op=op):
