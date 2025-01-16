@@ -128,8 +128,7 @@ class Trainer:
 
         train_step = torch_xla2.train.make_train_step(
             model_fn, loss_fn, jax_optimizer,
-            remat_policy=jax.checkpoint_policies.offload_dot_with_no_batch_dims('device', 'pinned_host'),
-            mark_fsdp_sharding_axis='fsdp')
+            remat_policy=jax.checkpoint_policies.offload_dot_with_no_batch_dims('device', 'pinned_host'))
 
         print('Begining training')
         s = time.perf_counter()
