@@ -39,7 +39,8 @@ NOTE: these flags are copied from https://github.com/AI-Hypercomputer/maxtext/bl
 Tested locally on v6e-8 doesnt seems to make a difference.
 
 ```bash
-python train_llama.py
+cd ~/xla/experimental/torch_xla2/examples/train_llama_torchtitan
+python train_llama.py --seqlen=8192
 ```
 
 ## Detailed Code walkthrough:

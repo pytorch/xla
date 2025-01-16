@@ -14,8 +14,7 @@ mark_sharding = torch_view(jax.lax.with_sharding_constraint)
 
 def make_train_step(model_fn, 
                     loss_fn, optax_optimizer, 
-                    remat_policy=None, 
-                    mark_fsdp_sharding_axis=None):
+                    remat_policy=None):
   """Make a function that do one train step given model and loss.
 
   model_fn: a function representing the model's forward:
@@ -38,14 +37,7 @@ def make_train_step(model_fn,
   env = torch_xla2.default_env()
   def loss(weights, buffers, args, label): # inputs are XLATensor
     with env, jax.named_scope('compute_loss'):
-      if mark_fsdp_sharding_axis is not None:
-        args = mark_sharding(
-            args, 
-            jax.sharding.PartitionSpec(mark_fsdp_sharding_axis))
       res = model_fn(weights, buffers, args)
-      if mark_fsdp_sharding_axis is not None:
-        res = mark_sharding(res, jax.sharding.PartitionSpec(mark_fsdp_sharding_axis))
-        label = mark_sharding(label, jax.sharding.PartitionSpec(mark_fsdp_sharding_axis))
       l = loss_fn(res, label)
       return l
 
@@ -116,7 +108,7 @@ class ScannedModule(torch.nn.Module):
           h, *rest = args
           newh = torch.func.functional_call(self.c.one_mod, weight, args)
           # next layer's input; and residual to be added to list
-          return (newh, *rest), torch.ones(1, device='jax')
+          return (newh, *rest), None 
 
       _eval_one_layer = interop.gradient_checkpoint(
           eval_one_layer,
