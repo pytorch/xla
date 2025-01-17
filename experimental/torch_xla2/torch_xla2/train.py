@@ -55,6 +55,7 @@ def make_train_step(model_fn,
         weights = interop.call_jax(optax.apply_updates, weights, updates)
     return loss, weights, opt_state
 
+  # TODO: apply jax.jit so the user don't have to.
   return step
 
   

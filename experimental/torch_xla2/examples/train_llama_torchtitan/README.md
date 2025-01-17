@@ -105,8 +105,8 @@ def sharded_device_put(tensor: jax.Array, sharding) -> jax.Array:
     return jax.make_array_from_single_device_arrays(shape, sharding, x_split)
 ```
 
-When running on single-host, `jax.device_put` sufficies. Multi-host need some 
-extra encantations so that we split an array to only the shards corresponding
+When running on single-host, `jax.device_put` suffices. Multi-host need some 
+extra incantations so that we split an array to only the shards corresponding
 to the accessible devices in this host.
 
 
@@ -191,8 +191,6 @@ class Trainer:
 
         jax_optimizer = optax.sgd(0.01)
         opt_state = torch_view(jax_optimizer.init(jax_view(jittable_mod.params)))
-        
-        #opt_state = torch_xla2.interop.call_jax(jax_optimizer.init, jittable_mod.params)
 
         train_step = torch_xla2.train.make_train_step(
             model_fn, loss_fn, jax_optimizer,
@@ -271,7 +269,7 @@ Few things to note:
 5. `interop.call_jax` API is used whenever we need something from Jax. Those API can be 
    wrapped and have the "jaxiness" hidden. However, I don't think we need to do such hidding.
 
-6. Precompile: call to `helpers.precompile_step`. This is not needed. If not used, then
+6. Precompile: call to `helpers.compile_step_func`. This is not needed. If not used, then
    it will compile on the first invokation. However, triggering compilation manually
    allows to print some stats (such as GBs accessed), also will error if the input shape
    / layout / sharding changed in the future iterations. For example I got the below while developing:
