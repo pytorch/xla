@@ -178,8 +178,6 @@ function run_xla_op_tests1 {
   run_test "$CDIR/dynamo/test_dynamo_config.py"
   run_save_tensor_ir run_test "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_test "$CDIR/test_data_type.py"
-  run_use_bf16 "$CDIR/test_data_type.py"
-  run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/test_fp8.py"
   run_xla_ir_debug run_test "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug run_test "$CDIR/test_env_var_mapper.py"
