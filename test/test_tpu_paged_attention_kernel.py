@@ -45,6 +45,7 @@ def _ref_jax_extended_paged_attention(
     lengths,  # [batch_size], the effective kv_length.
     page_indices,  # [batch_size, pages_per_sequence]
     effective_q_lens,  # [batch_size] the effective q_length
+    attn_logits_soft_cap: float | None = None,
 ):
   batch_size, query_len, num_query_heads, head_size = q.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
@@ -71,6 +72,9 @@ def _ref_jax_extended_paged_attention(
       v = jnp.repeat(v, num_query_per_kv, axis=1)
 
     attn = jnp.einsum("qhd,khd->hqk", q[i], k)
+    if attn_logits_soft_cap is not None:
+      capped_attn = jnp.tanh(attn / attn_logits_soft_cap)
+      attn = capped_attn * attn_logits_soft_cap
     attn = attn.astype('float32')
     effective_q_len = effective_q_lens[i]
     q_span = (kv_len - effective_q_len) + jax.lax.broadcasted_iota(
@@ -111,6 +115,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
       head_dim=(128, 256),
       num_queries_per_compute_block=(16, 32),
       block_kv_size=(128, 256),
+      attn_logits_soft_cap=(1.0, None),
   )
   def test_paged_attention_without_query_padding(
       self,
@@ -121,6 +126,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
       head_dim,
       num_queries_per_compute_block,
       block_kv_size,
+      attn_logits_soft_cap,
   ):
 
     max_kv_len = 2048
@@ -160,6 +166,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         effective_q_lens,
         num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
         num_queries_per_compute_block=num_queries_per_compute_block,
+        attn_logits_soft_cap=attn_logits_soft_cap,
     )
     # Note kernel execution is async. Without blocking, if an error happens in the kernel, the error may point to some irrelevant  and confusing places. See https://github.com/pytorch/xla/pull/8356#issuecomment-2486861631
     actual_output = jax.block_until_ready(actual_output)
@@ -172,6 +179,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         kv_seq_lens,
         page_indices,
         effective_q_lens,
+        attn_logits_soft_cap=attn_logits_soft_cap,
     )
 
     self.assertEqual(actual_output.shape, expected_output.shape)

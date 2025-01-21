@@ -1,5 +1,4 @@
 import logging
-import os
 import unittest
 
 import torch
@@ -597,6 +596,17 @@ class PallasTest(unittest.TestCase):
     page_indices_xla = page_indices.to("xla")
     effective_q_lens_xla = effective_q_lens.to("xla")
 
+    output_no_cap = multi_queries_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_seq_lens_xla,
+        page_indices_xla,
+        effective_q_lens_xla,
+        num_kv_pages_per_compute_block=block_kv_size // page_size,
+        num_queries_per_compute_block=num_queries_per_compute_block,
+    )
+
     output = multi_queries_paged_attention(
         q_xla,
         k_pages_xla,
@@ -606,6 +616,7 @@ class PallasTest(unittest.TestCase):
         effective_q_lens_xla,
         num_kv_pages_per_compute_block=block_kv_size // page_size,
         num_queries_per_compute_block=num_queries_per_compute_block,
+        attn_logits_soft_cap=1.0,
     )
 
     nonkernel_output = multi_queries_paged_attention(
@@ -637,14 +648,36 @@ class PallasTest(unittest.TestCase):
                 effective_q_lens_jax,
                 num_kv_pages_per_compute_block=block_kv_size // page_size,
                 num_queries_per_compute_block=num_queries_per_compute_block,
+                attn_logits_soft_cap=1.0,
+            )))
+    expected_output_no_cap = torch.from_numpy(
+        np.array(
+            jax_multi_queries_paged_attention(
+                q_jax,
+                k_pages_jax,
+                v_pages_jax,
+                kv_seq_lens_jax,
+                page_indices_jax,
+                effective_q_lens_jax,
+                num_kv_pages_per_compute_block=block_kv_size // page_size,
+                num_queries_per_compute_block=num_queries_per_compute_block,
             )))
 
     self.assertTrue(
         torch.allclose(
             output.cpu(), expected_output.cpu(), atol=1e-5, rtol=1e-5))
+    self.assertFalse(
+        torch.allclose(
+            output.cpu(), expected_output_no_cap.cpu(), atol=1e-5, rtol=1e-5))
     self.assertTrue(
         torch.allclose(
-            output.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
+            output_no_cap.cpu(),
+            expected_output_no_cap.cpu(),
+            atol=1e-5,
+            rtol=1e-5))
+    self.assertTrue(
+        torch.allclose(
+            output_no_cap.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
@@ -696,7 +729,7 @@ class PallasTest(unittest.TestCase):
                                               page_indices, effective_q_lens,
                                               num_kv_pages_per_compute_block,
                                               num_queries_per_compute_block,
-                                              use_kernel):
+                                              use_kernel, attn_logits_soft_cap):
       return torch.ops.xla.multi_queries_paged_attention(
           q,
           k_pages,
@@ -707,38 +740,42 @@ class PallasTest(unittest.TestCase):
           num_kv_pages_per_compute_block,
           num_queries_per_compute_block,
           use_kernel=use_kernel,
+          attn_logits_soft_cap=attn_logits_soft_cap,
       )
 
     compiled_paged_attention = torch.compile(
         multi_queries_paged_attention_wrapper, backend="openxla")
 
-    output = compiled_paged_attention(
-        q_xla,
-        k_pages_xla,
-        v_pages_xla,
-        kv_seq_lens_xla,
-        page_indices_xla,
-        effective_q_lens_xla,
-        num_kv_pages_per_compute_block=block_kv_size // page_size,
-        num_queries_per_compute_block=num_queries_per_compute_block,
-        use_kernel=True,
-    )
+    for attn_logits_soft_cap in (1.0, None):
+      output = compiled_paged_attention(
+          q_xla,
+          k_pages_xla,
+          v_pages_xla,
+          kv_seq_lens_xla,
+          page_indices_xla,
+          effective_q_lens_xla,
+          num_kv_pages_per_compute_block=block_kv_size // page_size,
+          num_queries_per_compute_block=num_queries_per_compute_block,
+          use_kernel=True,
+          attn_logits_soft_cap=attn_logits_soft_cap,
+      )
 
-    nonkernel_output = compiled_paged_attention(
-        q_xla,
-        k_pages_xla,
-        v_pages_xla,
-        kv_seq_lens_xla,
-        page_indices_xla,
-        effective_q_lens_xla,
-        num_kv_pages_per_compute_block=block_kv_size // page_size,
-        num_queries_per_compute_block=num_queries_per_compute_block,
-        use_kernel=False,
-    )
+      nonkernel_output = compiled_paged_attention(
+          q_xla,
+          k_pages_xla,
+          v_pages_xla,
+          kv_seq_lens_xla,
+          page_indices_xla,
+          effective_q_lens_xla,
+          num_kv_pages_per_compute_block=block_kv_size // page_size,
+          num_queries_per_compute_block=num_queries_per_compute_block,
+          use_kernel=False,
+          attn_logits_soft_cap=attn_logits_soft_cap,
+      )
 
-    self.assertTrue(
-        torch.allclose(
-            output.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
+      self.assertTrue(
+          torch.allclose(
+              output.cpu(), nonkernel_output.cpu(), atol=1e-2, rtol=1e-2))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() != 4,
                    "This test only works on TPUv4 and TPUv5p.")
@@ -822,7 +859,6 @@ class PallasTest(unittest.TestCase):
     num_kv_heads = 8
     q_kv_head_ratio = 8
     head_dim = 256
-    dtype = torch.float32
     seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
 
     q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
@@ -899,7 +935,6 @@ class PallasTest(unittest.TestCase):
     num_kv_heads = 8
     q_kv_head_ratio = 8
     head_dim = 256
-    dtype = torch.float32
     seq_lens = torch.tensor([0, 3, 256, 513, 1023, 2048], dtype=torch.int32)
 
     q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
