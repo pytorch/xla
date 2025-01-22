@@ -10,8 +10,13 @@ import test_xla_sharding_base
 
 parent_folder = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(parent_folder)
-from utils.train_spmd_linear_model import train_and_evaluate
 
+# TODO(rpsilva-aws): Unify the SPMD MLP training files.
+from utils.train_spmd_linear_model import train_and_evaluate
+from utils.train_spmd_linear_model_grad_acc import train_and_evaluate_grad_acc
+
+# CPU does not support optimization barriers, and hence we use this to disable
+# the gradient checkpointing A/B test run for it.
 SKIP_GRADIENT_CHECKPOINTING: bool = False
 
 
@@ -48,8 +53,35 @@ class TestSPMDLinearModel(test_xla_sharding_base.XlaShardingTest):
                 baseline_losses, checkpointing_losses))
 
 
+class TestSPMDLinearModelGradientAccumulation(
+    test_xla_sharding_base.XlaShardingTest):
+
+  def test_gradient_accumulation_matches(self):
+    """Verify that gradient accumulation produces the same losses with and
+       without the XLA `While` op.
+    """
+
+    COMMON_GRAD_ACC_ARGS = ["--gradient_accumulation_steps", "8"]
+    print('Training loop with traditional gradient accumulation')
+    with extended_argv(COMMON_GRAD_ACC_ARGS):
+      baseline_grad_acc_losses = train_and_evaluate_grad_acc()
+
+    print('Training loop with XLA\'s `While` gradient accumulation')
+    with extended_argv(COMMON_GRAD_ACC_ARGS +
+                       ["--use_gradient_accumulation_loop"]):
+      loop_grad_acc_losses = train_and_evaluate_grad_acc()
+
+    # Verify that the model losses are not zero, and that the runs match.
+    assert all(loss != 0 for loss in baseline_grad_acc_losses)
+    assert all(
+        torch.allclose(baseline_loss, checkpointing_loss)
+        for baseline_loss, checkpointing_loss in zip(baseline_grad_acc_losses,
+                                                     loop_grad_acc_losses))
+
+
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
+  # Relevant parser for the gradient checkpointing basic coverage.
   parser.add_argument('--skip-gradient-checkpointing', action='store_true')
   parsed_args, remaining_argv = parser.parse_known_args()
   SKIP_GRADIENT_CHECKPOINTING = parsed_args.skip_gradient_checkpointing
