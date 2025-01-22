@@ -242,8 +242,8 @@ def _gradient_accumulation_impl(context, body_fn, iterable_tensors, params,
       param_id = body_ctx.tensor_parameter_id(v)
       hoisted_vars.pop(param_id, None)
 
-    # TODO - Derived from `experimental/scan.py`. Unify the RNG and hoisted
-    # paths.
+    # TODO(rpsilva-aws): Derived from `experimental/scan.py`. Unify the RNG and
+    # hoisted paths.
     seed_info_id = torch_xla._XLAC._get_seed_info_id()
     seed_parameter_id = None
     if seed_info_id in graph_input_tensor_ids:
@@ -282,7 +282,8 @@ def _gradient_accumulation_impl(context, body_fn, iterable_tensors, params,
       sliced = xs.dynamic_slice(indices, slice_shape)
       return sliced.reshape(list(xs.shape().sizes)[1:])
 
-    # TODO - Derived from `experimental/scan.py`. Unify the RNG path.
+    # TODO(rpsilva-aws): Derived from `experimental/scan.py`. Unify the RNG
+    # path.
     def replace_rng_seed(curr_iter: xb.Op, *while_params: xb.Op):
       """Slices the pre-generated seed tensor for the current iteration."""
       if seed_parameter_id is None:

@@ -11,7 +11,7 @@ import test_xla_sharding_base
 parent_folder = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(parent_folder)
 
-# TODO - Unify the MLP SPMD linear training files.
+# TODO(rpsilva-aws): Unify the SPMD MLP training files.
 from utils.train_spmd_linear_model import train_and_evaluate
 from utils.train_spmd_linear_model_grad_acc import train_and_evaluate_grad_acc
 
@@ -35,14 +35,18 @@ class TestSPMDLinearModel(test_xla_sharding_base.XlaShardingTest):
   def test_basic(self):
     print('Training loop with baseline')
     with extended_argv([]):
-      baseline_losses = train_and_evaluate()
+      baseline_losses, baseline_result = train_and_evaluate()
     # Verify that the model losses are not zero.
     assert all(loss != 0 for loss in baseline_losses)
+    # Verify that the model produces non-zero outputs.
+    assert not torch.any(baseline_result == 0)
+
     if not SKIP_GRADIENT_CHECKPOINTING:
       print('Training loop with gradient checkpointing')
       with extended_argv(['--use_gradient_checkpointing']):
-        checkpointing_losses = train_and_evaluate()
+        checkpointing_losses, checkpointing_result = train_and_evaluate()
         # Verify that the runs match with and without checkpointing.
+        assert torch.allclose(baseline_result, checkpointing_result)
         assert all(
             torch.allclose(baseline_loss, checkpointing_loss)
             for baseline_loss, checkpointing_loss in zip(
