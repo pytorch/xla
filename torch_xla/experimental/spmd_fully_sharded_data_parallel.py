@@ -20,7 +20,7 @@ def _prepare_spmd_partition_spec(param,
   partition_spec = [None] * len(shape)
   # Skip scalar tensors and it replicated.
   if len(partition_spec) == 0:
-    return partition_spec
+    return tuple(partition_spec)
 
   # Shard the 0th dimension of the parameter according to the
   # fsdp axis of the mesh, if shard_maximal is not specified.
