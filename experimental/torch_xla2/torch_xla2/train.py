@@ -30,9 +30,6 @@ def make_train_step(model_fn,
   optax_optimizer: the optimizer from optax library. for example, optax.adam
   remat_policy: One of jax.ad_checkpoint.checkpoint_policies, specifies how
       to do gradient checkpointing. If None, then it means checkpoint everything.
-  mark_fsdp_sharding_axis: str. A string name for marking sharding for 
-      fsdp. It must be an axis that exists in the current mesh.
-      if None, then no sharding is specified (i.e. for single device)
   """
   env = torch_xla2.default_env()
   def loss(weights, buffers, args, label): # inputs are XLATensor
