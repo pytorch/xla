@@ -15,6 +15,7 @@ import torch_xla.distributed.spmd as xs
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 from torch_xla.distributed.spmd import Mesh
+from torch_xla.experimental.gradient_accumulation import gradient_accumulation
 from torch_xla.utils.checkpoint import checkpoint
 
 MODEL_OPTS = {
@@ -32,6 +33,13 @@ MODEL_OPTS = {
         'default': 1024 * 8,
     },
     '--use_gradient_checkpointing': {
+        'action': 'store_true',
+    },
+    '--gradient_accumulation_steps': {
+        'type': int,
+        'default': 1,
+    },
+    '--use_gradient_accumulation_loop': {
         'action': 'store_true',
     }
 }
@@ -70,21 +78,22 @@ class SimpleLinear(nn.Module):
 
 def train():
   device = xm.xla_device()
-  torch.manual_seed(42)
-  model = SimpleLinear().to(device)
-  print('===> Preparing data..')
-  train_loader = xu.SampleGenerator(
-      data=(torch.randn(FLAGS.batch_size, FLAGS.input_dim),
-            torch.randint(
-                0, model.NUM_CLASSES, (FLAGS.batch_size,), dtype=torch.int64)),
-      sample_count=FLAGS.train_dataset_len // FLAGS.batch_size)
-
   num_devices = xr.global_runtime_device_count()
   print(f'num_devices: {num_devices}')
   # Define a mesh with all devices along one axis
   mesh_shape = (num_devices, 1)
   device_ids = np.arange(num_devices)
   mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+
+  torch.manual_seed(42)
+  model = SimpleLinear().to(device)
+  print('===> Preparing data..')
+  batch_size = FLAGS.batch_size * FLAGS.gradient_accumulation_steps
+  train_loader = xu.SampleGenerator(
+      data=(torch.randn(batch_size, FLAGS.input_dim),
+            torch.randint(
+                0, model.NUM_CLASSES, (batch_size,), dtype=torch.int64)),
+      sample_count=FLAGS.train_dataset_len // batch_size)
 
   if 'batch' in FLAGS.sharding:
     train_loader = pl.MpDeviceLoader(
@@ -109,30 +118,56 @@ def train():
 
   loss_fn = nn.CrossEntropyLoss()
 
-  def train_loop_fn(loader, epoch):
-    model.train()
-    for step, (data, target) in enumerate(loader):
-      with xp.StepTrace('train_linear_model'):
-        with xp.Trace('build_graph'):
-          x = data.to(device)
-          y = target.to(device)
-          optimizer.zero_grad()
-          output = model(x)
-          loss = loss_fn(output, y)
-          losses.append(loss.clone().detach())
-          loss.backward()
-        optimizer.step()
-      xm.mark_step()
-      if step % FLAGS.log_steps == 0:
-        print(f"Epoch {epoch} step {step} loss {loss}")
+  def train_step(input_id, label):
+    output = model(input_id)
+    loss = loss_fn(output, label)
+    return loss
+
+  def train_loop_fn(data, target, running_loss):
+    if FLAGS.use_gradient_accumulation_loop:
+      running_loss, = gradient_accumulation(train_step, (data, target), model,
+                                            None)
+    else:
+      for i in range(FLAGS.gradient_accumulation_steps):
+        loss = train_step(data[i], target[i])
+        loss /= FLAGS.gradient_accumulation_steps
+        running_loss += loss.detach()
+        loss.backward()
+    return running_loss
 
   losses = []
   for epoch in range(FLAGS.num_epochs):
-    train_loop_fn(train_loader, epoch)
+    model.train()
+    training_step = 0
+    running_loss = torch.zeros(1, dtype=torch.float32, device=device)
+    for (data, target) in train_loader:
+      with xp.StepTrace('train_linear_model'):
+        with xp.Trace('build_graph'):
+          data = (data.reshape(FLAGS.gradient_accumulation_steps, -1,
+                               *data.shape[1:])).to(device)
+          target = (target.reshape(FLAGS.gradient_accumulation_steps,
+                                   -1)).to(device)
+          # Ensure the appropriate sharding specs with the reshaped gradient
+          # gradient accumulation leading dimension.
+          if "batch" in FLAGS.sharding or "fsdp" in FLAGS.sharding:
+            xs.mark_sharding(data, mesh, (None, 0, 1))
+            xs.mark_sharding(target, mesh, (None, 0))
+          running_loss = train_loop_fn(data, target, running_loss)
+          training_step += FLAGS.gradient_accumulation_steps
+      optimizer.step()
+      xm.mark_step()
+      losses.append(running_loss.clone().detach())
+      if training_step % FLAGS.log_steps == 0:
+        print(
+            f"Epoch {epoch} step {training_step} loss {running_loss.cpu().item()}"
+        )
+      optimizer.zero_grad()
+      running_loss.zero_()
+
   return losses, model
 
 
-def train_and_evaluate():
+def train_and_evaluate_grad_acc():
   default_config = {
       'batch_size': 128,
       'num_epochs': 1,
