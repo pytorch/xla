@@ -149,5 +149,4 @@ def train_and_evaluate():
   print('Start training loop...')
   losses, m = train()
   t = torch.randn(10, FLAGS.input_dim).to(xm.xla_device())
-  m(t).cpu()
-  return [loss.cpu() for loss in losses]
+  return [loss.cpu() for loss in losses], m(t).cpu()
