@@ -5,3 +5,4 @@ pytest
 pytest-xdist
 sentencepiece
 expecttest
+optax
