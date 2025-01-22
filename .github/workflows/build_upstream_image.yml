@@ -6,6 +6,7 @@ on:
       - r[0-9]+.[0-9]+
     paths-ignore:
       - 'experimental/**'
+      - 'torchax/**'
   workflow_dispatch:
 jobs:
   build:
