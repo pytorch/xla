@@ -17,7 +17,7 @@ from torchax import interop
 from torchax.ops import jax_reimplement
 
 # Keys are OpOverload, value is a callable that takes
-# XLATensor2
+# Tensor
 all_ops = {}
 
 # list all Aten ops from pytorch that does mutation

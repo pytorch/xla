@@ -42,7 +42,7 @@ def process_group():
 def test_all_gather_tensor(multi_cpu, process_group):
   device_count = multi_cpu
 
-  def f(index: torchax.tensor.XLATensor2):
+  def f(index: torchax.tensor.Tensor):
     with torchax.default_env():
       output = torch.zeros_like(index).expand(device_count)
     dist.all_gather_into_tensor(output, index)
@@ -58,7 +58,7 @@ def test_all_gather_tensor_func(multi_cpu, process_group):
   device_count = multi_cpu
   group_ranks = process_group
 
-  def f(index: torchax.tensor.XLATensor2):
+  def f(index: torchax.tensor.Tensor):
     return torch.distributed._functional_collectives.all_gather_tensor(
       index, 0, group_ranks
     )

@@ -128,7 +128,7 @@ with env:
   inputs = torch.randn(3, 3, 28, 28)
   m = MyModel()
   res = m(inputs)
-  print(type(res))  # outputs XLATensor2
+  print(type(res))  # outputs Tensor
 ```
 
 You can also enable the environment globally with

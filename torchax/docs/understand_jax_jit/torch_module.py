@@ -48,20 +48,20 @@ with env:
 print('---- example 3 -----')
 # where is the jax jit?
 
-# m2 is a callable that takes in XLATensor2 and returns XLATensor2
-#    m2: (XLATensor2 -> XLATensor2)
+# m2 is a callable that takes in Tensor and returns Tensor
+#    m2: (Tensor -> Tensor)
 
-# suppose t2j (XLATensor2 -> jax.Array) "unwraps the XLATensor"
-# suppose j2t (jax.Array  -> XLATensor2) "wraps the XLATensor"
+# suppose t2j (Tensor -> jax.Array) "unwraps the XLATensor"
+# suppose j2t (jax.Array  -> Tensor) "wraps the XLATensor"
 from torchax import tensor
 import jax
 
-def t2j(torch_tensor: tensor.XLATensor2) -> jax.Array:
+def t2j(torch_tensor: tensor.Tensor) -> jax.Array:
   return torch_tensor._elem
 
 
-def j2t(jax_array: jax.Array) -> tensor.XLATensor2:
-  return tensor.XLATensor2(jax_array, env)
+def j2t(jax_array: jax.Array) -> tensor.Tensor:
+  return tensor.Tensor(jax_array, env)
 
 # # further notice t2j(j2t(x)) == x; j2t(t2j(x)) == x
 
@@ -75,7 +75,7 @@ def jax_m(X: jax.Array):
 jax_x = jnp.ones((10, 1000))
 print(jax_m(jax_x))
 
-## Let f: XLATensor2 -> XLATensor2
+## Let f: Tensor -> Tensor
 ## There is a function g: jax.Array -> jax.Array; 
 ##   g = x |-> j2t (f (t2j(x))). OR,
 ##   g = j2t . f . t2j (. denotes function composition)

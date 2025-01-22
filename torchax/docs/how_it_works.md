@@ -4,7 +4,7 @@ How it works
 
 ## Tensor subclass and eager mode
 
-The class `XLATensor2` is a `torch.Tensor` subclass
+The class `Tensor` is a `torch.Tensor` subclass
 that overrides `__torch_dispatch__`.
 
 It roughly looks like this (with some details removed):
@@ -12,7 +12,7 @@ It roughly looks like this (with some details removed):
 The complete class impl is at [tensor.py](../torchax/tensor.py).
 
 ```python
-class XLATensor2(torch.Tensor):
+class Tensor(torch.Tensor):
 
   @staticmethod
   def __new__(cls, elem):
@@ -33,21 +33,21 @@ class XLATensor2(torch.Tensor):
   @classmethod
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
     # here assumes ALL tensors in args / kwargs are 
-    # instances of XLATensor2
+    # instances of Tensor
     args, kwargs = unwrap((args, kwargs))
     jax_func = some_registry[func]
     res = jax_func(*args, **kwargs)
     return wrap(res)
 
 def wrap(tree):
-    # wrap jax.Array with XLATensor2
+    # wrap jax.Array with Tensor
     return pytree.tree_map_only(
-        jax.Array, XLATensor2, tree)
+        jax.Array, Tensor, tree)
 
 def unwrap(tree):
-    # get jax.Array out ofXLATensor2
+    # get jax.Array out ofTensor
     return pytree.tree_map_only(
-        XLATensor2, lambda x: x._elem, tree)
+        Tensor, lambda x: x._elem, tree)
 ```
 
 In other words, assuming that we have a function
@@ -120,7 +120,7 @@ def backend(fxgraph):
 The inner function `tojit` is a function that takes and returns 
 `jax.Array`'s. So it's suitable to be jitted with `jax.jit`.
 
-`f` is returned callable that takes `XLATensor2`; so can interop with 
+`f` is returned callable that takes `Tensor`; so can interop with 
 other torch codes.
 
 ## nn.Modules and state management

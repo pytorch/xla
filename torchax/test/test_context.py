@@ -20,9 +20,9 @@ class TestContext(unittest.TestCase):
   def test_mode_context_manager(self):
     with xla_env:
       x = torch.full((3, 3), -1)
-      self.assertIsInstance(x, tensor.XLATensor2)
+      self.assertIsInstance(x, tensor.Tensor)
       y = x.abs()
-      self.assertIsInstance(y, tensor.XLATensor2)
+      self.assertIsInstance(y, tensor.Tensor)
 
   @staticmethod
   @xla_env
@@ -34,18 +34,18 @@ class TestContext(unittest.TestCase):
 
   def test_mode_decorator(self):
     x, y = self._test_mode_decorator()
-    self.assertIsInstance(x, tensor.XLATensor2)
-    self.assertIsInstance(y, tensor.XLATensor2)
+    self.assertIsInstance(x, tensor.Tensor)
+    self.assertIsInstance(y, tensor.Tensor)
 
   def test_same_manual_seed(self):
     with xla_env:
       torch.manual_seed(1234)
       x = torch.randn((3, 3))
-      self.assertIsInstance(x, tensor.XLATensor2)
+      self.assertIsInstance(x, tensor.Tensor)
 
       torch.manual_seed(1234)
       y = torch.randn((3, 3))
-      self.assertIsInstance(y, tensor.XLATensor2)
+      self.assertIsInstance(y, tensor.Tensor)
 
     self.assertTrue(torch.equal(torchax.tensor.j2t(x._elem), torchax.tensor.j2t(y._elem)))
 
@@ -53,11 +53,11 @@ class TestContext(unittest.TestCase):
     with xla_env:
       torch.manual_seed(1234)
       x = torch.randn((3, 3))
-      self.assertIsInstance(x, tensor.XLATensor2)
+      self.assertIsInstance(x, tensor.Tensor)
 
       torch.manual_seed(12345)
       y = torch.randn((3, 3))
-      self.assertIsInstance(y, tensor.XLATensor2)
+      self.assertIsInstance(y, tensor.Tensor)
 
     self.assertFalse(torch.equal(torchax.tensor.j2t(x._elem), torchax.tensor.j2t(y._elem)))
 
@@ -69,7 +69,7 @@ class TestContext(unittest.TestCase):
       return x @ y
 
     random_jit = torchax.interop.jax_jit(random_op)
-    self.assertIsInstance(random_jit(), tensor.XLATensor2)
+    self.assertIsInstance(random_jit(), tensor.Tensor)
 
     # Result always expected to be the same for a jitted function because seeds
     # are baked in
@@ -101,13 +101,13 @@ class TestContext(unittest.TestCase):
     # Test context manager.
     with xla_env:
       m = M()
-      self.assertIsInstance(m.c, tensor.XLATensor2)
-      self.assertIsInstance(m.c2, tensor.XLATensor2)
+      self.assertIsInstance(m.c, tensor.Tensor)
+      self.assertIsInstance(m.c2, tensor.Tensor)
     # Test `to_xla`.
     m = M()
     m = xla_env.to_xla(m)
-    self.assertIsInstance(m.c, tensor.XLATensor2)
-    self.assertIsInstance(m.c2, tensor.XLATensor2)
+    self.assertIsInstance(m.c, tensor.Tensor)
+    self.assertIsInstance(m.c2, tensor.Tensor)
 
 
 if __name__ == "__main__":

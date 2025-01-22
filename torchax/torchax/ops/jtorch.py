@@ -29,7 +29,7 @@ def _as_tensor(data, dtype=None, device=None, env=None):
     jax_res = jnp.asarray(data)
   else:
     jax_res = _tensor(data, dtype=dtype)
-  return torchax.tensor.XLATensor2(jax_res, env)
+  return torchax.tensor.Tensor(jax_res, env)
 
 
 @register_function(torch.tensor)

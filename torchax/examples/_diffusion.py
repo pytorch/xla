@@ -26,7 +26,7 @@ class CompiledModule:
 
 
     def _maybe_move_tensor(self, tensor):
-        if isinstance(tensor, torch.Tensor) and not isinstance(tensor, torchax.tensor.XLATensor2):
+        if isinstance(tensor, torch.Tensor) and not isinstance(tensor, torchax.tensor.Tensor):
             return torchax.tensor.move_to_device(tensor)
         return tensor
 

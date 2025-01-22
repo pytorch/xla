@@ -26,7 +26,7 @@ class TestTorchFunctions(parameterized.TestCase):
 
     with self.env:
       actual = func()
-      self.assertIsInstance(actual, torchax.tensor.XLATensor2)
+      self.assertIsInstance(actual, torchax.tensor.Tensor)
 
     torch.testing.assert_close(torchax.tensor.j2t(actual._elem), expected)
 

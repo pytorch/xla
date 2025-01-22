@@ -63,8 +63,8 @@ class ProcessGroupJax(ProcessGroup):
     input: torch.Tensor,
     opts=...,
   ) -> dist.Work:
-    assert isinstance(input, torchax.tensor.XLATensor2)
-    assert isinstance(output, torchax.tensor.XLATensor2)
+    assert isinstance(input, torchax.tensor.Tensor)
+    assert isinstance(output, torchax.tensor.Tensor)
     torch.distributed._functional_collectives.all_gather_tensor_inplace(
       output, input, group=self
     )
@@ -76,7 +76,7 @@ class ProcessGroupJax(ProcessGroup):
     opts: dist.AllreduceOptions = ...,
   ) -> dist.Work:
     assert len(tensors) == 1
-    assert isinstance(tensors[0], torchax.tensor.XLATensor2)
+    assert isinstance(tensors[0], torchax.tensor.Tensor)
     torch.distributed._functional_collectives.all_reduce_inplace(
       tensors[0],
       torch.distributed._functional_collectives.REDUCE_OP_TO_STR[
@@ -93,7 +93,7 @@ class ProcessGroupJax(ProcessGroup):
     opts: dist.BroadcastOptions = ...,
   ) -> dist.Work:
     assert len(tensors) == 1
-    assert isinstance(tensors[0], torchax.tensor.XLATensor2)
+    assert isinstance(tensors[0], torchax.tensor.Tensor)
     tensors[0].copy_(
       torch.distributed._functional_collectives.broadcast(
         tensors[0], opts.rootRank, group=self

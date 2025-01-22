@@ -33,11 +33,11 @@ not incur any data copies in this process.
 Consider this following pseudocode:
 
 ```python
-class XLATensor2:
+class Tensor:
   _data: jax.Array 
   def __torch_dispatch__(...):
       # do stuff with _data, get new data
-      return XLATensor2(new_data)
+      return Tensor(new_data)
 
 def dynamo_backend(fx, sample):
   compiled = compile fx into graph that manipulate jax.Array.

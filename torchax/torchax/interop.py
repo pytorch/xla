@@ -136,7 +136,7 @@ def _torch_view(t: JaxValue) -> TorchValue:
     # view it as-if it's a torch land object
     if isinstance(t, jax.Array):
         # TODO
-        return tensor.XLATensor2(t, torchax.default_env())
+        return tensor.Tensor(t, torchax.default_env())
     if isinstance(t, type(jnp.int32)):
         return tensor.t2j_type(t)
     if callable(t):  # t is a JaxCallable
@@ -151,7 +151,7 @@ def _jax_view(t: TorchValue) -> JaxValue:
     # t is an object from torch land
     # view it as-if it's a jax land object
     if isinstance(t, torch.Tensor):
-        assert isinstance(t, tensor.XLATensor2), type(t)
+        assert isinstance(t, tensor.Tensor), type(t)
         return t.jax()
     if isinstance(t, type(torch.int32)):
         return tensor.t2j_dtype(t)

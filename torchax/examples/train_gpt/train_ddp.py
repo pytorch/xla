@@ -29,8 +29,8 @@ import torch.utils._pytree as torch_pytree
 def _checkpoint(jax_model, path: pathlib.Path):
   torch.save(
     torch_pytree.tree_map_only(
-      torchax.tensor.XLATensor2,
-      torchax.tensor.XLATensor2.torch,
+      torchax.tensor.Tensor,
+      torchax.tensor.Tensor.torch,
       jax_model.state_dict(),
     ),
     path,

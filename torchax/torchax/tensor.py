@@ -20,15 +20,15 @@ class OperatorNotFound(Exception):
 
 
 def wrap(jaxarray):
-  return torch_pytree.tree_map_only(jnp.ndarray, XLATensor2, jaxarray)
+  return torch_pytree.tree_map_only(jnp.ndarray, Tensor, jaxarray)
 
 
 def unwrap(torchtensors):
-  return torch_pytree.tree_map_only(XLATensor2, lambda x: x._elem, torchtensors)
+  return torch_pytree.tree_map_only(Tensor, lambda x: x._elem, torchtensors)
 
 
 def t2j(t):
-  if isinstance(t, XLATensor2):
+  if isinstance(t, Tensor):
     return t._elem
   return mappings.t2j(t)
 
@@ -56,7 +56,7 @@ def log_nested(env, message):
 log_nested.level = 0
 
 
-class XLATensor2(torch.Tensor):
+class Tensor(torch.Tensor):
 
   @staticmethod
   def __new__(cls, elem, env):
@@ -81,7 +81,7 @@ class XLATensor2(torch.Tensor):
     self._env = env
 
   def __str__(self):
-    return "XLATensor2({} {})".format(str(type(self._elem)), str(self._elem))
+    return "Tensor({} {})".format(str(type(self._elem)), str(self._elem))
 
   __repr__ = __str__
 
@@ -102,7 +102,7 @@ class XLATensor2(torch.Tensor):
     new_shape = (
         self._elem.shape[:start_dim] + (-1,) + self._elem.shape[end_dim:])
     new_elem = jnp.reshape(self._elem, new_shape)
-    return XLATensor2(new_elem, self._env)
+    return Tensor(new_elem, self._env)
     # return torch.reshape(self, new_shape)
 
   def __setitem__(self, key, val):
@@ -119,7 +119,7 @@ class XLATensor2(torch.Tensor):
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
     env = None
     for arg in torch_pytree.arg_tree_leaves(*args, **kwargs):
-      if isinstance(arg, XLATensor2):
+      if isinstance(arg, Tensor):
         env = arg._env
         break
 
@@ -127,7 +127,7 @@ class XLATensor2(torch.Tensor):
       return func(*args, **(kwargs or {}))
 
   def detach(self):
-    return XLATensor2(jax.lax.stop_gradient(self.jax()), self._env)
+    return Tensor(jax.lax.stop_gradient(self.jax()), self._env)
 
   def numpy(self) -> numpy.ndarray:
     import numpy as np
@@ -325,7 +325,7 @@ class Environment(contextlib.ContextDecorator):
           )
 
     def _to_copy(self, the_tensor, new_dtype, new_device):
-      if isinstance(the_tensor, XLATensor2):
+      if isinstance(the_tensor, Tensor):
         arr = the_tensor.jax()
         if new_dtype is not None and new_dtype != arr.dtype:
           arr = arr.astype(mappings.t2j_dtype(new_dtype))
@@ -335,7 +335,7 @@ class Environment(contextlib.ContextDecorator):
             arr = jax.device_put(arr, jax_device)
           else:
             # converting to a non-jax device: let torch native handle it
-            torch_tensor = j2t(arr) if isinstance(the_tensor, XLATensor2) else arr
+            torch_tensor = j2t(arr) if isinstance(the_tensor, Tensor) else arr
             with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
               return torch_tensor.to(new_device)
       else:
@@ -350,7 +350,7 @@ class Environment(contextlib.ContextDecorator):
           with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
             return the_tensor.to(new_device)
 
-      return XLATensor2(arr, self)
+      return Tensor(arr, self)
       
 
     def get_and_rotate_prng_key(self, generator: Optional[torch.Generator]=None):
@@ -372,7 +372,7 @@ class Environment(contextlib.ContextDecorator):
         op = self._ops.get(func)
         res = op.func(*args, **kwargs)
         if isinstance(res, jax.Array):
-          res = XLATensor2(res, self)
+          res = Tensor(res, self)
         return res
 
     def _torch_Tensor_to(self, args, kwargs):
@@ -403,11 +403,11 @@ class Environment(contextlib.ContextDecorator):
       if func in (torch.Tensor.to, torch.ops.aten.lift_fresh.default ,torch.ops.aten._to_copy, torch.ops.aten._to_copy.default):
         return self._torch_Tensor_to(args, kwargs)
 
-      # If the func doesn't act on XLATensor2, and is not a tensor constructor,
+      # If the func doesn't act on Tensor, and is not a tensor constructor,
       # We should skip and let torch handle it.
       
       tensor_args = [t for t in torch_pytree.tree_flatten(args)[0] if isinstance(t, torch.Tensor)]
-      if tensor_args and all(not isinstance(t, XLATensor2) for t in tensor_args):
+      if tensor_args and all(not isinstance(t, Tensor) for t in tensor_args):
         return func(*args, **kwargs)
 
       with jax.named_scope(_name_of_func(func)):
@@ -466,10 +466,10 @@ class Environment(contextlib.ContextDecorator):
       if isinstance(val, torch.nn.Module):
         with self:
           return val.to('jax')
-      if isinstance(val, XLATensor2):
+      if isinstance(val, Tensor):
         return val
       if isinstance(val, torch.Tensor):
-        return XLATensor2(t2j(val), self)
+        return Tensor(t2j(val), self)
       return val
 
     def to_xla(self, torchvalues):
@@ -483,13 +483,13 @@ class Environment(contextlib.ContextDecorator):
       def to_jax(x):
         if isinstance(x, torch.distributed._functional_collectives.AsyncCollectiveTensor):
           x = x.wait()
-        assert isinstance(x, XLATensor2), f'Expect a XLATensor2 but got {type(x)}; usually this means there is a mixed math between XLATensor and torch.Tensor'
+        assert isinstance(x, Tensor), f'Expect a Tensor but got {type(x)}; usually this means there is a mixed math between XLATensor and torch.Tensor'
         return x.jax()
       return torch_pytree.tree_map_only(torch.Tensor, to_jax, torchtensors)
 
     def j2t_iso(self, jaxarray):
       return torch_pytree.tree_map_only(
-        jnp.ndarray, lambda x: XLATensor2(x, self), jaxarray)
+        jnp.ndarray, lambda x: Tensor(x, self), jaxarray)
 
     def j2t_copy(self, args):
       pass

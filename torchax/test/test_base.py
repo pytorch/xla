@@ -40,7 +40,7 @@ def run_function_and_compare(testcase,
       args2, kwargs2 = pytree.tree_map_only(torch.Tensor, tensor.move_to_device,
                                             (args, kwargs))
       res2 = func(*args2, **kwargs2)
-      res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
+      res2 = pytree.tree_map_only(tensor.Tensor, lambda t: t.torch(), res2)
       with testcase.subTest("torchax_diff:" + str(atol)):
         if ignore_indices and isinstance(res, tuple) and len(res) == 2:
           diff_output(
