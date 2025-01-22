@@ -10,7 +10,10 @@ import test_xla_sharding_base
 
 parent_folder = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(parent_folder)
+
+# TODO - Unify the MLP SPMD linear training files.
 from utils.train_spmd_linear_model import train_and_evaluate
+from utils.train_spmd_linear_model_grad_acc import train_and_evaluate_grad_acc
 
 # CPU does not support optimization barriers, and hence we use this to disable
 # the gradient checkpointing A/B test run for it.
@@ -41,8 +44,7 @@ class TestSPMDLinearModel(test_xla_sharding_base.XlaShardingTest):
         checkpointing_losses = train_and_evaluate()
         # Verify that the runs match with and without checkpointing.
         assert all(
-            torch.allclose(
-                baseline_loss, checkpointing_loss, rtol=1e-3, atol=1e-7)
+            torch.allclose(baseline_loss, checkpointing_loss)
             for baseline_loss, checkpointing_loss in zip(
                 baseline_losses, checkpointing_losses))
 
@@ -58,17 +60,17 @@ class TestSPMDLinearModelGradientAccumulation(
     COMMON_GRAD_ACC_ARGS = ["--gradient_accumulation_steps", "8"]
     print('Training loop with traditional gradient accumulation')
     with extended_argv(COMMON_GRAD_ACC_ARGS):
-      baseline_grad_acc_losses = train_and_evaluate()
+      baseline_grad_acc_losses = train_and_evaluate_grad_acc()
 
     print('Training loop with XLA\'s `While` gradient accumulation')
     with extended_argv(COMMON_GRAD_ACC_ARGS +
                        ["--use_gradient_accumulation_loop"]):
-      loop_grad_acc_losses = train_and_evaluate()
+      loop_grad_acc_losses = train_and_evaluate_grad_acc()
 
     # Verify that the model losses are not zero, and that the runs match.
     assert all(loss != 0 for loss in baseline_grad_acc_losses)
     assert all(
-        torch.allclose(baseline_loss, checkpointing_loss, rtol=1e-3, atol=1e-7)
+        torch.allclose(baseline_loss, checkpointing_loss)
         for baseline_loss, checkpointing_loss in zip(baseline_grad_acc_losses,
                                                      loop_grad_acc_losses))
 
