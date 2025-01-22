@@ -151,7 +151,7 @@ def _jax_view(t: TorchValue) -> JaxValue:
     # t is an object from torch land
     # view it as-if it's a jax land object
     if isinstance(t, torch.Tensor):
-        assert isinstance(t, tensor.XLATensor2)
+        assert isinstance(t, tensor.XLATensor2), type(t)
         return t.jax()
     if isinstance(t, type(torch.int32)):
         return tensor.t2j_dtype(t)
@@ -198,3 +198,12 @@ def jax_jit(torch_function, kwargs_for_jax_jit=None):
 def jax_shard_map(torch_function, kwargs_for_jax_shard_map=None):
     return wrap_jax_jit(torch_function, jax_jit_func=shard_map,
                         kwargs_for_jax=kwargs_for_jax_shard_map)
+
+
+def jax_value_and_grad(torch_function, kwargs_for_value_and_grad=None):
+    return wrap_jax_jit(torch_function, jax_jit_func=jax.value_and_grad,
+                        kwargs_for_jax=kwargs_for_value_and_grad)
+
+def gradient_checkpoint(torch_function, kwargs=None):
+    return wrap_jax_jit(torch_function, jax_jit_func=jax.checkpoint,
+                        kwargs_for_jax=kwargs)

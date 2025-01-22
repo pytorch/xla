@@ -4796,7 +4796,13 @@ def _aten_linalg_pinv_atol_rtol_tensor(a, rtol=None, **kwargs):
 # torch.linalg.solve
 @op(torch.ops.aten._linalg_solve_ex)
 def _aten__linalg_solve_ex(a, b):
+  batched = False
+  if b.ndim > 1 and b.shape[-1] == a.shape[-1]:
+    batched = True
+    b = b[..., None]
   res = jnp.linalg.solve(a, b)
+  if batched:
+    res = res.squeeze(-1)
   info_shape = a.shape[0] if len(a.shape) >= 3 else []
   info = jnp.zeros(info_shape, dtype=mappings.t2j_dtype(torch.int32))
   return res, info

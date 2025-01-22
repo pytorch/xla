@@ -12,7 +12,7 @@ import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
 
 from torch_xla2 import config
-from torch_xla2.ops import mappings
+from torch_xla2.ops import mappings, ops_registry
 
 
 class OperatorNotFound(Exception):
@@ -155,13 +155,20 @@ class XLATensor2(torch.Tensor):
   def jax_device(self):
     return self._elem.device
 
+  def apply_jax(self, jax_function, *args, **kwargs):
+    # Call a jax function on _elem
+    res = jax_function(self._elem, *args, **kwargs)
+    return self._env.j2t_iso(res)
+
+  def apply_jax_(self, jax_function, *args, **kwargs):
+    self._elem = jax_function(self._elem, *args, **kwargs)
+
   def tolist(self):
     return self._elem.tolist()
+
+  def shard_(self, sharding):
+    self.apply_(jax.lax.with_sharding_constraint, sharding)
   
-
- 
-
-
 
 def debug_accuracy(func, args, kwargs, current_output):
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
@@ -294,13 +301,13 @@ class Environment(contextlib.ContextDecorator):
       if not self.config.treat_cuda_as_jax_device and device.startswith('cuda'):
         return None
       
-      if device in ('jax_cpu', 'cpu'):
+      if device == 'cpu':
         return jax.devices('cpu')[0]
       return jax.devices()[0]
 
 
     def load_ops(self):
-      from torch_xla2.ops import jaten, jtorch, jc10d, jtorchvision_nms, ops_registry
+      from torch_xla2.ops import jaten, jtorch, jc10d, jtorchvision_nms
       self._ops.update(ops_registry.all_aten_ops)
       self._ops.update(ops_registry.all_torch_functions)
 
@@ -486,3 +493,12 @@ class Environment(contextlib.ContextDecorator):
 
     def j2t_copy(self, args):
       pass
+
+    def override_op_definition(self, op_to_override, op_impl):
+      self._ops[op_to_override] = ops_registry.Operator(
+        op_to_override,
+        op_impl,
+        is_jax_function=False,
+        is_user_defined=True,
+        needs_env=False
+      )

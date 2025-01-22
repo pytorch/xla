@@ -444,6 +444,46 @@ class ScanTest(TestBase):
     self.assertEqual(bf16_ys.dtype, torch.bfloat16)
     self.assertEqual(f32_ys.dtype, torch.float32)
 
+  def test_scan_activation_aliases_input(self):
+    """Test that if an intermediate activation of fn aliases an input,
+    we directly save the input tensor into the context object, instead of
+    indexing into the leading dimension during the while loop and copying
+    the those slices into a new output tensor. This is a memory saving optimization.
+    """
+
+    def fn(carry, x):
+      return carry, torch.sin(x)
+
+    carry = torch.randn(4, 4, requires_grad=True, device=self.device)
+    xs = torch.randn(20, 4, 4, requires_grad=True, device=self.device)
+    torch_xla.sync()
+
+    storage = []
+
+    def pack(x):
+      storage.append(x)
+      return len(storage) - 1
+
+    def unpack(x):
+      return storage[x]
+
+    # Intercept the tensors stored in the context object.
+    with torch.autograd.graph.saved_tensors_hooks(pack, unpack):
+      final_carry, ys = scan(fn, carry, xs)
+      ys.sum().backward()
+      torch_xla.sync()
+
+    # Find the input that is stored in the context object.
+    stored_xs = None
+    for s in storage:
+      if s.shape == xs.shape:
+        assert stored_xs is None
+        stored_xs = s
+
+    # Test that it's literally the same object as the input tensor,
+    # as opposed to just numerically identical but otherwise an extra copy.
+    assert id(stored_xs) == id(xs)
+
 
 class PyTreeTest(TestBase):
 
@@ -469,12 +509,16 @@ class ValueAndGradPartitionedTest(TestBase):
     xs = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]],
                       requires_grad=True,
                       device=self.device)
-    forward, backward = value_and_grad_partitioned(fn, init, xs)
+    forward, alias_input, backward = value_and_grad_partitioned(fn, init, xs)
 
-    # Forward should return `(new_carry, (y, (carry, x)))`,
-    # because `(carry, x)` are the two intermediate activations (primals),
-    # and they will be packed alongside the original output `y`.
+    # Once we add back activations that are aliases to inputs, the result should
+    # be `(new_carry, (y, (carry, x)))`, because `(carry, x)` are the two
+    # intermediate activations (primals), and they will be packed alongside
+    # the original output `y`.
     out = forward(init, xs[0])
+    new_carry, (y, partial_activations) = out
+    activations = alias_input(partial_activations, xs[0])
+    out = (new_carry, (y, activations))
     torch_xla.sync()
     carry = init
     x = xs[0]
@@ -521,11 +565,12 @@ class ValueAndGradPartitionedTest(TestBase):
     }
 
     # Get the forward and backward functions using value_and_grad_partitioned
-    forward, backward = value_and_grad_partitioned(
+    forward, alias_input, backward = value_and_grad_partitioned(
         fn, init, tree_map(lambda v: v.unsqueeze(0), x))
 
     # Run the forward function
-    carry_out, (y_out, activations) = forward(init, x)
+    carry_out, (y_out, partial_activations) = forward(init, x)
+    activations = alias_input(partial_activations, x)
     torch_xla.sync()
 
     # Compute expected outputs and gradients using PyTorch autograd

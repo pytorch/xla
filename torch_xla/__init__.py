@@ -178,9 +178,7 @@ def _setup_tpu_vm_library_path() -> bool:
 
 
 def _check_deprecated_env_var():
-  deprecated_env_vars = [
-      'XLA_USE_FP16', 'XLA_DOWNCAST_FP16', 'XLA_USE_32BIT_LONG'
-  ]
+  deprecated_env_vars = ['XLA_USE_FP16', 'XLA_DOWNCAST_FP16']
   for env_var in deprecated_env_vars:
     if os.environ.get(env_var):
       warnings.warn(f"The environment variable '{env_var}' is deprecated "

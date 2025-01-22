@@ -607,8 +607,25 @@ void custom_sharding_(
     const XLATensorPtr& input,
     const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec,
     const CustomSharding::Type& type) {
-  input->SetInPlaceIrValue(torch_xla::MakeNode<CustomSharding>(
-      input->GetIrValue(), input->shape().get(), type));
+  torch::lazy::NodePtr customShardingNode = torch_xla::MakeNode<CustomSharding>(
+      input->GetIrValue(), input->shape().get(), type);
+  XlaNode* xla_node = dynamic_cast<XlaNode*>(customShardingNode.get());
+  // Always call `SetSharding` to ensure the `CustomSharding` op has the correct
+  // sharding, especially if a view is updated afterward. Updating a view can
+  // modify the IR, potentially leading to the sharding being applied to the
+  // updated view instead of the original `CustomSharding` op.
+
+  // For example, consider the following IR:
+  // ```
+  // x0 = custom_sharding(input)
+  // x1 = view_update(x0)
+  // ```
+  // In this case, we want to ensure the sharding is applied to `x0`, not `x1`.
+
+  // While this solution may add a sharding spec to non-CustomSharding ops like
+  // `x1`, the XLA compiler will safely ignore it.
+  xla_node->SetSharding(sharding_spec->sharding, 0);
+  input->SetInPlaceIrValue(customShardingNode);
   input->SetShardingSpec(*sharding_spec);
 }
 
