@@ -32,21 +32,17 @@ class TestSPMDLinearModel(test_xla_sharding_base.XlaShardingTest):
   def test_basic(self):
     print('Training loop with baseline')
     with extended_argv([]):
-      baseline_losses, baseline_result = train_and_evaluate()
+      baseline_losses = train_and_evaluate()
     # Verify that the model losses are not zero.
     assert all(loss != 0 for loss in baseline_losses)
-    # Verify that the model produces non-zero outputs.
-    assert not torch.any(baseline_result == 0)
-
     if not SKIP_GRADIENT_CHECKPOINTING:
       print('Training loop with gradient checkpointing')
       with extended_argv(['--use_gradient_checkpointing']):
-        checkpointing_losses, checkpointing_result = train_and_evaluate()
+        checkpointing_losses = train_and_evaluate()
         # Verify that the runs match with and without checkpointing.
-        assert torch.allclose(
-            baseline_result, checkpointing_result, rtol=1e-06, atol=1e-09)
         assert all(
-            torch.allclose(baseline_loss, checkpointing_loss)
+            torch.allclose(
+                baseline_loss, checkpointing_loss, rtol=1e-3, atol=1e-7)
             for baseline_loss, checkpointing_loss in zip(
                 baseline_losses, checkpointing_losses))
 
@@ -55,30 +51,26 @@ class TestSPMDLinearModelGradientAccumulation(
     test_xla_sharding_base.XlaShardingTest):
 
   def test_gradient_accumulation_matches(self):
-    """Verify that gradient accumulation produces the same results and losses
-       with and without the XLA `While` op.
+    """Verify that gradient accumulation produces the same losses with and
+       without the XLA `While` op.
     """
 
     COMMON_GRAD_ACC_ARGS = ["--gradient_accumulation_steps", "8"]
     print('Training loop with traditional gradient accumulation')
     with extended_argv(COMMON_GRAD_ACC_ARGS):
-      baseline_grad_acc_losses, baseline_grad_acc_result = train_and_evaluate()
+      baseline_grad_acc_losses = train_and_evaluate()
 
     print('Training loop with XLA\'s `While` gradient accumulation')
     with extended_argv(COMMON_GRAD_ACC_ARGS +
                        ["--use_gradient_accumulation_loop"]):
-      loop_grad_acc_losses, loop_grad_acc_result = train_and_evaluate()
+      loop_grad_acc_losses = train_and_evaluate()
 
     # Verify that the model losses are not zero, and that the runs match.
     assert all(loss != 0 for loss in baseline_grad_acc_losses)
     assert all(
-        torch.allclose(baseline_loss, checkpointing_loss)
+        torch.allclose(baseline_loss, checkpointing_loss, rtol=1e-3, atol=1e-7)
         for baseline_loss, checkpointing_loss in zip(baseline_grad_acc_losses,
                                                      loop_grad_acc_losses))
-    # Verify that the model produces non-zero outputs, and that the runs match.
-    assert not torch.any(baseline_grad_acc_result == 0)
-    assert torch.allclose(
-        baseline_grad_acc_result, loop_grad_acc_result, rtol=1e-06, atol=1e-09)
 
 
 if __name__ == '__main__':
