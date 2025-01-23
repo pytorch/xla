@@ -1081,7 +1081,7 @@ def flash_attention_non_xla(q: torch.Tensor,
 
 XLA_LIB.define(
     "paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor lengths, Tensor page_indices,"
-    " int pages_per_compute_block, str megacore_mode=None, float? attn_logits_soft_cap=None) -> Tensor",
+    " int pages_per_compute_block, str? megacore_mode=None, float? attn_logits_soft_cap=None) -> Tensor",
 )
 
 
@@ -1092,8 +1092,8 @@ def paged_attention_xla(q: torch.Tensor,
                         lengths: torch.Tensor,
                         page_indices: torch.Tensor,
                         pages_per_compute_block: int,
-                        megacore_mode: str = None,
-                        attn_logits_soft_cap: float = None):
+                        megacore_mode: str | None = None,
+                        attn_logits_soft_cap: float | None = None):
   return paged_attention(q, k_pages, v_pages, lengths, page_indices,
                          pages_per_compute_block, megacore_mode,
                          attn_logits_soft_cap)
@@ -1106,8 +1106,8 @@ def paged_attention_non_xla(q: torch.Tensor,
                             lengths: torch.Tensor,
                             page_indices: torch.Tensor,
                             pages_per_compute_block: int,
-                            megacore_mode: str = None,
-                            attn_logits_soft_cap: float = None):
+                            megacore_mode: str | None = None,
+                            attn_logits_soft_cap: float | None = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 
