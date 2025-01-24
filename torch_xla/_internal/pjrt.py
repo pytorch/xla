@@ -207,7 +207,7 @@ def spawn(fn: Callable,
     return _run_singleprocess(spawn_fn)
   elif nprocs is not None:
     raise ValueError(
-        'Unsupported nprocs (%d). Please use the environment variable for the hardware you are using (X_NUM_DEVICES where X is CPU, GPU, TPU, NEURONCORE, etc).'
+        'Unsupported nprocs (%d). Please use nprocs=1 or None (default). If None, spawn will use all available devices. Use the environment variable X_NUM_DEVICES (where X is CPU, GPU, TPU, NEURONCORE, etc) to limit the number of devices used.'
         % nprocs)
 
   run_multiprocess(spawn_fn, start_method=start_method)
