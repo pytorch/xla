@@ -40,7 +40,7 @@ To install PyTorch/XLA nightly build in a new TPU VM:
 
 ```sh
 pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev-cp310-cp310-linux_x86_64.whl' \
+pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev+cxx11-cp310-cp310-linux_x86_64.whl' \
   -f https://storage.googleapis.com/libtpu-releases/index.html \
   -f https://storage.googleapis.com/libtpu-wheels/index.html
 
@@ -185,54 +185,17 @@ GPU and nightly builds are available in our public GCS bucket.
 | nightly (Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev-cp311-cp311-linux_x86_64.whl` |
 | nightly (CUDA 12.1 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.6.0.dev-cp38-cp38-linux_x86_64.whl` |
 
-<details>
+#### Use nightly build
 
-<summary> Use nightly build before 08/13/2024</summary>
-You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. Here is an example:
-
-```
-pip3 install torch==2.6.0.dev20240925+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly%2B20240925-cp310-cp310-linux_x86_64.whl
-```
-
-The torch wheel version `2.6.0.dev20240925+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
-</details>
-
-#### Use nightly build after 08/20/2024
-
-You can also add `yyyymmdd` after `torch_xla-2.6.0.dev` (or the latest dev version)
+You can also add `yyyymmdd` after `torch_xla-2.7.0.dev` (or the latest dev version)
 to get the nightly wheel of a specified date. Here is an example:
 
 ```
-pip3 install torch==2.5.0.dev20240820+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0.dev20240820-cp310-cp310-linux_x86_64.whl
+pip3 install torch==2.7.0.dev20250124+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev20250124+cxx11-cp310-cp310-linux_x86_64.whl
 ```
 
-The torch wheel version `2.6.0.dev20240925+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
-
-#### Use nightly build with C++11 ABI after 10/28/2024
-
-By default, `torch` is built with pre-C++11 version of ABI (see https://github.com/pytorch/pytorch/issues/51039).
-`torch_xla` follows that and ships pre-C++11 builds by default. However, the lazy
-tensor tracing performance can be improved by building the code with C++11 ABI.
-As a result, we provide C++11 ABI builds for interested users to try, especially
-if you find your model performance bottlenecked in Python lazy tensor tracing.
-
-You can add `.cxx11` after `yyyymmdd` to get the C++11 ABI variant of a
-specific nightly wheel.  Here is an example to install nightly builds from
-10/28/2024:
-
-```
-pip3 install torch==2.6.0.dev20241028+cpu.cxx11.abi --index-url https://download.pytorch.org/whl/nightly
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0.dev20241028.cxx11-cp310-cp310-linux_x86_64.whl
-```
-
-**As of 12/11/2024, the torch_xla C++11 ABI wheel is named differently and can be installed as follows:**
-```
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0.dev20241211+cxx11-cp310-cp310-linux_x86_64.whl
-```
-
-The torch wheel version `2.6.0.dev20241028+cpu.cxx11.abi` can be found at https://download.pytorch.org/whl/nightly/torch/.
+The torch wheel version `2.7.0.dev20250124+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
 
 <details>
 
