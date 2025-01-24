@@ -187,7 +187,7 @@ GPU and nightly builds are available in our public GCS bucket.
 
 #### Use nightly build
 
-You can also add `yyyymmdd` after `torch_xla-2.7.0.dev` (or the latest dev version)
+You can also add `yyyymmdd` like `torch_xla-2.7.0.devyyyymmdd+cxx11` (or the latest dev version)
 to get the nightly wheel of a specified date. Here is an example:
 
 ```
