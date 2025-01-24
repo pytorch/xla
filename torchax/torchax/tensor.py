@@ -162,12 +162,13 @@ class Tensor(torch.Tensor):
 
   def apply_jax_(self, jax_function, *args, **kwargs):
     self._elem = jax_function(self._elem, *args, **kwargs)
+    return self
 
   def tolist(self):
     return self._elem.tolist()
 
   def shard_(self, sharding):
-    self.apply_(jax.lax.with_sharding_constraint, sharding)
+    self.apply_jax_(jax.lax.with_sharding_constraint, sharding)
   
 
 def debug_accuracy(func, args, kwargs, current_output):

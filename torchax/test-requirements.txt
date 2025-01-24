@@ -3,6 +3,7 @@ absl-py
 immutabledict
 pytest
 pytest-xdist
+pytest-forked
 sentencepiece
 expecttest
 optax
