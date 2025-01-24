@@ -297,6 +297,7 @@ def paged_flash_attention_kernel(
   @pl.when(should_run)
   def get_kv_and_run_flash_attention():
     # Loop over num_q_heads_per_kv_head and use the same K and V
+    # grid = (batch_size, num_kv_heads, q_blk, kv_blk)
     def compute_block_indices(b, kv_head_idx, q_blk_idx, kv_blk_idx):
       """Return next_b, next_kv_head_idx, next_kv_blk_idx"""
 
@@ -341,6 +342,7 @@ def paged_flash_attention_kernel(
 
     def create_kv_async_copy_descriptors(b, kv_head_idx, kv_blk_idx,
                                          buffer_index):
+      # To load K/V from the pages, we need kv_head_idx and page_offset (requires the sequence_idx, kv_blk_idx)
       page_offset = b * pages_per_sequence + kv_blk_idx * num_kv_pages_per_compute_block
       pages_to_load = num_kv_pages_per_compute_block
       async_copy_k = MultiPageAsyncCopyDescriptor(

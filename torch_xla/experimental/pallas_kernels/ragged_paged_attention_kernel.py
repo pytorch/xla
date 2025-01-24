@@ -376,16 +376,19 @@ def ragged_paged_attention(
   m = jax.ShapeDtypeStruct((num_q_heads, num_tokens, MIN_BLOCK_SIZE),
                            dtype=jnp.float32)
   out_shape = (o_shape, l, m)
+  print(f'xw32 {out_shape=}')
 
   # in-spec. Note currently q.shape=[num_q_heads, num_tokens, head_dim]
   # Within the kernel, q.shape should be [num_q_heads_per_kv_head, q_block_size, head_dim]
   def qo_index_map(kv_head_idx, logical_q_idx, kv_blk_idx, *_):
-    return (kv_head_idx, logical_q_idx, 0)
+    physical_q_tile_id = physical_q_tile_ids[logical_q_idx]
+    return (kv_head_idx, physical_q_tile_id, 0)
   q_block_spec = pl.BlockSpec(
     (num_q_heads_per_kv_head, num_queries_per_compute_block, head_dim),
     qo_index_map,
   )
   q_dtype_for_kernel_launch = q.dtype
+  print(f'xw32 {q_block_spec=}')
   in_specs = [
       q_block_spec,
       # Below 4 correspond to the 4 input: k_pages, k_scales_pages, q_pages, q_scales_pages.
