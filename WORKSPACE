@@ -44,13 +44,8 @@ new_local_repository(
 
 ############################# OpenXLA Setup ###############################
 
-# To update OpenXLA to a new revision,
-# a) update URL and strip_prefix to the new git commit hash
-# b) get the sha256 hash of the commit by running:
-#    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
-#    and update the sha256 with the result.
-
-# Note the xla_hash should be the git commit number.
+# To build PyTorch/XLA with OpenXLA to a new revision, update following xla_hash to
+# the openxla git commit hash.
 xla_hash = '6e91ff19dad528ab7d2025a9bb46150618a3bc7d'
 
 http_archive(
