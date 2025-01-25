@@ -45,5 +45,5 @@ jobs:
         shell: bash
         run: |
           export JAX_PLATFORMS=cpu
-          pytest --forked test/
+          for t in $(find test -type f -name test*.py); do pytest $t; done
           XLA_FLAGS=--xla_force_host_platform_device_count=4 pytest -n 0 test_dist/
