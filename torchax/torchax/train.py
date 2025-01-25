@@ -32,28 +32,26 @@ def make_train_step(model_fn,
       to do gradient checkpointing. If None, then it means checkpoint everything.
   """
   env = torchax.default_env()
-  def loss(weights, buffers, args, label): # inputs are XLATensor
-    with env, jax.named_scope('compute_loss'):
-      res = model_fn(weights, buffers, args)
-      l = loss_fn(res, label)
+
+  def loss(weights, buffers, args, label): # inputs are jax.Array
+    with jax.named_scope('compute_loss'):
+      res = interop.call_torch(model_fn, weights, buffers, args)
+      l = interop.call_torch(loss_fn, res, label)
       return l
 
-  loss = interop.gradient_checkpoint(loss, kwargs={'policy': remat_policy})
-  grad_fn = interop.jax_value_and_grad(loss)
+  # loss = jax.checkpoint(loss, policy=remat_policy)
+  grad_fn = jax.value_and_grad(loss)
 
   def step(weights, buffers, opt_state, args, label): #inputs are array
     with jax.named_scope('compute_gradient'):
         loss, gradient = grad_fn(weights, buffers, args, label)
 
     with jax.named_scope("optimizer_updates"):
-        updates, opt_state = interop.call_jax(
-            optax_optimizer.update,
-            gradient, opt_state, weights)
-        weights = interop.call_jax(optax.apply_updates, weights, updates)
+        updates, opt_state = optax_optimizer.update(gradient, opt_state, weights)
+        weights = optax.apply_updates(weights, updates)
     return loss, weights, opt_state
 
-  # TODO: apply jax.jit so the user don't have to.
-  return step
+  return torch_view(jax.jit(step, donate_argnums=(0, 2)))
 
   
   
