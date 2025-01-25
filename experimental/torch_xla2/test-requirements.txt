@@ -1,8 +1,0 @@
--r dev-requirements.txt
-absl-py
-immutabledict
-pytest
-pytest-xdist
-sentencepiece
-expecttest
-optax
