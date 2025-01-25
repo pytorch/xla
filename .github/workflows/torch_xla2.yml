@@ -45,5 +45,19 @@ jobs:
         shell: bash
         run: |
           export JAX_PLATFORMS=cpu
-          for t in $(find test -type f -name test*.py); do pytest $t; done
+          pytest test/test_conv.py
+          pytest test/test_unbounded_dynamism.py
+          pytest test/test_interop.py
+          pytest test/test_ops.py
+          pytest test/test_context.py
+          pytest test/test_train.py
+          pytest test/test_mutations.py
+          pytest test/test_tf_integration.py
+          pytest test/gemma/test_gemma.py
+          pytest test/llama/test_llama.py
+          pytest test/test_core_aten_ops.py
+          pytest test/test_functions.py
+          pytest test/test_libraries.py
+          pytest test/test_symbolic_shapes.py
+          pytest test/test_exports.py
           XLA_FLAGS=--xla_force_host_platform_device_count=4 pytest -n 0 test_dist/
