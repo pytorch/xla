@@ -286,6 +286,7 @@ class Environment(contextlib.ContextDecorator):
 
         self._mesh = None
         self.config = configuration or config.Configuration()
+        self.default_device_or_sharding = jax.local_devices()[0]
 
         self._jax_devices = set(['jax', 'jax_cpu', 'xla'])
 
@@ -304,7 +305,7 @@ class Environment(contextlib.ContextDecorator):
       
       if device == 'cpu':
         return jax.devices('cpu')[0]
-      return jax.devices()[0]
+      return self.default_device_or_sharding
 
 
     def load_ops(self):
