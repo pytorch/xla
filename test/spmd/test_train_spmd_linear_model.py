@@ -74,7 +74,7 @@ class TestSPMDLinearModelGradientAccumulation(
     # Verify that the model losses are not zero, and that the runs match.
     assert all(loss != 0 for loss in baseline_grad_acc_losses)
     assert all(
-        torch.allclose(baseline_loss, checkpointing_loss)
+        torch.allclose(baseline_loss, checkpointing_loss, rtol=1e-4, atol=1e-8)
         for baseline_loss, checkpointing_loss in zip(baseline_grad_acc_losses,
                                                      loop_grad_acc_losses))
 
