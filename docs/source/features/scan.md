@@ -50,7 +50,38 @@ from the root directory of a `pytorch/xla` source checkout.
 
 ## `scan` example
 
+[`scan`][scan] takes a combine function and applies that function over leading
+dimension of tensors while carrying along state:
 
+```python
+def scan(
+    fn: Callable[[Carry, X], tuple[Carry, Y]],
+    init: Carry,
+    xs: X,
+) -> tuple[Carry, Y]:
+  ...
+```
+
+You may use it to loop over the leading dimension of tensors efficiently. If `xs`
+is a single tensor, this function is roughly equal to the following Python code:
+
+```python
+def scan(fn, init, xs):
+  ys = []
+  carry = init
+  for i in len(range(xs.size(0))):
+    carry, y = fn(carry, xs[i])
+    ys.append(y)
+  return carry, torch.stack(ys, dim=0)
+```
+
+Under the hood, `scan` is implemented much more efficiently by lowering the loop
+into an XLA `While` operation. This ensures that only one iteration of the loop
+is compiled by XLA.
+
+You can check out the usage examples in [`scan_examples.py`][scan_examples].
+In that file, `scan_example_cumsum` uses `scan` to implement cumulative sum.
+`scan_example_pytree` demonstrates how to pass PyTrees to `scan`.
 
 You may run the examples with:
 
@@ -115,3 +146,4 @@ for details on how to use them.
 [retracing-issue]: https://github.com/pytorch/xla/issues/8632
 [jax-lax-scan]: https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html
 [decoder_with_scan]: /examples/scan/decoder_with_scan.py
+[scan_examples]: /examples/scan/scan_examples.py
