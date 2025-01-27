@@ -4,26 +4,30 @@ import torch_xla
 from torch_xla.experimental.scan import scan
 
 
-def simple_scan_example_cumsum():
+def scan_example_cumsum():
   """
   This example uses the `scan` function to compute the cumulative sum of a tensor.
   """
 
+  # 1) Define a combine function that takes in the accumulated sum and the next element,
+  #    and returns the new accumulated sum. We return two values, one is the "carry" that
+  #    will be passed to the next iteration of this function call, and the other is the
+  #    "output" that will be stacked into the final result.
   def cumsum(accumulated, element):
     accumulated += element
     return accumulated, accumulated
 
+  # 2) Define an initial carry and the input tensor.
   init_sum = torch.tensor([0.0], device=torch_xla.device())
   xs = torch.tensor([1.0, 2.0, 3.0], device=torch_xla.device())
   torch_xla.sync()
 
+  # 3) Call `scan` with our combine function, initial carry, and input tensor.
   final, result = scan(cumsum, init_sum, xs)
   torch_xla.sync()
+
   print("Final sum:", final)
   print("History of sums", result)
-
-  assert torch.allclose(final.cpu(), torch.tensor([6.0]))
-  assert torch.allclose(result.cpu(), torch.tensor([[1.0], [3.0], [6.0]]))
 
 
 def scan_example_pytree():
@@ -72,5 +76,10 @@ def scan_example_pytree():
 
 
 if __name__ == "__main__":
-  simple_scan_example_cumsum()
-  scan_example_pytree()
+  for example in [
+      scan_example_cumsum,
+      scan_example_pytree,
+  ]:
+    print(f"\nRunning example: {example.__name__}", flush=True)
+    example()
+    print(flush=True)

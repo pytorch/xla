@@ -243,6 +243,9 @@ function run_xla_op_tests3 {
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
   run_test "$CDIR/test_pallas.py"
   run_xla_ir_hlo_debug run_test "$CDIR/test_user_computation_debug_cache.py"
+  
+  # Test examples
+  run_test "$CDIR/../examples/scan/scan_examples.py"
 
   # CUDA tests
   if [ -x "$(command -v nvidia-smi)" ]; then
