@@ -20,6 +20,11 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Dump Machine Details
+      shell: bash
+      run: |
+        nproc
+        free --human --total
     # See https://github.com/actions/checkout/issues/1014#issuecomment-1906802802
     - name: Clean up workspace
       shell: bash
