@@ -52,52 +52,52 @@ nightly_builds = [
 versioned_builds = [
   # Remove libtpu from PyPI builds, pre-C++11 ABI builds
   {
-    git_tag         = "v2.6.0-rc9"
-    package_version = "2.6.0-rc9"
-    pytorch_git_rev = "v2.6.0-rc7"
+    git_tag         = "v2.6.0-rc10"
+    package_version = "2.6.0-rc10"
+    pytorch_git_rev = "v2.6.0-rc9"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.6.0-rc9"
-    package_version = "2.6.0-rc9"
-    pytorch_git_rev = "v2.6.0-rc7"
+    git_tag         = "v2.6.0-rc10"
+    package_version = "2.6.0-rc10"
+    pytorch_git_rev = "v2.6.0-rc9"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.6.0-rc9"
-    package_version = "2.6.0-rc9"
-    pytorch_git_rev = "v2.6.0-rc7"
+    git_tag         = "v2.6.0-rc10"
+    package_version = "2.6.0-rc10"
+    pytorch_git_rev = "v2.6.0-rc9"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
   },
   # Remove libtpu from PyPI builds, C++11 ABI builds
   {
-    git_tag         = "v2.6.0-rc9"
-    package_version = "2.6.0-rc9"
-    pytorch_git_rev = "v2.6.0-rc7"
+    git_tag         = "v2.6.0-rc10"
+    package_version = "2.6.0-rc10"
+    pytorch_git_rev = "v2.6.0-rc9"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
     cxx11_abi       = "1"
   },
   {
-    git_tag         = "v2.6.0-rc9"
-    package_version = "2.6.0-rc9"
-    pytorch_git_rev = "v2.6.0-rc7"
+    git_tag         = "v2.6.0-rc10"
+    package_version = "2.6.0-rc10"
+    pytorch_git_rev = "v2.6.0-rc9"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
     cxx11_abi       = "1"
   },
   {
-    git_tag         = "v2.6.0-rc9"
-    package_version = "2.6.0-rc9"
-    pytorch_git_rev = "v2.6.0-rc7"
+    git_tag         = "v2.6.0-rc10"
+    package_version = "2.6.0-rc10"
+    pytorch_git_rev = "v2.6.0-rc9"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
@@ -105,9 +105,9 @@ versioned_builds = [
   }, 
   # Bundle libtpu for Kaggle
   {
-    git_tag         = "v2.6.0-rc9"
-    package_version = "2.6.0-rc9+libtpu"
-    pytorch_git_rev = "v2.6.0-rc7"
+    git_tag         = "v2.6.0-rc10"
+    package_version = "2.6.0-rc10+libtpu"
+    pytorch_git_rev = "v2.6.0-rc9"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "1"
