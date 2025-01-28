@@ -27,37 +27,10 @@ build --config=short_logs
 # PyTorch/XLA uses exceptions to communicate with Python.
 build --copt=-fexceptions
 
-# Force GCC because clang/bazel has issues.
-build --action_env=CC=gcc
-build --action_env=CXX=g++
-build --spawn_strategy=standalone
+build --spawn_strategy=sandboxed
 
-###########################################################################
-
-build:clang --action_env=CC=/usr/bin/clang-17
-build:clang --action_env=CXX=/usr/bin/clang++-17
-
-# clang requires the sandbox mode. Without this, `bazel build` generates an
-# error like:
-#
-# ERROR: .../external/llvm-project/llvm/BUILD.bazel:2006:11: Compiling
-# llvm/lib/CodeGenTypes/LowLevelType.cpp failed: undeclared inclusion(s) in
-# rule '@llvm-project//llvm:CodeGenTypes':
-# this rule is missing dependency declarations for the following files
-# included by 'llvm/lib/CodeGenTypes/LowLevelType.cpp':
-#   'bazel-out/k8-opt/bin/external/llvm-project/llvm/config.cppmap'
-#   'bazel-out/k8-opt/bin/external/llvm-project/llvm/Demangle.cppmap'
-#
-# The sandbox mode requires all source files to be readable by others, as
-# inside the docker we build PyTorch/XLA as root, not the original user who
-# created the files. You can ensure this by either:
-# 1. `umask 022` before running the `git clone` commands, or
-# 2. after running the `git clone` commands, go to the workspace directory
-#    and run `chmod -R o+rX .`. The X (capital X) is important: it gives
-#    execute permission to directories, and to files only if they already have
-#    execute permission for the owner (or group or others). This is generally
-#    safer than o+rx.
-build:clang --spawn_strategy=sandboxed
+build --action_env=CC=clang
+build --action_env=CXX=clang++
 
 ###########################################################################
 
@@ -82,7 +55,21 @@ build:cuda --repo_env TF_NEED_CUDA=1
 build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain
 build:cuda --@local_config_cuda//:enable_cuda
 build:cuda --define=xla_python_enable_gpu=true
+# Define XLA_CUDA for C++ files.
 build:cuda --cxxopt=-DXLA_CUDA=1
+
+# Default hermetic CUDA and CUDNN versions.
+build:cuda --repo_env HERMETIC_CUDA_COMPUTE_CAPABILITIES="sm_50,sm_60,sm_70,sm_80,compute_90"
+build:cuda --repo_env HERMETIC_CUDA_VERSION="12.3.2"
+build:cuda --repo_env HERMETIC_CUDNN_VERSION="9.1.1"
+
+# Link NCCL statically, as it was with the non-hermetic build.
+build:cuda --repo_env TF_NCCL_USE_STUB=0
+
+# Use NVCC for compiling CUDA.
+build:cuda --action_env TF_NVCC_CLANG=1
+build:cuda --@local_config_cuda//:cuda_compiler=nvcc
+build:cuda --@local_config_cuda//cuda:include_cuda_libs=false
 
 # Coverage with cuda/gcc/nvcc requires manually setting coverage flags.
 coverage:cuda --per_file_copt=third_party/.*,torch_xla/.*@--coverage
@@ -251,8 +238,10 @@ build:linux --copt="-Werror=unused-result"
 build:linux --copt="-Wswitch"
 build:linux --copt="-Werror=switch"
 # Required for building with clang
-build:linux --copt="-Wno-error=unused-but-set-variable"
+build:linux --copt="-Qunused-arguments"
+build:linux --copt="-Wno-unused-command-line-argument"
 
 # Only include debug info for files not under XLA.
 build:dbg -c dbg
+build:dbg --copt=-gdwarf-4
 build:dbg --per_file_copt=external/xla/.*@-g0,-DNDEBUG
