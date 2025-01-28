@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 import math
 
 import torch
@@ -201,7 +200,7 @@ class DecoderLayer(nn.Module):
 class DecoderOnlyModel(nn.Module):
 
   def __init__(self, config: DecoderOnlyConfig):
-    super(DecoderOnlyModel, self).__init__()
+    super().__init__()
     self.vocab_size = config.vocab_size
     self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size)
     self.layers = nn.ModuleList(
@@ -211,7 +210,7 @@ class DecoderOnlyModel(nn.Module):
 
   def forward(
       self,
-      input_ids: torch.LongTensor = None,
+      input_ids: torch.LongTensor,
   ) -> torch.Tensor:
     inputs_embeds = self.embed_tokens(input_ids)
 
@@ -219,10 +218,14 @@ class DecoderOnlyModel(nn.Module):
     hidden_states = inputs_embeds
 
     # decoder layers
-    for idx, decoder_layer in enumerate(self.layers):
-      layer_outputs = decoder_layer(hidden_states,)
-      hidden_states = layer_outputs
+    hidden_states = self.run_decoder_layers(hidden_states)
 
     hidden_states = self.norm(hidden_states)
+
     # [B, S, H] -> [B, S, V]
     return self.output(hidden_states)
+
+  def run_decoder_layers(self, hidden_states):
+    for decoder_layer in self.layers:
+      hidden_states = decoder_layer(hidden_states)
+    return hidden_states
