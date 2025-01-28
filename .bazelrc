@@ -24,10 +24,10 @@ build -c opt
 
 build --config=short_logs
 
-# Force GCC because clang/bazel has issues.
-build --action_env=CC=gcc
-build --action_env=CXX=g++
-build --spawn_strategy=standalone
+build --repo_env=CC=/usr/bin/clang-17
+build --repo_env=CXX=/usr/bin/clang-17
+build --repo_env=BAZEL_COMPILER=/usr/bin/clang-17
+# build --spawn_strategy=standalone
 
 ###########################################################################
 
@@ -47,12 +47,30 @@ build:native_arch_posix --host_copt=-march=native
 build:mkl_open_source_only --define=tensorflow_mkldnn_contraction_kernel=1
 
 build:cuda --repo_env TF_NEED_CUDA=1
+build:cuda --repo_env TF_NCCL_USE_STUB=1
 # "sm" means we emit only cubin, which is forward compatible within a GPU generation.
 # "compute" means we emit both cubin and PTX, which is larger but also forward compatible to future GPU generations.
 build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain
 build:cuda --@local_config_cuda//:enable_cuda
 build:cuda --define=xla_python_enable_gpu=true
+# Define XLA_CUDA for C++ files.
 build:cuda --cxxopt=-DXLA_CUDA=1
+
+# Default hermetic CUDA and CUDNN versions.
+build:cuda --repo_env HERMETIC_CUDA_COMPUTE_CAPABILITIES="sm_50,sm_60,sm_70,sm_80,compute_90"
+build:cuda --repo_env HERMETIC_CUDA_VERSION="12.3.2"
+build:cuda --repo_env HERMETIC_CUDNN_VERSION="9.1.1"
+
+# build:cuda --@local_config_cuda//:cuda_compiler=clang-17
+build:cuda --action_env TF_NVCC_CLANG=1
+build:cuda --action_env CLANG_COMPILER_PATH=/usr/bin/clang-17
+build:cuda --action_env CLANG_CUDA_COMPILER_PATH=/usr/bin/clang-17
+build:cuda --@local_config_cuda//:cuda_compiler=nvcc
+
+build:cuda --copt=-Qunused-arguments
+build:cuda --copt=-Wno-unused-command-line-argument
+build:cuda --@local_config_cuda//cuda:include_cuda_libs=false
+build:cuda --verbose_failures
 
 # Coverage with cuda/gcc/nvcc requires manually setting coverage flags.
 coverage:cuda --per_file_copt=third_party/.*,torch_xla/.*@--coverage
@@ -73,6 +91,8 @@ build:tpu --define=with_tpu_support=true
 # Run tests serially with TPU and GPU (only 1 device is available).
 test:tpu --local_test_jobs=1
 test:cuda --local_test_jobs=1
+
+test:cuda --@local_config_cuda//cuda:include_cuda_libs=true
 
 #########################################################################
 # RBE config options below.
@@ -221,7 +241,9 @@ build:linux --copt="-Werror=unused-result"
 build:linux --copt="-Wswitch"
 build:linux --copt="-Werror=switch"
 # Required for building with clang
-build:linux --copt="-Wno-error=unused-but-set-variable"
+build:linux --copt="-Wno-gnu-offsetof-extensions"
+build:linux --copt="-Wno-unused-command-line-argument"
+# build:linux --copt="-Wno-error=unused-but-set-variable"
 
 # Only include debug info for files not under XLA.
 build:dbg -c dbg
