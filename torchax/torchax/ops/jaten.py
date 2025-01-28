@@ -103,6 +103,9 @@ def op(*aten, **kwargs):
   torch.ops.aten.reshape,
 )
 def _aten_unsafe_view(x, shape):
+  if shape == [200, 30]:
+    breakpoint()
+  print('view', x.shape, shape)
   return jnp.reshape(x, shape)
 
 
@@ -378,9 +381,7 @@ def _aten_t(x):
 @op(torch.ops.aten.transpose)
 @op(torch.ops.aten.transpose_copy)
 def _aten_transpose(x, dim0, dim1):
-  shape = list(range(len(x.shape)))
-  shape[dim0], shape[dim1] = shape[dim1], shape[dim0]
-  return jnp.transpose(x, shape)
+  return jnp.swapaxes(x, dim0, dim1)
 
 
 @op(torch.ops.aten.triu)
@@ -792,7 +793,11 @@ def split_with_sizes(x, sizes, dim=0):
 @op(torch.ops.aten.permute)
 @op(torch.ops.aten.permute_copy)
 def permute(t, dims):
-  return jnp.transpose(t, dims)
+  print('before shape', t.shape)
+  print('dimsshape', dims)
+  res = jnp.transpose(t, dims)
+  print('after shape', res.shape)
+  return res
 
 
 @op(torch.ops.aten.unsqueeze)

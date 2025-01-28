@@ -414,3 +414,11 @@ def linalg_tensorsolve(A, b, dims=None):
   if A.shape[:b.ndim] != b.shape:
     b = jnp.reshape(b, A.shape[:b.ndim])
   return jnp.linalg.tensorsolve(A, b, axes=dims)
+
+
+@register_function(torch.nn.functional.linear)
+def functional_linear(self, weights, bias=None):
+  res = jnp.einsum("...a,ba->...b", self, weights)
+  if bias is not None:
+    res += bias
+  return res
