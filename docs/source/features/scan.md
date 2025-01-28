@@ -128,6 +128,61 @@ We are working on [improving tracing speed][retracing-issue]. This is less of a
 problem when your model is very large or has many layers, which are the situations 
 you would want to use `scan` anyways.
 
+## Compile time experiments
+
+To demonstrate the compile time savings, we'll train a simple decoder with many
+layers on a single TPU chip with for loops vs with `scan_layers`.
+
+- Run the for loop implementation:
+
+```sh
+❯ python3 examples/train_decoder_only_base.py \
+    --hidden-size 256 \
+    --num-layers 50 \
+    --num-attention-heads 4 \
+    --num-key-value-heads 2 \
+    --intermediate-size 2048 \
+    --num-steps 5 \
+    --print-metrics
+
+...
+
+Metric: CompileTime
+  TotalSamples: 3
+  Accumulator: 02m57s694ms418.595us
+  ValueRate: 02s112ms586.097us / second
+  Rate: 0.054285 / second
+  Percentiles: 1%=023ms113.470us; 5%=023ms113.470us; 10%=023ms113.470us; 20%=023ms113.470us; 50%=54s644ms733.284us; 80%=01m03s028ms571.841us; 90%=01m03s028ms571.841us; 95%=01m03s028ms571.841us;
+  99%=01m03s028ms571.841us
+```
+
+- Run the `scan_layers` implementation:
+
+```sh
+❯ python3 examples/train_decoder_only_base.py \
+    scan.decoder_with_scan.DecoderWithScan \
+    --hidden-size 256 \
+    --num-layers 50 \
+    --num-attention-heads 4 \
+    --num-key-value-heads 2 \
+    --intermediate-size 2048 \
+    --num-steps 5 \
+    --print-metrics
+
+...
+
+Metric: CompileTime
+  TotalSamples: 3
+  Accumulator: 29s996ms941.409us
+  ValueRate: 02s529ms591.388us / second
+  Rate: 0.158152 / second
+  Percentiles: 1%=018ms636.571us; 5%=018ms636.571us; 10%=018ms636.571us; 20%=018ms636.571us; 50%=11s983ms003.171us; 80%=18s995ms301.667us; 90%=18s995ms301.667us; 95%=18s995ms301.667us;
+  99%=18s995ms301.667us
+```
+
+We can see that the maximum compile time dropped from `1m03s` to `19s` by
+switching to `scan_layers`.
+
 ## References
 
 See https://github.com/pytorch/xla/issues/7253 for the design of `scan` and

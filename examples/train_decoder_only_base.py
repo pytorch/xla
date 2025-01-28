@@ -16,8 +16,11 @@ import torch.nn as nn
 
 class TrainDecoderOnlyBase:
 
-  def __init__(self, decoder_cls=DecoderOnlyModel, num_steps: int = 200):
-    self.config = DecoderOnlyConfig()
+  def __init__(self,
+               decoder_cls=DecoderOnlyModel,
+               num_steps: int = 200,
+               config=DecoderOnlyConfig()):
+    self.config = config
     if xr.device_type() == 'NEURON':
       self.batch_size = 4
     else:
@@ -93,6 +96,40 @@ if __name__ == '__main__':
       type=int,
       default=200,
       help="Number of steps to train the model for")
+  parser.add_argument(
+      "--hidden-size",
+      type=int,
+      default=1024,
+      help="Hidden size of the model, aka the embedding size")
+  parser.add_argument(
+      "--num-layers",
+      type=int,
+      default=2,
+      help="Number of decoder layers in the model",
+  )
+  parser.add_argument(
+      "--num-attention-heads",
+      type=int,
+      default=8,
+      help="Number of attention heads in the model",
+  )
+  parser.add_argument(
+      "--num-key-value-heads",
+      type=int,
+      default=4,
+      help="Number of key value heads in the model",
+  )
+  parser.add_argument(
+      "--intermediate-size",
+      type=int,
+      default=32 * 1024,
+      help="Intermediate size of the model, aka the up-projection output size",
+  )
+  parser.add_argument(
+      "--print-metrics",
+      action="store_true",
+      help="Print torch_xla metrics at the end of the training",
+  )
   args = parser.parse_args()
 
   # Seed the RNG for deterministic results
@@ -106,8 +143,20 @@ if __name__ == '__main__':
     module, cls_name = args.cls_name.rsplit('.', 1)
     decoder_cls = getattr(__import__(module, fromlist=[cls_name]), cls_name)
 
+  # Initialize config
+  config = DecoderOnlyConfig(
+      hidden_size=args.hidden_size,
+      num_hidden_layers=args.num_layers,
+      num_attention_heads=args.num_attention_heads,
+      num_key_value_heads=args.num_key_value_heads,
+      intermediate_size=args.intermediate_size,
+  )
+
   params = []
   if decoder_cls is not None:
     params.append(decoder_cls)
-  base = TrainDecoderOnlyBase(*params, num_steps=args.num_steps)
+  base = TrainDecoderOnlyBase(*params, num_steps=args.num_steps, config=config)
   base.start_training()
+
+  if args.print_metrics:
+    print(torch_xla._XLAC._xla_metrics_report())
