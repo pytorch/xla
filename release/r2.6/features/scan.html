@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Custom Hardware Plugins &mdash; PyTorch/XLA master documentation</title>
+  <title>Guide for using scan and scan_layers &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -31,8 +31,8 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Bazel in Pytorch/XLA" href="bazel.html" />
-    <link rel="prev" title="OP Lowering Guide" href="op_lowering.html" />
+    <link rel="next" title="Automatic Mixed Precision" href="../perf/amp.html" />
+    <link rel="prev" title="Custom GPU Kernels via Triton" href="triton.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -329,11 +329,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
 <ul>
@@ -351,12 +351,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="configure-environment.html">Configure a development environment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="codegen_migration.html">Codegen migration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="op_lowering.html">OP Lowering Guide</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Custom Hardware Plugins</a></li>
-<li class="toctree-l1"><a class="reference internal" href="bazel.html">Bazel in Pytorch/XLA</a></li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/configure-environment.html">Configure a development environment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/codegen_migration.html">Codegen migration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/op_lowering.html">OP Lowering Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/plugins.html">Custom Hardware Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contribute/bazel.html">Bazel in Pytorch/XLA</a></li>
 </ul>
 
             
@@ -397,13 +397,13 @@
       </li>
 
         
-      <li>Custom Hardware Plugins</li>
+      <li>Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/contribute/plugins.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/features/scan.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -433,92 +433,182 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="custom-hardware-plugins">
-<h1>Custom Hardware Plugins<a class="headerlink" href="#custom-hardware-plugins" title="Permalink to this heading">¶</a></h1>
-<p>PyTorch/XLA supports custom hardware through OpenXLA’s PJRT C API. The
-PyTorch/XLA team direclty supports plugins for Cloud TPU (<code class="docutils literal notranslate"><span class="pre">libtpu</span></code>) and
-GPU (<a class="reference external" href="https://github.com/openxla/xla/tree/main/xla/pjrt/gpu">OpenXLA</a>).
-The same plugins may also be used by JAX and TF.</p>
-<div class="section" id="implementing-a-pjrt-plugin">
-<h2>Implementing a PJRT Plugin<a class="headerlink" href="#implementing-a-pjrt-plugin" title="Permalink to this heading">¶</a></h2>
-<p>PJRT C API plugins may be closed-source or open-source. They contain two
-parts:</p>
-<ol class="arabic simple">
-<li><p>Binary exposing a PJRT C API implementation. This part can be shared
-with JAX and TensorFlow.</p></li>
-<li><p>Python package containing the above binary, as well as an
-implementation of our <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code> Python interface, which handles
-additional setup.</p></li>
-</ol>
-<div class="section" id="pjrt-c-api-implementation">
-<h3>PJRT C API Implementation<a class="headerlink" href="#pjrt-c-api-implementation" title="Permalink to this heading">¶</a></h3>
-<p>In short, you must implement a
-<a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/pjrt_client.h">PjRtClient</a>
-containing an XLA compiler and runtime for your device. The PJRT C++
-interface is mirrored in C in the
-<a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api.h">PJRT_Api</a>.
-The most straightforward option is to implement your plugin in C++ and
-<a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_wrapper_impl.h">wrap
-it</a>
-as a C API implementation. This process is explained in detail in
-<a class="reference external" href="https://openxla.org/xla/pjrt_integration#how_to_integrate_with_pjrt">OpenXLA’s
-documentation</a>.</p>
-<p>For a concrete example, see the <a class="reference external" href="https://github.com/openxla/xla/blob/main/xla/pjrt/c/pjrt_c_api_cpu_internal.cc">example
-implementation</a>.</p>
+  <div class="section" id="guide-for-using-scan-and-scan-layers">
+<h1>Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code><a class="headerlink" href="#guide-for-using-scan-and-scan-layers" title="Permalink to this heading">¶</a></h1>
+<p>This is a guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> in PyTorch/XLA.</p>
+<div class="section" id="when-should-you-use-this">
+<h2>When should you use this<a class="headerlink" href="#when-should-you-use-this" title="Permalink to this heading">¶</a></h2>
+<p>You should consider using <cite>``scan_layers`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py</a>&gt;`_ if you have a model with
+many homogenous (same shape, same logic) layers, for example LLMs. These models
+can be slow to compile. <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> is a drop-in replacement for a for loop over
+homogenous layers, such as a bunch of decoder layers. <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> traces the
+first layer and reuses the compiled result for all subsequent layers, significantly
+reducing the model compile time.</p>
+<p><cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ on the other hand is a lower level higher-order-op modeled after
+<cite>``jax.lax.scan`</cite> &lt;<a class="reference external" href="https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html">https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html</a>&gt;`_. Its primary purpose is to help implement
+<code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> under the hood. However, you may find it useful if you would like
+to program some sort of loop logic where the loop itself has a first-class
+representation in the compiler (specifically, an XLA <code class="docutils literal notranslate"><span class="pre">While</span></code> op).</p>
 </div>
-<div class="section" id="pytorch-xla-plugin-package">
-<h3>PyTorch/XLA Plugin Package<a class="headerlink" href="#pytorch-xla-plugin-package" title="Permalink to this heading">¶</a></h3>
-<p>At this point, you should have a functional PJRT plugin binary, which
-you can test with the placeholder <code class="docutils literal notranslate"><span class="pre">LIBRARY</span></code> device type. For example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=LIBRARY PJRT_LIBRARY_PATH=/path/to/your/plugin.so python
-&gt;&gt;&gt; import torch_xla
-&gt;&gt;&gt; torch_xla.devices()
-# Assuming there are 4 devices. Your hardware may differ.
-[device(type=&#39;xla&#39;, index=0), device(type=&#39;xla&#39;, index=1), device(type=&#39;xla&#39;, index=2), device(type=&#39;xla&#39;, index=3)]
+<div class="section" id="scan-layers-example">
+<h2><code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> example<a class="headerlink" href="#scan-layers-example" title="Permalink to this heading">¶</a></h2>
+<p>Typically, a transformer model passes the input embedding through a sequence of
+homogenous decoder layers like the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_decoder_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">decoder_layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+    <span class="n">hidden_states</span> <span class="o">=</span> <span class="n">decoder_layer</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">hidden_states</span>
 </pre></div>
 </div>
-<p>To register your device type automatically for users as well as to
-handle extra setup for e.g. multiprocessing, you may implement the
-<code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code> Python API. PyTorch/XLA plugin packages contain two key
-components:</p>
-<ol class="arabic simple">
-<li><p>An implementation of <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code> that (at the very least)
-provides the path to your plugin binary. For example:</p></li>
-</ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">CpuPlugin</span><span class="p">(</span><span class="n">plugins</span><span class="o">.</span><span class="n">DevicePlugin</span><span class="p">):</span>
+<p>When this function is lowered into an HLO graph, the for loop is unrolled into a
+flat list of operations, resulting in long compile times. To reduce compile
+times, you can replace the for loop with a call to <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>, as shown in
+<cite>``decoder_with_scan.py`</cite> &lt;/examples/scan/decoder_with_scan.py&gt;`_:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_decoder_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">):</span>
+  <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.scan_layers</span><span class="w"> </span><span class="kn">import</span> <span class="n">scan_layers</span>
+  <span class="k">return</span> <span class="n">scan_layers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can train this decoder model by running the following command from the root
+directory of a <code class="docutils literal notranslate"><span class="pre">pytorch/xla</span></code> source checkout.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>examples/train_decoder_only_base.py<span class="w"> </span>scan.decoder_with_scan.DecoderWithScan
+</pre></div>
+</div>
+</div>
+<div class="section" id="scan-example">
+<h2><code class="docutils literal notranslate"><span class="pre">scan</span></code> example<a class="headerlink" href="#scan-example" title="Permalink to this heading">¶</a></h2>
+<p><cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ takes a combine function and applies that function over the leading
+dimension of tensors while carrying along state:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">scan</span><span class="p">(</span>
+    <span class="n">fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Carry</span><span class="p">,</span> <span class="n">X</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Carry</span><span class="p">,</span> <span class="n">Y</span><span class="p">]],</span>
+    <span class="n">init</span><span class="p">:</span> <span class="n">Carry</span><span class="p">,</span>
+    <span class="n">xs</span><span class="p">:</span> <span class="n">X</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Carry</span><span class="p">,</span> <span class="n">Y</span><span class="p">]:</span>
+  <span class="o">...</span>
+</pre></div>
+</div>
+<p>You can use it to loop over the leading dimension of tensors efficiently. If <code class="docutils literal notranslate"><span class="pre">xs</span></code>
+is a single tensor, this function is roughly equal to the following Python code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">scan</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">init</span><span class="p">,</span> <span class="n">xs</span><span class="p">):</span>
+  <span class="n">ys</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">carry</span> <span class="o">=</span> <span class="n">init</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">len</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">xs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">))):</span>
+    <span class="n">carry</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">carry</span><span class="p">,</span> <span class="n">xs</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">ys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">carry</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">ys</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Under the hood, <code class="docutils literal notranslate"><span class="pre">scan</span></code> is implemented much more efficiently by lowering the loop
+into an XLA <code class="docutils literal notranslate"><span class="pre">While</span></code> operation. This ensures that only one iteration of the loop
+is compiled by XLA.</p>
+<p><cite>``scan_examples.py`</cite> &lt;/examples/scan/scan_examples.py&gt;`_ contains some example code showing how to use
+<code class="docutils literal notranslate"><span class="pre">scan</span></code>. In that file, <code class="docutils literal notranslate"><span class="pre">scan_example_cumsum</span></code> uses <code class="docutils literal notranslate"><span class="pre">scan</span></code> to implement a cumulative
+sum. <code class="docutils literal notranslate"><span class="pre">scan_example_pytree</span></code> demonstrates how to pass PyTrees to <code class="docutils literal notranslate"><span class="pre">scan</span></code>.</p>
+<p>You can run the examples with:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>examples/scan/scan_examples.py
+</pre></div>
+</div>
+<p>The output should look something like the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Running</span> <span class="n">example</span><span class="p">:</span> <span class="n">scan_example_cumsum</span>
+<span class="n">Final</span> <span class="nb">sum</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">6.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
+<span class="n">History</span> <span class="n">of</span> <span class="n">sums</span> <span class="n">tensor</span><span class="p">([[</span><span class="mf">1.</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">3.</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">6.</span><span class="p">]],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
 
-  <span class="k">def</span><span class="w"> </span><span class="nf">library_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s1">&#39;lib&#39;</span><span class="p">,</span> <span class="s1">&#39;pjrt_c_api_cpu_plugin.so&#39;</span><span class="p">)</span>
+
+<span class="n">Running</span> <span class="n">example</span><span class="p">:</span> <span class="n">scan_example_pytree</span>
+<span class="n">Final</span> <span class="n">carry</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;sum&#39;</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">15.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">),</span> <span class="s1">&#39;count&#39;</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">5.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)}</span>
+<span class="n">Means</span> <span class="n">over</span> <span class="n">time</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([[</span><span class="mf">1.0000</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">1.5000</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">2.0000</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">2.5000</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">3.0000</span><span class="p">]],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<ol class="arabic simple">
-<li><p>A <code class="docutils literal notranslate"><span class="pre">torch_xla.plugins</span></code> <a class="reference external" href="https://setuptools.pypa.io/en/latest/userguide/entry_point.html">entry
-point</a>
-that identifies your <code class="docutils literal notranslate"><span class="pre">DevicePlugin</span></code>. For exmaple, to register the
-<code class="docutils literal notranslate"><span class="pre">EXAMPLE</span></code> device type in a <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>:</p></li>
-</ol>
-<div class="highlight-{=html} notranslate"><div class="highlight"><pre><span></span>&lt;!-- --&gt;
+</div>
+<div class="section" id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this heading">¶</a></h2>
+<div class="section" id="aotautograd-compatibility-requirement">
+<h3>AOTAutograd compatibility requirement<a class="headerlink" href="#aotautograd-compatibility-requirement" title="Permalink to this heading">¶</a></h3>
+<p>The functions/modules passed to <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> must be AOTAutograd
+traceable. In particular, as of PyTorch/XLA 2.6, <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> cannot
+trace functions with custom Pallas kernels. That means if your decoder uses,
+for example flash attention, then it’s incompatible with <code class="docutils literal notranslate"><span class="pre">scan</span></code>. We are working on
+<a class="reference external" href="https://github.com/pytorch/xla/issues/8633">supporting this important use case</a> in nightly and the next
+releases.</p>
+</div>
+<div class="section" id="aotautograd-overhead">
+<h3>AOTAutograd overhead<a class="headerlink" href="#aotautograd-overhead" title="Permalink to this heading">¶</a></h3>
+<p>Because <code class="docutils literal notranslate"><span class="pre">scan</span></code> uses AOTAutograd to figure out the backward pass of the input
+function/module on every iteration, it’s easy to become tracing bound compared to
+a for loop implementation. In fact, the  <code class="docutils literal notranslate"><span class="pre">train_decoder_only_base.py</span></code> example runs
+slower under <code class="docutils literal notranslate"><span class="pre">scan</span></code> than with for loop as of PyTorch/XLA 2.6 due to this overhead.
+We are working on <a class="reference external" href="https://github.com/pytorch/xla/issues/8632">improving tracing speed</a>. This is less of a
+problem when your model is very large or has many layers, which are the situations
+you would want to use <code class="docutils literal notranslate"><span class="pre">scan</span></code> anyways.</p>
+</div>
+</div>
+<div class="section" id="compile-time-experiments">
+<h2>Compile time experiments<a class="headerlink" href="#compile-time-experiments" title="Permalink to this heading">¶</a></h2>
+<p>To demonstrate the compile time savings, we’ll train a simple decoder with many
+layers on a single TPU chip with for loops vs with <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>.</p>
+<ul class="simple">
+<li><p>Run the for loop implementation:</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>❯<span class="w"> </span>python3<span class="w"> </span>examples/train_decoder_only_base.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--hidden-size<span class="w"> </span><span class="m">256</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-layers<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-attention-heads<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-key-value-heads<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--intermediate-size<span class="w"> </span><span class="m">2048</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-steps<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--print-metrics
+
+...
+
+Metric:<span class="w"> </span>CompileTime
+<span class="w">  </span>TotalSamples:<span class="w"> </span><span class="m">3</span>
+<span class="w">  </span>Accumulator:<span class="w"> </span>02m57s694ms418.595us
+<span class="w">  </span>ValueRate:<span class="w"> </span>02s112ms586.097us<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Rate:<span class="w"> </span><span class="m">0</span>.054285<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Percentiles:<span class="w"> </span><span class="m">1</span>%<span class="o">=</span>023ms113.470us<span class="p">;</span><span class="w"> </span><span class="m">5</span>%<span class="o">=</span>023ms113.470us<span class="p">;</span><span class="w"> </span><span class="m">10</span>%<span class="o">=</span>023ms113.470us<span class="p">;</span><span class="w"> </span><span class="m">20</span>%<span class="o">=</span>023ms113.470us<span class="p">;</span><span class="w"> </span><span class="m">50</span>%<span class="o">=</span>54s644ms733.284us<span class="p">;</span><span class="w"> </span><span class="m">80</span>%<span class="o">=</span>01m03s028ms571.841us<span class="p">;</span><span class="w"> </span><span class="m">90</span>%<span class="o">=</span>01m03s028ms571.841us<span class="p">;</span><span class="w"> </span><span class="m">95</span>%<span class="o">=</span>01m03s028ms571.841us<span class="p">;</span>
+<span class="w">  </span><span class="m">99</span>%<span class="o">=</span>01m03s028ms571.841us
 </pre></div>
 </div>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">project</span><span class="o">.</span><span class="n">entry</span><span class="o">-</span><span class="n">points</span><span class="o">.</span><span class="s2">&quot;torch_xla.plugins&quot;</span><span class="p">]</span>
-<span class="n">example</span> <span class="o">=</span> <span class="s2">&quot;torch_xla_cpu_plugin:CpuPlugin&quot;</span>
+<ul class="simple">
+<li><p>Run the <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> implementation:</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>❯<span class="w"> </span>python3<span class="w"> </span>examples/train_decoder_only_base.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>scan.decoder_with_scan.DecoderWithScan<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--hidden-size<span class="w"> </span><span class="m">256</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-layers<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-attention-heads<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-key-value-heads<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--intermediate-size<span class="w"> </span><span class="m">2048</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-steps<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--print-metrics
+
+...
+
+Metric:<span class="w"> </span>CompileTime
+<span class="w">  </span>TotalSamples:<span class="w"> </span><span class="m">3</span>
+<span class="w">  </span>Accumulator:<span class="w"> </span>29s996ms941.409us
+<span class="w">  </span>ValueRate:<span class="w"> </span>02s529ms591.388us<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Rate:<span class="w"> </span><span class="m">0</span>.158152<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Percentiles:<span class="w"> </span><span class="m">1</span>%<span class="o">=</span>018ms636.571us<span class="p">;</span><span class="w"> </span><span class="m">5</span>%<span class="o">=</span>018ms636.571us<span class="p">;</span><span class="w"> </span><span class="m">10</span>%<span class="o">=</span>018ms636.571us<span class="p">;</span><span class="w"> </span><span class="m">20</span>%<span class="o">=</span>018ms636.571us<span class="p">;</span><span class="w"> </span><span class="m">50</span>%<span class="o">=</span>11s983ms003.171us<span class="p">;</span><span class="w"> </span><span class="m">80</span>%<span class="o">=</span>18s995ms301.667us<span class="p">;</span><span class="w"> </span><span class="m">90</span>%<span class="o">=</span>18s995ms301.667us<span class="p">;</span><span class="w"> </span><span class="m">95</span>%<span class="o">=</span>18s995ms301.667us<span class="p">;</span>
+<span class="w">  </span><span class="m">99</span>%<span class="o">=</span>18s995ms301.667us
 </pre></div>
 </div>
-<p>With your package installed, you may then use your <code class="docutils literal notranslate"><span class="pre">EXAMPLE</span></code> device
-directly:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ PJRT_DEVICE=EXAMPLE python
-&gt;&gt;&gt; import torch_xla
-&gt;&gt;&gt; torch_xla.devices()
-[device(type=&#39;xla&#39;, index=0), device(type=&#39;xla&#39;, index=1), device(type=&#39;xla&#39;, index=2), device(type=&#39;xla&#39;, index=3)]
-</pre></div>
+<p>We can see that the maximum compile time dropped from <code class="docutils literal notranslate"><span class="pre">1m03s</span></code> to <code class="docutils literal notranslate"><span class="pre">19s</span></code> by
+switching to <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>.</p>
 </div>
-<p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/plugins.py">DevicePlugin</a>
-provides additional extension points for multiprocess initialization and
-client options. The API is currently in an experimental state, but it is
-expected to become stable in a future release.</p>
-</div>
-</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this heading">¶</a></h2>
+<p>See <a class="reference external" href="https://github.com/pytorch/xla/issues/7253">https://github.com/pytorch/xla/issues/7253</a> for the design of <code class="docutils literal notranslate"><span class="pre">scan</span></code> and
+<code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> itself.</p>
+<p>See the function doc comments of <cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ and <cite>``scan_layers`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py</a>&gt;`_
+for details on how to use them.</p>
+<!-- xrefs --></div>
 </div>
 
 
@@ -529,10 +619,10 @@ expected to become stable in a future release.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="bazel.html" class="btn btn-neutral float-right" title="Bazel in Pytorch/XLA" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="../perf/amp.html" class="btn btn-neutral float-right" title="Automatic Mixed Precision" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="op_lowering.html" class="btn btn-neutral" title="OP Lowering Guide" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="triton.html" class="btn btn-neutral" title="Custom GPU Kernels via Triton" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -564,12 +654,17 @@ expected to become stable in a future release.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Custom Hardware Plugins</a><ul>
-<li><a class="reference internal" href="#implementing-a-pjrt-plugin">Implementing a PJRT Plugin</a><ul>
-<li><a class="reference internal" href="#pjrt-c-api-implementation">PJRT C API Implementation</a></li>
-<li><a class="reference internal" href="#pytorch-xla-plugin-package">PyTorch/XLA Plugin Package</a></li>
+<li><a class="reference internal" href="#">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a><ul>
+<li><a class="reference internal" href="#when-should-you-use-this">When should you use this</a></li>
+<li><a class="reference internal" href="#scan-layers-example"><code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> example</a></li>
+<li><a class="reference internal" href="#scan-example"><code class="docutils literal notranslate"><span class="pre">scan</span></code> example</a></li>
+<li><a class="reference internal" href="#limitations">Limitations</a><ul>
+<li><a class="reference internal" href="#aotautograd-compatibility-requirement">AOTAutograd compatibility requirement</a></li>
+<li><a class="reference internal" href="#aotautograd-overhead">AOTAutograd overhead</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#compile-time-experiments">Compile time experiments</a></li>
+<li><a class="reference internal" href="#references">References</a></li>
 </ul>
 </li>
 </ul>
