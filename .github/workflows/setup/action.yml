@@ -29,8 +29,8 @@ runs:
     - name: Setup CUDA environment
       shell: bash
       run: |
-        echo "PATH=$PATH:/usr/local/cuda-12.1/bin" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
+        echo "PATH=$PATH:/usr/local/cuda-12.3/bin" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.3/lib64" >> $GITHUB_ENV
       if: ${{ inputs.cuda }}
     - name: Setup gcloud
       shell: bash
