@@ -9,7 +9,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Fully Sharded Data Parallel in PyTorch XLA &mdash; PyTorch/XLA master documentation</title>
+  <title>Guide for using scan and scan_layers &mdash; PyTorch/XLA master documentation</title>
   
 
   
@@ -31,8 +31,8 @@
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Fully Sharded Data Parallel using SPMD" href="fsdpv2.html" />
-    <link rel="prev" title="Optimize memory utilization using while_loop" href="fori_loop.html" />
+    <link rel="next" title="Automatic Mixed Precision" href="../perf/amp.html" />
+    <link rel="prev" title="Custom GPU Kernels via Triton" href="triton.html" />
   <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -329,26 +329,26 @@
 <li class="toctree-l1"><a class="reference internal" href="../accelerators/gpu.html">Learn about GPUs</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">PyTorch/XLA features</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../features/pallas.html">Custom Kernels via Pallas</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/stablehlo.html">Torch Export to StableHLO</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/triton.html">Custom GPU Kernels via Triton</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../features/scan.html">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pallas.html">Custom Kernels via Pallas</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stablehlo.html">Torch Export to StableHLO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="triton.html">Custom GPU Kernels via Triton</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Improve Pytorch/XLA workload performance</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="amp.html">Automatic Mixed Precision</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="spmd_gpu.html">Running SPMD on GPU</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ddp.html">How to do DistributedDataParallel(DDP)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Fully Sharded Data Parallel in PyTorch XLA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
-<li class="toctree-l1"><a class="reference internal" href="quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../perf/amp.html">Automatic Mixed Precision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_basic.html">PyTorch/XLA SPMD User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_advanced.html">PyTorch/XLA SPMD advanced topics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_distributed_checkpoint.html">Distributed Checkpointing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/spmd_gpu.html">Running SPMD on GPU</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/ddp.html">How to do DistributedDataParallel(DDP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/dynamo.html">TorchDynamo integration in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fori_loop.html">Optimize memory utilization using <code class="docutils literal notranslate"><span class="pre">while_loop</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdp.html">Fully Sharded Data Parallel in PyTorch XLA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/fsdpv2.html">Fully Sharded Data Parallel using SPMD</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/quantized_ops.html">Quantized Operations for XLA (Experimental feature)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../perf/recompilation.html">Source of recompilations in Pytorch/XLA</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Contribute to Pytorch/XLA</span></p>
 <ul>
@@ -397,13 +397,13 @@
       </li>
 
         
-      <li>Fully Sharded Data Parallel in PyTorch XLA</li>
+      <li>Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></li>
     
     
       <li class="pytorch-breadcrumbs-aside">
         
             
-            <a href="../_sources/perf/fsdp.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+            <a href="../_sources/features/scan.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
           
         
       </li>
@@ -433,179 +433,182 @@
             <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
-  <div class="section" id="fully-sharded-data-parallel-in-pytorch-xla">
-<h1>Fully Sharded Data Parallel in PyTorch XLA<a class="headerlink" href="#fully-sharded-data-parallel-in-pytorch-xla" title="Permalink to this heading">¶</a></h1>
-<p>Fully Sharded Data Parallel (FSDP) in PyTorch XLA is a utility for
-sharding Module parameters across data-parallel workers.</p>
-<p>Example usage:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp</span><span class="w"> </span><span class="kn">import</span> <span class="n">XlaFullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDP</span>
+  <div class="section" id="guide-for-using-scan-and-scan-layers">
+<h1>Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code><a class="headerlink" href="#guide-for-using-scan-and-scan-layers" title="Permalink to this heading">¶</a></h1>
+<p>This is a guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> in PyTorch/XLA.</p>
+<div class="section" id="when-should-you-use-this">
+<h2>When should you use this<a class="headerlink" href="#when-should-you-use-this" title="Permalink to this heading">¶</a></h2>
+<p>You should consider using <cite>``scan_layers`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py</a>&gt;`_ if you have a model with
+many homogenous (same shape, same logic) layers, for example LLMs. These models
+can be slow to compile. <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> is a drop-in replacement for a for loop over
+homogenous layers, such as a bunch of decoder layers. <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> traces the
+first layer and reuses the compiled result for all subsequent layers, significantly
+reducing the model compile time.</p>
+<p><cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ on the other hand is a lower level higher-order-op modeled after
+<cite>``jax.lax.scan`</cite> &lt;<a class="reference external" href="https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html">https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html</a>&gt;`_. Its primary purpose is to help implement
+<code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> under the hood. However, you may find it useful if you would like
+to program some sort of loop logic where the loop itself has a first-class
+representation in the compiler (specifically, an XLA <code class="docutils literal notranslate"><span class="pre">While</span></code> op).</p>
+</div>
+<div class="section" id="scan-layers-example">
+<h2><code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> example<a class="headerlink" href="#scan-layers-example" title="Permalink to this heading">¶</a></h2>
+<p>Typically, a transformer model passes the input embedding through a sequence of
+homogenous decoder layers like the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_decoder_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">decoder_layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">:</span>
+    <span class="n">hidden_states</span> <span class="o">=</span> <span class="n">decoder_layer</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">hidden_states</span>
+</pre></div>
+</div>
+<p>When this function is lowered into an HLO graph, the for loop is unrolled into a
+flat list of operations, resulting in long compile times. To reduce compile
+times, you can replace the for loop with a call to <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>, as shown in
+<cite>``decoder_with_scan.py`</cite> &lt;/examples/scan/decoder_with_scan.py&gt;`_:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">run_decoder_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">):</span>
+  <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.scan_layers</span><span class="w"> </span><span class="kn">import</span> <span class="n">scan_layers</span>
+  <span class="k">return</span> <span class="n">scan_layers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">layers</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can train this decoder model by running the following command from the root
+directory of a <code class="docutils literal notranslate"><span class="pre">pytorch/xla</span></code> source checkout.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>examples/train_decoder_only_base.py<span class="w"> </span>scan.decoder_with_scan.DecoderWithScan
+</pre></div>
+</div>
+</div>
+<div class="section" id="scan-example">
+<h2><code class="docutils literal notranslate"><span class="pre">scan</span></code> example<a class="headerlink" href="#scan-example" title="Permalink to this heading">¶</a></h2>
+<p><cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ takes a combine function and applies that function over the leading
+dimension of tensors while carrying along state:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">scan</span><span class="p">(</span>
+    <span class="n">fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Carry</span><span class="p">,</span> <span class="n">X</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Carry</span><span class="p">,</span> <span class="n">Y</span><span class="p">]],</span>
+    <span class="n">init</span><span class="p">:</span> <span class="n">Carry</span><span class="p">,</span>
+    <span class="n">xs</span><span class="p">:</span> <span class="n">X</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Carry</span><span class="p">,</span> <span class="n">Y</span><span class="p">]:</span>
+  <span class="o">...</span>
+</pre></div>
+</div>
+<p>You can use it to loop over the leading dimension of tensors efficiently. If <code class="docutils literal notranslate"><span class="pre">xs</span></code>
+is a single tensor, this function is roughly equal to the following Python code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">scan</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">init</span><span class="p">,</span> <span class="n">xs</span><span class="p">):</span>
+  <span class="n">ys</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">carry</span> <span class="o">=</span> <span class="n">init</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">len</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">xs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">))):</span>
+    <span class="n">carry</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">carry</span><span class="p">,</span> <span class="n">xs</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">ys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">carry</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">ys</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Under the hood, <code class="docutils literal notranslate"><span class="pre">scan</span></code> is implemented much more efficiently by lowering the loop
+into an XLA <code class="docutils literal notranslate"><span class="pre">While</span></code> operation. This ensures that only one iteration of the loop
+is compiled by XLA.</p>
+<p><cite>``scan_examples.py`</cite> &lt;/examples/scan/scan_examples.py&gt;`_ contains some example code showing how to use
+<code class="docutils literal notranslate"><span class="pre">scan</span></code>. In that file, <code class="docutils literal notranslate"><span class="pre">scan_example_cumsum</span></code> uses <code class="docutils literal notranslate"><span class="pre">scan</span></code> to implement a cumulative
+sum. <code class="docutils literal notranslate"><span class="pre">scan_example_pytree</span></code> demonstrates how to pass PyTrees to <code class="docutils literal notranslate"><span class="pre">scan</span></code>.</p>
+<p>You can run the examples with:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>examples/scan/scan_examples.py
+</pre></div>
+</div>
+<p>The output should look something like the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Running</span> <span class="n">example</span><span class="p">:</span> <span class="n">scan_example_cumsum</span>
+<span class="n">Final</span> <span class="nb">sum</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">6.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
+<span class="n">History</span> <span class="n">of</span> <span class="n">sums</span> <span class="n">tensor</span><span class="p">([[</span><span class="mf">1.</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">3.</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">6.</span><span class="p">]],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">FSDP</span><span class="p">(</span><span class="n">my_module</span><span class="p">)</span>
-<span class="n">optim</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
-<span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-<span class="n">loss</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-<span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
-<span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+<span class="n">Running</span> <span class="n">example</span><span class="p">:</span> <span class="n">scan_example_pytree</span>
+<span class="n">Final</span> <span class="n">carry</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;sum&#39;</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">15.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">),</span> <span class="s1">&#39;count&#39;</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([</span><span class="mf">5.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)}</span>
+<span class="n">Means</span> <span class="n">over</span> <span class="n">time</span><span class="p">:</span> <span class="n">tensor</span><span class="p">([[</span><span class="mf">1.0000</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">1.5000</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">2.0000</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">2.5000</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">3.0000</span><span class="p">]],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla:0&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>It is also possible to shard individual layers separately and have an
-outer wrapper handle any leftover parameters.</p>
-<p>Notes: The <code class="docutils literal notranslate"><span class="pre">XlaFullyShardedDataParallel</span></code> class supports both the ZeRO-2
-optimizer (sharding gradients and optimizer states) and the ZeRO-3
-optimizer (sharding parameters, gradients, and optimizer states) in
-<a class="reference external" href="https://arxiv.org/abs/1910.02054">https://arxiv.org/abs/1910.02054</a>. The ZeRO-3 optimizer should be
-implemented via nested FSDP with <code class="docutils literal notranslate"><span class="pre">reshard_after_forward=True</span></code>. See
-<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> and
-<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_imagenet_fsdp.py</span></code> for an example. * For large
-models that cannot fit into a single TPU memory or the host CPU memory,
-one should interleave submodule construction with inner FSDP wrapping.
-See
-<a class="reference external" href="https://github.com/ronghanghu/vit_10b_fsdp_example/blob/master/run_vit_training.py">FSDPViTModel</a>
-for an example. a simple wrapper <code class="docutils literal notranslate"><span class="pre">checkpoint_module</span></code> is provided (based
-on <code class="docutils literal notranslate"><span class="pre">torch_xla.utils.checkpoint.checkpoint</span></code> from
-<a class="reference external" href="https://github.com/pytorch/xla/pull/3524">https://github.com/pytorch/xla/pull/3524</a>) to perform <a class="reference external" href="https://spell.ml/blog/gradient-checkpointing-pytorch-YGypLBAAACEAefHs">gradient
-checkpointing</a>
-over a given <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> instance. See
-<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> and
-<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_imagenet_fsdp.py</span></code> for an example. Auto-wrapping
-submodules: instead of manually nested FSDP wrapping, one can also
-specify an <code class="docutils literal notranslate"><span class="pre">auto_wrap_policy</span></code> argument to automatically wrap the
-submodules with inner FSDP. <code class="docutils literal notranslate"><span class="pre">size_based_auto_wrap_policy</span></code> in
-<code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.fsdp.wrap</span></code> is an example of <code class="docutils literal notranslate"><span class="pre">auto_wrap_policy</span></code>
-callable, this policy wraps layers with the number of parameters larger
-than 100M. <code class="docutils literal notranslate"><span class="pre">transformer_auto_wrap_policy</span></code> in
-<code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.fsdp.wrap</span></code> is an example of <code class="docutils literal notranslate"><span class="pre">auto_wrap_policy</span></code>
-callable for transformer-like model architectures.</p>
-<p>For example, to automatically wrap all <code class="docutils literal notranslate"><span class="pre">torch.nn.Conv2d</span></code> submodules with
-inner FSDP, one can use:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp.wrap</span><span class="w"> </span><span class="kn">import</span> <span class="n">transformer_auto_wrap_policy</span>
-<span class="n">auto_wrap_policy</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">transformer_auto_wrap_policy</span><span class="p">,</span> <span class="n">transformer_layer_cls</span><span class="o">=</span><span class="p">{</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">})</span>
-</pre></div>
 </div>
-<p>Additionally, one can also specify an <code class="docutils literal notranslate"><span class="pre">auto_wrapper_callable</span></code> argument
-to use a custom callable wrapper for the submodules (the default wrapper
-is just the <code class="docutils literal notranslate"><span class="pre">XlaFullyShardedDataParallel</span></code> class itself). For example,
-one can use the following to apply gradient checkpointing (i.e.
-activation checkpointing/rematerialization) to each auto-wrapped
-submodule.</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.fsdp</span><span class="w"> </span><span class="kn">import</span> <span class="n">checkpoint_module</span>
-<span class="n">auto_wrapper_callable</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">XlaFullyShardedDataParallel</span><span class="p">(</span>
-    <span class="n">checkpoint_module</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<div class="section" id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this heading">¶</a></h2>
+<div class="section" id="aotautograd-compatibility-requirement">
+<h3>AOTAutograd compatibility requirement<a class="headerlink" href="#aotautograd-compatibility-requirement" title="Permalink to this heading">¶</a></h3>
+<p>The functions/modules passed to <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> must be AOTAutograd
+traceable. In particular, as of PyTorch/XLA 2.6, <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> cannot
+trace functions with custom Pallas kernels. That means if your decoder uses,
+for example flash attention, then it’s incompatible with <code class="docutils literal notranslate"><span class="pre">scan</span></code>. We are working on
+<a class="reference external" href="https://github.com/pytorch/xla/issues/8633">supporting this important use case</a> in nightly and the next
+releases.</p>
+</div>
+<div class="section" id="aotautograd-overhead">
+<h3>AOTAutograd overhead<a class="headerlink" href="#aotautograd-overhead" title="Permalink to this heading">¶</a></h3>
+<p>Because <code class="docutils literal notranslate"><span class="pre">scan</span></code> uses AOTAutograd to figure out the backward pass of the input
+function/module on every iteration, it’s easy to become tracing bound compared to
+a for loop implementation. In fact, the  <code class="docutils literal notranslate"><span class="pre">train_decoder_only_base.py</span></code> example runs
+slower under <code class="docutils literal notranslate"><span class="pre">scan</span></code> than with for loop as of PyTorch/XLA 2.6 due to this overhead.
+We are working on <a class="reference external" href="https://github.com/pytorch/xla/issues/8632">improving tracing speed</a>. This is less of a
+problem when your model is very large or has many layers, which are the situations
+you would want to use <code class="docutils literal notranslate"><span class="pre">scan</span></code> anyways.</p>
+</div>
+</div>
+<div class="section" id="compile-time-experiments">
+<h2>Compile time experiments<a class="headerlink" href="#compile-time-experiments" title="Permalink to this heading">¶</a></h2>
+<p>To demonstrate the compile time savings, we’ll train a simple decoder with many
+layers on a single TPU chip with for loops vs with <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>.</p>
+<ul class="simple">
+<li><p>Run the for loop implementation:</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>❯<span class="w"> </span>python3<span class="w"> </span>examples/train_decoder_only_base.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--hidden-size<span class="w"> </span><span class="m">256</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-layers<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-attention-heads<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-key-value-heads<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--intermediate-size<span class="w"> </span><span class="m">2048</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-steps<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--print-metrics
+
+...
+
+Metric:<span class="w"> </span>CompileTime
+<span class="w">  </span>TotalSamples:<span class="w"> </span><span class="m">3</span>
+<span class="w">  </span>Accumulator:<span class="w"> </span>02m57s694ms418.595us
+<span class="w">  </span>ValueRate:<span class="w"> </span>02s112ms586.097us<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Rate:<span class="w"> </span><span class="m">0</span>.054285<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Percentiles:<span class="w"> </span><span class="m">1</span>%<span class="o">=</span>023ms113.470us<span class="p">;</span><span class="w"> </span><span class="m">5</span>%<span class="o">=</span>023ms113.470us<span class="p">;</span><span class="w"> </span><span class="m">10</span>%<span class="o">=</span>023ms113.470us<span class="p">;</span><span class="w"> </span><span class="m">20</span>%<span class="o">=</span>023ms113.470us<span class="p">;</span><span class="w"> </span><span class="m">50</span>%<span class="o">=</span>54s644ms733.284us<span class="p">;</span><span class="w"> </span><span class="m">80</span>%<span class="o">=</span>01m03s028ms571.841us<span class="p">;</span><span class="w"> </span><span class="m">90</span>%<span class="o">=</span>01m03s028ms571.841us<span class="p">;</span><span class="w"> </span><span class="m">95</span>%<span class="o">=</span>01m03s028ms571.841us<span class="p">;</span>
+<span class="w">  </span><span class="m">99</span>%<span class="o">=</span>01m03s028ms571.841us
 </pre></div>
 </div>
 <ul class="simple">
-<li><p>When stepping the optimizer, directly call <code class="docutils literal notranslate"><span class="pre">optimizer.step</span></code> and do
-not call <code class="docutils literal notranslate"><span class="pre">xm.optimizer_step</span></code>. The latter reduces the gradient across
-ranks, which is not needed for FSDP (where the parameters are
-already sharded).</p></li>
-<li><p>When saving model and optimizer checkpoints during training, each
-training process needs to save its own checkpoint of the (sharded)
-model and optimizer state dicts (use <code class="docutils literal notranslate"><span class="pre">master_only=False</span></code> and set
-different paths for each rank in <code class="docutils literal notranslate"><span class="pre">xm.save</span></code>). When resuming, it needs
-to load the checkpoint for the corresponding rank.</p></li>
-<li><p>Please also save <code class="docutils literal notranslate"><span class="pre">model.get_shard_metadata()</span></code> along with
-<code class="docutils literal notranslate"><span class="pre">model.state_dict()</span></code> as follows and use
-<code class="docutils literal notranslate"><span class="pre">consolidate_sharded_model_checkpoints</span></code> to stitch the sharded model
-checkpoints together into a full model state dict. See
-<code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> for an example.</p></li>
+<li><p>Run the <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> implementation:</p></li>
 </ul>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">ckpt</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
-    <span class="s1">&#39;shard_metadata&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">get_shard_metadata</span><span class="p">(),</span>
-    <span class="s1">&#39;optimizer&#39;</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
-<span class="p">}</span>
-<span class="n">ckpt_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;/tmp/rank-</span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span><span class="si">}</span><span class="s1">-of-</span><span class="si">{</span><span class="n">xr</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span><span class="si">}</span><span class="s1">.pth&#39;</span>
-<span class="n">xm</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">ckpt</span><span class="p">,</span> <span class="n">ckpt_path</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>❯<span class="w"> </span>python3<span class="w"> </span>examples/train_decoder_only_base.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>scan.decoder_with_scan.DecoderWithScan<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--hidden-size<span class="w"> </span><span class="m">256</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-layers<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-attention-heads<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-key-value-heads<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--intermediate-size<span class="w"> </span><span class="m">2048</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-steps<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--print-metrics
+
+...
+
+Metric:<span class="w"> </span>CompileTime
+<span class="w">  </span>TotalSamples:<span class="w"> </span><span class="m">3</span>
+<span class="w">  </span>Accumulator:<span class="w"> </span>29s996ms941.409us
+<span class="w">  </span>ValueRate:<span class="w"> </span>02s529ms591.388us<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Rate:<span class="w"> </span><span class="m">0</span>.158152<span class="w"> </span>/<span class="w"> </span>second
+<span class="w">  </span>Percentiles:<span class="w"> </span><span class="m">1</span>%<span class="o">=</span>018ms636.571us<span class="p">;</span><span class="w"> </span><span class="m">5</span>%<span class="o">=</span>018ms636.571us<span class="p">;</span><span class="w"> </span><span class="m">10</span>%<span class="o">=</span>018ms636.571us<span class="p">;</span><span class="w"> </span><span class="m">20</span>%<span class="o">=</span>018ms636.571us<span class="p">;</span><span class="w"> </span><span class="m">50</span>%<span class="o">=</span>11s983ms003.171us<span class="p">;</span><span class="w"> </span><span class="m">80</span>%<span class="o">=</span>18s995ms301.667us<span class="p">;</span><span class="w"> </span><span class="m">90</span>%<span class="o">=</span>18s995ms301.667us<span class="p">;</span><span class="w"> </span><span class="m">95</span>%<span class="o">=</span>18s995ms301.667us<span class="p">;</span>
+<span class="w">  </span><span class="m">99</span>%<span class="o">=</span>18s995ms301.667us
 </pre></div>
 </div>
-<ul class="simple">
-<li><p>The checkpoint consolidation script can also be launched from the
-command line as follows.</p></li>
-</ul>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># consolidate the saved checkpoints via command line tool</span>
-python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.fsdp.consolidate_sharded_ckpts<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ckpt_prefix<span class="w"> </span>/path/to/your_sharded_checkpoint_files<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ckpt_suffix<span class="w"> </span><span class="s2">&quot;_rank-*-of-*.pth&quot;</span>
-</pre></div>
+<p>We can see that the maximum compile time dropped from <code class="docutils literal notranslate"><span class="pre">1m03s</span></code> to <code class="docutils literal notranslate"><span class="pre">19s</span></code> by
+switching to <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code>.</p>
 </div>
-<p>The implementation of this class is largely inspired by and mostly
-follows the structure of <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> in
-<a class="reference external" href="https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html">https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html</a>. One of
-the biggest differences from <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> is
-that in XLA we don’t have explicit parameter storage, so here we resort
-to a different approach to free full parameters for ZeRO-3.</p>
-<div class="section" id="example-training-scripts-on-mnist-and-imagenet">
-<h2>Example training scripts on MNIST and ImageNet<a class="headerlink" href="#example-training-scripts-on-mnist-and-imagenet" title="Permalink to this heading">¶</a></h2>
-<ul class="simple">
-<li><p>Minimum example :
-<a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_resnet_fsdp_auto_wrap.py">examples/fsdp/train_resnet_fsdp_auto_wrap.py</a></p></li>
-<li><p>MNIST:
-<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py">test/test_train_mp_mnist_fsdp_with_ckpt.py</a>
-(it also tests checkpoint consolidation)</p></li>
-<li><p>ImageNet:
-<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py">test/test_train_mp_imagenet_fsdp.py</a></p></li>
-</ul>
-<div class="section" id="installation">
-<h3>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">¶</a></h3>
-<p>FSDP is available on PyTorch/XLA 1.12 release and newer nightly. Please
-refer to <a class="reference external" href="https://github.com/pytorch/xla#-available-images-and-wheels">https://github.com/pytorch/xla#-available-images-and-wheels</a>
-for installation guide.</p>
-</div>
-<div class="section" id="clone-pytorch-xla-repo">
-<h3>Clone PyTorch/XLA repo<a class="headerlink" href="#clone-pytorch-xla-repo" title="Permalink to this heading">¶</a></h3>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/pytorch/pytorch
-<span class="nb">cd</span><span class="w"> </span>pytorch/
-git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/pytorch/xla.git
-<span class="nb">cd</span><span class="w"> </span>~/
-</pre></div>
-</div>
-</div>
-<div class="section" id="train-mnist-on-v3-8-tpu">
-<h3>Train MNIST on v3-8 TPU<a class="headerlink" href="#train-mnist-on-v3-8-tpu" title="Permalink to this heading">¶</a></h3>
-<p>It gets around 98.9 accuracy for 2 epochs:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>~/pytorch/xla/test/test_train_mp_mnist_fsdp_with_ckpt.py<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--batch_size<span class="w"> </span><span class="m">16</span><span class="w"> </span>--drop_last<span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--use_nested_fsdp<span class="w"> </span>--use_gradient_checkpointing
-</pre></div>
-</div>
-<p>This script automatically tests checkpoint consolidation at the end. You
-can also manually consolidate the sharded checkpoints via</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># consolidate the saved checkpoints via command line tool</span>
-python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.fsdp.consolidate_sharded_ckpts<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ckpt_prefix<span class="w"> </span>/tmp/mnist-fsdp/final_ckpt<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--ckpt_suffix<span class="w"> </span><span class="s2">&quot;_rank-*-of-*.pth&quot;</span>
-</pre></div>
-</div>
-</div>
-<div class="section" id="train-imagenet-with-resnet-50-on-v3-8-tpu">
-<h3>Train ImageNet with ResNet-50 on v3-8 TPU<a class="headerlink" href="#train-imagenet-with-resnet-50-on-v3-8-tpu" title="Permalink to this heading">¶</a></h3>
-<p>It gets around 75.9 accuracy for 100 epochs; download
-<a class="reference external" href="https://github.com/pytorch/examples/tree/master/imagenet#requirements">ImageNet-1k</a>
-to <code class="docutils literal notranslate"><span class="pre">/datasets/imagenet-1k</span></code>:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>~/pytorch/xla/test/test_train_mp_imagenet_fsdp.py<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--datadir<span class="w"> </span>/datasets/imagenet-1k<span class="w"> </span>--drop_last<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--model<span class="w"> </span>resnet50<span class="w"> </span>--test_set_batch_size<span class="w"> </span><span class="m">64</span><span class="w"> </span>--eval_interval<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--lr<span class="w"> </span><span class="m">0</span>.4<span class="w"> </span>--batch_size<span class="w"> </span><span class="m">128</span><span class="w"> </span>--num_warmup_epochs<span class="w"> </span><span class="m">5</span><span class="w"> </span>--lr_scheduler_divide_every_n_epochs<span class="w"> </span><span class="m">30</span><span class="w"> </span>--lr_scheduler_divisor<span class="w"> </span><span class="m">10</span><span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--use_nested_fsdp
-</pre></div>
-</div>
-<p>You can also add <code class="docutils literal notranslate"><span class="pre">--use_gradient_checkpointing</span></code> (which needs to be used
-along with <code class="docutils literal notranslate"><span class="pre">--use_nested_fsdp</span></code> or <code class="docutils literal notranslate"><span class="pre">--auto_wrap_policy</span></code>) to apply
-gradient checkpointing on the residual blocks.</p>
-</div>
-</div>
-<div class="section" id="example-training-scripts-on-tpu-pod-with-10-billion-parameters">
-<h2>Example training scripts on TPU pod (with 10 billion parameters)<a class="headerlink" href="#example-training-scripts-on-tpu-pod-with-10-billion-parameters" title="Permalink to this heading">¶</a></h2>
-<p>To train large models that cannot fit into a single TPU, one should
-apply auto-wrap or manually wrap the submodules with inner FSDP when
-building the entire model to implement the ZeRO-3 algorithm.</p>
-<p>Please see <a class="reference external" href="https://github.com/ronghanghu/vit_10b_fsdp_example">https://github.com/ronghanghu/vit_10b_fsdp_example</a> for an
-example of sharded training of a Vision Transformer (ViT) model using
-this XLA FSDP PR.</p>
-</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this heading">¶</a></h2>
+<p>See <a class="reference external" href="https://github.com/pytorch/xla/issues/7253">https://github.com/pytorch/xla/issues/7253</a> for the design of <code class="docutils literal notranslate"><span class="pre">scan</span></code> and
+<code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> itself.</p>
+<p>See the function doc comments of <cite>``scan`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan.py</a>&gt;`_ and <cite>``scan_layers`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py">https://github.com/pytorch/xla/blob/master/torch_xla/experimental/scan_layers.py</a>&gt;`_
+for details on how to use them.</p>
+<!-- xrefs --></div>
 </div>
 
 
@@ -616,10 +619,10 @@ this XLA FSDP PR.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="fsdpv2.html" class="btn btn-neutral float-right" title="Fully Sharded Data Parallel using SPMD" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+        <a href="../perf/amp.html" class="btn btn-neutral float-right" title="Automatic Mixed Precision" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
       
       
-        <a href="fori_loop.html" class="btn btn-neutral" title="Optimize memory utilization using while_loop" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+        <a href="triton.html" class="btn btn-neutral" title="Custom GPU Kernels via Triton" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
       
     </div>
   
@@ -651,15 +654,17 @@ this XLA FSDP PR.</p>
           <div class="pytorch-right-menu" id="pytorch-right-menu">
             <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
               <ul>
-<li><a class="reference internal" href="#">Fully Sharded Data Parallel in PyTorch XLA</a><ul>
-<li><a class="reference internal" href="#example-training-scripts-on-mnist-and-imagenet">Example training scripts on MNIST and ImageNet</a><ul>
-<li><a class="reference internal" href="#installation">Installation</a></li>
-<li><a class="reference internal" href="#clone-pytorch-xla-repo">Clone PyTorch/XLA repo</a></li>
-<li><a class="reference internal" href="#train-mnist-on-v3-8-tpu">Train MNIST on v3-8 TPU</a></li>
-<li><a class="reference internal" href="#train-imagenet-with-resnet-50-on-v3-8-tpu">Train ImageNet with ResNet-50 on v3-8 TPU</a></li>
+<li><a class="reference internal" href="#">Guide for using <code class="docutils literal notranslate"><span class="pre">scan</span></code> and <code class="docutils literal notranslate"><span class="pre">scan_layers</span></code></a><ul>
+<li><a class="reference internal" href="#when-should-you-use-this">When should you use this</a></li>
+<li><a class="reference internal" href="#scan-layers-example"><code class="docutils literal notranslate"><span class="pre">scan_layers</span></code> example</a></li>
+<li><a class="reference internal" href="#scan-example"><code class="docutils literal notranslate"><span class="pre">scan</span></code> example</a></li>
+<li><a class="reference internal" href="#limitations">Limitations</a><ul>
+<li><a class="reference internal" href="#aotautograd-compatibility-requirement">AOTAutograd compatibility requirement</a></li>
+<li><a class="reference internal" href="#aotautograd-overhead">AOTAutograd overhead</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#example-training-scripts-on-tpu-pod-with-10-billion-parameters">Example training scripts on TPU pod (with 10 billion parameters)</a></li>
+<li><a class="reference internal" href="#compile-time-experiments">Compile time experiments</a></li>
+<li><a class="reference internal" href="#references">References</a></li>
 </ul>
 </li>
 </ul>
