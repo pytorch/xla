@@ -6,6 +6,19 @@ import torchax
 import torchax.tensor
 
 
+class SeqModel(torch.nn.Module):
+    """ Architecture is LLM generated """
+    def __init__(self):
+        super().__init__()
+        self.gru = torch.nn.GRU(20, 30, batch_first=True)
+        self.linear = torch.nn.Linear(30, 1)
+
+    def forward(self, x: torch.Tensor):
+        output, _ = self.gru(x)  #output, hidden state
+        output = self.linear(output)
+        return output
+
+
 class TestTorchFunctions(parameterized.TestCase):
 
   def setUp(self):
@@ -46,6 +59,20 @@ class TestTorchFunctions(parameterized.TestCase):
     with self.env:
       a = torch.randn((2,3))
       a.bernoulli_(0.4)
+
+  def test_rnn(self):
+    model = SeqModel()
+    x = torch.randn((2, 100, 20))
+    res = model(x)
+    self.env.config.debug_print_each_op = True
+    with self.env:
+      model.to('jax')
+      x = x.to('jax')
+      res2 = model(x)
+      print(res.shape, res2.shape)
+
+      self.assertEqual(res.shape, res2.shape)
+
 
 
 
