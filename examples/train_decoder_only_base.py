@@ -5,25 +5,28 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 
+import argparse
 import time
 import itertools
 
 import torch
 import torch_xla
-import torch.optim as optim
 import torch.nn as nn
 
 
-class TrainDecoderOnlyBase():
+class TrainDecoderOnlyBase:
 
-  def __init__(self):
-    self.config = DecoderOnlyConfig()
+  def __init__(self,
+               decoder_cls=DecoderOnlyModel,
+               num_steps: int = 200,
+               config=DecoderOnlyConfig()):
+    self.config = config
     if xr.device_type() == 'NEURON':
       self.batch_size = 4
     else:
       self.batch_size = 16
     self.seq_len = 512
-    self.num_steps = 200
+    self.num_steps = num_steps
     self.num_epochs = 1
     self.train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
     # For the purpose of this example, we are going to use fake data.
@@ -34,7 +37,7 @@ class TrainDecoderOnlyBase():
 
     self.device = torch_xla.device()
     self.train_device_loader = pl.MpDeviceLoader(train_loader, self.device)
-    self.model = DecoderOnlyModel(self.config).to(self.device)
+    self.model = decoder_cls(self.config).to(self.device)
     self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.0001)
     self.loss_fn = nn.CrossEntropyLoss()
     # Compile the step fn
@@ -43,6 +46,7 @@ class TrainDecoderOnlyBase():
 
   def _train_update(self, step, loss, tracker, epoch):
     print(f'epoch: {epoch}, step: {step}, loss: {loss}, rate: {tracker.rate()}')
+    assert not torch.isnan(loss).item(), "Loss became NaN!"
 
   def run_optimizer(self):
     self.optimizer.step()
@@ -79,5 +83,80 @@ class TrainDecoderOnlyBase():
 
 
 if __name__ == '__main__':
-  base = TrainDecoderOnlyBase()
+  parser = argparse.ArgumentParser("Train a decoder only model")
+  parser.add_argument(
+      "cls_name",
+      type=str,
+      nargs="?",
+      default=None,
+      help="The decoder model to train, as fully qualified Python class. \
+        Defauls to decoder_only_model.DecoderOnlyModel")
+  parser.add_argument(
+      "--num-steps",
+      type=int,
+      default=200,
+      help="Number of steps to train the model for")
+  parser.add_argument(
+      "--hidden-size",
+      type=int,
+      default=1024,
+      help="Hidden size of the model, aka the embedding size")
+  parser.add_argument(
+      "--num-layers",
+      type=int,
+      default=2,
+      help="Number of decoder layers in the model",
+  )
+  parser.add_argument(
+      "--num-attention-heads",
+      type=int,
+      default=8,
+      help="Number of attention heads in the model",
+  )
+  parser.add_argument(
+      "--num-key-value-heads",
+      type=int,
+      default=4,
+      help="Number of key value heads in the model",
+  )
+  parser.add_argument(
+      "--intermediate-size",
+      type=int,
+      default=32 * 1024,
+      help="Intermediate size of the model, aka the up-projection output size",
+  )
+  parser.add_argument(
+      "--print-metrics",
+      action="store_true",
+      help="Print torch_xla metrics at the end of the training",
+  )
+  args = parser.parse_args()
+
+  # Seed the RNG for deterministic results
+  torch.manual_seed(42)
+  torch_xla.manual_seed(42)
+
+  # Figure out the decoder model to use
+  decoder_cls = None
+  if args.cls_name is not None:
+    xm.master_print(f'Using decoder class: {args.cls_name}')
+    module, cls_name = args.cls_name.rsplit('.', 1)
+    decoder_cls = getattr(__import__(module, fromlist=[cls_name]), cls_name)
+
+  # Initialize config
+  config = DecoderOnlyConfig(
+      hidden_size=args.hidden_size,
+      num_hidden_layers=args.num_layers,
+      num_attention_heads=args.num_attention_heads,
+      num_key_value_heads=args.num_key_value_heads,
+      intermediate_size=args.intermediate_size,
+  )
+
+  params = []
+  if decoder_cls is not None:
+    params.append(decoder_cls)
+  base = TrainDecoderOnlyBase(*params, num_steps=args.num_steps, config=config)
   base.start_training()
+
+  if args.print_metrics:
+    print(torch_xla._XLAC._xla_metrics_report())
