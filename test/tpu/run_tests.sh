@@ -52,6 +52,9 @@ python3 "$TEST_CDIR/test_data_type.py"
 python3 "$TEST_CDIR/../examples/data_parallel/train_resnet_spmd_data_parallel.py"
 python3 "$TEST_CDIR/../examples/fsdp/train_decoder_only_fsdp_v2.py"
 python3 "$TEST_CDIR/../examples/train_resnet_amp.py"
+python3 "$TEST_CDIR/../examples/train_decoder_only_base.py"
+python3 "$TEST_CDIR/../examples/train_decoder_only_base.py" scan.decoder_with_scan.DecoderWithScan \
+    --num-steps 30  # TODO(https://github.com/pytorch/xla/issues/8632): Reduce scan tracing overhead
 
 # HACK: don't confuse local `torch_xla` folder with installed package
 # Python 3.11 has the permanent fix: https://stackoverflow.com/a/73636559
