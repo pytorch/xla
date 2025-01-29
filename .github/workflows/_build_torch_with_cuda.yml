@@ -24,6 +24,7 @@ jobs:
       _GLIBCXX_USE_CXX11_ABI: 0
       TORCH_CUDA_ARCH_LIST: "5.2;8.6"
       USE_CUDA: 1
+      MAX_JOBS: 24
     steps:
       - name: Checkout actions
         uses: actions/checkout@v4
@@ -40,7 +41,7 @@ jobs:
         shell: bash
         run: |
           cd pytorch
-          MAX_JOBS=12 python setup.py bdist_wheel
+          python setup.py bdist_wheel
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
