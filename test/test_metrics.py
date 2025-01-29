@@ -37,7 +37,6 @@ class MetricsTest(unittest.TestCase):
     t1 += 2
     self.assertIn("xla::add", met.metrics_report())
     assert (len(met.counter_names()) > 0)
-    assert check_metrics_file()
 
   def test_clear_metrics(self):
     xla_device = xm.xla_device()
@@ -98,6 +97,7 @@ class MetricsTest(unittest.TestCase):
     xm.mark_step()
     short_report = met.short_metrics_report()
     self.assertIn("CachedCompile", short_report)
+    assert check_metrics_file()
 
   def test_short_metrics_report_custom_list(self):
     xla_device = xm.xla_device()
