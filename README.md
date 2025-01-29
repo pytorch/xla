@@ -26,7 +26,7 @@ started:
 To install PyTorch/XLA stable build in a new TPU VM:
 
 ```sh
-pip install torch~=2.5.0 'torch_xla[tpu]~=2.5.0' \
+pip install torch~=2.6.0 'torch_xla[tpu]~=2.6.0' \
   -f https://storage.googleapis.com/libtpu-releases/index.html \
   -f https://storage.googleapis.com/libtpu-wheels/index.html
 
@@ -50,6 +50,36 @@ pip install 'torch_xla[pallas]' \
   -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 ```
 
+### C++11 ABI builds
+
+Starting from Pytorch/XLA 2.6, we'll provide wheels and docker images built with
+two C++ ABI flavors: C++11 and pre-C++11. Pre-C++11 is the default to align with
+PyTorch upstream, but C++11 ABI wheels and docker images have better lazy tensor
+tracing performance.
+
+To install C++11 ABI flavored 2.6 wheels:
+
+```sh
+pip install torch==2.6.0+cpu.cxx11.abi torch_xla[tpu]==2.6.0+cxx11 \
+  -f https://storage.googleapis.com/libtpu-releases/index.html \
+  -f https://storage.googleapis.com/libtpu-wheels/index.html \
+  -f https://download.pytorch.org/whl/torch
+```
+
+To access C++11 ABI flavored docker image:
+
+```
+us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm_cxx11
+```
+
+If your model is tracing bound (e.g. you see that the host CPU is busy tracing
+the model while TPUs are idle), switching to the C++11 ABI wheels/docker images
+can improve performance. Mixtral 8x7B benchmarking results on v5p-256, global
+batch size 1024:
+
+- Pre-C++11 ABI MFU: 33%
+- C++ ABI MFU: 39%
+
 ### GPU Plugin
 
 PyTorch/XLA now provides GPU support through a plugin package similar to `libtpu`:
@@ -57,6 +87,13 @@ PyTorch/XLA now provides GPU support through a plugin package similar to `libtpu
 ```
 pip install torch~=2.5.0 torch_xla~=2.5.0 https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla_cuda_plugin-2.5.0-py3-none-any.whl
 ```
+
+The newest stable version where PyTorch/XLA:GPU wheel is available is `torch_xla`
+2.5. We do not offer a PyTorch/XLA:GPU wheel in the PyTorch/XLA 2.6 release. We
+understand this is important and plan to [reinstate GPU support](https://github.com/pytorch/xla/issues/8577) by the 2.7 release.
+PyTorch/XLA remains an open-source project and we welcome contributions from the
+community to help maintain and improve the project. To contribute, please start
+with the [contributors guide](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md).
 
 ## Getting Started
 
@@ -203,6 +240,7 @@ The torch wheel version `2.7.0.dev20250124+cpu` can be found at https://download
 
 | Version | Cloud TPU VMs Wheel |
 |---------|-------------------|
+| 2.5 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.4 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.4.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.3 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.3.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.2 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.2.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
@@ -236,6 +274,7 @@ The torch wheel version `2.7.0.dev20250124+cpu` can be found at https://download
 
 | Version | Cloud TPU VMs Docker |
 | --- | ----------- |
+| 2.6 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm` |
 | 2.5 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.5.0_3.10_tpuvm` |
 | 2.4 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm` |
 | 2.3 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.3.0_3.10_tpuvm` |
