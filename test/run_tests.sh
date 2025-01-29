@@ -167,6 +167,10 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_python_ops.py"
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
+  if [ -f "/tmp/metrics.txt" ] ; then
+    rm /tmp/metrics.txt
+  fi
+  XLA_METRICS_FILE=/tmp/metrics.txt run_test "$CDIR/test_metrics.py"
   run_test "$CDIR/test_deprecation.py"
   run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test "$CDIR/dynamo/test_dynamo_aliasing.py"

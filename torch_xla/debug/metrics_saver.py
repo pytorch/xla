@@ -21,7 +21,7 @@ def _extract_metrics_file():
   import torch_xla.core.xla_model as xm
   metrics_file = os.environ.get('XLA_METRICS_FILE', None)
   if metrics_file is not None:
-    ordinal = xm.get_local_ordinal(defval=-1)
+    ordinal = xm.get_local_ordinal()
     if ordinal >= 0 and xr.world_size() > 1:
       metrics_file = '{}.{}'.format(metrics_file, ordinal)
   return metrics_file
