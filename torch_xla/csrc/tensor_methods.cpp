@@ -1314,9 +1314,22 @@ XLATensorPtr cross(const XLATensorPtr& input, const XLATensorPtr& other,
 
 std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
                                               int64_t dim) {
-  torch::lazy::NodePtr node = torch_xla::MakeNode<CumMax>(
-      input->GetIrValue(), torch::lazy::GetCanonicalDimensionIndex(
-                               dim, input->shape().get().rank()));
+  xla::Shape shape = input->shape().get();
+  int64_t canonical_dim =
+      torch::lazy::GetCanonicalDimensionIndex(dim, shape.rank());
+
+  if (shape.dimensions(canonical_dim) == 0) {
+    // Handle edge-case where the size of `dim` is 0.
+    // The current lowering crashes, setting the padding to -1.
+    absl::Span<const int64_t> dimensions = shape.dimensions();
+    at::IntArrayRef shape_(dimensions.data(), dimensions.size());
+    at::Tensor val =
+        at::empty(shape_, at::TensorOptions().dtype(input->dtype()));
+    at::Tensor idx = at::empty(shape_, at::TensorOptions().dtype(at::kLong));
+    return std::make_tuple(input->Create(val, input->GetDevice()),
+                           input->Create(idx, input->GetDevice()));
+  }
+  torch::lazy::NodePtr node = torch_xla::MakeNode<CumMax>(input->GetIrValue(), canonical_dim);
   XLATensorPtr t_value = input->CreateFrom(torch::lazy::Value(node, 0),
                                            /*delay_eager_executation=*/true);
   XLATensorPtr t_index =
