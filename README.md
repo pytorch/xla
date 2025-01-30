@@ -57,14 +57,23 @@ two C++ ABI flavors: C++11 and pre-C++11. Pre-C++11 is the default to align with
 PyTorch upstream, but C++11 ABI wheels and docker images have better lazy tensor
 tracing performance.
 
-To install C++11 ABI flavored 2.6 wheels:
+To install C++11 ABI flavored 2.6 wheels (Python 3.10 example):
 
 ```sh
-pip install torch==2.6.0+cpu.cxx11.abi torch_xla[tpu]==2.6.0+cxx11 \
+pip install torch==2.6.0+cpu.cxx11.abi \
+  https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0%2Bcxx11-cp310-cp310-manylinux_2_28_x86_64.whl \
+  'torch_xla[tpu]' \
   -f https://storage.googleapis.com/libtpu-releases/index.html \
   -f https://storage.googleapis.com/libtpu-wheels/index.html \
   -f https://download.pytorch.org/whl/torch
 ```
+
+The above command works for Python 3.10. We additionally have Python 3.9 and 3.11
+wheels:
+
+- 3.9: https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0%2Bcxx11-cp39-cp39-manylinux_2_28_x86_64.whl
+- 3.10: https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0%2Bcxx11-cp310-cp310-manylinux_2_28_x86_64.whl
+- 3.11: https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0%2Bcxx11-cp311-cp311-manylinux_2_28_x86_64.whl
 
 To access C++11 ABI flavored docker image:
 
