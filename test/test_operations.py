@@ -2370,6 +2370,20 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(out.dtype, out_xla.dtype)
     self.assertEqual(out.cpu(), out_xla.cpu(), prec=1e-4)
 
+  def test_cummax_0_sized_dimension(self):
+    # Test cummax on dim=2 (a 0-sized dimension).
+    #
+    # Make sure we are not crashing, here. Instead, we should return a tuple of
+    # empty tensors, just like PyTorch.
+
+    dim = 2
+    a = torch.rand(5, 5, 0, 5)
+
+    expected = torch.cummax(a, dim)
+    actual = torch.cummax(a.to(xm.xla_device()), dim)
+
+    self.assertEqual(actual, expected)
+
 
 class MNISTComparator(nn.Module):
 
