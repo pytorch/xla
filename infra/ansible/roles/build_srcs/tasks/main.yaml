@@ -42,6 +42,11 @@
     name: "{{ pytorch_wheels.files | map(attribute='path') }}"
     state: "forcereinstall"
 
+- name: Remove old PyTorch/XLA wheels
+  ansible.builtin.command:
+    cmd: rm -rf dist
+    chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
+
 - name: Build PyTorch/XLA
   ansible.builtin.command:
     cmd: python setup.py bdist_wheel -p manylinux_2_28_x86_64
@@ -133,31 +138,24 @@
     chdir: "/tmp/staging-wheels"
   when: nightly_release
 
-- name: Add cxx11 suffix to wheels built with C++11 ABI
+- name: Ensure that wheels built with C++11 ABI has cxx11 suffix
   ansible.builtin.shell: |
-    # Given names like
-    #
-    # torch_xla-2.5.0.dev20240819-cp310-cp310-linux_x86_64.whl
-    # torch_xla-2.4.0-cp311-cp311-manylinux_2_28_x86_64.whl
-    # torch-2.5.0+libtpu-cp310-cp310-linux_x86_64.whl
-    # torch-2.5.0-cp311-cp311-linux_x86_64.whl
-    #
-    # we want to rename it to
-    #
-    # torch_xla-2.5.0.dev20240819+cxx11-cp310-cp310-linux_x86_64.whl
-    # torch_xla-2.4.0+cxx11-cp311-cp311-manylinux_2_28_x86_64.whl
-    # torch-2.5.0+libtpu.cxx11-cp310-cp310-linux_x86_64.whl
-    # torch-2.5.0+cxx11-cp311-cp311-linux_x86_64.whl
-    #
-    # essentially adding +cxx11 before the -cp39, -cp310, -cp311 etc identifiers.
-    if [[ "$f" == *"+libtpu"* ]]; then
-      rename -v "s/^(.+?)(-cp\d+)/\1.cxx11\2/" *.whl
-    else
-      rename -v "s/^(.+?)(-cp\d+)/\1+cxx11\2/" *.whl
-    fi
+    # If a file has "torch_xla" in it, it should also contain "+cxx11"
+    for f in *.whl; do
+      if [[ "$f" == *"torch_xla"* ]]; then
+        if [[ "$f" == *"+cxx11"* ]]; then
+          continue
+        else
+          echo "$f didn't have cxx11 suffix".
+          exit 1
+        fi
+      fi
+    done
   args:
     executable: /bin/bash
     chdir: "/tmp/staging-wheels"
+  register: ret
+  failed_when: "ret.rc != 0"
   when: cxx11_abi | int > 0
 
 - name: Copy wheels to /dist
