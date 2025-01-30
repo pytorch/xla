@@ -103,11 +103,18 @@ def get_git_head_sha(base_dir):
 
 def get_build_version(xla_git_sha):
   version = os.getenv('TORCH_XLA_VERSION', '2.6.0')
+  cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI',
+                                            None)
   if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
       version += '+git' + xla_git_sha[:7]
+      if cxx_abi:
+        version += '.cxx11'
     except Exception:
       pass
+  else:
+    if cxx_abi:
+      version += '+cxx11'
   return version
 
 
