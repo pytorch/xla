@@ -5,6 +5,7 @@ from typing import Any, Literal, Optional, cast
 
 import jax
 from jax import lax
+from jax.experimental import checkify
 from jax.experimental import pallas as pl
 from jax.experimental.pallas import tpu as pltpu
 from jax.experimental.pallas.ops.tpu.paged_attention import quantization_utils
@@ -301,6 +302,11 @@ def check_kernel_input(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens,
   if cu_q_lens.shape[0] != num_tokens + 1:
     raise ValueError("cu_q_lens.shape[0] must be thet same as num_tokens + 1. Got"
                      f" {cu_q_lens.shape[0]} and {num_tokens + 1}")
+  for i in range(num_seqs):
+    cur_q_len = cu_q_lens[i+1] - cu_q_lens[i]
+    cur_kv_len = kv_lens[i]
+    jax.debug.print("xw32 line308 {i} {cur_q_len}, {cur_kv_len}", i=i, cur_q_len=cur_q_len, cur_kv_len=cur_kv_len)
+    checkify.check(cur_q_len <= cur_kv_len, "cur_q_len must be less or equal to cur_kv_len. Got {} and {}", cur_q_len, cur_kv_len)
   if num_seqs > num_tokens:
     raise ValueError(f"num_seqs must be less or equal to num_tokens. Got {num_seqs} and {num_tokens}")
   # int16: will pack. need to explicit cast to int32. int64 is not supported in Pallas. for smem 1d case.
@@ -720,15 +726,16 @@ def paged_flash_attention_kernel(
 MIN_BLOCK_SIZE = 128
 
 # TODO(xw32): uncomment this once the kernel output is correct.
-# @functools.partial(
-#     jax.jit,
-#     static_argnames=[
-#         "num_kv_pages_per_block",
-#         "num_queries_per_block",
-#         "mask_value",
-#         "num_seqs",
-#     ],
-# )
+@checkify.checkify
+@functools.partial(
+    jax.jit,
+    static_argnames=[
+        "num_kv_pages_per_block",
+        "num_queries_per_block",
+        "mask_value",
+        "num_seqs",
+    ],
+)
 def ragged_paged_attention(
     q: jax.Array,  # [num_tokens, num_q_heads, head_dim]
     k_pages: jax.Array,  # [num_kv_heads, total_num_pages, page_size, head_dim]
@@ -940,43 +947,26 @@ def ragged_paged_attention(
 
   # debug compile begins
   # To enable debug, uncomment this section, comment out the `kernel()` below and comment out the jax.jit above.
-  compiled_kernel = (
-      jax.jit(kernel)
-      .lower(
-          # prefetch
-          group_metadata,
-          kv_lens,
-          page_indices_1d,
-          cu_q_lens,
-          buffer_index,
-          step,
-          # kernel inputs
-          q.astype(q_dtype_for_kernel_launch),  # TODO: do we need the `.astype`? Need to double check.
-          k_pages,
-          k_scales_pages,
-          v_pages,
-          v_scales_pages,
-      )
-      .compile({'xla_tpu_enable_log_recorder': 'true'})
-  )
-  outputs = compiled_kernel(
-      # prefetch
-      group_metadata,
-      kv_lens,
-      page_indices_1d,
-      cu_q_lens,
-      buffer_index,
-      step,
-      # kernel inputs
-      q.astype(q_dtype_for_kernel_launch),  # TODO: do we need the `.astype`? Need to double check.
-      k_pages,
-      k_scales_pages,
-      v_pages,
-      v_scales_pages,
-  )
-  # debug compile ends
-  
-  # outputs = kernel(
+  # compiled_kernel = (
+  #     jax.jit(kernel)
+  #     .lower(
+  #         # prefetch
+  #         group_metadata,
+  #         kv_lens,
+  #         page_indices_1d,
+  #         cu_q_lens,
+  #         buffer_index,
+  #         step,
+  #         # kernel inputs
+  #         q.astype(q_dtype_for_kernel_launch),  # TODO: do we need the `.astype`? Need to double check.
+  #         k_pages,
+  #         k_scales_pages,
+  #         v_pages,
+  #         v_scales_pages,
+  #     )
+  #     .compile({'xla_tpu_enable_log_recorder': 'true'})
+  # )
+  # outputs = compiled_kernel(
   #     # prefetch
   #     group_metadata,
   #     kv_lens,
@@ -991,6 +981,23 @@ def ragged_paged_attention(
   #     v_pages,
   #     v_scales_pages,
   # )
+  # debug compile ends
+  
+  outputs = kernel(
+      # prefetch
+      group_metadata,
+      kv_lens,
+      page_indices_1d,
+      cu_q_lens,
+      buffer_index,
+      step,
+      # kernel inputs
+      q.astype(q_dtype_for_kernel_launch),  # TODO: do we need the `.astype`? Need to double check.
+      k_pages,
+      k_scales_pages,
+      v_pages,
+      v_scales_pages,
+  )
   ret = outputs[0]
   # print(f"xw32 line495 ret.shape={ret.shape}, {ret=}")
   return jnp.permute_dims(ret, (1, 0, 2)).astype(q.dtype)

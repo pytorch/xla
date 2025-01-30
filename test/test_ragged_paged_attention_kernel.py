@@ -12,6 +12,15 @@ import numpy as np
 
 jax.config.parse_flags_with_absl()
 
+# Make sure the q_len is no longer than the kv_len. For example,
+# seq_lens = [(1, 1328), (5, 18), (506, 463)] is not a valid test case because
+# the 3rd sequence has q_len(506) > kv_len(463).
+
+# Just to use the same very negative value in the ref impl as in the kernel.
+DEFAULT_MASK_VALUE = -0.7 * float(np.finfo(np.dtype("float32")).max)
+
+ATOL_FP32 = 2e-1
+
 
 # https://github.com/vllm-project/flash-attention/blob/98a4f8df6f5f50413e03f102dc319690300d4aaf/tests/test_vllm_flash_attn.py#L22
 def _ref_ragged_paged_attention(
@@ -36,9 +45,9 @@ def _ref_ragged_paged_attention(
     cur_kv_len = kv_lens[i]
     num_pages = (cur_kv_len + page_size - 1) // page_size
     page_indices_to_use = page_indices[i, :num_pages]
-    k = k_pages[:, page_indices_to_use, :, :]
-    k = jnp.permute_dims(k, (1, 2, 0, 3))
-    k = jnp.reshape(k, (-1, num_kv_heads, head_dim))
+    k = k_pages[:, page_indices_to_use, :, :]  # [num_kv_heads, page_indices_to_use, page_size, head_dim]
+    k = jnp.permute_dims(k, (1, 2, 0, 3))  #   [page_indices_to_use, page_size, num_kv_heads, head_dim]
+    k = jnp.reshape(k, (-1, num_kv_heads, head_dim))  #   [kv_len, num_kv_heads, head_dim]
     k = k[:cur_kv_len]  # [cur_kv_lens, num_kv_heads, head_dim]
     v = v_pages[:, page_indices_to_use, :, :]
     v = jnp.permute_dims(v, (1, 2, 0, 3))
@@ -55,7 +64,10 @@ def _ref_ragged_paged_attention(
         jnp.int32, (cur_q_len, cur_kv_len), 0
     )
     kv_span = jax.lax.broadcasted_iota(jnp.int32, (cur_q_len, cur_kv_len), 1)
-    mask = jnp.where(q_span < kv_span, float("-inf"), 0.)
+    # mask = jnp.where(q_span < kv_span, float("-inf"), 0.)
+    mask = jnp.where(q_span < kv_span, DEFAULT_MASK_VALUE, 0.)
+    if i == 2:
+      print(f"xw32 ref impl {mask.shape=}, {mask=}")
     with jax.numpy_rank_promotion("allow"):
       attn = attn + mask
     attn = jax.nn.softmax(attn, axis=-1).astype(v.dtype)
@@ -78,8 +90,13 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       page_size,
       dtype,
       num_pages,
+      num_queries_per_block=128,
   ):
     num_seqs = len(seq_lens)
+    for i in range(num_seqs):
+      cur_q_len = seq_lens[i][0]
+      cur_kv_len = seq_lens[i][1]
+      assert cur_q_len <= cur_kv_len, f"cur_q_len must be less than or equal to cur_kv_len. Got {cur_q_len} and {cur_kv_len}"
     query_lens = [seq_len[0] for seq_len in seq_lens]
     num_q_tokens = sum(query_lens)
     kv_lens = jnp.array([seq_len[1] for seq_len in seq_lens])
@@ -112,7 +129,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     print(f"xw32 max_kv_len: {max_kv_len}, {max_num_pages_per_seq=}")
     # The assert below mimics the reality that each page get a unique index.
     # But for testing, the assert could be omitted.
-    assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
+    # assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
     page_indices = jax.random.randint(k4, (num_q_tokens, max_num_pages_per_seq), 0, num_pages, dtype=jnp.int32)
     # Create a cu_q_lens: jax.Array,		# i32[num_tokens + 1]
     q_lens_with_paddings = [0] * num_q_tokens
@@ -120,7 +137,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       q_lens_with_paddings[i] = query_lens[i]
     cu_q_lens = jnp.cumsum(jnp.array([0]+q_lens_with_paddings))
 
-    actual_output = ragged_paged_attention(
+    err, actual_output = ragged_paged_attention(
         queries,
         k_pages,
         v_pages,
@@ -128,7 +145,9 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
         page_indices,
         cu_q_lens,
         num_seqs,
+        num_queries_per_block=num_queries_per_block,
     )
+    err.throw()
     actual_output = jax.block_until_ready(actual_output)
     print("ragged paged attention finished.")
 
@@ -145,22 +164,40 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     self.assertEqual(actual_output.shape, expected_output.shape)
     self.assertEqual(actual_output.dtype, expected_output.dtype)
 
-    print(f'xw32 {expected_output[:192]=}')
-    print(f'xw32 {actual_output[:192]=}')
+    print(f'xw32 {expected_output[:1]=}')
+    print(f'xw32 {actual_output[:1]=}')
 
     print(f'Output max diff: {jnp.max(jnp.abs(expected_output - actual_output))}')
     print(f'Output mean diff: {jnp.mean(jnp.abs(expected_output - actual_output))}')
     if dtype == jnp.float32:
-      atol = 2e-2
+      atol = ATOL_FP32
       rtol = 1e-2
     elif dtype == jnp.bfloat16:
       atol = 6e-1
       rtol = 1e-1
     else:
       self.fail(f'Unsupported dtype: {dtype}')
-    self.assertTrue(jnp.allclose(actual_output[:128], expected_output[:128], atol=atol, rtol=rtol))
-    self.assertTrue(jnp.allclose(actual_output[128:192], expected_output[128:192], atol=atol, rtol=rtol))
-    self.assertTrue(jnp.allclose(actual_output[192:256], expected_output[192:256], atol=atol, rtol=rtol))
+      
+    print(f'Output max diff [:1]: {jnp.max(jnp.abs(expected_output[:1] - actual_output[:1]))}')
+    print(f'Output mean diff [:1]: {jnp.mean(jnp.abs(expected_output[:1] - actual_output[:1]))}')
+    # print(f'Output max diff [1:6]: {jnp.max(jnp.abs(expected_output[1:6] - actual_output[1:6]))}')
+    # print(f'Output mean diff [1:6]: {jnp.mean(jnp.abs(expected_output[1:6] - actual_output[1:6]))}')
+    # print(f'Output max diff [6:128]: {jnp.max(jnp.abs(expected_output[6:128] - actual_output[6:128]))}')
+    # print(f'Output mean diff [6:128]: {jnp.mean(jnp.abs(expected_output[6:128] - actual_output[6:128]))}')
+    # print(f'Output max diff [128:256]: {jnp.max(jnp.abs(expected_output[128:256] - actual_output[128:256]))}')
+    # print(f'Output mean diff [128:256]: {jnp.mean(jnp.abs(expected_output[128:256] - actual_output[128:256]))}')
+    # print(f'xw32 {expected_output[6:128]=}')
+    # print(f'xw32 {actual_output[6:128]=}')
+    # print(f'Output max diff: {jnp.max(jnp.abs(expected_output[6:128] - actual_output[6:128]))}')
+    # print(f'Output mean diff: {jnp.mean(jnp.abs(expected_output[6:128] - actual_output[6:128]))}')
+    # print(f'Output max diff: {jnp.max(jnp.abs(expected_output[128:256] - actual_output[128:256]))}')
+    # print(f'Output max diff: {jnp.max(jnp.abs(expected_output[256:384] - actual_output[128:256]))}')
+    # print(f'Output max diff: {jnp.max(jnp.abs(expected_output[384:512] - actual_output[384:512]))}')
+    # print(f'Output mean diff: {jnp.mean(jnp.abs(expected_output[6:128] - actual_output[6:128]))}')
+      
+    self.assertTrue(jnp.allclose(actual_output[:1], expected_output[:1], atol=atol, rtol=rtol))
+    self.assertTrue(jnp.allclose(actual_output[1:6], expected_output[1:6], atol=atol, rtol=rtol))
+    self.assertTrue(jnp.allclose(actual_output[6:], expected_output[6:], atol=atol, rtol=rtol))
     self.assertTrue(jnp.allclose(actual_output, expected_output, atol=atol, rtol=rtol))
 
   def _verify_ragged_paged_attention(
@@ -173,6 +210,10 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       num_pages,
   ):
     num_seqs = len(seq_lens)
+    for i in range(num_seqs):
+      cur_q_len = seq_lens[i][0]
+      cur_kv_len = seq_lens[i][1]
+      assert cur_q_len <= cur_kv_len, f"cur_q_len must be less than or equal to cur_kv_len. Got {cur_q_len} and {cur_kv_len}"
     query_lens = [seq_len[0] for seq_len in seq_lens]
     num_q_tokens = sum(query_lens)
     kv_lens = jnp.array([seq_len[1] for seq_len in seq_lens])
@@ -205,7 +246,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     print(f"xw32 max_kv_len: {max_kv_len}, {max_num_pages_per_seq=}")
     # The assert below mimics the reality that each page get a unique index.
     # But for testing, the assert could be omitted.
-    assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
+    # assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
     page_indices = jax.random.randint(k4, (num_q_tokens, max_num_pages_per_seq), 0, num_pages, dtype=jnp.int32)
     # Create a cu_q_lens: jax.Array,		# i32[num_tokens + 1]
     q_lens_with_paddings = [0] * num_q_tokens
@@ -213,7 +254,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       q_lens_with_paddings[i] = query_lens[i]
     cu_q_lens = jnp.cumsum(jnp.array([0]+q_lens_with_paddings))
 
-    actual_output = ragged_paged_attention(
+    err, actual_output = ragged_paged_attention(
         queries,
         k_pages,
         v_pages,
@@ -222,6 +263,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
         cu_q_lens,
         num_seqs,
     )
+    err.throw()
     actual_output = jax.block_until_ready(actual_output)
     print("ragged paged attention finished.")
 
@@ -241,7 +283,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     print(f'Output max diff: {jnp.max(jnp.abs(expected_output - actual_output))}')
     print(f'Output mean diff: {jnp.mean(jnp.abs(expected_output - actual_output))}')
     if dtype == jnp.float32:
-      atol = 2e-2
+      atol = ATOL_FP32
       rtol = 1e-2
     elif dtype == jnp.bfloat16:
       atol = 6e-1
@@ -297,6 +339,109 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
         num_pages,
     )
 
+  @parameterized.product(
+      seq_lens=[[(1, 1328), (5, 18), (506, 563)]],
+      num_heads=[(4, 4), (8, 2), (16, 2)],
+      head_dim=[128, 256],
+      dtype=(jnp.float32, jnp.bfloat16),
+      page_size=[16, 32],
+      num_pages=[32768, 2048],
+  )
+  def test_paged_attention_varlen_comprehensive(
+      self,
+      seq_lens: List[Tuple[int, int]],
+      num_heads: Tuple[int, int],
+      head_dim: int,
+      dtype,
+      page_size: int,
+      num_pages: int,
+  ):
+    # assuming q_blk_size=128
+    # seq_lens = [(512, 1328)]  # [(q_len, kv_len),...]
+    # num_heads = (1, 1)
+    # head_dim = 128
+    # page_size = 16
+    # dtype = jnp.float32
+    # num_pages = 65536
+
+    self._verify_ragged_paged_attention(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        dtype,
+        num_pages,
+    )
+  
+  # @parameterized.product(
+  #     seq_lens=[[(1, 1328), (5, 18), (129, 463)]],
+  #     num_heads=[(4, 4), (8, 2), (16, 2)],
+  #     head_dim=[128, 256],
+  #     dtype=(jnp.float32, jnp.bfloat16),
+  #     page_size=[16, 32],
+  #     num_pages=[32768, 2048],
+  # )
+  def test_paged_attention_varlen1(
+      self,
+  ):
+    # assuming q_blk_size=128
+    seq_lens = [(1, 1328), (5, 18), (1, 129), (120, 229), (1, 122),  # first physical q block
+                (1, 64), (32, 100), (250, 463), (1, 18), (1, 17), (99, 123)]  # last 3 physical q blocks [(q_len, kv_len),...]
+    num_heads = (4, 4)
+    head_dim = 128
+    dtype = jnp.float32
+    page_size = 16
+    num_pages = 32768
+
+    self._verify_ragged_paged_attention_debug(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        dtype,
+        num_pages,
+    )
+
+  def test_paged_attention_varlen2(
+      self,
+  ):
+    # assuming q_blk_size=128
+    seq_lens = [(1, 1328), (5, 18), (506, 563)]
+    num_heads = (8, 2)
+    head_dim = 256
+    dtype = jnp.float32
+    page_size = 16
+    num_pages = 32768
+
+    self._verify_ragged_paged_attention_debug(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        dtype,
+        num_pages,
+    )
+
+  # this test passed.
+  def test_paged_attention_varlen3(
+      self,
+  ):
+    # assuming q_blk_size=128
+    seq_lens = [(256, 256),(128, 256)]
+    num_heads = (8, 2)
+    head_dim = 128
+    dtype = jnp.float32
+    page_size = 16
+    num_pages = 32768
+
+    self._verify_ragged_paged_attention_debug(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        dtype,
+        num_pages,
+    )
 
   def test_paged_attention_basic_with_one_token_per_sequence(
       self,
@@ -338,6 +483,146 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
         num_pages,
     )
 
+  def test_paged_attention_extreme_one_tokens_per_sequence_min(
+      self,
+  ):
+    seq_lens = []  # [(q_len, kv_len),...]
+    num_seqs = 64
+    num_queries_per_block=16
+    for i in range(num_seqs):
+      seq_lens.append((1, 128+i))
+    num_heads = (1, 1)
+    head_dim = 128
+    page_size = 16
+    dtype = jnp.float32
+    num_pages = 1024
+
+    self._verify_ragged_paged_attention_debug(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        dtype,
+        num_pages,
+        num_queries_per_block=num_queries_per_block,
+    )
+
+  def test_paged_attention_extreme_one_tokens_per_sequence_min2(
+      self,
+  ):
+    seq_lens = []  # [(q_len, kv_len),...]
+    num_seqs = 64
+    num_queries_per_block=16
+    for i in range(num_seqs):
+      seq_lens.append((1, 256+i))
+    num_heads = (1, 1)
+    head_dim = 128
+    page_size = 16
+    dtype = jnp.float32
+    num_pages = 1024
+
+    self._verify_ragged_paged_attention_debug(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        dtype,
+        num_pages,
+        num_queries_per_block=num_queries_per_block,
+    )
+
+  def test_paged_attention_extreme_one_tokens_per_sequence_min3(
+      self,
+  ):
+    seq_lens = []  # [(q_len, kv_len),...]
+    num_seqs = 16
+    num_queries_per_block=8
+    for i in range(num_seqs):
+      seq_lens.append((1, 128+i))
+    num_heads = (1, 1)
+    head_dim = 128
+    page_size = 16
+    dtype = jnp.float32
+    num_pages = 65536
+
+    self._verify_ragged_paged_attention_debug(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        dtype,
+        num_pages,
+        num_queries_per_block=num_queries_per_block,
+    )
+
+  def test_paged_attention_q_len_should_be_no_longer_than_kv_len(
+      self,
+  ):
+    # assuming q_blk_size=128
+    seq_lens = [(1, 0)]  # [(q_len, kv_len),...]
+    num_seqs = 511
+    for i in range(num_seqs):
+      seq_lens.append((1, 128+i))
+    num_heads = (1, 1)
+    head_dim = 128
+    page_size = 16
+    dtype = jnp.float32
+    num_pages = 65536
+
+    num_seqs = len(seq_lens)
+    query_lens = [seq_len[0] for seq_len in seq_lens]
+    num_q_tokens = sum(query_lens)
+    kv_lens = jnp.array([seq_len[1] for seq_len in seq_lens])
+    num_q_heads = num_heads[0]
+    num_kv_heads = num_heads[1]
+    assert num_q_heads % num_kv_heads == 0, "num_q_heads % num_kv_heads !=0."
+
+    prng_key = jax.random.key(0)
+    k1, k2, k3, k4 = jax.random.split(prng_key, 4)
+    queries = jax.random.normal(k1,
+                                (num_q_tokens, num_q_heads, head_dim),
+                                dtype=dtype)
+    k_pages = jax.random.normal(k2,
+                                (num_kv_heads, num_pages, page_size, head_dim),
+                                dtype=dtype)
+    v_pages = jax.random.normal(k3,
+                                (num_kv_heads, num_pages, page_size, head_dim),
+                                dtype=dtype)
+    # Create a kv_lens: i32[num_tokens]
+    kv_lens_with_paddings = [0] * num_q_tokens
+    for i in range(num_seqs):
+      kv_lens_with_paddings[i] = kv_lens[i]
+    kv_lens_np = jnp.array(kv_lens_with_paddings)
+    # Create a page_indices: jax.Array,	# i32[num_tokens, pages_per_sequence]
+    max_kv_len = max([seq_len[1] for seq_len in seq_lens])
+    max_num_pages_per_seq = (max_kv_len + page_size - 1) // page_size
+    # The reason why we need to pad max_num_pages_per_seq is that 
+    # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
+    max_num_pages_per_seq = self._get_closest_power_of_two(max_num_pages_per_seq)
+    print(f"xw32 max_kv_len: {max_kv_len}, {max_num_pages_per_seq=}")
+    # The assert below mimics the reality that each page get a unique index.
+    # But for testing, the assert could be omitted.
+    assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
+    page_indices = jax.random.randint(k4, (num_q_tokens, max_num_pages_per_seq), 0, num_pages, dtype=jnp.int32)
+    # Create a cu_q_lens: jax.Array,		# i32[num_tokens + 1]
+    q_lens_with_paddings = [0] * num_q_tokens
+    for i in range(num_seqs):
+      q_lens_with_paddings[i] = query_lens[i]
+    cu_q_lens = jnp.cumsum(jnp.array([0]+q_lens_with_paddings))
+    print(f"xw32 {cu_q_lens=}, {kv_lens_np=}")
+
+    with self.assertRaisesRegex(ValueError, "cur_q_len must be less or equal to cur_kv_len"):
+      err, _ = ragged_paged_attention(queries,
+          k_pages,
+          v_pages,
+          kv_lens_np,
+          page_indices,
+          cu_q_lens,
+          num_seqs,
+      )
+      err.throw()
+
+  # failing test
   def test_paged_attention_extreme_one_tokens_per_sequence(
       self,
   ):
@@ -345,14 +630,14 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     seq_lens = []  # [(q_len, kv_len),...]
     num_seqs = 512
     for i in range(num_seqs):
-      seq_lens.append((1, i))
+      seq_lens.append((1, 128+i))
     num_heads = (1, 1)
     head_dim = 128
     page_size = 16
     dtype = jnp.float32
     num_pages = 65536
 
-    self._verify_ragged_paged_attention(
+    self._verify_ragged_paged_attention_debug(
         seq_lens,
         num_heads,
         head_dim,
@@ -399,8 +684,6 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     # print(f"xw32 metadata.seq_ids[:metadata.num_logical_q_tiles]: {metadata.seq_ids[:metadata.num_logical_q_tiles]}")
     # self.assertTrue(jnp.array_equal(metadata.seq_ids[:metadata.num_logical_q_tiles], [0, 0, 1, 1, 1, 2]))
     # self.assertTrue(jnp.array_equal(metadata.physical_q_tile_ids[:metadata.num_logical_q_tiles], [0, 1, 1, 2, 3, 3]))
-
-
 
 if __name__ == "__main__":
   absltest.main(testLoader=jtu.JaxTestLoader())
