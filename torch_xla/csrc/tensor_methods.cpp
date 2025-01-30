@@ -1329,7 +1329,8 @@ std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
     return std::make_tuple(input->Create(val, input->GetDevice()),
                            input->Create(idx, input->GetDevice()));
   }
-  torch::lazy::NodePtr node = torch_xla::MakeNode<CumMax>(input->GetIrValue(), canonical_dim);
+  torch::lazy::NodePtr node =
+      torch_xla::MakeNode<CumMax>(input->GetIrValue(), canonical_dim);
   XLATensorPtr t_value = input->CreateFrom(torch::lazy::Value(node, 0),
                                            /*delay_eager_executation=*/true);
   XLATensorPtr t_index =
