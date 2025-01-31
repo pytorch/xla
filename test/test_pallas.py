@@ -1282,10 +1282,6 @@ class PallasTest(parameterized.TestCase):
     kv_segment_ids = None
     sm_scale = 1.0
 
-    # def flash_attention_wrapper(q, k, v, casual, q_segment_ids, kv_segment_ids, sm_scale, ab):
-    #   return flash_attention(q, k, v, casual, q_segment_ids, kv_segment_ids, sm_scale, ab=ab)
-    # AOT compatiable funtion only accepts argument types listed https://github.com/pytorch/pytorch/blob/82859f61857ef39898b34a5cdf0ae56ec25704d9/torch/_functorch/_aot_autograd/utils.py#L23-L34, so we serliaze partition_spec and mesh into string.
-
     compiled_flash_attention = aot_function(
         flash_attention, fw_compiler=compiler)
     o_actual = compiled_flash_attention(q, k, v, causal, q_segment_ids,
