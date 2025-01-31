@@ -224,7 +224,7 @@ def fa_custom_forward(
     ab: Optional[torch.Tensor], partition_spec: str, mesh: str,
     ctx_grad: List[bool]
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,
-           torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+           torch.Tensor, torch.Tensor]:
   partition_spec = eval(partition_spec)
   mesh = xs.get_global_mesh() or Mesh.from_str(mesh)
 
@@ -316,7 +316,7 @@ def fa_custom_forward(
         o = xs.disable_manual_sharding(
             o, partition_spec, q_full_shape, mesh=mesh).global_tensor
       # We need to consistently return full_q, full_k, full_v,... even though they are empty to support AOT.
-      return tuple([o] + [torch.Tensor() for _ in range(8)])
+      return tuple([o] + [torch.Tensor() for _ in range(6)])
 
     assert isinstance(o, list)
     o, *aux = o
@@ -333,9 +333,8 @@ def fa_custom_forward(
 
   # q_segment_ids and kv_segment_ids are sharded here if partition_spec is provided
   # but it should be OK as the backward will use the same partition_spec
-  outs = [o] + [
-      full_q, full_k, full_v, l, m, q_segment_ids_fa, kv_segment_ids_fa, full_ab
-  ]
+  outs = [o] + [full_q, full_k, full_v, l, m, full_ab]
+  return tuple(outs)
 
 
 @custom_op("xla::fa_custom_backward", mutates_args=())
@@ -519,19 +518,16 @@ def fa_custom_forward_fake(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor,
   l = torch.empty_like(full_q[:3])
   m = torch.empty_like(full_q[:3])
 
-  return tuple([
-      safe_empty_like(t) for t in (
+  return tuple(
+      [safe_empty_like(t) for t in (
           o,
           full_q,
           full_k,
           full_v,
           l,
           m,
-          q_segment_ids,
-          kv_segment_ids,
           full_ab,
-      )
-  ])
+      )])
 
 
 @fa_custom_backward.register_fake
@@ -611,9 +607,7 @@ class FlashAttention(torch.autograd.Function):
     outs = fa_custom_forward(*custom_op_arg, ctx_grads)
 
     o = outs[0]
-    full_q, full_k, full_v, l, m, q_segment_ids_fa, kv_segment_ids_fa, full_ab = [
-        x for x in outs[1:]
-    ]
+    full_q, full_k, full_v, l, m, full_ab = [x for x in outs[1:]]
 
     # q_segment_ids and kv_segment_ids are sharded here if partition_spec is provided
     # but it should be OK as the backward will use the same partition_spec
