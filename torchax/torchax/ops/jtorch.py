@@ -86,14 +86,14 @@ def _diag(input, diagonal=0):
 def _einsum(equation, *operands):
   def get_params(*a):
     inner_list = a[0]
-    if len(inner_list) == 1:
+    if not isinstance(inner_list, jax.Array):
+      if len(inner_list) == 1:
         A = inner_list
         return A
-    elif len(inner_list) == 2:
+      elif len(inner_list) == 2:
         A, B = inner_list
         return A, B
-    else:
-        return operands
+    return operands
   assert isinstance(equation, str), 'Only accept str equation'
   filtered_operands = get_params(*operands)
   return jnp.einsum(equation, *filtered_operands)
