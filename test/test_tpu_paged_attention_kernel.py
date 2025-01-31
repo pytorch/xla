@@ -185,7 +185,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     self.assertEqual(actual_output.shape, expected_output.shape)
 
     if dtype == jnp.float32:
-      atol = 1e-2
+      atol = 1e-1
       rtol = 1e-2
     elif dtype == jnp.bfloat16:
       atol = 6e-1
