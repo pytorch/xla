@@ -45,6 +45,9 @@ def set_device_type(pjrt_device: str) -> None:
   Args:
     pjrt_device: 'TPU' or 'CPU'
   """
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   if torch_xla._XLAC._xla_runtime_is_initialized() and os.environ.get(
       xenv.PJRT_DEVICE) != pjrt_device:
     raise RuntimeError(
@@ -133,6 +136,9 @@ def local_process_count() -> int:
 
 def global_device_count() -> int:
   """Returns the total number of devices across all processes/hosts."""
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   return len(torch_xla._XLAC._xla_get_all_devices())
 
 
@@ -141,6 +147,9 @@ def world_size() -> int:
   global _WORLD_SIZE
   if _WORLD_SIZE is not None:
     return _WORLD_SIZE
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   if torch_xla._XLAC._xla_get_replication_devices_count() == 0:
     _WORLD_SIZE = 1
   else:
@@ -158,6 +167,9 @@ def local_device_count() -> int:
 
 def addressable_device_count() -> int:
   """Returns the number of devices visible to this process."""
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   return torch_xla._XLAC._xla_num_devices()
 
 
@@ -183,10 +195,16 @@ def local_ordinal() -> int:
 
 
 def process_index() -> int:
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   return torch_xla._XLAC._xla_get_process_index()
 
 
 def process_count() -> int:
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   return torch_xla._XLAC._xla_get_num_processes()
 
 
@@ -202,16 +220,25 @@ def host_index() -> int:
 
 # API below will be used to query physcial device attribute.
 def runtime_device_attributes(device: str) -> Dict[str, object]:
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   return torch_xla._XLAC._xla_get_device_attributes(device)
 
 
 def global_runtime_device_attributes() -> List[Dict[str, object]]:
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   return torch_xla._XLAC._xla_get_all_device_attributes()
 
 
 @functools.lru_cache()
 def global_runtime_device_count() -> int:
   """Returns the total number of runtime devices across all processes/hosts, especially useful for SPMD."""
+  import traceback,inspect
+  print(f"Current line: {inspect.currentframe().f_lineno}")
+  traceback.print_stack()
   return len(torch_xla._XLAC._xla_get_all_runtime_devices())
 
 
