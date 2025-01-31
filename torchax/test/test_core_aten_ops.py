@@ -8,17 +8,35 @@ from . import test_base
 from torch.utils import _pytree as pytree
 
 
-def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True, check_dtype=False):
+def diff_output(testcase,
+                output1,
+                output2,
+                rtol,
+                atol,
+                equal_nan=True,
+                check_dtype=False):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
     torch.testing.assert_close(
-        output1, output2_cpu, atol=atol, rtol=rtol, equal_nan=equal_nan, check_dtype=check_dtype)
+        output1,
+        output2_cpu,
+        atol=atol,
+        rtol=rtol,
+        equal_nan=equal_nan,
+        check_dtype=check_dtype)
   elif isinstance(output1, (tuple, list)):
     testcase.assertIsInstance(output2, (tuple, list))
     testcase.assertEqual(len(output1), len(output2))
     for o1, o2 in zip(output1, output2):
-      diff_output(testcase, o1, o2, rtol, atol, equal_nan=equal_nan, check_dtype=check_dtype)
+      diff_output(
+          testcase,
+          o1,
+          o2,
+          rtol,
+          atol,
+          equal_nan=equal_nan,
+          check_dtype=check_dtype)
   else:
     testcase.assertEqual(output1, output2)
 
@@ -53,7 +71,13 @@ def run_export_and_compare(testcase,
               check_dtype=check_dtype)
         else:
           diff_output(
-              testcase, res, res2, atol=atol, rtol=rtol, equal_nan=equal_nan, check_dtype=check_dtype)
+              testcase,
+              res,
+              res2,
+              atol=atol,
+              rtol=rtol,
+              equal_nan=equal_nan,
+              check_dtype=check_dtype)
 
 
 class TestCoreAtenOps(unittest.TestCase):
@@ -1066,19 +1090,22 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.convolution, args, kwargs)
-    
+
   def test_aten_copy_0(self):
-    args = (torch.randn((10, 10)).to(torch.float32), torch.randn((10, 10)).to(torch.float32))
+    args = (torch.randn((10, 10)).to(torch.float32), torch.randn(
+        (10, 10)).to(torch.float32))
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.copy, args, kwargs)
-    
+
   def test_aten_copy_broadcast(self):
-    args = (torch.randn((10, 10)).to(torch.float32), torch.tensor(1.0, dtype=torch.float32))
+    args = (torch.randn(
+        (10, 10)).to(torch.float32), torch.tensor(1.0, dtype=torch.float32))
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.copy, args, kwargs)
-    
+
   def test_aten_copy_cast_dtype(self):
-    args = (torch.randn((10, 10)).to(torch.float32), torch.randn((10, 10)).to(torch.int64))
+    args = (torch.randn((10, 10)).to(torch.float32), torch.randn(
+        (10, 10)).to(torch.int64))
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.copy, args, kwargs)
 
@@ -1835,7 +1862,7 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index_select, args, kwargs)
-    
+
   def test_aten_index_select_int32_index(self):
     args = (
         torch.randint(0, 10, (2, 10)).to(torch.int32),
@@ -2151,7 +2178,13 @@ class TestCoreAtenOps(unittest.TestCase):
   def test_aten_logit_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.logit, args, kwargs, atol=0.01,)
+    run_export_and_compare(
+        self,
+        torch.ops.aten.logit,
+        args,
+        kwargs,
+        atol=0.01,
+    )
 
   def test_aten_logit_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
@@ -2738,7 +2771,7 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.native_layer_norm, args, kwargs)
-  
+
   def test_aten_native_layer_norm_1(self):
     args = (
         torch.randn((1, 10, 10, 10)).to(torch.float32),
@@ -2754,7 +2787,7 @@ class TestCoreAtenOps(unittest.TestCase):
     batch = 3
     channel = 2
     args = (
-        torch.randn((batch,channel,2,2)).to(torch.float32),
+        torch.randn((batch, channel, 2, 2)).to(torch.float32),
         torch.ones(channel),
         torch.zeros(channel),
         torch.zeros(channel),
@@ -2764,13 +2797,14 @@ class TestCoreAtenOps(unittest.TestCase):
         1,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit, args,
+                           kwargs)
 
   def test_aten_native_batch_norm_legit_none(self):
     batch = 3
     channel = 2
     args = (
-        torch.randn((batch,channel,4,4)).to(torch.float32),
+        torch.randn((batch, channel, 4, 4)).to(torch.float32),
         None,
         None,
         torch.ones(channel),
@@ -2780,13 +2814,14 @@ class TestCoreAtenOps(unittest.TestCase):
         1,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit, args,
+                           kwargs)
 
   def test_aten_native_batch_norm_legit_training_none(self):
     batch = 3
     channel = 2
     args = (
-        torch.randn((batch,channel,4,3)).to(torch.float32),
+        torch.randn((batch, channel, 4, 3)).to(torch.float32),
         None,
         None,
         torch.zeros(channel),
@@ -2796,13 +2831,14 @@ class TestCoreAtenOps(unittest.TestCase):
         2e-5,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit, args,
+                           kwargs)
 
   def test_aten_native_batch_norm_legit_no_training(self):
     batch = 3
     channel = 2
     args = (
-        torch.randn((batch,channel,4,3)).to(torch.float32),
+        torch.randn((batch, channel, 4, 3)).to(torch.float32),
         torch.ones(channel),
         torch.zeros(channel),
         torch.zeros(channel),
@@ -2811,13 +2847,15 @@ class TestCoreAtenOps(unittest.TestCase):
         2e-5,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten._native_batch_norm_legit_no_training, args, kwargs)
+    run_export_and_compare(self,
+                           torch.ops.aten._native_batch_norm_legit_no_training,
+                           args, kwargs)
 
   def test_aten_native_batch_norm_training(self):
     batch = 3
     channel = 2
     args = (
-        torch.randn((batch,channel,4,3)).to(torch.float32),
+        torch.randn((batch, channel, 4, 3)).to(torch.float32),
         torch.ones(channel),
         torch.zeros(channel),
         torch.zeros(channel),
@@ -2833,7 +2871,7 @@ class TestCoreAtenOps(unittest.TestCase):
     batch = 3
     channel = 2
     args = (
-        torch.randn((batch,channel,4,3)).to(torch.float32),
+        torch.randn((batch, channel, 4, 3)).to(torch.float32),
         None,
         None,
         torch.zeros(channel),
@@ -2849,7 +2887,7 @@ class TestCoreAtenOps(unittest.TestCase):
     batch = 3
     channel = 2
     args = (
-        torch.randn((batch,channel,4,3)).to(torch.float32),
+        torch.randn((batch, channel, 4, 3)).to(torch.float32),
         torch.ones(channel),
         torch.zeros(channel),
         torch.zeros(channel),
@@ -3810,6 +3848,15 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten._softmax, args, kwargs)
 
+  def test_aten_softmax(self):
+    args = (
+        torch.randn((10, 10)).to(torch.float32),
+        1,
+        False,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.softmax, args, kwargs)
+
   def _compare_sorted_result(self, args):
     res = torch.ops.aten.sort(*args)
     with self.subTest("torchax_eval"):
@@ -4390,20 +4437,39 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.where.self, args, kwargs)
 
+  def test_aten_where(self):
+    args = (torch.randn((10, 10)).to(torch.bool),)
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.where, args, kwargs)
+
   def test_aten_copy_dtype(self):
     args = (
         torch.ones((3, 3), dtype=torch.int32),
         torch.zeros((3, 3), dtype=torch.float32),
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.copy_, args, kwargs, check_dtype=True)
+    run_export_and_compare(
+        self, torch.ops.aten.copy_, args, kwargs, check_dtype=True)
 
   def test_aten_rand_like(self):
+    args = (torch.ones((3, 3), dtype=torch.bfloat16),)
+    kwargs = dict()
+    run_export_and_compare(
+        self,
+        torch.ops.aten.rand_like,
+        args,
+        kwargs,
+        atol=math.inf,
+        check_dtype=True)
+
+  def test_einsum(self):
     args = (
-      torch.ones((3, 3), dtype=torch.bfloat16),
+        "bshd,bthd->bsht",
+        torch.ones((1, 2, 4, 8), dtype=torch.float32),
+        torch.ones((1, 2, 4, 8), dtype=torch.float32),
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.rand_like, args, kwargs, atol=math.inf, check_dtype=True)
+    run_export_and_compare(self, torch.einsum, args, kwargs, check_dtype=True)
 
 
 if __name__ == "__main__":

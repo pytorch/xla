@@ -461,7 +461,8 @@ def _aten_stack(tensors, dim=0):
 
 
 @op(torch.ops.aten._softmax)
-def _aten_softmax(x, dim, halftofloat):
+@op(torch.ops.aten.softmax)
+def _aten_softmax(x, dim, halftofloat = False):
   if x.shape == ():
     return jax.nn.softmax(x.reshape([1]), axis=0).reshape([])
   return jax.nn.softmax(x, dim)
@@ -3281,11 +3282,12 @@ def _aten_unique_consecutive(input_tensor,
 
 
 # aten.where
+@op(torch.ops.aten.where)
 @op(torch.ops.aten.where.self)
 @op(torch.ops.aten.where.ScalarSelf)
 @op(torch.ops.aten.where.ScalarOther)
 @op(torch.ops.aten.where.Scalar)
-def _aten_where(condition, x, y):
+def _aten_where(condition, x = None, y = None):
   return jnp.where(condition, x, y)
 
 
