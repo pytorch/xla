@@ -12,8 +12,8 @@ from jax.experimental.pallas.ops.tpu.paged_attention import quantization_utils
 import jax.numpy as jnp
 import numpy as np
 
-
 DEFAULT_MASK_VALUE = -0.7 * float(np.finfo(np.dtype("float32")).max)
+
 
 class MultiPageAsyncCopyDescriptor:
   """Descriptor for async copy of multiple K/V pages from HBM."""
@@ -100,6 +100,7 @@ def _calculate_num_tiles(x: int, tx: int) -> int:
     raise ValueError(f"{x} must be divisible by x-dimension tile size ({tx}).")
   return tiles
 
+
 # https://github.com/jax-ml/jax/blob/9fb29766a2130e74a85cba30420cf777d185ea5a/jax/experimental/pallas/ops/tpu/megablox/gmm.py#L79
 def make_sequence_metadata(
     *,
@@ -152,13 +153,12 @@ def make_sequence_metadata(
   #
   # NOTE: This does not change sequence_offsets[num_sequences], which is m
   # (because we enforce m is divisible by tm).
-  rounded_sequence_ends = ((sequence_ends + tm - 1) // tm * tm).astype(jnp.int32)
-
+  rounded_sequence_ends = ((sequence_ends + tm - 1) // tm * tm).astype(
+      jnp.int32)
 
   # (2) Round the sequence_starts down to the nearest multiple of 'tm'.
   sequence_starts = jnp.concatenate(
-      [jnp.zeros(1, dtype=jnp.int32), sequence_ends[:-1]]
-  )
+      [jnp.zeros(1, dtype=jnp.int32), sequence_ends[:-1]])
   rounded_sequence_starts = sequence_starts // tm * tm
 
   # (3) Calculate the number of rows in each sequence.
@@ -216,14 +216,12 @@ def make_sequence_metadata(
   #
   partial_tile_mask = ((sequence_offsets[:-1] % tm) == 0)
 
-  partial_tile_ids = jnp.where(
-      partial_tile_mask, tiles_m, sequence_offsets[:-1] // tm
-  )
+  partial_tile_ids = jnp.where(partial_tile_mask, tiles_m,
+                               sequence_offsets[:-1] // tm)
 
   tile_visits = (
-      jnp.histogram(partial_tile_ids, bins=tiles_m, range=(0, tiles_m - 1))[0]
-      + 1
-  )
+      jnp.histogram(partial_tile_ids, bins=tiles_m, range=(0, tiles_m - 1))[0] +
+      1)
 
   # Create the m-dimension tile ids for each grid index based on the visit
   # counts for each tile.
@@ -246,10 +244,14 @@ def make_sequence_metadata(
   #
   # Remove tile visits that belong to a sequence not in our shard.
   iota = jnp.arange(num_sequences, dtype=jnp.int32)
-  active_sequence_mask = jnp.logical_and(iota <= end_sequence, iota >= start_sequence)
-  sequence_tiles = jnp.where(active_sequence_mask, sequence_tiles[:num_sequences], 0)
+  active_sequence_mask = jnp.logical_and(iota <= end_sequence,
+                                         iota >= start_sequence)
+  sequence_tiles = jnp.where(active_sequence_mask,
+                             sequence_tiles[:num_sequences], 0)
   num_tiles = sequence_tiles.sum()
-  return (sequence_ids, m_tile_ids), num_tiles  # (seq_ids, physical_q_tile_ids), num_logical_q_tiles
+  return (sequence_ids, m_tile_ids
+         ), num_tiles  # (seq_ids, physical_q_tile_ids), num_logical_q_tiles
+
 
 def check_kernel_input(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens,
                        num_seqs, num_kv_pages_per_block):
@@ -268,17 +270,24 @@ def check_kernel_input(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens,
     raise ValueError("kv_lens.shape[0] must be thet same as num_tokens. Got"
                      f" {kv_lens.shape[0]} and {num_tokens}")
   if page_indices.shape[0] != num_tokens:
-    raise ValueError("page_indices.shape[0] must be thet same as num_tokens. Got"
-                     f" {page_indices.shape[0]} and {num_tokens}")
+    raise ValueError(
+        "page_indices.shape[0] must be thet same as num_tokens. Got"
+        f" {page_indices.shape[0]} and {num_tokens}")
   if cu_q_lens.shape[0] != num_tokens + 1:
-    raise ValueError("cu_q_lens.shape[0] must be thet same as num_tokens + 1. Got"
-                     f" {cu_q_lens.shape[0]} and {num_tokens + 1}")
+    raise ValueError(
+        "cu_q_lens.shape[0] must be thet same as num_tokens + 1. Got"
+        f" {cu_q_lens.shape[0]} and {num_tokens + 1}")
   for i in range(num_seqs):
-    cur_q_len = cu_q_lens[i+1] - cu_q_lens[i]
+    cur_q_len = cu_q_lens[i + 1] - cu_q_lens[i]
     cur_kv_len = kv_lens[i]
-    checkify.check(cur_q_len <= cur_kv_len, "cur_q_len must be less or equal to cur_kv_len. Got {} and {}", cur_q_len, cur_kv_len)
+    checkify.check(
+        cur_q_len <= cur_kv_len,
+        "cur_q_len must be less or equal to cur_kv_len. Got {} and {}",
+        cur_q_len, cur_kv_len)
   if num_seqs > num_tokens:
-    raise ValueError(f"num_seqs must be less or equal to num_tokens. Got {num_seqs} and {num_tokens}")
+    raise ValueError(
+        f"num_seqs must be less or equal to num_tokens. Got {num_seqs} and {num_tokens}"
+    )
   # int16: will pack. need to explicit cast to int32. int64 is not supported in Pallas. for smem 1d case.
   # 2d smem: int16 will be packed with an empty. So we didn't save any memory.
   # scalar: use i32 (1, N). int16 for (1, N) will be padding. Need to use (2, N).
@@ -299,6 +308,7 @@ def check_kernel_input(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens,
         "Number of Q heads must be divisible by number of KV heads. Got"
         f" {num_q_heads} and {num_kv_heads}.")
 
+
 # https://github.com/jax-ml/jax/blob/e3b3b913f7bcec3767e1442ace08999413f8703d/jax/experimental/pallas/ops/tpu/megablox/gmm.py#L269C1-L283C64
 def _get_store_mask(
     *,
@@ -316,6 +326,7 @@ def _get_store_mask(
   m_id = m_tile_ids[grid_id] * tm
   iota = jax.lax.broadcasted_iota(jnp.int32, (tm, tn), 0) + m_id
   return jnp.logical_and(iota >= group_start, iota < group_end)
+
 
 def _flash_attention(
     q_head_idx_per_kv,  # scalar, ranges from 0 to num_query_heads_per_kv_head
@@ -344,7 +355,8 @@ def _flash_attention(
     head_dim: int,
     num_q_heads_per_kv_head: int,
 ):
-  assert q_ref.shape == (num_q_heads_per_kv_head, num_queries_per_block, head_dim)
+  assert q_ref.shape == (num_q_heads_per_kv_head, num_queries_per_block,
+                         head_dim)
   kv_blk_size = page_size * num_kv_pages_per_block
   assert k.shape == (kv_blk_size, head_dim)
   assert v.shape == (kv_blk_size, head_dim)
@@ -357,13 +369,17 @@ def _flash_attention(
   seq_ids, physical_q_tile_ids = group_metadata_ref
 
   # If the q-dim physical tile is changed (meaning it is a new physical q-dim tile that has not visited before), initialize the acc_scratch_ref, m_scratch_ref, and l_scratch_ref to run the flash attention v2 algorithm.
-  prev_logical_q_blk_idx = jnp.where(logical_q_blk_idx > 0, logical_q_blk_idx - 1, 0)
+  prev_logical_q_blk_idx = jnp.where(logical_q_blk_idx > 0,
+                                     logical_q_blk_idx - 1, 0)
   is_first_processed_logical_q_blk = logical_q_blk_idx == 0
-  physical_q_blk_changed = (physical_q_tile_ids[logical_q_blk_idx] != physical_q_tile_ids[prev_logical_q_blk_idx])
-  first_time_seeing_physical_q_blk = jnp.logical_or(is_first_processed_logical_q_blk, physical_q_blk_changed)
+  physical_q_blk_changed = (
+      physical_q_tile_ids[logical_q_blk_idx] !=
+      physical_q_tile_ids[prev_logical_q_blk_idx])
+  first_time_seeing_physical_q_blk = jnp.logical_or(
+      is_first_processed_logical_q_blk, physical_q_blk_changed)
   is_first_kv_blk = (kv_blk_idx == 0)
   should_init_scratch_ref = jnp.logical_and(is_first_kv_blk,
-      first_time_seeing_physical_q_blk)
+                                            first_time_seeing_physical_q_blk)
 
   @pl.when(should_init_scratch_ref)
   def init_scratch_ref():  # pylint: disable=unused-variable
@@ -374,8 +390,10 @@ def _flash_attention(
     acc_scratch_ref[q_head_idx_per_kv] = jnp.zeros(
         acc_scratch_ref[q_head_idx_per_kv].shape, jnp.float32)
 
-  m_prev = m_scratch_ref[q_head_idx_per_kv]  # [num_queries_per_block, MIN_BLOCK_SIZE]
-  l_prev = l_scratch_ref[q_head_idx_per_kv]  # [num_queries_per_block, MIN_BLOCK_SIZE]
+  m_prev = m_scratch_ref[
+      q_head_idx_per_kv]  # [num_queries_per_block, MIN_BLOCK_SIZE]
+  l_prev = l_scratch_ref[
+      q_head_idx_per_kv]  # [num_queries_per_block, MIN_BLOCK_SIZE]
 
   # Load the whole q_block that belongs to the current physical q_blk and compute the attention. When we write, we only write the part that belongs to the current sequence.
   # Cannot just load only the part of q_block that belongs to the current sequence, because it results in dynamic shapes and then fails the JIT compilation.
@@ -390,22 +408,19 @@ def _flash_attention(
   # Modify the mask accordingly: first form the mask. Then move the mask up/down to the right place.
   cur_seq_idx = seq_ids[logical_q_blk_idx]
   cur_seq_start = effective_cu_q_lens_ref[cur_seq_idx]
-  cur_seq_end = effective_cu_q_lens_ref[cur_seq_idx+1]
+  cur_seq_end = effective_cu_q_lens_ref[cur_seq_idx + 1]
   physical_q_blk_idx = physical_q_tile_ids[logical_q_blk_idx]
-  q_index = physical_q_blk_idx*num_queries_per_block-cur_seq_start
+  q_index = physical_q_blk_idx * num_queries_per_block - cur_seq_start
   kv_index = kv_blk_idx * kv_blk_size
   effective_kv_len = effective_kv_lens_ref[cur_seq_idx]
   effective_q_len = cur_seq_end - cur_seq_start
-  row_ids = (
-      effective_kv_len - effective_q_len) + q_index + jax.lax.broadcasted_iota(
-          jnp.int32,
-          (num_queries_per_block, kv_blk_size), 0)
+  row_ids = (effective_kv_len -
+             effective_q_len) + q_index + jax.lax.broadcasted_iota(
+                 jnp.int32, (num_queries_per_block, kv_blk_size), 0)
   col_ids = kv_index + jax.lax.broadcasted_iota(
-      jnp.int32,
-      (num_queries_per_block, kv_blk_size), 1)
+      jnp.int32, (num_queries_per_block, kv_blk_size), 1)
   causal_mask = jnp.where(row_ids < col_ids, mask_value, 0.)
-  assert causal_mask.shape == (num_queries_per_block,
-                               kv_blk_size)
+  assert causal_mask.shape == (num_queries_per_block, kv_blk_size)
 
   s = s + causal_mask  # [block_q, block_k]
 
@@ -415,8 +430,7 @@ def _flash_attention(
   block_k_repeats, rem = divmod(kv_blk_size, MIN_BLOCK_SIZE)
   if rem:
     raise NotImplementedError(
-        f"{kv_blk_size=} should be a multiple of {MIN_BLOCK_SIZE}"
-    )
+        f"{kv_blk_size=} should be a multiple of {MIN_BLOCK_SIZE}")
   p = jnp.exp(
       s - pltpu.repeat(m_next, block_k_repeats, 1))  # Shape [block_q, block_k]
 
@@ -437,44 +451,60 @@ def _flash_attention(
 
   # Need to store these l_next and m_next which will relay to the output.
   # But only update the part that belongs to the current sequence we are working on.
-  lm_mask = _get_store_mask(grid_id=logical_q_blk_idx,
-                            group_offsets=effective_cu_q_lens_ref,
-                            group_ids=seq_ids,
-                            m_tile_ids=physical_q_tile_ids,
-                            tm=num_queries_per_block,
-                            tn=MIN_BLOCK_SIZE,
-                            )
+  lm_mask = _get_store_mask(
+      grid_id=logical_q_blk_idx,
+      group_offsets=effective_cu_q_lens_ref,
+      group_ids=seq_ids,
+      m_tile_ids=physical_q_tile_ids,
+      tm=num_queries_per_block,
+      tn=MIN_BLOCK_SIZE,
+  )
   # Either jax.lax.select or jnp.where works here.
-  l_scratch_ref[q_head_idx_per_kv] = jax.lax.select(lm_mask[...], l_next, l_scratch_ref[q_head_idx_per_kv])
-  m_scratch_ref[q_head_idx_per_kv] = jax.lax.select(lm_mask[...], m_next, m_scratch_ref[q_head_idx_per_kv])
+  l_scratch_ref[q_head_idx_per_kv] = jax.lax.select(
+      lm_mask[...], l_next, l_scratch_ref[q_head_idx_per_kv])
+  m_scratch_ref[q_head_idx_per_kv] = jax.lax.select(
+      lm_mask[...], m_next, m_scratch_ref[q_head_idx_per_kv])
 
   l_next_inv_safe = jnp.where(l_next == 0.0, 1.0,
                               1.0 / l_next)  # [block_q, 128]
-  temp = acc_scratch_ref[q_head_idx_per_kv] * l_broadcast(l_corr * l_next_inv_safe)
-  acc_mask = _get_store_mask(grid_id=logical_q_blk_idx,
-                            group_offsets=effective_cu_q_lens_ref,
-                            group_ids=seq_ids,
-                            m_tile_ids=physical_q_tile_ids,
-                            tm=num_queries_per_block,
-                            tn=head_dim,
-                            )
-  acc_scratch_ref[q_head_idx_per_kv] = jax.lax.select(acc_mask[...], temp, acc_scratch_ref[q_head_idx_per_kv])
+  temp = acc_scratch_ref[q_head_idx_per_kv] * l_broadcast(
+      l_corr * l_next_inv_safe)
+  acc_mask = _get_store_mask(
+      grid_id=logical_q_blk_idx,
+      group_offsets=effective_cu_q_lens_ref,
+      group_ids=seq_ids,
+      m_tile_ids=physical_q_tile_ids,
+      tm=num_queries_per_block,
+      tn=head_dim,
+  )
+  acc_scratch_ref[q_head_idx_per_kv] = jax.lax.select(
+      acc_mask[...], temp, acc_scratch_ref[q_head_idx_per_kv])
   o_curr = jax.lax.dot(
       p.astype(v.dtype), v,
       preferred_element_type=jnp.float32)  # [block_q, 128]
-  temp = (acc_scratch_ref[q_head_idx_per_kv] + o_curr * l_broadcast(l_next_inv_safe))
-  acc_scratch_ref[q_head_idx_per_kv] = jax.lax.select(acc_mask[...], temp, acc_scratch_ref[q_head_idx_per_kv])
+  temp = (
+      acc_scratch_ref[q_head_idx_per_kv] +
+      o_curr * l_broadcast(l_next_inv_safe))
+  acc_scratch_ref[q_head_idx_per_kv] = jax.lax.select(
+      acc_mask[...], temp, acc_scratch_ref[q_head_idx_per_kv])
 
   # Store the result from VMEM to HBM only when it is the last kv_block and the next q-dim logical tile belongs to a different q-dim physical tile.
-  is_last_kv_blk_idx = (kv_blk_idx == (pl.cdiv(effective_kv_len, kv_blk_size) - 1))
-  num_logical_q_blks = pl.num_programs(1)  # grid=(num_kv_heads, num_logical_q_tiles, num_kv_blks)
-  next_logical_q_blk_idx = jnp.where(logical_q_blk_idx == num_logical_q_blks - 1,
-                                     logical_q_blk_idx,
-                                     logical_q_blk_idx+1)
-  is_last_logical_q_blk = (logical_q_blk_idx == num_logical_q_blks-1)
-  physical_q_blk_will_change = (physical_q_tile_ids[logical_q_blk_idx] != physical_q_tile_ids[next_logical_q_blk_idx])
-  last_time_seeing_cur_physical_q_blk = jnp.logical_or(is_last_logical_q_blk, physical_q_blk_will_change)
-  should_store_to_hbm = jnp.logical_and(is_last_kv_blk_idx, last_time_seeing_cur_physical_q_blk)
+  is_last_kv_blk_idx = (
+      kv_blk_idx == (pl.cdiv(effective_kv_len, kv_blk_size) - 1))
+  num_logical_q_blks = pl.num_programs(
+      1)  # grid=(num_kv_heads, num_logical_q_tiles, num_kv_blks)
+  next_logical_q_blk_idx = jnp.where(
+      logical_q_blk_idx == num_logical_q_blks - 1, logical_q_blk_idx,
+      logical_q_blk_idx + 1)
+  is_last_logical_q_blk = (logical_q_blk_idx == num_logical_q_blks - 1)
+  physical_q_blk_will_change = (
+      physical_q_tile_ids[logical_q_blk_idx] !=
+      physical_q_tile_ids[next_logical_q_blk_idx])
+  last_time_seeing_cur_physical_q_blk = jnp.logical_or(
+      is_last_logical_q_blk, physical_q_blk_will_change)
+  should_store_to_hbm = jnp.logical_and(is_last_kv_blk_idx,
+                                        last_time_seeing_cur_physical_q_blk)
+
   @pl.when(should_store_to_hbm)
   def store_to_hbm():  # pylint: disable=unused-variable
     o_ref[q_head_idx_per_kv] = acc_scratch_ref[q_head_idx_per_kv].astype(
@@ -483,6 +513,7 @@ def _flash_attention(
         l_ref.dtype)
     m_ref[q_head_idx_per_kv] = m_scratch_ref[q_head_idx_per_kv].astype(
         m_ref.dtype)
+
 
 def paged_flash_attention_kernel(
     # prefetch refs
@@ -563,7 +594,7 @@ def paged_flash_attention_kernel(
       cur_seq_idx = seq_ids[logical_q_blk_idx]
       effective_kv_len_cur_seq = effective_kv_lens_ref[cur_seq_idx]
       return lax.cond(
-          kv_blk_idx*kv_blk_size < effective_kv_len_cur_seq,
+          kv_blk_idx * kv_blk_size < effective_kv_len_cur_seq,
           lambda: (kv_head_idx, logical_q_blk_idx, kv_blk_idx),
           advance_logical_q_blk_idx,
       )
@@ -608,7 +639,8 @@ def paged_flash_attention_kernel(
       async_copy_k.start()
       async_copy_v.start()
 
-    next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx = compute_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx+1)
+    next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx = compute_block_indices(
+        kv_head_idx, logical_q_blk_idx, kv_blk_idx + 1)
 
     @pl.when(next_kv_head_idx < num_kv_heads)
     def prefetch_next_block():  # pylint: disable=unused-variable
@@ -625,8 +657,8 @@ def paged_flash_attention_kernel(
     k = async_copy_k.wait_and_get_loaded(
     )  # [pages_per_compute_block*page_size,head_dim]
     v = async_copy_v.wait_and_get_loaded()
-    assert k.shape == (num_kv_pages_per_block*page_size, head_dim)
-    assert v.shape == (num_kv_pages_per_block*page_size, head_dim)
+    assert k.shape == (num_kv_pages_per_block * page_size, head_dim)
+    assert v.shape == (num_kv_pages_per_block * page_size, head_dim)
 
     for q_head_idx in range(num_q_heads_per_kv_head):
       _flash_attention(
@@ -660,6 +692,7 @@ def paged_flash_attention_kernel(
 
 
 MIN_BLOCK_SIZE = 128
+
 
 @checkify.checkify
 @functools.partial(
@@ -737,7 +770,8 @@ def ragged_paged_attention(
   # out later so that num_q_heads doesn't have to be the 2nd last dimension and hence doesn't subject to the multiple of 8 constraint.
   q = jnp.permute_dims(q, (1, 0, 2))  # [num_q_heads, num_tokens, head_dim]
   num_kv_heads, total_num_pages, page_size, head_dim = k_pages.shape
-  check_kernel_input(q, k_pages, v_pages,kv_lens, page_indices, cu_q_lens, num_seqs, num_kv_pages_per_block)
+  check_kernel_input(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens,
+                     num_seqs, num_kv_pages_per_block)
   num_q_heads_per_kv_head = num_q_heads // num_kv_heads
 
   group_metadata, num_logical_q_tiles = make_sequence_metadata(
@@ -762,14 +796,16 @@ def ragged_paged_attention(
 
   # in-spec. Note currently q.shape=[num_q_heads, num_tokens, head_dim]
   # Within the kernel, q.shape should be [num_q_heads_per_kv_head, q_block_size, head_dim]
-  def qo_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx, group_metadata, *_):
+  def qo_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx, group_metadata,
+                   *_):
     seq_ids, physical_q_tile_ids = group_metadata
     del seq_ids
     physical_q_blk_idx = physical_q_tile_ids[logical_q_blk_idx]
     return (kv_head_idx, physical_q_blk_idx, 0)
+
   q_block_spec = pl.BlockSpec(
-    (num_q_heads_per_kv_head, num_queries_per_block, head_dim),
-    qo_index_map,
+      (num_q_heads_per_kv_head, num_queries_per_block, head_dim),
+      qo_index_map,
   )
   in_specs = [
       q_block_spec,
@@ -803,8 +839,7 @@ def ragged_paged_attention(
       (num_q_heads_per_kv_head, num_queries_per_block, MIN_BLOCK_SIZE),
       jnp.float32)
   acc_scratch = pltpu.VMEM(
-      (num_q_heads_per_kv_head, num_queries_per_block, head_dim),
-      jnp.float32)
+      (num_q_heads_per_kv_head, num_queries_per_block, head_dim), jnp.float32)
   scratch_shapes = [
       pltpu.VMEM(
           (
@@ -899,7 +934,7 @@ def ragged_paged_attention(
   #     v_scales_pages,
   # )
   # debug compile ends
-  
+
   outputs = kernel(
       # prefetch
       group_metadata,
