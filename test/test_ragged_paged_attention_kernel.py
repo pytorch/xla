@@ -5,7 +5,7 @@ from absl.testing import parameterized
 import jax
 from jax._src import test_util as jtu
 from jax.experimental.pallas.ops.tpu.paged_attention import quantization_utils
-from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention, make_group_metadata, DEFAULT_MASK_VALUE
+from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention, make_sequence_metadata, DEFAULT_MASK_VALUE
 import jax.numpy as jnp
 import numpy as np
 
@@ -408,12 +408,12 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     num_queries_per_compute_block = 128
     start_group = jnp.array([0])
     num_seqs = 3
-    metadata, num_logical_q_tiles  = make_group_metadata(
+    metadata, num_logical_q_tiles  = make_sequence_metadata(
         cu_q_lens=cu_q_lens,
         m=num_q_tokens,
         tm=num_queries_per_compute_block,
-        start_group=start_group,
-        num_seqs=num_seqs
+        start_sequence=start_group,
+        num_sequences=num_seqs
     )
     seq_ids, physical_q_tile_ids = metadata
     self.assertEqual(num_logical_q_tiles, 6)
