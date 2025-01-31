@@ -3852,7 +3852,6 @@ class TestCoreAtenOps(unittest.TestCase):
     args = (
         torch.randn((10, 10)).to(torch.float32),
         1,
-        False,
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.softmax, args, kwargs)
