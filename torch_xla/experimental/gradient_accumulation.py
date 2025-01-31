@@ -39,10 +39,13 @@ def gradient_accumulation(
 
   Notes:
 
-    The model tracing will happen entirely within the loop. Hence, it is
+  * The model tracing will happen entirely within the loop. Hence, it is
     assumed that `train_step` is purposefully encapsulated inside of the
     loop. Hence, it is not recommended to have any operation involving the
     model parameters outside of `train_step`.
+  * Note that zeroing the gradients to zero instead of None, (e.g.
+    `.zero_grad(set_to_none=False)) will avoid the device transfer of the
+    initial gradients in every call.
 
   Args:
     train_step: Training function that takes iterable tensors and carried
@@ -380,7 +383,7 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
   for param in model_parameters:
     if not param.requires_grad:
       continue
-    if param.grad:
+    if param.grad is not None:
       grad = param.grad
     else:
       grad = torch.zeros(param.size()).to(param.device).requires_grad_(False)
