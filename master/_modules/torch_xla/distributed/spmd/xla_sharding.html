@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git82d3504 )
+                  master (2.7.0+git9ae017e )
                 </div>
               
             
@@ -555,7 +555,28 @@
     <span class="n">tile_assignment</span><span class="p">,</span> <span class="n">group_assignment</span><span class="p">,</span> <span class="n">replication_groups</span><span class="p">,</span> <span class="n">sharding_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_op_sharding_args</span><span class="p">(</span>
         <span class="n">partition_spec</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">OpSharding</span><span class="p">(</span><span class="n">tile_assignment</span><span class="p">,</span> <span class="n">group_assignment</span><span class="p">,</span>
-                                      <span class="n">replication_groups</span><span class="p">,</span> <span class="n">sharding_type</span><span class="p">)</span></div>
+                                      <span class="n">replication_groups</span><span class="p">,</span> <span class="n">sharding_type</span><span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert Mesh to string representation.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">{{</span><span class="s2">&#39;device_ids&#39;: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">device_ids</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&#39;mesh_shape&#39;: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s2">, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&#39;axis_names&#39;: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span><span class="si">}</span><span class="se">}}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+  <span class="nd">@classmethod</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">from_str</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">mesh_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">&quot;Mesh&quot;</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create Mesh from string representation.&quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">ast</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">dict_str</span> <span class="o">=</span> <span class="n">mesh_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;Mesh&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+      <span class="n">mesh_dict</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">dict_str</span><span class="p">)</span>
+      <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+          <span class="n">device_ids</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">&#39;device_ids&#39;</span><span class="p">]),</span>
+          <span class="n">mesh_shape</span><span class="o">=</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">&#39;mesh_shape&#39;</span><span class="p">],</span>
+          <span class="n">axis_names</span><span class="o">=</span><span class="n">mesh_dict</span><span class="p">[</span><span class="s1">&#39;axis_names&#39;</span><span class="p">])</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">SyntaxError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+      <span class="k">return</span> <span class="kc">None</span></div>
 
 
 <span class="n">_GLOBAL_MESH</span><span class="p">:</span> <span class="n">Mesh</span> <span class="o">=</span> <span class="kc">None</span>
