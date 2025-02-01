@@ -84,7 +84,7 @@ def requires_jax(func: Callable) -> Callable:
   @functools.wraps(func)
   def wrapper(*args, **kwargs) -> Any:
     try:
-      torch_xla._XLAC._init_computation_client()
+      jax_import_guard()
     except ImportError as e:
       raise ImportError(
           "JAX import guard fail due to PJRT client is unavailable.") from e
@@ -350,6 +350,10 @@ def fa_custom_backward(
 
   from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq, _flash_attention_bwd_dkv
   grad_q = grad_k = grad_v = grad_ab = segment_ids = None
+
+  require_grad_q, require_grad_k, require_grad_v, *rest = ctx_grad
+  require_grad_ab = ctx_grad[-3]
+
   partition_spec = eval(partition_spec)
   mesh = xs.get_global_mesh() or Mesh.from_str(mesh)
   q_full_shape = torch.Size(q_full_shape)
@@ -397,7 +401,7 @@ def fa_custom_backward(
     segment_ids, q_segment_ids_fa, kv_segment_ids_fa = FlashAttention.prepare_segment_ids(
         q_segment_ids, kv_segment_ids)
 
-  if ctx_grad[0]:
+  if require_grad_q:
     payload, _ = trace_pallas(
         _flash_attention_bwd_dq,
         q,
@@ -439,13 +443,13 @@ def fa_custom_backward(
     grads = torch_xla._XLAC._xla_tpu_custom_call(args, payload,
                                                  [i.shape for i in outputs],
                                                  [i.dtype for i in outputs])
-    if ctx_grad[0]:
+    if require_grad_q:
       grad_q = grads[0]
 
-    if ctx_grad[-3]:
+    if require_grad_ab:
       grad_ab = grads[1]
 
-  if ctx_grad[1] or ctx_grad[2]:
+  if require_grad_k or require_grad_k:
     payload, _ = trace_pallas(
         _flash_attention_bwd_dkv,
         q,
@@ -481,9 +485,9 @@ def fa_custom_backward(
                                                  [k.shape, v.shape],
                                                  [k.dtype, v.dtype])
 
-  if ctx_grad[1]:
+  if require_grad_k:
     grad_k = grads[0]
-  if ctx_grad[2]:
+  if require_grad_v:
     grad_v = grads[1]
 
   # SPMD integration
@@ -604,6 +608,7 @@ class FlashAttention(torch.autograd.Function):
         partition_spec, mesh
     ]
     ctx_grads = generate_ctx_need_grad(*custom_op_arg)
+    # AOT compatiable funtion only accepts argument types listed https://github.com/pytorch/pytorch/blob/82859f61857ef39898b34a5cdf0ae56ec25704d9/torch/_functorch/_aot_autograd/utils.py#L23-L34, so we serliaze partition_spec and mesh into string.
     outs = fa_custom_forward(*custom_op_arg, ctx_grads)
 
     o = outs[0]

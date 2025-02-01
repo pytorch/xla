@@ -1373,23 +1373,29 @@ class PallasTest(parameterized.TestCase):
     ab_grad = ab.grad
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    q.retain_grad()
-    k.retain_grad()
-    v.retain_grad()
-    ab = torch.ones(4, 2, 128, 128).to("xla")
-    ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min).requires_grad_()
-    ab.retain_grad()
-
-    o = self._attention(q, k, v, ab=ab)
+    expected_q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    expected_k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    expected_v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    expected_q.retain_grad()
+    expected_k.retain_grad()
+    expected_v.retain_grad()
+    expected_ab = torch.ones(4, 2, 128, 128).to("xla")
+    expected_ab = expected_ab.masked_fill(mask,
+                                          torch.finfo(
+                                              ab.dtype).min).requires_grad_()
+    expected_ab.retain_grad()
+    o = self._attention(expected_q, expected_k, expected_v, ab=expected_ab)
     loss = o.sum()
     loss.backward()
     xm.mark_step()
 
-    for i in [(q, q_grad), (k, k_grad), (v, v_grad), (ab, ab_grad)]:
-      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-02))
+    for expected_tensor, actual_tensor_grad in [(expected_q, q_grad),
+                                                (expected_k, k_grad),
+                                                (expected_v, v_grad),
+                                                (expected_ab, ab_grad)]:
+      self.assertTrue(
+          torch.allclose(
+              expected_tensor.grad.cpu(), actual_tensor_grad.cpu(), atol=1e-02))
 
 
 if __name__ == '__main__':

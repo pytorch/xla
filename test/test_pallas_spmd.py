@@ -369,9 +369,7 @@ class PallasTest(unittest.TestCase):
     xs.set_global_mesh(mesh)
 
     def flash_attention_wrapper(q, k, v, casual, q_segment_ids, kv_segment_ids,
-                                sm_scale, ab, partition_spec: str, mesh: str):
-      partition_spec = eval(partition_spec)
-      mesh = Mesh.from_str(mesh)
+                                sm_scale, ab):
       return flash_attention(
           q,
           k,
@@ -384,7 +382,6 @@ class PallasTest(unittest.TestCase):
           partition_spec=partition_spec,
           mesh=mesh)
 
-    # AOT compatiable funtion only accepts argument types listed https://github.com/pytorch/pytorch/blob/82859f61857ef39898b34a5cdf0ae56ec25704d9/torch/_functorch/_aot_autograd/utils.py#L23-L34, so we serliaze partition_spec and mesh into string.
     compiled_flash_attention = aot_function(
         flash_attention_wrapper, fw_compiler=compiler)
 
@@ -406,8 +403,7 @@ class PallasTest(unittest.TestCase):
     kv_segment_ids = None
     sm_scale = 1.0
     o_actual = compiled_flash_attention(q, k, v, causal, q_segment_ids,
-                                        kv_segment_ids, sm_scale, ab,
-                                        str(partition_spec), str(mesh))
+                                        kv_segment_ids, sm_scale, ab)
     loss = o_actual.sum()
     loss.backward()
     xm.mark_step()
