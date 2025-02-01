@@ -51,8 +51,6 @@ resource "google_project_iam_custom_role" "remote_bazel_role" {
   ]
 }
 
-data "google_project" "project" {}
-
 variable "project_remote_build_writers" {
   type    = list(string)
   default = []
