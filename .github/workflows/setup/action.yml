@@ -26,6 +26,10 @@ runs:
       run: |
         ls -la
         rm -rvf ${GITHUB_WORKSPACE}/*
+    - name: "Install APT Packages"
+      ansible.builtin.apt:
+        name: "clang-17"
+        update_cache: true
     - name: Setup CUDA environment
       shell: bash
       run: |
