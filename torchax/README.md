@@ -26,7 +26,7 @@ The following instructions assume you are in the `torchax` directory:
 ```
 Fork the repository
 $ git clone https://github.com/<github_username>/xla.git
-$ cd xla/experimental/torchax
+$ cd xla/torchax
 ```
 
 
@@ -65,7 +65,7 @@ Otherwise, install `torchax` from source for your platform:
 ```bash
 pip install -e .[cpu]
 pip install -e .[cuda]
-pip install -e .[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+pip install -e .[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 ```
 
 #### 1.2 (optional) verify installation by running tests
