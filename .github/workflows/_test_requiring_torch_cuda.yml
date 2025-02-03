@@ -106,5 +106,5 @@ jobs:
       - name: Triton Tests
         shell: bash
         run: |
-          PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.1/bin/ptxas python pytorch/xla/test/test_triton.py
+          PJRT_DEVICE=CUDA TRITON_PTXAS_PATH=/usr/local/cuda-12.3/bin/ptxas python pytorch/xla/test/test_triton.py
         if: ${{ matrix.run_triton_tests }}
