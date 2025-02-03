@@ -1,11 +1,19 @@
 import math
+import os
+import sys
 import unittest
 
+
 import torch
+from torch.utils import _pytree as pytree
 from torchax import tensor
 
-from . import test_base
-from torch.utils import _pytree as pytree
+# Setup import folders.
+test_folder = os.path.dirname(os.path.abspath(sys.argv[0]))
+sys.path.append(test_folder)
+
+import test_base
+
 
 
 def diff_output(testcase,
@@ -4464,11 +4472,32 @@ class TestCoreAtenOps(unittest.TestCase):
   def test_einsum(self):
     args = (
         "bshd,bthd->bsht",
-        torch.ones((1, 2, 4, 8), dtype=torch.float32),
-        torch.ones((1, 2, 4, 8), dtype=torch.float32),
+        torch.randn((1, 2, 4, 8), dtype=torch.float16),
+        torch.randn((1, 2, 4, 8), dtype=torch.float16),
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.einsum, args, kwargs, check_dtype=True)
+    run_export_and_compare(self, torch.einsum, args, kwargs, atol=1e-2,
+                           rtol=1e-2, check_dtype=True)
+
+  def test_aten_einsum(self):
+    args = (
+        "bshd,bthd->bsht",
+        (torch.randn((1, 2, 4, 8), dtype=torch.float16),
+        torch.randn((1, 2, 4, 8), dtype=torch.float16),)
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.einsum, args, kwargs, atol=1e-2,
+                           rtol=1e-2, check_dtype=True)
+
+  def test_aten_linear(self):
+    args = (
+        torch.randn((2, 2), dtype=torch.float16),
+        torch.randn((2, 2), dtype=torch.float16),
+        torch.randn((2, ), dtype=torch.float16),
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.linear, args, kwargs, atol=1e-2,
+                           rtol=1e-2, check_dtype=True)
 
 
 if __name__ == "__main__":
