@@ -4490,10 +4490,20 @@ class TestCoreAtenOps(unittest.TestCase):
                            rtol=1e-2, check_dtype=True)
 
   def test_aten_linear(self):
+    # with bias
     args = (
-        torch.randn((2, 2), dtype=torch.float16),
-        torch.randn((2, 2), dtype=torch.float16),
+        torch.randn((2, 4), dtype=torch.float16),
+        torch.randn((2, 4), dtype=torch.float16),
         torch.randn((2, ), dtype=torch.float16),
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.linear, args, kwargs, atol=1e-2,
+                           rtol=1e-2, check_dtype=True)
+
+    # without bias
+    args = (
+        torch.randn((2, 4), dtype=torch.float16),
+        torch.randn((2, 4), dtype=torch.float16),
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.linear, args, kwargs, atol=1e-2,
