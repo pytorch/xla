@@ -304,7 +304,7 @@ class Environment(contextlib.ContextDecorator):
       
       if device == 'cpu':
         return jax.devices('cpu')[0]
-      return jax.devices()[0]
+      return jax.local_devices()[0]
 
 
     def load_ops(self):
