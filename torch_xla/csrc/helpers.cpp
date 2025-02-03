@@ -1039,8 +1039,9 @@ absl::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   // Rebuild aliasing.
   if (buffer_donor_indices.size() > 0) {
     for (size_t i : buffer_donor_indices) {
-      builder.AddBufferDonor(/*param_number=*/0,
-                             /*param_index=*/xla::ShapeIndex({static_cast<int64_t>(i)}));
+      builder.AddBufferDonor(
+          /*param_number=*/0,
+          /*param_index=*/xla::ShapeIndex({static_cast<int64_t>(i)}));
     }
   }
 
