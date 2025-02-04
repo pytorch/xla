@@ -78,7 +78,7 @@ jobs:
     needs: [build-torch-xla, build-cuda-plugin, get-torch-commit]
     with:
       dev-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.10_cuda_12.3
-      runner: linux.8xlarge.nvidia.gpu
+      runner: linux.g4dn.12xlarge.nvidia.gpu
       timeout-minutes: 300
       collect-coverage: false
       install-cuda-plugin: true
