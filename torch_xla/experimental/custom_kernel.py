@@ -279,6 +279,16 @@ def fa_custom_forward(
     segment_ids, q_segment_ids_fa, kv_segment_ids_fa = FlashAttention.prepare_segment_ids(
         q_segment_ids, kv_segment_ids)
 
+    block_k_major = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], k.shape[2])
+    block_k = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2])
+    k_padded, k_pad_size = _pad_to_block_size(k, max(block_k_major, block_k), 2)
+    v_padded = None
+    ab_padded = None
+    if k_pad_size > 0:
+      v_padded, _ = _pad_to_block_size(v, max(block_k_major, block_k), 2)
+      if ab is not None:
+        ab_padded, _ = _pad_to_block_size(ab, max(block_k_major, block_k), 2)
+    
     # We can't directly use flash_attention as we need to override the save_residuals flag which returns
     # l and m that is needed for the backward. Then we lose all the shape checks.
     # TODO: replicate the shape checks on flash_attention.
@@ -286,25 +296,25 @@ def fa_custom_forward(
     payload, _ = trace_pallas(
         _flash_attention_impl,
         q,
-        k,
-        v,
-        ab,
+        k_padded if k_pad_size > 0 else k,
+        v_padded if k_pad_size > 0 else v,
+        ab_padded if k_pad_size > 0 and ab is not None else ab,
         segment_ids,
         save_residuals,
         causal,
         sm_scale,
         min(FlashAttention.DEFAULT_BLOCK_SIZES["block_b"], q.shape[0]),
         min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q"], q.shape[2]),
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], k.shape[2]),
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2]),
+        block_k_major,
+        block_k,
         False,
         static_argnums=range(5, 13),
         use_cache=True,
     )
 
-    args = [q, k, v]
+    args = [q, k_padded if k_pad_size > 0 else k, v_padded if k_pad_size > 0 else v]
     if ab is not None:
-      args += [ab]
+      args += [ab_padded if k_pad_size > 0 else ab]
     if segment_ids is not None:
       args += [q_segment_ids_fa, kv_segment_ids_fa]
     o = torch_xla._XLAC._xla_tpu_custom_call(args, payload, shapes, dtypes)
@@ -336,6 +346,17 @@ def fa_custom_forward(
   outs = [o] + [full_q, full_k, full_v, l, m, full_ab]
   return tuple(outs)
 
+def _pad_to_block_size(tensor: torch.Tensor, block_size: int, dim: int) -> Tuple[torch.Tensor, int]:
+  size = tensor.shape[dim]
+  if size % block_size == 0:
+    return tensor, 0
+    
+  pad_size = block_size - (size % block_size)
+  pad_shape = list(tensor.shape)
+  pad_shape[dim] = pad_size
+  padding = torch.zeros(pad_shape, dtype=tensor.dtype, device=tensor.device)
+  padded = torch.cat([tensor, padding], dim=dim)
+  return padded, pad_size
 
 @custom_op("xla::fa_custom_backward", mutates_args=())
 def fa_custom_backward(
