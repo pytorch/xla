@@ -1,19 +1,11 @@
 import math
-import os
-import sys
 import unittest
 
-
 import torch
-from torch.utils import _pytree as pytree
 from torchax import tensor
 
-# Setup import folders.
-test_folder = os.path.dirname(os.path.abspath(sys.argv[0]))
-sys.path.append(test_folder)
-
-import test_base
-
+from . import test_base
+from torch.utils import _pytree as pytree
 
 
 def diff_output(testcase,
