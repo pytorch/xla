@@ -70,7 +70,6 @@ class TestTorchFunctions(parameterized.TestCase):
     model = SeqModel()
     x = torch.randn((2, 100, 20))
     res = model(x)
-    self.env.config.debug_print_each_op = True
     with self.env:
       model.to('jax')
       x = x.to('jax')
@@ -78,6 +77,18 @@ class TestTorchFunctions(parameterized.TestCase):
       print(res.shape, res2.shape)
 
       self.assertEqual(res.shape, res2.shape)
+
+  def test_rms_norm(self):
+    model = torch.nn.RMSNorm((100, 20))
+    x = torch.randn((2, 100, 20))
+    res = model(x)
+
+    with self.env:
+      model.to('jax')
+      x = x.to('jax')
+      res2 = model(x)
+      self.assertTrue(
+        torch.allclose(res, torchax.tensor.j2t(res2.jax())))
 
 
 
