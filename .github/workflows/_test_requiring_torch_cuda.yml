@@ -94,8 +94,12 @@ jobs:
           pip install -U --pre jaxlib -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
           pip install -U --pre jax-cuda12-pjrt jax-cuda12-plugin -f https://storage.googleapis.com/jax-releases/jax_cuda_plugin_nightly_releases.html
           pip install -U --pre jax -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
-          pip install --no-deps triton==2.3.0
         if: ${{ matrix.run_triton_tests }}
+      - name: Install Triton
+        shell: bash
+        run: |
+          cd pytorch
+          make triton
       - name: Python Tests
         shell: bash
         run: |
