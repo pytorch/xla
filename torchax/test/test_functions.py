@@ -60,6 +60,12 @@ class TestTorchFunctions(parameterized.TestCase):
       a = torch.randn((2,3))
       a.bernoulli_(0.4)
 
+  def test_flatten(self):
+    with self.env:
+      a = torch.randn((2,3,4))
+      a = a.flatten(0, 1)
+      self.assertEqual(tuple(a.shape), (6, 4))
+
   def test_rnn(self):
     model = SeqModel()
     x = torch.randn((2, 100, 20))

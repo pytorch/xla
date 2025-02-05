@@ -100,7 +100,7 @@ class Tensor(torch.Tensor):
     if end_dim == -1:
       end_dim = self.ndim
     new_shape = (
-        self._elem.shape[:start_dim] + (-1,) + self._elem.shape[end_dim:])
+        self._elem.shape[:start_dim] + (-1,) + self._elem.shape[end_dim + 1:])
     new_elem = jnp.reshape(self._elem, new_shape)
     return Tensor(new_elem, self._env)
     # return torch.reshape(self, new_shape)
@@ -371,6 +371,8 @@ class Environment(contextlib.ContextDecorator):
           return func(*args, **kwargs)
       with jax.default_device(jax_device):
         op = self._ops.get(func)
+        if op is None and isinstance(func, torch._ops.OpOverload):
+          op = self._ops.get(func.overloadpacket)
         res = op.func(*args, **kwargs)
         if isinstance(res, jax.Array):
           res = Tensor(res, self)
