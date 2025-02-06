@@ -94,14 +94,15 @@ class TestAutocastXla(unittest.TestCase):
       self.assertNotRegex(hlo, r".*dot.*f32")
 
     def test_pow(self):
-        data = torch.randn(16, 20).to(torch.bfloat16).to(device)
+      data = torch.randn(16, 20).to(torch.bfloat16).to(device)
 
-        with torch.autocast("xla"):
-            output=data.pow(2)
-            hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
-        
-            self.assertRegex(hlo, r".*convert.*f32.*convert.*bf16")
-            self.assertRegex(hlo, r".*power.*f32.*power.*f32")
+      with torch.autocast("xla"):
+        output = data.pow(2)
+        hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+
+        self.assertRegex(hlo, r".*convert.*f32.*convert.*bf16")
+        self.assertRegex(hlo, r".*power.*f32.*power.*f32")
+
 
 if __name__ == "__main__":
   unittest.main()
