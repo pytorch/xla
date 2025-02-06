@@ -2387,11 +2387,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_conj_no_fallback(self):
     met.clear_all()
 
-    tensor = torch.tensor([1 + 2j])
-    expected = torch.conj(tensor)
-    actual = torch.conj(tensor.to(xm.xla_device()))
+    def run(device):
+      tensor = torch.tensor([1 + 2j], device=device)
+      return torch.conj(tensor)
 
-    self.assertEqual(actual, expected)
+    actual = run("cpu")
+    expected = run(xm.xla_device())
+
+    self.assertEqual(actual, expected.cpu())
     self.assertEqual(len(met.executed_fallback_ops()), 0)
 
 
