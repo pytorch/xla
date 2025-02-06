@@ -581,7 +581,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       # we will skip checking the input sharding since it can be expensive.
       if skip_checking_input_sharding_threashold > 0:
         if torch_xla._XLAC._get_xla_sharding_specs(
-            args) != xla_args_sharding_spec:
+            xla_args_tensor_only) != xla_args_sharding_spec:
           # update the xla_args with the input with new sharding and retrace
           xla_model.xla_args = args
           (xla_args_sharding_spec, args_and_out_copy, graph_hash,
