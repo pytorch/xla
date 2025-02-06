@@ -66,13 +66,12 @@ def extract_jax(mod: torch.nn.Module, env=None):
   return states, jax_func
 
 def enable_globally():
-  global env 
-  env = default_env().__enter__()
+  env = default_env().enable_torch_modes()
   return env
 
 def disable_globally():
   global env 
-  default_env().__exit__(None, None, None)
+  default_env().disable_torch_modes()
 
 @contextlib.contextmanager
 def disable_temporarily():
