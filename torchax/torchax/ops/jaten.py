@@ -122,6 +122,8 @@ def _aten_add(x, y, *, alpha=1):
 
 @op(torch.ops.aten.copy_, is_jax_function=False)
 def _aten_copy(x, y, memory_format=None):
+  if y.device.type == "cpu":
+    y = y.to(x.device)
   if x.ndim == 1 and y.ndim == 0:
     # case of torch.empty((1,)).copy_(tensor(N))
     # we need to return 0D tensor([N]) and not scalar tensor(N)
