@@ -1,3 +1,4 @@
+import logging
 import sys
 import contextlib
 from typing import Optional, Any
@@ -13,6 +14,8 @@ import torch.utils._pytree as torch_pytree
 
 from torchax import config
 from torchax.ops import mappings, ops_registry
+
+logger = logging.getLogger(__name__)
 
 
 class OperatorNotFound(Exception):
@@ -155,6 +158,16 @@ class Tensor(torch.Tensor):
   def jax_device(self):
     return self._elem.device
 
+  @property
+  def data(self):
+    logger.warn("In-place to .data modifications still results a copy on TPU")
+    return self
+
+  @data.setter
+  def data(self, other):
+    if isinstance(other, Tensor):
+      self._elem = other._elem
+
   def apply_jax(self, jax_function, *args, **kwargs):
     # Call a jax function on _elem
     res = jax_function(self._elem, *args, **kwargs)
@@ -199,6 +212,21 @@ def debug_accuracy(func, args, kwargs, current_output):
 
   return True
 
+def _make_debug_msg(is_dispatch, log_args, func, args, kwargs):
+  def _display(a):
+    if isinstance(a, torch.Tensor):
+      return f'Tensor of {type(a)}: {a.dtype}{a.shape}'
+    elif isinstance(a, jax.Array):
+      return f'Jax Array of {type(a)}: {a.dtype}{a.shape}'
+    else:
+      return str(a)
+
+  kwargs = kwargs or {}
+  title = 'DISPATCH' if is_dispatch else 'FUNCTION'
+  args_msg = 'args: ' + ','.join(_display(a) for a in args) if log_args else ''
+  kwargs_msg = 'kwargs: ' + ','.join(f'{key}: {_display(a)}' for key, a in kwargs.items()) if log_args else ''
+  return f'{title}: {_name_of_func(func)} {args_msg} ~ {kwargs_msg}'
+
 
 class XLAFunctionMode(torch.overrides.TorchFunctionMode):
   """Context manager that dispatches torch function calls to JAX."""
@@ -211,7 +239,12 @@ class XLAFunctionMode(torch.overrides.TorchFunctionMode):
                          types,
                          args=(),
                          kwargs=None) -> torch.Tensor:
-    with log_nested(self.env, f'FUNCTION: {_name_of_func(func)}'):
+    message = f'FUNCTION: {_name_of_func(func)}'
+    if self.env.config.debug_print_each_op_operands:
+      message = message + 'f' 
+    message = _make_debug_msg(False, self.env.config.debug_print_each_op_operands,
+                              func, args, kwargs)
+    with log_nested(self.env, message):
       try:
         return self.env.dispatch(func, types, args, kwargs)
       except OperatorNotFound:
@@ -229,7 +262,9 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
     self.env = env
 
   def __torch_dispatch__(self, func, types, args=(), kwargs=None):
-    with log_nested(self.env, f'DISPATCH: {_name_of_func(func)}'):
+    message = _make_debug_msg(True, self.env.config.debug_print_each_op_operands,
+                              func, args, kwargs)
+    with log_nested(self.env, message):
       if isinstance(func, torch._ops.OpOverloadPacket):
         with self:
           return func(*args, **kwargs)
@@ -287,6 +322,8 @@ class Environment(contextlib.ContextDecorator):
         self._mesh = None
         self.config = configuration or config.Configuration()
 
+        self._manually_entered = False 
+        self.enabled = False
         self._jax_devices = set(['jax', 'jax_cpu', 'xla'])
 
     def get_as_jax_device(self, device: Any):
@@ -295,16 +332,19 @@ class Environment(contextlib.ContextDecorator):
 
       if isinstance(device, torch.device):
         device = str(device)
-      if (self.config.use_torch_native_for_cpu_tensor and 
-          not device.startswith('jax') and not device.startswith('cuda')):
-        return None
 
-      if not self.config.treat_cuda_as_jax_device and device.startswith('cuda'):
-        return None
-      
-      if device == 'cpu':
+      if (not self.config.use_torch_native_for_cpu_tensor and 
+          device.startswith('cpu')):
         return jax.devices('cpu')[0]
-      return jax.local_devices()[0]
+
+      if self.config.treat_cuda_as_jax_device and device.startswith('cuda'):
+        return jax.local_devices()[0]
+
+      if device.startswith('jax'):
+        return jax.local_devices()[0]
+
+      return None # fallback to torch
+      
 
 
     def load_ops(self):
@@ -331,10 +371,9 @@ class Environment(contextlib.ContextDecorator):
         if new_dtype is not None and new_dtype != arr.dtype:
           arr = arr.astype(mappings.t2j_dtype(new_dtype))
         if new_device is not None:
-          jax_device = self.get_as_jax_device(new_device)
-          if jax_device:
-            arr = jax.device_put(arr, jax_device)
-          else:
+          # convert xla tensor to other device
+          # only supported is CPU
+          if str(new_device).startswith('cpu'):
             # converting to a non-jax device: let torch native handle it
             torch_tensor = j2t(arr) if isinstance(the_tensor, Tensor) else arr
             with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
@@ -365,7 +404,8 @@ class Environment(contextlib.ContextDecorator):
     def _handle_tensor_constructor(self, func, args, kwargs):
       device = kwargs.get('device')
       jax_device = self.get_as_jax_device(device)
-      if jax_device is None:
+      # TODO(qihqi) figure out better ways for device propagation
+      if not self._manually_entered and jax_device is None:
         # let torch handle it
         with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
           return func(*args, **kwargs)
@@ -454,16 +494,26 @@ class Environment(contextlib.ContextDecorator):
           debug_accuracy(func, old_args, old_kwargs, res)
         return res
 
-    def __enter__(self):
+    def enable_torch_modes(self):
       self._dispatch_mode.__enter__()
       self._function_mode.__enter__()
       self.enabled = True
-      return self
-
-    def __exit__(self, *exc):
+    
+    def disable_torch_modes(self, *exc):
+      if not exc:
+        exc = (None, None, None)
       self._function_mode.__exit__(*exc)
       self._dispatch_mode.__exit__(*exc)
       self.enabled = False
+
+    def __enter__(self):
+      self.enable_torch_modes()
+      self._manually_entered = True
+      return self
+
+    def __exit__(self, *exc):
+      self._manually_entered = False
+      self.disable_torch_modes(*exc)
 
     def _move_one_value(self, val):
       if isinstance(val, torch.nn.Module):
