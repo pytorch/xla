@@ -163,6 +163,11 @@ class Tensor(torch.Tensor):
     logger.warn("In-place to .data modifications still results a copy on TPU")
     return self
 
+  @data.setter
+  def data(self, other):
+    if isinstance(other, Tensor):
+      self._elem = other._elem
+
   def apply_jax(self, jax_function, *args, **kwargs):
     # Call a jax function on _elem
     res = jax_function(self._elem, *args, **kwargs)
