@@ -83,6 +83,7 @@ def _diag(input, diagonal=0):
   return jnp.diag(input, k=diagonal)
 
 @register_function(torch.einsum)
+@register_function(torch.ops.aten.einsum)
 def _einsum(equation, *operands):
   def get_params(*a):
     inner_list = a[0]
