@@ -1,3 +1,4 @@
+import logging
 import sys
 import contextlib
 from typing import Optional, Any
@@ -13,6 +14,8 @@ import torch.utils._pytree as torch_pytree
 
 from torchax import config
 from torchax.ops import mappings, ops_registry
+
+logger = logging.getLogger(__name__)
 
 
 class OperatorNotFound(Exception):
@@ -154,6 +157,11 @@ class Tensor(torch.Tensor):
   @property
   def jax_device(self):
     return self._elem.device
+
+  @property
+  def data(self):
+    logger.warn("In-place to .data modifications still results a copy on TPU")
+    return self
 
   def apply_jax(self, jax_function, *args, **kwargs):
     # Call a jax function on _elem
