@@ -295,16 +295,19 @@ class Environment(contextlib.ContextDecorator):
 
       if isinstance(device, torch.device):
         device = str(device)
-      if (self.config.use_torch_native_for_cpu_tensor and 
-          not device.startswith('jax') and not device.startswith('cuda')):
-        return None
 
-      if not self.config.treat_cuda_as_jax_device and device.startswith('cuda'):
-        return None
-      
-      if device == 'cpu':
+      if (not self.config.use_torch_native_for_cpu_tensor and 
+          device.startswith('cpu')):
         return jax.devices('cpu')[0]
-      return jax.local_devices()[0]
+
+      if self.config.treat_cuda_as_jax_device and device.startswith('cuda'):
+        return jax.local_devices()[0]
+
+      if device.startswith('jax'):
+        return jax.local_devices()[0]
+
+      return None # fallback to torch
+      
 
 
     def load_ops(self):
