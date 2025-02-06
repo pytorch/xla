@@ -26,6 +26,7 @@ full_codegen:
   - clamp.Tensor
   - clamp_max.Tensor
   - clamp_min.Tensor
+  - _conj_copy
   - cos
   - cosh
   - elu

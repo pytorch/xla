@@ -342,6 +342,11 @@ torch_xla::XlaOpVector ClampMinTensor::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Max(xla_input, xla_other), loctx);
 }
 
+torch_xla::XlaOpVector ConjCopy::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Conj(input), loctx);
+}
+
 torch_xla::XlaOpVector Cos::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
