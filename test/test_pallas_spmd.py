@@ -89,12 +89,12 @@ class PallasTest(unittest.TestCase):
     v = torch.randn(4, 2, 513, 4).to("xla")
     ab = torch.randn(4, 2, 513, 513).to("xla")
 
-    o = flash_attention(q, k, v, ab, partition_spec=range(n_devices))
+    o = flash_attention(q, k, v, ab=ab, partition_spec=range(n_devices))
     self.assertEqual( 
         torch_xla._XLAC._get_xla_sharding_spec(o),
         f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
 
-    expected_o = self._attention(q, k, v, ab)
+    expected_o = self._attention(q, k, v, ab=ab)
     self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
