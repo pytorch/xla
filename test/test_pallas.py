@@ -245,6 +245,21 @@ class PallasTest(parameterized.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
   @with_jax_high_precision
+  def test_flash_attention_wrapper_kv_and_ab_padding(self):
+    from torch_xla.experimental.custom_kernel import flash_attention
+
+    q = torch.randn(1, 2, 513, 4).to("xla")
+    k = torch.randn(1, 2, 513, 4).to("xla")
+    v = torch.randn(1, 2, 513, 4).to("xla")
+    ab = torch.randn(1,2, 513, 513).to("xla")
+
+    o = flash_attention(q, k, v, ab)
+    expected_o = self._attention(q, k, v, ab)
+    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  @with_jax_high_precision
   def test_flash_attention_wrapper_with_dynamo(self):
     from torch_xla.experimental.custom_kernel import flash_attention
 
