@@ -449,7 +449,7 @@ def fa_custom_backward(
     if require_grad_ab:
       grad_ab = grads[1]
 
-  if require_grad_k or require_grad_k:
+  if require_grad_k or require_grad_v:
     payload, _ = trace_pallas(
         _flash_attention_bwd_dkv,
         q,
