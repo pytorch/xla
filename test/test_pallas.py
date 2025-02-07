@@ -41,10 +41,10 @@ class PallasTest(parameterized.TestCase):
   # therefore we use != instead of ==.
   def _make_attention_mask_from_segment_ids(self, q_segment_ids,
                                             kv_segment_ids):
-    return q_segment_ids.view(q_segment_ids.shape[0], 1,
-                              q_segment_ids.shape[1], 1) != kv_segment_ids.view(
-                                  kv_segment_ids.shape[0], 1, 1,
-                                  kv_segment_ids.shape[1])
+    return q_segment_ids.view(q_segment_ids.shape[0], 1, q_segment_ids.shape[1],
+                              1) != kv_segment_ids.view(kv_segment_ids.shape[0],
+                                                        1, 1,
+                                                        kv_segment_ids.shape[1])
 
   def _attention(self, q, k, v, *, attn_mask=None, ab=None):
     attn_weight = q @ k.transpose(-2, -1)
@@ -251,7 +251,7 @@ class PallasTest(parameterized.TestCase):
     q = torch.randn(1, 2, 513, 4).to("xla")
     k = torch.randn(1, 2, 513, 4).to("xla")
     v = torch.randn(1, 2, 513, 4).to("xla")
-    ab = torch.randn(1,2, 513, 513).to("xla")
+    ab = torch.randn(1, 2, 513, 513).to("xla")
 
     o = flash_attention(q, k, v, ab=ab)
     expected_o = self._attention(q, k, v, ab=ab)
