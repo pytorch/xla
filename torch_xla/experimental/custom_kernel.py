@@ -667,6 +667,205 @@ def flash_attention(
                               sm_scale, ab, partition_spec, mesh)
 
 
+def _ragged_paged_attention_nonkernel(
+    q,  # [num_tokens, num_q_heads, head_dim]
+    k_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
+    v_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
+    kv_lens,  # i32[num_tokens]
+    page_indices,  # i32[num_tokens, pages_per_sequence]
+    cu_q_lens,  # i32[num_tokens + 1]
+    num_seqs,  # int
+):
+  num_tokens, num_q_heads, head_dim = q.shape
+  num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
+  num_query_per_kv = num_q_heads // num_kv_heads
+
+  lengths = lengths.cpu()
+  page_indices = page_indices.cpu()
+
+  outputs: List[torch.Tensor] = []
+  for i in range(num_seqs):
+    cur_q_len = cu_q_lens[i + 1] - cu_q_lens[i]
+    q = queries[start_idx:start_idx +
+                cur_q_len]  # [cur_q_len, num_q_heads, head_dim]
+    cur_kv_len = kv_lens[i]
+    num_pages = (cur_kv_len + page_size - 1) // page_size
+    page_indices_to_use = page_indices[i, :num_pages]
+
+    k = k_pages[:,
+                page_indices_to_use, :, :]  # [num_kv_heads, page_indices_to_use, page_size, head_dim]
+    k = k.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_size]
+    k = k.reshape(num_pages * page_size, num_kv_heads, head_size)
+    k = k[:cur_kv_len]  # [cur_kv_len, num_kv_heads, head_size]
+
+    v = v_pages[:,
+                page_indices_to_use, :, :]  # [num_kv_heads, num_pages, page_size, head_size]
+    v = v.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_size]
+    v = v.reshape(num_pages * page_size, num_kv_heads, head_size)
+    v = v[:cur_kv_len]  # [cur_kv_len, num_kv_heads, head_size]
+
+    if num_query_per_kv != 1:
+      # GQA/MQA
+      k = torch.repeat_interleave(
+          k, num_query_per_kv,
+          dim=1)  # [cur_kv_len, num_query_heads, head_size]
+      v = torch.repeat_interleave(
+          v, num_query_per_kv,
+          dim=1)  # [cur_kv_len, num_query_heads, head_size]
+
+    # NOTE: To balance efficiency and performance, we use the original dtype (e.g., bfloat16 or float16)
+    # for matrix multiplications (i.e., q @ k and attn @ v) while using float32 for softmax.
+    # However, the kernel doesn't have to strictly follow the dtypes here.
+    # For example, it can use bfloat16 instead of float32 or vice versa for performance or simplicity.
+    attn = torch.einsum("qhd,khd->hqk", q[i],
+                        k)  # [num_query_heads, cur_q_len, kv_len]
+    attn = attn.float()
+    empty_mask = torch.ones(cur_q_len, cur_kv_len, device=attn.device)
+    mask = torch.triu(empty_mask, diagonal=cur_kv_len - cur_q_len + 1).bool()
+    attn.masked_fill_(mask, float("-inf"))
+    attn = torch.softmax(
+        attn, dim=-1).to(v.dtype)  # [num_query_heads, cur_q_len, kv_len]
+    out = torch.einsum("hqk,khd->qhd", attn,
+                       v)  # [cur_q_len, num_query_heads, head_size]
+    outputs.append(out)
+
+  output = torch.stack(
+      outputs, dim=0)  # [num_tokens, num_query_heads, head_size]
+  return output
+
+
+@requires_jax
+def ragged_paged_attention(
+    q,  # [num_tokens, num_q_heads, head_dim]
+    k_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
+    v_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
+    kv_lens,  # i32[num_tokens]
+    page_indices,  # i32[num_tokens, pages_per_sequence]
+    cu_q_lens,  # i32[num_tokens + 1]
+    num_seqs,  # int
+    num_kv_pages_per_block,
+    num_queries_per_block,
+    use_kernel=True,
+    # TODO(jevinjiang, xiowei): add attn_logits_soft_cap.
+    # attn_logits_soft_cap: float | None = None,
+):  # [batch_size, query_len, num_heads, head_dim]:
+  assert len(q.shape) == 3, "q should have 3 dimensions."
+  if not use_kernel:
+    return _ragged_paged_attention_nonkernel(
+        q,
+        k_pages,
+        v_pages,
+        kv_lens,
+        page_indices,
+        cu_q_lens,
+        num_seqs,
+    )
+
+  # Import JAX within the function such that we don't need to call the jax_import_guard()
+  # in the global scope which could cause problems for xmp.spawn.
+  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as ragged_attention, make_sequence_metadata
+  payload, tensor_args = trace_pallas(
+      ragged_attention,
+      q,
+      k_pages,
+      v_pages,
+      kv_lens,
+      page_indices,
+      cu_q_lens,
+      num_seqs=num_seqs,
+      num_kv_pages_per_block=num_kv_pages_per_block,
+      num_queries_per_block=num_queries_per_block,
+      static_argnames=[
+          "num_kv_pages_per_block",
+          "num_queries_per_block",
+          "num_seqs",
+      ],
+  )
+
+  print(f"[jevin debug] {len(tensor_args)=}")
+  print(f"[jevin debug] {tensor_args[0].shape=}")
+
+  # TODO(jevinjiang, xiowei): We need sequence metadata to be passed to _xla_tpu_custom_call. 
+  # But we can not directly use the JAX version. Consider unify make_sequence_metadata in one place.
+  # def make_sequence_metadata(
+  #   *
+  #   cu_q_lens,
+  #   m,
+  #   tm,
+  #   start_sequence,
+  #   num_sequences,
+  # ):
+  #   end_sequence = start_sequence + num_sequences - 1
+  #   sequence_ends = cu_q_lens[1:]
+  #   sequence_offsets = cu_q_lens
+  #   rounded_sequence_ends = ((sequence_ends + tm - 1) // tm * tm).int()
+  #   sequence_starts = torch.cat(
+  #     [torch.zeros(1).int(), sequence_ends[:-1]])
+  #   rounded_sequence_starts = sequence_starts // tm * tm
+  #   rounded_sequence_sizes = rounded_sequence_ends - rounded_sequence_starts
+  #   sequence_tiles = rounded_sequence_sizes // tm
+  #   assert x % tx == 0
+  #   tiles_m = x // tx
+
+
+
+  # import jax
+  sequence_metadata, _ = make_sequence_metadata(
+      cu_q_lens=cu_q_lens.cpu().numpy(),
+      m=q.shape[0],
+      tm=num_queries_per_block,
+      # TODO(jevinjiang, xiowei): pass start_sequence as input.
+      start_sequence=torch.tensor([0]).cpu().numpy(),
+      num_sequences=num_seqs,
+  )
+  # print(f"[jevin debug]{type(sequence_metadata)=}")
+  # print(f"[jevin debug]{len(sequence_metadata)=}")
+  # print(f"[jevin debug]{type(sequence_metadata[0])=}")
+  # print(f"[jevin debug]{type(sequence_metadata[1])=}")
+  # print(f"[jevin debug]{sequence_metadata[0].tolist()=}")
+  # print(f"[jevin debug]{sequence_metadata[1].tolist()=}")
+  assert len(sequence_metadata) == 2
+  seq_metadata = torch.cat
+  sequence_ids = torch.tensor(sequence_metadata[0].tolist(), dtype=torch.int32).to("xla")
+  m_tile_ids = torch.tensor(sequence_metadata[1].tolist(), dtype=torch.int32).to("xla")
+
+  q_dtype_for_kernel_launch = q.dtype
+  page_indices_reshaped = page_indices.reshape(-1)
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
+  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  pin1 = torch.zeros((1,1), dtype=torch.int32).to("xla")
+  pin2 = torch.zeros((1,1), dtype=torch.int32).to("xla")
+  pin3 = torch.zeros((1,1), dtype=torch.int32).to("xla")
+  pin4 = torch.zeros((1,1), dtype=torch.int32).to("xla")
+  q = q.permute(1, 0, 2)
+  MIN_BLOCK_SIZE = 128
+  output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
+
+  print(f"[jevin debug] prepare custom call")
+  
+
+  output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
+      [
+          sequence_ids, 
+          m_tile_ids,
+          kv_lens,
+          page_indices_reshaped,
+          cu_q_lens,
+          buffer_index,
+          step,
+          # pin1,
+          # pin2,
+          # pin3,
+          # pin4,
+          q.to(q_dtype_for_kernel_launch),
+          k_pages,
+          v_pages,
+      ], payload, [q.shape, output_shape, output_shape],
+      [q_dtype_for_kernel_launch, torch.float32, torch.float32])
+  print(f"[jevin debug] custom call finsihed")
+  return output.permute(1, 0, 2).to(q_dtype_for_kernel_launch)
+
+
 def _multi_queries_paged_attention_nonkernel(
     q,  # [batch_size, query_len, num_heads, head_size]
     k_pages,  # [num_kv_heads, total_num_pages, page_size, head_size]
@@ -1316,6 +1515,32 @@ def multi_queries_paged_attention_non_xla(q: torch.Tensor,
                                           use_kernel: bool,
                                           attn_logits_soft_cap: float |
                                           None = None):
+  return non_xla_attetion(q, k_pages, v_pages, "paged")
+
+
+XLA_LIB.define(
+    "ragged_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor kv_len, Tensor page_indices, Tensor cu_q_lens, int num_seqs, int num_kv_pages_per_block, int num_queries_per_block, bool use_kernel) -> Tensor",
+)
+
+
+@impl(XLA_LIB, "ragged_paged_attention", "XLA")
+def ragged_paged_attention_xla(q: torch.Tensor, k_pages: torch.Tensor,
+                               v_pages: torch.Tensor, kv_lens: torch.Tensor,
+                               page_indices: torch.Tensor,
+                               cu_q_lens: torch.Tensor, num_seqs: int,
+                               num_kv_pages_per_block: int,
+                               num_queries_per_block: int, use_kernel: bool):
+  return ragged_paged_attention(q, k_pages, v_pages, kv_lens, page_indices,
+                                cu_q_lens, num_seqs, num_kv_pages_per_block,
+                                num_queries_per_block, use_kernel)
+
+
+@impl(XLA_LIB, "ragged_paged_attention", "CompositeExplicitAutograd")
+def ragged_paged_attention_non_xla(
+    q: torch.Tensor, k_pages: torch.Tensor, v_pages: torch.Tensor,
+    kv_lens: torch.Tensor, page_indices: torch.Tensor, cu_q_lens: torch.Tensor,
+    num_seqs: int, num_kv_pages_per_block: int, num_queries_per_block: int,
+    use_kernel: bool):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 

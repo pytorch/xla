@@ -803,8 +803,8 @@ def ragged_paged_attention(
 
   # in-spec. Note currently q.shape=[num_q_heads, num_tokens, head_dim]
   # Within the kernel, q.shape should be [num_q_heads_per_kv_head, q_block_size, head_dim]
-  def qo_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
-                   sequence_metadata, *_):
+  def qo_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx):
+    print(f"[jevin debug] {len(args)=}")
     seq_ids, physical_q_tile_ids = sequence_metadata
     del seq_ids
     physical_q_blk_idx = physical_q_tile_ids[logical_q_blk_idx]
@@ -890,13 +890,13 @@ def ragged_paged_attention(
           grid=grid,
           scratch_shapes=scratch_shapes,
       ),
-      compiler_params=pltpu.TPUCompilerParams(
-          # due to compute_block_indices, we loop kv_head, q_blk, kv_blk, the order matters.
-          dimension_semantics=(
-              "arbitrary",
-              "arbitrary",
-              "arbitrary",
-          )),
+      # compiler_params=pltpu.TPUCompilerParams(
+      #     # due to compute_block_indices, we loop kv_head, q_blk, kv_blk, the order matters.
+      #     dimension_semantics=(
+      #         "arbitrary",
+      #         "arbitrary",
+      #         "arbitrary",
+      #     )),
       out_shape=out_shape,
   )
   # TODO: need to slice the page_indices later to avoid the SMEM OOM.
