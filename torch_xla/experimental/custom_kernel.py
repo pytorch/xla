@@ -282,12 +282,13 @@ def fa_custom_forward(
     block_k_major = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"],
                         k.shape[2])
     block_k = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2])
-    k, k_pad_size = _pad_to_block_size(
-        k, max(block_k_major, block_k), 2, padding_minus_inf=True)
+    k, k_pad_size = _pad_to_block_size(k, max(block_k_major, block_k), 2)
     if k_pad_size > 0:
       v, _ = _pad_to_block_size(v, max(block_k_major, block_k), 2)
-      if ab is not None:
-        ab, _ = _pad_to_block_size(ab, max(block_k_major, block_k), 3)
+      if ab is None:
+        ab = torch.zeros((q.shape[0], q.shape[1], q.shape[2], q.shape[2]))
+      ab, _ = _pad_to_block_size(
+          ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
 
     # We can't directly use flash_attention as we need to override the save_residuals flag which returns
     # l and m that is needed for the backward. Then we lose all the shape checks.
