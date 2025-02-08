@@ -248,6 +248,18 @@ def fa_custom_forward(
     full_ab = ab.clone()
   else:
     full_ab = None
+
+  block_k_major = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"],
+                      k.shape[2])
+  block_k = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2])
+  k, k_pad_size = _pad_to_block_size(k, max(block_k_major, block_k), 2)
+  if k_pad_size > 0:
+    v, _ = _pad_to_block_size(v, max(block_k_major, block_k), 2)
+    if ab is None:
+      ab = torch.zeros((q.shape[0], q.shape[1], q.shape[2], q.shape[2]))
+    ab, _ = _pad_to_block_size(
+        ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
+
   if partition_spec is not None:
     q_full_shape = q.shape
     q = xs.enable_manual_sharding(q, partition_spec, mesh=mesh).global_tensor
@@ -278,17 +290,6 @@ def fa_custom_forward(
           kv_segment_ids, segment_id_partition_spec, mesh=mesh).global_tensor
     segment_ids, q_segment_ids_fa, kv_segment_ids_fa = FlashAttention.prepare_segment_ids(
         q_segment_ids, kv_segment_ids)
-
-    block_k_major = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"],
-                        k.shape[2])
-    block_k = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2])
-    k, k_pad_size = _pad_to_block_size(k, max(block_k_major, block_k), 2)
-    if k_pad_size > 0:
-      v, _ = _pad_to_block_size(v, max(block_k_major, block_k), 2)
-      if ab is None:
-        ab = torch.zeros((q.shape[0], q.shape[1], q.shape[2], q.shape[2]))
-      ab, _ = _pad_to_block_size(
-          ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
 
     # We can't directly use flash_attention as we need to override the save_residuals flag which returns
     # l and m that is needed for the backward. Then we lose all the shape checks.
