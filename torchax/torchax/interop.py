@@ -23,7 +23,7 @@ def extract_all_buffers(m: torch.nn.Module):
                 continue
             qual_name = prefix + k
             if isinstance(v, torch.nn.parameter.Parameter) and v.requires_grad:
-                params[qual_name] = v
+                params[qual_name] = v.data # take the value
             elif isinstance(v, torch.Tensor):
                 buffers[qual_name] = v
         for name, child in module.named_children():
