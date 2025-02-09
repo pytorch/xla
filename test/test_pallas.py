@@ -562,6 +562,207 @@ class PallasTest(parameterized.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
+  def test_ragged_paged_attention_wrapper(self):
+    from torch_xla.experimental.custom_kernel import ragged_paged_attention
+    from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as jax_ragged_paged_attention
+
+    dtype = torch.float32
+    page_size = 16
+    num_kv_heads = 8
+    q_kv_head_ratio = 4
+    head_dim = 256
+    num_queries_per_block = 8
+    block_kv_size = 256
+    max_kv_len = 2048
+    max_q_len = 64
+
+    batch_size = 3
+
+    q_lens = [8, 32, 16]
+    total_num_tokens = sum(q_lens)
+
+    cu_q_lens = [0 for _ in range(total_num_tokens + 1)]
+    for i in range(batch_size):
+      cu_q_lens[i + 1] = cu_q_lens[i] + q_lens[i]
+    cu_q_lens = torch.tensor(cu_q_lens, dtype=torch.int32)
+
+    kv_lens = torch.randint(
+        max_q_len, max_kv_len, (total_num_tokens,), dtype=torch.int32)
+
+    pages_per_sequence = max_kv_len // page_size
+    total_num_pages = batch_size * pages_per_sequence
+    assert max_kv_len <= total_num_pages * page_size
+
+    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+        kv_lens,
+        page_size,
+        max_kv_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+        dtype=dtype,
+        query_len=max_q_len,
+    )
+    q = q.reshape(-1, *q.shape[-2:])[:sum(q_lens)]
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    kv_lens_xla = kv_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+    cu_q_lens_xla = cu_q_lens.to("xla")
+
+    output = ragged_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_lens_xla,
+        page_indices_xla,
+        cu_q_lens_xla,
+        num_seqs=batch_size,
+        num_kv_pages_per_block=block_kv_size // page_size,
+        num_queries_per_block=num_queries_per_block,
+        use_kernel=True)
+
+    nonkernel_output = ragged_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_lens_xla,
+        page_indices_xla,
+        cu_q_lens_xla,
+        num_seqs=batch_size,
+        num_kv_pages_per_block=block_kv_size // page_size,
+        num_queries_per_block=num_queries_per_block,
+        use_kernel=False)
+
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
+
+    expected_output = torch.from_numpy(
+        np.array(
+            jax_ragged_paged_attention(
+                q_jax,
+                k_pages_jax,
+                v_pages_jax,
+                kv_lens_jax,
+                page_indices_jax,
+                cu_q_lens_jax,
+                num_seqs=batch_size,
+                num_kv_pages_per_block=block_kv_size // page_size,
+                num_queries_per_block=num_queries_per_block,
+            )[1]))
+
+    self.assertTrue(
+        torch.allclose(
+            output.cpu(), expected_output.cpu(), atol=1e-5, rtol=1e-5))
+    self.assertTrue(
+        torch.allclose(
+            output.cpu(), nonkernel_output.cpu(), atol=2e-1, rtol=1e-2))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_ragged_paged_attention_wrapper_with_dynamo(self):
+    dtype = torch.float32
+    page_size = 16
+    num_kv_heads = 8
+    q_kv_head_ratio = 4
+    head_dim = 256
+    num_queries_per_block = 8
+    block_kv_size = 256
+    max_kv_len = 2048
+    max_q_len = 64
+
+    batch_size = 3
+
+    q_lens = [8, 32, 16]
+    total_num_tokens = sum(q_lens)
+
+    cu_q_lens = [0 for _ in range(total_num_tokens + 1)]
+    for i in range(batch_size):
+      cu_q_lens[i + 1] = cu_q_lens[i] + q_lens[i]
+    cu_q_lens = torch.tensor(cu_q_lens, dtype=torch.int32)
+
+    kv_lens = torch.randint(
+        max_q_len, max_kv_len, (total_num_tokens,), dtype=torch.int32)
+
+    pages_per_sequence = max_kv_len // page_size
+    total_num_pages = batch_size * pages_per_sequence
+    assert max_kv_len <= total_num_pages * page_size
+
+    q, k_pages, v_pages, page_indices = self._pagedattention_generate_qkv(
+        kv_lens,
+        page_size,
+        max_kv_len,
+        num_kv_heads,
+        num_kv_heads * q_kv_head_ratio,
+        head_dim,
+        dtype=dtype,
+        query_len=max_q_len,
+    )
+    q = q.reshape(-1, *q.shape[-2:])[:sum(q_lens)]
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    kv_lens_xla = kv_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+    cu_q_lens_xla = cu_q_lens.to("xla")
+
+    def ragged_paged_attention_wrapper(q, k_pages, v_pages, kv_lens,
+                                       page_indices, cu_q_lens, num_seqs,
+                                       num_kv_pages_per_block,
+                                       num_queries_per_block, use_kernel):
+      return torch.ops.xla.ragged_paged_attention(
+          q,
+          k_pages,
+          v_pages,
+          kv_lens,
+          page_indices,
+          cu_q_lens,
+          num_seqs,
+          num_kv_pages_per_block,
+          num_queries_per_block,
+          use_kernel=use_kernel,
+      )
+
+    compiled_paged_attention = torch.compile(
+        ragged_paged_attention_wrapper, backend="openxla")
+
+    output = compiled_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_lens_xla,
+        page_indices_xla,
+        cu_q_lens_xla,
+        num_seqs=batch_size,
+        num_kv_pages_per_block=block_kv_size // page_size,
+        num_queries_per_block=num_queries_per_block,
+        use_kernel=True,
+    )
+
+    nonkernel_output = compiled_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_lens_xla,
+        page_indices_xla,
+        cu_q_lens_xla,
+        num_seqs=batch_size,
+        num_kv_pages_per_block=block_kv_size // page_size,
+        num_queries_per_block=num_queries_per_block,
+        use_kernel=False,
+    )
+
+    self.assertTrue(
+        torch.allclose(
+            output.cpu(), nonkernel_output.cpu(), atol=2e-1, rtol=1e-2))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
   def test_paged_attention_multi_queries_wrapper(self):
     from torch_xla.experimental.custom_kernel import multi_queries_paged_attention
     from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention as jax_multi_queries_paged_attention
@@ -692,9 +893,6 @@ class PallasTest(parameterized.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_paged_attention_multi_queries_wrapper_with_dynamo(self):
-    from torch_xla.experimental.custom_kernel import multi_queries_paged_attention
-    from torch_xla.experimental.pallas_kernels.multi_queries_paged_attention_kernel import paged_attention as jax_multi_queries_paged_attention
-
     dtype = torch.float32
     page_size = 16
     num_kv_heads = 8
