@@ -55,6 +55,9 @@ mutation_ops_to_functional = {
   torch.ops.aten.log_normal_: torch.ops.aten.log_normal,
   torch.ops.aten.scatter_add_: torch.ops.aten.scatter_add,
   torch.ops.aten.scatter_reduce_.two: torch.ops.aten.scatter_reduce,
+  torch.ops.aten.scatter_.src: torch.ops.aten.scatter.src,
+  torch.ops.aten.scatter_.value: torch.ops.aten.scatter.value,
+  torch.ops.aten.scatter_: torch.ops.aten.scatter,
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
@@ -2131,6 +2134,11 @@ def _aten_select_scatter(input, src, dim, index):
 def _aten_scatter_src(input, dim, index, src, reduce=None):
   input_index, source_indexes = _scatter_index(dim, index)
   return input.at[input_index].set(src[source_indexes])
+
+@op(torch.ops.aten.scatter.value)
+def _aten_scatter_value(input, dim, index, src, reduce=None):
+  input_index, source_indexes = _scatter_index(dim, index)
+  return input.at[input_index].set(src)
 
 
 @op(torch.ops.aten.scatter.value)
