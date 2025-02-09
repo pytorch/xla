@@ -1,4 +1,0 @@
-WARNING:root:libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.
-Running tests under Python 3.10.16: /usr/local/bin/python
-FATAL Flags parsing error: flag --verbosity=-k: invalid literal for int() with base 10: '-k'
-Pass --helpshort or --helpfull to see help on flags.
