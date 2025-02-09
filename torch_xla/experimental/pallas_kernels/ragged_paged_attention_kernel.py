@@ -803,7 +803,8 @@ def ragged_paged_attention(
 
   # in-spec. Note currently q.shape=[num_q_heads, num_tokens, head_dim]
   # Within the kernel, q.shape should be [num_q_heads_per_kv_head, q_block_size, head_dim]
-  def qo_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx):
+  def qo_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
+                   sequence_metadata, *_):
     seq_ids, physical_q_tile_ids = sequence_metadata
     del seq_ids
     physical_q_blk_idx = physical_q_tile_ids[logical_q_blk_idx]
