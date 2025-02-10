@@ -125,7 +125,8 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     # The reason why we need to pad max_num_pages_per_seq is that
     # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
     num_kv_pages_per_block = 128
-    max_num_pages_per_seq = self._round_up_closest_multiple_of(max_num_pages_per_seq, num_kv_pages_per_block)
+    max_num_pages_per_seq = self._round_up_closest_multiple_of(
+        max_num_pages_per_seq, num_kv_pages_per_block)
     # The assert below mimics the reality that each page get a unique index.
     # But for testing, the assert could be omitted.
     # assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
@@ -230,7 +231,8 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       num_pages: int,
   ):
     if jtu.is_device_tpu(version=4) and head_dim == 256 and page_size == 32:
-      self.skipTest("TPU v4 has small VMEM. It will run into VMEM OOM. Skip the test.")
+      self.skipTest(
+          "TPU v4 has small VMEM. It will run into VMEM OOM. Skip the test.")
     self._verify_ragged_paged_attention(
         seq_lens,
         num_heads,
@@ -368,8 +370,9 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     max_num_pages_per_seq = (max_kv_len + page_size - 1) // page_size
     # The reason why we need to pad max_num_pages_per_seq is that
     # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
-    num_kv_pages_per_block=128
-    max_num_pages_per_seq = self._round_up_closest_multiple_of(max_num_pages_per_seq, num_kv_pages_per_block)
+    num_kv_pages_per_block = 128
+    max_num_pages_per_seq = self._round_up_closest_multiple_of(
+        max_num_pages_per_seq, num_kv_pages_per_block)
     # The assert below mimics the reality that each page get a unique index.
     # But for testing, the assert could be omitted.
     assert max_num_pages_per_seq * num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"

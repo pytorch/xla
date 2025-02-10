@@ -76,10 +76,12 @@ def _ref_ragged_paged_attention(
 
   return jnp.concatenate(outputs, axis=0)
 
+
 def _get_closest_power_of_two(x):
   if x <= 0:
     raise ValueError(f"x must be positive. Got {x}")
   return 2**int(np.ceil(np.log2(x)))
+
 
 def benchmark(args):
   seq_lens = [
@@ -100,7 +102,7 @@ def benchmark(args):
   dtype = jnp.float32
   page_size = 16
   num_pages = 32768
-  num_queries_per_block=128
+  num_queries_per_block = 128
 
   num_seqs = len(seq_lens)
   # Make sure the q_len is no longer than the kv_len. For example,
@@ -138,16 +140,12 @@ def benchmark(args):
   max_num_pages_per_seq = (max_kv_len + page_size - 1) // page_size
   # The reason why we need to pad max_num_pages_per_seq is that
   # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
-  max_num_pages_per_seq = _get_closest_power_of_two(
-      max_num_pages_per_seq)
+  max_num_pages_per_seq = _get_closest_power_of_two(max_num_pages_per_seq)
   # The assert below mimics the reality that each page get a unique index.
   # But for testing, the assert could be omitted.
   # assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
   page_indices = jax.random.randint(
-      k4, (num_q_tokens, max_num_pages_per_seq),
-      0,
-      num_pages,
-      dtype=jnp.int32)
+      k4, (num_q_tokens, max_num_pages_per_seq), 0, num_pages, dtype=jnp.int32)
 
   # Create a cu_q_lens: jax.Array,		# i32[num_tokens + 1]
   q_lens_with_paddings = [0] * num_q_tokens
@@ -174,28 +172,28 @@ def benchmark(args):
     if profile:
       jax.profiler.start_trace(profile_path)
 
-    actual_output=None
+    actual_output = None
     for _ in range(num_iters):
       if args.kernel == "ragged-paged-attention":
         err, actual_output = ragged_paged_attention(
-          queries,
-          k_pages,
-          v_pages,
-          kv_lens_np,
-          page_indices,
-          cu_q_lens,
-          num_seqs,
+            queries,
+            k_pages,
+            v_pages,
+            kv_lens_np,
+            page_indices,
+            cu_q_lens,
+            num_seqs,
         )
         err.throw()
       elif args.kernel == "ragged-paged-attention-ref-impl":
         actual_output = _ref_ragged_paged_attention(
-          queries,
-          k_pages,
-          v_pages,
-          kv_lens_np,
-          page_indices,
-          cu_q_lens,
-          num_seqs,
+            queries,
+            k_pages,
+            v_pages,
+            kv_lens_np,
+            page_indices,
+            cu_q_lens,
+            num_seqs,
         )
       else:
         assert False, f"Invalid kernel name {args.kernel}"
@@ -206,7 +204,7 @@ def benchmark(args):
     if profile:
       jax.profiler.stop_trace()
     return (end_time - start_time) / num_iters
-  
+
   # Warmup.
   print("Warming up...")
   run_benchmark(num_iters=3, profile=False)
@@ -217,14 +215,18 @@ def benchmark(args):
   else:
     latency = run_benchmark(num_iters=10, profile=False)
   print(f"Kernel running time: {latency * 1000000:.3f} us")
-  
+
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
-  parser.add_argument("--kernel",
-                type=str,
-                choices=["ragged-paged-attention","ragged-paged-attention-ref-impl",],
-                default="multi-queries-paged-attn")
+  parser.add_argument(
+      "--kernel",
+      type=str,
+      choices=[
+          "ragged-paged-attention",
+          "ragged-paged-attention-ref-impl",
+      ],
+      default="multi-queries-paged-attn")
   parser.add_argument("--profile", action="store_true")
   args = parser.parse_args()
   benchmark(args)
