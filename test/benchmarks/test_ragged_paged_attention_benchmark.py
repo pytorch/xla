@@ -1,4 +1,4 @@
-# python pytorch/xla/test/benchmarks/test_paged_attention_benchmark.py --kernel multi-queries-paged-attn-jax-nonkernel
+# Usage: python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention
 
 import argparse
 import time
@@ -10,19 +10,13 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import jax
 from jax._src import test_util as jtu
-from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention, make_sequence_metadata, DEFAULT_MASK_VALUE
 from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_single_query_paged_attention
 import jax.numpy as jnp
 import numpy as np
 
-@jax.profiler.annotate_function
+from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention, make_sequence_metadata, DEFAULT_MASK_VALUE
 
-@functools.partial(
-  jax.jit,
-  static_argnames=[
-      "num_seqs",
-  ],
-)
+
 def _ref_ragged_paged_attention(
     queries: jax.Array,  # [num_tokens, num_q_heads, head_dim]
     k_pages: jax.Array,  # [num_kv_heads, total_num_pages, page_size, head_dim]
