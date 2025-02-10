@@ -248,6 +248,18 @@ def fa_custom_forward(
     full_ab = ab.clone()
   else:
     full_ab = None
+
+  block_k_major = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"],
+                      k.shape[2])
+  block_k = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2])
+  k, k_pad_size = _pad_to_block_size(k, max(block_k_major, block_k), 2)
+  if k_pad_size > 0:
+    v, _ = _pad_to_block_size(v, max(block_k_major, block_k), 2)
+    if ab is None:
+      ab = torch.zeros((q.shape[0], q.shape[1], q.shape[2], q.shape[2]))
+    ab, _ = _pad_to_block_size(
+        ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
+
   if partition_spec is not None:
     q_full_shape = q.shape
     q = xs.enable_manual_sharding(q, partition_spec, mesh=mesh).global_tensor
@@ -295,8 +307,8 @@ def fa_custom_forward(
         sm_scale,
         min(FlashAttention.DEFAULT_BLOCK_SIZES["block_b"], q.shape[0]),
         min(FlashAttention.DEFAULT_BLOCK_SIZES["block_q"], q.shape[2]),
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"], k.shape[2]),
-        min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2]),
+        block_k_major,
+        block_k,
         False,
         static_argnums=range(5, 13),
         use_cache=True,
@@ -335,6 +347,27 @@ def fa_custom_forward(
   # but it should be OK as the backward will use the same partition_spec
   outs = [o] + [full_q, full_k, full_v, l, m, full_ab]
   return tuple(outs)
+
+
+def _pad_to_block_size(
+    tensor: torch.Tensor,
+    block_size: int,
+    dim: int,
+    padding_minus_inf: bool = False) -> Tuple[torch.Tensor, int]:
+  size = tensor.shape[dim]
+  if size % block_size == 0:
+    return tensor, 0
+
+  pad_size = block_size - (size % block_size)
+  pad_shape = list(tensor.shape)
+  pad_shape[dim] = pad_size
+  padding = torch.full(
+      pad_shape,
+      torch.finfo(tensor.dtype).min if padding_minus_inf else 0,
+      dtype=tensor.dtype,
+      device=tensor.device)
+  padded = torch.cat([tensor, padding], dim=dim)
+  return padded, pad_size
 
 
 @custom_op("xla::fa_custom_backward", mutates_args=())
