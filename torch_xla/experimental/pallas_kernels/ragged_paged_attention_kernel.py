@@ -522,6 +522,7 @@ def _flash_attention(
     m_ref[q_head_idx_per_kv] = m_scratch_ref[q_head_idx_per_kv].astype(
         m_ref.dtype)
 
+
 # grid = (num_kv_heads, num_logical_q_tiles, num_kv_blks)
 def _compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
                                 num_logical_q_blks, kv_blk_size, seq_ids,
@@ -553,6 +554,7 @@ def _compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
       lambda: (kv_head_idx, logical_q_blk_idx, kv_blk_idx),
       advance_logical_q_blk_idx,
   )
+
 
 # grid = (num_kv_heads, num_logical_q_tiles, num_kv_blks)
 def paged_flash_attention_kernel(
@@ -646,24 +648,29 @@ def paged_flash_attention_kernel(
     @pl.when(step == 0)
     def prefetch_first_block():  # pylint: disable=unused-variable
       async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
-          cur_seq_idx, kv_head_idx, kv_blk_idx, buffer_index, cur_page_indices_ref)
+          cur_seq_idx, kv_head_idx, kv_blk_idx, buffer_index,
+          cur_page_indices_ref)
       async_copy_k.start()
       async_copy_v.start()
 
-    next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx = _compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx, num_logical_q_blks, kv_blk_size, seq_ids, effective_kv_lens_ref)
+    next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx = _compute_next_block_indices(
+        kv_head_idx, logical_q_blk_idx, kv_blk_idx, num_logical_q_blks,
+        kv_blk_size, seq_ids, effective_kv_lens_ref)
 
     @pl.when(next_kv_head_idx < num_kv_heads)
     def prefetch_next_block():  # pylint: disable=unused-variable
       next_buffer_index = jnp.where(buffer_index == 0, 1, 0)
       next_seq_idx = seq_ids[next_logical_q_blk_idx]
       async_copy_next_k, async_copy_next_v = create_kv_async_copy_descriptors(
-          next_seq_idx, next_kv_head_idx, next_kv_blk_idx, next_buffer_index, next_page_indices_ref)
+          next_seq_idx, next_kv_head_idx, next_kv_blk_idx, next_buffer_index,
+          next_page_indices_ref)
       async_copy_next_k.start()
       async_copy_next_v.start()
       buffer_index_ref[0] = next_buffer_index
 
     async_copy_k, async_copy_v = create_kv_async_copy_descriptors(
-        cur_seq_idx, kv_head_idx, kv_blk_idx, buffer_index, cur_page_indices_ref)
+        cur_seq_idx, kv_head_idx, kv_blk_idx, buffer_index,
+        cur_page_indices_ref)
     k = async_copy_k.wait_and_get_loaded(
     )  # [pages_per_compute_block*page_size,head_dim]
     v = async_copy_v.wait_and_get_loaded()
@@ -703,6 +710,7 @@ def paged_flash_attention_kernel(
 
 def _round_up_to_multiple_of_tm(x, tm):
   return (x + tm - 1) // tm * tm
+
 
 MIN_BLOCK_SIZE = 128
 
@@ -826,13 +834,16 @@ def ragged_paged_attention(
   )
   # Note page_indices.shape=[num_tokens, pages_per_sequence], pages_per_sequence % num_kv_pages_per_block==0
   # Unsqueeze an extra dimension in page_indices so that num_tokens can avoid the 2nd last dimension having to be a multiple of 8.
-  expanded_page_indices = jnp.expand_dims(page_indices, 1)  # [num_tokens, 1, pages_per_sequence]
+  expanded_page_indices = jnp.expand_dims(
+      page_indices, 1)  # [num_tokens, 1, pages_per_sequence]
+
   def cur_page_indices_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
-                   sequence_metadata, *_):
+                                 sequence_metadata, *_):
     seq_ids, physical_q_tile_ids = sequence_metadata
     del physical_q_tile_ids
     seq_id = seq_ids[logical_q_blk_idx]
     return (seq_id, 0, kv_blk_idx)
+
   cur_page_indices_spec = pl.BlockSpec(
       (None, None, num_kv_pages_per_block),
       cur_page_indices_index_map,
@@ -840,13 +851,18 @@ def ragged_paged_attention(
   )
   page_size = k_pages.shape[2]
   kv_blk_size = page_size * num_kv_pages_per_block
-  def next_kv_blk_page_indices_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
-                   sequence_metadata, num_logical_q_tiles_1d, kv_lens, *_):
+
+  def next_kv_blk_page_indices_index_map(kv_head_idx, logical_q_blk_idx,
+                                         kv_blk_idx, sequence_metadata,
+                                         num_logical_q_tiles_1d, kv_lens, *_):
     seq_ids, physical_q_tile_ids = sequence_metadata
-    next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx =  _compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx, num_logical_q_tiles_1d[0], kv_blk_size, seq_ids, kv_lens)
+    next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx = _compute_next_block_indices(
+        kv_head_idx, logical_q_blk_idx, kv_blk_idx, num_logical_q_tiles_1d[0],
+        kv_blk_size, seq_ids, kv_lens)
     del physical_q_tile_ids
     next_seq_id = seq_ids[next_logical_q_blk_idx]
     return (next_seq_id, 0, next_kv_blk_idx)
+
   next_page_indices_spec = pl.BlockSpec(
       (None, None, num_kv_pages_per_block),
       next_kv_blk_page_indices_index_map,
