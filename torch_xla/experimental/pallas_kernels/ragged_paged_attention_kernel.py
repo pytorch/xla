@@ -561,7 +561,6 @@ def paged_flash_attention_kernel(
     num_logical_q_tiles_1d,
     effective_kv_lens_ref,  # [num_tokens]
     # 1d vector, results from page_indices.reshape(-1) where originally page_indices.shape=[num_tokens, pages_per_sequence]
-    # page_indices_1d_ref,
     effective_cu_q_lens_ref,  # [num_tokens + 1]
     buffer_index_ref,
     step_ref,
@@ -596,8 +595,6 @@ def paged_flash_attention_kernel(
     num_kv_pages_per_block: int,
     mask_value: float,
 ):
-  print(f"xw32 {cur_page_indices_ref.shape=}")
-  print(f"xw32 {next_page_indices_ref.shape=}")
   kv_head_idx, logical_q_blk_idx, kv_blk_idx = (
       pl.program_id(0),
       pl.program_id(1),
@@ -618,7 +615,6 @@ def paged_flash_attention_kernel(
 
     def create_kv_async_copy_descriptors(seq_idx, kv_head_idx, kv_blk_idx,
                                          buffer_index, page_indices):
-      # page_offset = seq_idx * pages_per_sequence + kv_blk_idx * num_kv_pages_per_block
       pages_to_load = num_kv_pages_per_block
       async_copy_k = MultiPageAsyncCopyDescriptor(
           k_pages_hbm_ref,
@@ -767,7 +763,6 @@ def ragged_paged_attention(
     The output of attention([num_tokens, num_q_heads, head_dim]).
   """
   # TODO: consider remove the k_scales_pages and v_scales_pages during cleaning up.
-  print(f"xw32 {page_indices.shape=}")
   if isinstance(k_pages, quantization_utils.QuantizedTensor):
     k_pages, k_scales_pages = k_pages.weight, k_pages.scales
     assert isinstance(k_scales_pages, jax.Array)  # For typing.
@@ -804,11 +799,9 @@ def ragged_paged_attention(
       num_sequences=num_seqs,
   )
 
-  print(f"xw32 line 807{num_logical_q_tiles.shape=}")
   pages_per_sequence = page_indices.shape[1]
   num_kv_blks = pages_per_sequence // num_kv_pages_per_block
   grid = (num_kv_heads, num_logical_q_tiles, num_kv_blks)
-  print(f"xw32 grid {grid=}")
 
   # out_shape
   o_shape = jax.ShapeDtypeStruct(shape=q.shape, dtype=q.dtype)
@@ -832,7 +825,7 @@ def ragged_paged_attention(
       qo_index_map,
   )
   # Note page_indices.shape=[num_tokens, pages_per_sequence], pages_per_sequence % num_kv_pages_per_block==0
-  # Unsqueeze an extra dimension in page_indices.
+  # Unsqueeze an extra dimension in page_indices so that num_tokens can avoid the 2nd last dimension having to be a multiple of 8.
   expanded_page_indices = jnp.expand_dims(page_indices, 1)  # [num_tokens, 1, pages_per_sequence]
   def cur_page_indices_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
                    sequence_metadata, *_):
@@ -847,48 +840,11 @@ def ragged_paged_attention(
   )
   page_size = k_pages.shape[2]
   kv_blk_size = page_size * num_kv_pages_per_block
-  print(f"xw32 {kv_blk_size=}, {num_logical_q_tiles=}")
   def next_kv_blk_page_indices_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
                    sequence_metadata, num_logical_q_tiles_1d, kv_lens, *_):
-
-    # def _my_compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
-    #                                 num_logical_q_blks, kv_blk_size, seq_ids,
-    #                                 effective_kv_lens_ref):
-    #   """Given the current kv_head_idx, logical_q_blk_idx, kv_blk_idx, return the next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx.
-
-    #       Note, k_pages has shape [num_kv_heads, total_num_pages, page_size, head_dim].
-    #       To get the KV, it needs the kv_head_idx, then we need the sequence_idx
-    #       and the kv_blk_idx to get the offset.
-    #   """
-
-    #   def advance_kv_head_idx():
-    #     next_kv_head_idx = kv_head_idx + 1
-    #     return next_kv_head_idx, 0, 0
-
-    #   def advance_logical_q_blk_idx():
-    #     next_logical_q_blk_idx = logical_q_blk_idx + 1
-    #     return lax.cond(
-    #         next_logical_q_blk_idx < num_logical_q_blks,
-    #         lambda: (kv_head_idx, next_logical_q_blk_idx, 0),
-    #         advance_kv_head_idx,
-    #     )
-
-    #   kv_blk_idx += 1
-    #   cur_seq_idx = seq_ids[logical_q_blk_idx]
-    #   effective_kv_len_cur_seq = effective_kv_lens_ref[cur_seq_idx]
-    #   return lax.cond(
-    #       kv_blk_idx * kv_blk_size < effective_kv_len_cur_seq,
-    #       lambda: (kv_head_idx, logical_q_blk_idx, kv_blk_idx),
-    #       advance_logical_q_blk_idx,
-    #   )
     seq_ids, physical_q_tile_ids = sequence_metadata
-    #next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx = _compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx, num_logical_q_tiles, kv_blk_size, seq_ids, kv_lens)
-    # next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx = kv_head_idx, logical_q_blk_idx, kv_blk_idx # works
-    # next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx = 0, 0, 0 # works
     next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx =  _compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx, num_logical_q_tiles_1d[0], kv_blk_size, seq_ids, kv_lens)
-
     del physical_q_tile_ids
-    print(f"xw32 next_kv_head_idx {next_kv_head_idx=}, {next_logical_q_blk_idx=}, {next_kv_blk_idx=}")
     next_seq_id = seq_ids[next_logical_q_blk_idx]
     return (next_seq_id, 0, next_kv_blk_idx)
   next_page_indices_spec = pl.BlockSpec(
@@ -896,19 +852,6 @@ def ragged_paged_attention(
       next_kv_blk_page_indices_index_map,
       memory_space=pltpu.TPUMemorySpace.SMEM,
   )
-  # k_pages: [num_kv_heads, total_num_pages, page_size, head_dim]
-  # def kv_index_map(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
-  #                  sequence_metadata, *_):
-  #   seq_ids, physical_q_tile_ids = sequence_metadata
-  #   seq_id = seq_ids[logical_q_blk_idx]
-  #   page_indices_to_load = page_indices[seq_id, kv_blk_idx*num_kv_pages_per_block]
-  #   # Here it shows that why we cannot use the pallas internal function to load
-  #   # kv_pages from hbm to vmem. The `page_indices_to_load` are not consecutive.
-  #   return (kv_head_idx, kv_blk_idx, 0, 0)
-  # kv_spec = pl.BlockSpec(
-  #     (1, num_kv_pages_per_block, page_size, head_dim),
-  #     kv_index_map,
-  # )
   in_specs = [
       q_block_spec,
       # Below 4 correspond to the 4 input: k_pages, k_scales_pages, q_pages, q_scales_pages.
@@ -996,8 +939,6 @@ def ragged_paged_attention(
           )),
       out_shape=out_shape,
   )
-  # TODO: need to slice the page_indices later to avoid the SMEM OOM.
-  # page_indices_1d = page_indices.reshape(-1)
   buffer_index = jnp.zeros((1,), jnp.int32)
   step = jnp.zeros((1,), jnp.int32)
   # Why converting num_logical_q_tiles to a 1d array? It's due to "INTERNAL: Mosaic failed to compile TPU kernel: 0-rank memref not supported"
@@ -1007,7 +948,6 @@ def ragged_paged_attention(
       sequence_metadata,
       num_logical_q_tiles_1d,
       kv_lens,
-      # page_indices_1d,
       cu_q_lens,
       buffer_index,
       step,
