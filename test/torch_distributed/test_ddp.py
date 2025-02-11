@@ -14,6 +14,7 @@ import distributed_util as util
 
 FLAGS = args_parse.parse_common_options()
 
+
 class TestXrtDistributedDataParallel(parameterized.TestCase):
 
   @staticmethod
