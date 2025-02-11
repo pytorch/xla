@@ -11,6 +11,11 @@ import torch_xla.debug.metrics_compare_utils as mcu
 import torch_xla.utils.utils as xu
 
 
+def skipIfCUDA(reason):
+  accelerator = xr.device_type() or ""
+  return lambda f: unittest.skipIf(accelerator.lower() == "cuda", reason)(f)
+
+
 def mp_test(func):
   """Wraps a `unittest.TestCase` function running it within an isolated process.
 
