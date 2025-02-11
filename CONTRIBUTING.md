@@ -57,7 +57,9 @@ using either VS Code or a local container:
   If you are not prompted to reopen in a container, in the VS Code command 
   pallete, type `Dev Containers: Reopen in Container` to open your workspace in 
   one of our pre-built Docker containers. Select the correct container based on 
-  your local accelerator. If you are unsure, use `tpu-contributor`.
+  your local accelerator. If you're a Googler, you should use the `tpu-internal`
+  container, which is set up for [bazel remote build caching](https://github.com/pytorch/xla/blob/master/docs/source/contribute/bazel.md#remote-caching)
+  for faster builds.
 
 * Open a new terminal window in VS Code. Since you are running as root in this 
   container, mark the repository directories as safe. The commands below assume
