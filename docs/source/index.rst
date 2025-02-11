@@ -40,6 +40,7 @@ PyTorch/XLA is a Python package that uses the XLA deep learning compiler to conn
    features/pallas.md
    features/stablehlo.md
    features/triton.md
+   features/scan.md
 
 .. toctree::
    :glob:

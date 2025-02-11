@@ -607,8 +607,25 @@ void custom_sharding_(
     const XLATensorPtr& input,
     const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec,
     const CustomSharding::Type& type) {
-  input->SetInPlaceIrValue(torch_xla::MakeNode<CustomSharding>(
-      input->GetIrValue(), input->shape().get(), type));
+  torch::lazy::NodePtr customShardingNode = torch_xla::MakeNode<CustomSharding>(
+      input->GetIrValue(), input->shape().get(), type);
+  XlaNode* xla_node = dynamic_cast<XlaNode*>(customShardingNode.get());
+  // Always call `SetSharding` to ensure the `CustomSharding` op has the correct
+  // sharding, especially if a view is updated afterward. Updating a view can
+  // modify the IR, potentially leading to the sharding being applied to the
+  // updated view instead of the original `CustomSharding` op.
+
+  // For example, consider the following IR:
+  // ```
+  // x0 = custom_sharding(input)
+  // x1 = view_update(x0)
+  // ```
+  // In this case, we want to ensure the sharding is applied to `x0`, not `x1`.
+
+  // While this solution may add a sharding spec to non-CustomSharding ops like
+  // `x1`, the XLA compiler will safely ignore it.
+  xla_node->SetSharding(sharding_spec->sharding, 0);
+  input->SetInPlaceIrValue(customShardingNode);
   input->SetShardingSpec(*sharding_spec);
 }
 
@@ -1297,9 +1314,23 @@ XLATensorPtr cross(const XLATensorPtr& input, const XLATensorPtr& other,
 
 std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
                                               int64_t dim) {
-  torch::lazy::NodePtr node = torch_xla::MakeNode<CumMax>(
-      input->GetIrValue(), torch::lazy::GetCanonicalDimensionIndex(
-                               dim, input->shape().get().rank()));
+  xla::Shape shape = input->shape().get();
+  int64_t canonical_dim =
+      torch::lazy::GetCanonicalDimensionIndex(dim, shape.rank());
+
+  if (shape.dimensions(canonical_dim) == 0) {
+    // Handle edge-case where the size of `dim` is 0.
+    // The current lowering crashes, setting the padding to -1.
+    absl::Span<const int64_t> dimensions = shape.dimensions();
+    at::IntArrayRef shape_(dimensions.data(), dimensions.size());
+    at::Tensor val =
+        at::empty(shape_, at::TensorOptions().dtype(input->dtype()));
+    at::Tensor idx = at::empty(shape_, at::TensorOptions().dtype(at::kLong));
+    return std::make_tuple(input->Create(val, input->GetDevice()),
+                           input->Create(idx, input->GetDevice()));
+  }
+  torch::lazy::NodePtr node =
+      torch_xla::MakeNode<CumMax>(input->GetIrValue(), canonical_dim);
   XLATensorPtr t_value = input->CreateFrom(torch::lazy::Value(node, 0),
                                            /*delay_eager_executation=*/true);
   XLATensorPtr t_index =

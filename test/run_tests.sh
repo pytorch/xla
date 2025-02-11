@@ -167,6 +167,10 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_python_ops.py"
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
+  if [ -f "/tmp/metrics.txt" ] ; then
+    rm /tmp/metrics.txt
+  fi
+  XLA_METRICS_FILE=/tmp/metrics.txt run_test "$CDIR/test_metrics.py"
   run_test "$CDIR/test_deprecation.py"
   run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test "$CDIR/dynamo/test_dynamo_aliasing.py"
@@ -178,8 +182,6 @@ function run_xla_op_tests1 {
   run_test "$CDIR/dynamo/test_dynamo_config.py"
   run_save_tensor_ir run_test "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_test "$CDIR/test_data_type.py"
-  run_use_bf16 "$CDIR/test_data_type.py"
-  run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/test_fp8.py"
   run_xla_ir_debug run_test "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug run_test "$CDIR/test_env_var_mapper.py"
@@ -232,6 +234,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_xla_auto_sharding.py"
   run_test "$CDIR/spmd/test_spmd_parameter_wrapping.py"
   run_test "$CDIR/spmd/test_mp_input_sharding.py"
+  run_test "$CDIR/spmd/test_train_spmd_linear_model.py" "$@" --skip-gradient-checkpointing
   run_save_tensor_hlo run_test "$CDIR/spmd/test_spmd_lowering_context.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
@@ -244,6 +247,9 @@ function run_xla_op_tests3 {
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
   run_test "$CDIR/test_pallas.py"
   run_xla_ir_hlo_debug run_test "$CDIR/test_user_computation_debug_cache.py"
+  
+  # Test examples
+  run_test "$CDIR/../examples/scan/scan_examples.py"
 
   # CUDA tests
   if [ -x "$(command -v nvidia-smi)" ]; then

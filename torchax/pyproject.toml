@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "torchax"
+dependencies = [
+    "absl-py",
+    "immutabledict",
+    "pytest",
+    # Developers should install `dev-requirements.txt` first
+    "torch>=2.3.0",
+]
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+dynamic = ["version"]
+
+[tool.hatch.version]
+path = "torchax/__init__.py"
+
+[project.optional-dependencies]
+cpu = ["jax[cpu]>=0.4.30", "jax[cpu]", "tensorflow-cpu"]
+# Add libtpu index `-f https://storage.googleapis.com/libtpu-releases/index.html`
+tpu = ["jax[cpu]>=0.4.30", "jax[tpu]", "tensorflow-cpu"]
+cuda = ["jax[cpu]>=0.4.30", "jax[cuda12]", "tensorflow-cpu"]
+odml = ["jax[cpu]>=0.4.30", "jax[cpu]"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["torchax"]
+
+[tool.pytest.ini_options]
+addopts="-n auto"
+
+[tool.ruff]
+line-length = 80
+indent-width = 2

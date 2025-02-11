@@ -58,6 +58,7 @@ function install_torchbench_models() {
   git clone --quiet https://github.com/pytorch/benchmark.git "$TORCHBENCH_DIR"
   cd $TORCHBENCH_DIR
   git checkout $torchbench_commit_hash
+  pip install -r requirements.txt
 
   for model in "${TORCHBENCH_MODELS[@]}"; do
       echo "Installing model: $model"

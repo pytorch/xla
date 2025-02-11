@@ -25,7 +25,7 @@ class ScanSpmdTest(unittest.TestCase):
     """This test uses `scan` to implement `torch.cumsum`."""
 
     def fn(carry, x):
-      new_carry = carry + x
+      new_carry = torch.sin(carry + x)
       y = new_carry
       return new_carry, y
 

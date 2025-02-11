@@ -65,6 +65,7 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   KERNEL_XLA(binary_cross_entropy, fp32)
   // KERNEL_XLA(grid_sampler, fp32)
   // KERNEL_XLA(polar, fp32)
+  KERNEL_XLA2(pow, Tensor_Scalar, fp32)
   KERNEL_XLA(prod, fp32)
   KERNEL_XLA2(prod, dim_int, fp32)
   KERNEL_XLA2(prod, dim_Dimname, fp32)

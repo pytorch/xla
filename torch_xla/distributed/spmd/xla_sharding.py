@@ -125,6 +125,27 @@ class Mesh:
     return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
                                       replication_groups, sharding_type)
 
+  def __str__(self):
+    """Convert Mesh to string representation."""
+    return (f"{{'device_ids': {self.device_ids.tolist()}, "
+            f"'mesh_shape': {self.mesh_shape}, "
+            f"'axis_names': {self.axis_names}}}")
+
+  @classmethod
+  def from_str(cls, mesh_str: str) -> Optional["Mesh"]:
+    """Create Mesh from string representation."""
+    import ast
+    import numpy as np
+    try:
+      dict_str = mesh_str.replace('Mesh', '')
+      mesh_dict = ast.literal_eval(dict_str)
+      return cls(
+          device_ids=np.array(mesh_dict['device_ids']),
+          mesh_shape=mesh_dict['mesh_shape'],
+          axis_names=mesh_dict['axis_names'])
+    except (ValueError, SyntaxError, KeyError, TypeError):
+      return None
+
 
 _GLOBAL_MESH: Mesh = None
 

@@ -116,6 +116,7 @@ def _flash_attention(
     query_len: int,
     page_size: int,
     head_dim: int,
+    attn_logits_soft_cap: float | None,
 ):
   b, kv_head_idx, q_blk_idx, kv_blk_idx = (
       pl.program_id(0),
@@ -143,6 +144,10 @@ def _flash_attention(
   s = jnp.einsum(
       'qd,td->qt', q, k,
       preferred_element_type=jnp.float32)  # [block_q, block_k]
+  if attn_logits_soft_cap is not None:
+    capped_s = jnp.tanh(s / attn_logits_soft_cap)
+    s = capped_s * attn_logits_soft_cap
+
   assert s.shape == (num_queries_per_compute_block,
                      kv_seq_len_per_kv_compute_blk)
 
@@ -266,6 +271,7 @@ def paged_flash_attention_kernel(
     num_kv_pages_per_compute_block: int,
     mask_value: float,
     query_len: int,
+    attn_logits_soft_cap: float | None,
 ):
   """Pallas kernel for paged attention."""
   b, kv_head_idx, q_blk_idx, kv_blk_idx = (
@@ -411,6 +417,7 @@ def paged_flash_attention_kernel(
           query_len=query_len,
           page_size=page_size,
           head_dim=head_dim,
+          attn_logits_soft_cap=attn_logits_soft_cap,
       )
     # o_ref.shape=[num_q_heads_per_kv_head, num_queries_per_compute_block, head_dim]
     step_ref[0] = step + 1
@@ -428,6 +435,7 @@ MIN_BLOCK_SIZE = 128
         "num_kv_pages_per_compute_block",
         "num_queries_per_compute_block",
         "mask_value",
+        "attn_logits_soft_cap",
     ],
 )
 def paged_attention(
@@ -441,6 +449,7 @@ def paged_attention(
     mask_value: float = DEFAULT_MASK_VALUE,
     num_kv_pages_per_compute_block: int,
     num_queries_per_compute_block: int = 4,
+    attn_logits_soft_cap: float | None = None,
 ) -> jax.Array:
   """Paged grouped query attention.
 
@@ -620,7 +629,9 @@ def paged_attention(
           batch_size=batch_size,
           num_kv_pages_per_compute_block=num_kv_pages_per_compute_block,
           mask_value=mask_value,
-          query_len=query_len),
+          query_len=query_len,
+          attn_logits_soft_cap=attn_logits_soft_cap,
+      ),
       grid_spec=pltpu.PrefetchScalarGridSpec(
           num_scalar_prefetch=5,
           in_specs=in_specs,

@@ -36,7 +36,9 @@ python3 "$TEST_CDIR/scan/test_scan_layers.py"
 run_xla_hlo_debug python3 "$TEST_CDIR/scan/test_scan_debug.py"
 python3 "$TEST_CDIR/test_pallas.py" -v
 python3 "$TEST_CDIR/test_pallas_spmd.py"
-python3 "$TEST_CDIR/test_tpu_paged_attention_kernel.py"
+XLA_DISABLE_FUNCTIONALIZATION=1 python3 "$TEST_CDIR/test_pallas_spmd.py"
+python3 "$TEST_CDIR/test_multi_queries_paged_attention_kernel.py"
+python3 "$TEST_CDIR/test_ragged_paged_attention_kernel.py"
 python3 "$TEST_CDIR/test_input_output_aliases.py"
 python3 "$TEST_CDIR/test_gmm.py"
 python3 "$TEST_CDIR/eager/test_eager_spmd.py"
@@ -46,11 +48,15 @@ python3 "$TEST_CDIR/torch_distributed/test_torch_distributed_multi_all_reduce_xl
 python3 "$TEST_CDIR/torch_distributed/test_torch_distributed_reduce_scatter_xla_backend.py"
 python3 "$TEST_CDIR/quantized_ops/test_dot_general.py"
 run_xla_ir_hlo_debug python3 "$TEST_CDIR/test_user_computation_debug_cache.py"
+python3 "$TEST_CDIR/test_data_type.py"
 
 # run examples, each test should takes <2 minutes
 python3 "$TEST_CDIR/../examples/data_parallel/train_resnet_spmd_data_parallel.py"
 python3 "$TEST_CDIR/../examples/fsdp/train_decoder_only_fsdp_v2.py"
 python3 "$TEST_CDIR/../examples/train_resnet_amp.py"
+python3 "$TEST_CDIR/../examples/train_decoder_only_base.py"
+python3 "$TEST_CDIR/../examples/train_decoder_only_base.py" scan.decoder_with_scan.DecoderWithScan \
+    --num-steps 30  # TODO(https://github.com/pytorch/xla/issues/8632): Reduce scan tracing overhead
 
 # HACK: don't confuse local `torch_xla` folder with installed package
 # Python 3.11 has the permanent fix: https://stackoverflow.com/a/73636559

@@ -25,16 +25,69 @@ started:
 
 To install PyTorch/XLA stable build in a new TPU VM:
 
-```
-pip install torch~=2.5.0 torch_xla[tpu]~=2.5.0 -f https://storage.googleapis.com/libtpu-releases/index.html -f https://storage.googleapis.com/libtpu-wheels/index.html
+```sh
+pip install torch~=2.6.0 'torch_xla[tpu]~=2.6.0' \
+  -f https://storage.googleapis.com/libtpu-releases/index.html \
+  -f https://storage.googleapis.com/libtpu-wheels/index.html
+
+# Optional: if you're using custom kernels, install pallas dependencies
+pip install 'torch_xla[pallas]' \
+  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
+  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 ```
 
 To install PyTorch/XLA nightly build in a new TPU VM:
 
+```sh
+pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
+pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev+cxx11-cp310-cp310-linux_x86_64.whl' \
+  -f https://storage.googleapis.com/libtpu-releases/index.html \
+  -f https://storage.googleapis.com/libtpu-wheels/index.html
+
+# Optional: if you're using custom kernels, install pallas dependencies
+pip install 'torch_xla[pallas]' \
+  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
+  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 ```
-pip3 install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev-cp310-cp310-linux_x86_64.whl' -f https://storage.googleapis.com/libtpu-releases/index.html -f https://storage.googleapis.com/libtpu-wheels/index.html
+
+### C++11 ABI builds
+
+Starting from Pytorch/XLA 2.6, we'll provide wheels and docker images built with
+two C++ ABI flavors: C++11 and pre-C++11. Pre-C++11 is the default to align with
+PyTorch upstream, but C++11 ABI wheels and docker images have better lazy tensor
+tracing performance.
+
+To install C++11 ABI flavored 2.6 wheels (Python 3.10 example):
+
+```sh
+pip install torch==2.6.0+cpu.cxx11.abi \
+  https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0%2Bcxx11-cp310-cp310-manylinux_2_28_x86_64.whl \
+  'torch_xla[tpu]' \
+  -f https://storage.googleapis.com/libtpu-releases/index.html \
+  -f https://storage.googleapis.com/libtpu-wheels/index.html \
+  -f https://download.pytorch.org/whl/torch
 ```
+
+The above command works for Python 3.10. We additionally have Python 3.9 and 3.11
+wheels:
+
+- 3.9: https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0%2Bcxx11-cp39-cp39-manylinux_2_28_x86_64.whl
+- 3.10: https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0%2Bcxx11-cp310-cp310-manylinux_2_28_x86_64.whl
+- 3.11: https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0%2Bcxx11-cp311-cp311-manylinux_2_28_x86_64.whl
+
+To access C++11 ABI flavored docker image:
+
+```
+us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm_cxx11
+```
+
+If your model is tracing bound (e.g. you see that the host CPU is busy tracing
+the model while TPUs are idle), switching to the C++11 ABI wheels/docker images
+can improve performance. Mixtral 8x7B benchmarking results on v5p-256, global
+batch size 1024:
+
+- Pre-C++11 ABI MFU: 33%
+- C++ ABI MFU: 39%
 
 ### GPU Plugin
 
@@ -43,6 +96,13 @@ PyTorch/XLA now provides GPU support through a plugin package similar to `libtpu
 ```
 pip install torch~=2.5.0 torch_xla~=2.5.0 https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla_cuda_plugin-2.5.0-py3-none-any.whl
 ```
+
+The newest stable version where PyTorch/XLA:GPU wheel is available is `torch_xla`
+2.5. We do not offer a PyTorch/XLA:GPU wheel in the PyTorch/XLA 2.6 release. We
+understand this is important and plan to [reinstate GPU support](https://github.com/pytorch/xla/issues/8577) by the 2.7 release.
+PyTorch/XLA remains an open-source project and we welcome contributions from the
+community to help maintain and improve the project. To contribute, please start
+with the [contributors guide](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md).
 
 ## Getting Started
 
@@ -96,7 +156,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 +  dist.init_process_group("xla", init_method='xla://')
 +
 +  model.to(xm.xla_device())
-+  ddp_model = DDP(model)
++  ddp_model = DDP(model, gradient_as_bucket_view=True)
 
 -  model = model.to(rank)
 -  ddp_model = DDP(model, device_ids=[rank])
@@ -171,54 +231,17 @@ GPU and nightly builds are available in our public GCS bucket.
 | nightly (Python 3.11) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev-cp311-cp311-linux_x86_64.whl` |
 | nightly (CUDA 12.1 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.6.0.dev-cp38-cp38-linux_x86_64.whl` |
 
-<details>
+#### Use nightly build
 
-<summary> Use nightly build before 08/13/2024</summary>
-You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. Here is an example:
-
-```
-pip3 install torch==2.6.0.dev20240925+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly%2B20240925-cp310-cp310-linux_x86_64.whl
-```
-
-The torch wheel version `2.6.0.dev20240925+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
-</details>
-
-#### Use nightly build after 08/20/2024
-
-You can also add `yyyymmdd` after `torch_xla-2.6.0.dev` (or the latest dev version)
+You can also add `yyyymmdd` like `torch_xla-2.7.0.devyyyymmdd+cxx11` (or the latest dev version)
 to get the nightly wheel of a specified date. Here is an example:
 
 ```
-pip3 install torch==2.5.0.dev20240820+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0.dev20240820-cp310-cp310-linux_x86_64.whl
+pip3 install torch==2.7.0.dev20250124+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev20250124+cxx11-cp310-cp310-linux_x86_64.whl
 ```
 
-The torch wheel version `2.6.0.dev20240925+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
-
-#### Use nightly build with C++11 ABI after 10/28/2024
-
-By default, `torch` is built with pre-C++11 version of ABI (see https://github.com/pytorch/pytorch/issues/51039).
-`torch_xla` follows that and ships pre-C++11 builds by default. However, the lazy
-tensor tracing performance can be improved by building the code with C++11 ABI.
-As a result, we provide C++11 ABI builds for interested users to try, especially
-if you find your model performance bottlenecked in Python lazy tensor tracing.
-
-You can add `.cxx11` after `yyyymmdd` to get the C++11 ABI variant of a
-specific nightly wheel.  Here is an example to install nightly builds from
-10/28/2024:
-
-```
-pip3 install torch==2.6.0.dev20241028+cpu.cxx11.abi --index-url https://download.pytorch.org/whl/nightly
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0.dev20241028.cxx11-cp310-cp310-linux_x86_64.whl
-```
-
-**As of 12/11/2024, the torch_xla C++11 ABI wheel is named differently and can be installed as follows:**
-```
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0.dev20241211+cxx11-cp310-cp310-linux_x86_64.whl
-```
-
-The torch wheel version `2.6.0.dev20241028+cpu.cxx11.abi` can be found at https://download.pytorch.org/whl/nightly/torch/.
+The torch wheel version `2.7.0.dev20250124+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
 
 <details>
 
@@ -226,6 +249,7 @@ The torch wheel version `2.6.0.dev20241028+cpu.cxx11.abi` can be found at https:
 
 | Version | Cloud TPU VMs Wheel |
 |---------|-------------------|
+| 2.5 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.4 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.4.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.3 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.3.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.2 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.2.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
@@ -259,6 +283,8 @@ The torch wheel version `2.6.0.dev20241028+cpu.cxx11.abi` can be found at https:
 
 | Version | Cloud TPU VMs Docker |
 | --- | ----------- |
+| 2.6 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm` |
+| 2.6 (C++11 ABI) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.6.0_3.10_tpuvm_cxx11` |
 | 2.5 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.5.0_3.10_tpuvm` |
 | 2.4 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.4.0_3.10_tpuvm` |
 | 2.3 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.3.0_3.10_tpuvm` |

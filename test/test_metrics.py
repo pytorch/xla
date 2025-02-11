@@ -14,6 +14,13 @@ def XLAExperimentalContains(feat):
   return feat in experimental
 
 
+def check_metrics_file():
+  metrics_file = os.environ.get("XLA_METRICS_FILE", None)
+  if metrics_file is None:
+    return True
+  return os.path.exists(metrics_file)
+
+
 class MetricsTest(unittest.TestCase):
 
   def test_clear_counters(self):
@@ -90,6 +97,7 @@ class MetricsTest(unittest.TestCase):
     xm.mark_step()
     short_report = met.short_metrics_report()
     self.assertIn("CachedCompile", short_report)
+    assert check_metrics_file()
 
   def test_short_metrics_report_custom_list(self):
     xla_device = xm.xla_device()
