@@ -13,6 +13,12 @@ import random
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
+import torch_xla.runtime as xr
+
+
+def skipIfCUDA(reason):
+  accelerator = xr.device_type() or ""
+  return lambda f: unittest.skipIf(accelerator.lower() == "cuda", reason)(f)
 
 
 def _set_rng_seed(seed):
