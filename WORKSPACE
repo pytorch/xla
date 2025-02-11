@@ -44,13 +44,9 @@ new_local_repository(
 
 ############################# OpenXLA Setup ###############################
 
-# To update OpenXLA to a new revision,
-# a) update URL and strip_prefix to the new git commit hash
-# b) get the sha256 hash of the commit by running:
-#    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
-#    and update the sha256 with the result.
-
-xla_hash = '8d06f3680ad046ea44f8e7159f52c728bb66c069'
+# To build PyTorch/XLA with OpenXLA to a new revision, update following xla_hash to
+# the openxla git commit hash.
+xla_hash = '52d5ccaf00fdbc32956c457eae415c09f56f0208'
 
 http_archive(
     name = "xla",
@@ -61,6 +57,7 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//openxla_patches:gpu_race_condition.diff",
+        "//openxla_patches:count_down.diff",
     ],
     strip_prefix = "xla-" + xla_hash,
     urls = [
