@@ -329,7 +329,7 @@ at::Tensor fromDLPack(DLManagedTensor* dlmt) {
       device->client()->CreateViewOfDeviceBuffer(
           static_cast<char*>(dlmt->dl_tensor.data) +
               dlmt->dl_tensor.byte_offset,
-          shape, device, on_delete_callback);
+          shape, *device->default_memory_space(), on_delete_callback);
   XLA_CHECK_OK(pjrt_buffer.status()) << "Failed to create a pjrt buffer.";
   XLA_CHECK(pjrt_buffer.value() != nullptr) << "pjrt buffer is null.";
 

@@ -274,7 +274,9 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
                           tensor->dimensions(), tensor->byte_strides(),
                           xla::PjRtClient::HostBufferSemantics::
                               kImmutableUntilTransferCompletes,
-                          [tensor]() { /* frees tensor */ }, pjrt_device)
+                          [tensor]() { /* frees tensor */ },
+                          *pjrt_device->default_memory_space(),
+                          /*device_layout=*/nullptr)
                       .value());
 
     ComputationClient::DataPtr data =
@@ -321,7 +323,7 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
 
   // Returns error if the buffer is already on `dst_device`.
   absl::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
-      pjrt_data->buffer->CopyToDevice(dst_device);
+      pjrt_data->buffer->CopyToMemorySpace(*dst_device->default_memory_space());
   if (!status_or.ok()) {
     return data;
   }
