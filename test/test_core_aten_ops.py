@@ -992,7 +992,6 @@ class AtenOpTest(unittest.TestCase):
         ],
         1,
     )
-
     kwargs = dict()
     # With xla pin to 52d5ccaf00fdbc32956c457eae415c09f56f0208
     # The rtol needs to be raise to 1e-3 on CPU.
