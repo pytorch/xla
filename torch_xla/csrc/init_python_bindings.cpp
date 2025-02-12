@@ -623,6 +623,7 @@ std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
   std::stringstream ss;
   ss << "XLATensor {\n";
   ss << "TensorID: " << xtensor->GetUniqueId() << "\n";
+  ss << "AliasID: " << xtensor->data()->alias_id << "\n";
   ss << "Device: " << xtensor->GetDevice() << "\n";
   ss << "XLA Shape: " << xtensor->shape().get().ToString() << "\n";
 
