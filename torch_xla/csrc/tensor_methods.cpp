@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iostream>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -1314,6 +1315,7 @@ XLATensorPtr cross(const XLATensorPtr& input, const XLATensorPtr& other,
 
 std::tuple<XLATensorPtr, XLATensorPtr> cummax(const XLATensorPtr& input,
                                               int64_t dim) {
+  std::cout << "CumMax: Call tensor method call\n";
   torch::lazy::NodePtr node = torch_xla::MakeNode<CumMax>(
       input->GetIrValue(), torch::lazy::GetCanonicalDimensionIndex(
                                dim, input->shape().get().rank()));
@@ -1490,6 +1492,8 @@ XLATensorPtr xla_dot_general(
 
 XLATensorPtr einsum(const std::string& equation,
                     const absl::Span<const XLATensorPtr> tensors) {
+  std::cout << "Einsum: Call tensor method call\n";
+
   std::vector<torch::lazy::Value> irs;
   irs.reserve(tensors.size());
   for (const XLATensorPtr& tensor : tensors) {

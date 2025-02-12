@@ -5,6 +5,7 @@
 #include <torch/csrc/lazy/core/util.h>
 
 #include <cmath>
+#include <iostream>
 #include <unordered_set>
 
 #include "torch_xla/csrc/convert_ops.h"
@@ -288,6 +289,7 @@ xla::XlaOp BuildCumulativeComputationWithIndices(
     xla::XlaOp value_input, xla::XlaOp index_input, int64_t dim,
     const xla::XlaComputation& reducer, xla::XlaOp value_init,
     xla::XlaOp index_init) {
+  std::cout << "CumMax: Calling BuildCumulativeComputationWithIndices\n";
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(value_input);
   std::vector<int64_t> window_strides(input_shape.rank(), 1);
   std::vector<int64_t> window_dims(input_shape.rank(), 1);
@@ -566,6 +568,7 @@ xla::XlaOp BuildLogsumexp(xla::XlaOp input,
 
 xla::XlaOp BuildEinsum(absl::Span<const xla::XlaOp> operands,
                        const std::string& equation) {
+  std::cout << "Einsum: Build lowered eisum\n";
   if (operands.size() == 1) {
     return xla::Einsum(
         operands[0], equation,

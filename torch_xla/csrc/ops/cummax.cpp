@@ -2,6 +2,8 @@
 
 #include <torch/csrc/lazy/core/tensor_util.h>
 
+#include <iostream>
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -54,6 +56,7 @@ torch::lazy::NodePtr CumMax::Clone(torch::lazy::OpList operands) const {
 }
 
 XlaOpVector CumMax::Lower(LoweringContext* loctx) const {
+  std::cout << "CumMax: Calling lowered cummax\n";
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp values_and_indices = LowerCumMax(input, dim_);
   return ReturnOps({xla::GetTupleElement(values_and_indices, 0),

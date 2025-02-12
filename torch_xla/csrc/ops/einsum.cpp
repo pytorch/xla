@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/ops/einsum.h"
 
+#include <iostream>
+
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -42,6 +44,8 @@ XlaOpVector Einsum::Lower(LoweringContext* loctx) const {
   for (size_t i = 0; i < operand_list.size(); ++i) {
     inputs.push_back(loctx->GetOutputOp(operand_list[i]));
   }
+
+  std::cout << "Einsum: Calling lowered eisum\n";
   return ReturnOp(BuildEinsum(absl::MakeSpan(inputs), equation_), loctx);
 }
 

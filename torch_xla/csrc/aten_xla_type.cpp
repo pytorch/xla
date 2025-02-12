@@ -14,6 +14,7 @@
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
 
+#include <iostream>
 #include <mutex>
 #include <optional>
 
@@ -1310,6 +1311,7 @@ at::Tensor XLANativeFunctions::cross(const at::Tensor& self,
 
 std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::cummax(
     const at::Tensor& self, int64_t dim) {
+  std::cout << "CumMax: Call native function\n";
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   std::tuple<XLATensorPtr, XLATensorPtr> res =
@@ -1428,6 +1430,7 @@ at::Tensor XLANativeFunctions::dot(const at::Tensor& self,
 at::Tensor XLANativeFunctions::einsum(std::string_view equation,
                                       at::TensorList tensors,
                                       at::OptionalIntArrayRef path) {
+  std::cout << "Einsum: Call native function\n";
   std::string cleansed_equation = std::string(equation);
 
   cleansed_equation.erase(
@@ -1445,13 +1448,10 @@ at::Tensor XLANativeFunctions::einsum(std::string_view equation,
   }
 
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  // Einsum operations with more than 2 operands, like bilinear operations, are
-  // not currently supported in XLA
   if (tensors.size() < 1 || tensors.size() > 2 || !all_xla_tensors_are_valid ||
       !EinsumUtilities::EquationIsValid(cleansed_equation) ||
       TensorsAreOfType(xla_tensors, at::ScalarType::Long)) {
-    TORCH_LAZY_COUNTER("EinsumFallback", 1);
-    return at::native::einsum(equation, tensors, path);
+    TF_LOG(INFO) << "EinSum op not supported by PyTorch XLA atm\n";
   }
   return aten_autograd_ops::EinsumAutogradFunction::apply(cleansed_equation,
                                                           tensors);
