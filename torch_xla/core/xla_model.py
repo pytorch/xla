@@ -161,7 +161,6 @@ def xla_device(n: Optional[int] = None,
   # under the hood we use virtual device logic for every xla tensor
   if xu.check_env_flag('XLA_USE_SPMD'):
     device = 'xla:0'
-    torch_xla._XLAC._xla_set_default_device(device)
     return torch.device(device)
 
   return runtime.xla_device(n, devkind)
