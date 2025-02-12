@@ -800,7 +800,8 @@ def ragged_paged_attention(
   page_indices_reshaped = page_indices.reshape(-1)
   buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
   step = torch.zeros((1,), dtype=torch.int32).to("xla")
-  # Place holder for checkify!!!
+  # The jax checkify in ragged paged attention kernel will insert several scalar refs to both inputs
+  # (end of prefetch) and outputs (begining of the original outputs).
   # TODO(jevinjiang, xiowei): consider seperate checkify from kernel!
   s1 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
   s2 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
@@ -810,6 +811,7 @@ def ragged_paged_attention(
   MIN_BLOCK_SIZE = 128
   output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
 
+  # TODO(jevinjiang, xiowei): check err returned by checkify! And add tests.
   _, _, _, _, output, _, _ = torch_xla._XLAC._xla_tpu_custom_call([
       num_q_tiles,
       sequence_ids,
@@ -1489,7 +1491,7 @@ def multi_queries_paged_attention_non_xla(q: torch.Tensor,
 
 
 XLA_LIB.define(
-    "ragged_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor kv_len, Tensor page_indices, Tensor cu_q_lens, int num_seqs, int num_kv_pages_per_block, int num_queries_per_block, bool use_kernel) -> Tensor",
+    "ragged_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor kv_lens, Tensor page_indices, Tensor cu_q_lens, int num_seqs, int num_kv_pages_per_block, int num_queries_per_block, bool use_kernel) -> Tensor",
 )
 
 
