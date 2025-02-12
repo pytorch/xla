@@ -116,5 +116,8 @@ class NeuronPlugin(plugins.DevicePlugin):
   def configure_multiprocess(self, local_rank, local_world_size):
     initialize_env(local_rank, local_world_size)
 
+  def configure_single_process(self):
+    initialize_env(0, 1)
+
   def physical_chip_count(self):
     return num_local_processes()
