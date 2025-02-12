@@ -22,6 +22,9 @@ jobs:
       image: ${{ inputs.dev-image }}
     env:
       _GLIBCXX_USE_CXX11_ABI: 0
+      TORCH_CUDA_ARCH_LIST: "5.2;7.0;7.5;8.0;9.0"
+      USE_CUDA: 1
+      MAX_JOBS: 24
     steps:
       - name: Checkout actions
         uses: actions/checkout@v4
@@ -34,18 +37,11 @@ jobs:
         with:
           torch-commit: ${{ inputs.torch-commit }}
           cuda: true
-      - name: Checkout PyTorch Repo
-        uses: actions/checkout@v4
-        with:
-          repository: pytorch/pytorch
-          path: pytorch
-          ref: ${{ inputs.torch-commit }}
-          submodules: recursive
       - name: Build PyTorch with CUDA enabled
         shell: bash
         run: |
           cd pytorch
-          TORCH_CUDA_ARCH_LIST="5.2;8.6" USE_CUDA=1 MAX_JOBS="$(nproc --ignore=4)" python setup.py bdist_wheel
+          python setup.py bdist_wheel
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:

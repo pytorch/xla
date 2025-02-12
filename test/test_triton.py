@@ -6,6 +6,7 @@ import unittest
 import torch_xla.experimental.triton as xla_triton
 import torch_xla
 from torch_xla import runtime as xr
+from torch_xla.test.test_utils import skipIfCUDA
 
 import triton
 import triton.language as tl
@@ -241,6 +242,8 @@ def _attn_fwd(
   tl.store(O_block_ptr, acc.to(Out.type.element_ty))
 
 
+# Ref: https://github.com/pytorch/xla/pull/8593
+@skipIfCUDA("GPU CI is failing")
 class TritonTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'CUDA', "This test only works on GPU.")
