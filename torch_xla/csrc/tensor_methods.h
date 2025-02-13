@@ -325,7 +325,7 @@ XLATensorPtr clamp(const XLATensorPtr& input,
                    const std::optional<at::Tensor>& min,
                    const std::optional<at::Tensor>& max);
 
-XLATensorPtr clone(const XLATensorPtr& input);
+XLATensorPtr clone(const XLATensorPtr& input, bool is_conj);
 
 // Pad with the given value and size specified by the given list of low and
 // high paddings.

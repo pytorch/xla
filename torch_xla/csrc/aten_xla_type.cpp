@@ -863,10 +863,15 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                             /*bias=*/bridge::GetXlaTensor(self)));
 }
 
-at::Tensor XLANativeFunctions::alias_copy(const at::Tensor& self) {
+at::Tensor XLANativeFunctions::alias(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::alias(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor XLANativeFunctions::alias_copy(const at::Tensor& self) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return alias(self);
 }
 
 at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
@@ -1333,8 +1338,8 @@ at::Tensor XLANativeFunctions::clone(
     const at::Tensor& self,
     std::optional<at::MemoryFormat> /* memory_format */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::clone(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(tensor_methods::clone(
+      bridge::GetXlaTensor(self), /* is_conj= */ self.is_conj()));
 }
 
 at::Tensor XLANativeFunctions::constant_pad_nd(const at::Tensor& self,
