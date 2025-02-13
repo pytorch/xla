@@ -17,8 +17,8 @@ There are 2 ways to accomplish this:
 from torch.export import export
 import torchvision
 import torch
-import torch_xla2 as tx
-import torch_xla2.export
+import torchax as tx
+import torchax.export
 
 resnet18 = torchvision.models.resnet18()
 # Sample input is a tuple
@@ -63,6 +63,31 @@ print(stablehlo.mlir_module())
 
 The second to last line we used `jax.ShapedDtypeStruct` to specify the input shape.
 You can also pass a numpy array here.
+
+### Inline some weights in generated stablehlo
+
+Suppose that you want to inline some (or all) of the model's weight
+into the generated StableHLO graph as constant. You can accomplish it by
+exporting a different function that calls your model.
+
+The convention used in `jax.jit` is that, all the input of the `jit`'d python
+functions are exported as parameters, and everything else are inlined as constants.
+
+So as above, the function we exported `jfunc` takes `weights` and `args` as input, so
+they appear as paramters.
+
+If you do this instead:
+
+```
+def jfunc_inlined(args):
+  return jfunc(weights, args)
+```
+and export / print out stablehlo for that:
+
+```
+print(jax.jit(jfunc_inlined).lower((jax.ShapedDtypeStruct((4, 3, 224, 224), jnp.float32.dtype, ))))
+```
+Then, you will see inlined constants.
 
 
 ## Preserving High-Level PyTorch Operations in StableHLO by generating `stablehlo.composite`
