@@ -1448,10 +1448,14 @@ at::Tensor XLANativeFunctions::einsum(std::string_view equation,
   }
 
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  if (tensors.size() < 1 || tensors.size() > 2 || !all_xla_tensors_are_valid ||
-      !EinsumUtilities::EquationIsValid(cleansed_equation) ||
-      TensorsAreOfType(xla_tensors, at::ScalarType::Long)) {
-    TF_LOG(INFO) << "EinSum op not supported by PyTorch XLA atm\n";
+  if (tensors.size() < 1 || tensors.size() > 2) {
+    std::cout << "EinSum cannot support operands != 2\n";
+  }
+  if (!EinsumUtilities::EquationIsValid(cleansed_equation)) {
+    std::cout << "EinSum equation is not correct\n";
+  }
+  if (TensorsAreOfType(xla_tensors, at::ScalarType::Long)) {
+    std::cout << "EinSum tensors are of wrong type\n";
   }
   return aten_autograd_ops::EinsumAutogradFunction::apply(cleansed_equation,
                                                           tensors);
