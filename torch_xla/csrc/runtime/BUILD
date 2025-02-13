@@ -165,6 +165,7 @@ cc_library(
         ":tf_logging",
         "@tsl//tsl/platform:stacktrace",
         "@tsl//tsl/platform:statusor",
+        "@tsl//tsl/platform:macros",
     ],
 )
 

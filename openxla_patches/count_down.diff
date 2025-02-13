@@ -1,0 +1,14 @@
+diff --git a/xla/backends/cpu/runtime/convolution_thunk_internal.h b/xla/backends/cpu/runtime/convolution_thunk_internal.h
+index 84fed6bb78..9835f12e4e 100644
+--- a/xla/backends/cpu/runtime/convolution_thunk_internal.h
++++ b/xla/backends/cpu/runtime/convolution_thunk_internal.h
+@@ -342,7 +342,8 @@ void EigenGenericConv2D(
+         Eigen::Index start = task_index * task_size;
+         Eigen::Index end = std::min(start + task_size, feature_group_count);
+         for (Eigen::Index i = start; i < end; ++i) {
+-          auto on_done = [count_down]() mutable { count_down.CountDown(); };
++          // auto on_done = [count_down]() mutable { count_down.CountDown(); };
++          auto on_done = [count_down]() mutable { const_cast<decltype(count_down)*>(&count_down)->CountDown(); };
+           auto [output, convolved] = convolve_group(i);
+           output.device(device, std::move(on_done)) = convolved;
+         }

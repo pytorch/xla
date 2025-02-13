@@ -66,10 +66,10 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 
 USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
 
-_date = '20250131'
+_date = '20250210'
 
 # Note: jax/jaxlib 20250115 build will fail. Check https://github.com/pytorch/xla/pull/8621#issuecomment-2616564634 for more details.
-_libtpu_version = '0.0.9'
+_libtpu_version = '0.0.10'
 _jax_version = '0.5.1'
 _jaxlib_version = '0.5.1'
 
@@ -332,9 +332,6 @@ setup(
         'tpu': [
             f'libtpu=={_libtpu_version}',
             'tpu-info',
-            # This special version removes `libtpu.so` from any `libtpu-nightly` installations,
-            # since we have migrated to using the `libtpu.so` from the `libtpu` package.
-            "libtpu-nightly==0.1.dev20241010+nightly.cleanup"
         ],
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
         'pallas': [f'jaxlib=={_jaxlib_version}', f'jax=={_jax_version}'],
