@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git6f423d0 )
+                  master (2.7.0+git8a71249 )
                 </div>
               
             
@@ -430,7 +430,10 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.distributed.spmd.xla_sharding</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">collections</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Generator</span><span class="p">,</span> <span class="n">MutableMapping</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
@@ -698,7 +701,7 @@
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="n">axis_names</span><span class="p">)</span>
 
   <span class="c1"># This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L172</span>
-  <span class="k">def</span><span class="w"> </span><span class="nf">_get_physical_tpu_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_get_physical_tpu_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">devices</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Rearrange TPU devices in a slice into a physical mesh.</span>
 
 <span class="sd">      Args:</span>
@@ -717,98 +720,9 @@
       <span class="n">out</span><span class="p">[</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="n">d</span>
     <span class="k">return</span> <span class="n">out</span>
 
-  <span class="c1"># This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L64.</span>
-  <span class="k">def</span><span class="w"> </span><span class="nf">_create_device_mesh_for_nd_torus</span><span class="p">(</span>
-      <span class="bp">self</span><span class="p">,</span> <span class="n">physical_mesh</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-      <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Assigns logical parallelism axes to physical axes of an N-D torus network.</span>
-
-<span class="sd">      Given logical parallelism axes with sizes in `mesh_shape` and devices in an</span>
-<span class="sd">      N-dimensional torus network represented by `physical_mesh`, maps each logical</span>
-<span class="sd">      axis to one or more physical axes. Prefer to map more-performance-sensitive</span>
-<span class="sd">      logical axes to larger numbers of physical axes to maximize the bandwidth</span>
-<span class="sd">      available to them. Also prefer to assign logical axes to multiple physical</span>
-<span class="sd">      axes of the same size (e.g., a 2D square) rather than multiple physical axes</span>
-<span class="sd">      of different sizes when possible.</span>
-
-<span class="sd">      Note that this routine will never split a physical axis over more than one</span>
-<span class="sd">      logical axis (which would reduce total usable bandwidth but may sometimes be</span>
-<span class="sd">      desired anyway). As a result, it will error out in cases where this is</span>
-<span class="sd">      necessary to produce a valid mapping.</span>
-
-<span class="sd">      Let&#39;s use a concrete example to explain the concepts and considerations.</span>
-
-<span class="sd">      As an example, suppose the logical mesh is [data, model], for data and model</span>
-<span class="sd">      parallelism respectively. Also suppose that data parallelism is less</span>
-<span class="sd">      performance sensitive than model parallelism. Consider a 3D TPU pod slice of</span>
-<span class="sd">      shape 4x4x16, represented by a physical mesh of shape (4, 4, 16).</span>
-
-<span class="sd">      A TPU pod slice has equal bandwidth along all axes with wraparound links, but</span>
-<span class="sd">      a 2D plane of size 4x4 may have faster XLA collective implementations than a</span>
-<span class="sd">      non-square plane or a 1D subgroup. If the mesh_shape is [16, 16], we may want</span>
-<span class="sd">      the more performance sensitive `model` axis to be mapped to the 4x4 XY plane.</span>
-
-<span class="sd">      Args:</span>
-<span class="sd">        physical_mesh: a np.ndarray of devices in the shape of the N-D torus</span>
-<span class="sd">          physical topology.</span>
-<span class="sd">        mesh_shape: shape of the logical mesh (size of the various logical</span>
-<span class="sd">          parallelism axes), with axes ordered by increasing network intensity.</span>
-
-<span class="sd">      Returns:</span>
-<span class="sd">        An np.ndarray of devices in the shape of the logical mesh (mesh_shape), with</span>
-<span class="sd">          each logical parallelism axis mapped to one or more physical mesh axes.</span>
-<span class="sd">        The axis assignment (a list of length num_logical_axes, whose elements</span>
-<span class="sd">          are tuples representing physical axis indices).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Remaining physical axes to be assigned to logical axes.</span>
-    <span class="n">assignable_physical_mesh</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-    <span class="c1"># Map each logical axis to a subset of physical axes.</span>
-    <span class="n">assignment</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">mesh_shape</span><span class="p">]</span>
-    <span class="c1"># Assign logical axes from highest network intensity to lowest.</span>
-    <span class="c1"># `mesh_shape` is assumed to ordered by lowest network intensity first, so</span>
-    <span class="c1"># reverse it first.</span>
-    <span class="c1"># Assigns devices to 2D or 3D logical mesh.</span>
-    <span class="k">for</span> <span class="n">logical_axis_index</span><span class="p">,</span> <span class="n">logical_axis_size</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span>
-        <span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">))):</span>
-      <span class="k">for</span> <span class="n">num_axes</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
-        <span class="c1"># map a combination of devices in physical axes to the logical axis.</span>
-        <span class="n">axes</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">assignable_physical_mesh</span><span class="p">,</span> <span class="n">num_axes</span><span class="p">)</span>
-        <span class="n">indices</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span>
-            <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">assignable_physical_mesh</span><span class="p">)),</span> <span class="n">num_axes</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">c_axes</span><span class="p">,</span> <span class="n">c_indices</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
-          <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">c_axes</span><span class="p">)</span> <span class="o">==</span> <span class="n">logical_axis_size</span><span class="p">:</span>
-            <span class="n">assignment</span><span class="p">[</span><span class="n">logical_axis_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">c_indices</span>
-            <span class="c1"># Zero the assigned physical axes.</span>
-            <span class="n">assignable_physical_mesh</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="mi">0</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">c_indices</span> <span class="k">else</span> <span class="n">v</span>
-                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">assignable_physical_mesh</span><span class="p">)</span>
-            <span class="p">]</span>
-            <span class="k">break</span>
-        <span class="k">if</span> <span class="n">assignment</span><span class="p">[</span><span class="n">logical_axis_index</span><span class="p">]:</span>
-          <span class="c1"># We already found an assignment from one candidate above.</span>
-          <span class="k">break</span>
-      <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># If the num_axes for loop did not break, i.e. none of the candidates work</span>
-        <span class="c1"># goto here with this while-else construct.</span>
-        <span class="k">if</span> <span class="n">logical_axis_size</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-          <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-              <span class="s1">&#39;Failed to find assignment for logical_axis_index&#39;</span>
-              <span class="sa">f</span><span class="s1">&#39; </span><span class="si">{</span><span class="n">logical_axis_index</span><span class="si">}</span><span class="s1"> of size </span><span class="si">{</span><span class="n">logical_axis_size</span><span class="si">}</span><span class="s1"> with remaining&#39;</span>
-              <span class="sa">f</span><span class="s1">&#39; assignable mesh </span><span class="si">{</span><span class="n">assignable_physical_mesh</span><span class="si">}</span><span class="s1">. The size of each&#39;</span>
-              <span class="s1">&#39; axis in your logical mesh must be equal to the product of&#39;</span>
-              <span class="s1">&#39; some subset of the physical mesh axis sizes. E.g logical mesh (4,&#39;</span>
-              <span class="s1">&#39; 16) is compatible with physical mesh 4x4x4 since 4=4 and 16=4x4.&#39;</span>
-          <span class="p">)</span>
-    <span class="c1"># Flatten the assignment</span>
-    <span class="n">transpose</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">assignment</span><span class="p">:</span>
-      <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">x</span><span class="p">:</span>
-        <span class="n">transpose</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">physical_mesh</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">transpose</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">),</span> <span class="n">assignment</span>
-
   <span class="k">def</span><span class="w"> </span><span class="nf">_create_device_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                           <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-                          <span class="n">devices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+                          <span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a performant device mesh.</span>
 
 <span class="sd">      Args:</span>
@@ -828,14 +742,13 @@
           <span class="sa">f</span><span class="s1">&#39;Number of devices </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span><span class="si">}</span><span class="s1"> must equal the product &#39;</span>
           <span class="sa">f</span><span class="s1">&#39;of mesh_shape </span><span class="si">{</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="n">physical_mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_physical_tpu_mesh</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span>
-    <span class="n">device_mesh</span><span class="p">,</span> <span class="n">assignment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_device_mesh_for_nd_torus</span><span class="p">(</span>
-        <span class="n">physical_mesh</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">)</span>
+    <span class="n">device_mesh</span><span class="p">,</span> <span class="n">assignment</span> <span class="o">=</span> <span class="n">_create_device_mesh_for_nd_torus</span><span class="p">(</span>
+        <span class="n">physical_mesh</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="n">allow_split_physical_axes</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">device_mesh</span>
 
   <span class="c1"># This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L288.</span>
-  <span class="k">def</span><span class="w"> </span><span class="nf">_create_hybrid_device_mesh</span><span class="p">(</span>
-      <span class="bp">self</span><span class="p">,</span> <span class="n">ici_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-      <span class="n">dcn_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_create_hybrid_device_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ici_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                                 <span class="n">dcn_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a device mesh for hybrid (e.g., ICI and DCN) parallelism.</span>
 
 <span class="sd">      Args:</span>
@@ -858,7 +771,7 @@
       <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
           <span class="sa">f</span><span class="s1">&#39;Number of slices </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">granules</span><span class="p">)</span><span class="si">}</span><span class="s1"> must equal the product of &#39;</span>
           <span class="sa">f</span><span class="s1">&#39;dcn_mesh_shape </span><span class="si">{</span><span class="n">dcn_mesh_shape</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
-    <span class="c1"># creates a seperate internal mesh for each slice.</span>
+    <span class="c1"># creates a separate internal mesh for each slice.</span>
     <span class="n">per_granule_meshes</span> <span class="o">=</span> <span class="p">[</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_create_device_mesh</span><span class="p">(</span><span class="n">ici_mesh_shape</span><span class="p">,</span> <span class="n">granule</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">granule</span> <span class="ow">in</span> <span class="n">granules</span>
@@ -872,7 +785,7 @@
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">ShardingType</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
-  <span class="c1"># ShardingType enum ID maps to OpSharidng.Type (https://shorturl.at/pvAJX)</span>
+  <span class="c1"># ShardingType enum ID maps to OpSharding.Type (https://shorturl.at/pvAJX)</span>
   <span class="n">REPLICATED</span> <span class="o">=</span> <span class="mi">0</span>
   <span class="n">MAXIMAL</span> <span class="o">=</span> <span class="mi">1</span>
   <span class="n">TUPLE</span> <span class="o">=</span> <span class="mi">2</span>
@@ -1249,6 +1162,399 @@
                                                       <span class="nb">list</span><span class="p">(</span><span class="n">grad_input</span><span class="p">)))</span>
 
   <span class="n">m</span><span class="o">.</span><span class="n">register_full_backward_hook</span><span class="p">(</span><span class="n">optimization_barrier</span><span class="p">)</span>
+
+
+<span class="c1">###############################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># The following is copied from JAX: https://github.com/jax-ml/jax/blob/main/jax/_src/mesh_utils.py</span>
+<span class="c1">#</span>
+<span class="c1">###############################################################################</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_create_device_mesh_for_nd_torus</span><span class="p">(</span>
+    <span class="n">physical_mesh</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">allow_split_physical_axes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Assigns logical parallelism axes to physical axes of an N-D torus network.</span>
+
+<span class="sd">  Given logical parallelism axes with sizes in `mesh_shape` and devices in an</span>
+<span class="sd">  N-dimensional torus network represented by `physical_mesh`, maps each logical</span>
+<span class="sd">  axis to one or more physical axes. Prefer to map more-performance-sensitive</span>
+<span class="sd">  logical axes to larger numbers of physical axes to maximize the bandwidth</span>
+<span class="sd">  available to them. Also prefer to assign logical axes to multiple physical</span>
+<span class="sd">  axes of the same size (e.g., a 2D square) rather than multiple physical axes</span>
+<span class="sd">  of different sizes when possible.</span>
+
+<span class="sd">  If allow_split_physical_axes = False (default), this routine will error out</span>
+<span class="sd">  instead of splitting a physical axis over more than one logical axis (which</span>
+<span class="sd">  would reduce total usable bandwidth).</span>
+
+<span class="sd">  Let&#39;s use a concrete example to explain the concepts and considerations.</span>
+
+<span class="sd">  As an example, suppose the logical mesh is [data, model], for data and model</span>
+<span class="sd">  parallelism respectively. Also suppose that data parallelism is less</span>
+<span class="sd">  performance sensitive than model parallelism. Consider a 3D TPU pod slice of</span>
+<span class="sd">  shape 4x4x16, represented by a physical mesh of shape (4, 4, 16).</span>
+
+<span class="sd">  A TPU pod slice has equal bandwidth along all axes with wraparound links, but</span>
+<span class="sd">  a 2D plane of size 4x4 may have faster XLA collective implementations than a</span>
+<span class="sd">  non-square plane or a 1D subgroup. If the mesh_shape is [16, 16], we may want</span>
+<span class="sd">  the more performance sensitive `model` axis to be mapped to the 4x4 XY plane.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    physical_mesh: a np.ndarray of devices in the shape of the N-D torus</span>
+<span class="sd">      physical topology.</span>
+<span class="sd">    mesh_shape: shape of the logical mesh (size of the various logical</span>
+<span class="sd">      parallelism axes), with axes ordered by increasing network intensity.</span>
+<span class="sd">    allow_split_physical_axes: If True, we would split physical axes if</span>
+<span class="sd">      necessary to fit the desired mesh shape.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    An np.ndarray of devices in the shape of the logical mesh (mesh_shape), with</span>
+<span class="sd">      each logical parallelism axis mapped to one or more physical mesh axes.</span>
+<span class="sd">    The axis assignment matrix, which is a 2-d array mapping from</span>
+<span class="sd">      (physical_axis, logical_axis) to the size assigned, with the invariant</span>
+<span class="sd">      np.prod(assignment, axis=1) = physical_mesh_shape, and</span>
+<span class="sd">      np.prod(assignment, axis=0) = mesh_shape.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># Remaining physical axes to be assigned to logical axes.</span>
+  <span class="n">assignable_physical_mesh</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+  <span class="c1"># Map each logical axis to a subset of physical axes.</span>
+  <span class="n">assignment</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">mesh_shape</span><span class="p">]</span>
+
+  <span class="c1"># Assign logical axes from highest network intensity to lowest.</span>
+  <span class="c1"># `mesh_shape` is assumed to ordered by lowest network intensity first, so</span>
+  <span class="c1"># reverse it first.</span>
+  <span class="k">for</span> <span class="n">logical_axis_index</span><span class="p">,</span> <span class="n">logical_axis_size</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span>
+      <span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">))):</span>
+    <span class="c1"># Preferentially map to more physical axes first for higher bandwidth.</span>
+    <span class="k">for</span> <span class="n">num_axes</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+      <span class="c1"># Try assign to any subset of size num_axes. Generate all candidates.</span>
+      <span class="n">indices_and_axes</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span>
+          <span class="nb">enumerate</span><span class="p">(</span><span class="n">assignable_physical_mesh</span><span class="p">),</span> <span class="n">num_axes</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">indices_and_axes</span><span class="p">:</span>
+        <span class="n">c_indices</span><span class="p">,</span> <span class="n">c_axes</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">elem</span><span class="p">)</span>
+        <span class="c1"># TODO(zhangqiaorjc): Due to limitations in XLA, 2D collectives only</span>
+        <span class="c1"># implemented for square 2D plane. Mapping a physical axis to two</span>
+        <span class="c1"># logical axes might be slower for non-square 2D plane, e.g., map 32 to</span>
+        <span class="c1"># 4x8 or a single axis. If XLA 2D collectives support non-square plane</span>
+        <span class="c1"># soon, we can continue to preferentially map to 2D plane in general,</span>
+        <span class="c1"># otherwise, we should treat non-square 2D plane and 1D submesh equally.</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">c_axes</span><span class="p">)</span> <span class="o">==</span> <span class="n">logical_axis_size</span><span class="p">:</span>
+          <span class="n">assignment</span><span class="p">[</span><span class="n">logical_axis_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">c_indices</span>
+          <span class="c1"># Zero the assigned physical axes.</span>
+          <span class="n">assignable_physical_mesh</span> <span class="o">=</span> <span class="p">[</span>
+              <span class="mi">0</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">c_indices</span> <span class="k">else</span> <span class="n">v</span>
+              <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">assignable_physical_mesh</span><span class="p">)</span>
+          <span class="p">]</span>
+          <span class="k">break</span>
+      <span class="k">if</span> <span class="n">assignment</span><span class="p">[</span><span class="n">logical_axis_index</span><span class="p">]:</span>
+        <span class="c1"># We already found an assignment from one candidate above.</span>
+        <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="c1"># If the num_axes for loop did not break, i.e. none of the candidates work</span>
+      <span class="c1"># goto here with this while-else construct.</span>
+      <span class="k">if</span> <span class="n">logical_axis_size</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">allow_split_physical_axes</span><span class="p">:</span>
+          <span class="c1"># Although this is now implemented, there are downstream tasks</span>
+          <span class="c1"># counting on this being a NotImplementedError.</span>
+          <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+              <span class="s1">&#39;Failed to find assignment for logical_axis_index&#39;</span>
+              <span class="sa">f</span><span class="s1">&#39; </span><span class="si">{</span><span class="n">logical_axis_index</span><span class="si">}</span><span class="s1"> of size </span><span class="si">{</span><span class="n">logical_axis_size</span><span class="si">}</span><span class="s1"> with&#39;</span>
+              <span class="sa">f</span><span class="s1">&#39; remaining assignable mesh </span><span class="si">{</span><span class="n">assignable_physical_mesh</span><span class="si">}</span><span class="s1">. The size&#39;</span>
+              <span class="s1">&#39; of each axis in your logical mesh must be equal to the product&#39;</span>
+              <span class="s1">&#39; of some subset of the physical mesh axis sizes. E.g. logical&#39;</span>
+              <span class="s1">&#39; mesh (4, 16) is compatible with physical mesh 4x4x4 since 4=4&#39;</span>
+              <span class="s1">&#39; and 16=4x4. If you want to split physical axes, set &#39;</span>
+              <span class="s1">&#39; allow_split_physical_axes to True.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="c1"># We will try finding an assignment, even if that means splitting the</span>
+          <span class="c1"># physical axes, which requires a more sophisticated implementation.</span>
+          <span class="k">return</span> <span class="n">_create_device_mesh_for_nd_torus_splitting_axes</span><span class="p">(</span>
+              <span class="n">physical_mesh</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">)</span>
+
+  <span class="c1"># Flatten the assignment, e.g., [(), (2,), (0, 1)] -&gt; (2, 0, 1).</span>
+  <span class="n">transpose</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">assignment_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+      <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">assignment</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">x</span><span class="p">:</span>
+      <span class="n">physical_mesh_axis</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+      <span class="n">assignment_array</span><span class="p">[</span><span class="n">physical_mesh_axis</span><span class="p">,</span>
+                       <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">physical_mesh_axis</span><span class="p">]</span>
+      <span class="n">transpose</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">physical_mesh_axis</span><span class="p">)</span>
+  <span class="k">return</span> <span class="p">(</span>
+      <span class="n">physical_mesh</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">transpose</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">),</span>
+      <span class="n">assignment_array</span><span class="p">,</span>
+  <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_prefer_first_logical_axis_assignment</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">physical_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="n">assignment</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns True if the first axis assignment is preferred over the second.</span>
+
+<span class="sd">  For now, this is implemented with some very simple heuristics. However,</span>
+<span class="sd">  it is possible to introduce e.g., a value function here based on a more</span>
+<span class="sd">  precise model of the underlying hardware.</span>
+
+<span class="sd">  TODO(rosun): Use a proxy of network capacity to select the partitions.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    x: Logical axis assignment as [len(physical_mesh_shape)] array.</span>
+<span class="sd">    y: Logical axis assignment as [len(physical_mesh_shape)] array.</span>
+<span class="sd">    physical_mesh_shape: Physical mesh shape.</span>
+<span class="sd">    assignment: Assignment matrix.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    True if x is preferred over y.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># Prefer occupying complete physical axes. I don&#39;t have a good reason for</span>
+  <span class="c1"># this, except that it is compatible with the existing behavior.</span>
+  <span class="c1">#</span>
+  <span class="c1"># E.g., on 4 x 4 x 8, [4, 4, -] will be preferred over [4, -, 4], and then</span>
+  <span class="c1"># over [2, 2, 4].</span>
+  <span class="n">x_whole_axis_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
+      <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">physical_mesh_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
+  <span class="n">y_whole_axis_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
+      <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">physical_mesh_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
+
+  <span class="k">if</span> <span class="n">x_whole_axis_size</span> <span class="o">!=</span> <span class="n">y_whole_axis_size</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">x_whole_axis_size</span> <span class="o">&gt;</span> <span class="n">y_whole_axis_size</span>
+
+  <span class="c1"># Prefer occupying more whole physical axes for better bandwidth.</span>
+  <span class="c1">#</span>
+  <span class="c1"># This is consistent with existing logic, i.e., 2 x 2 is preferred over 4.</span>
+  <span class="n">x_num_whole_axes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
+      <span class="p">[</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">physical_mesh_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">and</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">])</span>
+  <span class="n">y_num_whole_axes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
+      <span class="p">[</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">physical_mesh_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">and</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">])</span>
+
+  <span class="k">if</span> <span class="n">x_num_whole_axes</span> <span class="o">!=</span> <span class="n">y_num_whole_axes</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">x_num_whole_axes</span> <span class="o">&gt;</span> <span class="n">y_num_whole_axes</span>
+
+  <span class="c1"># Prefer taking physical axes that are not taken by logical axes of higher</span>
+  <span class="c1"># network intensity. E.g., for a 4 x 4 x 4, suppose that the previous</span>
+  <span class="c1"># assignments are 1 x 2 x 4, and we want to place a new logical axis of size</span>
+  <span class="c1"># 2, we will go for [2, 1, 1] instead of [1, 2, 1], as the latter choice will</span>
+  <span class="c1"># tap into bandwidth already taken by the higher intensity axis.</span>
+  <span class="n">assigned_physical_mesh_shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">assignment</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+  <span class="n">x_non_overlapping_axis_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
+      <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">if</span> <span class="n">assigned_physical_mesh_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">])</span>
+  <span class="n">y_non_overlapping_axis_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
+      <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="k">if</span> <span class="n">assigned_physical_mesh_shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">])</span>
+
+  <span class="k">if</span> <span class="n">x_non_overlapping_axis_size</span> <span class="o">!=</span> <span class="n">y_non_overlapping_axis_size</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">x_non_overlapping_axis_size</span> <span class="o">&gt;</span> <span class="n">y_non_overlapping_axis_size</span>
+
+  <span class="c1"># Otherwise sort by reverse lexical graphical order, to be consistent with</span>
+  <span class="c1"># existing behavior.</span>
+  <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_create_device_mesh_for_nd_torus_splitting_axes</span><span class="p">(</span>
+    <span class="n">physical_mesh</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Assigns logical parallelism axes to physical axes of an N-D torus network.</span>
+
+<span class="sd">  This implementation allows creating meshes that requires splitting physical</span>
+<span class="sd">  axes, and thus one could produce logical mesh of any shape, as long as the</span>
+<span class="sd">  number of devices matches, e.g.,</span>
+
+<span class="sd">  - Creating 2x2x4 from 4x4;</span>
+
+<span class="sd">  - Creating 2x2x16 from 8x8;</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    physical_mesh: a np.ndarray of devices in the shape of the N-D torus</span>
+<span class="sd">      physical topology.</span>
+<span class="sd">    mesh_shape: shape of the logical mesh (size of the various logical</span>
+<span class="sd">      parallelism axes), with axes ordered by increasing network intensity.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    An np.ndarray of devices in the shape of the logical mesh (mesh_shape), with</span>
+<span class="sd">      each logical parallelism axis mapped to one or more physical mesh axes.</span>
+<span class="sd">    The axis assignment matrix, which is a 2-d array mapping from</span>
+<span class="sd">      (physical_axis, logical_axis) to the size assigned, with the invariant</span>
+<span class="sd">      np.prod(assignment, axis=1) = physical_mesh_shape, and</span>
+<span class="sd">      np.prod(assignment, axis=0) = mesh_shape.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="s1">&#39;The number of devices in physical mesh&#39;</span>
+        <span class="sa">f</span><span class="s1">&#39; </span><span class="si">{</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1"> does not match the number of devices&#39;</span>
+        <span class="sa">f</span><span class="s1">&#39; in logical mesh </span><span class="si">{</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+  <span class="n">physical_mesh_shape</span> <span class="o">=</span> <span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span>
+  <span class="n">logical_mesh_shape</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span>
+
+  <span class="c1"># (Partial) assignment map as an 2-d array [p_axis, l_axis] -&gt; size.</span>
+  <span class="n">assignment</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">physical_mesh_shape</span><span class="p">),</span>
+                        <span class="nb">len</span><span class="p">(</span><span class="n">logical_mesh_shape</span><span class="p">)],</span>
+                       <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+
+  <span class="c1"># Process logical axes from highest network intensity to lowest.</span>
+  <span class="c1"># `mesh_shape` is assumed to ordered by lowest network intensity first, so</span>
+  <span class="c1"># reverse it.</span>
+  <span class="k">for</span> <span class="n">logical_axis</span><span class="p">,</span> <span class="n">logical_axis_size</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span>
+      <span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">logical_mesh_shape</span><span class="p">))):</span>
+    <span class="c1"># Go over all the possible assignment for the logical axis, including the</span>
+    <span class="c1"># one that splits multiple physical axes.</span>
+    <span class="n">best_logical_axis_assignment</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">logical_axis_assignment</span> <span class="ow">in</span> <span class="n">_enumerate_feasible_logical_axis_assignments</span><span class="p">(</span>
+        <span class="n">physical_mesh_shape</span><span class="p">,</span> <span class="n">assignment</span><span class="p">,</span> <span class="n">logical_axis_size</span><span class="p">):</span>
+      <span class="c1"># TODO(rosun): Instead of using heuristics, replace this with a proper</span>
+      <span class="c1"># scoring function reflecting the underlying hardware properties.</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">best_logical_axis_assignment</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span>
+          <span class="n">_prefer_first_logical_axis_assignment</span><span class="p">(</span>
+              <span class="n">logical_axis_assignment</span><span class="p">,</span>
+              <span class="n">best_logical_axis_assignment</span><span class="p">,</span>
+              <span class="n">physical_mesh_shape</span><span class="o">=</span><span class="n">physical_mesh_shape</span><span class="p">,</span>
+              <span class="n">assignment</span><span class="o">=</span><span class="n">assignment</span><span class="p">,</span>
+          <span class="p">)):</span>
+        <span class="n">best_logical_axis_assignment</span> <span class="o">=</span> <span class="n">logical_axis_assignment</span>
+    <span class="n">assignment</span><span class="p">[:,</span>
+               <span class="n">logical_axis</span><span class="p">]</span> <span class="o">=</span> <span class="n">best_logical_axis_assignment</span>  <span class="c1"># type: ignore  # numpy 2.2</span>
+
+  <span class="c1"># Read out the assignment.</span>
+  <span class="n">logical_mesh</span> <span class="o">=</span> <span class="n">_generate_logical_mesh</span><span class="p">(</span><span class="n">physical_mesh</span><span class="p">,</span> <span class="n">logical_mesh_shape</span><span class="p">,</span>
+                                        <span class="n">assignment</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">logical_mesh</span><span class="p">,</span> <span class="n">assignment</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_prime_factors</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a sorted list of prime factors for the given number.&quot;&quot;&quot;</span>
+  <span class="k">assert</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span>
+  <span class="n">factors</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">isqrt</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span><span class="p">):</span>
+    <span class="k">while</span> <span class="n">x</span> <span class="o">%</span> <span class="n">p</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+      <span class="n">x</span> <span class="o">//=</span> <span class="n">p</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">factors</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>  <span class="c1"># x is a prime number.</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_enumerate_feasible_logical_axis_assignments</span><span class="p">(</span>
+    <span class="n">physical_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="n">assignment</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">logical_axis_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Yields feasible assignments for a single logical axis.</span>
+
+<span class="sd">  For a physical mesh of shape [x_1, ..., x_n], and the product of all previous</span>
+<span class="sd">  assignments on each physical axes [y_1, ..., y_n], this function yields all</span>
+<span class="sd">  possible assignments for the axis as 1-d arrays [z_1, ..., z_n], so that:</span>
+
+<span class="sd">  - prod(z_1, ..., z_n) = logical_axis_size</span>
+
+<span class="sd">  - x_i % (z_i * y_i) = 0</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    physical_mesh_shape: Physical mesh shape.</span>
+<span class="sd">    assignment: Existing assignment matrix.</span>
+<span class="sd">    logical_axis_size: Size of the logical axis to assign.</span>
+
+<span class="sd">  Yields:</span>
+<span class="sd">    All valid assignments for the logical axis. Each assignment is represented</span>
+<span class="sd">    as an integer array of length len(physical_mesh_shape).</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">logical_axis_factors</span><span class="p">:</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">factor</span> <span class="ow">in</span> <span class="n">_get_prime_factors</span><span class="p">(</span><span class="n">logical_axis_size</span><span class="p">):</span>
+    <span class="n">logical_axis_factors</span><span class="p">[</span><span class="n">factor</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+  <span class="n">available_physical_mesh_shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">physical_mesh_shape</span><span class="p">)</span> <span class="o">//</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span>
+      <span class="n">assignment</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+  <span class="c1"># To enable efficient enumerations, we first index physical axes by their</span>
+  <span class="c1"># prime factors. Since we know the prime factorization of the logical axis</span>
+  <span class="c1"># size, we could simply enumerate by picking the correct count for each</span>
+  <span class="c1"># prime factor.</span>
+  <span class="n">physical_axes_by_factor</span><span class="p">:</span> <span class="n">MutableMapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
+      <span class="n">collections</span><span class="o">.</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">))</span>
+  <span class="k">for</span> <span class="n">physical_axis</span><span class="p">,</span> <span class="n">physical_axis_size</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+      <span class="n">available_physical_mesh_shape</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">factor</span> <span class="ow">in</span> <span class="n">_get_prime_factors</span><span class="p">(</span><span class="n">physical_axis_size</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">factor</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">logical_axis_factors</span><span class="p">:</span>
+        <span class="k">continue</span>
+      <span class="n">physical_axes_by_factor</span><span class="p">[</span><span class="n">factor</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">physical_axis</span><span class="p">)</span>
+
+  <span class="n">factors</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">assignments_by_factor</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">factor</span><span class="p">,</span> <span class="n">multiplicity</span> <span class="ow">in</span> <span class="n">logical_axis_factors</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span>
+    <span class="n">assignments_by_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="nb">set</span><span class="p">(</span>
+            <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">physical_axes_by_factor</span><span class="p">[</span><span class="n">factor</span><span class="p">],</span>
+                                   <span class="n">multiplicity</span><span class="p">)))</span>
+
+  <span class="k">for</span> <span class="n">axis_assignment</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="o">*</span><span class="n">assignments_by_factor</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">physical_mesh_shape</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">factor_index</span><span class="p">,</span> <span class="n">per_factor_assignment</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">axis_assignment</span><span class="p">):</span>
+      <span class="k">for</span> <span class="n">physical_axis</span> <span class="ow">in</span> <span class="n">per_factor_assignment</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">physical_axis</span><span class="p">]</span> <span class="o">*=</span> <span class="n">factors</span><span class="p">[</span><span class="n">factor_index</span><span class="p">]</span>
+    <span class="k">yield</span> <span class="n">result</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_generate_logical_mesh</span><span class="p">(</span>
+    <span class="n">physical_mesh</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">logical_mesh_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+    <span class="n">assignment</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Compute the logical mesh from assignment map.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    physical_mesh: Physical device mesh.</span>
+<span class="sd">    logical_mesh_shape: Logical mesh shape.</span>
+<span class="sd">    assignment: 2-d assignment matrix shape [physical_dims, logical_dims].</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Logical mesh reshaped from physical mesh.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">physical_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span>
+      <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span>
+          <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">physical_mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span>
+      <span class="n">assignment</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+  <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+  <span class="n">logical_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span>
+      <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span>
+          <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">logical_mesh_shape</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+      <span class="n">assignment</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+  <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+  <span class="c1"># Axes of logical mesh is ordered by (physical_axis, logical_axis).</span>
+  <span class="c1">#</span>
+  <span class="c1"># Note that we sort for each physical_axis the logical_axis, so that higher</span>
+  <span class="c1"># intensity logical axes are replicated at inner (minor) dimensions.</span>
+  <span class="c1">#</span>
+  <span class="c1"># E.g., if a dimension size is 12 = 3x4, where 3 is higher intensity and 4</span>
+  <span class="c1"># is lower, we want to reshape so that it becomes 12 = 4x3. Imagine in the</span>
+  <span class="c1"># 1-d case, this will allow more connections between the higher intensity</span>
+  <span class="c1"># axes.</span>
+  <span class="n">logical_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">physical_mesh</span><span class="p">,</span> <span class="n">assignment</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+
+  <span class="c1"># We will then group by l_axis as this is what is expected from output.</span>
+  <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">transpose_axes</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="nb">sorted</span><span class="p">(</span>
+      <span class="nb">zip</span><span class="p">(</span><span class="n">logical_indices</span><span class="p">,</span> <span class="n">physical_indices</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">logical_indices</span><span class="p">)))))</span>
+  <span class="n">logical_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">logical_mesh</span><span class="p">,</span>
+                              <span class="n">transpose_axes</span><span class="p">)</span>  <span class="c1"># type: ignore  # numpy 2.2</span>
+
+  <span class="c1"># Reshape to add the trivial dimensions back.</span>
+  <span class="n">logical_mesh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">logical_mesh</span><span class="p">,</span>
+                            <span class="n">logical_mesh_shape</span><span class="p">)</span>  <span class="c1"># type: ignore  # numpy 2.2</span>
+
+  <span class="k">return</span> <span class="n">logical_mesh</span>
 </pre></div>
 
              </article>
