@@ -801,6 +801,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
                "`torch_xla._dynamo.config.skip_input_data_check` to False";
         dataptr = xla_tensor_ptr->GetXlaData();
       } else {
+        std::cout << "execute computation with barrier" << std::endl;
         XLA_CHECK(device.type() != (int8_t)XlaDeviceType::SPMD)
             << "SPMD device data should already be on the XLA backend "
                "(XLATensor).";

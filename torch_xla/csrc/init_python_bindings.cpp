@@ -1421,21 +1421,30 @@ void InitXlaModuleBindings(py::module m) {
     std::vector<XLATensorPtr> xtensors =
         XLAGraphExecutor::Get()->GetLiveTensors(&current_device);
     torch::lazy::BackendDevice spmd_device = ParseDeviceString("SPMD:0");
-    for (auto xtensor : xtensors) {
-      XlaDeviceType xla_device_type =
-          static_cast<XlaDeviceType>(xtensor->GetDevice().type());
-      if (xla_device_type != XlaDeviceType::SPMD) {
-        // Internally this moves the device data to the host and then copy
-        // to the SPMD virtual device. The original data should be destroyed
-        // in the transition, after creating a detached host-side copy.
-        // TODO(yeounoh) Consider CopyToDevice, and make data's device mutable.
-        at::Tensor tensor = xtensor->ToTensor(false);
-        xtensor->SetXlaData(TensorToXlaData(tensor, spmd_device));
-      }
-    }
-
+    // for (auto xtensor : xtensors) {
+    //   XlaDeviceType xla_device_type =
+    //       static_cast<XlaDeviceType>(xtensor->GetDevice().type());
+    //   if (xla_device_type != XlaDeviceType::SPMD) {
+    //     // Internally this moves the device data to the host and then copy
+    //     // to the SPMD virtual device. The original data should be destroyed
+    //     // in the transition, after creating a detached host-side copy.
+    //     // TODO(yeounoh) Consider CopyToDevice, and make data's device mutable.
+    //     at::Tensor tensor = xtensor->ToTensor(false);
+    //     xtensor->SetXlaData(TensorToXlaData(tensor, spmd_device));
+    //   }
+    // }
+    bridge::InitAtenXlaDeviceMapper(true);
     // Ensure that virtual device is registered.
     XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
+  });
+  m.def("_set_spmd_mode", [](bool enable) {
+    if (enable) {
+      bridge::InitAtenXlaDeviceMapper(true);
+      // Ensure that virtual device is registered.
+      XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
+    } else {
+      bridge::InitAtenXlaDeviceMapper(false);
+    }
   });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
   m.def("_xla_get_device_hw_type", [](const at::Tensor& tensor) {
@@ -2313,6 +2322,9 @@ void InitXlaModuleBindings(py::module m) {
         XLA_CHECK(UseVirtualDevice())
             << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
         auto local_devices = runtime::GetComputationClient()->GetLocalDevices();
+        for(auto& device : local_devices) {
+          std::cout << "check local device: " << device << std::endl;
+        }
         XLA_CHECK(local_devices.size() == shards.size())
             << "Must specify a shard for each local device";
         XLA_CHECK(!global_shape.has_value() ||
@@ -2419,6 +2431,43 @@ void InitXlaModuleBindings(py::module m) {
           }
           return result;
         });
+  m.def("_global_tensor_from_tpu_shards",
+        [](const std::vector<at::Tensor>& shards, const xla::OpSharding& sharding,
+         std::optional<std::vector<int64_t>>& global_shape) -> at::Tensor {
+          std::vector<runtime::ComputationClient::DataPtr> handles;
+          std::vector<at::ScalarType> element_types;
+          // Find all shard handles for transfer
+          for (auto& shard : shards) {
+            XLATensorPtr xtensor = bridge::GetXlaTensor(shard);
+            XLA_CHECK(xtensor->GetXlaData() != nullptr)
+                << "Shard data is not available";
+            // XLA_CHECK(xtensor->sharding_spec() != nullptr)
+            //     << "Tensor is not sharded";
+            runtime::ComputationClient::DataPtr handle =
+                std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                    xtensor->GetXlaData());
+            handles.push_back(handle);
+            element_types.push_back(MaybeUpcastToHostTorchType(
+                                    handle->shape().element_type()));
+          }
+
+          auto local_devices = runtime::GetComputationClient()->GetLocalDevices();
+          auto device = GetVirtualDevice();
+          auto primitive_type =
+              MakeXlaPrimitiveType(shards[0].type().scalarType(), &device);
+          xla::Shape tensor_shape = MakeArrayShapeFromDimensions(
+              global_shape.value(), /*dynamic_dimensions=*/{}, primitive_type,
+              static_cast<XlaDeviceType>(device.type()));
+          auto sharding_spec =
+            std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+          runtime::ComputationClient::DataPtr sharded_data = 
+            ShardingUtil::CreateShardedDataFromShards(handles, local_devices, sharding_spec);
+
+          XLATensorPtr xla_tensor = XLATensor::Create(std::move(sharded_data));
+          return bridge::AtenFromXlaTensor(std::move(xla_tensor));
+        },
+        py::arg("shards"), py::arg("sharding"),
+        py::arg("global_shape") = py::none());
   // For each input tensors' local shards, returns the tuple:
   //        (replica_id: int, indices: Union[List[Slice], Ellipsis]),
   // where `replica_id` is the replica the shard belongs to and `indices` index

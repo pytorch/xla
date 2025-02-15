@@ -1331,6 +1331,9 @@ def send_cpu_data_to_device(
 
     xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices,
                                                       shardings)
+    print(f"convert_fn len(xtensors) {len(xtensors)}")
+    for xtensor in xtensors:
+      print(f"tensor shape {xtensor.shape}")
     return xtensors
 
   def select_fn(v):

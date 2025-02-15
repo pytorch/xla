@@ -87,6 +87,8 @@ std::optional<torch::lazy::BackendDevice> GetXlaDevice(
 
 std::vector<torch::lazy::BackendDevice> GetBackendDevices();
 
+void InitAtenXlaDeviceMapper(bool use_virtual_device);
+
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device);
 
 c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device);

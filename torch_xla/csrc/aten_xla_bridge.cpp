@@ -20,6 +20,7 @@ namespace bridge {
 namespace {
 
 thread_local absl::optional<torch::lazy::BackendDevice> g_current_device;
+thread_local torch::lazy::BackendDevice g_default_device;
 
 class AtenXlaDeviceMapper {
  public:
@@ -39,14 +40,21 @@ class AtenXlaDeviceMapper {
     return devices_;
   }
 
-  void SetVirtualDevice() {
-    for (auto& device : GetAllDevices()) {
-      if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
-        return;
+  void InitAtenXlaDeviceMapper(bool use_virtual_device) {
+    devices_.clear();
+    devices_ordinals_.clear();
+    std::cout << "in InitAtenXlaDeviceMapper check UseVirtualDevice()" << UseVirtualDevice() << std::endl;
+    if (use_virtual_device) {
+      std::cout << "update virtual device in AtenXlaDeviceMapper" << std::endl;
+      devices_.emplace_back(ParseDeviceString("SPMD:0"));
+      devices_ordinals_[devices_.back()] = 0;
+    } else {
+      for (auto& device_str :
+           torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
+        devices_.emplace_back(ParseDeviceString(device_str));
+        devices_ordinals_[devices_.back()] = devices_.size() - 1;
       }
     }
-    devices_.emplace_back(ParseDeviceString("SPMD:0"));
-    devices_ordinals_[devices_.back()] = 0;
   }
 
  private:
@@ -335,6 +343,10 @@ std::vector<torch::lazy::BackendDevice> GetBackendDevices() {
   return AtenXlaDeviceMapper::Get()->GetAllDevices();
 }
 
+void InitAtenXlaDeviceMapper(bool use_virtual_device) {
+  return AtenXlaDeviceMapper::Get()->InitAtenXlaDeviceMapper(use_virtual_device);
+}
+
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
   XLA_CHECK_EQ(device.type(), at::kXLA) << device;
   int ordinal = device.has_index() ? device.index() : -1;
@@ -345,8 +357,12 @@ torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
     }
   }
   if (ordinal < 0) {
+    std::cout << "ordinal < 0" << std::endl;
     return GetCurrentDevice();
   }
+  std::cout << "GetDeviceFromOrdinal: " 
+    << AtenXlaDeviceMapper::Get()->GetDeviceFromOrdinal(ordinal).toString()
+    << std::endl;
   return AtenXlaDeviceMapper::Get()->GetDeviceFromOrdinal(ordinal);
 }
 
@@ -365,13 +381,21 @@ std::string ToXlaString(const c10::Device& device) {
 }
 
 const torch::lazy::BackendDevice* GetDefaultDevice() {
-  static std::string default_device_spec =
+  // std::cout << "in GetDefaultDevice, check UseVirtualDevice " <<
+  // UseVirtualDevice() << std::endl;
+  const std::string default_device_spec =
       UseVirtualDevice() ? "SPMD:0"
                          : runtime::GetComputationClient()->GetDefaultDevice();
+  // std::cout << "in GetDefaultDevice, check default_device_spec " <<
+  //   default_device_spec << std::endl;
   XLA_CHECK(!default_device_spec.empty());
-  static const torch::lazy::BackendDevice default_device =
-      ParseDeviceString(default_device_spec);
-  return &default_device;
+  g_default_device = ParseDeviceString(default_device_spec);
+  return &g_default_device;
+  // static torch::lazy::BackendDevice default_device;
+  // std::cout << "before default_device" << std::endl;
+  // default_device = ParseDeviceString(default_device_spec);
+  // std::cout << "after default_device" << std::endl;
+  // return &default_device;
 }
 
 c10::Device AtenDefaultDevice() {
@@ -379,9 +403,9 @@ c10::Device AtenDefaultDevice() {
 }
 
 torch::lazy::BackendDevice GetCurrentDevice() {
-  if (!g_current_device) {
-    g_current_device = *GetDefaultDevice();
-  }
+  // if (!g_current_device) {
+  g_current_device = *GetDefaultDevice();
+  // }
   return *g_current_device;
 }
 

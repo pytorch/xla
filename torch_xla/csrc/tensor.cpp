@@ -214,6 +214,7 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   if (up_to_date) {
     torch::lazy::BackendDataPtr handle = CurrentDataHandle();
     if (handle != nullptr) {
+      std::cout << "get current data handle" << std::endl;
       XLA_CHECK(handle->HasValue())
           << "Trying to access XLA data for tensor with ID " << GetUniqueId()
           << " while an async operation is in flight: " << handle->shape();
@@ -240,6 +241,7 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
       ApplyPendingGraph();
     }
   } else {
+    std::cout << "tensor_data" << std::endl;
     XLA_CHECK(data()->tensor_data);
     data()->handle = TensorToXlaData(*data()->tensor_data, GetDevice());
   }
@@ -399,6 +401,8 @@ torch::lazy::Value XLATensor::GetIrValue() const {
   }
   std::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
+  std::cout << "GetIrValue before GetIrValueForTensor" << std::endl;
+  std::cout << "check GetDevice " << GetDevice().toString() << std::endl;
   AssignIrValue(GetIrValueForTensor(*tensor_data, GetDevice()));
   data()->tensor_data = std::nullopt;
   return data()->ir_value;
@@ -431,6 +435,7 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
     data = XLAGraphExecutor::Get()->GetDeviceData(tensor.cpu(), device);
     read_only = true;
   } else {
+    std::cout << "in GetIrValueForTensor" << std::endl;
     TORCH_LAZY_TIMED("IrValueTensorToXlaData");
     data = TensorToXlaData(tensor, device);
   }
@@ -568,6 +573,7 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
     data()->handle = nullptr;
     // if shape is different,
     if (data()->sharding) {
+      std::cout << "in UpdateFromTensor data has sharindg" << std::endl;
       auto coyped_tensor_dims = XlaHelpers::I64List(coyped_tensor.sizes());
       auto sharding_dims = data()->sharding->shape.dimensions();
       if (coyped_tensor_dims != sharding_dims) {

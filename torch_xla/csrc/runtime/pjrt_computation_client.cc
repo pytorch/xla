@@ -256,6 +256,7 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
+  std::cout << "transfer to device" << std::endl;
   metrics::TimedSection timed(TransferToDeviceMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -281,6 +282,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
         std::make_shared<PjRtData>(tensor->device(), tensor->shape(), buffer);
     datas.push_back(data);
   }
+  std::cout << "Transfer " << total_size << " bytes to device" << std::endl;
   OutboundDataMetric()->AddSample(total_size);
   CreateDataHandlesCounter()->AddValue(datas.size());
 
@@ -290,6 +292,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
     std::string device, xla::Shape shape, xla::OpSharding sharding) {
+  std::cout << "transfer shards to device" << std::endl;
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToDevice",
       tsl::profiler::TraceMeLevel::kInfo);
@@ -306,6 +309,22 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
         pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
   }
   return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards,
+                                           sharding);
+}
+
+ComputationClient::DataPtr PjRtComputationClient::CreateShardedDataFromShards(
+    std::vector<DataPtr> shards, std::string device,
+    xla::Shape global_shape, xla::OpSharding sharding) {
+  tsl::profiler::TraceMe activity(
+      "PjRtComputationClient::CreateShardedDataFromShards",
+      tsl::profiler::TraceMeLevel::kInfo);
+  std::vector<std::shared_ptr<PjRtData>> pjrt_shards;
+  for (auto shard : shards) {
+    pjrt_shards.push_back(
+      std::dynamic_pointer_cast<PjRtData>(shard)
+    );
+  }
+  return std::make_shared<PjRtShardedData>(device, global_shape, pjrt_shards,
                                            sharding);
 }
 
@@ -785,6 +804,10 @@ PjRtComputationClient::ExecuteReplicated(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
 
+  for (auto& device : devices) {
+    std::cout << "PjRtComputationClient::ExecuteReplicated device:" << device << std::endl;
+  }
+
   std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(
       devices.size(), std::vector<xla::PjRtBuffer*>(arguments.size()));
   {
@@ -803,6 +826,12 @@ PjRtComputationClient::ExecuteReplicated(
           for (int32_t i = start; i < end; ++i) {
             auto pjrt_data =
                 std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
+            std::cout << "check pjrt_data is null " << (pjrt_data == nullptr) << std::endl;
+            std::cout << "Check pjrt_data->shards.size() " <<
+              pjrt_data->shards.size();
+            std::cout << "Check devices.size() " <<
+              devices.size();
+
             XLA_CHECK_EQ(pjrt_data->shards.size(), devices.size())
                 << "Expected one shard per device";
 

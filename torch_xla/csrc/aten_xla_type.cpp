@@ -251,7 +251,16 @@ at::Tensor to_meta(const at::Tensor& tensor) {
 
 torch::lazy::BackendDevice GetXlaDeviceOrCurrent(
     const std::optional<c10::Device>& device) {
-  auto xla_device_opt = bridge::GetXlaDevice(device);
+  std::optional<torch::lazy::BackendDevice>
+    xla_device_opt = bridge::GetXlaDevice(device);
+  std::cout << "in GetXlaDeviceOrCurrent" << std::endl;
+  if (xla_device_opt.has_value()) {
+    std::cout << "xla_device_opt: " << (*xla_device_opt).toString()
+      << std::endl;
+  } else {
+    std::cout << "bridge::GetCurrentDevice(): "
+      << bridge::GetCurrentDevice().toString() << std::endl;
+  }
   return xla_device_opt ? *xla_device_opt : bridge::GetCurrentDevice();
 }
 
@@ -641,17 +650,21 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
-    static bool sync_update =
+    std::cout << "in copy from 1" << std::endl;
+    std::cout << "check dst_tensor device" << dst_tensor->GetDevice().toString() << std::endl;
+    bool sync_update =
         runtime::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
         !UseVirtualDevice();
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
     XLA_CHECK(dst_tensor);
   } else if (!dst_tensor) {
+    std::cout << "in copy from 2" << std::endl;
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dst.scalar_type(), /*copy=*/false);
     dst.resize_as_(typed_tensor).copy_(typed_tensor);
   } else {
+    std::cout << "in copy from 3" << std::endl;
     tensor_methods::copy_(dst_tensor, self_tensor);
     bridge::ReplaceXlaTensor(dst, dst_tensor);
   }
@@ -725,7 +738,7 @@ at::Tensor XLANativeFunctions::_to_copy(
     // Use the eager .to on the eager tensor.
     return eager_tensor.to(options, non_blocking, /*copy=*/true);
   }
-
+  std::cout << "check options.device() " << options.device() << std::endl;
   // Case 2: Create a new XLA tensor with the supplied data and options.
   auto new_tensor =
       empty_symint(self.sym_sizes(), at::typeMetaToScalarType(options.dtype()),
@@ -1555,6 +1568,7 @@ at::Tensor XLANativeFunctions::empty_symint(
   // s_copy_().
   XLATensorPtr xla_tensor;
   if (all_dims_static) {
+    std::cout << "in empty_symint, GetXlaDeviceOrCurrent(device): " << GetXlaDeviceOrCurrent(device).toString() << std::endl;
     xla_tensor = tensor_methods::full(XlaHelpers::I64List(int_sizes.value()), 0,
                                       GetXlaDeviceOrCurrent(device),
                                       at::dtype_or_default(dtype));

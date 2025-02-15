@@ -247,6 +247,7 @@ def _name_of_func(func):
 TENSOR_CONSTRUCTORS = {
   torch.ones,
   torch.zeros,
+  torch.ops.aten.empty,
   torch.empty,
   torch.empty_strided,
   torch.tensor,
@@ -397,9 +398,9 @@ class Environment(contextlib.ContextDecorator):
 
 
     def dispatch(self, func, types, args, kwargs):
-
+      # breakpoint()
       kwargs = kwargs or {}
-      if func in TENSOR_CONSTRUCTORS:
+      if func in TENSOR_CONSTRUCTORS or (hasattr(func, 'overloadpacket') and func.overloadpacket in TENSOR_CONSTRUCTORS):
         return self._handle_tensor_constructor(func, args, kwargs)
       if func in (torch.Tensor.to, torch.ops.aten.lift_fresh.default ,torch.ops.aten._to_copy, torch.ops.aten._to_copy.default):
         return self._torch_Tensor_to(args, kwargs)
