@@ -192,6 +192,12 @@ ComputationClient::DataPtr IfrtComputationClient::CreateDataPlaceholder(
                                     std::move(sharding));
 }
 
+ComputationClient::DataPtr IfrtComputationClient::CreateShardedDataFromShards(
+    std::vector<ComputationClient::DataPtr> shards, std::string device,
+    xla::Shape global_shape, xla::OpSharding sharding) {
+  XLA_ERROR() << __FUNCTION__ << " not implemented";
+}
+
 std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
     ComputationClient::DataPtr data) {
   tsl::profiler::TraceMe activity("IfrtComputationClient::GetDataShards",
