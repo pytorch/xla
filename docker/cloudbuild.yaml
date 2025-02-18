@@ -1,5 +1,5 @@
 # Cloud Build Configuration which:
-# (1) Builds, tests, and pushes gcr.io/tpu-pytorch/xla image
+# (1) Builds, tests, and pushes gcr.io/tpu-pytorch-releases/xla image
 # (2) Collects and stores torch and torch_xla wheels
 steps:
 - name: 'gcr.io/cloud-builders/docker'
@@ -16,20 +16,20 @@ steps:
           '--build-arg', 'cuda_compute=${_CUDA_COMPUTE}',
           '--build-arg', 'xla_branch=${_GITHUB_XLA_BRANCH}',
           '--build-arg', 'examle_branch=${_GITHUB_EXAMPLE_BRANCH}',
-          '-t', 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}',
+          '-t', 'gcr.io/tpu-pytorch-releases/xla:${_IMAGE_NAME}',
           '-f', 'docker/Dockerfile', '.'
         ]
   timeout: 14400s
 - name: 'gcr.io/cloud-builders/docker'
   entrypoint: bash
-  args: ['-c', 'docker tag gcr.io/tpu-pytorch/xla:${_IMAGE_NAME} gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}_$(date -u +%Y%m%d)']
-- name: 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}'
+  args: ['-c', 'docker tag gcr.io/tpu-pytorch-releases/xla:${_IMAGE_NAME} gcr.io/tpu-pytorch-releases/xla:${_IMAGE_NAME}_$(date -u +%Y%m%d)']
+- name: 'gcr.io/tpu-pytorch-releases/xla:${_IMAGE_NAME}'
   entrypoint: bash
   args: ['-c', 'source /pytorch/xla/docker/common.sh && run_deployment_tests']
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', '--all-tags', 'gcr.io/tpu-pytorch/xla']
+  args: ['push', '--all-tags', 'gcr.io/tpu-pytorch-releases/xla']
   timeout: 2700s
-- name: 'gcr.io/tpu-pytorch/xla:${_IMAGE_NAME}'
+- name: 'gcr.io/tpu-pytorch-releases/xla:${_IMAGE_NAME}'
   entrypoint: 'bash'
   args: ['-c', 'source /pytorch/xla/docker/common.sh && collect_wheels ${_RELEASE_VERSION}']
 
@@ -48,12 +48,12 @@ substitutions:
     _GITHUB_EXAMPLE_BRANCH: 'master'
 options:
     pool:
-      name: 'projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build'
+      name: 'projects/tpu-pytorch-releases/locations/us-central1/workerPools/wheel_build'
     dynamic_substitutions: true
     substitution_option: 'ALLOW_LOOSE'
 timeout: 32000s
 artifacts:
   objects:
     # CUDA wheels exported under `wheels/cuda/<cuda_version>`
-    location: 'gs://tpu-pytorch/wheels/$_UPLOAD_SUBDIR'
+    location: 'gs://tpu-pytorch-releases/wheels/$_UPLOAD_SUBDIR'
     paths: ['/**/*.whl']
