@@ -309,6 +309,20 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
                                            sharding);
 }
 
+ComputationClient::DataPtr PjRtComputationClient::CreateShardedDataFromShards(
+    std::vector<DataPtr> shards, std::string device, xla::Shape global_shape,
+    xla::OpSharding sharding) {
+  tsl::profiler::TraceMe activity(
+      "PjRtComputationClient::CreateShardedDataFromShards",
+      tsl::profiler::TraceMeLevel::kInfo);
+  std::vector<std::shared_ptr<PjRtData>> pjrt_shards;
+  for (auto shard : shards) {
+    pjrt_shards.push_back(std::dynamic_pointer_cast<PjRtData>(shard));
+  }
+  return std::make_shared<PjRtShardedData>(device, global_shape, pjrt_shards,
+                                           sharding);
+}
+
 ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
     ComputationClient::DataPtr data, std::string dst) {
   tsl::profiler::TraceMe activity("PjRtComputationClient::CopyToDevice",

@@ -35,6 +35,11 @@ class IfrtComputationClient : public ComputationClient {
       std::string device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
+  DataPtr CreateShardedDataFromShards(std::vector<DataPtr> shards,
+                                      std::string device,
+                                      xla::Shape global_shape,
+                                      xla::OpSharding sharding) override;
+
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
   DataPtr GetDataShard(DataPtr data, size_t index) override;

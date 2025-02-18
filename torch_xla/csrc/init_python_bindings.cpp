@@ -2419,6 +2419,41 @@ void InitXlaModuleBindings(py::module m) {
           }
           return result;
         });
+  m.def(
+      "_global_tensor_from_tpu_shards",
+      [](const std::vector<at::Tensor>& shards, const xla::OpSharding& sharding,
+         std::optional<std::vector<int64_t>>& global_shape) -> at::Tensor {
+        std::vector<runtime::ComputationClient::DataPtr> handles;
+        std::vector<at::ScalarType> element_types;
+        for (auto& shard : shards) {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(shard);
+          XLA_CHECK(xtensor->GetXlaData() != nullptr)
+              << "Shard data is not available";
+          runtime::ComputationClient::DataPtr handle =
+              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                  xtensor->GetXlaData());
+          handles.push_back(handle);
+          element_types.push_back(
+              MaybeUpcastToHostTorchType(handle->shape().element_type()));
+        }
+        auto local_devices = runtime::GetComputationClient()->GetLocalDevices();
+        auto device = GetVirtualDevice();
+        auto primitive_type =
+            MakeXlaPrimitiveType(shards[0].type().scalarType(), &device);
+        xla::Shape tensor_shape = MakeArrayShapeFromDimensions(
+            global_shape.value(), /*dynamic_dimensions=*/{}, primitive_type,
+            static_cast<XlaDeviceType>(device.type()));
+        auto sharding_spec =
+            std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+        runtime::ComputationClient::DataPtr sharded_data =
+            ShardingUtil::CreateShardedDataFromShards(handles, local_devices,
+                                                      sharding_spec);
+
+        XLATensorPtr xla_tensor = XLATensor::Create(std::move(sharded_data));
+        return bridge::AtenFromXlaTensor(std::move(xla_tensor));
+      },
+      py::arg("shards"), py::arg("sharding"),
+      py::arg("global_shape") = py::none());
   // For each input tensors' local shards, returns the tuple:
   //        (replica_id: int, indices: Union[List[Slice], Ellipsis]),
   // where `replica_id` is the replica the shard belongs to and `indices` index
