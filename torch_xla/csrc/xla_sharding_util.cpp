@@ -622,8 +622,24 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         local_shards[j], shard_shape, devices[j]));
   }
+  std::cout << "ShardingUtil::CreateShardedData check global shape"
+            << global_shape.ToString() << std::endl;
   return runtime::GetComputationClient()->TransferShardsToDevice(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
+}
+
+runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedDataFromShards(
+    const std::vector<runtime::ComputationClient::DataPtr>& local_shards,
+    const std::vector<std::string>& devices,
+    const XLATensor::ShardingSpecPtr& sharding_spec) {
+  XLA_CHECK(local_shards.size() == devices.size())
+      << "A device must be speficied for each shard";
+  XLA_CHECK(sharding_spec != nullptr)
+      << "A device must be speficied for each shard";
+  xla::Shape global_shape = sharding_spec->shape;
+  xla::OpSharding sharding = sharding_spec->sharding;
+  return runtime::GetComputationClient()->CreateShardedDataFromShards(
+      local_shards, GetVirtualDevice().toString(), global_shape, sharding);
 }
 
 std::vector<int64_t> ShardingUtil::GetAutoShardingMesh() {
@@ -779,11 +795,14 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
   XLA_CHECK(sharding.type() != xla::OpSharding::UNKNOWN)
       << "Can't explicilty annotate with UNKNOWN sharding type.";
   XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+  auto xla_shape = MakeShapeWithDeviceLayout(
+      xtensor->shape(),
+      static_cast<XlaDeviceType>(xtensor->GetDevice().type()));
   XLATensor::ShardingSpecPtr new_sharding_spec =
-      std::make_shared<XLATensor::ShardingSpec>(
-          sharding, MakeShapeWithDeviceLayout(
-                        xtensor->shape(), static_cast<XlaDeviceType>(
-                                              xtensor->GetDevice().type())));
+      std::make_shared<XLATensor::ShardingSpec>(sharding, xla_shape);
+  std::cout << "XlaMarkSharding... "
+            << new_sharding_spec->sharding.DebugString() << std::endl;
+  std::cout << "xla shape..." << xla_shape.ToString() << std::endl;
 
   // For Non DeviceData IR values, we directly attach the sharding spec
   // to the xtensor.
