@@ -120,6 +120,12 @@ class ShardingUtil {
       const std::vector<std::string>& devices,
       const XLATensor::ShardingSpecPtr& sharding_spec);
 
+
+  static runtime::ComputationClient::DataPtr CreateShardedDataFromShards(
+    const std::vector<runtime::ComputationClient::DataPtr>& local_shards,
+    const std::vector<std::string>& devices,
+    const XLATensor::ShardingSpecPtr& sharding_spec);
+
   static void XlaMarkSharding(const at::Tensor& input,
                               xla::OpSharding sharding);
 

@@ -549,7 +549,9 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   TORCH_LAZY_TIMED("TensorToData");
+  std::cout << "in TensorToXlaData device.type() : " << device.type() << std::endl;
   if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
+    std::cout << "in TensorToXlaData device.type() device.type() is SPMD" << std::endl;
     // The tensor is bypassing the virtual device, so it should be replicated
     // to all devices.
     std::vector<std::string> local_devices =
@@ -564,6 +566,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
   source_tensors.push_back(
       std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
 
+  std::cout << "in TensorToXlaData before transfertodevice" << std::endl;
   auto handles =
       runtime::GetComputationClient()->TransferToDevice(source_tensors);
   XLA_CHECK_EQ(handles.size(), 1);
@@ -795,6 +798,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
   // CreateTensorsData should be implicitly replicated to all devices.
   if (IsVirtualDevice(devices[0])) {
+    std::cout << "CreateTensorsData: IsVirtualDevice(devices[0])" << std::endl;
     XLA_CHECK(
         std::all_of(devices.begin(), devices.end(),
                     [&](const std::string& s) { return s == devices[0]; }))
@@ -821,6 +825,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         tensors[i], std::move(shape), devices[i]));
   }
+  std::cout << "CreateTensorsData: before transftertodevice" << std::endl;
   return WrapXlaData(
       runtime::GetComputationClient()->TransferToDevice(source_tensors));
 }
@@ -842,6 +847,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
         source_tensors;                                            // in
     std::vector<runtime::ComputationClient::DataPtr> new_handles;  // out
     if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
+      std::cout << "in CreateTensorsData device.type(): " << device.type() << std::endl;
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
 

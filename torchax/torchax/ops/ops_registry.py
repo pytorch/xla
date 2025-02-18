@@ -11,6 +11,7 @@ class Operator:
     func: Union[TorchCallable, JaxCallable]
     is_jax_function: bool
     is_user_defined: bool
+    is_op_constructor: bool
     needs_env: bool
 
 
