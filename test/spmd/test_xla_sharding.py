@@ -618,9 +618,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   # avoid calling xr.addressable_device_count here otherwise it will init the test
   # in non-spmd mode.
-  @unittest.skipIf(xr.device_type() == 'CPU',
-                   "sharding will be the same for both tensors on single device"
-                  )
+  @unittest.skipIf(
+      xr.device_type() == 'CPU',
+      "sharding will be the same for both tensors on single device")
   def test_shard_hashing(self):
     xt1 = torch.ones(2, 2).to(xm.xla_device())
     xt2 = torch.ones(2, 2).to(xm.xla_device())
@@ -835,15 +835,15 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         hlo)
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
-  
+
   def test_mark_sharding_autograd(self):
     x = torch.randn(8, 8, requires_grad=True)
     x = x.to('xla')
-    self._get_mesh((1, self.n_devices))
+    mesh = self._get_mesh((1, self.n_devices))
     # Forward pass
-    z = x@x
-    z.retain_grad() # To be able to extract HLO from intermediate tensor grad.
-    y = MarkShardingFunction.apply (z, (0, 1))  
+    z = x @ x
+    z.retain_grad()  # To be able to extract HLO from intermediate tensor grad.
+    y = MarkShardingFunction.apply(z, mesh, (0, 1))
     t = y.sum()
     # Backward pass
     t.backward()
@@ -1327,8 +1327,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(mesh_without_name.mesh_shape,
                      (xr.global_runtime_device_count(),))
 
-  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
-                       "Multiple devices required for dataloader sharding test")
+  @unittest.skipUnless(
+      xr.global_runtime_device_count() > 1,
+      "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_sharding(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1349,8 +1350,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
     )
 
-  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
-                       "Multiple devices required for dataloader sharding test")
+  @unittest.skipUnless(
+      xr.global_runtime_device_count() > 1,
+      "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")
@@ -1371,8 +1373,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         f"{{devices=[{mesh.size()},1,1,1]{','.join([str(i) for i in range(mesh.size())])}}}"
     )
 
-  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
-                       "Multiple devices required for dataloader sharding test")
+  @unittest.skipUnless(
+      xr.global_runtime_device_count() > 1,
+      "Multiple devices required for dataloader sharding test")
   def test_data_loader_with_non_batch_size_and_mini_batch(self):
     device = torch_xla.device()
     mesh = xs.get_1d_mesh("data")

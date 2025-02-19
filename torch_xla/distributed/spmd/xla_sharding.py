@@ -1126,16 +1126,29 @@ def _generate_logical_mesh(
 
 
 class MarkShardingFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, torch_tensor: torch.Tensor, partition_spec) -> torch.Tensor:
-        mesh = get_global_mesh()
-        mark_sharding(torch_tensor, mesh, partition_spec)
-        ctx.partition_spec = partition_spec
-        return torch_tensor
-    
-    @staticmethod
-    def backward(ctx, grad_output: torch.Tensor) -> torch.Tensor:
-        mesh = get_global_mesh()
-        partition_spec = ctx.partition_spec
-        mark_sharding(grad_output, mesh, partition_spec)
-        return grad_output, None
+  """
+  Autograd function to mark_sharding on intermediate tensors and the gradient
+  of the intermediate tensors during backward pass.
+
+  Usage:
+  new_tensor = MarkShardingFunction.apply(tensor, mesh, ('axis_1', 'axis_2'))
+
+  This is required to guide GSPMD sharding propagation better during the 
+  backward pass as during complicated workloads the compiler can introduce extra 
+  collectives that can hurt performance.
+  """
+
+  @staticmethod
+  def forward(ctx, torch_tensor: torch.Tensor, mesh: Mesh,
+              partition_spec: Tuple) -> torch.Tensor:
+    mark_sharding(torch_tensor, mesh, partition_spec)
+    ctx.partition_spec = partition_spec
+    ctx.mesh = mesh
+    return torch_tensor
+
+  @staticmethod
+  def backward(ctx, grad_output: torch.Tensor) -> torch.Tensor:
+    partition_spec = ctx.partition_spec
+    mesh = ctx.mesh
+    mark_sharding(grad_output, mesh, partition_spec)
+    return grad_output, None, None
