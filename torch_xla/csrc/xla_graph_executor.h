@@ -95,8 +95,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   torch::lazy::BackendDataPtr GetBaseSeedData(
       const torch::lazy::BackendDevice& device);
 
-  void SetAliasWithBufferDonorConfig(bool should_alias);
-
+  void SetAliasWithBufferDonorConfig(bool enable_alias);
   bool GetAliasWithBufferDonorConfig();
 
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
@@ -240,13 +239,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::BackendDataPtr GetBaseSeedData(
         const torch::lazy::BackendDevice& device);
 
-    void SetAliasWithBufferDonorConfig(bool should_alias) {
-      should_alias_with_buffer_donor = should_alias;
+    void SetAliasWithBufferDonorConfig(bool enable_alias) {
+      enable_user_config_aliasing = enable_alias;
     }
-
-    bool GetAliasWithBufferDonorConfig() {
-      return should_alias_with_buffer_donor;
-    }
+    bool GetAliasWithBufferDonorConfig() { return enable_user_config_aliasing; }
 
     void SaveGraphAsString(
         torch::lazy::hash_t hash, absl::Span<const XLATensorPtr> tensors,
@@ -276,7 +272,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,
         const torch::lazy::BackendDevice& device) final;
-    bool should_alias_with_buffer_donor = false;
+    bool enable_user_config_aliasing = false;
   };
 
   XLAGraphExecutor() = default;

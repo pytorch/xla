@@ -366,8 +366,8 @@ torch::lazy::BackendDataPtr XLAGraphExecutor::GetBaseSeedData(
   return DeviceContextArena::Get()->GetBaseSeedData(device);
 }
 
-void XLAGraphExecutor::SetAliasWithBufferDonorConfig(bool should_alias) {
-  DeviceContextArena::Get()->SetAliasWithBufferDonorConfig(should_alias);
+void XLAGraphExecutor::SetAliasWithBufferDonorConfig(bool enable_alias) {
+  DeviceContextArena::Get()->SetAliasWithBufferDonorConfig(enable_alias);
 }
 
 bool XLAGraphExecutor::GetAliasWithBufferDonorConfig() {
@@ -1290,53 +1290,73 @@ std::vector<size_t> XLAGraphExecutor::GetBufferDonors(
   static const bool enable_aliasing =
       runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
   static const bool use_autosharding = ShardingUtil::GetAutoSharding();
-
-  std::vector<size_t> buffer_donor_indices;
   // TODO(yeounoh) enable aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
-  if (enable_aliasing && !use_autosharding) {
-    if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
-      // We can only alias at the step barrier, when force_ltc_data is true.
-      // Consider the case:
-      //   1. Tensor A(DEVICE_DATA)
-      //   2. Tensor B = A + 0.9
-      //   3. A += 0.4
-      // If we activate aliasing for A's graph, and we do:
-      //   print(A)
-      //   print(A)
-      // The first print will update DEVICE_DATA' with DEVICE_DATA+0.4, and the
-      // second print will again update DEVICE_DATA" with DEVICE_DATA'+0.4,
-      // which will lead to incorrect results. We cannot normally turn A's state
-      // into DEVICE_DATA, as if any of the sources is a view, this will not
-      // lead to correct results (as A's value taken at different times need to
-      // reflect view source changes):
-      //   1. Tensor A = some_graph_with_view_source(V)
-      //   2. print(A)
-      //   3. V += 1
-      //   4. print(A)
-      // The second print should reflect the new value due to V's changes.
-      // Also in the first example, unless we are doing a step barrier and hence
-      // include all live tensors, if the B value is not part of the graph, it
-      // will later fetch the new value of A, which is incorrect.
-      // But, when we issue a step barrier (force_ltc_data == true) we have to
-      // turn everything into DEVICE_DATA, so we can activate aliasing.
-      buffer_donor_indices = GetBufferDonorIndexForStepMarker(
-          tensors, coll.indices, parameters_data);
-    } else if (GetAliasWithBufferDonorConfig()) {
-      // only alias based on buffer donor if LTC can't auto infer the input
-      // output aliasing.
-      buffer_donor_indices = GetBufferDonorIndexFromUserConfig(parameters_data);
-    }
+  if (use_autosharding) {
+    return {};
   }
+
+  if (!enable_aliasing) {
+    return {};
+  }
+
+  std::vector<size_t> ltc_buffer_donor_indices;
+  if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
+    // We can only alias at the step barrier, when force_ltc_data is true.
+    // Consider the case:
+    //   1. Tensor A(DEVICE_DATA)
+    //   2. Tensor B = A + 0.9
+    //   3. A += 0.4
+    // If we activate aliasing for A's graph, and we do:
+    //   print(A)
+    //   print(A)
+    // The first print will update DEVICE_DATA' with DEVICE_DATA+0.4, and the
+    // second print will again update DEVICE_DATA" with DEVICE_DATA'+0.4,
+    // which will lead to incorrect results. We cannot normally turn A's state
+    // into DEVICE_DATA, as if any of the sources is a view, this will not
+    // lead to correct results (as A's value taken at different times need to
+    // reflect view source changes):
+    //   1. Tensor A = some_graph_with_view_source(V)
+    //   2. print(A)
+    //   3. V += 1
+    //   4. print(A)
+    // The second print should reflect the new value due to V's changes.
+    // Also in the first example, unless we are doing a step barrier and hence
+    // include all live tensors, if the B value is not part of the graph, it
+    // will later fetch the new value of A, which is incorrect.
+    // But, when we issue a step barrier (force_ltc_data == true) we have to
+    // turn everything into DEVICE_DATA, so we can activate aliasing.
+    ltc_buffer_donor_indices = GetBufferDonorIndexForStepMarker(
+        tensors, coll.indices, parameters_data);
+  }
+
+  std::vector<size_t> user_config_buffer_donor_indices;
+  if (GetAliasWithBufferDonorConfig()) {
+    user_config_buffer_donor_indices =
+        GetBufferDonorIndexFromUserConfig(parameters_data);
+  }
+
+  // Both LTC and user config buffer donation indices vector are originally
+  // sorted. In order to ensure that we get deterministic hash across runs, in
+  // cases where there is an alternating aliasing among auto LTC and user
+  // specified buffer donor indices, we ensure we retain the sorting and remove
+  // any duplicates when merging the two indices vector.
+  std::vector<size_t> buffer_donor_indices;
+  buffer_donor_indices.reserve(
+      std::max(ltc_buffer_donor_indices.size(),
+               user_config_buffer_donor_indices.size()));
+  std::set_union(ltc_buffer_donor_indices.cbegin(),
+                 ltc_buffer_donor_indices.cend(),
+                 user_config_buffer_donor_indices.cbegin(),
+                 user_config_buffer_donor_indices.cend(),
+                 std::back_inserter(buffer_donor_indices));
   return buffer_donor_indices;
 }
 
 void XLAGraphExecutor::SetBufferDonors(
     LoweringContext* lowering_ctx,
     const std::vector<size_t>& buffer_donor_indexs) {
-  const std::vector<torch::lazy::BackendDataPtr>& parameters_data =
-      lowering_ctx->GetParametersData();
   for (size_t i : buffer_donor_indexs) {
     lowering_ctx->builder()->AddBufferDonor(/*param_number=*/i,
                                             /*param_index=*/{});
