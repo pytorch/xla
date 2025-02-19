@@ -220,8 +220,17 @@ def addressable_runtime_device_count() -> int:
   return torch_xla._XLAC._xla_num_runtime_devices()
 
 
+def disable_spmd():
+  """API to dsiable SPMD mode.
+  Revert the environment variable set by `use_spmd`, reset  
+  """
+  os.environ["XLA_USE_SPMD"] = "0"
+  torch_xla._XLAC._set_spmd_mode(False)
+
+
 # TODO(yeounoh) introduce SPMD configuration.
-def use_spmd(auto: Optional[bool] = False):
+def use_spmd(auto: Optional[bool] = False,
+             force_tensors_on_spmd_device: Optional[bool] = False):
   """API to enable SPMD mode. This is a recommended way to enable SPMD.
 
   This forces SPMD mode if some tensors are already initialized on non-SPMD
@@ -244,7 +253,9 @@ def use_spmd(auto: Optional[bool] = False):
         "to force SPMD mode. This is one-time overhead to setup, and to minimize such, "
         "please set SPMD mode before initializting tensors "
         "(i.e., call use_spmd() in the beginning of the program).")
-    torch_xla._XLAC._xla_force_spmd_device()
+    if force_tensors_on_spmd_device:
+      torch_xla._XLAC._xla_force_spmd_device()
+    torch_xla._XLAC._set_spmd_mode(True)
     xm.wait_device_ops()
 
   # TODO(yeounoh) we can drop envvar in the future

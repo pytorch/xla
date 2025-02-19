@@ -1433,10 +1433,9 @@ void InitXlaModuleBindings(py::module m) {
         xtensor->SetXlaData(TensorToXlaData(tensor, spmd_device));
       }
     }
-
-    // Ensure that virtual device is registered.
-    XLA_CHECK(UseVirtualDevice(/*force_spmd=*/true));
   });
+  m.def("_set_spmd_mode",
+        [](bool enable) { bridge::InitAtenXlaDeviceMapper(enable); });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
   m.def("_xla_get_device_hw_type", [](const at::Tensor& tensor) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
