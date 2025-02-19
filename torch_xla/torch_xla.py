@@ -217,6 +217,17 @@ def launch(
 ):
   """ Entry to launch multiprocess.
 
+    Args:
+    fn: The function to be called for each device which takes part of the
+      replication. The function will be called with a first argument being
+      the global index of the process within the replication, followed by the
+      arguments passed in `args`.
+    args: The arguments for `fn`.
+      Default: Empty tuple
+    start_method: The Python `multiprocessing` process creation method.
+      Default: `spawn`
+    debug_single_process: flag for using 1 process for debugging.
+
   Raises:
     NotImplementedError: SPMD is not supported yet.
   """
