@@ -95,8 +95,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   torch::lazy::BackendDataPtr GetBaseSeedData(
       const torch::lazy::BackendDevice& device);
 
-  void SetAliasWithBufferDonorConfig(bool should_alias);
+  void SetEnableParameterAliasing(bool enable_param_aliasing);
+  bool GetEnableParameterAliasing();
 
+  void SetAliasWithBufferDonorConfig(bool enable_user_config_alias);
   bool GetAliasWithBufferDonorConfig();
 
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
@@ -240,12 +242,19 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::BackendDataPtr GetBaseSeedData(
         const torch::lazy::BackendDevice& device);
 
-    void SetAliasWithBufferDonorConfig(bool should_alias) {
-      should_alias_with_buffer_donor = should_alias;
+    void SetEnableParameterAliasing(bool enable_param_aliasing) {
+      buffer_donor_alias_config.enable_param_aliasing = enable_param_aliasing;
+    }
+    bool GetEnableParameterAliasing() {
+      return buffer_donor_alias_config.enable_param_aliasing;
     }
 
+    void SetAliasWithBufferDonorConfig(bool enable_user_config_aliasing) {
+      buffer_donor_alias_config.enable_user_config_aliasing =
+          enable_user_config_aliasing;
+    }
     bool GetAliasWithBufferDonorConfig() {
-      return should_alias_with_buffer_donor;
+      return buffer_donor_alias_config.enable_user_config_aliasing;
     }
 
     void SaveGraphAsString(
@@ -265,6 +274,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     std::vector<xla::Shape>* GetOutputShapesByHash(torch::lazy::hash_t hash);
 
    private:
+    struct BufferDonorAliasConfig {
+      bool enable_param_aliasing = true;
+      bool enable_user_config_aliasing = false;
+    };
     // Below two maps are used for dynamo integration.
     std::unordered_map<torch::lazy::hash_t, std::string,
                        torch::lazy::HashReducer>
@@ -276,7 +289,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,
         const torch::lazy::BackendDevice& device) final;
-    bool should_alias_with_buffer_donor = false;
+    BufferDonorAliasConfig buffer_donor_alias_config{};
   };
 
   XLAGraphExecutor() = default;

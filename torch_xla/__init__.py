@@ -195,6 +195,9 @@ if int(os.environ.get('PT_XLA_DEBUG', '0')):
 if os.environ.get('TF_CPP_MIN_LOG_LEVEL') == '0':
   logger.setLevel(logging.INFO)
 
+if 'XLA_ENABLE_PARAM_ALIASING' in os.environ:
+  _XLAC.set_enable_parameter_aliasing(os.environ['XLA_ENABLE_PARAM_ALIASING'])
+
 import atexit
 from ._patched_functions import _apply_patches
 

@@ -8,7 +8,36 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import unittest
+import contextlib
 import copy
+
+
+def create_xla_config_context(set_func, get_func):
+
+  @contextlib.contextmanager
+  def config_context(value):
+    original_value = get_func()
+    set_func(value)
+    try:
+      assert get_func() == value
+      yield
+    finally:
+      set_func(original_value)
+
+  return config_context
+
+
+# Create context managers to simplify the test setup and cleanup with different
+# aliasing configurations.
+parameter_aliasing_context = create_xla_config_context(
+    torch_xla._XLAC._xla_set_enable_parameter_aliasing,
+    torch_xla._XLAC._xla_get_enable_parameter_aliasing,
+)
+
+alias_with_buffer_donor_config_context = create_xla_config_context(
+    torch_xla._XLAC._xla_set_enable_alias_with_buffer_donor_config,
+    torch_xla._XLAC._xla_get_enable_alias_with_buffer_donor_config,
+)
 
 
 # TODO(alanwaketan): add test for views.
@@ -210,7 +239,104 @@ class InputOutputAliasesTest(unittest.TestCase):
     # ...if it doesn't crash, the value here would be 44.
     self.assertEqual(t1.item(), 43)
 
+  def test_disable_param_aliasing(self):
+    with parameter_aliasing_context(False):
+      xla_device = xm.xla_device()
+      t = torch.tensor(42, device=xla_device)
+      xm.mark_step()
 
-if __name__ == '__main__':
-  test = unittest.main()
-  sys.exit(0 if test.result.wasSuccessful() else 1)
+      met.clear_all()
+      t.add_(1)
+      xm.mark_step()
+
+      self.assertEqual(met.metric_data("InputOutputAliasCount"), None)
+
+  def test_user_config_donation_with_ltc_donation(self):
+    with alias_with_buffer_donor_config_context(True):
+      met.clear_all()
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      t1 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([t0], True)))
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      self.assertFalse(torch_xla._XLAC._get_buffer_donation(t1))
+      t3 = t0 + t1
+      t1 += 2
+      xm.mark_step()
+
+      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
+
+  def test_user_config_donation_with_ltc_donation_overlap(self):
+    with alias_with_buffer_donor_config_context(True):
+      met.clear_all()
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([t0], True)))
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      t0 += 2
+      xm.mark_step()
+
+      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
+
+  def test_user_config_donation(self):
+    with alias_with_buffer_donor_config_context(True):
+      met.clear_all()
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([t0], True)))
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      self.assertIn('XlaSetBufferDonation', met.counter_names())
+      self.assertEqual(met.counter_value('XlaSetBufferDonation'), 1)
+      t1 = t0 + 1
+      torch_xla._XLAC._xla_sync_multi([t0, t1], [str(xla_device)], True, False)
+
+      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
+
+  def test_user_config_donation_inplace_aliasing(self):
+    with alias_with_buffer_donor_config_context(True):
+      met.clear_all()
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([t0], True)))
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      t0 *= 2
+      torch_xla._XLAC._xla_sync_multi([t0], [str(xla_device)], True, False)
+
+      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
+
+  def test_user_config_donation_with_disable_param_aliasing(self):
+    with alias_with_buffer_donor_config_context(
+        True), parameter_aliasing_context(False):
+      met.clear_all()
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([t0], True)))
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+
+      xm.mark_step()
+
+      self.assertEqual(met.metric_data("InputOutputAliasCount"), None)
+
+  def test_user_config_donation_no_op_mark_step(self):
+    with alias_with_buffer_donor_config_context(True):
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([t0], True)))
+      xm.mark_step()
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      xm.mark_step()
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+
+
+if __name__ == "__main__":
+  loader = unittest.TestLoader()
+  test_cases = loader.getTestCaseNames(InputOutputAliasesTest)
+  failed = False
+  for test_name in test_cases:
+    test = InputOutputAliasesTest(test_name)
+    runner = unittest.TextTestRunner(failfast=True)
+    result = runner.run(test)
+    if not result.wasSuccessful():
+      failed = True
+
+  sys.exit(1 if failed else 0)

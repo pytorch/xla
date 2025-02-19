@@ -38,7 +38,7 @@ XLA_LIB.define(
 
 @impl(XLA_LIB, "dynamo_set_buffer_donor_", "XLA")
 def dynamo_set_buffer_donor_xla_(t: torch.Tensor, should_donoate: bool):
-  torch_xla._XLAC._set_buffer_donation(t, should_donoate)
+  torch_xla._XLAC._set_buffer_donation([t], should_donoate)
   return t
 
 
