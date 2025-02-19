@@ -238,6 +238,7 @@ function run_xla_op_tests3 {
   run_save_tensor_hlo run_test "$CDIR/spmd/test_spmd_lowering_context.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
+  run_test_without_functionalization "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
   run_torchrun "$CDIR/pjrt/test_torchrun.py"
   run_test "$CDIR/test_persistent_cache.py"

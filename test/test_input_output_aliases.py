@@ -8,7 +8,29 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import unittest
+import contextlib
 import copy
+
+
+def create_xla_config_context(set_func, get_func):
+
+  @contextlib.contextmanager
+  def config_context(value):
+    original_value = get_func()
+    set_func(value)
+    try:
+      assert get_func() == value
+      yield
+    finally:
+      set_func(original_value)
+
+  return config_context
+
+
+alias_with_buffer_donor_config_context = create_xla_config_context(
+    torch_xla._XLAC._xla_set_enable_alias_with_buffer_donor_config,
+    torch_xla._XLAC._xla_get_enable_alias_with_buffer_donor_config,
+)
 
 
 # TODO(alanwaketan): add test for views.
@@ -209,6 +231,78 @@ class InputOutputAliasesTest(unittest.TestCase):
 
     # ...if it doesn't crash, the value here would be 44.
     self.assertEqual(t1.item(), 43)
+
+  def test_user_config_donation_with_ltc_donation(self):
+    with alias_with_buffer_donor_config_context(True):
+      met.clear_all()
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      t1 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      self.assertFalse(torch_xla._XLAC._get_buffer_donation(t1))
+      t3 = t0 + t1
+      t1 += 2
+      xm.mark_step(wait=True)
+
+      # We surface the C++ runtime error by checking that the backend data is
+      # no longer present for the IR node.
+      self.assertTrue(torch_xla._XLAC._is_placecholder(t0))
+      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 2.0)
+
+  def test_user_config_donation_with_ltc_donation_overlap(self):
+    with alias_with_buffer_donor_config_context(True):
+      met.clear_all()
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      t0 += 2
+      xm.mark_step()
+
+      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
+
+  def test_user_config_donation(self):
+    with alias_with_buffer_donor_config_context(True):
+      met.clear_all()
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      self.assertIn('XlaSetBufferDonation', met.counter_names())
+      self.assertEqual(met.counter_value('XlaSetBufferDonation'), 1)
+      t1 = t0 + 1
+      # We use _xla_sync_multi to explicitly disable sync_xla_data, which will
+      # in turn avoid using LTC aliasings. This ensures that the resulting
+      # aliasings are due to the buffer donation.
+      torch_xla._XLAC._xla_sync_multi([t0, t1], [str(xla_device)], True, False)
+
+      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
+
+  def test_user_config_donation_inplace_aliasing(self):
+    with alias_with_buffer_donor_config_context(True):
+      met.clear_all()
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      t0 *= 2
+      # We use _xla_sync_multi to explicitly disable sync_xla_data, which will
+      # in turn avoid using LTC aliasings. This ensures that the resulting
+      # aliasings are due to the buffer donation.
+      torch_xla._XLAC._xla_sync_multi([t0], [str(xla_device)], True, False)
+
+      self.assertEqual(met.metric_data("InputOutputAliasCount")[1], 1.0)
+
+  def test_user_config_donation_no_op_mark_step(self):
+    with alias_with_buffer_donor_config_context(True):
+      xla_device = xm.xla_device()
+      t0 = torch.randn(4, 2, 2).to(xla_device)
+      self.assertTrue(torch_xla._XLAC._set_buffer_donation(t0, True))
+      xm.mark_step()
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
+      xm.mark_step()
+      self.assertTrue(torch_xla._XLAC._get_buffer_donation(t0))
 
 
 if __name__ == '__main__':
