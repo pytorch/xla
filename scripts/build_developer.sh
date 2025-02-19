@@ -27,7 +27,7 @@ fi
 cd ..
 cd pytorch/xla
 pip uninstall torch_xla -y
-python3 setup.py develop
+BUILD_CPP_TESTS=1 python3 setup.py develop
 
 # libtpu is needed to talk to the TPUs. If TPUs are not present,
 # installing this wouldn't hurt either.

@@ -396,7 +396,7 @@ supported:
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
   # Note: [Disabling functionalization]
-  # The ops below are no longer needed when functionalization is enabled. 
+  # The ops below are no longer needed when functionalization is enabled.
   # However, we sometimes may want to disable functionalization (A/B testing,
   # debugging, etc). The ops below exist only to disable functionalization,
   # new features/functionalities should not depend on these ops.
@@ -420,8 +420,8 @@ symint:
   - expand
   - view
 autograd:
-  - einsum
   - max_pool2d
   - max_pool3d
   - native_layer_norm
   - native_group_norm
+  - einsum
