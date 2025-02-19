@@ -120,6 +120,7 @@ supported:
   - _amp_update_scale_
   - _copy_from
   - _copy_from_and_resize
+  - einsum
   - _index_put_impl_
   - _linalg_eigh
   - _linalg_slogdet
@@ -424,4 +425,3 @@ autograd:
   - max_pool3d
   - native_layer_norm
   - native_group_norm
-  - einsum
