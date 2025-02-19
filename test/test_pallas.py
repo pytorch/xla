@@ -638,7 +638,7 @@ class PallasTest(parameterized.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
-  def test_ragged_paged_attention_wrapper(self):
+  def test_ragged_paged_attention_wrapper_without_dynamo(self):
     from torch_xla.experimental.custom_kernel import ragged_paged_attention
     from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as jax_ragged_paged_attention
 
@@ -661,6 +661,7 @@ class PallasTest(parameterized.TestCase):
     page_size = 16
     num_pages = 32768
     num_seqs = len(seq_lens)
+    num_kv_pages_per_block = 128
     num_queries_per_block = 8
     block_kv_size = 256
 
@@ -682,7 +683,7 @@ class PallasTest(parameterized.TestCase):
         page_indices_xla,
         cu_q_lens_xla,
         num_seqs=num_seqs,
-        num_kv_pages_per_block=block_kv_size // page_size,
+        num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=True)
 
@@ -694,7 +695,7 @@ class PallasTest(parameterized.TestCase):
         page_indices_xla,
         cu_q_lens_xla,
         num_seqs=num_seqs,
-        num_kv_pages_per_block=block_kv_size // page_size,
+        num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=False)
 
@@ -715,7 +716,7 @@ class PallasTest(parameterized.TestCase):
                 page_indices_jax,
                 cu_q_lens_jax,
                 num_seqs=num_seqs,
-                num_kv_pages_per_block=block_kv_size // page_size,
+                num_kv_pages_per_block=num_kv_pages_per_block,
                 num_queries_per_block=num_queries_per_block,
             )[1]))
 
@@ -748,6 +749,7 @@ class PallasTest(parameterized.TestCase):
     page_size = 16
     num_pages = 32768
     num_seqs = len(seq_lens)
+    num_kv_pages_per_block = 128
     num_queries_per_block = 8
     block_kv_size = 256
 
@@ -789,7 +791,7 @@ class PallasTest(parameterized.TestCase):
         page_indices_xla,
         cu_q_lens_xla,
         num_seqs=num_seqs,
-        num_kv_pages_per_block=block_kv_size // page_size,
+        num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=True,
     )
@@ -802,7 +804,7 @@ class PallasTest(parameterized.TestCase):
         page_indices_xla,
         cu_q_lens_xla,
         num_seqs=num_seqs,
-        num_kv_pages_per_block=block_kv_size // page_size,
+        num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=False,
     )

@@ -86,6 +86,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       page_size,
       dtype,
       num_pages,
+      num_kv_pages_per_block=128,
       num_queries_per_block=128,
   ):
     num_seqs = len(seq_lens)
@@ -124,7 +125,6 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     max_num_pages_per_seq = (max_kv_len + page_size - 1) // page_size
     # The reason why we need to pad max_num_pages_per_seq is that
     # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
-    num_kv_pages_per_block = 128
     max_num_pages_per_seq = self._round_up_closest_multiple_of(
         max_num_pages_per_seq, num_kv_pages_per_block)
     # The assert below mimics the reality that each page get a unique index.

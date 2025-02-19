@@ -294,6 +294,7 @@ def check_kernel_input(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens,
     raise ValueError(
         f"{num_kv_pages_per_block=} should be smaller or equal to {pages_per_sequence=}"
     )
+  # The below constraint "num_kv_pages_per_block % PALLAS_LAST_DIM_MIN_SIZE == 0" comes from when we chunk the page_indices and load it into SMEM. Pallas requires the last dim to be a multiple of 128.
   PALLAS_LAST_DIM_MIN_SIZE = 128
   if num_kv_pages_per_block % PALLAS_LAST_DIM_MIN_SIZE != 0:
     raise ValueError(
@@ -523,11 +524,12 @@ def _flash_attention(
         m_ref.dtype)
 
 
-# grid = (num_kv_heads, num_logical_q_tiles, num_kv_blks)
 def _compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
                                 num_logical_q_blks, kv_blk_size, seq_ids,
                                 effective_kv_lens_ref):
-  """Given the current kv_head_idx, logical_q_blk_idx, kv_blk_idx, return the next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx.
+  """ Compute the next block indices.
+  
+      Given the current kv_head_idx, logical_q_blk_idx, kv_blk_idx, return the next_kv_head_idx, next_logical_q_blk_idx, next_kv_blk_idx.
 
       Note, k_pages has shape [num_kv_heads, total_num_pages, page_size, head_dim].
       To get the KV, it needs the kv_head_idx, then we need the sequence_idx
@@ -556,7 +558,6 @@ def _compute_next_block_indices(kv_head_idx, logical_q_blk_idx, kv_blk_idx,
   )
 
 
-# grid = (num_kv_heads, num_logical_q_tiles, num_kv_blks)
 def paged_flash_attention_kernel(
     # prefetch refs
     sequence_metadata_ref,  # Tuple (seq_ids, physical_q_tile_ids)
@@ -849,6 +850,7 @@ def ragged_paged_attention(
       cur_page_indices_index_map,
       memory_space=pltpu.TPUMemorySpace.SMEM,
   )
+
   page_size = k_pages.shape[2]
   kv_blk_size = page_size * num_kv_pages_per_block
 
@@ -973,8 +975,8 @@ def ragged_paged_attention(
       k_scales_pages,
       v_pages,
       v_scales_pages,
-      expanded_page_indices,
-      expanded_page_indices,
+      expanded_page_indices,  # for the current iteration
+      expanded_page_indices,  # for the next iteration
   )
   ret = outputs[0]
   return jnp.permute_dims(ret, (1, 0, 2)).astype(q.dtype)

@@ -26,6 +26,7 @@ def _ref_ragged_paged_attention(
     cu_q_lens: jax.Array,  # i32[num_tokens + 1]
     num_seqs: int,
 ):
+  """This is the reference ragged paged attention implementation."""
   num_kv_heads, _, page_size, head_dim = k_pages.shape
   num_q_heads = queries.shape[1]
   assert num_q_heads % num_kv_heads == 0, "num_q_heads % num_kv_heads !=0."
@@ -105,12 +106,12 @@ def benchmark(args):
   num_queries_per_block = 128
 
   num_seqs = len(seq_lens)
-  # Make sure the q_len is no longer than the kv_len. For example,
-  # seq_lens = [(1, 1328), (5, 18), (506, 463)] is not a valid test case because
-  # the 3rd sequence has q_len(506) > kv_len(463).
   for i in range(num_seqs):
     cur_q_len = seq_lens[i][0]
     cur_kv_len = seq_lens[i][1]
+    # Make sure the q_len is no longer than the kv_len. For example,
+    # seq_lens = [(1, 1328), (5, 18), (506, 463)] is not a valid test case because
+    # the 3rd sequence has q_len(506) > kv_len(463).
     assert cur_q_len <= cur_kv_len, f"cur_q_len must be less than or equal to cur_kv_len. Got {cur_q_len} and {cur_kv_len}"
 
   query_lens = [seq_len[0] for seq_len in seq_lens]
@@ -131,8 +132,7 @@ def benchmark(args):
 
   # Create a kv_lens: i32[num_tokens]
   kv_lens_with_paddings = [0] * num_q_tokens
-  for i in range(num_seqs):
-    kv_lens_with_paddings[i] = kv_lens[i]
+  kv_lens_with_paddings[:num_seqs] = kv_lens[:num_seqs]
   kv_lens_np = jnp.array(kv_lens_with_paddings)
 
   # Create a page_indices: jax.Array,	# i32[num_tokens, pages_per_sequence]
@@ -141,9 +141,6 @@ def benchmark(args):
   # The reason why we need to pad max_num_pages_per_seq is that
   # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
   max_num_pages_per_seq = _get_closest_power_of_two(max_num_pages_per_seq)
-  # The assert below mimics the reality that each page get a unique index.
-  # But for testing, the assert could be omitted.
-  # assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
   page_indices = jax.random.randint(
       k4, (num_q_tokens, max_num_pages_per_seq), 0, num_pages, dtype=jnp.int32)
 

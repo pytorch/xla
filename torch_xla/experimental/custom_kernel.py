@@ -809,6 +809,7 @@ def ragged_paged_attention(
       static_argnames=[
           "num_kv_pages_per_block",
           "num_queries_per_block",
+          "mask_value",
           "num_seqs",
       ],
   )
@@ -830,7 +831,7 @@ def ragged_paged_attention(
       num_logical_q_tiles.tolist(), dtype=torch.int32).to("xla")
 
   q_dtype_for_kernel_launch = q.dtype
-  page_indices_reshaped = page_indices.reshape(-1)
+  page_indices_expanded = torch.unsqueeze(page_indices, 1)
   buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
   step = torch.zeros((1,), dtype=torch.int32).to("xla")
   # The jax checkify in ragged paged attention kernel will insert several scalar refs to both inputs
@@ -843,31 +844,39 @@ def ragged_paged_attention(
   q = q.permute(1, 0, 2)
   MIN_BLOCK_SIZE = 128
   output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
+  num_q_tiles_1d = torch.tensor([num_logical_q_tiles.tolist()],
+                                dtype=torch.int32).to("xla")
 
   # TODO(jevinjiang, xiowei): check err returned by checkify! And add tests.
-  _, _, _, _, output, _, _ = torch_xla._XLAC._xla_tpu_custom_call([
-      num_q_tiles,
-      sequence_ids,
-      m_tile_ids,
-      kv_lens,
-      page_indices_reshaped,
-      cu_q_lens,
-      buffer_index,
-      step,
-      s1,
-      s2,
-      s3,
-      s4,
-      q.to(q_dtype_for_kernel_launch),
-      k_pages,
-      v_pages,
-  ], payload, [
-      s1.shape, s2.shape, s3.shape, s4.shape, q.shape, output_shape,
-      output_shape
-  ], [
-      s1.dtype, s2.dtype, s3.dtype, s4.dtype, q_dtype_for_kernel_launch,
-      torch.float32, torch.float32
-  ])
+  _, _, _, _, output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
+      [
+          num_q_tiles,
+          sequence_ids,
+          m_tile_ids,
+          num_q_tiles_1d,
+          kv_lens,
+          cu_q_lens,
+          buffer_index,
+          step,
+          s1,
+          s2,
+          s3,
+          s4,
+          q.to(q_dtype_for_kernel_launch),
+          k_pages,
+          v_pages,
+          page_indices_expanded,
+          page_indices_expanded,
+      ],
+      payload,
+      [  # output shape
+          s1.shape, s2.shape, s3.shape, s4.shape, q.shape, output_shape,
+          output_shape
+      ],
+      [  # output dtype
+          s1.dtype, s2.dtype, s3.dtype, s4.dtype, q_dtype_for_kernel_launch,
+          torch.float32, torch.float32
+      ])
   return output.permute(1, 0, 2)
 
 
