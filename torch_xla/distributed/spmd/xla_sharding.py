@@ -1123,3 +1123,19 @@ def _generate_logical_mesh(
                             logical_mesh_shape)  # type: ignore  # numpy 2.2
 
   return logical_mesh
+
+
+class MarkShardingFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, torch_tensor: torch.Tensor, partition_spec) -> torch.Tensor:
+        mesh = get_global_mesh()
+        mark_sharding(torch_tensor, mesh, partition_spec)
+        ctx.partition_spec = partition_spec
+        return torch_tensor
+    
+    @staticmethod
+    def backward(ctx, grad_output: torch.Tensor) -> torch.Tensor:
+        mesh = get_global_mesh()
+        partition_spec = ctx.partition_spec
+        mark_sharding(grad_output, mesh, partition_spec)
+        return grad_output, None
