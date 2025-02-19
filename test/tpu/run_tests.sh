@@ -26,6 +26,7 @@ python3 "$TEST_CDIR/test_grad_checkpoint.py" "$@" --test_autocast
 python3 "$TEST_CDIR/dynamo/test_dynamo.py"
 python3 "$TEST_CDIR/dynamo/test_dynamo_dynamic_shape.py"
 python3 "$TEST_CDIR/spmd/test_spmd_debugging.py"
+python3 "$TEST_CDIR/spmd/test_disable_spmd.py"
 XLA_PARAMETER_WRAPPING_THREADSHOLD=1 python3 "$TEST_CDIR/spmd/test_spmd_parameter_wrapping.py"
 python3 "$TEST_CDIR/pjrt/test_dtypes.py"
 python3 "$TEST_CDIR/pjrt/test_dynamic_plugin_tpu.py"
