@@ -378,6 +378,10 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
     return (iteri, loss, *iterable_tensors, *carried_tensors, *params,
             *acc_grads)
 
+  # Ensure that the input or pre-initialized gradient tensors can be donated
+  # after reassigned to the respective model parameters.
+  torch_xla._XLAC._xla_set_enable_alias_with_buffer_donor_config(True)
+
   init_grads = []
   # Initialize the gradients to zero.
   for param in model_parameters:
@@ -392,6 +396,7 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
         # Match the gradient sharding to the parameter's.
         torch_xla._XLAC._xla_mark_sharding(grad, param_sharding)
     init_grads.append(grad)
+  torch_xla._XLAC._set_buffer_donation(init_grads, True)
 
   # Apply gradients to parameters
   result = _gradient_accumulation_impl(context, body_fn, iterable_tensors,

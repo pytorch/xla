@@ -1,3 +1,4 @@
+import sys
 import unittest
 
 import torch
@@ -14,7 +15,7 @@ class TestBufferDonationUtil(unittest.TestCase):
     input = torch.randn(5, 5).to(device)
     res = torch.cos(input)
     hash_no_donor = torch_xla._XLAC._get_graph_hash([res])
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([input], True)))
     # without the alias_with_buffer_donor_config context, buffer donor will be ignored,
     # so we still expect the hash to be the same.
     hash_with_donor = torch_xla._XLAC._get_graph_hash([res])
@@ -116,7 +117,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
 
     met.clear_all()
     # input is a device_data, we should be able to set the buffer donation field.
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([input], True)))
     # make sure buffer donation setting is correctly updated
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
     self.assertIn('XlaSetBufferDonation', met.counter_names())
@@ -133,7 +134,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
 
     met.clear_all()
     # input is a device_data, we should be able to set the buffer donation field.
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([input], True)))
     # make sure buffer donation setting is correctly updated
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
     self.assertIn('XlaSetBufferDonation', met.counter_names())
@@ -158,7 +159,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
     xm.mark_step()
     met.clear_all()
     # input is a device_data, we should be able to set the buffer donation field.
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([input], True)))
     # make sure buffer donation setting is correctly updated
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
 
@@ -179,7 +180,7 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
 
     met.clear_all()
     # res now points to a `Add` IR, only data's buffer can be aliased
-    self.assertFalse(torch_xla._XLAC._set_buffer_donation(res, True))
+    self.assertFalse(all(torch_xla._XLAC._set_buffer_donation([res], True)))
     self.assertFalse(torch_xla._XLAC._get_buffer_donation(res))
     self.assertNotIn('XlaSetBufferDonation', met.counter_names())
 
@@ -198,12 +199,12 @@ class TestNonDynamoBufferDonationAliasing(unittest.TestCase):
 
     # We should be able to set buffer donation for input tensor, but when mark_step
     # triggered, the buffer donation should be ignored.
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([input], True)))
     res = self.dummy_fn(input)
     xm.mark_step()
     # Make sure that input buffer is not aliased and can be used for other compuations.
     # Also make sure that buffer_donation will not trigger recompilation in non-dynamo.
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, False))
+    self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([input], False)))
     res2 = self.dummy_fn(input)
     xm.mark_step()
     torch.allclose(res.cpu(), res2.cpu())
@@ -212,7 +213,7 @@ class TestNonDynamoBufferDonationAliasing(unittest.TestCase):
   def test_no_op_mark_step_keep_buffer_donation(self):
     device = xm.xla_device()
     input = torch.randn(5, 5).to(device)
-    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    self.assertTrue(all(torch_xla._XLAC._set_buffer_donation([input], True)))
     xm.mark_step()
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
     xm.mark_step()
