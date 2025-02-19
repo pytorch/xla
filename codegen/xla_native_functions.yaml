@@ -26,6 +26,7 @@ full_codegen:
   - clamp.Tensor
   - clamp_max.Tensor
   - clamp_min.Tensor
+  - _conj_copy
   - cos
   - cosh
   - elu
@@ -138,6 +139,7 @@ supported:
   - add.Scalar
   - add.Tensor
   - addmm
+  - alias
   - alias_copy
   - arange.start_out
   - as_strided_copy
