@@ -835,7 +835,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         hlo)
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
-
+  
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for autograd sharding test")
   def test_mark_sharding_autograd(self):
     x = torch.randn(8, 8, requires_grad=True)
     x = x.to('xla')
