@@ -2384,18 +2384,20 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.assertEqual(actual, expected)
 
-  def test_conj_no_fallback(self):
+  def test_conj(self):
+    # Leave the factory out of the fallback count.
+    tensor = torch.rand(2, 2, dtype=torch.complex64)
+
     met.clear_all()
 
     def run(device):
-      tensor = torch.tensor([1 + 2j], device=device)
-      return torch.conj(tensor)
+      return torch.conj(tensor.to(device))
 
     actual = run("cpu")
     expected = run(xm.xla_device())
 
-    self.assertEqual(actual, expected.cpu())
-    self.assertEqual(len(met.executed_fallback_ops()), 0)
+    self.assertEqual(met.executed_fallback_ops(), [], message="expected no fallback operations.")
+    self.assertEqual(actual, expected.cpu(), message="XLA results should match CPU results.")
 
 
 class MNISTComparator(nn.Module):

@@ -2420,6 +2420,26 @@ TEST_F(AtenXlaTensorTest, TestAcoshInPlace) {
   ExpectCounterChanged("xla::acosh", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestAlias) {
+  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::alias(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::alias(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/0e-5);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestConj) {
+  torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kComplexFloat));
+  torch::Tensor b = torch::conj(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::conj(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/0e-5);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestCos) {
   torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::cos(a);
