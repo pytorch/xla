@@ -2430,7 +2430,7 @@ TEST_F(AtenXlaTensorTest, TestAlias) {
   });
 }
 
-TEST_F(AtenXlaTensorTest, TestAlias) {
+TEST_F(AtenXlaTensorTest, TestConj) {
   torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kComplexFloat));
   torch::Tensor b = torch::conj(a);
   ForEachDevice([&](const torch::Device& device) {
