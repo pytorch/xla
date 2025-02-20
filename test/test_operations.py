@@ -2396,8 +2396,11 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     actual = run("cpu")
     expected = run(xm.xla_device())
 
-    self.assertEqual(met.executed_fallback_ops(), [], message="expected no fallback operations.")
-    self.assertEqual(actual, expected.cpu(), message="XLA results should match CPU results.")
+    self.assertEqual(
+        met.executed_fallback_ops(), [],
+        message="expected no fallback operations.")
+    self.assertEqual(
+        actual, expected.cpu(), message="XLA results should match CPU results.")
 
 
 class MNISTComparator(nn.Module):
