@@ -853,6 +853,7 @@ def ragged_paged_attention(
           num_q_tiles,
           sequence_ids,
           m_tile_ids,
+          # Need num_q_tiles_1d to work around a Mosaic internal error.
           num_q_tiles_1d,
           kv_lens,
           cu_q_lens,
@@ -865,8 +866,8 @@ def ragged_paged_attention(
           q.to(q_dtype_for_kernel_launch),
           k_pages,
           v_pages,
-          page_indices_expanded,
-          page_indices_expanded,
+          page_indices_expanded,  # for the current iteration
+          page_indices_expanded,  # for the next iteration
       ],
       payload,
       [  # output shape
