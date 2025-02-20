@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git0c4e82d )
+                  master (2.7.0+gita08b7f8 )
                 </div>
               
             
@@ -648,6 +648,18 @@
     <span class="n">debug_single_process</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot; Entry to launch multiprocess.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    fn: The function to be called for each device which takes part of the</span>
+<span class="sd">      replication. The function will be called with a first argument being</span>
+<span class="sd">      the global index of the process within the replication, followed by the</span>
+<span class="sd">      arguments passed in `args`.</span>
+<span class="sd">    args: The arguments for `fn`.</span>
+<span class="sd">      Default: Empty tuple</span>
+<span class="sd">    start_method: The Python `multiprocessing` process creation method.</span>
+<span class="sd">      Default: `spawn`</span>
+<span class="sd">    debug_single_process: debug flag to run only in one process.</span>
+<span class="sd">      Default: False</span>
 
 <span class="sd">  Raises:</span>
 <span class="sd">    NotImplementedError: SPMD is not supported yet.</span>
