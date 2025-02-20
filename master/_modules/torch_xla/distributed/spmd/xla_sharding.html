@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+gita08b7f8 )
+                  master (2.7.0+git1acc987 )
                 </div>
               
             
@@ -1555,6 +1555,35 @@
                             <span class="n">logical_mesh_shape</span><span class="p">)</span>  <span class="c1"># type: ignore  # numpy 2.2</span>
 
   <span class="k">return</span> <span class="n">logical_mesh</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MarkShardingFunction</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Autograd function to mark_sharding on intermediate tensors and the gradient</span>
+<span class="sd">  of the intermediate tensors during backward pass.</span>
+
+<span class="sd">  Usage:</span>
+<span class="sd">  new_tensor = MarkShardingFunction.apply(tensor, mesh, (&#39;axis_1&#39;, &#39;axis_2&#39;))</span>
+
+<span class="sd">  This is required to guide GSPMD sharding propagation better during the </span>
+<span class="sd">  backward pass as during complicated workloads the compiler can introduce extra </span>
+<span class="sd">  collectives that can hurt performance.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="nd">@staticmethod</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">torch_tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
+              <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="n">mark_sharding</span><span class="p">(</span><span class="n">torch_tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">partition_spec</span> <span class="o">=</span> <span class="n">partition_spec</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span>
+    <span class="k">return</span> <span class="n">torch_tensor</span>
+
+  <span class="nd">@staticmethod</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="n">partition_spec</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">partition_spec</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">mesh</span>
+    <span class="n">mark_sharding</span><span class="p">(</span><span class="n">grad_output</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">grad_output</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
 </pre></div>
 
              </article>
