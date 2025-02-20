@@ -86,6 +86,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       page_size,
       dtype,
       num_pages,
+      num_kv_pages_per_block=128,
       num_queries_per_block=128,
   ):
     num_seqs = len(seq_lens)
@@ -124,8 +125,8 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     max_num_pages_per_seq = (max_kv_len + page_size - 1) // page_size
     # The reason why we need to pad max_num_pages_per_seq is that
     # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
-    max_num_pages_per_seq = self._get_closest_power_of_two(
-        max_num_pages_per_seq)
+    max_num_pages_per_seq = self._round_up_closest_multiple_of(
+        max_num_pages_per_seq, num_kv_pages_per_block)
     # The assert below mimics the reality that each page get a unique index.
     # But for testing, the assert could be omitted.
     # assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
@@ -149,6 +150,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
         page_indices,
         cu_q_lens,
         num_seqs,
+        num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
     )
     err.throw()  # noop if there is not err.
@@ -182,6 +184,9 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       self.fail(f'Unsupported dtype: {dtype}')
     self.assertTrue(
         jnp.allclose(actual_output, expected_output, atol=atol, rtol=rtol))
+
+  def _round_up_closest_multiple_of(self, x, base):
+    return (x + base - 1) // base * base
 
   def _get_closest_power_of_two(self, x):
     if x <= 0:
@@ -225,7 +230,9 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       page_size: int,
       num_pages: int,
   ):
-    # assuming q_blk_size=128
+    if jtu.is_device_tpu(version=4) and head_dim == 256 and page_size == 32:
+      self.skipTest(
+          "TPU v4 has small VMEM. It will run into VMEM OOM. Skip the test.")
     self._verify_ragged_paged_attention(
         seq_lens,
         num_heads,
@@ -233,6 +240,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
         page_size,
         dtype,
         num_pages,
+        num_queries_per_block=64,
     )
 
   def test_paged_attention_mix_prefill_and_decode1(self,):
@@ -326,6 +334,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
 
   def test_paged_attention_q_len_should_be_no_longer_than_kv_len(self,):
     # assuming q_blk_size=128
+    # Here the q_len(1 or 511) is set up to be longer than the corresponding kv_len (0 or 256).
     seq_lens = [(1, 0), (511, 256)]  # [(q_len, kv_len),...]
     num_heads = (1, 1)
     head_dim = 128
@@ -361,8 +370,9 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
     max_num_pages_per_seq = (max_kv_len + page_size - 1) // page_size
     # The reason why we need to pad max_num_pages_per_seq is that
     # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
-    max_num_pages_per_seq = self._get_closest_power_of_two(
-        max_num_pages_per_seq)
+    num_kv_pages_per_block = 128
+    max_num_pages_per_seq = self._round_up_closest_multiple_of(
+        max_num_pages_per_seq, num_kv_pages_per_block)
     # The assert below mimics the reality that each page get a unique index.
     # But for testing, the assert could be omitted.
     assert max_num_pages_per_seq * num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
@@ -388,6 +398,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
           page_indices,
           cu_q_lens,
           num_seqs,
+          num_kv_pages_per_block=num_kv_pages_per_block,
       )
       err.throw()
 
