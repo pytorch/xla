@@ -17,6 +17,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.spmd as xs
 from torch_xla.distributed.spmd import XLAShardedTensor
+from torch_xla.distributed.spmd.xla_sharding import MarkShardingFunction
 import torch_xla.distributed.parallel_loader as pl
 import test_xla_sharding_base
 
@@ -834,6 +835,23 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
         hlo)
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
+
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for autograd sharding test")
+  def test_mark_sharding_autograd(self):
+    x = torch.randn(8, 8, requires_grad=True)
+    x = x.to('xla')
+    mesh = self._get_mesh((1, self.n_devices))
+    # Forward pass
+    z = x @ x
+    z.retain_grad()  # To be able to extract HLO from intermediate tensor grad.
+    y = MarkShardingFunction.apply(z, mesh, (0, 1))
+    t = y.sum()
+    # Backward pass
+    t.backward()
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([z.grad])
+    sharding_annotation = 'sharding={devices=[1,%d]' % self.n_devices
+    self.assertIn(sharding_annotation, hlo)
 
   def test_sharded_tensor_aliasing(self):
     met.clear_all()

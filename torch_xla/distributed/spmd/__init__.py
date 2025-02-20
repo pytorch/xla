@@ -17,6 +17,7 @@ __all__ = [
     "ShardingType",
     "ShardingSpec",
     "XLAPatchedLinear",
+    "MarkShardingFunction"
     "mark_sharding",
     "clear_sharding",
     "get_1d_mesh",
