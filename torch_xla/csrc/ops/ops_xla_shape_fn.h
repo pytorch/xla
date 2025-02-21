@@ -108,6 +108,8 @@ xla::Shape ClampMaxTensorOutputShape(const torch::lazy::Value& input,
 xla::Shape ClampMinTensorOutputShape(const torch::lazy::Value& input,
                                      const torch::lazy::Value& target);
 
+xla::Shape ConjCopyOutputShape(const torch::lazy::Value& input);
+
 xla::Shape CosOutputShape(const torch::lazy::Value& input);
 
 xla::Shape CoshOutputShape(const torch::lazy::Value& input);

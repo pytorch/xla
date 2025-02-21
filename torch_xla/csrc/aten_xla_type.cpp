@@ -1230,8 +1230,8 @@ at::Tensor XLANativeFunctions::clone(
     const at::Tensor& self,
     std::optional<at::MemoryFormat> /* memory_format */) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::clone(bridge::GetXlaTensor(self)));
+  return bridge::AtenFromXlaTensor(tensor_methods::clone(
+      bridge::GetXlaTensor(self), /* is_conj= */ self.is_conj()));
 }
 
 at::Tensor XLANativeFunctions::constant_pad_nd(const at::Tensor& self,
