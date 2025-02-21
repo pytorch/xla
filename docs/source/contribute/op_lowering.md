@@ -184,3 +184,56 @@ You can find the `OpKind` definition in
 [interned_strings.h](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/core/interned_strings.h).
 If the aten symbol is missing, you can submit a PR like
 [this](https://github.com/pytorch/pytorch/pull/36851).
+
+### Debugging op dispatch
+
+Sometimes even after registering the lowering, PyTorch might not make use
+of it appropriately. We can check what operations the PyTorch dispatcher
+ran by:
+
+1. Build a debug build of PyTorch and PyTorch/XLA
+
+   ```sh
+   # Do this inside the pytorch/xla checkout
+   export DEBUG=1
+   scripts/build_developer.sh
+   ```
+
+2. Run the offending script or notebook with the
+   `TORCH_SHOW_DISPATCH_TRACE=1` environment variable.
+
+3. Then whenever the PyTorch dispatcher encounters an operation, we'll
+   see a log like this:
+
+   ```
+   [call] op=[aten::einsum], key=[AutogradXLA]
+   ```
+
+   This suggests that the dispatcher wants to call the `aten.einsum`
+   operation with the `AutogradXLA` dispatch key. The best guide level
+   explanation for dispatch key is ezyang@'s blog:
+   [Let’s talk about the PyTorch dispatcher][pytorch-dispatcher].
+   
+   The logs will be nested when one operation is implemented with
+   other operations that also go through the dispatcher.
+
+When an op falls back to CPU, we'll see a line that looks like:
+
+```
+  [call] op=[aten::cummin.out], key=[XLA]
+   [call] op=[aten::empty.memory_format], key=[BackendSelect]
+    [redispatch] op=[aten::empty.memory_format], key=[XLA]
+   [call] op=[aten::_cummin_helper], key=[XLA]
+    [call] op=[aten::_to_cpu], key=[XLA]
+     [call] op=[aten::empty.memory_format], key=[BackendSelect]
+      [redispatch] op=[aten::empty.memory_format], key=[CPU]
+   [redispatchBoxed] op=[aten::_cummin_helper], key=[CPU]
+```
+
+We'll see the dispatch key starts with `XLA` and later becomes `CPU`,
+suggesting a fallback to CPU kernels.
+
+Another way to debug the dispatcher is to set breakpoints in C++ with
+gdb. This is also helped by first producing a debug build of PyTorch.
+
+[pytorch-dispatcher]: http://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/
