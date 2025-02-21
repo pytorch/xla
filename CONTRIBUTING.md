@@ -112,7 +112,7 @@ TorchVision, and PyTorch/XLA.
 
   ```shell
   docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
-  docker run --privileged --name ptxla -it -d -e "TERM=xterm-256color" us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
+  docker run --privileged --network=host --name ptxla -it -d -e "TERM=xterm-256color" us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
   docker exec --privileged -it ptxla /bin/bash
   ```
   All of the code below will be assumed to be run within the docker.
