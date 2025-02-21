@@ -73,6 +73,9 @@ inline bool IsDefined(const std::optional<at::Tensor>& tensor) {
   return tensor.has_value() && tensor.value().defined();
 }
 
+// The namespace to generate composite op.
+absl::string_view GetCompositeNamespace();
+
 }  // namespace torch_xla
 
 namespace torch {
