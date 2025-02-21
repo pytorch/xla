@@ -14,6 +14,87 @@ from torch_xla.core.xla_model import XLA_LIB
 
 _XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
 
+def _shard_map(
+    func, 
+    mesh,
+    input_specs,
+    output_specs
+):
+    """Map a function over shards of data.
+
+    Note:
+      ``shard_map`` is an experimental API, and still subject to change. For an
+      introduction to sharded data, refer to :ref:`sharded-computation`. For a more
+      in-depth look at using ``shard_map``, refer to `SPMD multi-device parallelism with shard_map`_.
+
+    Args:
+      func: callable to be mapped. Each application of ``f``, or "instance" of ``f``,
+        takes as input a shard of the mapped-over arguments and produces a shard
+        of the output.
+      mesh: a ``Mesh`` representing the array of devices over which
+        to shard the data and on which to execute instances of ``f``. The names of
+        the ``Mesh`` can be used in collective communication operations in ``f``.
+        This is typically created by a utility function like
+        :func:`jax.experimental.mesh_utils.create_device_mesh`.
+      in_specs: a tuple of tuples of str. Each is the partition spec of positional input
+        of func. kwarg is not supported yet
+      out_specs: a pytree with :class:`~tuple[tuple[str]]`, with the same length
+        as the number of outputs
+
+    Returns:
+      A callable that applies the input function ``f`` across data sharded according to
+      the ``mesh`` and ``out_specs``.
+
+    Reference:
+      This function is identical Jax's shard_map:
+      https://docs.jax.dev/en/latest/_autosummary/jax.experimental.shard_map.shard_map.html
+    """
+
+    def _full_shape(a, spec):
+        # a is local tensor
+        # spec is the sharding spec
+        # return logical shape of global tensor
+        mesh_name_to_size = dict(
+            zip(mesh.axis_names, mesh.mesh_shape)
+        )
+
+        result_shape = []
+        for axis_size, axis_sharding in zip(a.shape, spec):
+            if axis_sharding is None:
+                new_size = axis_size
+            else:
+                if isinstance(axis_sharding, str):
+                    mesh_mult = mesh_name_to_size[axis_sharding]
+                else:
+                    # tuple or list
+                    mesh_mult = math.prod(mesh_name_to_size[a] for a in axis_sharding)
+                    
+                if mesh_mult is not None:
+                    new_size = axis_size * mesh_mult
+            result_shape.append(new_size)
+        return tuple(result_shape)
+
+    def wrapped(*args):
+        assert len(args) == len(input_specs), f'args={len(args)}; input_specs={len(input_specs)}'
+        new_args = tuple(
+            xs.enable_manual_sharding(a, spec, mesh=mesh).global_tensor 
+            if isinstance(a, torch.Tensor) and spec is not None else a
+            for a, spec in zip(args, input_specs)
+        )
+        res = func(*new_args)
+        if isinstance(res, tuple):
+            return tuple(
+                xs.disable_manual_sharding(
+                    a, spec, _full_shape(a, spec), mesh=mesh).global_tensor 
+                if isinstance(a, torch.Tensor) and spec is not None else a
+                for a, spec in zip(res, output_specs)
+            )
+        else:
+            return xs.disable_manual_sharding(
+                    res, output_specs[0], 
+                    _full_shape(res, output_specs[0]), mesh=mesh).global_tensor 
+        return res
+    return wrapped
 
 def safe_empty_like(tensor: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
   """Returns empty tensor like input, or None if input is None."""
@@ -217,17 +298,19 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
 
 
-@custom_op("xla::fa_custom_forward", mutates_args=())
-def fa_custom_forward(
-    q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, causal: bool,
-    q_segment_ids: torch.Tensor, kv_segment_ids: torch.Tensor, sm_scale: float,
-    ab: Optional[torch.Tensor], partition_spec: str, mesh: str,
+def _fa_custom_forward_single_device(
+    q: torch.Tensor, 
+    k: torch.Tensor, 
+    v: torch.Tensor, 
+    causal: bool,
+    q_segment_ids: torch.Tensor, 
+    kv_segment_ids: torch.Tensor, 
+    sm_scale: float,
+    ab: Optional[torch.Tensor], 
     ctx_grad: List[bool]
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,
-           torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
   partition_spec = eval(partition_spec)
   mesh = xs.get_global_mesh() or Mesh.from_str(mesh)
-
   from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
 
   q_full_shape = None
@@ -238,16 +321,6 @@ def fa_custom_forward(
   # Original we use save_residuals = q.requires_grad or k.requires_grad or v.requires_grad
   save_residuals = any(ctx_grad[:3])
 
-  # SPMD integration.
-  # mark_sharding is in-placed, and therefore save the full q, k, v for the backward.
-  # PyTorch tell us clone is necessary:
-  full_q = q.clone()
-  full_k = k.clone()
-  full_v = v.clone()
-  if ab is not None:
-    full_ab = ab.clone()
-  else:
-    full_ab = None
 
   block_k_major = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"],
                       k.shape[2])
@@ -260,15 +333,6 @@ def fa_custom_forward(
     ab, _ = _pad_to_block_size(
         ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
 
-  if partition_spec is not None:
-    q_full_shape = q.shape
-    q = xs.enable_manual_sharding(q, partition_spec, mesh=mesh).global_tensor
-    k = xs.enable_manual_sharding(k, partition_spec, mesh=mesh).global_tensor
-    v = xs.enable_manual_sharding(v, partition_spec, mesh=mesh).global_tensor
-    if ab is not None:
-      ab = xs.enable_manual_sharding(
-          ab, partition_spec, mesh=mesh).global_tensor
-
   # It computes the shape and type of o, l, m.
   shapes = [q.shape]
   dtypes = [q.dtype]
@@ -280,14 +344,6 @@ def fa_custom_forward(
       dtypes.append(torch.float32)
 
   with torch.no_grad():
-    if partition_spec is not None and q_segment_ids is not None and kv_segment_ids is not None:
-      # partition_spec is for q,k,v with shape [batch, num_head, seq_len, head_dim], segment id
-      # is of shape [batch, seq_len], hence we need to tweak it a bit
-      segment_id_partition_spec = (partition_spec[0], partition_spec[2])
-      q_segment_ids = xs.enable_manual_sharding(
-          q_segment_ids, segment_id_partition_spec, mesh=mesh).global_tensor
-      kv_segment_ids = xs.enable_manual_sharding(
-          kv_segment_ids, segment_id_partition_spec, mesh=mesh).global_tensor
     segment_ids, q_segment_ids_fa, kv_segment_ids_fa = FlashAttention.prepare_segment_ids(
         q_segment_ids, kv_segment_ids)
 
@@ -324,9 +380,6 @@ def fa_custom_forward(
     if not save_residuals:
       o = o[0]
       # SPMD integration
-      if partition_spec is not None:
-        o = xs.disable_manual_sharding(
-            o, partition_spec, q_full_shape, mesh=mesh).global_tensor
       # We need to consistently return full_q, full_k, full_v,... even though they are empty to support AOT.
       return tuple([o] + [torch.Tensor() for _ in range(6)])
 
@@ -334,17 +387,84 @@ def fa_custom_forward(
     o, *aux = o
     l, m = (v[..., 0] for v in aux[-2:])
 
-  # SPMD integration
-  if partition_spec is not None:
-    o = xs.disable_manual_sharding(
-        o, partition_spec, q_full_shape, mesh=mesh).global_tensor
-    l = xs.disable_manual_sharding(
-        l, partition_spec[0:3], q_full_shape[0:3], mesh=mesh).global_tensor
-    m = xs.disable_manual_sharding(
-        m, partition_spec[0:3], q_full_shape[0:3], mesh=mesh).global_tensor
+  return o, l, m
 
-  # q_segment_ids and kv_segment_ids are sharded here if partition_spec is provided
-  # but it should be OK as the backward will use the same partition_spec
+
+@custom_op("xla::fa_custom_forward", mutates_args=())
+def fa_custom_forward(
+    q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, causal: bool,
+    q_segment_ids: torch.Tensor, kv_segment_ids: torch.Tensor, sm_scale: float,
+    ab: Optional[torch.Tensor], partition_spec: str, mesh: str,
+    ctx_grad: List[bool]
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,
+           torch.Tensor, torch.Tensor]:
+  partition_spec = eval(partition_spec)
+  mesh = xs.get_global_mesh() or Mesh.from_str(mesh)
+
+  q_full_shape = None
+
+  # Suprisingly, any tensor that is input to the custom_op decorated function will show
+  # requires_grad=False. Is this a bug or feature? We have to pass ctx_grad to record the
+  # requires_grad for inputs.
+  # Original we use save_residuals = q.requires_grad or k.requires_grad or v.requires_grad
+  save_residuals = any(ctx_grad[:3])
+
+  # SPMD integration.
+  # mark_sharding is in-placed, and therefore save the full q, k, v for the backward.
+  # PyTorch tell us clone is necessary:
+  full_q = q.clone()
+  full_k = k.clone()
+  full_v = v.clone()
+  if ab is not None:
+    full_ab = ab.clone()
+  else:
+    full_ab = None
+
+  block_k_major = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"],
+                      k.shape[2])
+  block_k = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2])
+  k, k_pad_size = _pad_to_block_size(k, max(block_k_major, block_k), 2)
+  if k_pad_size > 0:
+    v, _ = _pad_to_block_size(v, max(block_k_major, block_k), 2)
+    if ab is None:
+      ab = torch.zeros((q.shape[0], q.shape[1], q.shape[2], q.shape[2]))
+    ab, _ = _pad_to_block_size(
+        ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
+
+  if partition_spec is not None:
+    segment_id_partition_spec = (partition_spec[0], partition_spec[2])
+
+    input_specs = [
+      partition_spec, # q
+      partition_spec, # k
+      partition_spec, # v
+      None,
+      segment_id_partition_spec,
+      segment_id_partition_spec,
+      None,
+      partition_spec,
+      None,
+    ]
+
+    output_specs = [
+      partition_spec, # o
+      partition_spec, # l
+      partition_spec, # m
+    ]
+
+    fa_forward_callable = _shard_map(
+      _fa_custom_forward_one_device,
+      mesh,
+      input_specs,
+      output_specs,
+    )
+  else:
+    fa_forward_callable = _fa_custom_forward_one_device
+
+  o, l, m = fa_forward_callable(
+    q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale, ab, ctx_grad
+  )
+
   outs = [o] + [full_q, full_k, full_v, l, m, full_ab]
   return tuple(outs)
 
@@ -370,13 +490,12 @@ def _pad_to_block_size(
   return padded, pad_size
 
 
-@custom_op("xla::fa_custom_backward", mutates_args=())
-def fa_custom_backward(
+def _fa_custom_backward_single_device(
     grad_output: torch.Tensor, q: torch.Tensor, k: torch.Tensor,
     v: torch.Tensor, o: torch.Tensor, l: torch.Tensor, m: torch.Tensor,
     q_segment_ids: Optional[torch.Tensor],
     kv_segment_ids: Optional[torch.Tensor], ab: Optional[torch.Tensor],
-    causal: bool, sm_scale: float, partition_spec: str, mesh: str,
+    causal: bool, sm_scale: float,
     q_full_shape: List[int], kv_full_shape: List[int],
     ab_full_shape: Optional[List[int]], ctx_grad: List[bool]
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -387,8 +506,6 @@ def fa_custom_backward(
   require_grad_q, require_grad_k, require_grad_v, *rest = ctx_grad
   require_grad_ab = ctx_grad[-3]
 
-  partition_spec = eval(partition_spec)
-  mesh = xs.get_global_mesh() or Mesh.from_str(mesh)
   q_full_shape = torch.Size(q_full_shape)
   kv_full_shape = torch.Size(kv_full_shape)
   ab_full_shape = torch.Size(
@@ -405,31 +522,6 @@ def fa_custom_backward(
   expanded_grad_i = grad_i.unsqueeze(-1).expand([-1 for _ in grad_i.shape] +
                                                 [FlashAttention.MIN_BLOCK_SIZE])
 
-  # SPMD integration
-  if partition_spec is not None:
-    if q_segment_ids is not None and kv_segment_ids is not None:
-      # partition_spec is for q,k,v with shape [batch, num_head, seq_len, head_dim], segment id
-      # is of shape [batch, seq_len], hence we need to tweak it a bit
-      segment_id_partition_spec = (partition_spec[0], partition_spec[2])
-      q_segment_ids = xs.enable_manual_sharding(
-          q_segment_ids, segment_id_partition_spec, mesh=mesh).global_tensor
-      kv_segment_ids = xs.enable_manual_sharding(
-          kv_segment_ids, segment_id_partition_spec, mesh=mesh).global_tensor
-
-    q = xs.enable_manual_sharding(q, partition_spec, mesh=mesh).global_tensor
-    k = xs.enable_manual_sharding(k, partition_spec, mesh=mesh).global_tensor
-    v = xs.enable_manual_sharding(v, partition_spec, mesh=mesh).global_tensor
-    expanded_l = xs.enable_manual_sharding(
-        expanded_l, partition_spec, mesh=mesh).global_tensor
-    expanded_m = xs.enable_manual_sharding(
-        expanded_m, partition_spec, mesh=mesh).global_tensor
-    grad_output = xs.enable_manual_sharding(
-        grad_output, partition_spec, mesh=mesh).global_tensor
-    expanded_grad_i = xs.enable_manual_sharding(
-        expanded_grad_i, partition_spec, mesh=mesh).global_tensor
-    if ab is not None:
-      ab = xs.enable_manual_sharding(
-          ab, partition_spec, mesh=mesh).global_tensor
   if q_segment_ids is not None and kv_segment_ids is not None:
     segment_ids, q_segment_ids_fa, kv_segment_ids_fa = FlashAttention.prepare_segment_ids(
         q_segment_ids, kv_segment_ids)
@@ -523,18 +615,75 @@ def fa_custom_backward(
   if require_grad_v:
     grad_v = grads[1]
 
-  # SPMD integration
-  if partition_spec is not None:
-    grad_q = xs.disable_manual_sharding(
-        grad_q, partition_spec, q_full_shape, mesh=mesh).global_tensor
-    grad_k = xs.disable_manual_sharding(
-        grad_k, partition_spec, kv_full_shape, mesh=mesh).global_tensor
-    grad_v = xs.disable_manual_sharding(
-        grad_v, partition_spec, kv_full_shape, mesh=mesh).global_tensor
-    if ab is not None:
-      grad_ab = xs.disable_manual_sharding(
-          grad_ab, partition_spec, ab_full_shape, mesh=mesh).global_tensor
   return grad_q, grad_k, grad_v, grad_ab
+
+@custom_op("xla::fa_custom_backward", mutates_args=())
+def fa_custom_backward(
+    grad_output: torch.Tensor, q: torch.Tensor, k: torch.Tensor,
+    v: torch.Tensor, o: torch.Tensor, l: torch.Tensor, m: torch.Tensor,
+    q_segment_ids: Optional[torch.Tensor],
+    kv_segment_ids: Optional[torch.Tensor], ab: Optional[torch.Tensor],
+    causal: bool, sm_scale: float, partition_spec: str, mesh: str,
+    q_full_shape: List[int], kv_full_shape: List[int],
+    ab_full_shape: Optional[List[int]], ctx_grad: List[bool]
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+  partition_spec = eval(partition_spec)
+  mesh = Mesh.from_str(mesh) or xs.get_global_mesh()
+    grad_q = grad_k = grad_v = grad_ab = segment_ids = None
+
+  require_grad_q, require_grad_k, require_grad_v, *rest = ctx_grad
+  require_grad_ab = ctx_grad[-3]
+
+  q_full_shape = torch.Size(q_full_shape)
+  kv_full_shape = torch.Size(kv_full_shape)
+  ab_full_shape = torch.Size(
+      ab_full_shape) if ab_full_shape is not None else None
+
+
+  if partition_spec:
+    segment_id_partition_spec = (partition_spec[0], partition_spec[2])
+    input_specs = [
+      partition_spec, # grad_output
+      partition_spec, # q
+      partition_spec, # k
+      partition_spec, # v
+      partition_spec, # o
+      partition_spec, # l 
+      partition_spec, # m 
+      segment_id_partition_spec, # q_segment_ids
+      segment_id_partition_spec, # kv_segment_ids
+      partition_spec, # ab
+      None, # causal
+      None, # sm_scale
+      None, # q_full_shape 
+      None, # kv_full_shape 
+      None, # ab_full_shape
+      None, # ctx_grad
+    ]
+    output_specs = [
+      partition_spec,
+      partition_spec,
+      partition_spec,
+      partition_spec,
+    ]
+    fa_backward_callable = _shard_map(
+      _fa_custom_backward_single_device 
+      mesh,
+      input_specs,
+      output_specs
+    )
+  else:
+    fa_backward_callable = _fa_custom_backward_single_device
+
+  res = fa_backward_callable(
+    grad_output, q, k, v, o, l, m, q_segment_ids, kv_segment_ids, ab, causal, sm_scale
+    q_full_shape, kv_full_shape, ab_full_shape, ctx_grad
+  )
+
+  return res
+
+  
+
 
 
 @fa_custom_forward.register_fake
