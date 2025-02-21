@@ -5,12 +5,9 @@ import time
 from typing import List, Optional, Tuple
 import functools
 
-import torch
-import torch_xla
 import torch_xla.core.xla_model as xm
 import jax
 from jax._src import test_util as jtu
-from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_single_query_paged_attention
 import jax.numpy as jnp
 import numpy as np
 
@@ -78,13 +75,14 @@ def _ref_ragged_paged_attention(
   return jnp.concatenate(outputs, axis=0)
 
 
-def _get_closest_power_of_two(x):
-  if x <= 0:
-    raise ValueError(f"x must be positive. Got {x}")
-  return 2**int(np.ceil(np.log2(x)))
+def _get_closest_of_multiple(x, base):
+  return (x + base - 1) // base * base
 
 
 def benchmark(args):
+  if args.profile:
+    assert args.profile_path is not None, "Need to provide a profile path to profile."
+
   seq_lens = [
       (1, 1328),
       (5, 18),
@@ -100,18 +98,16 @@ def benchmark(args):
   ]
   num_heads = (4, 4)
   head_dim = 128
-  dtype = jnp.float32
+  dtype = jnp.bfloat16
   page_size = 16
   num_pages = 32768
-  num_queries_per_block = 128
+  num_queries_per_block = 16
+  num_kv_pages_per_block = 128
 
   num_seqs = len(seq_lens)
   for i in range(num_seqs):
     cur_q_len = seq_lens[i][0]
     cur_kv_len = seq_lens[i][1]
-    # Make sure the q_len is no longer than the kv_len. For example,
-    # seq_lens = [(1, 1328), (5, 18), (506, 463)] is not a valid test case because
-    # the 3rd sequence has q_len(506) > kv_len(463).
     assert cur_q_len <= cur_kv_len, f"cur_q_len must be less than or equal to cur_kv_len. Got {cur_q_len} and {cur_kv_len}"
 
   query_lens = [seq_len[0] for seq_len in seq_lens]
@@ -140,7 +136,8 @@ def benchmark(args):
   max_num_pages_per_seq = (max_kv_len + page_size - 1) // page_size
   # The reason why we need to pad max_num_pages_per_seq is that
   # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
-  max_num_pages_per_seq = _get_closest_power_of_two(max_num_pages_per_seq)
+  max_num_pages_per_seq = _get_closest_of_multiple(max_num_pages_per_seq,
+                                                   num_kv_pages_per_block)
   page_indices = jax.random.randint(
       k4, (num_q_tokens, max_num_pages_per_seq), 0, num_pages, dtype=jnp.int32)
 
@@ -150,26 +147,13 @@ def benchmark(args):
     q_lens_with_paddings[i] = query_lens[i]
   cu_q_lens = jnp.cumsum(jnp.array([0] + q_lens_with_paddings))
 
-  err, actual_output = ragged_paged_attention(
-      queries,
-      k_pages,
-      v_pages,
-      kv_lens_np,
-      page_indices,
-      cu_q_lens,
-      num_seqs,
-      num_queries_per_block=num_queries_per_block,
-  )
-  err.throw()  # noop if there is no error.
-  actual_output = jax.block_until_ready(actual_output)
-  profile_path = "/workspaces/persist/myprofiles/plugins/profile"
+  profile_path = args.profile_path
 
   def run_benchmark(num_iters: int, profile: bool = False) -> float:
     start_time = time.perf_counter()
     if profile:
       jax.profiler.start_trace(profile_path)
 
-    actual_output = None
     for _ in range(num_iters):
       if args.kernel == "ragged-paged-attention":
         err, actual_output = ragged_paged_attention(
@@ -180,6 +164,8 @@ def benchmark(args):
             page_indices,
             cu_q_lens,
             num_seqs,
+            num_queries_per_block=num_queries_per_block,
+            num_kv_pages_per_block=num_kv_pages_per_block,
         )
         err.throw()
       elif args.kernel == "ragged-paged-attention-ref-impl":
@@ -225,5 +211,6 @@ if __name__ == "__main__":
       ],
       default="multi-queries-paged-attn")
   parser.add_argument("--profile", action="store_true")
+  parser.add_argument("--profile_path", type=str, default=None)
   args = parser.parse_args()
   benchmark(args)
