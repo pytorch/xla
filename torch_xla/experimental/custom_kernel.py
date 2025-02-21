@@ -333,6 +333,13 @@ def fa_custom_forward(
     assert isinstance(o, list)
     o, *aux = o
     l, m = (v[..., 0] for v in aux[-2:])
+    # l = aux[-2]
+    # l = torch.ops.aten.slice(l, -1, 0, 1)
+    # # print(torch_xla._XLAC._get_xla_tensors_text([l]))
+    # # l = aux[-2].permute(3, 0, 1, 2)[0]
+    # # m = aux[-1].permute(3, 0, 1, 2)[0]
+    # m = aux[-1]
+    # m = torch.ops.aten.slice(m, -1, 0, 1)
 
   # SPMD integration
   if partition_spec is not None:
