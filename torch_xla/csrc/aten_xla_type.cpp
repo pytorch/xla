@@ -879,113 +879,205 @@ at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
   return out;
 }
 
+
 at::Tensor XLANativeFunctions::as_strided_copy(
-    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
-    std::optional<int64_t> storage_offset) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  // Retrieve the base tensor, if there's one.
-  // This function actually operates on the tensor's storage. Since XLA does not
-  // expose the actual storage, we use the originally allocated tensor.
-  const at::Tensor& base = bridge::GetXlaTensor(self)->Base();
-  at::Tensor tensor = base.defined() ? base : self;
+  const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+  std::optional<int64_t> storage_offset) {
+TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+XLA_CHECK(size.size() == stride.size())
+    << "mismatch in length of size and stride";
+// Retrieve the base tensor, if there's one.
+// This function actually operates on the tensor's storage. Since XLA does not
+// expose the actual storage, we use the originally allocated tensor.
+const at::Tensor& base = bridge::GetXlaTensor(self)->Base();
+at::Tensor tensor = base.defined() ? base : self;
 
-  // Fast path: PyTorch/XLA implementation for as_strided works only with
-  // non-overlapping and dense tensors.
-  if (c10::_compute_non_overlapping_and_dense(size, stride)) {
-    // Sets the base tensor as tensor.
-    // Even though this function copies (without aliasing) tensor, it's still
-    // treated as a view function in the functionalization layer.
-    return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
-        tensor_methods::as_strided(bridge::GetXlaTensor(tensor),
-                                   XlaHelpers::I64List(size),
-                                   XlaHelpers::I64List(stride),
-                                   XlaHelpers::I64Optional(storage_offset)),
-        tensor));
+// Optimize: decide if we can use `slice` to replace `as_strided` to avoid
+// the copy. To use `slice`, the following conditions must be satisfied:
+// - `stride` must be: [..., dim[-2]*dim[-1], dim[-1], 1] and one of them
+//   (assume stride[X]) can be multiplied with a constant K.
+// - `size` must be: [dim[0], dim[1], ...], and size[X]*K <= dim[X].
+// In theory we can shuffle element in `stride` and `size` and this can
+//   result in the transpose of dimensions, but we don't consider this case
+//   here.
+auto tensor_dim = tensor.sizes();
+
+std::cout << "tensor dim: ";
+for (auto i: tensor_dim) {
+  std::cout << i << " ";
+}
+std::cout << std::endl;
+
+std::cout << "stride: ";
+for (auto i: stride) {
+  std::cout << i << " ";
+}
+std::cout << std::endl;
+
+std::cout << "size: ";
+for (auto i: size) {
+  std::cout << i << " ";
+}
+std::cout << std::endl;
+
+if (!storage_offset.has_value() || (*storage_offset) == 0){
+  if (tensor_dim.size() != stride.size()) {
+    // Special case tensor_dim and stride can be differ by 1 dim size. This can happen for `v[...,0]` op in fx graph dispatch path.
+    
+
+  } else if (tensor_dim.size() == stride.size()) {
+    auto l = stride.size();
+    bool can_replace = true;
+    long stride_mul = 1;
+    long K_location = -1;
+    int K = 0;
+    // check `stride`
+    for (long i = l - 1; i >= 0; i--) {
+      if (stride_mul != stride[i]) {
+        if (K_location == -1) {
+          K_location = i;
+          K = stride[i] / stride_mul;
+        } else {
+          // multiple X index found
+          can_replace = false;
+          break;
+        }
+      }
+      stride_mul *= tensor_dim[i];
+    }
+    // check `size`
+    long reduce_size_location = -1;
+    for (auto i = 0; i < l; i++) {
+      if (size[i] != tensor_dim[i]) {
+        if (size[i] < tensor_dim[i] && reduce_size_location == -1) {
+          reduce_size_location = i;
+        } else {
+          can_replace = false;
+          break;
+        }
+      }
+    }
+    // check if only one dimension is sliced
+    if (can_replace) {
+      if (reduce_size_location != -1) {
+        if (K_location != -1) {
+          if (K_location != reduce_size_location || size[reduce_size_location] * K > tensor_dim[reduce_size_location]) {
+            can_replace = false;
+          }
+        } else {
+          // we have one dim size reduced but without any step jump regarding stride.
+          K = 1;
+        }
+      } else {
+        // size remains the same as tensor, return directly
+        return tensor;
+      }
+    }
+  
+    std::cout << "PIZ: use slice 4 " << can_replace << std::endl;
+    if (can_replace) {
+      return bridge::AtenFromXlaTensor(
+          tensor_methods::slice(bridge::GetXlaTensor(tensor), reduce_size_location, 0,
+                                size[reduce_size_location] * K, K));
+    }
   }
+}
 
-  // Slow path: decompose as_strided into indexing (we use take, though)
-  // operations. We pre-compute the index on CPU, so as to avoid runtime
-  // overhead.
-  auto dim = size.size();
-  auto itemsize = tensor.dtype().itemsize();
-  int64_t storage_size =
-      at::detail::computeStorageNbytes(size, stride, itemsize);
+if (c10::_compute_non_overlapping_and_dense(size, stride)) {
+  // Sets the base tensor as tensor.
+  // Even though this function copies (without aliasing) tensor, it's still
+  // treated as a view function in the functionalization layer.
+  return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
+      tensor_methods::as_strided(bridge::GetXlaTensor(tensor),
+                                 XlaHelpers::I64List(size),
+                                 XlaHelpers::I64List(stride),
+                                 XlaHelpers::I64Optional(storage_offset)),
+      tensor));
+}
 
-  XLA_CHECK(tensor.numel() * itemsize >= storage_size)
-      << "as_strided: storage not big enough for size " << size << ": "
-      << storage_size << " (needed) vs " << tensor.numel() << " (actual).";
+// Slow path: decompose as_strided into indexing (we use take, though)
+// operations. We pre-compute the index on CPU, so as to avoid runtime
+// overhead.
+auto dim = size.size();
+auto itemsize = tensor.dtype().itemsize();
+int64_t storage_size =
+    at::detail::computeStorageNbytes(size, stride, itemsize);
 
-  if (dim == 0 && tensor.numel() > 0) {
-    // If there's no specified dimension, return the first element of the
-    // storage. This behavior is consistent with eager.
-    return select_copy(view_copy_symint(tensor, {tensor.numel()}), 0, 0);
-  }
+XLA_CHECK(tensor.numel() * itemsize >= storage_size)
+    << "as_strided: storage not big enough for size " << size << ": "
+    << storage_size << " (needed) vs " << tensor.numel() << " (actual).";
 
-  if (storage_size == 0) {
-    // Return an empty tensor, if no storage is actually needed.
-    return empty_symint(c10::fromIntArrayRefSlow(size), tensor.scalar_type(),
-                        /* layout= */ std::nullopt, tensor.device(),
-                        /* pin_memory= */ std::nullopt,
-                        /*  memory_format= */ std::nullopt);
-  }
+if (dim == 0 && tensor.numel() > 0) {
+  // If there's no specified dimension, return the first element of the
+  // storage. This behavior is consistent with eager.
+  return select_copy(view_copy_symint(tensor, {tensor.numel()}), 0, 0);
+}
 
-  // At this point, the following is true:
-  XLA_CHECK(storage_size > 0);
-  XLA_CHECK(tensor.numel() > 0);
-  XLA_CHECK(dim > 0);
+if (storage_size == 0) {
+  // Return an empty tensor, if no storage is actually needed.
+  return empty_symint(c10::fromIntArrayRefSlow(size), tensor.scalar_type(),
+                      /* layout= */ std::nullopt, tensor.device(),
+                      /* pin_memory= */ std::nullopt,
+                      /*  memory_format= */ std::nullopt);
+}
 
-  // Index tensor for gathering the needed elements into contiguous data.
-  //
-  // PyTorch/XLA, by default, assumes dense and contiguous data. However, when
-  // specifying strides, that might not be the case.
-  //
-  // Therefore, we gather the elements selected by following the size, stride,
-  // and storage offset, materializing it into contiguous elements.
-  //
-  // In order to accomplish that, we create an index tensor. Specifically, we
-  // create an n-dimensional tensor (n is the number of dimensions of the
-  // output) of indices. Each element represent the at which position of the
-  // flattened tensor the desired element is in.
+// At this point, the following is true:
+XLA_CHECK(storage_size > 0);
+XLA_CHECK(tensor.numel() > 0);
+XLA_CHECK(dim > 0);
 
-  // Example: arange(13).as_strided((2, 2, 2), (3, 4, 5))
-  //
-  // Start with a 1-element n-dimensional tensor, initialized with 0:
-  //
-  //     [[[0]]]
-  //
-  std::vector<int64_t> view_shape(dim, 1);
-  auto index_tensor =
-      at::tensor({storage_offset.value_or(self.storage_offset())},
-                 at::TensorOptions().dtype(at::kLong))
-          .view(view_shape);
+// Index tensor for gathering the needed elements into contiguous data.
+//
+// PyTorch/XLA, by default, assumes dense and contiguous data. However, when
+// specifying strides, that might not be the case.
+//
+// Therefore, we gather the elements selected by following the size, stride,
+// and storage offset, materializing it into contiguous elements.
+//
+// In order to accomplish that, we create an index tensor. Specifically, we
+// create an n-dimensional tensor (n is the number of dimensions of the
+// output) of indices. Each element represent the at which position of the
+// flattened tensor the desired element is in.
 
-  // Then, add to the index_tensor the offset value introduced for each possible
-  // index of that corresponding dimension.
-  //
-  //   - Iteration i=0:
-  //        [[[0]]] + [[[0 * 3]], [[1 * 3]]]
-  //        = [[[0 * 3]], [[1 * 3]]]
-  //        = [[[0]], [[3]]]
-  //
-  //   - Iteration i=1:
-  //        [[[0]], [[3]]] + [[[0 * 4], [1 * 4]]]
-  //        = [[[0 + 0 * 4], [0 + 1 * 4]], [[3 + 0 * 4], [3 + 1 * 4]]]
-  //        = [[[0], [4]], [[3], [7]]]
-  //
-  //   - Iteration i=2:
-  //        [[[0], [4]], [[3], [7]]] + [[[0 * 5, 1 * 5]]]
-  //        =[[[0 + 0 * 5, 0 + 1 * 5], [4 + 0 * 5, 4 + 1 * 5]],
-  //          [[3 + 0 * 5, 3 + 1 * 5], [7 + 0 * 5, 7 + 1 * 5]]]
-  //        =[[[0, 5], [4, 9]], [[3, 8], [7, 12]]]
-  for (int i = 0; i < dim; i++) {
-    auto vshape = view_shape;
-    vshape[i] = size[i];
-    index_tensor =
-        index_tensor.add((at::arange(size[i]) * stride[i]).view(vshape));
-  }
+// Example: arange(13).as_strided((2, 2, 2), (3, 4, 5))
+//
+// Start with a 1-element n-dimensional tensor, initialized with 0:
+//
+//     [[[0]]]
+//
+std::vector<int64_t> view_shape(dim, 1);
+auto index_tensor =
+    at::tensor({storage_offset.value_or(self.storage_offset())},
+               at::TensorOptions().dtype(at::kLong))
+        .view(view_shape);
 
-  // Finally, index the tensor with the computed indices.
-  return take(tensor, index_tensor.to(tensor.device()));
+// Then, add to the index_tensor the offset value introduced for each possible
+// index of that corresponding dimension.
+//
+//   - Iteration i=0:
+//        [[[0]]] + [[[0 * 3]], [[1 * 3]]]
+//        = [[[0 * 3]], [[1 * 3]]]
+//        = [[[0]], [[3]]]
+//
+//   - Iteration i=1:
+//        [[[0]], [[3]]] + [[[0 * 4], [1 * 4]]]
+//        = [[[0 + 0 * 4], [0 + 1 * 4]], [[3 + 0 * 4], [3 + 1 * 4]]]
+//        = [[[0], [4]], [[3], [7]]]
+//
+//   - Iteration i=2:
+//        [[[0], [4]], [[3], [7]]] + [[[0 * 5, 1 * 5]]]
+//        =[[[0 + 0 * 5, 0 + 1 * 5], [4 + 0 * 5, 4 + 1 * 5]],
+//          [[3 + 0 * 5, 3 + 1 * 5], [7 + 0 * 5, 7 + 1 * 5]]]
+//        =[[[0, 5], [4, 9]], [[3, 8], [7, 12]]]
+for (int i = 0; i < dim; i++) {
+  auto vshape = view_shape;
+  vshape[i] = size[i];
+  index_tensor =
+      index_tensor.add((at::arange(size[i]) * stride[i]).view(vshape));
+}
+
+// Finally, index the tensor with the computed indices.
+return take(tensor, index_tensor.to(tensor.device()));
 }
 
 at::Tensor XLANativeFunctions::as_strided_scatter(
