@@ -1,0 +1,18 @@
+githubConfigUrl: ${github_repo_url}
+githubConfigSecret: github-pat
+minRunners: 1
+maxRunners: ${max_tpu_nodes}
+template:
+  spec:
+    containers:
+    - name: runner
+      image: ${runner_image}
+      command: ["/home/runner/run.sh"]
+      resources:
+        limits:
+          google.com/tpu: 4
+        requests:
+          google.com/tpu: 4
+    nodeSelector:
+      cloud.google.com/gke-tpu-accelerator: tpu-v5p-slice
+      cloud.google.com/gke-tpu-topology: 2x2x1
