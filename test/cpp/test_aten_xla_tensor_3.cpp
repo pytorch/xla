@@ -922,6 +922,9 @@ TEST_F(AtenXlaTensorTest, TestAsStrided) {
         torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
     AllClose(output, xla_output);
   });
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAsStridedInPlace) {
@@ -938,6 +941,9 @@ TEST_F(AtenXlaTensorTest, TestAsStridedInPlace) {
     AllClose(output, xla_output);
     AllClose(input, xla_input);
   });
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAsStridedWithOffset) {
@@ -956,6 +962,9 @@ TEST_F(AtenXlaTensorTest, TestAsStridedWithOffset) {
                           /*storage_offset=*/storage_offset);
     AllClose(output, xla_output);
   });
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAsStridedWithInplaceCopy) {
@@ -970,6 +979,9 @@ TEST_F(AtenXlaTensorTest, TestAsStridedWithInplaceCopy) {
     xla_output.as_strided(size, stride).copy_(xla_grad);
     AllClose(output, xla_output);
   });
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestEmptyStrided) {
@@ -982,6 +994,138 @@ TEST_F(AtenXlaTensorTest, TestEmptyStrided) {
     EXPECT_EQ(output.sizes(), xla_output.sizes());
     EXPECT_EQ(output.strides(), xla_output.strides());
   });
+}
+
+TEST_F(AtenXlaTensorTest, TestAsStridedUseSlice) {
+  torch::Tensor input =
+      torch::rand({16, 32, 24}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> size = {16, 8, 24};
+  std::vector<int64_t> stride = {768, 48, 1};
+  torch::Tensor output =
+      torch::as_strided(input, /*size=*/size, /*stride=*/stride);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output =
+        torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
+    AllClose(output, xla_output);
+  });
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestAsStridedMismatchLastDimUseSlice) {
+  torch::Tensor input =
+      torch::rand({16, 32, 24}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> size = {16, 32}; // 16, 32, 24
+  std::vector<int64_t> stride = {768, 24}; // 768, 24, 1
+  torch::Tensor output =
+      torch::as_strided(input, /*size=*/size, /*stride=*/stride);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output =
+        torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
+    AllClose(output, xla_output);
+  });
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestAsStridedMismatchMiddleDimUseSlice) {
+  torch::lazy::MetricsArena::Get()->ResetMetrics();
+  runtime::metrics::ClearMetrics();
+  torch::Tensor input =
+      torch::rand({6, 4, 2, 4}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> size = {6, 2, 4};
+  std::vector<int64_t> stride = {32, 4, 1};
+  torch::Tensor output =
+      torch::as_strided(input, /*size=*/size, /*stride=*/stride);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output =
+        torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
+    AllClose(output, xla_output);
+  });
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
+}
+
+
+
+TEST_F(AtenXlaTensorTest, TestAsStridedMismatchDimWithOffset) {
+  torch::lazy::MetricsArena::Get()->ResetMetrics();
+  runtime::metrics::ClearMetrics();
+  torch::Tensor input =
+      torch::rand({6, 4, 2, 4}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> size = {6, 2, 4};
+  std::vector<int64_t> stride = {32, 4, 1};
+  torch::Tensor output =
+      torch::as_strided(input, /*size=*/size, /*stride=*/stride, 1);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output =
+        torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride, 1);
+    AllClose(output, xla_output);
+  });
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestAsStridedMultipleMismatchDimWithOffset) {
+  torch::lazy::MetricsArena::Get()->ResetMetrics();
+  runtime::metrics::ClearMetrics();
+  torch::Tensor input =
+      torch::rand({6, 4, 2, 4}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> size = {3, 2, 4};
+  std::vector<int64_t> stride = {16, 4, 1};
+  torch::Tensor output =
+      torch::as_strided(input, /*size=*/size, /*stride=*/stride);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output =
+        torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
+    AllClose(output, xla_output);
+  });
+  for (auto& name : torch_xla::runtime::metrics::GetCounterNames()) {
+    std::cout << name << std::endl;
+  }
+  std::cout << std::endl;
+  for (auto& name : torch::lazy::GetCounterNames()) {
+    std::cout << name << std::endl;
+  }
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestAsStridedMultipleDimMismatch) {
+  torch::lazy::MetricsArena::Get()->ResetMetrics();
+  runtime::metrics::ClearMetrics();
+  torch::Tensor input =
+      torch::rand({6, 4, 2, 4}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> size = {6, 4, 1, 2};
+  std::vector<int64_t> stride = {32, 8, 8, 2};
+  torch::Tensor output =
+      torch::as_strided(input, /*size=*/size, /*stride=*/stride);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output =
+        torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
+    AllClose(output, xla_output);
+  });
+  for (auto& name : torch_xla::runtime::metrics::GetCounterNames()) {
+    std::cout << name << std::endl;
+  }
+  std::cout << std::endl;
+  for (auto& name : torch::lazy::GetCounterNames()) {
+    std::cout << name << std::endl;
+  }
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestAvgPool2DBackward) {

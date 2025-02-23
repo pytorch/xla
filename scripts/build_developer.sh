@@ -1,33 +1,33 @@
 #!/bin/bash
 
-set -e  # Fail on any error.
-set -x  # Display commands being run.
+# set -e  # Fail on any error.
+# set -x  # Display commands being run.
 
-# Change to pytorch directory.
-cd "$(dirname "$(readlink -f "$0")")"
-cd ../../
+# # Change to pytorch directory.
+# cd "$(dirname "$(readlink -f "$0")")"
+# cd ../../
 
-# First remove any left over old wheels
-# and old installation
-pip uninstall torch -y
-python3 setup.py clean
+# # First remove any left over old wheels
+# # and old installation
+# pip uninstall torch -y
+# python3 setup.py clean
 
-# Install pytorch
-python3 setup.py bdist_wheel
-python3 setup.py install
-cd ..
+# # Install pytorch
+# python3 setup.py bdist_wheel
+# python3 setup.py install
+# cd ..
 
-# Optionally install torchvision.
-if [ -d "vision" ]; then
-  cd vision
-  python3 setup.py develop
-fi
+# # Optionally install torchvision.
+# if [ -d "vision" ]; then
+#   cd vision
+#   python3 setup.py develop
+# fi
 
-# Install torch_xla
-cd ..
-cd pytorch/xla
-pip uninstall torch_xla -y
-python3 setup.py develop
+# # Install torch_xla
+# cd ..
+# cd pytorch/xla
+# pip uninstall torch_xla -y
+# python3 setup.py develop
 
 # libtpu is needed to talk to the TPUs. If TPUs are not present,
 # installing this wouldn't hurt either.
