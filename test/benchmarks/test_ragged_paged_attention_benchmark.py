@@ -25,7 +25,6 @@ if xr.device_type() == 'TPU':
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention, make_sequence_metadata, DEFAULT_MASK_VALUE
 
 
-
 def _ref_ragged_paged_attention(
     queries: jax.Array,  # [num_tokens, num_q_heads, head_dim]
     k_pages: jax.Array,  # [num_kv_heads, total_num_pages, page_size, head_dim]
@@ -90,8 +89,10 @@ def _ref_ragged_paged_attention(
 def _get_closest_of_multiple(x, base):
   return (x + base - 1) // base * base
 
+
 def _run_with_torch_xla(kernel):
   return "torch-xla" in kernel
+
 
 def benchmark(args):
   seq_lens = [
@@ -159,12 +160,16 @@ def benchmark(args):
   cu_q_lens = jnp.cumsum(jnp.array([0] + q_lens_with_paddings))
 
   if _run_with_torch_xla(args.kernel):
-    queries_xla = torch.from_numpy(np.array(queries)).to(torch.bfloat16).to("xla")
-    k_pages_xla = torch.from_numpy(np.array(k_pages)).to(torch.bfloat16).to("xla")
-    v_pages_xla = torch.from_numpy(np.array(v_pages)).to(torch.bfloat16).to("xla")
+    queries_xla = torch.from_numpy(np.array(queries)).to(
+        torch.bfloat16).to("xla")
+    k_pages_xla = torch.from_numpy(np.array(k_pages)).to(
+        torch.bfloat16).to("xla")
+    v_pages_xla = torch.from_numpy(np.array(v_pages)).to(
+        torch.bfloat16).to("xla")
     kv_lens_xla = torch.from_numpy(np.array(kv_lens_np)).to("xla")
     page_indices_xla = torch.from_numpy(np.array(page_indices)).to("xla")
     cu_q_lens_xla = torch.from_numpy(np.array(cu_q_lens)).to("xla")
+
     def ragged_paged_attention_wrapper(q, k_pages, v_pages, kv_lens,
                                        page_indices, cu_q_lens, num_seqs,
                                        num_kv_pages_per_block,
@@ -254,7 +259,9 @@ def benchmark(args):
   print("Warming up...")
   run_benchmark(num_iters=3)
 
-  print(f"Run benchmark with {num_queries_per_block=}, {num_kv_pages_per_block=} ...")
+  print(
+      f"Run benchmark with {num_queries_per_block=}, {num_kv_pages_per_block=} ..."
+  )
   latency = run_benchmark(num_iters=10)
   print(f"Kernel running time: {latency * 1000000:.3f} us")
 
