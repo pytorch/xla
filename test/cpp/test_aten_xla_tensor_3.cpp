@@ -1087,13 +1087,6 @@ TEST_F(AtenXlaTensorTest, TestAsStridedMultipleMismatchDimWithOffset) {
         torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
     AllClose(output, xla_output);
   });
-  for (auto& name : torch_xla::runtime::metrics::GetCounterNames()) {
-    std::cout << name << std::endl;
-  }
-  std::cout << std::endl;
-  for (auto& name : torch::lazy::GetCounterNames()) {
-    std::cout << name << std::endl;
-  }
   ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::take", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
@@ -1114,13 +1107,6 @@ TEST_F(AtenXlaTensorTest, TestAsStridedMultipleDimMismatch) {
         torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
     AllClose(output, xla_output);
   });
-  for (auto& name : torch_xla::runtime::metrics::GetCounterNames()) {
-    std::cout << name << std::endl;
-  }
-  std::cout << std::endl;
-  for (auto& name : torch::lazy::GetCounterNames()) {
-    std::cout << name << std::endl;
-  }
   ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::take", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
