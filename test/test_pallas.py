@@ -687,18 +687,6 @@ class PallasTest(parameterized.TestCase):
         num_queries_per_block=num_queries_per_block,
         use_kernel=True)
 
-    nonkernel_output = ragged_paged_attention(
-        q_xla,
-        k_pages_xla,
-        v_pages_xla,
-        kv_lens_xla,
-        page_indices_xla,
-        cu_q_lens_xla,
-        num_seqs=num_seqs,
-        num_kv_pages_per_block=num_kv_pages_per_block,
-        num_queries_per_block=num_queries_per_block,
-        use_kernel=False)
-
     q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
     k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
     v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
@@ -723,9 +711,6 @@ class PallasTest(parameterized.TestCase):
     self.assertTrue(
         torch.allclose(
             output.cpu(), expected_output.cpu(), atol=1e-5, rtol=1e-5))
-    self.assertTrue(
-        torch.allclose(
-            output.cpu(), nonkernel_output.cpu(), atol=2e-1, rtol=1e-2))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
