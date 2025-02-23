@@ -1,4 +1,5 @@
-# Usage: python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention-with-torch-xla
+# Usage: python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention-with-torch-xla-dynamo
+# python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention-with-torch-xla-nondynamo
 # python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention
 
 import argparse
@@ -188,8 +189,21 @@ def benchmark(args):
     start_time = time.perf_counter()
 
     for _ in range(num_iters):
-      if args.kernel == "ragged-paged-attention-with-torch-xla":
+      if args.kernel == "ragged-paged-attention-with-torch-xla-dynamo":
         compiled_paged_attention(
+            queries_xla,
+            k_pages_xla,
+            v_pages_xla,
+            kv_lens_xla,
+            page_indices_xla,
+            cu_q_lens_xla,
+            num_seqs,
+            num_queries_per_block=num_queries_per_block,
+            num_kv_pages_per_block=num_kv_pages_per_block,
+            use_kernel=True,
+        )
+      elif args.kernel == "ragged-paged-attention-with-torch-xla-nondynamo":
+        torch.ops.xla.ragged_paged_attention(
             queries_xla,
             k_pages_xla,
             v_pages_xla,
@@ -252,7 +266,8 @@ if __name__ == "__main__":
       type=str,
       choices=[
           "ragged-paged-attention",
-          "ragged-paged-attention-with-torch-xla",
+          "ragged-paged-attention-with-torch-xla-dynamo",
+          "ragged-paged-attention-with-torch-xla-nondynamo",
           "ragged-paged-attention-ref-impl",
       ],
       default="multi-queries-paged-attn")
