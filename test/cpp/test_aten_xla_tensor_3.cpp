@@ -1017,8 +1017,8 @@ TEST_F(AtenXlaTensorTest, TestAsStridedUseSlice) {
 TEST_F(AtenXlaTensorTest, TestAsStridedMismatchLastDimUseSlice) {
   torch::Tensor input =
       torch::rand({16, 32, 24}, torch::TensorOptions(torch::kFloat));
-  std::vector<int64_t> size = {16, 32}; // 16, 32, 24
-  std::vector<int64_t> stride = {768, 24}; // 768, 24, 1
+  std::vector<int64_t> size = {16, 32};
+  std::vector<int64_t> stride = {768, 24};
   torch::Tensor output =
       torch::as_strided(input, /*size=*/size, /*stride=*/stride);
   ForEachDevice([&](const torch::Device& device) {
@@ -1051,8 +1051,6 @@ TEST_F(AtenXlaTensorTest, TestAsStridedMismatchMiddleDimUseSlice) {
   ExpectCounterNotChanged("xla::take", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
 }
-
-
 
 TEST_F(AtenXlaTensorTest, TestAsStridedMismatchDimWithOffset) {
   torch::lazy::MetricsArena::Get()->ResetMetrics();

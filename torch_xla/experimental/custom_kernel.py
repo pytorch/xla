@@ -337,7 +337,7 @@ def fa_custom_forward(
     # https://github.com/pytorch/xla/issues/8683 is fixed
 
     # l, m = aux[-2:]
-    # l = torch.ops.aten.slice(l, -1, 0, 1) 
+    # l = torch.ops.aten.slice(l, -1, 0, 1)
     # m = torch.ops.aten.slice(m, -1, 0, 1)
 
   # SPMD integration

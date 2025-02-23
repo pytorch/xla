@@ -879,10 +879,9 @@ at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
   return out;
 }
 
-
 at::Tensor XLANativeFunctions::as_strided_copy(
-  const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
-  std::optional<int64_t> storage_offset) {
+    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    std::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_CHECK(size.size() == stride.size())
       << "mismatch in length of size and stride";
@@ -900,7 +899,9 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   // In theory we can shuffle element in `stride` and `size` and this can result
   //   in the transpose of dimensions, but we don't consider this case here.
   auto tensor_dim = tensor.sizes();
-  if ((tensor_dim.size() == stride.size() || tensor_dim.size() == stride.size()+1) && (!storage_offset.has_value() || (*storage_offset) == 0)){
+  if ((tensor_dim.size() == stride.size() ||
+       tensor_dim.size() == stride.size() + 1) &&
+      (!storage_offset.has_value() || (*storage_offset) == 0)) {
     bool can_replace = true;
     // find the dim that we either skip or slice on based on stride
     long l = tensor_dim.size();
@@ -908,12 +909,13 @@ at::Tensor XLANativeFunctions::as_strided_copy(
     long skip_dim = -1;
     int K = 0;
     // check `stride`
-    for (long i = l - 1, j = std::min(i, (long)stride.size()-1); j >= 0 ; i--, j--) {
+    for (long i = l - 1, j = std::min(i, (long)stride.size() - 1); j >= 0;
+         i--, j--) {
       if (stride_mul != stride[j]) {
         if (skip_dim == -1) {
           skip_dim = i;
           K = stride[j] / stride_mul;
-          if (tensor_dim.size() == stride.size()+1) {
+          if (tensor_dim.size() == stride.size() + 1) {
             // tensor_dim and strict element can potentially shift by one.
             j++;
           }
@@ -926,22 +928,22 @@ at::Tensor XLANativeFunctions::as_strided_copy(
       stride_mul *= tensor_dim[i];
     }
 
-    if (can_replace && tensor_dim.size() == stride.size()+1 ) {
-      for (long i=0,j=0; i<size.size(); i++, j++) {
-        if (i==skip_dim) {
+    if (can_replace && tensor_dim.size() == stride.size() + 1) {
+      for (long i = 0, j = 0; i < size.size(); i++, j++) {
+        if (i == skip_dim) {
           j++;
         } else {
-          if (size[i]!=tensor_dim[j]) {
+          if (size[i] != tensor_dim[j]) {
             can_replace = false;
             break;
           }
         }
-
       }
       if (can_replace) {
-        return bridge::AtenFromXlaTensor(
-          tensor_methods::squeeze(
-            tensor_methods::slice(bridge::GetXlaTensor(tensor), skip_dim, 0, 1, 1), skip_dim));
+        return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
+            tensor_methods::slice(bridge::GetXlaTensor(tensor), skip_dim, 0, 1,
+                                  1),
+            skip_dim));
       }
 
     } else if (can_replace && tensor_dim.size() == stride.size()) {
@@ -960,11 +962,14 @@ at::Tensor XLANativeFunctions::as_strided_copy(
       if (can_replace) {
         if (reduce_size_location != -1) {
           if (skip_dim != -1) {
-            if (skip_dim != reduce_size_location || size[reduce_size_location] * K > tensor_dim[reduce_size_location]) {
+            if (skip_dim != reduce_size_location ||
+                size[reduce_size_location] * K >
+                    tensor_dim[reduce_size_location]) {
               can_replace = false;
             }
           } else {
-            // we have one dim size reduced but without any step jump regarding stride.
+            // we have one dim size reduced but without any step jump regarding
+            // stride.
             K = 1;
           }
         } else {
@@ -974,9 +979,9 @@ at::Tensor XLANativeFunctions::as_strided_copy(
       }
 
       if (can_replace) {
-        return bridge::AtenFromXlaTensor(
-            tensor_methods::slice(bridge::GetXlaTensor(tensor), reduce_size_location, 0,
-                                  size[reduce_size_location] * K, K));
+        return bridge::AtenFromXlaTensor(tensor_methods::slice(
+            bridge::GetXlaTensor(tensor), reduce_size_location, 0,
+            size[reduce_size_location] * K, K));
       }
     }
   }
