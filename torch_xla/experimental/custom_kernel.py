@@ -765,6 +765,139 @@ def _ragged_paged_attention_nonkernel(
   return output
 
 
+# https://github.com/jax-ml/jax/blob/9fb29766a2130e74a85cba30420cf777d185ea5a/jax/experimental/pallas/ops/tpu/megablox/gmm.py#L79
+def _make_sequence_metadata(
+    *,
+    cu_q_lens: torch.Tensor,
+    m: int,
+    tm: int,
+    start_sequence: torch.Tensor,
+    num_sequences: int,
+):
+  """Create the metadata needed for ragged paged attention computation.
+
+  Args:
+    cu_q_lens: : A 1d, jnp.ndarray with shape [num_seqs+1] and jnp.int32 dtype.
+      The cumulative query lengths.
+    m: The number of query tokens.
+    tm: The m-dimension tile size being used.
+    start_sequence: The sequence in cu_q_lens to start computing from. This is useful for when num_seqs is sharded.
+    num_sequences: The number of sequences to compute on.
+
+  Returns:
+    tuple of:
+      seq_ids: A 1d, jnp.ndarray with shape [m_tiles + num_seqs] and
+        jnp.int32 dtype. seq_ids[i] indicates which sequence the grid index (num_logical_tiles_q) will work on.
+      physical_q_tile_ids: A 1d, jnp.ndarray with shape [m_tiles + num_seqs] and
+        jnp.int32. physical_q_tile_ids[i] indicates which query-dim physical tile the grid index (num_logical_tiles_q) will work on.
+
+    num_logical_q_tiles: The number of query-dim logical tiles to execute.
+  """
+  device = cu_q_lens.device
+
+  end_sequence = start_sequence + num_sequences - 1
+
+  # We need the offset of each sequence from input, starting at zero. This metadata is
+  # similar to row offsets in a CSR matrix. The following properties hold:
+  #
+  # sequence_offsets.shape = [num_sequences + 1]
+  # sequence_offsets[0] = 0
+  # sequence_offsets[num_sequences] = m
+  #
+  # The row at which sequence 'i' starts is sequence_offsets[i].
+  sequence_ends = cu_q_lens[1:]
+  sequence_offsets = cu_q_lens
+
+  # Assign a sequence id to each grid index. The grid index refers to the logical q tile index.
+  #
+  # If a sequence starts somewhere other than the start of a tile or ends somewhere
+  # other than the end of a tile we need to compute that full tile. Calculate
+  # the number of tiles for each sequence by rounding their end up to the nearest
+  # 'tm' and their start down to the nearest 'tm'.
+
+  # (1) Round the sequence_ends up to the nearest multiple of 'tm'.
+  #
+  # NOTE: This does not change sequence_offsets[num_sequences], which is m
+  # (because we enforce m is divisible by tm).
+  rounded_sequence_ends = ((sequence_ends + tm - 1) // tm * tm).to(torch.int32)
+
+  # (2) Round the sequence_starts down to the nearest multiple of 'tm'.
+  sequence_starts = torch.cat(
+      [torch.zeros(1, dtype=torch.int32).to(device), sequence_ends[:-1]])
+  rounded_sequence_starts = sequence_starts // tm * tm
+
+  # (3) Calculate the number of rows in each sequence.
+  rounded_sequence_sizes = rounded_sequence_ends - rounded_sequence_starts
+
+  # (4) Convert the sequence sizes from units of rows to unit of 'tm' sized tiles.
+  #
+  # An m-dimension tile is 'owned' by sequence 'i' if the first row of the tile
+  # belongs to sequence 'i'. In addition to owned tiles, each sequence can have 0 or 1
+  # initial partial tiles if it's first row does not occur in the first row of a
+  # tile. The '0-th' sequence never has a partial tile because it always starts at
+  # the 0-th row.
+  #
+  # If no sequence has a partial tile, the total number of tiles is equal to
+  # 'm // tm'. If every sequence has a partial except the 0-th sequence, the total
+  # number of tiles is equal to 'm // tm + num_sequences - 1'. Thus we know that
+  #
+  # tiles_m <= sequence_tiles.sum() <= tiles_m + num_sequences - 1
+  #
+  # Where tiles_m = m // tm.
+  #
+  # NOTE: All sequence sizes are divisible by 'tm' because of the rounding in steps
+  # (1) and (2) so this division is exact.
+  sequence_tiles = rounded_sequence_sizes // tm
+
+  # Create the sequence ids for each grid index based on the tile counts for each
+  # sequence.
+  #
+  # NOTE: This repeat(...) will pad sequence_ids with the final sequence id if
+  # sequence_tiles.sum() < tiles_m + num_sequences - 1. The kernel grid will be sized
+  # such that we only execute the necessary number of tiles.
+  tiles_m = _calculate_num_tiles(m, tm)
+  sequence_ids = repeat_with_fixed_output_size(
+      torch.arange(num_sequences, dtype=torch.int32).to(device),
+      sequence_tiles[:num_sequences],
+      total_repeat_length=tiles_m + num_sequences - 1,
+  )
+
+  # Assign an m-dimension tile id to each grid index.
+  #
+  # NOTE: Output tiles can only be re-visited consecutively. The following
+  # procedure guarantees that m-dimension tile indices respect this.
+
+  # (1) Calculate how many times each m-dimension tile will be visited.
+  #
+  # Each tile is guaranteed to be visited once by the sequence that owns the tile.
+  # The remaining possible visits occur when a sequence starts inside of a tile at
+  # a position other than the first row. We can calculate which m-dimension tile
+  # each sequence starts in by floor-dividing its offset with `tm` and then count
+  # tile visits with a histogram.
+  #
+  # To avoid double counting tile visits from the sequence that owns the tile,
+  # filter these out by assigning their tile id to `tile_m` (one beyond the max)
+  # such that they're ignored by the subsequent histogram.
+  #
+  partial_tile_mask = ((sequence_offsets[:-1] % tm) == 0)
+
+  partial_tile_ids = torch.where(partial_tile_mask, tiles_m,
+                                 sequence_offsets[:-1] // tm)
+
+  tile_visits = (_histogram(partial_tile_ids, min=0, max=tiles_m - 1) + 1)
+
+  # Create the m-dimension tile ids for each grid index based on the visit
+  # counts for each tile.
+  m_tile_ids = repeat_with_fixed_output_size(
+      torch.arange(tiles_m, dtype=torch.int32).to(device),
+      tile_visits,
+      total_repeat_length=tiles_m + num_sequences - 1,
+  )
+  num_tiles = sequence_tiles[:num_sequences].sum(dtype=torch.int32)
+  return (sequence_ids, m_tile_ids
+         ), num_tiles  # (seq_ids, physical_q_tile_ids), num_logical_q_tiles
+
+
 @requires_jax
 def ragged_paged_attention(
     q,  # [num_tokens, num_q_heads, head_dim]
@@ -794,7 +927,7 @@ def ragged_paged_attention(
 
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
-  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as ragged_attention, make_sequence_metadata
+  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as ragged_attention
   payload, tensor_args = trace_pallas(
       ragged_attention,
       q,
@@ -814,47 +947,44 @@ def ragged_paged_attention(
       ],
   )
 
-  sequence_metadata, num_logical_q_tiles = make_sequence_metadata(
-      cu_q_lens=cu_q_lens.cpu().numpy(),
+  q_device = q.device
+  sequence_metadata, num_logical_q_tiles = _make_sequence_metadata(
+      cu_q_lens=cu_q_lens,
       m=q.shape[0],
       tm=num_queries_per_block,
-      # TODO(jevinjiang, xiowei): pass start_sequence as input.
-      start_sequence=torch.tensor([0]).cpu().numpy(),
+      start_sequence=torch.tensor([0], dtype=torch.int32).to(q_device),
       num_sequences=num_seqs,
   )
+  # print(f'xw32 {num_logical_q_tiles=}')
   assert len(sequence_metadata) == 2
-  sequence_ids = torch.tensor(
-      sequence_metadata[0].tolist(), dtype=torch.int32).to("xla")
-  m_tile_ids = torch.tensor(
-      sequence_metadata[1].tolist(), dtype=torch.int32).to("xla")
-  num_q_tiles = torch.tensor(
-      num_logical_q_tiles.tolist(), dtype=torch.int32).to("xla")
+  sequence_ids, m_tile_ids = sequence_metadata
 
   q_dtype_for_kernel_launch = q.dtype
   page_indices_expanded = torch.unsqueeze(page_indices, 1)
-  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
-  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  buffer_index = torch.zeros((1,), dtype=torch.int32).to(q_device)
+  step = torch.zeros((1,), dtype=torch.int32).to(q_device)
   # The jax checkify in ragged paged attention kernel will insert several scalar refs to both inputs
   # (end of prefetch) and outputs (begining of the original outputs).
   # TODO(jevinjiang, xiowei): consider seperate checkify from kernel!
-  s1 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  s2 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  s3 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  s4 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
+  s1 = torch.zeros((1, 1), dtype=torch.int32).to(q_device)
+  s2 = torch.zeros((1, 1), dtype=torch.int32).to(q_device)
+  s3 = torch.zeros((1, 1), dtype=torch.int32).to(q_device)
+  s4 = torch.zeros((1, 1), dtype=torch.int32).to(q_device)
   q = q.permute(1, 0, 2)
   MIN_BLOCK_SIZE = 128
   output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
-  num_q_tiles_1d = torch.tensor([num_logical_q_tiles.tolist()],
-                                dtype=torch.int32).to("xla")
+  # num_logical_q_tiles_1d = torch.tensor([num_logical_q_tiles],
+  #                               dtype=torch.int32).to(q_device)
+  num_logical_q_tiles_1d = num_logical_q_tiles.unsqueeze(0)
 
   # TODO(jevinjiang, xiowei): check err returned by checkify! And add tests.
   _, _, _, _, output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
       [
-          num_q_tiles,
+          num_logical_q_tiles,
           sequence_ids,
           m_tile_ids,
-          # Need num_q_tiles_1d to work around a Mosaic internal error.
-          num_q_tiles_1d,
+          # Need num_logical_q_tiles_1d to work around a Mosaic internal error.
+          num_logical_q_tiles_1d,
           kv_lens,
           cu_q_lens,
           buffer_index,
