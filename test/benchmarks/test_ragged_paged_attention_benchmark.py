@@ -1,20 +1,28 @@
-# Usage: python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention
+# Usage: python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention-with-torch-xla-dynamo
+# python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention-with-torch-xla-nondynamo
+# python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention
 
 import argparse
 import time
 from typing import List, Optional, Tuple
 import functools
+import os
+import sys
 
 import torch
-import torch_xla
+import torch_xla.debug.profiler as xp
+import torch_xla.experimental.custom_kernel  # Required to register custom ops.
 import torch_xla.core.xla_model as xm
-import jax
-from jax._src import test_util as jtu
-from jax.experimental.pallas.ops.tpu.paged_attention.paged_attention_kernel import paged_attention as jax_single_query_paged_attention
-import jax.numpy as jnp
+from torch_xla import runtime as xr
 import numpy as np
 
-from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention, make_sequence_metadata, DEFAULT_MASK_VALUE
+if xr.device_type() == 'TPU':
+  from torch_xla.experimental.custom_kernel import jax_import_guard
+  jax_import_guard()
+  import jax
+  import jax.numpy as jnp
+  from jax.experimental import pallas as pl
+  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention, make_sequence_metadata, DEFAULT_MASK_VALUE
 
 
 def _ref_ragged_paged_attention(
@@ -78,10 +86,12 @@ def _ref_ragged_paged_attention(
   return jnp.concatenate(outputs, axis=0)
 
 
-def _get_closest_power_of_two(x):
-  if x <= 0:
-    raise ValueError(f"x must be positive. Got {x}")
-  return 2**int(np.ceil(np.log2(x)))
+def _get_closest_of_multiple(x, base):
+  return (x + base - 1) // base * base
+
+
+def _run_with_torch_xla(kernel):
+  return "torch-xla" in kernel
 
 
 def benchmark(args):
@@ -103,15 +113,13 @@ def benchmark(args):
   dtype = jnp.float32
   page_size = 16
   num_pages = 32768
-  num_queries_per_block = 128
+  num_queries_per_block = args.num_queries_per_block
+  num_kv_pages_per_block = args.num_kv_pages_per_block
 
   num_seqs = len(seq_lens)
   for i in range(num_seqs):
     cur_q_len = seq_lens[i][0]
     cur_kv_len = seq_lens[i][1]
-    # Make sure the q_len is no longer than the kv_len. For example,
-    # seq_lens = [(1, 1328), (5, 18), (506, 463)] is not a valid test case because
-    # the 3rd sequence has q_len(506) > kv_len(463).
     assert cur_q_len <= cur_kv_len, f"cur_q_len must be less than or equal to cur_kv_len. Got {cur_q_len} and {cur_kv_len}"
 
   query_lens = [seq_len[0] for seq_len in seq_lens]
@@ -140,7 +148,8 @@ def benchmark(args):
   max_num_pages_per_seq = (max_kv_len + page_size - 1) // page_size
   # The reason why we need to pad max_num_pages_per_seq is that
   # page_indices[1]=max_num_pages_per_seq and max_num_pages_per_seq%num_kv_pages_per_compute_block==0
-  max_num_pages_per_seq = _get_closest_power_of_two(max_num_pages_per_seq)
+  max_num_pages_per_seq = _get_closest_of_multiple(max_num_pages_per_seq,
+                                                   num_kv_pages_per_block)
   page_indices = jax.random.randint(
       k4, (num_q_tokens, max_num_pages_per_seq), 0, num_pages, dtype=jnp.int32)
 
@@ -150,28 +159,68 @@ def benchmark(args):
     q_lens_with_paddings[i] = query_lens[i]
   cu_q_lens = jnp.cumsum(jnp.array([0] + q_lens_with_paddings))
 
-  err, actual_output = ragged_paged_attention(
-      queries,
-      k_pages,
-      v_pages,
-      kv_lens_np,
-      page_indices,
-      cu_q_lens,
-      num_seqs,
-      num_queries_per_block=num_queries_per_block,
-  )
-  err.throw()  # noop if there is no error.
-  actual_output = jax.block_until_ready(actual_output)
-  profile_path = "/workspaces/persist/myprofiles/plugins/profile"
+  if _run_with_torch_xla(args.kernel):
+    queries_xla = torch.from_numpy(np.array(queries)).to(
+        torch.bfloat16).to("xla")
+    k_pages_xla = torch.from_numpy(np.array(k_pages)).to(
+        torch.bfloat16).to("xla")
+    v_pages_xla = torch.from_numpy(np.array(v_pages)).to(
+        torch.bfloat16).to("xla")
+    kv_lens_xla = torch.from_numpy(np.array(kv_lens_np)).to("xla")
+    page_indices_xla = torch.from_numpy(np.array(page_indices)).to("xla")
+    cu_q_lens_xla = torch.from_numpy(np.array(cu_q_lens)).to("xla")
 
-  def run_benchmark(num_iters: int, profile: bool = False) -> float:
+    def ragged_paged_attention_wrapper(q, k_pages, v_pages, kv_lens,
+                                       page_indices, cu_q_lens, num_seqs,
+                                       num_kv_pages_per_block,
+                                       num_queries_per_block, use_kernel):
+      return torch.ops.xla.ragged_paged_attention(
+          q,
+          k_pages,
+          v_pages,
+          kv_lens,
+          page_indices,
+          cu_q_lens,
+          num_seqs,
+          num_kv_pages_per_block,
+          num_queries_per_block,
+          use_kernel=use_kernel,
+      )
+
+    compiled_paged_attention = torch.compile(
+        ragged_paged_attention_wrapper, backend="openxla")
+
+  def run_benchmark(num_iters: int) -> float:
     start_time = time.perf_counter()
-    if profile:
-      jax.profiler.start_trace(profile_path)
 
-    actual_output = None
     for _ in range(num_iters):
-      if args.kernel == "ragged-paged-attention":
+      if args.kernel == "ragged-paged-attention-with-torch-xla-dynamo":
+        compiled_paged_attention(
+            queries_xla,
+            k_pages_xla,
+            v_pages_xla,
+            kv_lens_xla,
+            page_indices_xla,
+            cu_q_lens_xla,
+            num_seqs,
+            num_queries_per_block=num_queries_per_block,
+            num_kv_pages_per_block=num_kv_pages_per_block,
+            use_kernel=True,
+        )
+      elif args.kernel == "ragged-paged-attention-with-torch-xla-nondynamo":
+        torch.ops.xla.ragged_paged_attention(
+            queries_xla,
+            k_pages_xla,
+            v_pages_xla,
+            kv_lens_xla,
+            page_indices_xla,
+            cu_q_lens_xla,
+            num_seqs,
+            num_queries_per_block=num_queries_per_block,
+            num_kv_pages_per_block=num_kv_pages_per_block,
+            use_kernel=True,
+        )
+      elif args.kernel == "ragged-paged-attention":
         err, actual_output = ragged_paged_attention(
             queries,
             k_pages,
@@ -180,6 +229,8 @@ def benchmark(args):
             page_indices,
             cu_q_lens,
             num_seqs,
+            num_queries_per_block=num_queries_per_block,
+            num_kv_pages_per_block=num_kv_pages_per_block,
         )
         err.throw()
       elif args.kernel == "ragged-paged-attention-ref-impl":
@@ -195,22 +246,23 @@ def benchmark(args):
       else:
         assert False, f"Invalid kernel name {args.kernel}"
 
-    jax.block_until_ready(actual_output)
+    if _run_with_torch_xla(args.kernel):
+      xm.mark_step()
+      xm.wait_device_ops()
+    else:
+      jax.block_until_ready(actual_output)
 
     end_time = time.perf_counter()
-    if profile:
-      jax.profiler.stop_trace()
     return (end_time - start_time) / num_iters
 
   # Warmup.
   print("Warming up...")
-  run_benchmark(num_iters=3, profile=False)
+  run_benchmark(num_iters=3)
 
-  print("Run benchmark...")
-  if args.profile:
-    latency = run_benchmark(num_iters=1, profile=True)
-  else:
-    latency = run_benchmark(num_iters=10, profile=False)
+  print(
+      f"Run benchmark with {num_queries_per_block=}, {num_kv_pages_per_block=} ..."
+  )
+  latency = run_benchmark(num_iters=10)
   print(f"Kernel running time: {latency * 1000000:.3f} us")
 
 
@@ -221,9 +273,13 @@ if __name__ == "__main__":
       type=str,
       choices=[
           "ragged-paged-attention",
+          "ragged-paged-attention-with-torch-xla-dynamo",
+          "ragged-paged-attention-with-torch-xla-nondynamo",
           "ragged-paged-attention-ref-impl",
       ],
       default="multi-queries-paged-attn")
-  parser.add_argument("--profile", action="store_true")
+  parser.add_argument("--num-queries-per-block", type=int, default=128)
+  parser.add_argument("--num-kv-pages-per-block", type=int, default=128)
   args = parser.parse_args()
+
   benchmark(args)
