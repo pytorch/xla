@@ -764,6 +764,7 @@ def _ragged_paged_attention_nonkernel(
   output = torch.cat(outputs, dim=0)  # [num_tokens, num_query_heads, head_dim]
   return output
 
+
 # https://github.com/jax-ml/jax/blob/9fb29766a2130e74a85cba30420cf777d185ea5a/jax/experimental/pallas/ops/tpu/megablox/gmm.py#L79
 def _make_sequence_metadata(
     *,
@@ -881,20 +882,21 @@ def _make_sequence_metadata(
   partial_tile_mask = ((sequence_offsets[:-1] % tm) == 0)
 
   partial_tile_ids = torch.where(partial_tile_mask, tiles_m,
-                               sequence_offsets[:-1] // tm)
+                                 sequence_offsets[:-1] // tm)
 
   tile_visits = (_histogram(partial_tile_ids, min=0, max=tiles_m - 1) + 1)
 
   # Create the m-dimension tile ids for each grid index based on the visit
   # counts for each tile.
   m_tile_ids = repeat_with_fixed_output_size(
-      torch.arange(tiles_m, dtype=torch.int32).to(device), 
+      torch.arange(tiles_m, dtype=torch.int32).to(device),
       tile_visits,
       total_repeat_length=tiles_m + num_sequences - 1,
   )
-  num_tiles = sequence_tiles.sum(dtype=torch.int32)
+  num_tiles = sequence_tiles[:num_sequences].sum(dtype=torch.int32)
   return (sequence_ids, m_tile_ids
          ), num_tiles  # (seq_ids, physical_q_tile_ids), num_logical_q_tiles
+
 
 @requires_jax
 def ragged_paged_attention(
@@ -926,7 +928,6 @@ def ragged_paged_attention(
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as ragged_attention
-  import pdb; pdb.set_trace()
   payload, tensor_args = trace_pallas(
       ragged_attention,
       q,
@@ -954,6 +955,7 @@ def ragged_paged_attention(
       start_sequence=torch.tensor([0], dtype=torch.int32).to(q_device),
       num_sequences=num_seqs,
   )
+  # print(f'xw32 {num_logical_q_tiles=}')
   assert len(sequence_metadata) == 2
   sequence_ids, m_tile_ids = sequence_metadata
 
