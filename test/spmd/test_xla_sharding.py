@@ -1421,6 +1421,60 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertIn("Data Shape: c64[2048,8]\n  OpSharding: {replicated}",
                   torch_xla._XLAC._get_xla_tensor_debug_info(freqs_cis))
 
+  def test_xla_patched_linear(self):
+    """
+    Test the numerical accuracy of XLAPatchedLinear.
+    """
+
+    from torch_xla.distributed.spmd.xla_sharding import XLAPatchedLinear
+    import torch_xla.runtime
+    import torch.nn.functional as F
+
+    with torch_xla.runtime.xla_device():
+      torch_xla.manual_seed(42)
+      x0 = torch.randn(2, 3, requires_grad=True)
+      w0 = torch.randn(4, 3, requires_grad=True)
+      b0 = torch.randn(4, requires_grad=True)
+      torch_xla.sync()
+
+    # Run `XLAPatchedLinear`.
+
+    x = x0.clone().detach().requires_grad_()
+    w = w0.clone().detach().requires_grad_()
+    b = b0.clone().detach().requires_grad_()
+
+    y = XLAPatchedLinear.apply(x, w, b)
+    assert y is not None
+    loss = y.sum()
+    loss.backward()
+    torch_xla.sync()
+
+    assert x.grad is not None
+    assert w.grad is not None
+    assert b.grad is not None
+    y1, xg1, wg1, bg1 = y.clone().detach(), x.grad.clone().detach(
+    ), w.grad.clone().detach(), b.grad.clone().detach()
+
+    # Compare with `F.linear`.
+
+    x = x0.clone().detach().requires_grad_()
+    w = w0.clone().detach().requires_grad_()
+    b = b0.clone().detach().requires_grad_()
+
+    y = F.linear(x, w, b)
+    loss = y.sum()
+    loss.backward()
+
+    assert x.grad is not None
+    assert w.grad is not None
+    assert b.grad is not None
+    y2, xg2, wg2, bg2 = y.clone().detach(), x.grad.clone().detach(
+    ), w.grad.clone().detach(), b.grad.clone().detach()
+    torch.testing.assert_close(y1, y2)
+    torch.testing.assert_close(xg1, xg2)
+    torch.testing.assert_close(wg1, wg2)
+    torch.testing.assert_close(bg1, bg2)
+
 
 if __name__ == '__main__':
   test = unittest.main()
