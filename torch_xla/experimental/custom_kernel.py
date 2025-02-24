@@ -926,6 +926,7 @@ def ragged_paged_attention(
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as ragged_attention
+  import pdb; pdb.set_trace()
   payload, tensor_args = trace_pallas(
       ragged_attention,
       q,
@@ -970,8 +971,9 @@ def ragged_paged_attention(
   q = q.permute(1, 0, 2)
   MIN_BLOCK_SIZE = 128
   output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
-  num_logical_q_tiles_1d = torch.tensor([num_logical_q_tiles],
-                                dtype=torch.int32).to(q_device)
+  # num_logical_q_tiles_1d = torch.tensor([num_logical_q_tiles],
+  #                               dtype=torch.int32).to(q_device)
+  num_logical_q_tiles_1d = num_logical_q_tiles.unsqueeze(0)
 
   # TODO(jevinjiang, xiowei): check err returned by checkify! And add tests.
   _, _, _, _, output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
