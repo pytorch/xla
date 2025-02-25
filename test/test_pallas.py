@@ -20,6 +20,7 @@ if xr.device_type() == 'TPU':
   import jax.numpy as jnp
   from jax.experimental import pallas as pl
 
+
 def with_jax_high_precision(func):
 
   def wrapper(*args, **kwargs):
@@ -111,7 +112,9 @@ class PallasTest(parameterized.TestCase):
 
     query_lens = [seq_len[0] for seq_len in seq_lens]
     actual_num_q_tokens = sum(query_lens)
-    num_q_tokens = self._round_up_closest_multiple_of(actual_num_q_tokens, num_queries_per_block) if pad_num_q_tokens else actual_num_q_tokens
+    num_q_tokens = self._round_up_closest_multiple_of(
+        actual_num_q_tokens,
+        num_queries_per_block) if pad_num_q_tokens else actual_num_q_tokens
     kv_lens = torch.tensor([seq_len[1] for seq_len in seq_lens],
                            dtype=torch.int32)
     num_q_heads = num_heads[0]
@@ -746,7 +749,14 @@ class PallasTest(parameterized.TestCase):
   ):
     num_seqs = len(seq_lens)
     q, k_pages, v_pages, page_indices, cu_q_lens, kv_lens = self._ragged_pagedattention_generate_qkv(
-        seq_lens, num_heads, head_dim, page_size, num_pages, dtype=dtype, num_queries_per_block=num_queries_per_block, pad_num_q_tokens=pad_num_q_tokens)
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype=dtype,
+        num_queries_per_block=num_queries_per_block,
+        pad_num_q_tokens=pad_num_q_tokens)
 
     q_xla = q.to("xla")
     k_pages_xla = k_pages.to("xla")
@@ -829,15 +839,20 @@ class PallasTest(parameterized.TestCase):
             )[1]))
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 
-
     if pad_num_q_tokens:
       actual_num_q_tokens = cu_q_lens[num_seqs]
       self.assertTrue(
           torch.allclose(
-              kernel_output_cpu[:actual_num_q_tokens], nonkernel_output_cpu[:actual_num_q_tokens], atol=2e-1, rtol=1e-2))
+              kernel_output_cpu[:actual_num_q_tokens],
+              nonkernel_output_cpu[:actual_num_q_tokens],
+              atol=2e-1,
+              rtol=1e-2))
       self.assertTrue(
           torch.allclose(
-              kernel_output_cpu[:actual_num_q_tokens], jax_kernel_output_cpu[:actual_num_q_tokens], atol=2e-1, rtol=1e-2))
+              kernel_output_cpu[:actual_num_q_tokens],
+              jax_kernel_output_cpu[:actual_num_q_tokens],
+              atol=2e-1,
+              rtol=1e-2))
     else:
       self.assertTrue(
           torch.allclose(
@@ -845,7 +860,7 @@ class PallasTest(parameterized.TestCase):
       self.assertTrue(
           torch.allclose(
               kernel_output_cpu, jax_kernel_output_cpu, atol=2e-1, rtol=1e-2))
-    
+
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_ragged_paged_attention_wrapper_no_query_padding_with_dynamo(self):
@@ -867,16 +882,16 @@ class PallasTest(parameterized.TestCase):
     dtype = torch.float32
     page_size = 16
     num_pages = 32768
-    
+
     self._verify_ragged_paged_attention_with_dynamo(
-      seq_lens,
-      num_heads,
-      head_dim,
-      page_size,
-      num_pages,
-      dtype,
-      num_kv_pages_per_block=128,
-      num_queries_per_block=8,
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype,
+        num_kv_pages_per_block=128,
+        num_queries_per_block=8,
     )
 
   @parameterized.product(
@@ -886,26 +901,26 @@ class PallasTest(parameterized.TestCase):
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
   def test_ragged_paged_attention_wrapper_with_query_padding_with_dynamo(
-    self,
-    seq_lens,
-    num_queries_per_block,
+      self,
+      seq_lens,
+      num_queries_per_block,
   ):
     num_heads = (4, 4)
     head_dim = 128
     dtype = torch.float32
     page_size = 16
     num_pages = 32768
-    
+
     self._verify_ragged_paged_attention_with_dynamo(
-      seq_lens,
-      num_heads,
-      head_dim,
-      page_size,
-      num_pages,
-      dtype,
-      num_kv_pages_per_block=128,
-      num_queries_per_block=num_queries_per_block,
-      pad_num_q_tokens=True,
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype,
+        num_kv_pages_per_block=128,
+        num_queries_per_block=num_queries_per_block,
+        pad_num_q_tokens=True,
     )
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,

@@ -77,7 +77,9 @@ def _ref_ragged_paged_attention(
   actual_num_tokens = cu_q_lens[num_seqs]
   if actual_num_tokens < maybe_padded_num_q_tokens:
     num_tokens_diff = maybe_padded_num_q_tokens - actual_num_tokens
-    outputs.append(jnp.zeros((num_tokens_diff, num_q_heads, head_dim)).astype(outputs[0].dtype))
+    outputs.append(
+        jnp.zeros(
+            (num_tokens_diff, num_q_heads, head_dim)).astype(outputs[0].dtype))
   return jnp.concatenate(outputs, axis=0)
 
 
@@ -107,7 +109,9 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
     query_lens = [seq_len[0] for seq_len in seq_lens]
     actual_num_q_tokens = sum(query_lens)
     # Caller(eg vLLM) may decide to pad the num_q_tokens.
-    num_q_tokens = self._round_up_closest_multiple_of(actual_num_q_tokens, num_queries_per_block) if pad_num_q_tokens else actual_num_q_tokens
+    num_q_tokens = self._round_up_closest_multiple_of(
+        actual_num_q_tokens,
+        num_queries_per_block) if pad_num_q_tokens else actual_num_q_tokens
     kv_lens = jnp.array([seq_len[1] for seq_len in seq_lens])
     num_q_heads = num_heads[0]
     num_kv_heads = num_heads[1]
@@ -194,11 +198,14 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
       self.fail(f'Unsupported dtype: {dtype}')
     if pad_num_q_tokens:
       self.assertTrue(
-          jnp.allclose(actual_output[:actual_num_q_tokens], expected_output[:actual_num_q_tokens], atol=atol, rtol=rtol))
+          jnp.allclose(
+              actual_output[:actual_num_q_tokens],
+              expected_output[:actual_num_q_tokens],
+              atol=atol,
+              rtol=rtol))
     else:
       self.assertTrue(
           jnp.allclose(actual_output, expected_output, atol=atol, rtol=rtol))
-
 
   def _round_up_closest_multiple_of(self, x, base):
     return (x + base - 1) // base * base
@@ -270,19 +277,19 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
       num_queries_per_block=[16, 64, 128],
   )
   def test_paged_attention_varlen_with_padding_comprehensive(
-    self,
-    num_heads: Tuple[int, int],
-    head_dim: int,
-    dtype,
-    page_size: int,
-    num_pages: int,
-    num_queries_per_block: int,
+      self,
+      num_heads: Tuple[int, int],
+      head_dim: int,
+      dtype,
+      page_size: int,
+      num_pages: int,
+      num_queries_per_block: int,
   ):
     if jtu.is_device_tpu(version=4) and head_dim == 256 and page_size == 32:
       self.skipTest(
           "TPU v4 has small VMEM. It will run into VMEM OOM. Skip the test.")
     # If num_queries_per_block is 128, then num_tokens will be pad 6 to be the smallest multiple of 128.
-    seq_lens=[(1, 1328), (5, 18), (500, 563)]
+    seq_lens = [(1, 1328), (5, 18), (500, 563)]
     self._verify_ragged_paged_attention(
         seq_lens,
         num_heads,
@@ -294,7 +301,6 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
         num_kv_pages_per_block=128,
         pad_num_q_tokens=True,
     )
-
 
   def test_paged_attention_mix_prefill_and_decode1(self,):
     # assuming q_blk_size=128

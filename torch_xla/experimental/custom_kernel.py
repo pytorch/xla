@@ -766,7 +766,10 @@ def _ragged_paged_attention_nonkernel(
   actual_num_tokens = cu_q_lens[num_seqs]
   if actual_num_tokens < maybe_padded_num_q_tokens:
     num_tokens_diff = maybe_padded_num_q_tokens - actual_num_tokens
-    outputs.append(torch.zeros((num_tokens_diff, num_q_heads, head_dim), dtype=queries[0].dtype, device=queries.device))
+    outputs.append(
+        torch.zeros((num_tokens_diff, num_q_heads, head_dim),
+                    dtype=queries[0].dtype,
+                    device=queries.device))
   return torch.cat(outputs, dim=0)  # [num_tokens, num_query_heads, head_dim]
 
 
