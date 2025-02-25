@@ -8,7 +8,7 @@ from torch.utils import _pytree as pytree
 from torchax import tensor
 from torchax import distributed  # noqa: F401
 
-__version__ = "0.0.1"
+__version__ = "0.0.4"
 VERSION = __version__
 
 __all__ = [
@@ -21,21 +21,11 @@ from jax._src import xla_bridge
 os.environ.setdefault('ENABLE_RUNTIME_UPTIME_TELEMETRY', '1')
 
 # torchax:oss-begin
-old_pjrt_options = jax.config.jax_pjrt_client_create_options
-try:
+if getattr(jax.config, 'jax_pjrt_client_create_options', None):
   jax.config.update(
     'jax_pjrt_client_create_options',
     f'ml_framework_name:PyTorch/XLA2;ml_framework_version:{"v0.0.1"}'
   )
-  xla_bridge._clear_backends()
-  if os.environ.get("DISABLE_XLA2_PJRT_TEST") != "true":
-    jax.devices()  # open PJRT  to see if it opens
-except RuntimeError:
-  jax.config.update(
-    'jax_pjrt_client_create_options', old_pjrt_options
-  )
-  xla_bridge._clear_backends()
-  jax.devices()  # open PJRT  to see if it opens
 # torchax:oss-end
 
 env = None
