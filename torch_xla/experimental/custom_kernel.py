@@ -709,7 +709,7 @@ def _ragged_paged_attention_nonkernel(
     cu_q_lens,  # i32[num_tokens + 1]
     num_seqs,  # int
 ):
-  num_tokens, num_q_heads, head_dim = queries.shape
+  _, num_q_heads, head_dim = queries.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
   num_query_per_kv = num_q_heads // num_kv_heads
   start_idx = 0
@@ -761,8 +761,15 @@ def _ragged_paged_attention_nonkernel(
     outputs.append(out)
     start_idx += cur_q_len
 
-  output = torch.cat(outputs, dim=0)  # [num_tokens, num_query_heads, head_dim]
-  return output
+  maybe_padded_num_q_tokens = queries.shape[0]
+  actual_num_tokens = cu_q_lens[num_seqs]
+  if actual_num_tokens < maybe_padded_num_q_tokens:
+    num_tokens_diff = maybe_padded_num_q_tokens - actual_num_tokens
+    outputs.append(
+        torch.zeros((num_tokens_diff, num_q_heads, head_dim),
+                    dtype=queries[0].dtype,
+                    device=queries.device))
+  return torch.cat(outputs, dim=0)  # [num_tokens, num_query_heads, head_dim]
 
 
 @requires_jax

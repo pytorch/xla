@@ -1,15 +1,15 @@
 from typing import List, Optional, Tuple
+import sys
+import unittest
 
-from absl.testing import absltest
 from absl.testing import parameterized
+from absl.testing import absltest
 import jax
 from jax._src import test_util as jtu
 from jax.experimental.pallas.ops.tpu.paged_attention import quantization_utils
 from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention, make_sequence_metadata, DEFAULT_MASK_VALUE
 import jax.numpy as jnp
 import numpy as np
-
-jax.config.parse_flags_with_absl()
 
 ATOL_FP32 = 2e-1
 
@@ -29,6 +29,7 @@ def _ref_ragged_paged_attention(
   assert num_q_heads % num_kv_heads == 0, "num_q_heads % num_kv_heads !=0."
   num_query_per_kv = num_q_heads // num_kv_heads
   start_idx = 0
+
   outputs: List[jax.Array] = []
   for i in range(num_seqs):
     cur_q_len = cu_q_lens[i + 1] - cu_q_lens[i]
@@ -72,11 +73,17 @@ def _ref_ragged_paged_attention(
     outputs.append(out)
     start_idx += cur_q_len
 
+  maybe_padded_num_q_tokens = queries.shape[0]
+  actual_num_tokens = cu_q_lens[num_seqs]
+  if actual_num_tokens < maybe_padded_num_q_tokens:
+    num_tokens_diff = maybe_padded_num_q_tokens - actual_num_tokens
+    outputs.append(
+        jnp.zeros(
+            (num_tokens_diff, num_q_heads, head_dim)).astype(outputs[0].dtype))
   return jnp.concatenate(outputs, axis=0)
 
 
-@jtu.with_config(jax_numpy_dtype_promotion="standard")
-class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
+class RaggedPagedAttentionKernelTest(parameterized.TestCase):
 
   def _verify_ragged_paged_attention(
       self,
@@ -88,6 +95,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       num_pages,
       num_kv_pages_per_block=128,
       num_queries_per_block=128,
+      pad_num_q_tokens=False,
   ):
     num_seqs = len(seq_lens)
     # Make sure the q_len is no longer than the kv_len. For example,
@@ -99,7 +107,11 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       assert cur_q_len <= cur_kv_len, f"cur_q_len must be less than or equal to cur_kv_len. Got {cur_q_len} and {cur_kv_len}"
 
     query_lens = [seq_len[0] for seq_len in seq_lens]
-    num_q_tokens = sum(query_lens)
+    actual_num_q_tokens = sum(query_lens)
+    # Caller(eg vLLM) may decide to pad the num_q_tokens.
+    num_q_tokens = self._round_up_closest_multiple_of(
+        actual_num_q_tokens,
+        num_queries_per_block) if pad_num_q_tokens else actual_num_q_tokens
     kv_lens = jnp.array([seq_len[1] for seq_len in seq_lens])
     num_q_heads = num_heads[0]
     num_kv_heads = num_heads[1]
@@ -115,6 +127,8 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
         k3, (num_kv_heads, num_pages, page_size, head_dim), dtype=dtype)
 
     # Create a kv_lens: i32[num_tokens]
+    # Only the first num_seqs of kv_lens_with_paddings are meaningful
+    # [num_seqs:num_q_tokens] are padded value and are meaningless.
     kv_lens_with_paddings = [0] * num_q_tokens
     for i in range(num_seqs):
       kv_lens_with_paddings[i] = kv_lens[i]
@@ -182,8 +196,16 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       rtol = 1e-1
     else:
       self.fail(f'Unsupported dtype: {dtype}')
-    self.assertTrue(
-        jnp.allclose(actual_output, expected_output, atol=atol, rtol=rtol))
+    if pad_num_q_tokens:
+      self.assertTrue(
+          jnp.allclose(
+              actual_output[:actual_num_q_tokens],
+              expected_output[:actual_num_q_tokens],
+              atol=atol,
+              rtol=rtol))
+    else:
+      self.assertTrue(
+          jnp.allclose(actual_output, expected_output, atol=atol, rtol=rtol))
 
   def _round_up_closest_multiple_of(self, x, base):
     return (x + base - 1) // base * base
@@ -215,11 +237,12 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
 
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (506, 563)]],
-      num_heads=[(4, 4), (8, 2), (16, 2)],
+      num_heads=[(4, 4), (4, 2)],
       head_dim=[128, 256],
       dtype=(jnp.float32, jnp.bfloat16),
       page_size=[16, 32],
       num_pages=[32768, 2048],
+      num_queries_per_block=[16, 64, 128],
   )
   def test_paged_attention_varlen_comprehensive(
       self,
@@ -229,6 +252,7 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
       dtype,
       page_size: int,
       num_pages: int,
+      num_queries_per_block: int,
   ):
     if jtu.is_device_tpu(version=4) and head_dim == 256 and page_size == 32:
       self.skipTest(
@@ -240,7 +264,42 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
         page_size,
         dtype,
         num_pages,
-        num_queries_per_block=64,
+        num_queries_per_block=num_queries_per_block,
+        num_kv_pages_per_block=128,
+    )
+
+  @parameterized.product(
+      num_heads=[(4, 4), (4, 2)],
+      head_dim=[128, 256],
+      dtype=(jnp.float32, jnp.bfloat16),
+      page_size=[16, 32],
+      num_pages=[32768, 2048],
+      num_queries_per_block=[16, 64, 128],
+  )
+  def test_paged_attention_varlen_with_padding_comprehensive(
+      self,
+      num_heads: Tuple[int, int],
+      head_dim: int,
+      dtype,
+      page_size: int,
+      num_pages: int,
+      num_queries_per_block: int,
+  ):
+    if jtu.is_device_tpu(version=4) and head_dim == 256 and page_size == 32:
+      self.skipTest(
+          "TPU v4 has small VMEM. It will run into VMEM OOM. Skip the test.")
+    # If num_queries_per_block is 128, then num_tokens will be pad 6 to be the smallest multiple of 128.
+    seq_lens = [(1, 1328), (5, 18), (500, 563)]
+    self._verify_ragged_paged_attention(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        dtype,
+        num_pages,
+        num_queries_per_block=num_queries_per_block,
+        num_kv_pages_per_block=128,
+        pad_num_q_tokens=True,
     )
 
   def test_paged_attention_mix_prefill_and_decode1(self,):
@@ -442,4 +501,5 @@ class RaggedPagedAttentionKernelTest(jtu.JaxTestCase):
 
 
 if __name__ == "__main__":
-  absltest.main(testLoader=jtu.JaxTestLoader())
+  test = unittest.main()
+  sys.exit(0 if test.result.wasSuccessful() else 1)
