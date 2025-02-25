@@ -67,6 +67,7 @@ def ref_ragged_paged_attention(
 
     attn = jnp.einsum("qhd,khd->hqk", q, k)
     attn = attn.astype('float32')
+    #print(f'xw32 jax ref line70 {attn=}')
     q_span = (cur_kv_len - cur_q_len) + jax.lax.broadcasted_iota(
         jnp.int32, (cur_q_len, cur_kv_len), 0)
     kv_span = jax.lax.broadcasted_iota(jnp.int32, (cur_q_len, cur_kv_len), 1)
@@ -81,9 +82,11 @@ def ref_ragged_paged_attention(
     outputs.append(out)
     start_idx += cur_q_len
 
+  # print(f'xw32 jax ref line85 {jnp.concatenate(outputs, axis=0)=}')
   if actual_num_tokens < outputs_maybe_padded.shape[0]:
     num_tokens_diff = outputs_maybe_padded.shape[0] - actual_num_tokens
     outputs.append(jnp.zeros((num_tokens_diff, num_q_heads, head_dim)).astype(outputs[0].dtype))
+  print(f'xw32 jax ref line89 {jnp.concatenate(outputs, axis=0)=}')
   return jnp.concatenate(outputs, axis=0)
 
 def with_jax_high_precision(func):
