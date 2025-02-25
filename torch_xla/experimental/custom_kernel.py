@@ -718,7 +718,6 @@ def _ragged_paged_attention_nonkernel(
 
   outputs: List[torch.Tensor] = []
   for i in range(num_seqs):
-    # import pdb; pdb.set_trace()
     cur_q_len = cu_q_lens[i + 1] - cu_q_lens[i]
     q = queries[start_idx:start_idx +
                 cur_q_len]  # [cur_q_len, num_q_heads, head_dim]
