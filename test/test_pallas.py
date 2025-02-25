@@ -20,6 +20,71 @@ if xr.device_type() == 'TPU':
   import jax.numpy as jnp
   from jax.experimental import pallas as pl
 
+# xw32: delete it
+def ref_ragged_paged_attention(
+    queries: jax.Array,  # [num_tokens, num_q_heads, head_dim]
+    k_pages: jax.Array,  # [num_kv_heads, total_num_pages, page_size, head_dim]
+    v_pages: jax.Array,  # [num_kv_heads, total_num_pages, page_size, head_dim]
+    kv_lens: jax.Array,  # i32[num_tokens]
+    page_indices: jax.Array,  # i32[num_tokens, pages_per_sequence]
+    cu_q_lens: jax.Array,  # i32[num_tokens + 1]
+    num_seqs: int,
+):
+  num_kv_heads, _, page_size, head_dim = k_pages.shape
+  num_q_heads = queries.shape[1]
+  assert num_q_heads % num_kv_heads == 0, "num_q_heads % num_kv_heads !=0."
+  num_query_per_kv = num_q_heads // num_kv_heads
+  start_idx = 0
+
+  outputs_maybe_padded = jnp.zeros_like(queries)
+  actual_num_tokens = cu_q_lens[num_seqs]
+  outputs = []
+  for i in range(num_seqs):
+    cur_q_len = cu_q_lens[i + 1] - cu_q_lens[i]
+    q = queries[start_idx:start_idx +
+                cur_q_len]  # [cur_q_len, num_q_heads, head_dim]
+
+    cur_kv_len = kv_lens[i]
+    num_pages = (cur_kv_len + page_size - 1) // page_size
+    page_indices_to_use = page_indices[i, :num_pages]
+    k = k_pages[:,
+                page_indices_to_use, :, :]  # [num_kv_heads, page_indices_to_use, page_size, head_dim]
+    k = jnp.permute_dims(
+        k, (1, 2, 0,
+            3))  #   [page_indices_to_use, page_size, num_kv_heads, head_dim]
+    k = jnp.reshape(
+        k, (-1, num_kv_heads, head_dim))  #   [kv_len, num_kv_heads, head_dim]
+    k = k[:cur_kv_len]  # [cur_kv_lens, num_kv_heads, head_dim]
+
+    v = v_pages[:, page_indices_to_use, :, :]
+    v = jnp.permute_dims(v, (1, 2, 0, 3))
+    v = jnp.reshape(v, (-1, num_kv_heads, head_dim))
+    v = v[:cur_kv_len]  # [cur_kv_lens, num_kv_heads, head_dim]
+
+    if num_query_per_kv != 1:
+      k = jnp.repeat(k, num_query_per_kv, axis=1)
+      v = jnp.repeat(v, num_query_per_kv, axis=1)
+
+    attn = jnp.einsum("qhd,khd->hqk", q, k)
+    attn = attn.astype('float32')
+    q_span = (cur_kv_len - cur_q_len) + jax.lax.broadcasted_iota(
+        jnp.int32, (cur_q_len, cur_kv_len), 0)
+    kv_span = jax.lax.broadcasted_iota(jnp.int32, (cur_q_len, cur_kv_len), 1)
+    # Use the same DEFAULT_MASK_VALUE as in the kernel instead of float("-inf") so that the kernel can match the ref implement better.
+    mask = jnp.where(q_span < kv_span, float("-inf"), 0.)
+    with jax.numpy_rank_promotion("allow"):
+      attn = attn + mask
+    attn = jax.nn.softmax(attn, axis=-1).astype(v.dtype)
+    out = jnp.einsum("hqk,khd->qhd", attn,
+                     v)  # [cur_q_len, num_q_heads, head_dim]
+
+    outputs.append(out)
+    start_idx += cur_q_len
+
+  if actual_num_tokens < outputs_maybe_padded.shape[0]:
+    num_tokens_diff = outputs_maybe_padded.shape[0] - actual_num_tokens
+    outputs.append(jnp.zeros((num_tokens_diff, num_q_heads, head_dim)).astype(outputs[0].dtype))
+  return jnp.concatenate(outputs, axis=0)
 
 def with_jax_high_precision(func):
 
@@ -776,7 +841,7 @@ class PallasTest(parameterized.TestCase):
     compiled_paged_attention = torch.compile(
         ragged_paged_attention_wrapper, backend="openxla")
 
-    output = compiled_paged_attention(
+    kernel_output = compiled_paged_attention(
         q_xla,
         k_pages_xla,
         v_pages_xla,
@@ -802,9 +867,91 @@ class PallasTest(parameterized.TestCase):
         use_kernel=False,
     )
 
-    self.assertTrue(
-        torch.allclose(
-            output.cpu(), nonkernel_output.cpu(), atol=2e-1, rtol=1e-2))
+    kernel_output_cpu = kernel_output.cpu()
+    nonkernel_output_cpu = nonkernel_output.cpu()
+    self.assertEqual(kernel_output_cpu.shape, nonkernel_output_cpu.shape)
+    self.assertEqual(kernel_output_cpu.dtype, nonkernel_output_cpu.dtype)
+    print(
+        f'Output max diff: {torch.max(torch.abs(kernel_output_cpu - nonkernel_output_cpu))}')
+    print(
+        f'Output mean diff: {torch.mean(torch.abs(kernel_output_cpu - nonkernel_output_cpu))}'
+    )
+
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
+
+    from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as jax_ragged_paged_attention
+    jax_kernel_output = torch.from_numpy(
+        np.array(
+            jax_ragged_paged_attention(
+                q_jax,
+                k_pages_jax,
+                v_pages_jax,
+                kv_lens_jax,
+                page_indices_jax,
+                cu_q_lens_jax,
+                num_seqs=num_seqs,
+                num_kv_pages_per_block=num_kv_pages_per_block,
+                num_queries_per_block=num_queries_per_block,
+            )[1]))
+    jax_kernel_output_cpu = jax_kernel_output.cpu()
+    jax_nonkernel_output = torch.from_numpy(
+        np.array(
+            ref_ragged_paged_attention(
+                q_jax,
+                k_pages_jax,
+                v_pages_jax,
+                kv_lens_jax,
+                page_indices_jax,
+                cu_q_lens_jax,
+                num_seqs=num_seqs,
+            )))
+    jax_nonkernel_output_cpu = jax_nonkernel_output.cpu()
+    print(
+        f'jax_kernel vs torch_kernel Output max diff: {torch.max(torch.abs(kernel_output_cpu - jax_kernel_output_cpu))}')
+    print(
+        f'jax_kernel vs torch_kernel Output mean diff: {torch.mean(torch.abs(kernel_output_cpu - jax_kernel_output_cpu))}'
+    )
+    print(
+        f'jax_kernel vs nonkernel_output_cpu Output max diff: {torch.max(torch.abs(nonkernel_output_cpu - jax_kernel_output_cpu))}')
+    print(
+        f'jax_kernel vs nonkernel_output_cpu Output mean diff: {torch.mean(torch.abs(nonkernel_output_cpu - jax_kernel_output_cpu))}'
+    )
+
+
+    if pad_num_q_tokens:
+      actual_num_q_tokens = cu_q_lens[num_seqs]
+      print(
+          f'Output max diff: {torch.max(torch.abs(kernel_output_cpu[:actual_num_q_tokens] - nonkernel_output_cpu[:actual_num_q_tokens]))}')
+      print(
+          f'Output mean diff: {torch.mean(torch.abs(kernel_output_cpu[:actual_num_q_tokens] - nonkernel_output_cpu[:actual_num_q_tokens]))}'
+      )
+      print(
+          f'jax_kernel vs torch_kernel Output max diff: {torch.max(torch.abs(kernel_output_cpu[:actual_num_q_tokens] - jax_kernel_output_cpu[:actual_num_q_tokens]))}')
+      print(
+          f'jax_kernel vs torch_kernel Output mean diff: {torch.mean(torch.abs(kernel_output_cpu[:actual_num_q_tokens] - jax_kernel_output_cpu[:actual_num_q_tokens]))}'
+      )
+      print(
+          f'jax_kernel vs nonkernel_output_cpu Output max diff: {torch.max(torch.abs(nonkernel_output_cpu[:actual_num_q_tokens] - jax_kernel_output_cpu[:actual_num_q_tokens]))}')
+      print(
+          f'jax_kernel vs nonkernel_output_cpu Output mean diff: {torch.mean(torch.abs(nonkernel_output_cpu[:actual_num_q_tokens] - jax_kernel_output_cpu[:actual_num_q_tokens]))}'
+      )
+      print(
+          f'jax_nonkernel_output_cpu vs nonkernel_output_cpu Output max diff: {torch.max(torch.abs(nonkernel_output_cpu[:actual_num_q_tokens] - jax_nonkernel_output_cpu[:actual_num_q_tokens]))}')
+      print(
+          f'jax_nonkernel_output_cpu vs nonkernel_output_cpu Output mean diff: {torch.mean(torch.abs(nonkernel_output_cpu[:actual_num_q_tokens] - jax_nonkernel_output_cpu[:actual_num_q_tokens]))}'
+      )
+      self.assertTrue(
+          torch.allclose(
+              kernel_output_cpu[:actual_num_q_tokens], nonkernel_output_cpu[:actual_num_q_tokens], atol=2e-1, rtol=1e-2))
+    else:
+      self.assertTrue(
+          torch.allclose(
+              kernel_output_cpu, nonkernel_output_cpu, atol=2e-1, rtol=1e-2))
     
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
