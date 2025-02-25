@@ -895,7 +895,7 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   // copy. To use `slice`, the following conditions must be satisfied:
   // - `stride` must be: [..., dim[-2]*dim[-1], dim[-1], 1] and one of them
   //   (assume stride[X]) can be multiplied with a constant K.
-  // - `size` must be: [dim[0], dim[1], ...], and size[X]*K <= dim[X]. å
+  // - `size` must be: [dim[0], dim[1], ...], and size[X]*K <= dim[X].
   // In theory we can shuffle element in `stride` and `size` and this can result
   //   in the transpose of dimensions, but we don't consider this case here.
   auto tensor_dim = tensor.sizes();
@@ -974,7 +974,10 @@ at::Tensor XLANativeFunctions::as_strided_copy(
           }
         } else {
           // size remains the same as tensor, return directly
-          // we can't return the same tensor directly, this will cause "RuntimeError: View operation returned a tensor that is the same as the input base tensor.  This is no longer allowed;" error from upstream
+          // we can't return the same tensor directly, this will cause
+          // "RuntimeError: View operation returned a tensor that is the same as
+          // the input base tensor.  This is no longer allowed;" error from
+          // upstream
           can_replace = false;
         }
       }

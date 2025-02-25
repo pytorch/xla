@@ -17,6 +17,7 @@ from torch_xla.experimental.custom_kernel import flash_attention
 from functorch.compile import aot_function, make_boxed_func
 from torch.library import custom_op
 
+
 class FakeAttention(torch.nn.Module):
 
   def __init__(self, num_head=4, hidden_dim=256):
@@ -42,6 +43,7 @@ class FakeAttention(torch.nn.Module):
     # kernel
     attn_output = self.fc(attn_output)
     return attn_output
+
 
 class DummyModule(torch.nn.Module):
 
@@ -75,7 +77,7 @@ class StridedAndSlice(torch.nn.Module):
       return custom_strided_and_slice_forward(input, use_aten_slice)
     else:
       if not use_aten_slice:
-        output = input[...,0].squeeze(-1)
+        output = input[..., 0].squeeze(-1)
       else:
         output = torch.ops.aten.slice(input, -1, 0, 1).squeeze(-1)
     return output
@@ -100,30 +102,42 @@ class StridedAndSliceWithCustomOp(torch.autograd.Function):
     needs_input_grad = ctx.needs_input_grad
     use_aten_slice = ctx.use_aten_slice
     assert input.dim() > 1
-    grad_input = custom_strided_and_slice_backward(grad_output, input, use_aten_slice, needs_input_grad)
+    grad_input = custom_strided_and_slice_backward(grad_output, input,
+                                                   use_aten_slice,
+                                                   needs_input_grad)
     return grad_input, None
 
+
 @custom_op("xla::custom_strided_and_slice_forward", mutates_args=())
-def custom_strided_and_slice_forward(input: torch.Tensor, use_aten_slice: bool) -> torch.Tensor:
+def custom_strided_and_slice_forward(input: torch.Tensor,
+                                     use_aten_slice: bool) -> torch.Tensor:
   assert input.dim() > 1
   i = input.clone()
   if not use_aten_slice:
-    output = i[...,0]
+    output = i[..., 0]
   else:
     output = torch.ops.aten.slice(i, -1, 0, 1).squeeze(-1)
   return output
 
+
 @custom_strided_and_slice_forward.register_fake
-def custom_strided_and_slice_forward_fake(input: torch.Tensor, use_aten_slice: bool) -> torch.Tensor:
-  return torch.empty_like(input[...,0])
+def custom_strided_and_slice_forward_fake(input: torch.Tensor,
+                                          use_aten_slice: bool) -> torch.Tensor:
+  return torch.empty_like(input[..., 0])
+
 
 @custom_op("xla::custom_strided_and_slice_backward", mutates_args=())
-def custom_strided_and_slice_backward(grad_output: torch.Tensor, input: torch.Tensor, use_aten_slice: bool, needs_input_grad: bool) -> torch.Tensor:
+def custom_strided_and_slice_backward(grad_output: torch.Tensor,
+                                      input: torch.Tensor, use_aten_slice: bool,
+                                      needs_input_grad: bool) -> torch.Tensor:
   assert input.dim() > 1
   raise NotImplementedError("This should not be called")
 
+
 @custom_strided_and_slice_backward.register_fake
-def custom_strided_and_slice_backward_fake(grad_output: torch.Tensor, input: torch.Tensor, use_aten_slice: bool, needs_input_grad: bool) -> torch.Tensor:
+def custom_strided_and_slice_backward_fake(
+    grad_output: torch.Tensor, input: torch.Tensor, use_aten_slice: bool,
+    needs_input_grad: bool) -> torch.Tensor:
   return torch.empty_like(input)
 
 
@@ -144,21 +158,18 @@ class AsStridedTest(parameterized.TestCase):
       ss.to(xm.xla_device())
       input = input.to(xm.xla_device())
     return ss(input, use_aten_slice)
-  
+
   def custom_op_strided_wrapper(self, input, use_aten_slice):
     return StridedAndSliceWithCustomOp.apply(input, use_aten_slice)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
-  @parameterized.named_parameters(
-      ("use_scan_True", True),
-      ("use_scan_False", False)
-  )
+  @parameterized.named_parameters(("use_scan_True", True),
+                                  ("use_scan_False", False))
   def test_scan_layer_aot(self, use_scan):
     output = self.fake_fa_wrapper(use_scan)
     torch_xla.sync()
     self.assertFalse(torch.isnan(output).any())
-
 
   # compare torch native against xla aten.slice/aten.as_strided
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
@@ -169,12 +180,12 @@ class AsStridedTest(parameterized.TestCase):
   )
   def test_pure_as_strided(self, use_aten_slice):
     torch.manual_seed(12)
-    cpu_output = self.pure_strided_wrapper(use_xla=False, use_aten_slice=use_aten_slice)
+    cpu_output = self.pure_strided_wrapper(
+        use_xla=False, use_aten_slice=use_aten_slice)
     torch.manual_seed(12)
-    xla_output = self.pure_strided_wrapper(use_xla=True, use_aten_slice=use_aten_slice)
-    self.assertTrue( 
-        torch.allclose(cpu_output, xla_output.cpu(), atol=1e-4))
-
+    xla_output = self.pure_strided_wrapper(
+        use_xla=True, use_aten_slice=use_aten_slice)
+    self.assertTrue(torch.allclose(cpu_output, xla_output.cpu(), atol=1e-4))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -183,11 +194,13 @@ class AsStridedTest(parameterized.TestCase):
       ("use_aten_slice_False", False),
   )
   def test_custom_ops_as_strided(self, use_aten_slice):
+
     def compiler(gm, _):
       gm.print_readable()
       return make_boxed_func(gm)
-    
-    compiler_func = aot_function(self.custom_op_strided_wrapper, fw_compiler=compiler)
+
+    compiler_func = aot_function(
+        self.custom_op_strided_wrapper, fw_compiler=compiler)
     torch.manual_seed(12)
     torch_xla.manual_seed(12)
     input_cpu = torch.randn((2, 2, 3, 3), requires_grad=True)
