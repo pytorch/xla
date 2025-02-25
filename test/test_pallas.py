@@ -87,6 +87,9 @@ class PallasTest(parameterized.TestCase):
       q = torch.randn(batch_size, query_len, num_heads, head_dim, dtype=dtype)
     return q, k_pages, v_pages, page_indices
 
+  def _round_up_closest_multiple_of(self, x, base):
+    return (x + base - 1) // base * base
+
   def _ragged_pagedattention_generate_qkv(
       self,
       seq_lens,
@@ -95,6 +98,8 @@ class PallasTest(parameterized.TestCase):
       page_size,
       num_pages,
       dtype=torch.float32,
+      num_queries_per_block=None,
+      pad_num_q_tokens=False,
   ):
     num_seqs = len(seq_lens)
     # Make sure the q_len is no longer than the kv_len. For example,
@@ -106,7 +111,10 @@ class PallasTest(parameterized.TestCase):
       assert cur_q_len <= cur_kv_len, f"cur_q_len must be less than or equal to cur_kv_len. Got {cur_q_len} and {cur_kv_len}"
 
     query_lens = [seq_len[0] for seq_len in seq_lens]
-    num_q_tokens = sum(query_lens)
+    actual_num_q_tokens = sum(query_lens)
+    num_q_tokens = self._round_up_closest_multiple_of(
+        actual_num_q_tokens,
+        num_queries_per_block) if pad_num_q_tokens else actual_num_q_tokens
     kv_lens = torch.tensor([seq_len[1] for seq_len in seq_lens],
                            dtype=torch.int32)
     num_q_heads = num_heads[0]
@@ -727,34 +735,28 @@ class PallasTest(parameterized.TestCase):
         torch.allclose(
             output.cpu(), nonkernel_output.cpu(), atol=2e-1, rtol=1e-2))
 
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
-                   "This test only works on TPUv4+.")
-  def test_ragged_paged_attention_wrapper_with_dynamo(self):
-    seq_lens = [
-        (1, 1328),
-        (5, 18),
-        (1, 129),
-        (120, 229),
-        (1, 122),  # first physical q block
-        (1, 64),
-        (32, 100),
-        (250, 463),
-        (1, 18),
-        (1, 17),
-        (99, 123)
-    ]  # last 3 physical q blocks [(q_len, kv_len),...]
-    num_heads = (4, 4)
-    head_dim = 128
-    dtype = torch.float32
-    page_size = 16
-    num_pages = 32768
+  def _verify_ragged_paged_attention_with_dynamo(
+      self,
+      seq_lens,
+      num_heads,
+      head_dim,
+      page_size,
+      num_pages,
+      dtype,
+      num_kv_pages_per_block,
+      num_queries_per_block,
+      pad_num_q_tokens=False,
+  ):
     num_seqs = len(seq_lens)
-    num_kv_pages_per_block = 128
-    num_queries_per_block = 8
-    block_kv_size = 256
-
     q, k_pages, v_pages, page_indices, cu_q_lens, kv_lens = self._ragged_pagedattention_generate_qkv(
-        seq_lens, num_heads, head_dim, page_size, num_pages, dtype=dtype)
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype=dtype,
+        num_queries_per_block=num_queries_per_block,
+        pad_num_q_tokens=pad_num_q_tokens)
 
     q_xla = q.to("xla")
     k_pages_xla = k_pages.to("xla")
@@ -783,7 +785,7 @@ class PallasTest(parameterized.TestCase):
     compiled_paged_attention = torch.compile(
         ragged_paged_attention_wrapper, backend="openxla")
 
-    output = compiled_paged_attention(
+    kernel_output = compiled_paged_attention(
         q_xla,
         k_pages_xla,
         v_pages_xla,
@@ -809,9 +811,117 @@ class PallasTest(parameterized.TestCase):
         use_kernel=False,
     )
 
-    self.assertTrue(
-        torch.allclose(
-            output.cpu(), nonkernel_output.cpu(), atol=2e-1, rtol=1e-2))
+    kernel_output_cpu = kernel_output.cpu()
+    nonkernel_output_cpu = nonkernel_output.cpu()
+    self.assertEqual(kernel_output_cpu.shape, nonkernel_output_cpu.shape)
+    self.assertEqual(kernel_output_cpu.dtype, nonkernel_output_cpu.dtype)
+
+    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
+    page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
+
+    from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as jax_ragged_paged_attention
+    jax_kernel_output = torch.from_numpy(
+        np.array(
+            jax_ragged_paged_attention(
+                q_jax,
+                k_pages_jax,
+                v_pages_jax,
+                kv_lens_jax,
+                page_indices_jax,
+                cu_q_lens_jax,
+                num_seqs=num_seqs,
+                num_kv_pages_per_block=num_kv_pages_per_block,
+                num_queries_per_block=num_queries_per_block,
+            )[1]))
+    jax_kernel_output_cpu = jax_kernel_output.cpu()
+
+    if pad_num_q_tokens:
+      actual_num_q_tokens = cu_q_lens[num_seqs]
+      self.assertTrue(
+          torch.allclose(
+              kernel_output_cpu[:actual_num_q_tokens],
+              nonkernel_output_cpu[:actual_num_q_tokens],
+              atol=2e-1,
+              rtol=1e-2))
+      self.assertTrue(
+          torch.allclose(
+              kernel_output_cpu[:actual_num_q_tokens],
+              jax_kernel_output_cpu[:actual_num_q_tokens],
+              atol=2e-1,
+              rtol=1e-2))
+    else:
+      self.assertTrue(
+          torch.allclose(
+              kernel_output_cpu, nonkernel_output_cpu, atol=2e-1, rtol=1e-2))
+      self.assertTrue(
+          torch.allclose(
+              kernel_output_cpu, jax_kernel_output_cpu, atol=2e-1, rtol=1e-2))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_ragged_paged_attention_wrapper_no_query_padding_with_dynamo(self):
+    seq_lens = [
+        (1, 1328),
+        (5, 18),
+        (1, 129),
+        (120, 229),
+        (1, 122),  # first physical q block
+        (1, 64),
+        (32, 100),
+        (250, 463),
+        (1, 18),
+        (1, 17),
+        (99, 123)
+    ]  # last 3 physical q blocks [(q_len, kv_len),...]
+    num_heads = (4, 4)
+    head_dim = 128
+    dtype = torch.float32
+    page_size = 16
+    num_pages = 32768
+
+    self._verify_ragged_paged_attention_with_dynamo(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype,
+        num_kv_pages_per_block=128,
+        num_queries_per_block=8,
+    )
+
+  @parameterized.product(
+      seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
+      num_queries_per_block=[16, 64, 128],
+  )
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
+  def test_ragged_paged_attention_wrapper_with_query_padding_with_dynamo(
+      self,
+      seq_lens,
+      num_queries_per_block,
+  ):
+    num_heads = (4, 4)
+    head_dim = 128
+    dtype = torch.float32
+    page_size = 16
+    num_pages = 32768
+
+    self._verify_ragged_paged_attention_with_dynamo(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype,
+        num_kv_pages_per_block=128,
+        num_queries_per_block=num_queries_per_block,
+        pad_num_q_tokens=True,
+    )
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
