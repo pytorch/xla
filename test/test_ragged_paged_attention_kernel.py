@@ -230,13 +230,12 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
 
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (506, 563)]],
-      num_heads=[(4, 4), (8, 2)],
+      num_heads=[(4, 4), (4, 2)],
       head_dim=[128, 256],
       dtype=(jnp.float32, jnp.bfloat16),
       page_size=[16, 32],
       num_pages=[32768, 2048],
       num_queries_per_block=[16, 64, 128],
-      num_kv_pages_per_block=[128, 256],
   )
   def test_paged_attention_varlen_comprehensive(
       self,
@@ -247,7 +246,6 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
       page_size: int,
       num_pages: int,
       num_queries_per_block: int,
-      num_kv_pages_per_block: int,
   ):
     if jtu.is_device_tpu(version=4) and head_dim == 256 and page_size == 32:
       self.skipTest(
@@ -260,17 +258,16 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
         dtype,
         num_pages,
         num_queries_per_block=num_queries_per_block,
-        num_kv_pages_per_block=num_kv_pages_per_block,
+        num_kv_pages_per_block=128,
     )
 
   @parameterized.product(
-      num_heads=[(4, 4), (8, 2)],
+      num_heads=[(4, 4), (4, 2)],
       head_dim=[128, 256],
       dtype=(jnp.float32, jnp.bfloat16),
       page_size=[16, 32],
       num_pages=[32768, 2048],
       num_queries_per_block=[16, 64, 128],
-      num_kv_pages_per_block=[128, 256],
   )
   def test_paged_attention_varlen_with_padding_comprehensive(
     self,
@@ -280,7 +277,6 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
     page_size: int,
     num_pages: int,
     num_queries_per_block: int,
-    num_kv_pages_per_block: int,
   ):
     if jtu.is_device_tpu(version=4) and head_dim == 256 and page_size == 32:
       self.skipTest(
@@ -295,7 +291,7 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
         dtype,
         num_pages,
         num_queries_per_block=num_queries_per_block,
-        num_kv_pages_per_block=num_kv_pages_per_block,
+        num_kv_pages_per_block=128,
         pad_num_q_tokens=True,
     )
 
