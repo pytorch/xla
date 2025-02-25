@@ -709,14 +709,13 @@ def _ragged_paged_attention_nonkernel(
     cu_q_lens,  # i32[num_tokens + 1]
     num_seqs,  # int
 ):
-  num_tokens, num_q_heads, head_dim = queries.shape
+  _, num_q_heads, head_dim = queries.shape
   num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
   num_query_per_kv = num_q_heads // num_kv_heads
   start_idx = 0
   kv_lens = kv_lens.cpu()
   page_indices = page_indices.cpu()
 
-  padded_output = torch.zeros_like(queries)
   outputs: List[torch.Tensor] = []
   for i in range(num_seqs):
     # import pdb; pdb.set_trace()
@@ -753,7 +752,6 @@ def _ragged_paged_attention_nonkernel(
     attn = torch.einsum("qhd,khd->hqk", q,
                         k)  # [num_query_heads, cur_q_len, kv_len]
     attn = attn.float()
-    #print(f'xw32 torch ref line756 {attn=}')
     empty_mask = torch.ones(cur_q_len, cur_kv_len, device=attn.device)
     mask = torch.triu(empty_mask, diagonal=cur_kv_len - cur_q_len + 1).bool()
     attn.masked_fill_(mask, float("-inf"))
@@ -764,13 +762,12 @@ def _ragged_paged_attention_nonkernel(
     outputs.append(out)
     start_idx += cur_q_len
 
-  output = torch.cat(outputs, dim=0)  # [num_tokens, num_query_heads, head_dim]
-  # print(f'xw32 torch ref line768 {output=}')
-  actual_num_tokens = output.shape[0]
-  import pdb; pdb.set_trace()
-  padded_output[:actual_num_tokens] = output
-  print(f'xw32 torch ref line771 {padded_output=}')
-  return padded_output
+  maybe_padded_num_q_tokens = queries.shape[0]
+  actual_num_tokens = cu_q_lens[num_seqs]
+  if actual_num_tokens < maybe_padded_num_q_tokens:
+    num_tokens_diff = maybe_padded_num_q_tokens - actual_num_tokens
+    outputs.append(torch.zeros((num_tokens_diff, num_q_heads, head_dim), dtype=queries[0].dtype, device=queries.device))
+  return torch.cat(outputs, dim=0)  # [num_tokens, num_query_heads, head_dim]
 
 
 @requires_jax

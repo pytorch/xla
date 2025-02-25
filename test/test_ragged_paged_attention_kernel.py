@@ -30,8 +30,6 @@ def _ref_ragged_paged_attention(
   num_query_per_kv = num_q_heads // num_kv_heads
   start_idx = 0
 
-  outputs_maybe_padded = jnp.zeros_like(queries)
-  actual_num_tokens = cu_q_lens[num_seqs]
   outputs: List[jax.Array] = []
   for i in range(num_seqs):
     cur_q_len = cu_q_lens[i + 1] - cu_q_lens[i]
@@ -75,8 +73,10 @@ def _ref_ragged_paged_attention(
     outputs.append(out)
     start_idx += cur_q_len
 
-  if actual_num_tokens < outputs_maybe_padded.shape[0]:
-    num_tokens_diff = outputs_maybe_padded.shape[0] - actual_num_tokens
+  maybe_padded_num_q_tokens = queries.shape[0]
+  actual_num_tokens = cu_q_lens[num_seqs]
+  if actual_num_tokens < maybe_padded_num_q_tokens:
+    num_tokens_diff = maybe_padded_num_q_tokens - actual_num_tokens
     outputs.append(jnp.zeros((num_tokens_diff, num_q_heads, head_dim)).astype(outputs[0].dtype))
   return jnp.concatenate(outputs, axis=0)
 
