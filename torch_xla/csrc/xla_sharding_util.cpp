@@ -371,7 +371,11 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
       shard_indices[i] = std::make_pair(global_ordinal, indices);
     }
   } else if (sharding.type() == xla::OpSharding::OTHER) {
-    auto device_index = build_index_map(devices);
+    std::unordered_map<int, int> device_index = build_index_map(devices);
+    std::cout << "Check device_index " << std::endl;
+    for (const auto& pair : device_index) {
+      std::cout << "Key: " << pair.first << ", Value: " << pair.second << std::endl;
+    }
     std::vector<int64_t> tile_assignment_devices(
         sharding.tile_assignment_devices().begin(),
         sharding.tile_assignment_devices().end());
@@ -384,7 +388,10 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
     }
     for (size_t i = 0; i < tile_assignment_devices.size(); i++) {
       int64_t core = tile_assignment_devices[i];
+      std::cout << "Check core " << core << std::endl;
       if (device_index.find(core) == device_index.end()) {
+        std::cout << "current core " << core
+          << " is not in device_index" << std::endl;
         // Skip any shards whose device is not part of the `devices` list.
         continue;
       }
@@ -434,6 +441,7 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
     const std::vector<std::string>& devices, bool padded) {
+  std::cout << "ShardingUtil::ShardTensor check devices " << devices << std::endl;
   xla::OpSharding sharding;
   bool minibatch = false;
   if (shardings != nullptr) {
@@ -464,6 +472,8 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
                      std::back_inserter(shard_indices),
                      [](auto& pair) { return pair.second; });
     }
+    std::cout << "ShardingUtil::ShardTensor check shard_indices: "
+      << shard_indices << std::endl;
 
     for (size_t i = 0; i < shard_indices.size(); i++) {
       at::Tensor shard = tensor.index(

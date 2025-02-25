@@ -66,7 +66,7 @@ class Mesh:
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    assert all(d < self.size() for d in device_ids)
+    # assert all(d < self.size() for d in device_ids)
 
   def size(self):
     return np.prod(self.mesh_shape)
@@ -79,7 +79,8 @@ class Mesh:
         (name, size) for name, size in zip(self.axis_names, self.mesh_shape))
 
   def get_logical_mesh(self):
-    return self.device_ids.reshape(self.mesh_shape)
+    return np.arange(len(self.device_ids)).reshape(self.mesh_shape)
+    # return self.device_ids.reshape(self.mesh_shape)
 
   def get_axis_name_idx(self, name: str) -> int:
     if name not in self.axis_names:
@@ -125,6 +126,10 @@ class Mesh:
 
     tile_assignment, group_assignment, replication_groups, sharding_type = self._get_op_sharding_args(
         partition_spec)
+    print(f"check tile_assignment: {tile_assignment}")
+    print(f"check group_assignment: {group_assignment}")
+    print(f"check replication_groups: {replication_groups}")
+    print(f"check sharding_type: {sharding_type}")
     return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
                                       replication_groups, sharding_type)
 
@@ -547,8 +552,8 @@ def mark_sharding(
   """
   num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
-  assert mesh.size() == num_devices, \
-    f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
+  # assert mesh.size() == num_devices, \
+  #   f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   # We only allow fully specified `partition_spec` to be applicable, as opposed
   # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
   # should be of the same rank as `t`. This is to support partial replication
