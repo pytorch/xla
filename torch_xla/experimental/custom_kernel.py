@@ -333,12 +333,11 @@ def fa_custom_forward(
     assert isinstance(o, list)
     o, *aux = o
     l, m = (v[..., 0] for v in aux[-2:])
-    # TODO(tengyifei,zpcore): check to use the following l, m output once
-    # https://github.com/pytorch/xla/issues/8683 is fixed
 
+    # Or we can use the following instread
     # l, m = aux[-2:]
-    # l = torch.ops.aten.slice(l, -1, 0, 1)
-    # m = torch.ops.aten.slice(m, -1, 0, 1)
+    # l = torch.ops.aten.slice(l, -1, 0, 1).squeeze(-1)
+    # m = torch.ops.aten.slice(m, -1, 0, 1).squeeze(-1)
 
   # SPMD integration
   if partition_spec is not None:
@@ -916,6 +915,7 @@ def _multi_queries_paged_attention_nonkernel(
     num_pages = (kv_len + page_size - 1) // page_size
     indices = page_indices[i, :num_pages]
 
+    print(indices)
     k = k_pages[:, indices]  # [num_kv_heads, num_pages, page_size, head_size]
     k = k.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_size]
     k = k.reshape(num_pages * page_size, num_kv_heads, head_size)

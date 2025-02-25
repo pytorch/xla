@@ -974,7 +974,8 @@ at::Tensor XLANativeFunctions::as_strided_copy(
           }
         } else {
           // size remains the same as tensor, return directly
-          return tensor;
+          // we can't return the same tensor directly, this will cause "RuntimeError: View operation returned a tensor that is the same as the input base tensor.  This is no longer allowed;" error from upstream
+          can_replace = false;
         }
       }
 
