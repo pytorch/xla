@@ -716,6 +716,7 @@ def _ragged_paged_attention_nonkernel(
   kv_lens = kv_lens.cpu()
   page_indices = page_indices.cpu()
 
+  padded_output = torch.zeros_like(queries)
   outputs: List[torch.Tensor] = []
   for i in range(num_seqs):
     cur_q_len = cu_q_lens[i + 1] - cu_q_lens[i]
@@ -762,7 +763,9 @@ def _ragged_paged_attention_nonkernel(
     start_idx += cur_q_len
 
   output = torch.cat(outputs, dim=0)  # [num_tokens, num_query_heads, head_dim]
-  return output
+  actual_num_tokens = output.shape[0]
+  padded_output[:actual_num_tokens] = output
+  return padded_output
 
 
 @requires_jax
