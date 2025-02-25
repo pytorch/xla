@@ -87,6 +87,9 @@ class PallasTest(parameterized.TestCase):
       q = torch.randn(batch_size, query_len, num_heads, head_dim, dtype=dtype)
     return q, k_pages, v_pages, page_indices
 
+  def _round_up_closest_multiple_of(self, x, base):
+    return (x + base - 1) // base * base
+
   def _ragged_pagedattention_generate_qkv(
       self,
       seq_lens,
@@ -95,6 +98,8 @@ class PallasTest(parameterized.TestCase):
       page_size,
       num_pages,
       dtype=torch.float32,
+      num_queries_per_block=None,
+      pad_num_q_tokens=False,
   ):
     num_seqs = len(seq_lens)
     # Make sure the q_len is no longer than the kv_len. For example,
@@ -106,7 +111,8 @@ class PallasTest(parameterized.TestCase):
       assert cur_q_len <= cur_kv_len, f"cur_q_len must be less than or equal to cur_kv_len. Got {cur_q_len} and {cur_kv_len}"
 
     query_lens = [seq_len[0] for seq_len in seq_lens]
-    num_q_tokens = sum(query_lens)
+    actual_num_q_tokens = sum(query_lens)
+    num_q_tokens = self._round_up_closest_multiple_of(actual_num_q_tokens, num_queries_per_block) if pad_num_q_tokens else actual_num_q_tokens
     kv_lens = torch.tensor([seq_len[1] for seq_len in seq_lens],
                            dtype=torch.int32)
     num_q_heads = num_heads[0]
@@ -737,10 +743,11 @@ class PallasTest(parameterized.TestCase):
       dtype,
       num_kv_pages_per_block,
       num_queries_per_block,
+      pad_num_q_tokens=False,
   ):
     num_seqs = len(seq_lens)
     q, k_pages, v_pages, page_indices, cu_q_lens, kv_lens = self._ragged_pagedattention_generate_qkv(
-        seq_lens, num_heads, head_dim, page_size, num_pages, dtype=dtype)
+        seq_lens, num_heads, head_dim, page_size, num_pages, dtype=dtype, num_queries_per_block=num_queries_per_block, pad_num_q_tokens=pad_num_q_tokens)
 
     q_xla = q.to("xla")
     k_pages_xla = k_pages.to("xla")
@@ -858,6 +865,7 @@ class PallasTest(parameterized.TestCase):
       dtype,
       num_kv_pages_per_block=128,
       num_queries_per_block=num_queries_per_block,
+      pad_num_q_tokens=True,
     )
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
