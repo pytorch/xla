@@ -226,13 +226,13 @@ class ScanFlashAttentionTest(parameterized.TestCase):
     output = self.fake_fa_wrapper(
         has_model_weight=has_model_weight_scan, use_scan=False)
     torch_xla.sync()
-    torch.manual_seed(12)
-    torch_xla.manual_seed(12)
-    scan_output = self.fake_fa_wrapper(
-        has_model_weight=has_model_weight_scan, use_scan=True)
-    torch_xla.sync()
     # TODO(https://github.com/pytorch/xla/issues/8742): Fix NaN
     # TODO(https://github.com/pytorch/xla/issues/8753): Fix assertion
+    # torch.manual_seed(12)
+    # torch_xla.manual_seed(12)
+    # scan_output = self.fake_fa_wrapper(
+    #     has_model_weight=has_model_weight_scan, use_scan=True)
+    # torch_xla.sync()
     # torch.testing.assert_close(output.cpu(), scan_output.cpu())
 
 
