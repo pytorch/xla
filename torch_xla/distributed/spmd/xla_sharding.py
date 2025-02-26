@@ -79,8 +79,8 @@ class Mesh:
         (name, size) for name, size in zip(self.axis_names, self.mesh_shape))
 
   def get_logical_mesh(self):
-    return np.arange(len(self.device_ids)).reshape(self.mesh_shape)
-    # return self.device_ids.reshape(self.mesh_shape)
+    # return np.arange(len(self.device_ids)).reshape(self.mesh_shape)
+    return self.device_ids.reshape(self.mesh_shape)
 
   def get_axis_name_idx(self, name: str) -> int:
     if name not in self.axis_names:

@@ -560,6 +560,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
               {instance.allow_spmd_sharding_propagation_to_output});
 
       int num_partitions = client_->device_count();
+      std::cout << "num_partitions: " << num_partitions << std::endl;
+      num_partitions = 4;
       compile_options.executable_build_options.set_num_partitions(
           num_partitions);
       compile_options.executable_build_options.set_num_replicas(1);
