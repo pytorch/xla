@@ -186,6 +186,7 @@ def trace_me(scope: str):
 
   return decorator_trace_me
 
+
 # The profiler implementation is based on JAX implementation
 # https://github.com/jax-ml/jax/blob/main/jax/_src/profiler.py
 class _ProfileState:

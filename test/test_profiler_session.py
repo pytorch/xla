@@ -7,6 +7,7 @@ import torch_xla.debug.profiler as xp
 
 
 def _run_computation():
+
   class M(torch.nn.Module):
 
     def __init__(self):
