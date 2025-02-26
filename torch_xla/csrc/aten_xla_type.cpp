@@ -890,83 +890,85 @@ at::Tensor as_strided_eliminate_one_dim_fast_path(
   // In theory we can shuffle element in `stride` and `size` and this can result
   //   in the transpose of dimensions, but we don't consider this case here.
   auto tensor_dim = tensor.sizes();
-  if ((tensor_dim.size() == stride.size() ||
-       tensor_dim.size() == stride.size() + 1) &&
-      (!storage_offset.has_value() || (*storage_offset) == 0)) {
-    // find the dim that we either skip or slice on based on stride
-    long l = tensor_dim.size();
-    long stride_mul = 1;
-    long skip_dim = -1;
-    int K = 0;
-    // check `stride`
-    for (long i = l - 1, j = std::min(i, (long)stride.size() - 1); j >= 0;
-         i--, j--) {
-      if (stride_mul != stride[j]) {
-        if (skip_dim == -1) {
-          skip_dim = i;
-          K = stride[j] / stride_mul;
-          if (tensor_dim.size() == stride.size() + 1) {
-            // tensor_dim and stride element can potentially shift by one.
-            j++;
-          }
-        } else {
-          // multiple X index found
-          return bridge::AtenFromXlaTensor(nullptr);
-        }
-      }
-      stride_mul *= tensor_dim[i];
-    }
+  if (storage_offset.has_value() && (*storage_offset != 0)) {
+    return at::Tensor();
+  }
+  if (tensor_dim.size() != stride.size() &&
+      tensor_dim.size() != stride.size() + 1) {
+    return at::Tensor();
+  }
 
-    if (tensor_dim.size() == stride.size() + 1) {
-      for (long i = 0, j = 0; i < size.size(); i++, j++) {
-        if (i == skip_dim) {
+  // find the dim that we either skip or slice on based on stride
+  long l = tensor_dim.size();
+  long stride_mul = 1;
+  long skip_dim = -1;
+  int K = 0;
+  // check `stride`
+  for (long i = l - 1, j = std::min(i, (long)stride.size() - 1); j >= 0;
+       i--, j--) {
+    if (stride_mul != stride[j]) {
+      if (skip_dim == -1) {
+        skip_dim = i;
+        K = stride[j] / stride_mul;
+        if (tensor_dim.size() == stride.size() + 1) {
+          // tensor_dim and stride element can potentially shift by one.
           j++;
-        } else {
-          if (size[i] != tensor_dim[j]) {
-            return bridge::AtenFromXlaTensor(nullptr);
-          }
-        }
-      }
-      return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
-          tensor_methods::slice(bridge::GetXlaTensor(tensor), skip_dim, 0, 1,
-                                1),
-          skip_dim));
-    } else if (tensor_dim.size() == stride.size()) {
-      long reduce_size_location = -1;
-      for (auto i = 0; i < l; i++) {
-        if (size[i] != tensor_dim[i]) {
-          if (size[i] < tensor_dim[i] && reduce_size_location == -1) {
-            reduce_size_location = i;
-          } else {
-            return bridge::AtenFromXlaTensor(nullptr);
-          }
-        }
-      }
-      // check if only one dimension is sliced
-      if (reduce_size_location != -1) {
-        if (skip_dim != -1) {
-          if (skip_dim != reduce_size_location ||
-              size[reduce_size_location] * K >
-                  tensor_dim[reduce_size_location]) {
-            return bridge::AtenFromXlaTensor(nullptr);
-          }
-        } else {
-          // we have one dim size reduced but without any step jump regarding
-          // stride.
-          K = 1;
         }
       } else {
-        // size remains the same as tensor, we can't return the same tensor
-        // directly, this will cause "RuntimeError: View operation returned a
-        // tensor that is the same as the input base tensor.  This is no longer
-        // allowed;" error from upstream
-        return bridge::AtenFromXlaTensor(nullptr);
+        // multiple X index found
+        return at::Tensor();
       }
-
-      return bridge::AtenFromXlaTensor(tensor_methods::slice(
-          bridge::GetXlaTensor(tensor), reduce_size_location, 0,
-          size[reduce_size_location] * K, K));
     }
+    stride_mul *= tensor_dim[i];
+  }
+
+  if (tensor_dim.size() == stride.size() + 1) {
+    for (long i = 0, j = 0; i < size.size(); i++, j++) {
+      if (i == skip_dim) {
+        j++;
+      } else {
+        if (size[i] != tensor_dim[j]) {
+          return at::Tensor();
+        }
+      }
+    }
+    return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
+        tensor_methods::slice(bridge::GetXlaTensor(tensor), skip_dim, 0, 1, 1),
+        skip_dim));
+  } else if (tensor_dim.size() == stride.size()) {
+    long reduce_size_location = -1;
+    for (auto i = 0; i < l; i++) {
+      if (size[i] != tensor_dim[i]) {
+        if (size[i] < tensor_dim[i] && reduce_size_location == -1) {
+          reduce_size_location = i;
+        } else {
+          return at::Tensor();
+        }
+      }
+    }
+    // check if only one dimension is sliced
+    if (reduce_size_location != -1) {
+      if (skip_dim != -1) {
+        if (skip_dim != reduce_size_location ||
+            size[reduce_size_location] * K > tensor_dim[reduce_size_location]) {
+          return at::Tensor();
+        }
+      } else {
+        // we have one dim size reduced but without any step jump regarding
+        // stride.
+        K = 1;
+      }
+    } else {
+      // size remains the same as tensor, we can't return the same tensor
+      // directly, this will cause "RuntimeError: View operation returned a
+      // tensor that is the same as the input base tensor.  This is no longer
+      // allowed;" error from upstream
+      return at::Tensor();
+    }
+
+    return bridge::AtenFromXlaTensor(tensor_methods::slice(
+        bridge::GetXlaTensor(tensor), reduce_size_location, 0,
+        size[reduce_size_location] * K, K));
   }
 }
 
@@ -975,7 +977,8 @@ at::Tensor XLANativeFunctions::as_strided_copy(
     std::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLA_CHECK(size.size() == stride.size())
-      << "mismatch in length of size and stride";
+      << "mismatch in length of size (" << size.size() << ") and stride("
+      << stride.size() << ")";
   // Retrieve the base tensor, if there's one.
   // This function actually operates on the tensor's storage. Since XLA does not
   // expose the actual storage, we use the originally allocated tensor.

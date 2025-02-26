@@ -43,10 +43,10 @@ class AttentionLayers(torch.nn.Module):
     return attn_output
 
 
-class DummyModule(torch.nn.Module):
+class AttentionModule(torch.nn.Module):
 
   def __init__(self, num_layer=3, use_scan=False):
-    super(DummyModule, self).__init__()
+    super(AttentionModule, self).__init__()
     self.num_layer = num_layer
     self.use_scan = use_scan
     self.layers = nn.ModuleList(
@@ -186,12 +186,10 @@ class AsStridedTest(parameterized.TestCase):
     input_xla = input_cpu.clone().detach().requires_grad_()
 
     cpu_output = compiler_func(input_cpu, use_aten_slice=use_aten_slice)
-    loss = cpu_output.sum()
     torch_xla.sync()
 
     input_xla = input_xla.to(xm.xla_device())
     xla_output = compiler_func(input_xla, use_aten_slice=use_aten_slice)
-    loss = xla_output.sum()
     torch_xla.sync()
     torch.testing.assert_close(cpu_output, xla_output.cpu())
 
@@ -200,7 +198,7 @@ class ScanFlashAttentionTest(parameterized.TestCase):
 
   def fake_fa_wrapper(self, use_scan):
     with xm.xla_device():
-      dm = DummyModule(3, use_scan=use_scan)
+      dm = AttentionModule(3, use_scan=use_scan)
       hidden_states = torch.randn((2, 4, 256, 256)).requires_grad_()
     hidden_states.retain_grad()
     output = dm(hidden_states)
