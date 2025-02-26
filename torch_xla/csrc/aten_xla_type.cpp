@@ -937,7 +937,7 @@ static at::Tensor as_strided_eliminate_one_dim_fast_path(
     return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
         tensor_methods::slice(bridge::GetXlaTensor(tensor), skip_dim, 0, 1, 1),
         skip_dim));
-  } 
+  }
   // now tensor_dim.size() == stride.size()
   long reduce_size_location = -1;
   for (long i = 0; i < l; i++) {
@@ -967,9 +967,9 @@ static at::Tensor as_strided_eliminate_one_dim_fast_path(
     // stride.
     K = 1;
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::slice(
-      bridge::GetXlaTensor(tensor), reduce_size_location, 0,
-      size[reduce_size_location] * K, K));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::slice(bridge::GetXlaTensor(tensor), reduce_size_location,
+                            0, size[reduce_size_location] * K, K));
 }
 
 at::Tensor XLANativeFunctions::as_strided_copy(
