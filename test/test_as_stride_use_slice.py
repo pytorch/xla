@@ -18,13 +18,15 @@ from functorch.compile import aot_function, make_boxed_func
 from torch.library import custom_op
 
 
-class AttentionLayers(torch.nn.Module):
+class AttentionModule(torch.nn.Module):
 
-  def __init__(self, num_head=4, hidden_dim=256):
-    super(AttentionLayers, self).__init__()
-    self.num_head = num_head
-    self.hidden_dim = hidden_dim
-    self.fc = nn.Linear(hidden_dim, hidden_dim)
+  def __init__(self, has_model_weight=True, num_head=4, hidden_dim=256):
+    super(AttentionModule, self).__init__()
+    self.has_model_weight = has_model_weight
+    if has_model_weight:
+      self.num_head = num_head
+      self.hidden_dim = hidden_dim
+      self.fc = nn.Linear(hidden_dim, hidden_dim)
 
   def forward(self, input):
     # query_states: [B, NUM_HEAD, SEQ_LEN, d_k]
@@ -37,25 +39,29 @@ class AttentionLayers(torch.nn.Module):
         key_states,
         value_states,
         causal=True,
-        partition_spec=("fsdp", "tensor", None, None),
+        partition_spec=("fsdp", None, None, None),
     )
-    attn_output = self.fc(attn_output)
+    if self.has_model_weight:
+      attn_output = self.fc(attn_output)
     return attn_output
 
 
-class AttentionModule(torch.nn.Module):
+class AttentionLayers(torch.nn.Module):
 
-  def __init__(self, num_layer=3, use_scan=False):
-    super(AttentionModule, self).__init__()
+  def __init__(self, has_model_weight=True, num_layer=3, use_scan=False):
+    super(AttentionLayers, self).__init__()
     self.num_layer = num_layer
     self.use_scan = use_scan
-    self.layers = nn.ModuleList(
-        [AttentionLayers() for i in range(self.num_layer)])
+    self.has_model_weight = has_model_weight
+    self.layers = nn.ModuleList([
+        AttentionModule(has_model_weight=has_model_weight)
+        for i in range(self.num_layer)
+    ])
 
   def forward(self, input):
     hidden_states = input
     xs.mark_sharding(hidden_states, xs.get_global_mesh(),
-                     ("fsdp", "tensor", None, None))
+                     ("fsdp", None, None, None))
     if not self.use_scan:
       for layer in self.layers:
         hidden_states = layer(hidden_states)
@@ -153,7 +159,6 @@ class AsStridedTest(parameterized.TestCase):
       input = input.to(xm.xla_device())
     return ss(input, use_aten_slice)
 
-  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU")
   @parameterized.named_parameters(
       ("use_aten_slice_True", True),
       ("use_aten_slice_False", False),
@@ -168,7 +173,6 @@ class AsStridedTest(parameterized.TestCase):
         use_xla=True, use_aten_slice=use_aten_slice)
     torch.testing.assert_close(cpu_output, xla_output.cpu())
 
-  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU")
   @parameterized.named_parameters(
       ("use_aten_slice_True", True),
       ("use_aten_slice_False", False),
@@ -196,9 +200,9 @@ class AsStridedTest(parameterized.TestCase):
 
 class ScanFlashAttentionTest(parameterized.TestCase):
 
-  def fake_fa_wrapper(self, use_scan):
+  def fake_fa_wrapper(self, has_model_weight, use_scan):
     with xm.xla_device():
-      dm = AttentionModule(3, use_scan=use_scan)
+      dm = AttentionLayers(has_model_weight, 3, use_scan)
       hidden_states = torch.randn((2, 4, 256, 256)).requires_grad_()
     hidden_states.retain_grad()
     output = dm(hidden_states)
@@ -208,10 +212,27 @@ class ScanFlashAttentionTest(parameterized.TestCase):
   @parameterized.named_parameters(("use_scan_True", True),
                                   ("use_scan_False", False))
   def test_scan_layer_aot(self, use_scan):
-    output = self.fake_fa_wrapper(use_scan)
+    output = self.fake_fa_wrapper(has_model_weight=True, use_scan=use_scan)
     torch_xla.sync()
     # TODO(https://github.com/pytorch/xla/issues/8742): Fix NaN
     # self.assertFalse(torch.isnan(output).any())
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU")
+  @parameterized.named_parameters(("has_model_weight_True", True),
+                                  ("has_model_weight_False", False))
+  def test_scan_weight_layer_aot(self, has_model_weight_scan):
+    torch.manual_seed(12)
+    torch_xla.manual_seed(12)
+    output = self.fake_fa_wrapper(
+        has_model_weight=has_model_weight_scan, use_scan=False)
+    torch_xla.sync()
+    torch.manual_seed(12)
+    torch_xla.manual_seed(12)
+    scan_output = self.fake_fa_wrapper(
+        has_model_weight=has_model_weight_scan, use_scan=True)
+    # TODO(https://github.com/pytorch/xla/issues/8742): Fix NaN
+    # TODO(https://github.com/pytorch/xla/issues/8753): Fix assertion
+    torch.testing.assert_close(output.cpu(), scan_output.cpu())
 
 
 if __name__ == '__main__':
@@ -219,12 +240,7 @@ if __name__ == '__main__':
 
   xr.use_spmd()
   n_devices = xr.global_runtime_device_count()
-  xs.set_global_mesh(
-      xs.HybridMesh(
-          ici_mesh_shape=(n_devices, 1),
-          dcn_mesh_shape=(1, 1),
-          axis_names=("fsdp", "tensor"),
-      ))
+  xs.set_global_mesh(xs.get_1d_mesh("fsdp"))
 
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

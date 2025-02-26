@@ -1014,6 +1014,24 @@ TEST_F(AtenXlaTensorTest, TestAsStridedUseSlice) {
   ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestAsStridedUseSliceSizeReduce) {
+  torch::Tensor input =
+      torch::rand({16, 32, 24}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> size = {16, 8, 24};
+  std::vector<int64_t> stride = {768, 24, 1};
+  torch::Tensor output =
+      torch::as_strided(input, /*size=*/size, /*stride=*/stride);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output =
+        torch::as_strided(xla_input, /*size=*/size, /*stride=*/stride);
+    AllClose(output, xla_output);
+  });
+  ExpectCounterNotChanged("aten::*", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("xla::take", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::as_strided_copy", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestAsStridedMismatchLastDimUseSlice) {
   torch::Tensor input =
       torch::rand({16, 32, 24}, torch::TensorOptions(torch::kFloat));

@@ -879,16 +879,18 @@ at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
   return out;
 }
 
-at::Tensor as_strided_eliminate_one_dim_fast_path(
+static at::Tensor as_strided_eliminate_one_dim_fast_path(
     const at::Tensor& tensor, at::IntArrayRef size, at::IntArrayRef stride,
     std::optional<int64_t> storage_offset) {
   // Optimize: decide if we can use `slice` to replace `as_strided` to avoid the
   // copy. To use `slice`, the following conditions must be satisfied:
-  // - `stride` must be: [..., dim[-2]*dim[-1], dim[-1], 1] and one of them
-  //   (assume stride[X]) can be multiplied with a constant K.
-  // - `size` must be: [dim[0], dim[1], ...], and size[X]*K <= dim[X].
-  // In theory we can shuffle element in `stride` and `size` and this can result
-  //   in the transpose of dimensions, but we don't consider this case here.
+  // - `stride` must be: [..., K*dim[-3]*dim[-2]*dim[-1], dim[-2]*dim[-1],
+  //   dim[-1], 1] where K > 1. We want to find the dimension where the stride
+  //   does not match the cumulative product of the dimension sizes from right
+  //   to left. Let's call this dimension X.
+  // - `size` must be: [dim[0], dim[1], ...], and size[X]*K <= dim[X]. In theory
+  //   we can shuffle element in `stride` and `size` and this can result in the
+  //   transpose of dimensions, but we don't consider this case here.
   auto tensor_dim = tensor.sizes();
   if (storage_offset.has_value() && (*storage_offset != 0)) {
     return at::Tensor();
@@ -935,41 +937,39 @@ at::Tensor as_strided_eliminate_one_dim_fast_path(
     return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
         tensor_methods::slice(bridge::GetXlaTensor(tensor), skip_dim, 0, 1, 1),
         skip_dim));
-  } else if (tensor_dim.size() == stride.size()) {
-    long reduce_size_location = -1;
-    for (auto i = 0; i < l; i++) {
-      if (size[i] != tensor_dim[i]) {
-        if (size[i] < tensor_dim[i] && reduce_size_location == -1) {
-          reduce_size_location = i;
-        } else {
-          return at::Tensor();
-        }
+  } 
+  // now tensor_dim.size() == stride.size()
+  long reduce_size_location = -1;
+  for (long i = 0; i < l; i++) {
+    if (size[i] != tensor_dim[i]) {
+      if (size[i] < tensor_dim[i] && reduce_size_location == -1) {
+        reduce_size_location = i;
+      } else {
+        return at::Tensor();
       }
     }
-    // check if only one dimension is sliced
-    if (reduce_size_location != -1) {
-      if (skip_dim != -1) {
-        if (skip_dim != reduce_size_location ||
-            size[reduce_size_location] * K > tensor_dim[reduce_size_location]) {
-          return at::Tensor();
-        }
-      } else {
-        // we have one dim size reduced but without any step jump regarding
-        // stride.
-        K = 1;
-      }
-    } else {
-      // size remains the same as tensor, we can't return the same tensor
-      // directly, this will cause "RuntimeError: View operation returned a
-      // tensor that is the same as the input base tensor.  This is no longer
-      // allowed;" error from upstream
+  }
+  // check if only one dimension is sliced
+  if (reduce_size_location == -1) {
+    // size remains the same as tensor, we can't return the same tensor
+    // directly, this will cause "RuntimeError: View operation returned a
+    // tensor that is the same as the input base tensor.  This is no longer
+    // allowed;" error from upstream
+    return at::Tensor();
+  }
+  if (skip_dim != -1) {
+    if (skip_dim != reduce_size_location ||
+        size[reduce_size_location] * K > tensor_dim[reduce_size_location]) {
       return at::Tensor();
     }
-
-    return bridge::AtenFromXlaTensor(tensor_methods::slice(
-        bridge::GetXlaTensor(tensor), reduce_size_location, 0,
-        size[reduce_size_location] * K, K));
+  } else {
+    // we have one dim size reduced but without any step jump regarding
+    // stride.
+    K = 1;
   }
+  return bridge::AtenFromXlaTensor(tensor_methods::slice(
+      bridge::GetXlaTensor(tensor), reduce_size_location, 0,
+      size[reduce_size_location] * K, K));
 }
 
 at::Tensor XLANativeFunctions::as_strided_copy(
