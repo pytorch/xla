@@ -910,7 +910,6 @@ def _multi_queries_paged_attention_nonkernel(
     num_pages = (kv_len + page_size - 1) // page_size
     indices = page_indices[i, :num_pages]
 
-    print(indices)
     k = k_pages[:, indices]  # [num_kv_heads, num_pages, page_size, head_size]
     k = k.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_size]
     k = k.reshape(num_pages * page_size, num_kv_heads, head_size)

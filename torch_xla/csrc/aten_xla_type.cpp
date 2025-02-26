@@ -879,18 +879,9 @@ at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
   return out;
 }
 
-at::Tensor XLANativeFunctions::as_strided_copy(
-    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+at::Tensor as_strided_eliminate_one_dim_fast_path(
+    const at::Tensor& tensor, at::IntArrayRef size, at::IntArrayRef stride,
     std::optional<int64_t> storage_offset) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLA_CHECK(size.size() == stride.size())
-      << "mismatch in length of size and stride";
-  // Retrieve the base tensor, if there's one.
-  // This function actually operates on the tensor's storage. Since XLA does not
-  // expose the actual storage, we use the originally allocated tensor.
-  const at::Tensor& base = bridge::GetXlaTensor(self)->Base();
-  at::Tensor tensor = base.defined() ? base : self;
-
   // Optimize: decide if we can use `slice` to replace `as_strided` to avoid the
   // copy. To use `slice`, the following conditions must be satisfied:
   // - `stride` must be: [..., dim[-2]*dim[-1], dim[-1], 1] and one of them
@@ -902,7 +893,6 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   if ((tensor_dim.size() == stride.size() ||
        tensor_dim.size() == stride.size() + 1) &&
       (!storage_offset.has_value() || (*storage_offset) == 0)) {
-    bool can_replace = true;
     // find the dim that we either skip or slice on based on stride
     long l = tensor_dim.size();
     long stride_mul = 1;
@@ -916,80 +906,91 @@ at::Tensor XLANativeFunctions::as_strided_copy(
           skip_dim = i;
           K = stride[j] / stride_mul;
           if (tensor_dim.size() == stride.size() + 1) {
-            // tensor_dim and strict element can potentially shift by one.
+            // tensor_dim and stride element can potentially shift by one.
             j++;
           }
         } else {
           // multiple X index found
-          can_replace = false;
-          break;
+          return bridge::AtenFromXlaTensor(nullptr);
         }
       }
       stride_mul *= tensor_dim[i];
     }
 
-    if (can_replace && tensor_dim.size() == stride.size() + 1) {
+    if (tensor_dim.size() == stride.size() + 1) {
       for (long i = 0, j = 0; i < size.size(); i++, j++) {
         if (i == skip_dim) {
           j++;
         } else {
           if (size[i] != tensor_dim[j]) {
-            can_replace = false;
-            break;
+            return bridge::AtenFromXlaTensor(nullptr);
           }
         }
       }
-      if (can_replace) {
-        return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
-            tensor_methods::slice(bridge::GetXlaTensor(tensor), skip_dim, 0, 1,
-                                  1),
-            skip_dim));
-      }
-
-    } else if (can_replace && tensor_dim.size() == stride.size()) {
+      return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
+          tensor_methods::slice(bridge::GetXlaTensor(tensor), skip_dim, 0, 1,
+                                1),
+          skip_dim));
+    } else if (tensor_dim.size() == stride.size()) {
       long reduce_size_location = -1;
       for (auto i = 0; i < l; i++) {
         if (size[i] != tensor_dim[i]) {
           if (size[i] < tensor_dim[i] && reduce_size_location == -1) {
             reduce_size_location = i;
           } else {
-            can_replace = false;
-            break;
+            return bridge::AtenFromXlaTensor(nullptr);
           }
         }
       }
       // check if only one dimension is sliced
-      if (can_replace) {
-        if (reduce_size_location != -1) {
-          if (skip_dim != -1) {
-            if (skip_dim != reduce_size_location ||
-                size[reduce_size_location] * K >
-                    tensor_dim[reduce_size_location]) {
-              can_replace = false;
-            }
-          } else {
-            // we have one dim size reduced but without any step jump regarding
-            // stride.
-            K = 1;
+      if (reduce_size_location != -1) {
+        if (skip_dim != -1) {
+          if (skip_dim != reduce_size_location ||
+              size[reduce_size_location] * K >
+                  tensor_dim[reduce_size_location]) {
+            return bridge::AtenFromXlaTensor(nullptr);
           }
         } else {
-          // size remains the same as tensor, return directly
-          // we can't return the same tensor directly, this will cause
-          // "RuntimeError: View operation returned a tensor that is the same as
-          // the input base tensor.  This is no longer allowed;" error from
-          // upstream
-          can_replace = false;
+          // we have one dim size reduced but without any step jump regarding
+          // stride.
+          K = 1;
         }
+      } else {
+        // size remains the same as tensor, we can't return the same tensor
+        // directly, this will cause "RuntimeError: View operation returned a
+        // tensor that is the same as the input base tensor.  This is no longer
+        // allowed;" error from upstream
+        return bridge::AtenFromXlaTensor(nullptr);
       }
 
-      if (can_replace) {
-        return bridge::AtenFromXlaTensor(tensor_methods::slice(
-            bridge::GetXlaTensor(tensor), reduce_size_location, 0,
-            size[reduce_size_location] * K, K));
-      }
+      return bridge::AtenFromXlaTensor(tensor_methods::slice(
+          bridge::GetXlaTensor(tensor), reduce_size_location, 0,
+          size[reduce_size_location] * K, K));
     }
   }
+}
 
+at::Tensor XLANativeFunctions::as_strided_copy(
+    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
+    std::optional<int64_t> storage_offset) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_CHECK(size.size() == stride.size())
+      << "mismatch in length of size and stride";
+  // Retrieve the base tensor, if there's one.
+  // This function actually operates on the tensor's storage. Since XLA does not
+  // expose the actual storage, we use the originally allocated tensor.
+  const at::Tensor& base = bridge::GetXlaTensor(self)->Base();
+  at::Tensor tensor = base.defined() ? base : self;
+
+  // Fast path: using slice to replace as_strided to avoid the index copy.
+  at::Tensor fast_result = as_strided_eliminate_one_dim_fast_path(
+      tensor, size, stride, storage_offset);
+  if (fast_result.defined()) {
+    return fast_result;
+  }
+
+  // Fast path: PyTorch/XLA implementation for as_strided works only with
+  // non-overlapping and dense tensors.
   if (c10::_compute_non_overlapping_and_dense(size, stride)) {
     // Sets the base tensor as tensor.
     // Even though this function copies (without aliasing) tensor, it's still
