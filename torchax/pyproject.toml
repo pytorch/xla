@@ -40,10 +40,10 @@ classifiers = [
 path = "torchax/__init__.py"
 
 [project.optional-dependencies]
-cpu = ["jax[cpu]>=0.4.30", "jax[cpu]", "tensorflow-cpu"]
+cpu = ["jax[cpu]>=0.4.30", "jax[cpu]"]
 # Add libtpu index `-f https://storage.googleapis.com/libtpu-releases/index.html`
-tpu = ["jax[cpu]>=0.4.30", "jax[tpu]", "tensorflow-cpu"]
-cuda = ["jax[cpu]>=0.4.30", "jax[cuda12]", "tensorflow-cpu"]
+tpu = ["jax[cpu]>=0.4.30", "jax[tpu]"]
+cuda = ["jax[cpu]>=0.4.30", "jax[cuda12]"]
 odml = ["jax[cpu]>=0.4.30", "jax[cpu]"]
 
 [tool.hatch.build.targets.wheel]

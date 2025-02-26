@@ -1,72 +1,90 @@
-# torchxla2
+# torchax: Running PyTorch on TPU
+
+**torchax!** is a backend for PyTorch, allowing users to run
+PyTorch on Google CloudTPUs. **torchax!** is also a library for providing 
+graph-level interoperability between PyTorch with Jax.
+
+This means, with **torchax** you can:
+* Run PyTorch code on TPU with as little as 2 lines of code change.
+* Call a jax function from a pytorch function, passing in `jax.Array`s
+* Call a pytorch function from a jax function, passing in a `torch.Tensor` subclass.
+* Use jax features such as `jax.grad`, `optax` and `GSMPD` to train a Pytorch model.
+* Use a Pytorch model as feature extractor and use it with a Jax model.
+etc etc.
 
 ## Install
 
-Currently this is only source-installable. Requires Python version >= 3.10.
 
-### NOTE:
+### On Google Cloud TPU:
+First install torch CPU:
 
-Please don't install torch-xla from instructions in
-https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md .
-In particular, the following are not needed:
-
-* There is no need to build pytorch/pytorch from source.
-* There is no need to clone pytorch/xla project inside of pytorch/pytorch
-  git checkout.
-
-
-TorchXLA2 and torch-xla have different installation instructions, please follow
-the instructions below from scratch (fresh venv / conda environment.)
-
-
-### 1. Installing `torchax`
-
-The following instructions assume you are in the `torchax` directory:
-
-```
-Fork the repository
-$ git clone https://github.com/<github_username>/xla.git
-$ cd xla/torchax
+```bash 
+pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
-
-#### 1.0 (recommended) Make a virtualenv / conda env
-
-If you are using VSCode, then [you can create a new environment from
-UI](https://code.visualstudio.com/docs/python/environments). Select the
-`dev-requirements.txt` when asked to install project dependencies.
-
-Otherwise create a new environment from the command line.
+Then install jax TPU:
 
 ```bash
-# Option 1: venv
-python -m venv my_venv
-source my_venv/bin/activate
-
-# Option 2: conda
-conda create --name <your_name> python=3.10
-conda activate <your_name>
-
-# Either way, install the dev requirements.
-pip install -r dev-requirements.txt
+pip install -U jax[tpu]
 ```
 
-Note: `dev-requirements.txt` will install the CPU-only version of PyTorch.
+Finally install torchax 
 
-#### 1.1 Install this package
-
-Install `torchax` from source for your platform:
 ```bash
-pip install -e .[cpu]
-pip install -e .[cuda]
-pip install -e .[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+pip install torchax
 ```
 
-#### 1.2 (optional) verify installation by running tests
+### On GPU machines:
+First install torch CPU:
+
+```bash 
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+Then install jax CUDA:
 
 ```bash
-pip install -r test-requirements.txt
-pytest test
+pip install -U jax[cuda12]
+```
+
+Finally install torchax 
+
+```bash
+pip install torchax
+```
+
+### On CPU machines (mac included)
+First install torch CPU:
+
+```bash 
+# Linux
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# OR Mac:
+pip install torch
+```
+
+Then install jax CPU:
+
+```bash
+pip install -U jax
+```
+
+Finally install torchax 
+
+```bash
+pip install torchax
+```
+
+NOTE: if you like metal support for Apple devices then install the 
+metal version of jax: https://developer.apple.com/metal/jax/
+
+### Installing `torchax` from source
+
+Still need to install `torch` CPU and `Jax` of your accelerator (GPU, TPU or None).
+
+```bash
+pip install git+https://github.com/pytorch/xla.git#subdirectory=torchax
 ```
 
 ## Run a model
@@ -104,69 +122,41 @@ print(m(inputs))
 This model `m` contains 2 parts: the weights that is stored inside of the model
 and it's submodules (`nn.Linear`).
 
-To execute this model with `torchax`; we need construct and run the model
-under an `environment` that captures pytorch ops and swaps them with TPU equivalent.
-
-To create this environment: use
+To execute this model with `torchax`; we need enable torchax to capture pytorch ops.
+To enable this, use:
 
 ```python
 import torchax
-
-env = torchax.default_env() 
-```
-Then, execute the instantiation of the model, as well as evaluation of model, 
-using `env` as a context manager:
-
-```python
-with env:
-  inputs = torch.randn(3, 3, 28, 28)
-  m = MyModel()
-  res = m(inputs)
-  print(type(res))  # outputs Tensor
-```
-
-You can also enable the environment globally with
-```python
-import torchax
-
 torchax.enable_globally() 
 ```
+Then, a `jax` device will be available to use
 
-Then everything afterwards is run with XLA.
+```python
+inputs = torch.randn(3, 3, 28, 28, device='jax')
+m = MyModel()
+res = m(inputs)
+print(type(res))  # outputs torchax.tensor.Tensor
+```
+
+`torchax.tensor.Tensor` is a `torch.Tensor` subclass that holds
+a `jax.Array`. You can inspect that jax array with `res.jax()`
+
 
 ## What is happening behind the scene:
 
-When a torch op is executed inside of `env` context manager, we can swap out the 
-implementation of that op with a version that runs on TPU. 
+We took the approach detailed in [new device](https://github.com/albanD/subclass_zoo/blob/main/new_device.py) recipe by Alban (@albanD); using `jax.Array` for the `raw_data`.
+
+In other words, When a torch op is executed inside of `env` context manager (which is enabled with `torchax.enable_globally()`), we can swap out the 
+implementation of that op written in Jax.
+
 When a model's constructor runs, it will call some tensor constructor, such as
-`torch.rand`, `torch.ones` or `torch.zeros` etc to create its weights. Those
-ops are captured by `env` too and placed directly on TPU.
+`torch.rand`, `torch.ones` or `torch.zeros` etc to create its weights. The constructor
+will create an `torch.Tensor` subclass that contains a `jax.Array`. 
+
+Then, each subsequent ops can unpack the `jax.Array`, call the op implementation,
+and wraps it back into `torch.Tensor` subclass.
 
 See more at [how_it_works](docs/how_it_works.md) and [ops registry](docs/ops_registry.md).
-
-### What if I created model outside of `env`.
-
-So if you have
-
-```
-m = MyModel()
-```
-outside of env, then regular torch ops will run when creating this model.
-Then presumably the model's weights will be on CPU (as instances of `torch.Tensor`).
-
-To move this model into XLA device, one can use `env.to_xla()` function.
-
-i.e.
-```
-m2 = env.to_xla(m)
-inputs = env.to_xla(inputs)
-
-with env:
-  res = m2(inputs)
-```
-
-NOTE that we also need to move inputs to xla using `.to_xla`. 
-`to_xla` works with all pytrees of `torch.Tensor`.
 
 
 ### Executing with jax.jit
@@ -192,7 +182,7 @@ def model_func(param, inputs):
 ```
 Here we use [torch.func.functional_call](https://pytorch.org/docs/stable/generated/torch.func.functional_call.html) 
 from PyTorch to replace the model
-weights with `param`, then call the model. This is equivalent to:
+weights with `param`, then call the model. This is roughly equivalent to:
 
 ```python
 def model_func(param, inputs):
@@ -209,3 +199,78 @@ print(model_func_jitted(new_state_dict, inputs))
 ```
 
 See more examples at [eager_mode.py](examples/eager_mode.py) and the (examples folder)[examples/]
+
+However, to ease the idiom of creating functional model and calling it with parameters,
+we also created the `JittableModule` helper class.
+
+So the above can be written as:
+
+```python
+
+from torchax.interop import JittableModule
+
+m_jitted = JittableModule(m)
+res = m_jitted(...)
+```
+
+The first time that `m_jitted` is called , it will trigger `jax.jit`
+then the subsequent computation with inputs of same shape will be fast.
+
+
+
+# Citation:
+
+@software{torchax,
+  author = {Han Qi, Chun-nien Chan, Will Cromar, Manfei Bai, Kevin Gleanson},
+  title = {torchax: PyTorch on TPU and Jax interoperability},
+  url = {https://github.com/pytorch/xla/tree/master/torchax}
+  version = {0.0.4},
+  date = {2025-02-24},
+}
+
+# Maintainers & Contributors:
+
+This library is created and maintained by the PyTorch/XLA team at Google Cloud.
+
+However, it benefitted from many direct and indirect 
+contributions outside of the team. Many of them done by 
+fellow Googlers using [Google's 20% project policy](https://ebsedu.org/blog/google-tapping-workplace-actualization-20-time-rule), others by partner teams.
+
+Here is the full list of contributors by 2025-02-25.
+
+Han Qi (qihqi), Pytorch / XLA
+Manfei Bai (manfeibai), Pytorch / XLA
+Will Cromar (will-cromar), Meta
+Milad Mohammadi (miladm), Pytorch / XLA
+Siyuan Liu (lsy323), Pytorch / XLA
+Bhavya Bahl (bhavya01), Pytorch / XLA
+Pei Zhang (zpcore), Pytorch / XLA
+Yifei Teng (tengyifei), Pytorch / XLA
+Chunnien Chan (chunnienc), Google, ODML
+Alban Desmaison (albanD), Meta, Pytorch
+Simon Teo (simonteozw), Google(20%)
+David Huang (dvhg), Google(20%)
+Barni Seetharaman (barney-s), Google(20%)
+Anish Karthik (anishfish2) , Google(20%)
+Yao Gu (guyao) , Google(20%)
+Yenkai Wang (yenkwang) , Google(20%)
+Greg Shikhman (commander) , Google(20%)
+Matin Akhlaghinia (matinehAkhlaghinia), Google(20%)
+Tracy Chen (tracych477), Google(20%)
+Matthias Guenther (mrguenther) , Google(20%)
+WenXin Dong (wenxindongwork), Google(20%)
+Kevin Gleason (GleasonK) , Google, StableHLO
+Nupur Baghel (nupurbaghel), Google(20%)
+Gwen Mittertreiner (gmittert), Google(20%)
+Zeev Melumian (zmelumian), Lightricks
+Vyom Sharma (vyom1611), Google(20%)
+Shitong Wang (ShitongWang), Adobe
+Rémi Doreau (ayshiff), Google(20%)
+Lance Wang (wang2yn84), Google, CoreML
+Hossein Sarshar (hosseinsarshar) , Google(20%)
+Daniel Vega-Myhre (danielvegamyhre) , Google(20%)
+Tianqi Fan (tqfan28), Google(20%)
+Jim Lin (jimlinntu), Google(20%)
+Fanhai Lu (FanhaiLu1), Google Cloud
+DeWitt Clinton (dewitt), Google PyTorch
+Aman Gupta (aman2930) , Google(20%)
