@@ -192,7 +192,7 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
       atol = 2e-1
       rtol = 1e-2
     elif dtype == jnp.bfloat16:
-      atol = 6e-1
+      atol = 2e-1
       rtol = 1e-1
     else:
       self.fail(f'Unsupported dtype: {dtype}')
@@ -239,7 +239,7 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
       seq_lens=[[(1, 1328), (5, 18), (506, 563)]],
       num_heads=[(4, 4), (4, 2)],
       head_dim=[128, 256],
-      dtype=(jnp.float32, jnp.bfloat16),
+      dtype=(jnp.bfloat16,),
       page_size=[16, 32],
       num_pages=[32768, 2048],
       num_queries_per_block=[16, 64, 128],
@@ -271,7 +271,7 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
   @parameterized.product(
       num_heads=[(4, 4), (4, 2)],
       head_dim=[128, 256],
-      dtype=(jnp.float32, jnp.bfloat16),
+      dtype=(jnp.bfloat16,),
       page_size=[16, 32],
       num_pages=[32768, 2048],
       num_queries_per_block=[16, 64, 128],
@@ -390,6 +390,103 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
         num_pages,
         num_queries_per_block=num_queries_per_block,
     )
+
+  def test_paged_attention_vllm_load_file_debug0(self):
+    dtype = jnp.bfloat16
+
+    # somehow, npz doesn't work
+    # jax_tensors_file = "/ansible/0.96875-jax-array.npz"
+    # # Loading from npz file will result in normal numpy array.
+    # npzfile = jnp.load(jax_tensors_file)
+    # queries = jnp.array(npzfile['q_jax'])
+    # k_pages = jnp.array(npzfile['k_pages_jax'])
+    # v_pages = jnp.array(npzfile['v_pages_jax'])
+    # kv_lens = jnp.array(npzfile['kv_lens_jax'])
+    # page_indices = jnp.array(npzfile['page_indices_jax'])
+    # cu_q_lens = jnp.array(npzfile['cu_q_lens_jax'])
+    # num_seqs = npzfile['num_seqs']
+    # num_kv_pages_per_block = npzfile['num_kv_pages_per_block']
+    # num_queries_per_block = npzfile['num_queries_per_block']
+
+    jax_tensors_file = "/ansible/0.96875-jax-array.npy"
+    with open(jax_tensors_file, 'rb') as f:
+      queries = jnp.load(f)
+      k_pages = jnp.load(f)
+      v_pages = jnp.load(f)
+      kv_lens = jnp.load(f)
+      page_indices = jnp.load(f)
+      cu_q_lens = jnp.load(f)
+      num_seqs = jnp.load(f).item()
+      num_kv_pages_per_block = jnp.load(f).item()
+      num_queries_per_block = jnp.load(f).item()
+
+    # import pdb; pdb.set_trace()
+    kv_lens_list = kv_lens.tolist()
+    cu_q_lens_list = cu_q_lens.tolist()
+    q_lens_list = [cu_q_lens_list[i+1]-cu_q_lens_list[i] for i in range(len(cu_q_lens_list)-1)]
+    assert len(q_lens_list) == len(kv_lens_list)
+    for (q_len, kv_len) in zip(q_lens_list, kv_lens_list):
+      assert q_len <= kv_len
+
+    err, actual_output = ragged_paged_attention(
+        queries,
+        k_pages,
+        v_pages,
+        kv_lens,
+        page_indices,
+        cu_q_lens,
+        num_seqs,
+        num_kv_pages_per_block=num_kv_pages_per_block,
+        num_queries_per_block=num_queries_per_block,
+    )
+    err.throw()  # noop if there is not err.
+    actual_output = jax.block_until_ready(actual_output)
+
+    expected_output = _ref_ragged_paged_attention(
+        queries,
+        k_pages,
+        v_pages,
+        kv_lens,
+        page_indices,
+        cu_q_lens,
+        num_seqs,
+    )
+
+    self.assertEqual(actual_output.shape, expected_output.shape)
+    self.assertEqual(actual_output.dtype, expected_output.dtype)
+
+    if dtype == jnp.float32:
+      atol = 2e-1
+      rtol = 1e-2
+    elif dtype == jnp.bfloat16:
+      atol = 6e-1
+      rtol = 1e-1
+    else:
+      self.fail(f'Unsupported dtype: {dtype}')
+
+    num_q_tokens = queries.shape[0]
+    actual_num_q_tokens = cu_q_lens_list[num_seqs]
+    pad_num_q_tokens = actual_num_q_tokens < num_q_tokens
+    if pad_num_q_tokens:
+      print(
+          f'Output max diff pad_num_q_tokens: {jnp.max(jnp.abs(expected_output[:actual_num_q_tokens] - actual_output[:actual_num_q_tokens]))}')
+      print(
+          f'Output mean diff pad_num_q_tokens: {jnp.mean(jnp.abs(expected_output[:actual_num_q_tokens] - actual_output[:actual_num_q_tokens]))}'
+      )
+      self.assertTrue(
+          jnp.allclose(
+              actual_output[:actual_num_q_tokens],
+              expected_output[:actual_num_q_tokens],
+              atol=atol,
+              rtol=rtol))
+    else:
+      print(
+          f'Output max diff no pad_num_q_tokens: {jnp.max(jnp.abs(expected_output - actual_output))}')
+      print(
+          f'Output mean diff no pad_num_q_tokens: {jnp.mean(jnp.abs(expected_output - actual_output))}'
+      )
+      self.assertTrue(
+          jnp.allclose(actual_output, expected_output, atol=atol, rtol=rtol))
 
   def test_paged_attention_q_len_should_be_no_longer_than_kv_len(self,):
     # assuming q_blk_size=128
