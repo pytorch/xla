@@ -43,10 +43,20 @@ at::Tensor nms_kernel(const at::Tensor& boxes, const at::Tensor& scores,
       /*skip_functionalization=*/true);
 }
 
+bridge::AtenFromXlaTensor custom_einsum(const std::string& equation, const std::vector<at::Tensor>& inputs) {
+  std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(inputs);
+  XLATensorPtr output = tensor_methods::einsum(equation, xla_tensors);
+  return bridge::AtenFromXlaTensor(output);
+}
+
 }  // namespace
 
 TORCH_LIBRARY_IMPL(torchvision, XLA, m) {
   m.impl(TORCH_SELECTIVE_NAME("torchvision::nms"), TORCH_FN(nms_kernel));
+}
+
+TORCH_LIBRARY_IMPL(torch, XLA, m) {
+  m.impl(TORCH_SELECTIVE_NAME("torch::einsum"), TORCH_FN(custom_einsum));
 }
 
 }  // namespace manual
