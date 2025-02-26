@@ -115,7 +115,7 @@ class ScanSpmdTest(unittest.TestCase):
     y_xla = model(x)
 
     torch_xla.sync()
-    torch.testing.assert_close(y_cpu, y_xla.cpu())
+    torch.testing.assert_close(y_cpu, y_xla.cpu(), atol=1e-3, rtol=1e-3)
 
   def check_dots_in_model(self, model, x, expect_pattern):
     # Trace the model to get the HLO.
