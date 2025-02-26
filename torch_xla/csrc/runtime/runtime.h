@@ -11,6 +11,8 @@ ComputationClient* GetComputationClient();
 
 ComputationClient* GetComputationClientIfInitialized();
 
+void SetVirtualTopology(const std::string& topology);
+
 // Run the XRT local service, this will block the caller unitl the server
 // being stopped.
 void RunLocalService(uint64_t service_port);
