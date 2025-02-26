@@ -34,7 +34,8 @@ def generate_ctx_need_grad(*args):
 
 
 def _extract_backend_config(
-    module: "jaxlib.mlir._mlir_libs._mlir.ir.Module") -> Optional[str]:
+    module: "jaxlib.mlir._mlir_libs._mlir.ir.Module",
+    extract_from_shmap: bool = False) -> Optional[str]:
   """
   This algorithm intends to extract the backend config from the compiler IR like the following,
   and it is not designed to traverse any generic MLIR module.
@@ -61,6 +62,8 @@ def _extract_backend_config(
   Basically, what we are looking for is a two level of operations, and the tpu_custom_call operation in the inner level. It will return None if the payload is not found.
   """
   for operation in module.body.operations:
+    if extract_from_shmap and ("shmap_body" not in str(operation.name)):
+      continue
     assert len(
         operation.body.blocks) == 1, "The passing module is not compatible."
     for op in operation.body.blocks[0].operations:
@@ -143,6 +146,7 @@ def trace_pallas(kernel: Callable,
                  static_argnums=None,
                  static_argnames=None,
                  use_cache=False,
+                 extract_from_shmap=False,
                  **kwargs):
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
@@ -178,7 +182,7 @@ def trace_pallas(kernel: Callable,
   ir = jax.jit(
       kernel, static_argnums=static_argnums,
       static_argnames=static_argnames).lower(*jax_args, **kwargs).compiler_ir()
-  payload = _extract_backend_config(ir)
+  payload = _extract_backend_config(ir, extract_from_shmap=extract_from_shmap)
 
   if use_cache:
     # if we reach here it means we have a cache miss.
