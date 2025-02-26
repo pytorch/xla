@@ -158,7 +158,6 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_hlo_metadata.py"
   run_test "$CDIR/test_profiler.py"
   run_test "$CDIR/test_profiler_session.py"
-  run_test "$CDIR/test_profiler_session.py"
   run_test "$CDIR/pjrt/test_runtime.py"
   run_test "$CDIR/pjrt/test_runtime_single_proc_gpu.py"
   run_test "$CDIR/pjrt/test_runtime_multi_gpu.py"
