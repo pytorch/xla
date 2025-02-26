@@ -1916,14 +1916,15 @@ void InitXlaModuleBindings(py::module m) {
       [](const std::string& device) { return GetRngSeed(device); },
       py::arg("device") = "");
   m.def(
-      "_xla_set_should_alias_with_buffer_donor_config",
-      [](bool should_alias, const std::string& device_str) {
+      "_xla_set_enable_alias_with_buffer_donor_config",
+      [](bool enable_user_config_alias, const std::string& device_str) {
         torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-        XLAGraphExecutor::Get()->SetAliasWithBufferDonorConfig(should_alias);
+        XLAGraphExecutor::Get()->SetAliasWithBufferDonorConfig(
+            enable_user_config_alias);
       },
-      py::arg("should_alias") = false, py::arg("device") = "");
+      py::arg("enable_user_config_alias") = false, py::arg("device") = "");
   m.def(
-      "_xla_get_should_alias_with_buffer_donor_config",
+      "_xla_get_enable_alias_with_buffer_donor_config",
       [](const std::string& device_str) {
         torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
         return XLAGraphExecutor::Get()->GetAliasWithBufferDonorConfig();
@@ -2747,19 +2748,19 @@ void InitXlaModuleBindings(py::module m) {
 
   // This api will set the `should_donate_buffer_` field in the
   // ComputationClient::Data. This api is currently only useful if you are
-  // running with `torch.compile`. Buffer assocaited with data with
-  // `should_donate_buffer_` set to true will be donated to the output, You
-  // should only use this api if
-  // 1. You are using torch.compile
-  // 2. You will inplace update a tensor in the `torch.compiled` function(so the
-  //    currnet buffer can be donated after compuation)
+  // running with `torch.compile`. The buffer associated with the data has
+  // `should_donate_buffer_` set to true will be donated to the output. This
+  // can be used if:
+  // 1. You are using torch.compile, and there is an inplace udpate of a tensor
+  //    so that the current buffer can be donated after computation.
+  // 2. You want to explicitly donate a tensor because it is not necessary
+  //    after the current computation.
+  // Note that donated buffers can not be used after being donated.
   m.def("_set_buffer_donation",
-        [](at::Tensor& input, bool should_donate) -> bool {
-          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+        [](at::Tensor& tensor, bool should_donate) -> bool {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
           bool buffer_donation_updated = false;
-          if (!xtensor) {
-            // input tensor is not a XLATensor, return here.
-          } else if (xtensor->CurrentDataHandle() != nullptr) {
+          if (xtensor->CurrentDataHandle() != nullptr) {
             auto data =
                 std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
                     xtensor->CurrentDataHandle());

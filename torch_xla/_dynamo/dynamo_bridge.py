@@ -36,13 +36,13 @@ ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
 
 @contextmanager
 def alias_with_buffer_donor_config(should_alias: bool = True):
-  saved_config = torch_xla._XLAC._xla_get_should_alias_with_buffer_donor_config(
+  saved_config = torch_xla._XLAC._xla_get_enable_alias_with_buffer_donor_config(
   )
-  torch_xla._XLAC._xla_set_should_alias_with_buffer_donor_config(should_alias)
+  torch_xla._XLAC._xla_set_enable_alias_with_buffer_donor_config(should_alias)
   try:
     yield saved_config
   finally:
-    torch_xla._XLAC._xla_set_should_alias_with_buffer_donor_config(saved_config)
+    torch_xla._XLAC._xla_set_enable_alias_with_buffer_donor_config(saved_config)
 
 
 @dataclasses.dataclass
