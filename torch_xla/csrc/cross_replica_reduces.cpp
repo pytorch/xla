@@ -237,6 +237,9 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   TokenHandler token_handler(token);
   xla::XlaOp all_gather_result;
+  xla::ChannelHandle channel_handle;
+  channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+  channel_handle.set_handle(2);
   if (pin_layout) {
     torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
@@ -245,12 +248,12 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
         static_cast<XlaDeviceType>(xla_device.type()));
     all_gather_result =
         xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
-                       shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
-                       /*layout=*/reduce_shape.layout());
+                       shard_count, reduce_groups, /*channel_id=*/channel_handle,
+                       /*layout=*/reduce_shape.layout(), true);
   } else {
     all_gather_result =
         xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
-                       shard_count, reduce_groups);
+                       shard_count, reduce_groups, channel_handle, std::nullopt, true);
   }
   return {all_gather_result, token_handler.GetNewToken(all_gather_result)};
 }

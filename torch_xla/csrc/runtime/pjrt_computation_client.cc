@@ -548,6 +548,9 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
   for (auto& instance : instances) {
     xla::CompileOptions compile_options;
+    compile_options.executable_build_options.set_use_spmd_partitioning(true);
+    compile_options.env_option_overrides.push_back({"xla_tpu_decompose_all_gather_einsum", true});
+    compile_options.env_option_overrides.push_back({"xla_tpu_decompose_einsum_reduce_scatter", true});
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
