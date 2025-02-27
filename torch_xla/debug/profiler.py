@@ -1,6 +1,7 @@
 import functools
 import os
 import threading
+from typing import Union
 
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -208,7 +209,7 @@ class _ProfileState:
 _profile_state = _ProfileState()
 
 
-def start_trace(log_dir: os.PathLike | str) -> None:
+def start_trace(log_dir: Union[os.PathLike, str]) -> None:
   """Starts a profiler trace.
 
   The trace will capture CPU, GPU, and/or TPU activity, including Python
