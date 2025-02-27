@@ -1,5 +1,7 @@
 import functools
+import os
 import threading
+
 import torch_xla
 import torch_xla.core.xla_model as xm
 
@@ -183,3 +185,65 @@ def trace_me(scope: str):
     return wrapper_trace_me
 
   return decorator_trace_me
+
+
+# The profiler implementation is based on JAX implementation
+# https://github.com/jax-ml/jax/blob/main/jax/_src/profiler.py
+class _ProfileState:
+
+  def __init__(self):
+    self.profile_session = None
+    self.log_dir = None
+    self.create_perfetto_link = False
+    self.create_perfetto_trace = False
+    self.lock = threading.Lock()
+
+  def reset(self):
+    _profile_state.profile_session = None
+    _profile_state.create_perfetto_link = False
+    _profile_state.create_perfetto_trace = False
+    _profile_state.log_dir = None
+
+
+_profile_state = _ProfileState()
+
+
+def start_trace(log_dir: os.PathLike | str) -> None:
+  """Starts a profiler trace.
+
+  The trace will capture CPU, GPU, and/or TPU activity, including Python
+  functions and PyTorch/XLA on-device operations. Use :func:`stop_trace` to end
+  the trace and save the results to ``log_dir``.
+
+  The resulting trace can be viewed with TensorBoard. Note that TensorBoard
+  doesn't need to be running when collecting the trace.
+
+  Only one trace may be collected at a time. A RuntimeError will be raised if
+  :func:`start_trace` is called while another trace is running.
+
+  Args:
+    log_dir: The directory to save the profiler trace to (usually the
+      TensorBoard log directory).
+  """
+  with _profile_state.lock:
+    if _profile_state.profile_session is not None:
+      raise RuntimeError("Profile has already been started. "
+                         "Only one profile may be run at a time.")
+
+    _profile_state.profile_session = torch_xla._XLAC.profiler.TslProfilerSessionWrapper(
+    )
+    _profile_state.log_dir = str(log_dir)
+
+
+def stop_trace() -> None:
+  """Stops the currently-running profiler trace.
+
+  The trace will be saved to the ``log_dir`` passed to the corresponding
+  :func:`start_trace` call. Raises a RuntimeError if a trace hasn't been started.
+  """
+  with _profile_state.lock:
+    if _profile_state.profile_session is None:
+      raise RuntimeError("No profile started")
+    sess = _profile_state.profile_session
+    sess.export(sess.stop(), str(_profile_state.log_dir))
+    _profile_state.reset()

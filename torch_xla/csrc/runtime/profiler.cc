@@ -7,6 +7,7 @@
 #include "xla/backends/profiler/plugin/plugin_tracer.h"
 #include "xla/backends/profiler/plugin/profiler_c_api.h"
 #include "xla/pjrt/c/pjrt_c_api_profiler_extension.h"
+#include "xla/pjrt/status_casters.h"
 #include "xla/tsl/profiler/rpc/client/capture_profile.h"
 #include "xla/tsl/profiler/rpc/profiler_server.h"
 
@@ -44,6 +45,31 @@ void ProfilerServer::Start(int port) {
 }
 
 ProfilerServer::~ProfilerServer() {}
+
+const std::string TslProfilerSessionWrapper::Stop() const {
+  tensorflow::profiler::XSpace xspace;
+  // Disables the ProfilerSession
+  xla::ThrowIfError(this->session->CollectData(&xspace));
+  std::string xspace_str = xspace.SerializeAsString();
+  return xspace_str;
+}
+
+void TslProfilerSessionWrapper::Export(
+    const std::string& xspace_str, const std::string& tensorboard_dir) const {
+  tensorflow::profiler::XSpace xspace_proto;
+  xspace_proto.ParseFromString(xspace_str);
+  xla::ThrowIfError(
+      tsl::profiler::ExportToTensorBoard(xspace_proto, tensorboard_dir,
+                                         /* also_export_trace_json= */ true));
+}
+
+std::unique_ptr<TslProfilerSessionWrapper> TslProfilerSessionWrapper::Create() {
+  tensorflow::ProfileOptions options = tsl::ProfilerSession::DefaultOptions();
+  options.set_python_tracer_level(1);
+  options.set_enable_hlo_proto(true);
+  return absl::make_unique<runtime::profiler::TslProfilerSessionWrapper>(
+      tsl::ProfilerSession::Create(options));
+}
 
 absl::Status Trace(
     const char* service_addr, const char* logdir, int duration_ms,
