@@ -1,15 +1,11 @@
-import copy
 import dataclasses
 import operator
 import warnings
 
-import functools
 import itertools
 import os
-import time
 from typing import Any, Dict, List, Set, Tuple, Union
 from numbers import Number
-from contextlib import contextmanager
 from collections import deque
 
 import torch
@@ -28,21 +24,11 @@ import torch_xla.debug.metrics as metrics
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
+from torch_xla.utils.buffer_donor_context import alias_with_buffer_donor_config
 import torch_xla.utils.dlpack as torch_xla_dlpack
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
-
-
-@contextmanager
-def alias_with_buffer_donor_config(should_alias: bool = True):
-  saved_config = torch_xla._XLAC._xla_get_enable_alias_with_buffer_donor_config(
-  )
-  torch_xla._XLAC._xla_set_enable_alias_with_buffer_donor_config(should_alias)
-  try:
-    yield saved_config
-  finally:
-    torch_xla._XLAC._xla_set_enable_alias_with_buffer_donor_config(saved_config)
 
 
 @dataclasses.dataclass
