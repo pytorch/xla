@@ -25,7 +25,8 @@ def _shard_map(
     Note:
       ``shard_map`` is an experimental API, and still subject to change. For an
       introduction to sharded data, refer to :ref:`sharded-computation`. For a more
-      in-depth look at using ``shard_map``, refer to `SPMD multi-device parallelism with shard_map`_.
+      in-depth look at using ``shard_map``, refer to 
+      [SPMD multi-device parallelism with shard_map](https://docs.jax.dev/en/latest/notebooks/shard_map.html)
 
     Args:
       func: callable to be mapped. Each application of ``f``, or "instance" of ``f``,
@@ -311,11 +312,22 @@ def _fa_custom_forward_single_device(
     ab: Optional[torch.Tensor], 
     ctx_grad: List[bool]
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-  partition_spec = eval(partition_spec)
-  mesh = xs.get_global_mesh() or Mesh.from_str(mesh)
   from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
 
-  q_full_shape = None
+  num_batches = None
+  batch_size = None
+  if len(q.shape) == 5:
+    num_batches, batch_size, *rest = q.shape
+    q = q.reshape(-1, *rest)
+    k = k.reshape(-1, *rest)
+    v = v.reshape(-1, *rest)
+    if q_segment_ids is not None:
+      q_segment_ids = q_segment_ids.reshape(-1, *rest)
+    if kv_segment_ids is not None:
+      kv_segment_ids = kv_segment_ids.reshape(-1, *rest)
+    if ab is not none:
+      ab = ab.reshape(-1, *rest)
+    
 
   # Suprisingly, any tensor that is input to the custom_op decorated function will show
   # requires_grad=False. Is this a bug or feature? We have to pass ctx_grad to record the
@@ -389,6 +401,11 @@ def _fa_custom_forward_single_device(
     o, *aux = o
     l, m = (v[..., 0] for v in aux[-2:])
 
+  if num_batches is not None:
+    o = o.reshape(num_batches, batch_size, *o.shape[1:])
+    l = l.reshape(num_batches, batch_size, *l.shape[1:])
+    m = m.reshape(num_batches, batch_size, *m.shape[1:])
+
   return o, l, m
 
 
@@ -402,8 +419,6 @@ def fa_custom_forward(
            torch.Tensor, torch.Tensor]:
   partition_spec = eval(partition_spec)
   mesh = xs.get_global_mesh() or Mesh.from_str(mesh)
-
-  q_full_shape = None
 
   # Suprisingly, any tensor that is input to the custom_op decorated function will show
   # requires_grad=False. Is this a bug or feature? We have to pass ctx_grad to record the
@@ -434,7 +449,10 @@ def fa_custom_forward(
         ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
 
   if partition_spec is not None:
-    segment_id_partition_spec = (partition_spec[0], partition_spec[2])
+    if len(partition_spec) == 5:
+      segment_id_partition_spec = (partition_spec[0], partition_spec[1], partition_spec[3])
+    else:
+      segment_id_partition_spec = (partition_spec[0], partition_spec[2])
 
     input_specs = [
       partition_spec, # q
@@ -455,13 +473,13 @@ def fa_custom_forward(
     ]
 
     fa_forward_callable = _shard_map(
-      _fa_custom_forward_one_device,
+      _fa_custom_forward_single_device,
       mesh,
       input_specs,
       output_specs,
     )
   else:
-    fa_forward_callable = _fa_custom_forward_one_device
+    fa_forward_callable = _fa_custom_forward_single_device
 
   o, l, m = fa_forward_callable(
     q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale, ab, ctx_grad
@@ -504,6 +522,25 @@ def _fa_custom_backward_single_device(
 
   from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq, _flash_attention_bwd_dkv
   grad_q = grad_k = grad_v = grad_ab = segment_ids = None
+
+  
+  num_batches = None
+  batch_size = None
+  if len(q.shape) == 5:
+    num_batches, batch_size, *rest = q.shape
+    grad_output = grad_output.reshape(-1, *rest)
+    q = q.reshape(-1, *rest)
+    k = k.reshape(-1, *rest)
+    v = v.reshape(-1, *rest)
+    o = o.reshape(-1, *rest)
+    l = l.reshape(-1, *rest)
+    m = m.reshape(-1, *rest)
+    if q_segment_ids is not None:
+      q_segment_ids = q_segment_ids.reshape(-1, *rest)
+    if kv_segment_ids is not None:
+      kv_segment_ids = kv_segment_ids.reshape(-1, *rest)
+    if ab is not none:
+      ab = ab.reshape(-1, *rest)
 
   require_grad_q, require_grad_k, require_grad_v, *rest = ctx_grad
   require_grad_ab = ctx_grad[-3]
@@ -617,6 +654,16 @@ def _fa_custom_backward_single_device(
   if require_grad_v:
     grad_v = grads[1]
 
+  if num_batches is not None:
+    def _reshape(x):
+      if x is not None:
+        return x.reshape(num_batches, batch_size, *x.shape[1:])
+      return None
+    grad_q = _reshape(grad_q)
+    grad_k = _reshape(grad_k)
+    grad_v = _reshape(grad_v)
+    grad_ab = _reshape(grad_ab)
+
   return grad_q, grad_k, grad_v, grad_ab
 
 @custom_op("xla::fa_custom_backward", mutates_args=())
@@ -643,7 +690,10 @@ def fa_custom_backward(
 
 
   if partition_spec:
-    segment_id_partition_spec = (partition_spec[0], partition_spec[2])
+    if len(partition_spec) == 5:
+      segment_id_partition_spec = (partition_spec[0], partition_spec[1], partition_spec[3])
+    else:
+      segment_id_partition_spec = (partition_spec[0], partition_spec[2])
     input_specs = [
       partition_spec, # grad_output
       partition_spec, # q
@@ -669,7 +719,7 @@ def fa_custom_backward(
       partition_spec,
     ]
     fa_backward_callable = _shard_map(
-      _fa_custom_backward_single_device 
+      _fa_custom_backward_single_device,
       mesh,
       input_specs,
       output_specs
@@ -678,7 +728,7 @@ def fa_custom_backward(
     fa_backward_callable = _fa_custom_backward_single_device
 
   res = fa_backward_callable(
-    grad_output, q, k, v, o, l, m, q_segment_ids, kv_segment_ids, ab, causal, sm_scale
+    grad_output, q, k, v, o, l, m, q_segment_ids, kv_segment_ids, ab, causal, sm_scale,
     q_full_shape, kv_full_shape, ab_full_shape, ctx_grad
   )
 
