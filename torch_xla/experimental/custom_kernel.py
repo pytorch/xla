@@ -67,7 +67,9 @@ def _shard_map(
                     mesh_mult = mesh_name_to_size[axis_sharding]
                 else:
                     # tuple or list
-                    mesh_mult = math.prod(mesh_name_to_size[a] for a in axis_sharding)
+                    mesh_mult = math.prod(
+                      mesh_name_to_size[a] for a in axis_sharding
+                      if mesh_name_to_size[a] is not None)
                     
                 if mesh_mult is not None:
                     new_size = axis_size * mesh_mult
@@ -629,7 +631,7 @@ def fa_custom_backward(
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
   partition_spec = eval(partition_spec)
   mesh = Mesh.from_str(mesh) or xs.get_global_mesh()
-    grad_q = grad_k = grad_v = grad_ab = segment_ids = None
+  grad_q = grad_k = grad_v = grad_ab = segment_ids = None
 
   require_grad_q, require_grad_k, require_grad_v, *rest = ctx_grad
   require_grad_ab = ctx_grad[-3]
