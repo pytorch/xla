@@ -150,7 +150,7 @@ class XlaBuildHelper:
 
 
 def _gradient_accumulation_impl(context, body_fn, iterable_tensors, params,
-                                grads, carried_tensors):
+                                carried_tensors):
   builder = XlaBuildHelper('grad_acc')
   device = torch_xla.device()
 
@@ -178,6 +178,7 @@ def _gradient_accumulation_impl(context, body_fn, iterable_tensors, params,
   init_iterator = torch.tensor(0, dtype=torch.int32, device=device)
   init_loss = torch.tensor(0, dtype=torch.float32, device=device)
 
+  grads = [param.grad for param in params]
   body_fn_inputs = (init_iterator, init_loss, *fake_iterable_tensors,
                     *fake_carried_tensors, *params, *grads)
   body_result = body_fn(init_iterator, init_loss, tuple(fake_iterable_tensors),
@@ -387,8 +388,6 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
         'tensors, consider enabling `_xla_set_enable_alias_with_buffer_donor_config(True)`'
     )
 
-  init_grads = []
-  # Initialize the gradients to zero.
   for param in model_parameters:
     if not param.requires_grad:
       continue
@@ -404,12 +403,10 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
     # after reassigned to the respective model parameters. If the buffer donor
     # is not enabled, then this is a no-op.
     torch_xla._XLAC._set_buffer_donation(param.grad, True)
-    init_grads.append(param.grad)
 
   # Apply gradients to parameters
   result = _gradient_accumulation_impl(context, body_fn, iterable_tensors,
-                                       model_parameters, init_grads,
-                                       carried_tensors)
+                                       model_parameters, carried_tensors)
 
   for param, grad in zip(model_parameters,
                          result[1 + context.num_carried_tensors:]):
