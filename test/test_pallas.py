@@ -682,6 +682,7 @@ class PallasTest(parameterized.TestCase):
     kv_lens_xla = kv_lens.to("xla")
     page_indices_xla = page_indices.to("xla")
     cu_q_lens_xla = cu_q_lens.to("xla")
+    num_seqs_xla = torch.tensor(num_seqs).to('xla')
 
     output = ragged_paged_attention(
         q_xla,
@@ -690,7 +691,7 @@ class PallasTest(parameterized.TestCase):
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
-        num_seqs=num_seqs,
+        num_seqs=num_seqs_xla,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=True)
@@ -702,7 +703,7 @@ class PallasTest(parameterized.TestCase):
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
-        num_seqs=num_seqs,
+        num_seqs=num_seqs_xla,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=False)
@@ -764,6 +765,7 @@ class PallasTest(parameterized.TestCase):
     kv_lens_xla = kv_lens.to("xla")
     page_indices_xla = page_indices.to("xla")
     cu_q_lens_xla = cu_q_lens.to("xla")
+    num_seqs_xla = torch.tensor(num_seqs).to("xla")
 
     def ragged_paged_attention_wrapper(q, k_pages, v_pages, kv_lens,
                                        page_indices, cu_q_lens, num_seqs,
@@ -792,7 +794,7 @@ class PallasTest(parameterized.TestCase):
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
-        num_seqs=num_seqs,
+        num_seqs=num_seqs_xla,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=True,
@@ -805,7 +807,7 @@ class PallasTest(parameterized.TestCase):
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
-        num_seqs=num_seqs,
+        num_seqs=num_seqs_xla,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=False,
