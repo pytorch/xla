@@ -2,8 +2,9 @@ import torch
 import torch_xla
 import torch_xla.core.xla_builder as xb
 
-from typing import Any, Callable, Sequence, Tuple, Optional, List, Dict
 from dataclasses import dataclass
+from typing import Any, Callable, Sequence, Tuple, Optional, List, Dict
+import warnings
 
 
 @dataclass(frozen=True)
@@ -378,20 +379,32 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
     return (iteri, loss, *iterable_tensors, *carried_tensors, *params,
             *acc_grads)
 
+  if not torch_xla._XLAC._xla_get_enable_alias_with_buffer_donor_config():
+    warnings.warn(
+        'Buffer donation is currently not enabled for gradient accumulation '
+        'The resulting computed gradients will be unaliased from the initial '
+        'gradient tensors. In order to donate and discard the former gradient '
+        'tensors, consider enabling `_xla_set_enable_alias_with_buffer_donor_config(True)`'
+    )
+
   init_grads = []
   # Initialize the gradients to zero.
   for param in model_parameters:
     if not param.requires_grad:
       continue
-    if param.grad is not None:
-      grad = param.grad
-    else:
-      grad = torch.zeros(param.size()).to(param.device).requires_grad_(False)
-      param_sharding = torch_xla._XLAC._get_xla_op_sharding(param)
+    if param.grad is None:
+      param.grad = torch.zeros(param.size()).to(
+          param.device).requires_grad_(False)
+      param_sharding = torch_xla._XLAC._get_xla_op_sharding(param.grad)
       if param_sharding:
         # Match the gradient sharding to the parameter's.
-        torch_xla._XLAC._xla_mark_sharding(grad, param_sharding)
-    init_grads.append(grad)
+        torch_xla._XLAC._xla_mark_sharding(param.grad, param_sharding)
+
+    # Ensure that the input or pre-initialized gradient tensors can be donated
+    # after reassigned to the respective model parameters. If the buffer donor
+    # is not enabled, then this is a no-op.
+    torch_xla._XLAC._set_buffer_donation(param.grad, True)
+    init_grads.append(param.grad)
 
   # Apply gradients to parameters
   result = _gradient_accumulation_impl(context, body_fn, iterable_tensors,
