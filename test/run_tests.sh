@@ -196,6 +196,7 @@ function run_xla_op_tests2 {
   run_test "$CDIR/scan/test_scan.py"
   run_test "$CDIR/scan/test_scan_spmd.py"
   run_test "$CDIR/scan/test_scan_layers.py"
+  run_test "$CDIR/test_as_stride_use_slice.py"
   run_xla_hlo_debug run_test "$CDIR/scan/test_scan_debug.py"
   run_test "$CDIR/test_autocast.py"
   run_test "$CDIR/eager/test_eager.py"
