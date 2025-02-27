@@ -978,6 +978,24 @@ void BuildProfilerSubmodule(py::module* m) {
       [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
         return absl::make_unique<torch::lazy::ScopePusher>(name);
       });
+
+  // Profiler Session Definition.
+  py::class_<runtime::profiler::TslProfilerSessionWrapper,
+             std::unique_ptr<runtime::profiler::TslProfilerSessionWrapper>>
+      profiler_session_class(profiler, "TslProfilerSessionWrapper");
+  profiler_session_class.def(
+      py::init(&runtime::profiler::TslProfilerSessionWrapper::Create));
+  profiler_session_class.def("stop", [](py::object self) -> py::bytes {
+    std::string xspace_str =
+        py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)->Stop();
+    return py::bytes(xspace_str);
+  });
+  profiler_session_class.def("export", [](py::object self, py::bytes xspace,
+                                          const std::string& dump_dir) {
+    const std::string xspace_str = xspace.cast<std::string>();
+    py::cast<runtime::profiler::TslProfilerSessionWrapper*>(self)->Export(
+        xspace_str, dump_dir);
+  });
 }
 
 class PyLoweringContext {
