@@ -79,11 +79,15 @@ def _shard_map(
 
     def wrapped(*args):
         assert len(args) == len(input_specs), f'args={len(args)}; input_specs={len(input_specs)}'
-        new_args = tuple(
-            xs.enable_manual_sharding(a, spec, mesh=mesh).global_tensor 
-            if isinstance(a, torch.Tensor) and spec is not None else a
-            for a, spec in zip(args, input_specs)
-        )
+        new_args = []
+        for i, (a, spec) in enumerate(zip(args, input_specs)):
+          if isinstance(a, torch.Tensor) and spec is not None:
+            assert(len(a.shape) == len(spec)), f'{i}th input has wrong shape: {a.shape} for {spec}'
+            new_a = xs.enable_manual_sharding(a, spec, mesh=mesh).global_tensor 
+            new_args.append(new_a)
+          else:
+            new_args.append(a)
+
         res = func(*new_args)
         if isinstance(res, tuple):
             return tuple(
