@@ -856,10 +856,10 @@ class PallasTest(parameterized.TestCase):
     else:
       self.assertTrue(
           torch.allclose(
-              kernel_output_cpu, nonkernel_output_cpu, atol=2e-1, rtol=1e-2))
+              kernel_output_cpu, nonkernel_output_cpu, atol=2e-2, rtol=1e-2))
       self.assertTrue(
           torch.allclose(
-              kernel_output_cpu, jax_kernel_output_cpu, atol=2e-1, rtol=1e-2))
+              kernel_output_cpu, jax_kernel_output_cpu, atol=2e-2, rtol=1e-2))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")

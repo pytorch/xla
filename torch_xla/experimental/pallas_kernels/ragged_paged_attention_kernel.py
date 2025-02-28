@@ -355,6 +355,7 @@ def _flash_attention(
     page_size: int,
     head_dim: int,
     num_q_heads_per_kv_head: int,
+    sm_scale: float,
 ):
   assert q_ref.shape == (num_q_heads_per_kv_head, num_queries_per_block,
                          head_dim)
@@ -403,8 +404,9 @@ def _flash_attention(
   assert q.shape == (num_queries_per_block, head_dim)
   s = jnp.einsum(
       'qd,td->qt', q, k,
-      preferred_element_type=jnp.float32)  # [block_q, block_k]
+      preferred_element_type=jnp.float32).astype(jnp.float32)  # [block_q, block_k]
   assert s.shape == (num_queries_per_block, kv_blk_size)
+  s = s * sm_scale
 
   # Modify the mask accordingly: first form the mask. Then move the mask up/down to the right place.
   cur_seq_idx = seq_ids[logical_q_blk_idx]
@@ -597,6 +599,7 @@ def paged_flash_attention_kernel(
     num_seqs: int,
     num_kv_pages_per_block: int,
     mask_value: float,
+    sm_scale: float,
 ):
   kv_head_idx, logical_q_blk_idx, kv_blk_idx = (
       pl.program_id(0),
@@ -704,6 +707,7 @@ def paged_flash_attention_kernel(
           page_size=page_size,
           head_dim=head_dim,
           num_q_heads_per_kv_head=num_q_heads_per_kv_head,
+          sm_scale = sm_scale,
       )
     step_ref[0] = step + 1
     # end of get_kv_and_run_flash_attention
@@ -724,6 +728,7 @@ MIN_BLOCK_SIZE = 128
         "num_queries_per_block",
         "mask_value",
         "num_seqs",
+        "sm_scale",
     ],
 )
 def ragged_paged_attention(
@@ -738,6 +743,7 @@ def ragged_paged_attention(
     mask_value: float = DEFAULT_MASK_VALUE,
     num_kv_pages_per_block: int = 128,
     num_queries_per_block: int = 128,
+    sm_scale: float = 1.0,
 ) -> jax.Array:
   """Paged attention kernel with ragged input.
 
@@ -940,6 +946,7 @@ def ragged_paged_attention(
           num_seqs=num_seqs,
           num_kv_pages_per_block=num_kv_pages_per_block,
           mask_value=mask_value,
+          sm_scale=sm_scale,
       ),
       grid_spec=pltpu.PrefetchScalarGridSpec(
           num_scalar_prefetch=6,
