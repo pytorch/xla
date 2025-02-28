@@ -807,6 +807,8 @@ def ragged_paged_attention(
   # in the global scope which could cause problems for xmp.spawn.
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as ragged_attention, make_sequence_metadata
   from torch_xla.experimental.pallas_kernels.ragged_paged_attn_v2 import ragged_paged_attention as ragged_paged_attention_v2
+  k_pages = k_pages.permute(1, 2, 0, 3)
+  v_pages = v_pages.permute(1, 2, 0, 3)
   payload, tensor_args = trace_pallas(
       ragged_paged_attention_v2,
       q,
@@ -891,7 +893,7 @@ def ragged_paged_attention(
       [  # output dtype
           q_dtype_for_kernel_launch,
       ])
-  return output
+  return output[0]
 
 
 def _multi_queries_paged_attention_nonkernel(

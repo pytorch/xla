@@ -587,7 +587,7 @@ def ragged_paged_attention(
       pl.BlockSpec(memory_space=pltpu.TPUMemorySpace.ANY),
   ]
 
-  out_specs = q_block_spec
+  out_specs = [q_block_spec]
 
   lm_scratch = pltpu.VMEM(
       # TODO(jevinjiang): use 128 instead of 1 is due to Mosaic does not support
@@ -638,10 +638,10 @@ def ragged_paged_attention(
           ),
           vmem_limit_bytes=1024 * 1024 * 36,
       ),
-      out_shape=jax.ShapeDtypeStruct(shape=q.shape, dtype=jnp.float32),
+      out_shape=[jax.ShapeDtypeStruct(shape=q.shape, dtype=jnp.float32)],
       # interpret=True,
       # debug=True,
       name="ragged_paged_attention_kernel_v2_opt",
   )
 
-  return kernel(*scalar_prefetches, q, k_pages, v_pages).astype(q.dtype)
+  return kernel(*scalar_prefetches, q, k_pages, v_pages)[0].astype(q.dtype)
