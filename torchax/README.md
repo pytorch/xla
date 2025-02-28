@@ -122,7 +122,7 @@ print(m(inputs))
 This model `m` contains 2 parts: the weights that is stored inside of the model
 and it's submodules (`nn.Linear`).
 
-To execute this model with `torchax`; we need enable torchax to capture pytorch ops.
+To execute this model with `torchax`; we need to enable torchax to capture pytorch ops.
 To enable this, use:
 
 ```python
