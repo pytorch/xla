@@ -564,7 +564,52 @@ def _scan_impl_flat(fn,
   device = torch_xla.device()
   fake_carry = tree_map(make_fake_tensor, init)
   fake_x = tree_map(lambda v: make_fake_tensor(v[0]), xs)
-  fake_output_carry, fake_output_y = fn(fake_carry, fake_x)
+
+  def defeat_device_data(v: torch.Tensor) -> torch.Tensor:
+    """
+    Make sure inputs into `fn` are not `device_data` IR nodes.
+
+    This is to workaround a limitation of `mark_sharding`, which replaces
+    the innards of the tensors it operates on. In other words, `mark_sharding`
+    is an in-place operation as opposed to a transform like found in JAX.
+
+    When `fn` contains a `mark_sharding` and the `mark_sharding` operates on one
+    of the carry or xs fake tensors, the original device data will be discarded
+    and a new one will be created in its place. That's because `mark_sharding` has
+    different code paths depending on if the IR has or doesn't have device data.
+    If the IR is an intermediate operation like add or matmul, `mark_sharding` will
+    update the sharding annotation. If the IR holds data, `mark_sharding` will
+    transfer the data to the TPU in a sharded manner, and update the data object
+    in the IR to point to a sharded data object, as can be seen in [2].
+
+    When lowering a graph to HLO, tensors that hold the same data object will
+    map to the same HLO parameter. Changing the data object in the tensor will
+    cause it to map to a different HLO parameter. As a result, `fn` will appear
+    to create a few empty tensors internally that are unrelated to the carry and
+    xs fake tensors, and the carry and xs will appear completely unused.
+
+    See https://github.com/pytorch/xla/issues/8742 for the bug. In short,
+    if an input into the layer to be scanned is a device data, and that layer
+    does a `mark_sharding` on said input, then the graph capturing in `scan`
+    will fail.
+
+    The workaround here is simple and cursed: multiply any `device_data` by 1.
+    This will make sure these tensor don't hold device data IR nodes and will
+    defeat the device data replacement of `mark_sharding`.
+
+    Fortunately, XLA simplifies away the multiplication (see [1]) so this should
+    become a no-op by the time it hits the TPU.
+
+    [1]: https://github.com/openxla/xla/blob/869f57d0082d7adbb9efc10cc18f51a562fc7bf3/xla/hlo/transforms/simplifiers/algebraic_simplifier.cc#L4755-L4770
+    [2]: https://github.com/pytorch/xla/blob/2675e6892c6f955fc2baf88d85dfdfa72062273c/torch_xla/csrc/xla_sharding_util.cpp#L799-L846
+
+    """
+    return v * 1
+
+  # Trace `fn` in order to stage out its HLO.
+  fake_output_carry, fake_output_y = fn(
+      tree_map(defeat_device_data, fake_carry),
+      tree_map(defeat_device_data, fake_x))
 
   y_len = len(fake_output_y)
   fn_outputs = fake_output_carry + fake_output_y
