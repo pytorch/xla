@@ -746,7 +746,7 @@ class PallasTest(parameterized.TestCase):
       num_kv_pages_per_block,
       num_queries_per_block,
       pad_num_q_tokens=False,
-      sm_scale = 1.0,
+      sm_scale=1.0,
   ):
     num_seqs = len(seq_lens)
     q, k_pages, v_pages, page_indices, cu_q_lens, kv_lens = self._ragged_pagedattention_generate_qkv(
@@ -888,7 +888,7 @@ class PallasTest(parameterized.TestCase):
     dtype = torch.float32
     page_size = 16
     num_pages = 32768
-    sm_scale = head_dim ** -0.5
+    sm_scale = head_dim**-0.5
 
     self._verify_ragged_paged_attention_with_dynamo(
         seq_lens,
@@ -918,7 +918,7 @@ class PallasTest(parameterized.TestCase):
     dtype = torch.float32
     page_size = 16
     num_pages = 32768
-    sm_scale = head_dim ** -0.5
+    sm_scale = head_dim**-0.5
 
     self._verify_ragged_paged_attention_with_dynamo(
         seq_lens,
