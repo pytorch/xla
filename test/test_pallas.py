@@ -746,6 +746,7 @@ class PallasTest(parameterized.TestCase):
       num_kv_pages_per_block,
       num_queries_per_block,
       pad_num_q_tokens=False,
+      sm_scale=1.0,
   ):
     num_seqs = len(seq_lens)
     q, k_pages, v_pages, page_indices, cu_q_lens, kv_lens = self._ragged_pagedattention_generate_qkv(
@@ -768,7 +769,8 @@ class PallasTest(parameterized.TestCase):
     def ragged_paged_attention_wrapper(q, k_pages, v_pages, kv_lens,
                                        page_indices, cu_q_lens, num_seqs,
                                        num_kv_pages_per_block,
-                                       num_queries_per_block, use_kernel):
+                                       num_queries_per_block, use_kernel,
+                                       sm_scale):
       return torch.ops.xla.ragged_paged_attention(
           q,
           k_pages,
@@ -780,6 +782,7 @@ class PallasTest(parameterized.TestCase):
           num_kv_pages_per_block,
           num_queries_per_block,
           use_kernel=use_kernel,
+          sm_scale=sm_scale,
       )
 
     compiled_paged_attention = torch.compile(
@@ -796,6 +799,7 @@ class PallasTest(parameterized.TestCase):
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=True,
+        sm_scale=sm_scale,
     )
 
     nonkernel_output = compiled_paged_attention(
@@ -809,6 +813,7 @@ class PallasTest(parameterized.TestCase):
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
         use_kernel=False,
+        sm_scale=sm_scale,
     )
 
     kernel_output_cpu = kernel_output.cpu()
@@ -836,6 +841,7 @@ class PallasTest(parameterized.TestCase):
                 num_seqs=num_seqs,
                 num_kv_pages_per_block=num_kv_pages_per_block,
                 num_queries_per_block=num_queries_per_block,
+                sm_scale=sm_scale,
             )[1]))
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 
@@ -845,21 +851,21 @@ class PallasTest(parameterized.TestCase):
           torch.allclose(
               kernel_output_cpu[:actual_num_q_tokens],
               nonkernel_output_cpu[:actual_num_q_tokens],
-              atol=2e-1,
+              atol=2e-2,
               rtol=1e-2))
       self.assertTrue(
           torch.allclose(
               kernel_output_cpu[:actual_num_q_tokens],
               jax_kernel_output_cpu[:actual_num_q_tokens],
-              atol=2e-1,
+              atol=2e-2,
               rtol=1e-2))
     else:
       self.assertTrue(
           torch.allclose(
-              kernel_output_cpu, nonkernel_output_cpu, atol=2e-1, rtol=1e-2))
+              kernel_output_cpu, nonkernel_output_cpu, atol=2e-2, rtol=1e-2))
       self.assertTrue(
           torch.allclose(
-              kernel_output_cpu, jax_kernel_output_cpu, atol=2e-1, rtol=1e-2))
+              kernel_output_cpu, jax_kernel_output_cpu, atol=2e-2, rtol=1e-2))
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
@@ -882,6 +888,7 @@ class PallasTest(parameterized.TestCase):
     dtype = torch.float32
     page_size = 16
     num_pages = 32768
+    sm_scale = head_dim**-0.5
 
     self._verify_ragged_paged_attention_with_dynamo(
         seq_lens,
@@ -892,6 +899,7 @@ class PallasTest(parameterized.TestCase):
         dtype,
         num_kv_pages_per_block=128,
         num_queries_per_block=8,
+        sm_scale=sm_scale,
     )
 
   @parameterized.product(
@@ -910,6 +918,7 @@ class PallasTest(parameterized.TestCase):
     dtype = torch.float32
     page_size = 16
     num_pages = 32768
+    sm_scale = head_dim**-0.5
 
     self._verify_ragged_paged_attention_with_dynamo(
         seq_lens,
@@ -921,6 +930,7 @@ class PallasTest(parameterized.TestCase):
         num_kv_pages_per_block=128,
         num_queries_per_block=num_queries_per_block,
         pad_num_q_tokens=True,
+        sm_scale=sm_scale,
     )
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
