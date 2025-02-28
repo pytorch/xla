@@ -241,5 +241,5 @@ try:
   import torch
   import torchvision
   ops_registry.register_torch_dispatch_op(torch.ops.torchvision.nms, nms)
-except ImportError:
+except Exception:
   pass

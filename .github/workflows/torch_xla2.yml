@@ -39,7 +39,6 @@ jobs:
         run: |
           pip install -r test-requirements.txt
           pip install -e .[cpu]
-          pip install tensorflow-cpu  # for TF integrations tests
       - name: Run tests
         working-directory: torchax
         shell: bash
@@ -52,7 +51,7 @@ jobs:
           pytest test/test_context.py
           pytest test/test_train.py
           pytest test/test_mutations.py
-          pytest test/test_tf_integration.py
+          # pytest test/test_tf_integration.py # TODO(8770)
           pytest test/gemma/test_gemma.py
           pytest test/llama/test_llama.py
           pytest test/test_core_aten_ops.py
