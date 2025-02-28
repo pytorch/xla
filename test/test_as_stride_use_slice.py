@@ -26,14 +26,15 @@ class AttentionModule(torch.nn.Module):
     if has_model_weight:
       self.num_head = num_head
       self.hidden_dim = hidden_dim
-      self.fc = nn.Linear(hidden_dim, hidden_dim)
+      # self.fc = nn.Linear(hidden_dim, hidden_dim)
+      self.param = nn.Parameter(torch.zeros(hidden_dim))
 
   def forward(self, input):
     # query_states: [B, NUM_HEAD, SEQ_LEN, d_k]
     # attn_output: [B, SEQ_LEN, d_m], dm = dk * NUM_HEAD
-    query_states = input.clone()
-    key_states = input.clone()
-    value_states = input.clone()
+    query_states = input.clone() + 1e-9
+    key_states = input.clone() + 1e-9
+    value_states = input.clone() + 1e-9
     attn_output = flash_attention(
         query_states,
         key_states,
@@ -42,7 +43,7 @@ class AttentionModule(torch.nn.Module):
         partition_spec=("fsdp", None, None, None),
     )
     if self.has_model_weight:
-      attn_output = self.fc(attn_output)
+      attn_output = self.param + attn_output
     return attn_output
 
 
@@ -200,12 +201,44 @@ class AsStridedTest(parameterized.TestCase):
 
 class ScanFlashAttentionTest(parameterized.TestCase):
 
+  def setUp(self):
+    super().setUp()
+    torch.manual_seed(12)
+    torch_xla.manual_seed(12)
+
   def fake_fa_wrapper(self, has_model_weight, use_scan):
+    # hidden_states = torch.randn((2, 4, 256, 256)).requires_grad_()
+    # Generate hidden state of monotonically increasing values of shape [2, 4, 256, 256]
+    hidden_states = torch.sin(
+        torch.ones((2, 4, 256, 256),
+                   dtype=torch.float32,
+                   device=xm.xla_device())).requires_grad_()
+    # torch_xla.sync()
+
     with xm.xla_device():
-      dm = AttentionLayers(has_model_weight, 3, use_scan)
-      hidden_states = torch.randn((2, 4, 256, 256)).requires_grad_()
+      dm = AttentionLayers(has_model_weight, num_layer=1, use_scan=use_scan)
+    hidden_states = hidden_states.to(xm.xla_device())
     hidden_states.retain_grad()
     output = dm(hidden_states)
+
+    print()
+    print(
+        f"############### Begin {'scan' if use_scan else 'for loop'} ###############"
+    )
+    print()
+    print()
+    print()
+    print()
+    print(torch_xla._XLAC._get_xla_tensors_hlo([output]))
+    print()
+    print()
+    print(
+        f"############### End {'scan' if use_scan else 'for loop'} ###############"
+    )
+    print()
+    print()
+    print()
+    print()
     return output
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU")
@@ -215,14 +248,13 @@ class ScanFlashAttentionTest(parameterized.TestCase):
     output = self.fake_fa_wrapper(has_model_weight=True, use_scan=use_scan)
     torch_xla.sync()
     # TODO(https://github.com/pytorch/xla/issues/8742): Fix NaN
-    # self.assertFalse(torch.isnan(output).any())
+    print(f'Output with {"scan" if use_scan else "for loop"}', output)
+    self.assertFalse(torch.isnan(output).any())
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU")
   @parameterized.named_parameters(("has_model_weight_True", True),
                                   ("has_model_weight_False", False))
   def test_scan_weight_layer_aot(self, has_model_weight_scan):
-    torch.manual_seed(12)
-    torch_xla.manual_seed(12)
     output = self.fake_fa_wrapper(
         has_model_weight=has_model_weight_scan, use_scan=False)
     torch_xla.sync()

@@ -1,0 +1,492 @@
+
+############### Begin for loop ###############
+
+
+
+
+HloModule IrToHlo.22, entry_computation_layout={(f32[2,4,256,256]{3,2,1,0})->(f32[2,4,256,256]{3,2,1,0})}
+
+ENTRY %IrToHlo.22 (p0.2: f32[2,4,256,256]) -> (f32[2,4,256,256]) {
+  %p0.2 = f32[2,4,256,256]{3,2,1,0} parameter(0), sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__device_data" op_name="xla__device_data" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=563}
+  %custom-call.5 = f32[1,4,256,256]{3,2,1,0} custom-call(f32[2,4,256,256]{3,2,1,0} %p0.2), custom_call_target="SPMDFullToShardShape", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=493}
+  %custom-call.4 = f32[1,4,256,256]{3,2,1,0} custom-call(f32[2,4,256,256]{3,2,1,0} %p0.2), custom_call_target="SPMDFullToShardShape", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=493}
+  %custom-call.3 = f32[1,4,256,256]{3,2,1,0} custom-call(f32[2,4,256,256]{3,2,1,0} %p0.2), custom_call_target="SPMDFullToShardShape", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=493}
+  %custom-call.6 = (f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}) custom-call(f32[1,4,256,256]{3,2,1,0} %custom-call.5, f32[1,4,256,256]{3,2,1,0} %custom-call.4, f32[1,4,256,256]{3,2,1,0} %custom-call.3), custom_call_target="tpu_custom_call", operand_layout_constraints={f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,256]{3,2,1,0}}, metadata={op_type="xla__tpu_custom_call" op_name="xla__tpu_custom_call" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=322}, backend_config={"custom_call_config": {"body": "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ExcDAzsLAwEVBjsDAQcZBxsDAwELAwEDAwELAwEJBAEJAQMdHwcRAfUHAyM7CQEBAQEBAQEBAwMzMQMBEQczDQMBBQUJAwMTKwMBDwcTDQMBBQsNAwM5MQMBGQc5DQMBBQ8RAwMTKwMBDwcTDQMBBQcVEweBfQMTBRMXAwM7CwMBFQY7AwEHGQcbAwMBCwMBAwMBCwMBCQQBCQEDHR8HEQH3BwMNDwkBAQEBAQEBAQMDAQsDAQMDAQsDAQkEAQkBAwUJBxEB+QcDDQ8JAQEBAQEBAQEDAwELAwEDAwELAwEJBAEJAQMFCQcRAQoCBwMNDwkBAQEBAQEBAQMDAQsDAQMDAQsDAQkEAQkBAwUJBgMBBQEAHhSnESkLGQsZEw0JCR0hJREbLSMdCyMhIyktHwsNFR0dJRsVFQsLfxsZGRkZGRkxDQsRCyWNHSUdEw1jtxcTFxcvExcXIxsXFxcZIxkVJR8PDw0JHRFidWlsdGluAHN0YWJsZV9tb3NhaWMAdHB1AGFyaXRoAHZlY3RvcgBtb2R1bGUAYXJpdGguY29uc3RhbnQAdmVjdG9yLnNoYXBlX2Nhc3QAZnVuYy5mdW5jAGZ1bmMucmV0dXJuAHZlY3Rvci5icm9hZGNhc3QAdmVjdG9yLmxvYWQAYXJpdGgubXVsaQBhcml0aC5hZGRpAGFyaXRoLmNtcGkAYXJpdGguc2VsZWN0AHRwdS52ZWN0b3Jfc3RvcmUAYXJpdGguc3ViaQB0cHUubWF0bXVsAHRwdS5pb3RhAHZlY3Rvci5tdWx0aV9yZWR1Y3Rpb24AYXJpdGguYWRkZgBhcml0aC5zdWJmAG1hdGguZXhwAGFyaXRoLmRpdmYAL3Vzci9sb2NhbC9saWIvcHl0aG9uMy4xMC9zaXRlLXBhY2thZ2VzL2pheC9leHBlcmltZW50YWwvcGFsbGFzL29wcy90cHUvZmxhc2hfYXR0ZW50aW9uLnB5AF9mbGFzaF9hdHRlbnRpb25fa2VybmVsX3NpbmdsZV9iYXRjaF9zaW5nbGVfc3RlcAB2YWx1ZQBzeW1fbmFtZQBmdW5jdGlvbl90eXBlAHRyYW5zZm9ybV9pbmRpY2VzAHdpbmRvd19ib3VuZHMAL3dvcmtzcGFjZXMvdG9yY2gvcHl0b3JjaC94bGEvdG9yY2hfeGxhL2V4cGVyaW1lbnRhbC9jdXN0b21fa2VybmVsLnB5AC9icm9hZGNhc3RfaW5fZGltAC9hZGQAZm9yd2FyZAAvZ2V0AC9zd2FwAF9mbGFzaF9hdHRlbnRpb25fa2VybmVsAHRyYW5zZm9ybV8wAHRyYW5zZm9ybV8xAHRyYW5zZm9ybV8yAHRyYW5zZm9ybV8zAHRyYW5zZm9ybV80AHRyYW5zZm9ybV81AGt2X2luZGV4X21hcAAvd29ya3NwYWNlcy90b3JjaC9weXRvcmNoL3hsYS90ZXN0L3Rlc3RfYXNfc3RyaWRlX3VzZV9zbGljZS5weQAvbXVsAC9zdWIAcHJlZGljYXRlAC9zZWxlY3RfbgAvZG90X2dlbmVyYWwAZGltZW5zaW9uX251bWJlcnMAdHJhbnNwb3NlX2xocwB0cmFuc3Bvc2VfcmhzAGRpbWVuc2lvbgAvaW90YQBraW5kAHJlZHVjdGlvbl9kaW1zAHN0YWJsZV9tb3NhaWMudmVyc2lvbgBkaW1lbnNpb25fc2VtYW50aWNzAGl0ZXJhdGlvbl9ib3VuZHMAc2NhbGFyX3ByZWZldGNoAHNjcmF0Y2hfb3BlcmFuZHMAbWFpbgB3aW5kb3dfcGFyYW1zAGJlbG93X29yX29uX2RpYWcAX2ZsYXNoX2F0dGVudGlvbl9pbXBsAHRyYWNlX3BhbGxhcwB3cmFwcGVyAGZhX2N1c3RvbV9mb3J3YXJkAGZsYXNoX2F0dGVudGlvbgBvdmVyZmxvd0ZsYWdzAC9ndAAvbGUAL3BqaXQAZmFzdG1hdGgAL3JlZHVjZV9tYXgAL2V4cAAvcmVkdWNlX3N1bQAvZGl2AG9wZXJhbmRTZWdtZW50U2l6ZXMAc3RyaWRlcwA=", "cost_estimate": {"flops": 269221888, "transcendentals": 262144, "bytes_accessed": 5242880}, "serialization_format": 1, "needs_layout_passes": true}}
+  %get-tuple-element.8 = f32[1,4,256,128]{3,2,1,0} get-tuple-element((f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}) %custom-call.6), index=1, metadata={op_type="xla__tpu_custom_call" op_name="xla__tpu_custom_call" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=322}
+  %get-tuple-element.9 = f32[1,4,256,128]{3,2,1,0} get-tuple-element((f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}) %custom-call.6), index=2, metadata={op_type="xla__tpu_custom_call" op_name="xla__tpu_custom_call" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=322}
+  %constant.12 = f32[] constant(0), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %reshape.13 = f32[1]{0} reshape(f32[] %constant.12), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %broadcast.14 = f32[1]{0} broadcast(f32[1]{0} %reshape.13), dimensions={0}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %reshape.15 = f32[] reshape(f32[1]{0} %broadcast.14), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %broadcast.16 = f32[256]{0} broadcast(f32[] %reshape.15), dimensions={}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %broadcast.19 = f32[2,4,256,256]{3,2,1,0} broadcast(f32[256]{0} %broadcast.16), dimensions={3}, metadata={op_type="aten__add" op_name="aten__add.1/aten__add" source_file="/workspaces/torch/pytorch/xla/test/test_as_stride_use_slice.py" source_line=46}
+  %get-tuple-element.7 = f32[1,4,256,256]{3,2,1,0} get-tuple-element((f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}) %custom-call.6), index=0, metadata={op_type="xla__tpu_custom_call" op_name="xla__tpu_custom_call" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=322}
+  %custom-call.10 = f32[1,4,256,256]{3,2,1,0} custom-call(f32[1,4,256,256]{3,2,1,0} %get-tuple-element.7), custom_call_target="Sharding", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=475}
+  %custom-call.11 = f32[2,4,256,256]{3,2,1,0} custom-call(f32[1,4,256,256]{3,2,1,0} %custom-call.10), custom_call_target="SPMDShardToFullShape", sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__custom_sharding" op_name="xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=508}
+  %constant.1 = f32[] constant(1), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/workspaces/torch/pytorch/xla/test/test_as_stride_use_slice.py" source_line=46}
+  %broadcast.17 = f32[2,4,256,256]{3,2,1,0} broadcast(f32[] %constant.1), dimensions={}, metadata={op_type="aten__add" op_name="aten__add.1/aten__add" source_file="/workspaces/torch/pytorch/xla/test/test_as_stride_use_slice.py" source_line=46}
+  %multiply.18 = f32[2,4,256,256]{3,2,1,0} multiply(f32[2,4,256,256]{3,2,1,0} %custom-call.11, f32[2,4,256,256]{3,2,1,0} %broadcast.17), metadata={op_type="aten__add" op_name="aten__add.1/aten__add" source_file="/workspaces/torch/pytorch/xla/test/test_as_stride_use_slice.py" source_line=46}
+  %add.20 = f32[2,4,256,256]{3,2,1,0} add(f32[2,4,256,256]{3,2,1,0} %broadcast.19, f32[2,4,256,256]{3,2,1,0} %multiply.18), metadata={op_type="aten__add" op_name="aten__add.1/aten__add" source_file="/workspaces/torch/pytorch/xla/test/test_as_stride_use_slice.py" source_line=46}
+  ROOT %tuple.21 = (f32[2,4,256,256]{3,2,1,0}) tuple(f32[2,4,256,256]{3,2,1,0} %add.20)
+}
+
+
+
+
+############### End for loop ###############
+
+
+
+
+Output with for loop tensor([[[[0.0000e+00, 3.9062e-03, 7.8125e-03,  ..., 9.8828e-01,
+           9.9219e-01, 9.9609e-01],
+          [1.0000e+00, 1.0000e+00, 1.0078e+00,  ..., 1.9844e+00,
+           1.9922e+00, 2.0000e+00],
+          [2.0000e+00, 2.0000e+00, 2.0000e+00,  ..., 2.9844e+00,
+           3.0000e+00, 3.0000e+00],
+          ...,
+          [2.5300e+02, 2.5300e+02, 2.5300e+02,  ..., 2.5400e+02,
+           2.5400e+02, 2.5400e+02],
+          [2.5400e+02, 2.5400e+02, 2.5400e+02,  ..., 2.5500e+02,
+           2.5500e+02, 2.5500e+02],
+          [2.5500e+02, 2.5500e+02, 2.5500e+02,  ..., 2.5600e+02,
+           2.5600e+02, 2.5600e+02]],
+
+         [[2.5600e+02, 2.5600e+02, 2.5600e+02,  ..., 2.5600e+02,
+           2.5600e+02, 2.5600e+02],
+          [2.5600e+02, 2.5800e+02, 2.5800e+02,  ..., 2.5800e+02,
+           2.5800e+02, 2.5800e+02],
+          [2.5800e+02, 2.5800e+02, 2.5800e+02,  ..., 2.5800e+02,
+           2.5800e+02, 2.5800e+02],
+          ...,
+          [5.0800e+02, 5.1000e+02, 5.1000e+02,  ..., 5.1000e+02,
+           5.1000e+02, 5.1000e+02],
+          [5.1000e+02, 5.1000e+02, 5.1000e+02,  ..., 5.1000e+02,
+           5.1000e+02, 5.1000e+02],
+          [5.1200e+02, 5.1200e+02, 5.1200e+02,  ..., 5.1200e+02,
+           5.1200e+02, 5.1200e+02]],
+
+         [[5.1200e+02, 5.1200e+02, 5.1200e+02,  ..., 5.1200e+02,
+           5.1200e+02, 5.1200e+02],
+          [5.1200e+02, 5.1200e+02, 5.1200e+02,  ..., 5.1200e+02,
+           5.1200e+02, 5.1200e+02],
+          [5.1200e+02, 5.1600e+02, 5.1600e+02,  ..., 5.1600e+02,
+           5.1600e+02, 5.1600e+02],
+          ...,
+          [7.6549e+02, 7.6549e+02, 7.6549e+02,  ..., 7.6549e+02,
+           7.6549e+02, 7.6549e+02],
+          [7.6800e+02, 7.6800e+02, 7.6800e+02,  ..., 7.6800e+02,
+           7.6800e+02, 7.6800e+02],
+          [7.6800e+02, 7.6800e+02, 7.6800e+02,  ..., 7.6800e+02,
+           7.6800e+02, 7.6800e+02]],
+
+         [[7.6800e+02, 7.6800e+02, 7.6800e+02,  ..., 7.6800e+02,
+           7.6800e+02, 7.6800e+02],
+          [7.6800e+02, 7.6800e+02, 7.6800e+02,  ..., 7.6800e+02,
+           7.6800e+02, 7.6800e+02],
+          [7.6800e+02, 7.7200e+02, 7.7200e+02,  ..., 7.7200e+02,
+           7.7200e+02, 7.7200e+02],
+          ...,
+          [1.0220e+03, 1.0220e+03, 1.0220e+03,  ..., 1.0220e+03,
+           1.0220e+03, 1.0220e+03],
+          [1.0240e+03, 1.0240e+03, 1.0240e+03,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03],
+          [1.0240e+03, 1.0240e+03, 1.0240e+03,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03]]],
+
+
+        [[[1.0240e+03, 1.0240e+03, 1.0240e+03,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03],
+          [1.0240e+03, 1.0240e+03, 1.0240e+03,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03],
+          [1.0260e+03, 1.0260e+03, 1.0260e+03,  ..., 1.0260e+03,
+           1.0260e+03, 1.0260e+03],
+          ...,
+          [1.2800e+03, 1.2800e+03, 1.2800e+03,  ..., 1.2800e+03,
+           1.2800e+03, 1.2800e+03],
+          [1.2825e+03, 1.2825e+03, 1.2825e+03,  ..., 1.2825e+03,
+           1.2825e+03, 1.2825e+03],
+          [1.2800e+03, 1.2800e+03, 1.2800e+03,  ..., 1.2800e+03,
+           1.2800e+03, 1.2800e+03]],
+
+         [[1.2800e+03, 1.2800e+03, 1.2800e+03,  ..., 1.2800e+03,
+           1.2800e+03, 1.2800e+03],
+          [1.2800e+03, 1.2800e+03, 1.2800e+03,  ..., 1.2800e+03,
+           1.2800e+03, 1.2800e+03],
+          [1.2825e+03, 1.2825e+03, 1.2825e+03,  ..., 1.2825e+03,
+           1.2825e+03, 1.2825e+03],
+          ...,
+          [1.5360e+03, 1.5360e+03, 1.5360e+03,  ..., 1.5360e+03,
+           1.5360e+03, 1.5360e+03],
+          [1.5390e+03, 1.5390e+03, 1.5390e+03,  ..., 1.5390e+03,
+           1.5390e+03, 1.5390e+03],
+          [1.5360e+03, 1.5360e+03, 1.5360e+03,  ..., 1.5360e+03,
+           1.5360e+03, 1.5360e+03]],
+
+         [[1.5360e+03, 1.5360e+03, 1.5360e+03,  ..., 1.5360e+03,
+           1.5360e+03, 1.5360e+03],
+          [1.5360e+03, 1.5360e+03, 1.5360e+03,  ..., 1.5360e+03,
+           1.5360e+03, 1.5360e+03],
+          [1.5390e+03, 1.5390e+03, 1.5390e+03,  ..., 1.5390e+03,
+           1.5390e+03, 1.5390e+03],
+          ...,
+          [1.7920e+03, 1.7920e+03, 1.7920e+03,  ..., 1.7920e+03,
+           1.7920e+03, 1.7920e+03],
+          [1.7955e+03, 1.7955e+03, 1.7955e+03,  ..., 1.7955e+03,
+           1.7955e+03, 1.7955e+03],
+          [1.7920e+03, 1.7920e+03, 1.7920e+03,  ..., 1.7920e+03,
+           1.7920e+03, 1.7920e+03]],
+
+         [[1.7920e+03, 1.7920e+03, 1.7920e+03,  ..., 1.7920e+03,
+           1.7920e+03, 1.7920e+03],
+          [1.7920e+03, 1.7920e+03, 1.7920e+03,  ..., 1.7920e+03,
+           1.7920e+03, 1.7920e+03],
+          [1.7955e+03, 1.7955e+03, 1.7955e+03,  ..., 1.7955e+03,
+           1.7955e+03, 1.7955e+03],
+          ...,
+          [2.0480e+03, 2.0480e+03, 2.0480e+03,  ..., 2.0480e+03,
+           2.0480e+03, 2.0480e+03],
+          [2.0520e+03, 2.0520e+03, 2.0520e+03,  ..., 2.0520e+03,
+           2.0520e+03, 2.0520e+03],
+          [2.0480e+03, 2.0480e+03, 2.0480e+03,  ..., 2.0480e+03,
+           2.0480e+03, 2.0480e+03]]]], device='xla:0', grad_fn=<AddBackward0>)
+
+############### Begin scan ###############
+
+
+
+
+HloModule IrToHlo.202, entry_computation_layout={(f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0})->(f32[2,4,256,256]{3,2,1,0})}
+
+%FnComputation.43 (p0.45: f32[2,4,256,256], p1.47: f32[2,4,256,256], p2.49: f32[2,4,256,256], p3.57: f32[256], p4.62: f32[2,4,256,256]) -> (f32[2,4,256,256], f32[2,4,256,256], f32[2,4,256,256], f32[2,4,256,256], f32[2,4,256,256], /*index=5*/f32[2,4,256], f32[2,4,256]) {
+  %p3.57 = f32[256]{0} parameter(3), sharding={replicated}, metadata={op_type="xla__device_data" op_name="aot_forward.3/xla__device_data" source_file="/usr/local/lib/python3.10/site-packages/torch/_ops.py" source_line=756}
+  %broadcast.60 = f32[2,4,256,256]{3,2,1,0} broadcast(f32[256]{0} %p3.57), dimensions={3}, metadata={op_type="aten__add" op_name="aot_forward.3/aten__add.1/aten__add" source_file="/usr/local/lib/python3.10/site-packages/torch/_ops.py" source_line=756}
+  %p2.49 = f32[2,4,256,256]{3,2,1,0} parameter(2), sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__device_data" op_name="aot_forward.3/xla__device_data" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=563}
+  %custom-call.50 = f32[1,4,256,256]{3,2,1,0} custom-call(f32[2,4,256,256]{3,2,1,0} %p2.49), custom_call_target="SPMDFullToShardShape", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="aot_forward.3/xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=493}
+  %p1.47 = f32[2,4,256,256]{3,2,1,0} parameter(1), sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__device_data" op_name="aot_forward.3/xla__device_data" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=563}
+  %custom-call.48 = f32[1,4,256,256]{3,2,1,0} custom-call(f32[2,4,256,256]{3,2,1,0} %p1.47), custom_call_target="SPMDFullToShardShape", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="aot_forward.3/xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=493}
+  %p0.45 = f32[2,4,256,256]{3,2,1,0} parameter(0), sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__device_data" op_name="aot_forward.3/xla__device_data" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=563}
+  %custom-call.46 = f32[1,4,256,256]{3,2,1,0} custom-call(f32[2,4,256,256]{3,2,1,0} %p0.45), custom_call_target="SPMDFullToShardShape", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="aot_forward.3/xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=493}
+  %custom-call.51 = (f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}) custom-call(f32[1,4,256,256]{3,2,1,0} %custom-call.50, f32[1,4,256,256]{3,2,1,0} %custom-call.48, f32[1,4,256,256]{3,2,1,0} %custom-call.46), custom_call_target="tpu_custom_call", operand_layout_constraints={f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,256]{3,2,1,0}}, metadata={op_type="xla__tpu_custom_call" op_name="aot_forward.3/xla__tpu_custom_call" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=322}, backend_config={"custom_call_config": {"body": "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ExcDAzsLAwEVBjsDAQcZBxsDAwELAwEDAwELAwEJBAEJAQMdHwcRAfUHAyM7CQEBAQEBAQEBAwMzMQMBEQczDQMBBQUJAwMTKwMBDwcTDQMBBQsNAwM5MQMBGQc5DQMBBQ8RAwMTKwMBDwcTDQMBBQcVEweBfQMTBRMXAwM7CwMBFQY7AwEHGQcbAwMBCwMBAwMBCwMBCQQBCQEDHR8HEQH3BwMNDwkBAQEBAQEBAQMDAQsDAQMDAQsDAQkEAQkBAwUJBxEB+QcDDQ8JAQEBAQEBAQEDAwELAwEDAwELAwEJBAEJAQMFCQcRAQoCBwMNDwkBAQEBAQEBAQMDAQsDAQMDAQsDAQkEAQkBAwUJBgMBBQEAHhSnESkLGQsZEw0JCR0hJREbLSMdCyMhIyktHwsNFR0dJRsVFQsLfxsZGRkZGRkxDQsRCyWNHSUdEw1jtxcTFxcvExcXIxsXFxcZIxkVJR8PDw0JHRFidWlsdGluAHN0YWJsZV9tb3NhaWMAdHB1AGFyaXRoAHZlY3RvcgBtb2R1bGUAYXJpdGguY29uc3RhbnQAdmVjdG9yLnNoYXBlX2Nhc3QAZnVuYy5mdW5jAGZ1bmMucmV0dXJuAHZlY3Rvci5icm9hZGNhc3QAdmVjdG9yLmxvYWQAYXJpdGgubXVsaQBhcml0aC5hZGRpAGFyaXRoLmNtcGkAYXJpdGguc2VsZWN0AHRwdS52ZWN0b3Jfc3RvcmUAYXJpdGguc3ViaQB0cHUubWF0bXVsAHRwdS5pb3RhAHZlY3Rvci5tdWx0aV9yZWR1Y3Rpb24AYXJpdGguYWRkZgBhcml0aC5zdWJmAG1hdGguZXhwAGFyaXRoLmRpdmYAL3Vzci9sb2NhbC9saWIvcHl0aG9uMy4xMC9zaXRlLXBhY2thZ2VzL2pheC9leHBlcmltZW50YWwvcGFsbGFzL29wcy90cHUvZmxhc2hfYXR0ZW50aW9uLnB5AF9mbGFzaF9hdHRlbnRpb25fa2VybmVsX3NpbmdsZV9iYXRjaF9zaW5nbGVfc3RlcAB2YWx1ZQBzeW1fbmFtZQBmdW5jdGlvbl90eXBlAHRyYW5zZm9ybV9pbmRpY2VzAHdpbmRvd19ib3VuZHMAL3dvcmtzcGFjZXMvdG9yY2gvcHl0b3JjaC94bGEvdG9yY2hfeGxhL2V4cGVyaW1lbnRhbC9jdXN0b21fa2VybmVsLnB5AC9icm9hZGNhc3RfaW5fZGltAC9hZGQAZm9yd2FyZAAvZ2V0AC9zd2FwAF9mbGFzaF9hdHRlbnRpb25fa2VybmVsAHRyYW5zZm9ybV8wAHRyYW5zZm9ybV8xAHRyYW5zZm9ybV8yAHRyYW5zZm9ybV8zAHRyYW5zZm9ybV80AHRyYW5zZm9ybV81AGt2X2luZGV4X21hcAAvd29ya3NwYWNlcy90b3JjaC9weXRvcmNoL3hsYS90ZXN0L3Rlc3RfYXNfc3RyaWRlX3VzZV9zbGljZS5weQAvbXVsAC9zdWIAcHJlZGljYXRlAC9zZWxlY3RfbgAvZG90X2dlbmVyYWwAZGltZW5zaW9uX251bWJlcnMAdHJhbnNwb3NlX2xocwB0cmFuc3Bvc2VfcmhzAGRpbWVuc2lvbgAvaW90YQBraW5kAHJlZHVjdGlvbl9kaW1zAHN0YWJsZV9tb3NhaWMudmVyc2lvbgBkaW1lbnNpb25fc2VtYW50aWNzAGl0ZXJhdGlvbl9ib3VuZHMAc2NhbGFyX3ByZWZldGNoAHNjcmF0Y2hfb3BlcmFuZHMAbWFpbgB3aW5kb3dfcGFyYW1zAGJlbG93X29yX29uX2RpYWcAX2ZsYXNoX2F0dGVudGlvbl9pbXBsAHRyYWNlX3BhbGxhcwB3cmFwcGVyAGZhX2N1c3RvbV9mb3J3YXJkAGZsYXNoX2F0dGVudGlvbgBvdmVyZmxvd0ZsYWdzAC9ndAAvbGUAL3BqaXQAZmFzdG1hdGgAL3JlZHVjZV9tYXgAL2V4cAAvcmVkdWNlX3N1bQAvZGl2AG9wZXJhbmRTZWdtZW50U2l6ZXMAc3RyaWRlcwA=", "cost_estimate": {"flops": 269221888, "transcendentals": 262144, "bytes_accessed": 5242880}, "serialization_format": 1, "needs_layout_passes": true}}
+  %get-tuple-element.52 = f32[1,4,256,256]{3,2,1,0} get-tuple-element((f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}) %custom-call.51), index=0, metadata={op_type="xla__tpu_custom_call" op_name="aot_forward.3/xla__tpu_custom_call" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=322}
+  %custom-call.55 = f32[1,4,256,256]{3,2,1,0} custom-call(f32[1,4,256,256]{3,2,1,0} %get-tuple-element.52), custom_call_target="Sharding", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="aot_forward.3/xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=475}
+  %custom-call.56 = f32[2,4,256,256]{3,2,1,0} custom-call(f32[1,4,256,256]{3,2,1,0} %custom-call.55), custom_call_target="SPMDShardToFullShape", sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__custom_sharding" op_name="aot_forward.3/xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=508}
+  %constant.44 = f32[] constant(1), metadata={op_type="prim__Constant" op_name="aot_forward.3/prim__Constant" source_file="/usr/local/lib/python3.10/site-packages/torch/_ops.py" source_line=756}
+  %broadcast.58 = f32[2,4,256,256]{3,2,1,0} broadcast(f32[] %constant.44), dimensions={}, metadata={op_type="aten__add" op_name="aot_forward.3/aten__add.1/aten__add" source_file="/usr/local/lib/python3.10/site-packages/torch/_ops.py" source_line=756}
+  %multiply.59 = f32[2,4,256,256]{3,2,1,0} multiply(f32[2,4,256,256]{3,2,1,0} %custom-call.56, f32[2,4,256,256]{3,2,1,0} %broadcast.58), metadata={op_type="aten__add" op_name="aot_forward.3/aten__add.1/aten__add" source_file="/usr/local/lib/python3.10/site-packages/torch/_ops.py" source_line=756}
+  %add.61 = f32[2,4,256,256]{3,2,1,0} add(f32[2,4,256,256]{3,2,1,0} %broadcast.60, f32[2,4,256,256]{3,2,1,0} %multiply.59), metadata={op_type="aten__add" op_name="aot_forward.3/aten__add.1/aten__add" source_file="/usr/local/lib/python3.10/site-packages/torch/_ops.py" source_line=756}
+  %p4.62 = f32[2,4,256,256]{3,2,1,0} parameter(4), sharding={replicated}, metadata={op_type="xla__device_data" op_name="aot_forward.3/xla__device_data" source_file="/usr/local/lib/python3.10/site-packages/torch/_ops.py" source_line=756}
+  %get-tuple-element.53 = f32[1,4,256,128]{3,2,1,0} get-tuple-element((f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}) %custom-call.51), index=1, metadata={op_type="xla__tpu_custom_call" op_name="aot_forward.3/xla__tpu_custom_call" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=322}
+  %slice.63 = f32[1,4,256,1]{3,2,1,0} slice(f32[1,4,256,128]{3,2,1,0} %get-tuple-element.53), slice={[0:1], [0:4], [0:256], [0:1]}, metadata={op_type="xla__select" op_name="aot_forward.3/xla__select" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=335}
+  %reshape.64 = f32[1,4,256]{2,1,0} reshape(f32[1,4,256,1]{3,2,1,0} %slice.63), metadata={op_type="aten__view" op_name="aot_forward.3/aten__view" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=335}
+  %custom-call.65 = f32[1,4,256]{2,1,0} custom-call(f32[1,4,256]{2,1,0} %reshape.64), custom_call_target="Sharding", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="aot_forward.3/xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=475}
+  %custom-call.66 = f32[2,4,256]{2,1,0} custom-call(f32[1,4,256]{2,1,0} %custom-call.65), custom_call_target="SPMDShardToFullShape", sharding={devices=[4,1,1]0,1,2,3}, metadata={op_type="xla__custom_sharding" op_name="aot_forward.3/xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=508}
+  %get-tuple-element.54 = f32[1,4,256,128]{3,2,1,0} get-tuple-element((f32[1,4,256,256]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}, f32[1,4,256,128]{3,2,1,0}) %custom-call.51), index=2, metadata={op_type="xla__tpu_custom_call" op_name="aot_forward.3/xla__tpu_custom_call" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=322}
+  %slice.67 = f32[1,4,256,1]{3,2,1,0} slice(f32[1,4,256,128]{3,2,1,0} %get-tuple-element.54), slice={[0:1], [0:4], [0:256], [0:1]}, metadata={op_type="xla__select" op_name="aot_forward.3/xla__select" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=335}
+  %reshape.68 = f32[1,4,256]{2,1,0} reshape(f32[1,4,256,1]{3,2,1,0} %slice.67), metadata={op_type="aten__view" op_name="aot_forward.3/aten__view" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/custom_kernel.py" source_line=335}
+  %custom-call.69 = f32[1,4,256]{2,1,0} custom-call(f32[1,4,256]{2,1,0} %reshape.68), custom_call_target="Sharding", sharding={manual}, metadata={op_type="xla__custom_sharding" op_name="aot_forward.3/xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=475}
+  %custom-call.70 = f32[2,4,256]{2,1,0} custom-call(f32[1,4,256]{2,1,0} %custom-call.69), custom_call_target="SPMDShardToFullShape", sharding={devices=[4,1,1]0,1,2,3}, metadata={op_type="xla__custom_sharding" op_name="aot_forward.3/xla__custom_sharding" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=508}
+  ROOT %tuple.71 = (f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=5*/f32[2,4,256]{2,1,0}, f32[2,4,256]{2,1,0}) tuple(f32[2,4,256,256]{3,2,1,0} %add.61, f32[2,4,256,256]{3,2,1,0} %custom-call.56, f32[2,4,256,256]{3,2,1,0} %p4.62, f32[2,4,256,256]{3,2,1,0} %p4.62, f32[2,4,256,256]{3,2,1,0} %p4.62, /*index=5*/f32[2,4,256]{2,1,0} %custom-call.66, f32[2,4,256]{2,1,0} %custom-call.70)
+}
+
+%Body.72 (p0.73: (s64[], f32[2,4,256,256], f32[1,256], f32[1,2,4,256,256], f32[1,2,4,256,256], /*index=5*/f32[1,2,4,256,256], f32[1,2,4,256,256], f32[1,2,4,256], f32[1,2,4,256], f32[2,4,256,256], /*index=10*/f32[2,4,256,256], f32[2,4,256,256])) -> (s64[], f32[2,4,256,256], f32[1,256], f32[1,2,4,256,256], f32[1,2,4,256,256], /*index=5*/f32[1,2,4,256,256], f32[1,2,4,256,256], f32[1,2,4,256], f32[1,2,4,256], f32[2,4,256,256], /*index=10*/f32[2,4,256,256], f32[2,4,256,256]) {
+  %p0.73 = (s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) parameter(0)
+  %get-tuple-element.74 = s64[] get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=0
+  %constant.154 = s64[] constant(1)
+  %add.155 = s64[] add(s64[] %get-tuple-element.74, s64[] %constant.154)
+  %get-tuple-element.85 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=11
+  %get-tuple-element.84 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=10
+  %get-tuple-element.83 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=9
+  %get-tuple-element.76 = f32[1,256]{1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=2
+  %constant.86 = s64[] constant(0)
+  %broadcast.87 = s64[] broadcast(s64[] %constant.86), dimensions={}
+  %dynamic-slice.88 = f32[1,256]{1,0} dynamic-slice(f32[1,256]{1,0} %get-tuple-element.76, s64[] %get-tuple-element.74, s64[] %broadcast.87), dynamic_slice_sizes={1,256}
+  %reshape.89 = f32[256]{0} reshape(f32[1,256]{1,0} %dynamic-slice.88)
+  %get-tuple-element.75 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=1
+  %call.90 = (f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=5*/f32[2,4,256]{2,1,0}, f32[2,4,256]{2,1,0}) call(f32[2,4,256,256]{3,2,1,0} %get-tuple-element.85, f32[2,4,256,256]{3,2,1,0} %get-tuple-element.84, f32[2,4,256,256]{3,2,1,0} %get-tuple-element.83, f32[256]{0} %reshape.89, f32[2,4,256,256]{3,2,1,0} %get-tuple-element.75), to_apply=%FnComputation.43
+  %get-tuple-element.91 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=5*/f32[2,4,256]{2,1,0}, f32[2,4,256]{2,1,0}) %call.90), index=0
+  %get-tuple-element.77 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=3
+  %get-tuple-element.92 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=5*/f32[2,4,256]{2,1,0}, f32[2,4,256]{2,1,0}) %call.90), index=1
+  %broadcast.93 = f32[1,2,4,256,256]{4,3,2,1,0} broadcast(f32[2,4,256,256]{3,2,1,0} %get-tuple-element.92), dimensions={1,2,3,4}
+  %constant.94 = s64[] constant(0)
+  %broadcast.95 = s64[] broadcast(s64[] %constant.94), dimensions={}
+  %constant.96 = s64[] constant(0)
+  %broadcast.97 = s64[] broadcast(s64[] %constant.96), dimensions={}
+  %constant.98 = s64[] constant(0)
+  %broadcast.99 = s64[] broadcast(s64[] %constant.98), dimensions={}
+  %constant.100 = s64[] constant(0)
+  %broadcast.101 = s64[] broadcast(s64[] %constant.100), dimensions={}
+  %dynamic-update-slice.102 = f32[1,2,4,256,256]{4,3,2,1,0} dynamic-update-slice(f32[1,2,4,256,256]{4,3,2,1,0} %get-tuple-element.77, f32[1,2,4,256,256]{4,3,2,1,0} %broadcast.93, s64[] %get-tuple-element.74, s64[] %broadcast.95, s64[] %broadcast.97, /*index=5*/s64[] %broadcast.99, s64[] %broadcast.101)
+  %get-tuple-element.78 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=4
+  %get-tuple-element.103 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=5*/f32[2,4,256]{2,1,0}, f32[2,4,256]{2,1,0}) %call.90), index=2
+  %broadcast.104 = f32[1,2,4,256,256]{4,3,2,1,0} broadcast(f32[2,4,256,256]{3,2,1,0} %get-tuple-element.103), dimensions={1,2,3,4}
+  %constant.105 = s64[] constant(0)
+  %broadcast.106 = s64[] broadcast(s64[] %constant.105), dimensions={}
+  %constant.107 = s64[] constant(0)
+  %broadcast.108 = s64[] broadcast(s64[] %constant.107), dimensions={}
+  %constant.109 = s64[] constant(0)
+  %broadcast.110 = s64[] broadcast(s64[] %constant.109), dimensions={}
+  %constant.111 = s64[] constant(0)
+  %broadcast.112 = s64[] broadcast(s64[] %constant.111), dimensions={}
+  %dynamic-update-slice.113 = f32[1,2,4,256,256]{4,3,2,1,0} dynamic-update-slice(f32[1,2,4,256,256]{4,3,2,1,0} %get-tuple-element.78, f32[1,2,4,256,256]{4,3,2,1,0} %broadcast.104, s64[] %get-tuple-element.74, s64[] %broadcast.106, s64[] %broadcast.108, /*index=5*/s64[] %broadcast.110, s64[] %broadcast.112)
+  %get-tuple-element.79 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=5
+  %get-tuple-element.114 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=5*/f32[2,4,256]{2,1,0}, f32[2,4,256]{2,1,0}) %call.90), index=3
+  %broadcast.115 = f32[1,2,4,256,256]{4,3,2,1,0} broadcast(f32[2,4,256,256]{3,2,1,0} %get-tuple-element.114), dimensions={1,2,3,4}
+  %constant.116 = s64[] constant(0)
+  %broadcast.117 = s64[] broadcast(s64[] %constant.116), dimensions={}
+  %constant.118 = s64[] constant(0)
+  %broadcast.119 = s64[] broadcast(s64[] %constant.118), dimensions={}
+  %constant.120 = s64[] constant(0)
+  %broadcast.121 = s64[] broadcast(s64[] %constant.120), dimensions={}
+  %constant.122 = s64[] constant(0)
+  %broadcast.123 = s64[] broadcast(s64[] %constant.122), dimensions={}
+  %dynamic-update-slice.124 = f32[1,2,4,256,256]{4,3,2,1,0} dynamic-update-slice(f32[1,2,4,256,256]{4,3,2,1,0} %get-tuple-element.79, f32[1,2,4,256,256]{4,3,2,1,0} %broadcast.115, s64[] %get-tuple-element.74, s64[] %broadcast.117, s64[] %broadcast.119, /*index=5*/s64[] %broadcast.121, s64[] %broadcast.123)
+  %get-tuple-element.80 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=6
+  %get-tuple-element.125 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=5*/f32[2,4,256]{2,1,0}, f32[2,4,256]{2,1,0}) %call.90), index=4
+  %broadcast.126 = f32[1,2,4,256,256]{4,3,2,1,0} broadcast(f32[2,4,256,256]{3,2,1,0} %get-tuple-element.125), dimensions={1,2,3,4}
+  %constant.127 = s64[] constant(0)
+  %broadcast.128 = s64[] broadcast(s64[] %constant.127), dimensions={}
+  %constant.129 = s64[] constant(0)
+  %broadcast.130 = s64[] broadcast(s64[] %constant.129), dimensions={}
+  %constant.131 = s64[] constant(0)
+  %broadcast.132 = s64[] broadcast(s64[] %constant.131), dimensions={}
+  %constant.133 = s64[] constant(0)
+  %broadcast.134 = s64[] broadcast(s64[] %constant.133), dimensions={}
+  %dynamic-update-slice.135 = f32[1,2,4,256,256]{4,3,2,1,0} dynamic-update-slice(f32[1,2,4,256,256]{4,3,2,1,0} %get-tuple-element.80, f32[1,2,4,256,256]{4,3,2,1,0} %broadcast.126, s64[] %get-tuple-element.74, s64[] %broadcast.128, s64[] %broadcast.130, /*index=5*/s64[] %broadcast.132, s64[] %broadcast.134)
+  %get-tuple-element.81 = f32[1,2,4,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=7
+  %get-tuple-element.136 = f32[2,4,256]{2,1,0} get-tuple-element((f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=5*/f32[2,4,256]{2,1,0}, f32[2,4,256]{2,1,0}) %call.90), index=5
+  %broadcast.137 = f32[1,2,4,256]{3,2,1,0} broadcast(f32[2,4,256]{2,1,0} %get-tuple-element.136), dimensions={1,2,3}
+  %constant.138 = s64[] constant(0)
+  %broadcast.139 = s64[] broadcast(s64[] %constant.138), dimensions={}
+  %constant.140 = s64[] constant(0)
+  %broadcast.141 = s64[] broadcast(s64[] %constant.140), dimensions={}
+  %constant.142 = s64[] constant(0)
+  %broadcast.143 = s64[] broadcast(s64[] %constant.142), dimensions={}
+  %dynamic-update-slice.144 = f32[1,2,4,256]{3,2,1,0} dynamic-update-slice(f32[1,2,4,256]{3,2,1,0} %get-tuple-element.81, f32[1,2,4,256]{3,2,1,0} %broadcast.137, s64[] %get-tuple-element.74, s64[] %broadcast.139, s64[] %broadcast.141, /*index=5*/s64[] %broadcast.143)
+  %get-tuple-element.82 = f32[1,2,4,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.73), index=8
+  %get-tuple-element.145 = f32[2,4,256]{2,1,0} get-tuple-element((f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=5*/f32[2,4,256]{2,1,0}, f32[2,4,256]{2,1,0}) %call.90), index=6
+  %broadcast.146 = f32[1,2,4,256]{3,2,1,0} broadcast(f32[2,4,256]{2,1,0} %get-tuple-element.145), dimensions={1,2,3}
+  %constant.147 = s64[] constant(0)
+  %broadcast.148 = s64[] broadcast(s64[] %constant.147), dimensions={}
+  %constant.149 = s64[] constant(0)
+  %broadcast.150 = s64[] broadcast(s64[] %constant.149), dimensions={}
+  %constant.151 = s64[] constant(0)
+  %broadcast.152 = s64[] broadcast(s64[] %constant.151), dimensions={}
+  %dynamic-update-slice.153 = f32[1,2,4,256]{3,2,1,0} dynamic-update-slice(f32[1,2,4,256]{3,2,1,0} %get-tuple-element.82, f32[1,2,4,256]{3,2,1,0} %broadcast.146, s64[] %get-tuple-element.74, s64[] %broadcast.148, s64[] %broadcast.150, /*index=5*/s64[] %broadcast.152)
+  ROOT %tuple.156 = (s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) tuple(s64[] %add.155, f32[2,4,256,256]{3,2,1,0} %get-tuple-element.91, f32[1,256]{1,0} %get-tuple-element.76, f32[1,2,4,256,256]{4,3,2,1,0} %dynamic-update-slice.102, f32[1,2,4,256,256]{4,3,2,1,0} %dynamic-update-slice.113, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0} %dynamic-update-slice.124, f32[1,2,4,256,256]{4,3,2,1,0} %dynamic-update-slice.135, f32[1,2,4,256]{3,2,1,0} %dynamic-update-slice.144, f32[1,2,4,256]{3,2,1,0} %dynamic-update-slice.153, f32[2,4,256,256]{3,2,1,0} %get-tuple-element.83, /*index=10*/f32[2,4,256,256]{3,2,1,0} %get-tuple-element.84, f32[2,4,256,256]{3,2,1,0} %get-tuple-element.85)
+}
+
+%Condition.157 (p0.158: (s64[], f32[2,4,256,256], f32[1,256], f32[1,2,4,256,256], f32[1,2,4,256,256], /*index=5*/f32[1,2,4,256,256], f32[1,2,4,256,256], f32[1,2,4,256], f32[1,2,4,256], f32[2,4,256,256], /*index=10*/f32[2,4,256,256], f32[2,4,256,256])) -> pred[] {
+  %p0.158 = (s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) parameter(0)
+  %get-tuple-element.160 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=1
+  %get-tuple-element.161 = f32[1,256]{1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=2
+  %get-tuple-element.162 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=3
+  %get-tuple-element.163 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=4
+  %get-tuple-element.164 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=5
+  %get-tuple-element.165 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=6
+  %get-tuple-element.166 = f32[1,2,4,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=7
+  %get-tuple-element.167 = f32[1,2,4,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=8
+  %get-tuple-element.168 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=9
+  %get-tuple-element.169 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=10
+  %get-tuple-element.170 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=11
+  %get-tuple-element.159 = s64[] get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %p0.158), index=0
+  %constant.171 = s64[] constant(1)
+  ROOT %compare.172 = pred[] compare(s64[] %get-tuple-element.159, s64[] %constant.171), direction=LT
+}
+
+%scan.173 (p0.174: s64[], p1.175: f32[2,4,256,256], p2.176: f32[1,256], p3.177: f32[1,2,4,256,256], p4.178: f32[1,2,4,256,256], p5.179: f32[1,2,4,256,256], p6.180: f32[1,2,4,256,256], p7.181: f32[1,2,4,256], p8.182: f32[1,2,4,256], p9.183: f32[2,4,256,256], p10.184: f32[2,4,256,256], p11.185: f32[2,4,256,256]) -> (s64[], f32[2,4,256,256], f32[1,256], f32[1,2,4,256,256], f32[1,2,4,256,256], /*index=5*/f32[1,2,4,256,256], f32[1,2,4,256,256], f32[1,2,4,256], f32[1,2,4,256], f32[2,4,256,256], /*index=10*/f32[2,4,256,256], f32[2,4,256,256]) {
+  %p0.174 = s64[] parameter(0)
+  %p1.175 = f32[2,4,256,256]{3,2,1,0} parameter(1)
+  %p2.176 = f32[1,256]{1,0} parameter(2)
+  %p3.177 = f32[1,2,4,256,256]{4,3,2,1,0} parameter(3)
+  %p4.178 = f32[1,2,4,256,256]{4,3,2,1,0} parameter(4)
+  %p5.179 = f32[1,2,4,256,256]{4,3,2,1,0} parameter(5)
+  %p6.180 = f32[1,2,4,256,256]{4,3,2,1,0} parameter(6)
+  %p7.181 = f32[1,2,4,256]{3,2,1,0} parameter(7)
+  %p8.182 = f32[1,2,4,256]{3,2,1,0} parameter(8)
+  %p9.183 = f32[2,4,256,256]{3,2,1,0} parameter(9)
+  %p10.184 = f32[2,4,256,256]{3,2,1,0} parameter(10)
+  %p11.185 = f32[2,4,256,256]{3,2,1,0} parameter(11)
+  %tuple.186 = (s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) tuple(s64[] %p0.174, f32[2,4,256,256]{3,2,1,0} %p1.175, f32[1,256]{1,0} %p2.176, f32[1,2,4,256,256]{4,3,2,1,0} %p3.177, f32[1,2,4,256,256]{4,3,2,1,0} %p4.178, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0} %p5.179, f32[1,2,4,256,256]{4,3,2,1,0} %p6.180, f32[1,2,4,256]{3,2,1,0} %p7.181, f32[1,2,4,256]{3,2,1,0} %p8.182, f32[2,4,256,256]{3,2,1,0} %p9.183, /*index=10*/f32[2,4,256,256]{3,2,1,0} %p10.184, f32[2,4,256,256]{3,2,1,0} %p11.185)
+  ROOT %while.187 = (s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) while((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %tuple.186), condition=%Condition.157, body=%Body.72
+}
+
+ENTRY %IrToHlo.202 (p0.1: f32[2,4,256,256], p1.2: f32[2,4,256,256], p2.3: f32[2,4,256,256], p3.41: f32[2,4,256,256]) -> (f32[2,4,256,256]) {
+  %constant.42 = s64[] constant(0), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %p3.41 = f32[2,4,256,256]{3,2,1,0} parameter(3), sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__device_data" op_name="xla__device_data" source_file="/workspaces/torch/pytorch/xla/torch_xla/distributed/spmd/xla_sharding.py" source_line=563}
+  %constant.34 = f32[] constant(0), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %reshape.35 = f32[1]{0} reshape(f32[] %constant.34), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %broadcast.36 = f32[1]{0} broadcast(f32[1]{0} %reshape.35), dimensions={0}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %reshape.37 = f32[] reshape(f32[1]{0} %broadcast.36), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %broadcast.38 = f32[256]{0} broadcast(f32[] %reshape.37), dimensions={}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/usr/local/lib/python3.10/site-packages/torch/utils/_device.py" source_line=104}
+  %reshape.39 = f32[1,256]{1,0} reshape(f32[256]{0} %broadcast.38), metadata={op_type="aten__stack" op_name="aten__stack" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan_layers.py" source_line=75}
+  %concatenate.40 = f32[1,256]{1,0} concatenate(f32[1,256]{1,0} %reshape.39), dimensions={0}, metadata={op_type="aten__stack" op_name="aten__stack" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan_layers.py" source_line=75}
+  %constant.29 = f32[] constant(0), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.30 = f32[1,1,1,1,1]{4,3,2,1,0} reshape(f32[] %constant.29), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.31 = f32[1,1,1,1,1]{4,3,2,1,0} broadcast(f32[1,1,1,1,1]{4,3,2,1,0} %reshape.30), dimensions={0,1,2,3,4}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.32 = f32[1]{0} reshape(f32[1,1,1,1,1]{4,3,2,1,0} %broadcast.31), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.33 = f32[1,2,4,256,256]{4,3,2,1,0} broadcast(f32[1]{0} %reshape.32), dimensions={0}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %constant.24 = f32[] constant(0), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.25 = f32[1,1,1,1,1]{4,3,2,1,0} reshape(f32[] %constant.24), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.26 = f32[1,1,1,1,1]{4,3,2,1,0} broadcast(f32[1,1,1,1,1]{4,3,2,1,0} %reshape.25), dimensions={0,1,2,3,4}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.27 = f32[1]{0} reshape(f32[1,1,1,1,1]{4,3,2,1,0} %broadcast.26), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.28 = f32[1,2,4,256,256]{4,3,2,1,0} broadcast(f32[1]{0} %reshape.27), dimensions={0}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %constant.19 = f32[] constant(0), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.20 = f32[1,1,1,1,1]{4,3,2,1,0} reshape(f32[] %constant.19), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.21 = f32[1,1,1,1,1]{4,3,2,1,0} broadcast(f32[1,1,1,1,1]{4,3,2,1,0} %reshape.20), dimensions={0,1,2,3,4}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.22 = f32[1]{0} reshape(f32[1,1,1,1,1]{4,3,2,1,0} %broadcast.21), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.23 = f32[1,2,4,256,256]{4,3,2,1,0} broadcast(f32[1]{0} %reshape.22), dimensions={0}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %constant.14 = f32[] constant(0), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.15 = f32[1,1,1,1,1]{4,3,2,1,0} reshape(f32[] %constant.14), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.16 = f32[1,1,1,1,1]{4,3,2,1,0} broadcast(f32[1,1,1,1,1]{4,3,2,1,0} %reshape.15), dimensions={0,1,2,3,4}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.17 = f32[1]{0} reshape(f32[1,1,1,1,1]{4,3,2,1,0} %broadcast.16), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.18 = f32[1,2,4,256,256]{4,3,2,1,0} broadcast(f32[1]{0} %reshape.17), dimensions={0}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %constant.9 = f32[] constant(0), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.10 = f32[1,1,1,1]{3,2,1,0} reshape(f32[] %constant.9), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.11 = f32[1,1,1,1]{3,2,1,0} broadcast(f32[1,1,1,1]{3,2,1,0} %reshape.10), dimensions={0,1,2,3}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.12 = f32[1]{0} reshape(f32[1,1,1,1]{3,2,1,0} %broadcast.11), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.13 = f32[1,2,4,256]{3,2,1,0} broadcast(f32[1]{0} %reshape.12), dimensions={0}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %constant.4 = f32[] constant(0), metadata={op_type="prim__Constant" op_name="prim__Constant" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.5 = f32[1,1,1,1]{3,2,1,0} reshape(f32[] %constant.4), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.6 = f32[1,1,1,1]{3,2,1,0} broadcast(f32[1,1,1,1]{3,2,1,0} %reshape.5), dimensions={0,1,2,3}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %reshape.7 = f32[1]{0} reshape(f32[1,1,1,1]{3,2,1,0} %broadcast.6), metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %broadcast.8 = f32[1,2,4,256]{3,2,1,0} broadcast(f32[1]{0} %reshape.7), dimensions={0}, metadata={op_type="aten__expand" op_name="aten__expand" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=589}
+  %p2.3 = f32[2,4,256,256]{3,2,1,0} parameter(2), sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__device_data" op_name="xla__device_data" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=616}
+  %p1.2 = f32[2,4,256,256]{3,2,1,0} parameter(1), sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__device_data" op_name="xla__device_data" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=616}
+  %p0.1 = f32[2,4,256,256]{3,2,1,0} parameter(0), sharding={devices=[4,1,1,1]0,1,2,3}, metadata={op_type="xla__device_data" op_name="xla__device_data" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=616}
+  %call.188 = (s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) call(s64[] %constant.42, f32[2,4,256,256]{3,2,1,0} %p3.41, f32[1,256]{1,0} %concatenate.40, f32[1,2,4,256,256]{4,3,2,1,0} %broadcast.33, f32[1,2,4,256,256]{4,3,2,1,0} %broadcast.28, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0} %broadcast.23, f32[1,2,4,256,256]{4,3,2,1,0} %broadcast.18, f32[1,2,4,256]{3,2,1,0} %broadcast.13, f32[1,2,4,256]{3,2,1,0} %broadcast.8, f32[2,4,256,256]{3,2,1,0} %p2.3, /*index=10*/f32[2,4,256,256]{3,2,1,0} %p1.2, f32[2,4,256,256]{3,2,1,0} %p0.1), to_apply=%scan.173, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.189 = s64[] get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=0, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.191 = f32[1,256]{1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=2, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.192 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=3, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.193 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=4, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.194 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=5, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.195 = f32[1,2,4,256,256]{4,3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=6, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.196 = f32[1,2,4,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=7, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.197 = f32[1,2,4,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=8, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.198 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=9, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.199 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=10, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.200 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=11, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  %get-tuple-element.190 = f32[2,4,256,256]{3,2,1,0} get-tuple-element((s64[], f32[2,4,256,256]{3,2,1,0}, f32[1,256]{1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, /*index=5*/f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256,256]{4,3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[1,2,4,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}, /*index=10*/f32[2,4,256,256]{3,2,1,0}, f32[2,4,256,256]{3,2,1,0}) %call.188), index=1, metadata={op_type="xla__scan" op_name="xla__scan" source_file="/workspaces/torch/pytorch/xla/torch_xla/experimental/scan.py" source_line=710}
+  ROOT %tuple.201 = (f32[2,4,256,256]{3,2,1,0}) tuple(f32[2,4,256,256]{3,2,1,0} %get-tuple-element.190)
+}
+
+
+
+
+############### End scan ###############
+
+
+
+
+Output with scan tensor([[[[       nan,        nan,        nan,  ...,        nan,
+                  nan,        nan],
+          [4.2506e-35, 0.0000e+00, 5.7805e+32,  ..., 9.8828e-01,
+           9.9219e-01, 9.9609e-01],
+          [4.2506e-35, 0.0000e+00, 5.7805e+32,  ..., 9.8828e-01,
+           9.9219e-01, 9.9609e-01],
+          ...,
+          [4.2506e-35, 0.0000e+00, 5.7805e+32,  ..., 9.8828e-01,
+           9.9219e-01, 9.9609e-01],
+          [4.2506e-35, 0.0000e+00, 5.7805e+32,  ..., 9.8828e-01,
+           9.9219e-01, 9.9609e-01],
+          [4.2506e-35, 0.0000e+00, 5.7805e+32,  ..., 9.8828e-01,
+           9.9219e-01, 9.9609e-01]],
+
+         [[2.5600e+02, 2.5600e+02, 2.5600e+02,  ..., 2.5600e+02,
+           2.5600e+02, 2.5600e+02],
+          [2.5600e+02, 2.5800e+02, 2.5800e+02,  ..., 2.5800e+02,
+           2.5800e+02, 2.5800e+02],
+          [2.5800e+02, 2.5800e+02, 2.5800e+02,  ..., 2.5800e+02,
+           2.5800e+02, 2.5800e+02],
+          ...,
+          [5.0800e+02, 5.1000e+02, 5.1000e+02,  ..., 5.1000e+02,
+           5.1000e+02, 5.1000e+02],
+          [5.1000e+02, 5.1000e+02, 5.1000e+02,  ..., 5.1000e+02,
+           5.1000e+02, 5.1000e+02],
+          [5.1200e+02, 5.1200e+02, 5.1200e+02,  ..., 5.1200e+02,
+           5.1200e+02, 5.1200e+02]],
+
+         [[5.1200e+02, 5.1200e+02, 5.1200e+02,  ..., 5.1200e+02,
+           5.1200e+02, 5.1200e+02],
+          [5.1200e+02, 5.1200e+02, 5.1200e+02,  ..., 5.1200e+02,
+           5.1200e+02, 5.1200e+02],
+          [5.1200e+02, 5.1600e+02, 5.1600e+02,  ..., 5.1600e+02,
+           5.1600e+02, 5.1600e+02],
+          ...,
+          [7.6549e+02, 7.6549e+02, 7.6549e+02,  ..., 7.6549e+02,
+           7.6549e+02, 7.6549e+02],
+          [7.6800e+02, 7.6800e+02, 7.6800e+02,  ..., 7.6800e+02,
+           7.6800e+02, 7.6800e+02],
+          [7.6800e+02, 7.6800e+02, 7.6800e+02,  ..., 7.6800e+02,
+           7.6800e+02, 7.6800e+02]],
+
+         [[7.6800e+02, 7.6800e+02, 7.6800e+02,  ..., 7.6800e+02,
+           7.6800e+02, 7.6800e+02],
+          [7.6800e+02, 7.6800e+02, 7.6800e+02,  ..., 7.6800e+02,
+           7.6800e+02, 7.6800e+02],
+          [7.6800e+02, 7.7200e+02, 7.7200e+02,  ..., 7.7200e+02,
+           7.7200e+02, 7.7200e+02],
+          ...,
+          [1.0220e+03, 1.0220e+03, 1.0220e+03,  ..., 1.0220e+03,
+           1.0220e+03, 1.0220e+03],
+          [1.0240e+03, 1.0240e+03, 1.0240e+03,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03],
+          [1.0240e+03, 1.0240e+03, 1.0240e+03,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03]]],
+
+
+        [[[0.0000e+00, 0.0000e+00, 0.0000e+00,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03],
+          [0.0000e+00, 0.0000e+00, 0.0000e+00,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03],
+          [0.0000e+00, 0.0000e+00, 0.0000e+00,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03],
+          ...,
+          [0.0000e+00, 0.0000e+00, 0.0000e+00,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03],
+          [0.0000e+00, 0.0000e+00, 0.0000e+00,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03],
+          [0.0000e+00, 0.0000e+00, 0.0000e+00,  ..., 1.0240e+03,
+           1.0240e+03, 1.0240e+03]],
+
+         [[1.2800e+03, 1.2800e+03, 1.2800e+03,  ..., 1.2800e+03,
+           1.2800e+03, 1.2800e+03],
+          [1.2800e+03, 1.2800e+03, 1.2800e+03,  ..., 1.2800e+03,
+           1.2800e+03, 1.2800e+03],
+          [1.2825e+03, 1.2825e+03, 1.2825e+03,  ..., 1.2825e+03,
+           1.2825e+03, 1.2825e+03],
+          ...,
+          [1.5360e+03, 1.5360e+03, 1.5360e+03,  ..., 1.5360e+03,
+           1.5360e+03, 1.5360e+03],
+          [1.5360e+03, 1.5360e+03, 1.5360e+03,  ..., 1.5360e+03,
+           1.5360e+03, 1.5360e+03],
+          [1.5390e+03, 1.5390e+03, 1.5390e+03,  ..., 1.5390e+03,
+           1.5390e+03, 1.5390e+03]],
+
+         [[1.5360e+03, 1.5360e+03, 1.5360e+03,  ..., 1.5360e+03,
+           1.5360e+03, 1.5360e+03],
+          [1.5360e+03, 1.5360e+03, 1.5360e+03,  ..., 1.5360e+03,
+           1.5360e+03, 1.5360e+03],
+          [1.5390e+03, 1.5390e+03, 1.5390e+03,  ..., 1.5390e+03,
+           1.5390e+03, 1.5390e+03],
+          ...,
+          [1.7920e+03, 1.7920e+03, 1.7920e+03,  ..., 1.7920e+03,
+           1.7920e+03, 1.7920e+03],
+          [1.7920e+03, 1.7920e+03, 1.7920e+03,  ..., 1.7920e+03,
+           1.7920e+03, 1.7920e+03],
+          [1.7955e+03, 1.7955e+03, 1.7955e+03,  ..., 1.7955e+03,
+           1.7955e+03, 1.7955e+03]],
+
+         [[1.7920e+03, 1.7920e+03, 1.7920e+03,  ..., 1.7920e+03,
+           1.7920e+03, 1.7920e+03],
+          [1.7920e+03, 1.7920e+03, 1.7920e+03,  ..., 1.7920e+03,
+           1.7920e+03, 1.7920e+03],
+          [1.7955e+03, 1.7955e+03, 1.7955e+03,  ..., 1.7955e+03,
+           1.7955e+03, 1.7955e+03],
+          ...,
+          [2.0480e+03, 2.0480e+03, 2.0480e+03,  ..., 2.0480e+03,
+           2.0480e+03, 2.0480e+03],
+          [2.0480e+03, 2.0480e+03, 2.0480e+03,  ..., 2.0480e+03,
+           2.0480e+03, 2.0480e+03],
+          [2.0520e+03, 2.0520e+03, 2.0520e+03,  ..., 2.0520e+03,
+           2.0520e+03, 2.0520e+03]]]], device='xla:0', grad_fn=<ScanBackward>)
