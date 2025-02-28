@@ -891,7 +891,7 @@ def ragged_paged_attention(
           q.shape
       ],
       [  # output dtype
-          q_dtype_for_kernel_launch,
+          torch.float32,
       ])
   return output[0]
 

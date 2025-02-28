@@ -494,14 +494,14 @@ def get_min_heads_per_blk(num_q_heads, num_kv_heads, dtype):
     return x in (1, 2, 4, 8) or x % 8 == 0
 
   # TODO(jevinjiang): support unaligned number of heads!
-  if not can_be_xla_fully_tiled(num_q_heads):
-    raise ValueError(
-        f"Not implemented: {num_q_heads=} can not be XLA fully tiled."
-    )
-  if not can_be_xla_fully_tiled(num_kv_heads):
-    raise ValueError(
-        f"Not implemented: {num_kv_heads=} can not be XLA fully tiled."
-    )
+  # if not can_be_xla_fully_tiled(num_q_heads):
+  #   raise ValueError(
+  #       f"Not implemented: {num_q_heads=} can not be XLA fully tiled."
+  #   )
+  # if not can_be_xla_fully_tiled(num_kv_heads):
+  #   raise ValueError(
+  #       f"Not implemented: {num_kv_heads=} can not be XLA fully tiled."
+  #   )
   assert num_q_heads % num_kv_heads == 0
   ratio = num_q_heads // num_kv_heads
   # TODO(jevinjiang): we can choose smaller tiling for packed type if large
