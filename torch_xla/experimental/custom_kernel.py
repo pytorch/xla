@@ -14,13 +14,9 @@ from torch_xla.core.xla_model import XLA_LIB
 
 _XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
 
-def _shard_map(
-    func, 
-    mesh,
-    input_specs,
-    output_specs
-):
-    """Map a function over shards of data.
+
+def _shard_map(func, mesh, input_specs, output_specs):
+  """Map a function over shards of data.
 
     Note:
       ``shard_map`` is an experimental API, and still subject to change. For an
@@ -51,57 +47,58 @@ def _shard_map(
       https://docs.jax.dev/en/latest/_autosummary/jax.experimental.shard_map.shard_map.html
     """
 
-    def _full_shape(a, spec):
-        # a is local tensor
-        # spec is the sharding spec
-        # return logical shape of global tensor
-        mesh_name_to_size = dict(
-            zip(mesh.axis_names, mesh.mesh_shape)
-        )
+  def _full_shape(a, spec):
+    # a is local tensor
+    # spec is the sharding spec
+    # return logical shape of global tensor
+    mesh_name_to_size = dict(zip(mesh.axis_names, mesh.mesh_shape))
 
-        result_shape = []
-        for axis_size, axis_sharding in zip(a.shape, spec):
-            if axis_sharding is None:
-                new_size = axis_size
-            else:
-                if isinstance(axis_sharding, str):
-                    mesh_mult = mesh_name_to_size[axis_sharding]
-                else:
-                    # tuple or list
-                    mesh_mult = math.prod(
-                      mesh_name_to_size[a] for a in axis_sharding
-                      if mesh_name_to_size[a] is not None)
-                    
-                if mesh_mult is not None:
-                    new_size = axis_size * mesh_mult
-            result_shape.append(new_size)
-        return tuple(result_shape)
-
-    def wrapped(*args):
-        assert len(args) == len(input_specs), f'args={len(args)}; input_specs={len(input_specs)}'
-        new_args = []
-        for i, (a, spec) in enumerate(zip(args, input_specs)):
-          if isinstance(a, torch.Tensor) and spec is not None:
-            assert(len(a.shape) == len(spec)), f'{i}th input has wrong shape: {a.shape} for {spec}'
-            new_a = xs.enable_manual_sharding(a, spec, mesh=mesh).global_tensor 
-            new_args.append(new_a)
-          else:
-            new_args.append(a)
-
-        res = func(*new_args)
-        if isinstance(res, tuple):
-            return tuple(
-                xs.disable_manual_sharding(
-                    a, spec, _full_shape(a, spec), mesh=mesh).global_tensor 
-                if isinstance(a, torch.Tensor) and spec is not None else a
-                for a, spec in zip(res, output_specs)
-            )
+    result_shape = []
+    for axis_size, axis_sharding in zip(a.shape, spec):
+      if axis_sharding is None:
+        new_size = axis_size
+      else:
+        if isinstance(axis_sharding, str):
+          mesh_mult = mesh_name_to_size[axis_sharding]
         else:
-            return xs.disable_manual_sharding(
-                    res, output_specs[0], 
-                    _full_shape(res, output_specs[0]), mesh=mesh).global_tensor 
-        return res
-    return wrapped
+          # tuple or list
+          mesh_mult = math.prod(mesh_name_to_size[a]
+                                for a in axis_sharding
+                                if mesh_name_to_size[a] is not None)
+
+        if mesh_mult is not None:
+          new_size = axis_size * mesh_mult
+      result_shape.append(new_size)
+    return tuple(result_shape)
+
+  def wrapped(*args):
+    assert len(args) == len(
+        input_specs), f'args={len(args)}; input_specs={len(input_specs)}'
+    new_args = []
+    for i, (a, spec) in enumerate(zip(args, input_specs)):
+      if isinstance(a, torch.Tensor) and spec is not None:
+        assert (len(a.shape) == len(spec)
+               ), f'{i}th input has wrong shape: {a.shape} for {spec}'
+        new_a = xs.enable_manual_sharding(a, spec, mesh=mesh).global_tensor
+        new_args.append(new_a)
+      else:
+        new_args.append(a)
+
+    res = func(*new_args)
+    if isinstance(res, tuple):
+      return tuple(
+          xs.disable_manual_sharding(a, spec, _full_shape(a, spec), mesh=mesh).
+          global_tensor
+          if isinstance(a, torch.Tensor) and spec is not None else a
+          for a, spec in zip(res, output_specs))
+    else:
+      return xs.disable_manual_sharding(
+          res, output_specs[0], _full_shape(res, output_specs[0]),
+          mesh=mesh).global_tensor
+    return res
+
+  return wrapped
+
 
 def safe_empty_like(tensor: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
   """Returns empty tensor like input, or None if input is None."""
@@ -306,16 +303,10 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
 
 
 def _fa_custom_forward_single_device(
-    q: torch.Tensor, 
-    k: torch.Tensor, 
-    v: torch.Tensor, 
-    causal: bool,
-    q_segment_ids: torch.Tensor, 
-    kv_segment_ids: torch.Tensor, 
-    sm_scale: float,
-    ab: Optional[torch.Tensor], 
-    ctx_grad: List[bool]
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, causal: bool,
+    q_segment_ids: torch.Tensor, kv_segment_ids: torch.Tensor, sm_scale: float,
+    ab: Optional[torch.Tensor],
+    ctx_grad: List[bool]) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
   from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_impl
 
   num_batches = None
@@ -331,14 +322,12 @@ def _fa_custom_forward_single_device(
       kv_segment_ids = kv_segment_ids.reshape(-1, *rest)
     if ab is not none:
       ab = ab.reshape(-1, *rest)
-    
 
   # Suprisingly, any tensor that is input to the custom_op decorated function will show
   # requires_grad=False. Is this a bug or feature? We have to pass ctx_grad to record the
   # requires_grad for inputs.
   # Original we use save_residuals = q.requires_grad or k.requires_grad or v.requires_grad
   save_residuals = any(ctx_grad[:3])
-
 
   block_k_major = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"],
                       k.shape[2])
@@ -456,42 +445,42 @@ def fa_custom_forward(
 
   if partition_spec is not None:
     if len(partition_spec) == 5:
-      segment_id_partition_spec = (partition_spec[0], partition_spec[1], partition_spec[3])
+      segment_id_partition_spec = (partition_spec[0], partition_spec[1],
+                                   partition_spec[3])
       lm_partition_spec = partition_spec[:4]
     else:
       segment_id_partition_spec = (partition_spec[0], partition_spec[2])
       lm_partition_spec = partition_spec[:3]
 
     input_specs = [
-      partition_spec, # q
-      partition_spec, # k
-      partition_spec, # v
-      None,
-      segment_id_partition_spec,
-      segment_id_partition_spec,
-      None,
-      partition_spec,
-      None,
+        partition_spec,  # q
+        partition_spec,  # k
+        partition_spec,  # v
+        None,
+        segment_id_partition_spec,
+        segment_id_partition_spec,
+        None,
+        partition_spec,
+        None,
     ]
 
     output_specs = [
-      partition_spec, # o
-      lm_partition_spec, # l
-      lm_partition_spec, # m
+        partition_spec,  # o
+        lm_partition_spec,  # l
+        lm_partition_spec,  # m
     ]
 
     fa_forward_callable = _shard_map(
-      _fa_custom_forward_single_device,
-      mesh,
-      input_specs,
-      output_specs,
+        _fa_custom_forward_single_device,
+        mesh,
+        input_specs,
+        output_specs,
     )
   else:
     fa_forward_callable = _fa_custom_forward_single_device
 
-  o, l, m = fa_forward_callable(
-    q, k, v, causal, q_segment_ids, kv_segment_ids, sm_scale, ab, ctx_grad
-  )
+  o, l, m = fa_forward_callable(q, k, v, causal, q_segment_ids, kv_segment_ids,
+                                sm_scale, ab, ctx_grad)
 
   outs = [o] + [full_q, full_k, full_v, l, m, full_ab]
   return tuple(outs)
@@ -523,15 +512,14 @@ def _fa_custom_backward_single_device(
     v: torch.Tensor, o: torch.Tensor, l: torch.Tensor, m: torch.Tensor,
     q_segment_ids: Optional[torch.Tensor],
     kv_segment_ids: Optional[torch.Tensor], ab: Optional[torch.Tensor],
-    causal: bool, sm_scale: float,
-    q_full_shape: List[int], kv_full_shape: List[int],
-    ab_full_shape: Optional[List[int]], ctx_grad: List[bool]
+    causal: bool, sm_scale: float, q_full_shape: List[int],
+    kv_full_shape: List[int], ab_full_shape: Optional[List[int]],
+    ctx_grad: List[bool]
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
   from jax.experimental.pallas.ops.tpu.flash_attention import _flash_attention_bwd_dq, _flash_attention_bwd_dkv
   grad_q = grad_k = grad_v = grad_ab = segment_ids = None
 
-  
   num_batches = None
   batch_size = None
   if len(q.shape) == 5:
@@ -663,16 +651,19 @@ def _fa_custom_backward_single_device(
     grad_v = grads[1]
 
   if num_batches is not None:
+
     def _reshape(x):
       if x is not None:
         return x.reshape(num_batches, batch_size, *x.shape[1:])
       return None
+
     grad_q = _reshape(grad_q)
     grad_k = _reshape(grad_k)
     grad_v = _reshape(grad_v)
     grad_ab = _reshape(grad_ab)
 
   return grad_q, grad_k, grad_v, grad_ab
+
 
 @custom_op("xla::fa_custom_backward", mutates_args=())
 def fa_custom_backward(
@@ -696,56 +687,48 @@ def fa_custom_backward(
   ab_full_shape = torch.Size(
       ab_full_shape) if ab_full_shape is not None else None
 
-
   if partition_spec:
     if len(partition_spec) == 5:
-      segment_id_partition_spec = (partition_spec[0], partition_spec[1], partition_spec[3])
+      segment_id_partition_spec = (partition_spec[0], partition_spec[1],
+                                   partition_spec[3])
       lm_partition_spec = partition_spec[:4]
     else:
       segment_id_partition_spec = (partition_spec[0], partition_spec[2])
       lm_partition_spec = partition_spec[:3]
     input_specs = [
-      partition_spec, # grad_output
-      partition_spec, # q
-      partition_spec, # k
-      partition_spec, # v
-      partition_spec, # o
-      lm_partition_spec, # l 
-      lm_partition_spec, # m 
-      segment_id_partition_spec, # q_segment_ids
-      segment_id_partition_spec, # kv_segment_ids
-      partition_spec, # ab
-      None, # causal
-      None, # sm_scale
-      None, # q_full_shape 
-      None, # kv_full_shape 
-      None, # ab_full_shape
-      None, # ctx_grad
+        partition_spec,  # grad_output
+        partition_spec,  # q
+        partition_spec,  # k
+        partition_spec,  # v
+        partition_spec,  # o
+        lm_partition_spec,  # l 
+        lm_partition_spec,  # m 
+        segment_id_partition_spec,  # q_segment_ids
+        segment_id_partition_spec,  # kv_segment_ids
+        partition_spec,  # ab
+        None,  # causal
+        None,  # sm_scale
+        None,  # q_full_shape 
+        None,  # kv_full_shape 
+        None,  # ab_full_shape
+        None,  # ctx_grad
     ]
     output_specs = [
-      partition_spec,
-      partition_spec,
-      partition_spec,
-      partition_spec,
+        partition_spec,
+        partition_spec,
+        partition_spec,
+        partition_spec,
     ]
-    fa_backward_callable = _shard_map(
-      _fa_custom_backward_single_device,
-      mesh,
-      input_specs,
-      output_specs
-    )
+    fa_backward_callable = _shard_map(_fa_custom_backward_single_device, mesh,
+                                      input_specs, output_specs)
   else:
     fa_backward_callable = _fa_custom_backward_single_device
 
-  res = fa_backward_callable(
-    grad_output, q, k, v, o, l, m, q_segment_ids, kv_segment_ids, ab, causal, sm_scale,
-    q_full_shape, kv_full_shape, ab_full_shape, ctx_grad
-  )
+  res = fa_backward_callable(grad_output, q, k, v, o, l, m, q_segment_ids,
+                             kv_segment_ids, ab, causal, sm_scale, q_full_shape,
+                             kv_full_shape, ab_full_shape, ctx_grad)
 
   return res
-
-  
-
 
 
 @fa_custom_forward.register_fake
