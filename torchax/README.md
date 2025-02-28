@@ -2,7 +2,7 @@
 
 **torchax!** is a backend for PyTorch, allowing users to run
 PyTorch on Google CloudTPUs. **torchax!** is also a library for providing
-graph-level interoperability between PyTorch with Jax.
+graph-level interoperability between PyTorch and Jax.
 
 This means, with **torchax** you can:
 * Run PyTorch code on TPU with as little as 2 lines of code change.
