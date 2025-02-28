@@ -153,7 +153,7 @@ When a model's constructor runs, it will call some tensor constructor, such as
 `torch.rand`, `torch.ones` or `torch.zeros` etc to create its weights. The constructor
 will create an `torch.Tensor` subclass that contains a `jax.Array`.
 
-Then, each subsequent ops can unpack the `jax.Array`, call the op implementation,
+Then, each subsequent op can unpack the `jax.Array`, call the op implementation,
 and wraps it back into `torch.Tensor` subclass.
 
 See more at [how_it_works](docs/how_it_works.md) and [ops registry](docs/ops_registry.md).
