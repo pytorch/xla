@@ -90,7 +90,9 @@ def _shard_map(func, mesh, input_specs, output_specs):
       for i, r in enumerate(res):
         if isinstance(r, torch.Tensor):
           assert str(r.device).startswith('xla'), f'{i}th device is {r.device}'
-          assert len(r.shape) == len(output_specs[i]), f'{i}th shape is {r.shape}, sharding is {output_specs[i]}'
+          assert len(r.shape) == len(
+              output_specs[i]
+          ), f'{i}th shape is {r.shape}, sharding is {output_specs[i]}'
       return tuple(
           xs.disable_manual_sharding(a, spec, _full_shape(a, spec), mesh=mesh).
           global_tensor
@@ -387,7 +389,8 @@ def _fa_custom_forward_single_device(
       args += [ab]
     if segment_ids is not None:
       args += [q_segment_ids_fa, kv_segment_ids_fa]
-    custom_call_output = torch_xla._XLAC._xla_tpu_custom_call(args, payload, shapes, dtypes)
+    custom_call_output = torch_xla._XLAC._xla_tpu_custom_call(
+        args, payload, shapes, dtypes)
 
     assert isinstance(custom_call_output, list)
     if not save_residuals:

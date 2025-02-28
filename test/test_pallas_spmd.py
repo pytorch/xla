@@ -84,14 +84,16 @@ class PallasTest(unittest.TestCase):
   def test_flash_attention_spmd_data_parallel_5d(self):
     n_devices = xr.global_runtime_device_count()
     xs.set_global_mesh(
-      xs.Mesh(range(n_devices), (n_devices // 2, 2, 1, 1, 1),
-      ('fsdp', 'dp', 'a', 'b', 'c')))
+        xs.Mesh(
+            range(n_devices), (n_devices // 2, 2, 1, 1, 1),
+            ('fsdp', 'dp', 'a', 'b', 'c')))
 
     q = torch.randn(4, 2, 2, 128, 4).to("xla")
     k = torch.randn(4, 2, 2, 128, 4).to("xla")
     v = torch.randn(4, 2, 2, 128, 4).to("xla")
 
-    o = flash_attention(q, k, v, partition_spec=('fsdp', 'dp', None, None, None))
+    o = flash_attention(
+        q, k, v, partition_spec=('fsdp', 'dp', None, None, None))
     dev_ids = ','.join(map(str, range(n_devices)))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(o),
@@ -144,7 +146,7 @@ class PallasTest(unittest.TestCase):
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
-    
+
     dev_ids = ','.join(map(str, range(n_devices)))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(q_grad),
