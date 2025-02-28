@@ -51,14 +51,14 @@ def _shard_map(func, mesh, input_specs, output_specs):
     # a is local tensor
     # spec is the sharding spec
     # return logical shape of global tensor
-    mesh_name_to_size = dict(zip(mesh.axis_names, mesh.mesh_shape))
+    mesh_name_to_size = mesh.shape()
 
     result_shape = []
     for axis_size, axis_sharding in zip(a.shape, spec):
       if axis_sharding is None:
         new_size = axis_size
       else:
-        if isinstance(axis_sharding, str):
+        if isinstance(axis_sharding, (str, int)):
           mesh_mult = mesh_name_to_size[axis_sharding]
         else:
           # tuple or list
@@ -86,6 +86,11 @@ def _shard_map(func, mesh, input_specs, output_specs):
 
     res = func(*new_args)
     if isinstance(res, tuple):
+      res_updated = []
+      for i, r in enumerate(res):
+        if isinstance(r, torch.Tensor):
+          assert str(r.device).startswith('xla'), f'{i}th device is {r.device}'
+          assert len(r.shape) == len(output_specs[i]), f'{i}th shape is {r.shape}, sharding is {output_specs[i]}'
       return tuple(
           xs.disable_manual_sharding(a, spec, _full_shape(a, spec), mesh=mesh).
           global_tensor
@@ -320,7 +325,7 @@ def _fa_custom_forward_single_device(
       q_segment_ids = q_segment_ids.reshape(-1, *rest)
     if kv_segment_ids is not None:
       kv_segment_ids = kv_segment_ids.reshape(-1, *rest)
-    if ab is not none:
+    if ab is not None:
       ab = ab.reshape(-1, *rest)
 
   # Suprisingly, any tensor that is input to the custom_op decorated function will show
@@ -335,10 +340,10 @@ def _fa_custom_forward_single_device(
   k, k_pad_size = _pad_to_block_size(k, max(block_k_major, block_k), 2)
   if k_pad_size > 0:
     v, _ = _pad_to_block_size(v, max(block_k_major, block_k), 2)
-    if ab is None:
-      ab = torch.zeros((q.shape[0], q.shape[1], q.shape[2], q.shape[2]))
-    ab, _ = _pad_to_block_size(
-        ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
+    if ab is not None:
+      #ab = torch.zeros((q.shape[0], q.shape[1], q.shape[2], q.shape[2]), device=q.device)
+      ab, _ = _pad_to_block_size(
+          ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
 
   # It computes the shape and type of o, l, m.
   shapes = [q.shape]
@@ -382,24 +387,23 @@ def _fa_custom_forward_single_device(
       args += [ab]
     if segment_ids is not None:
       args += [q_segment_ids_fa, kv_segment_ids_fa]
-    o = torch_xla._XLAC._xla_tpu_custom_call(args, payload, shapes, dtypes)
+    custom_call_output = torch_xla._XLAC._xla_tpu_custom_call(args, payload, shapes, dtypes)
 
+    assert isinstance(custom_call_output, list)
     if not save_residuals:
-      o = o[0]
-      # SPMD integration
-      # We need to consistently return full_q, full_k, full_v,... even though they are empty to support AOT.
-      return tuple([o] + [torch.Tensor() for _ in range(2)])
-
-    assert isinstance(o, list)
-    o, *aux = o
-    l, m = (v[..., 0] for v in aux[-2:])
+      o = custom_call_output[0]
+      l = None
+      m = None
+    else:
+      o, *aux = custom_call_output
+      l, m = (v[..., 0] for v in aux[-2:])
 
   if num_batches is not None:
     o = o.reshape(num_batches, batch_size, *o.shape[1:])
-    l = l.reshape(num_batches, batch_size, *l.shape[1:])
-    m = m.reshape(num_batches, batch_size, *m.shape[1:])
-
-  print(f'o: {o.shape}')
+    if l is not None:
+      l = l.reshape(num_batches, batch_size, *l.shape[1:])
+    if m is not None:
+      m = m.reshape(num_batches, batch_size, *m.shape[1:])
 
   return o, l, m
 
@@ -431,17 +435,6 @@ def fa_custom_forward(
     full_ab = ab.clone()
   else:
     full_ab = None
-
-  block_k_major = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k_major"],
-                      k.shape[2])
-  block_k = min(FlashAttention.DEFAULT_BLOCK_SIZES["block_k"], k.shape[2])
-  k, k_pad_size = _pad_to_block_size(k, max(block_k_major, block_k), 2)
-  if k_pad_size > 0:
-    v, _ = _pad_to_block_size(v, max(block_k_major, block_k), 2)
-    if ab is None:
-      ab = torch.zeros((q.shape[0], q.shape[1], q.shape[2], q.shape[2]))
-    ab, _ = _pad_to_block_size(
-        ab, max(block_k_major, block_k), 3, padding_minus_inf=True)
 
   if partition_spec is not None:
     if len(partition_spec) == 5:
@@ -837,10 +830,6 @@ class FlashAttention(torch.autograd.Function):
     ctx_grads = generate_ctx_need_grad(*custom_op_arg)
     # AOT compatiable funtion only accepts argument types listed https://github.com/pytorch/pytorch/blob/82859f61857ef39898b34a5cdf0ae56ec25704d9/torch/_functorch/_aot_autograd/utils.py#L23-L34, so we serliaze partition_spec and mesh into string.
     outs = fa_custom_forward(*custom_op_arg, ctx_grads)
-
-    for i, o in enumerate(outs):
-      if isinstance(o, torch.Tensor):
-        print(f'{i}: {o.shape}')
 
     o = outs[0]
     full_q, full_k, full_v, l, m, full_ab = [x for x in outs[1:]]
