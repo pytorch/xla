@@ -203,7 +203,7 @@ class ScanFlashAttentionTest(parameterized.TestCase):
   def fake_fa_wrapper(self, has_model_weight, use_scan):
     with xm.xla_device():
       dm = AttentionLayers(has_model_weight, 3, use_scan)
-      hidden_states = torch.randn((2, 4, 256, 256)).requires_grad_()
+      hidden_states = torch.randn((8, 4, 256, 256)).requires_grad_()
     hidden_states.retain_grad()
     output = dm(hidden_states)
     return output

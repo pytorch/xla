@@ -399,7 +399,7 @@ def _fa_custom_forward_single_device(
       o = o[0]
       # SPMD integration
       # We need to consistently return full_q, full_k, full_v,... even though they are empty to support AOT.
-      return tuple([o] + [torch.Tensor() for _ in range(6)])
+      return tuple([o] + [torch.Tensor() for _ in range(2)])
 
     assert isinstance(o, list)
     o, *aux = o
@@ -409,6 +409,8 @@ def _fa_custom_forward_single_device(
     o = o.reshape(num_batches, batch_size, *o.shape[1:])
     l = l.reshape(num_batches, batch_size, *l.shape[1:])
     m = m.reshape(num_batches, batch_size, *m.shape[1:])
+
+  print(f'o: {o.shape}')
 
   return o, l, m
 
@@ -455,8 +457,10 @@ def fa_custom_forward(
   if partition_spec is not None:
     if len(partition_spec) == 5:
       segment_id_partition_spec = (partition_spec[0], partition_spec[1], partition_spec[3])
+      lm_partition_spec = partition_spec[:4]
     else:
       segment_id_partition_spec = (partition_spec[0], partition_spec[2])
+      lm_partition_spec = partition_spec[:3]
 
     input_specs = [
       partition_spec, # q
@@ -472,8 +476,8 @@ def fa_custom_forward(
 
     output_specs = [
       partition_spec, # o
-      partition_spec, # l
-      partition_spec, # m
+      lm_partition_spec, # l
+      lm_partition_spec, # m
     ]
 
     fa_forward_callable = _shard_map(
@@ -696,16 +700,18 @@ def fa_custom_backward(
   if partition_spec:
     if len(partition_spec) == 5:
       segment_id_partition_spec = (partition_spec[0], partition_spec[1], partition_spec[3])
+      lm_partition_spec = partition_spec[:4]
     else:
       segment_id_partition_spec = (partition_spec[0], partition_spec[2])
+      lm_partition_spec = partition_spec[:3]
     input_specs = [
       partition_spec, # grad_output
       partition_spec, # q
       partition_spec, # k
       partition_spec, # v
       partition_spec, # o
-      partition_spec, # l 
-      partition_spec, # m 
+      lm_partition_spec, # l 
+      lm_partition_spec, # m 
       segment_id_partition_spec, # q_segment_ids
       segment_id_partition_spec, # kv_segment_ids
       partition_spec, # ab
@@ -848,6 +854,10 @@ class FlashAttention(torch.autograd.Function):
     ctx_grads = generate_ctx_need_grad(*custom_op_arg)
     # AOT compatiable funtion only accepts argument types listed https://github.com/pytorch/pytorch/blob/82859f61857ef39898b34a5cdf0ae56ec25704d9/torch/_functorch/_aot_autograd/utils.py#L23-L34, so we serliaze partition_spec and mesh into string.
     outs = fa_custom_forward(*custom_op_arg, ctx_grads)
+
+    for i, o in enumerate(outs):
+      if isinstance(o, torch.Tensor):
+        print(f'{i}: {o.shape}')
 
     o = outs[0]
     full_q, full_k, full_v, l, m, full_ab = [x for x in outs[1:]]
