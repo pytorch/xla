@@ -181,6 +181,15 @@ def _gradient_accumulation_impl(context, body_fn, iterable_tensors, params,
   grads = [param.grad for param in params]
   body_fn_inputs = (init_iterator, init_loss, *fake_iterable_tensors,
                     *fake_carried_tensors, *params, *grads)
+  # TODO - Fake the gradients once we are able to create placeholder tensors.
+  # Since the body is expected to do an in-place mutation of the gradients, we
+  # clone the gradients and use that as an input to the body. This will ensure
+  # that we retain a device data IR node in the graph. The cloned gradient will
+  # be updated to denote an IR operation (e.g. %add), and that can not be
+  # captured as a device data input for the other required computations, namely
+  # the condition and init for the XLA while loop.
+  for param in params:
+    param.grad = param.grad.clone()
   body_result = body_fn(init_iterator, init_loss, tuple(fake_iterable_tensors),
                         tuple(fake_carried_tensors), tuple(params),
                         tuple(grads))
@@ -375,10 +384,9 @@ def _gradient_accumulation(accumulation_steps, train_step, iterable_tensors,
     else:
       loss, *carried_tensors = result
     loss /= context.num_gradient_steps
-    gradients = torch.autograd.grad(loss, model_parameters)
-    acc_grads = [prev_grad + grad for prev_grad, grad in zip(grads, gradients)]
-    return (iteri, loss, *iterable_tensors, *carried_tensors, *params,
-            *acc_grads)
+    loss.backward()
+    grads = [param.grad for param in params]
+    return (iteri, loss, *iterable_tensors, *carried_tensors, *params, *grads)
 
   if not torch_xla._XLAC._xla_get_enable_alias_with_buffer_donor_config():
     warnings.warn(
