@@ -403,8 +403,8 @@ def _flash_attention(
   q = q_ref[q_head_idx_per_kv, :, :].astype(jnp.float32)  # [block_q, head_dim]
   assert q.shape == (num_queries_per_block, head_dim)
   s = jnp.einsum(
-      'qd,td->qt', q, k, preferred_element_type=jnp.float32).astype(
-          jnp.float32)  # [block_q, block_k]
+      'qd,td->qt', q, k,
+      preferred_element_type=jnp.float32)  # [block_q, block_k]
   assert s.shape == (num_queries_per_block, kv_blk_size)
   s = s * sm_scale
 
