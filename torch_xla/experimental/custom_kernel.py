@@ -806,8 +806,9 @@ def ragged_paged_attention(
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as ragged_attention, make_sequence_metadata
+  from torch_xla.experimental.pallas_kernels.ragged_paged_attn_v2 import ragged_paged_attention as ragged_paged_attention_v2
   payload, tensor_args = trace_pallas(
-      ragged_attention,
+      ragged_paged_attention_v2,
       q,
       k_pages,
       v_pages,
@@ -827,71 +828,70 @@ def ragged_paged_attention(
       ],
   )
 
-  sequence_metadata, num_logical_q_tiles = make_sequence_metadata(
-      cu_q_lens=cu_q_lens.cpu().numpy(),
-      m=q.shape[0],
-      tm=num_queries_per_block,
-      # TODO(jevinjiang, xiowei): pass start_sequence as input.
-      start_sequence=torch.tensor([0]).cpu().numpy(),
-      num_sequences=num_seqs,
-  )
-  assert len(sequence_metadata) == 2
-  sequence_ids = torch.tensor(
-      sequence_metadata[0].tolist(), dtype=torch.int32).to("xla")
-  m_tile_ids = torch.tensor(
-      sequence_metadata[1].tolist(), dtype=torch.int32).to("xla")
-  num_q_tiles = torch.tensor(
-      num_logical_q_tiles.tolist(), dtype=torch.int32).to("xla")
+  # sequence_metadata, num_logical_q_tiles = make_sequence_metadata(
+  #     cu_q_lens=cu_q_lens.cpu().numpy(),
+  #     m=q.shape[0],
+  #     tm=num_queries_per_block,
+  #     # TODO(jevinjiang, xiowei): pass start_sequence as input.
+  #     start_sequence=torch.tensor([0]).cpu().numpy(),
+  #     num_sequences=num_seqs,
+  # )
+  # assert len(sequence_metadata) == 2
+  # sequence_ids = torch.tensor(
+  #     sequence_metadata[0].tolist(), dtype=torch.int32).to("xla")
+  # m_tile_ids = torch.tensor(
+  #     sequence_metadata[1].tolist(), dtype=torch.int32).to("xla")
+  # num_q_tiles = torch.tensor(
+  #     num_logical_q_tiles.tolist(), dtype=torch.int32).to("xla")
 
   q_dtype_for_kernel_launch = q.dtype
-  page_indices_expanded = torch.unsqueeze(page_indices, 1)
-  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
-  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  # page_indices_expanded = torch.unsqueeze(page_indices, 1)
+  sequence_buffer_index = torch.zeros((2,), dtype=torch.int32).to("xla")
+  # step = torch.zeros((1,), dtype=torch.int32).to("xla")
   # The jax checkify in ragged paged attention kernel will insert several scalar refs to both inputs
   # (end of prefetch) and outputs (begining of the original outputs).
   # TODO(jevinjiang, xiowei): consider seperate checkify from kernel!
-  s1 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  s2 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  s3 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  s4 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  q = q.permute(1, 0, 2)
+  # s1 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
+  # s2 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
+  # s3 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
+  # s4 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
+  # q = q.permute(1, 0, 2)
   MIN_BLOCK_SIZE = 128
-  output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
-  num_q_tiles_1d = torch.tensor([num_logical_q_tiles.tolist()],
-                                dtype=torch.int32).to("xla")
+  # output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
+  # num_q_tiles_1d = torch.tensor([num_logical_q_tiles.tolist()],
+  #                               dtype=torch.int32).to("xla")
 
   # TODO(jevinjiang, xiowei): check err returned by checkify! And add tests.
-  _, _, _, _, output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
+  output = torch_xla._XLAC._xla_tpu_custom_call(
       [
-          num_q_tiles,
-          sequence_ids,
-          m_tile_ids,
+          # num_q_tiles,
+          # sequence_ids,
+          # m_tile_ids,
           # Need num_q_tiles_1d to work around a Mosaic internal error.
-          num_q_tiles_1d,
+          # num_q_tiles_1d,
           kv_lens,
+          page_indices,
           cu_q_lens,
-          buffer_index,
-          step,
-          s1,
-          s2,
-          s3,
-          s4,
+          sequence_buffer_index,
+          # step,
+          # s1,
+          # s2,
+          # s3,
+          # s4,
           q.to(q_dtype_for_kernel_launch),
           k_pages,
           v_pages,
-          page_indices_expanded,  # for the current iteration
-          page_indices_expanded,  # for the next iteration
+          # page_indices_expanded,  # for the current iteration
+          # page_indices_expanded,  # for the next iteration
       ],
       payload,
       [  # output shape
-          s1.shape, s2.shape, s3.shape, s4.shape, q.shape, output_shape,
-          output_shape
+          q.shape
       ],
       [  # output dtype
-          s1.dtype, s2.dtype, s3.dtype, s4.dtype, q_dtype_for_kernel_launch,
-          torch.float32, torch.float32
+          q_dtype_for_kernel_launch,
       ])
-  return output.permute(1, 0, 2)
+  return output
 
 
 def _multi_queries_paged_attention_nonkernel(

@@ -144,17 +144,17 @@ class PallasTest(parameterized.TestCase):
     # But for testing, the assert could be omitted.
     # assert max_num_pages_per_seq*num_q_tokens <= num_pages, f"assert failed: max_num_pages_per_seq*num_q_tokens < num_pages. Got {max_num_pages_per_seq*num_q_tokens} and {num_pages}"
     page_indices = torch.randint(
-        0, num_pages, (num_q_tokens, max_num_pages_per_seq), dtype=torch.int32)
+        0, num_pages, (num_seqs, max_num_pages_per_seq), dtype=torch.int32)
 
     # Create a cu_q_lens i32[num_tokens + 1]
-    q_lens_with_paddings = [0] * num_q_tokens
-    for i in range(num_seqs):
-      q_lens_with_paddings[i] = query_lens[i]
+    # q_lens_with_paddings = [0] * num_q_tokens
+    # for i in range(num_seqs):
+    #   q_lens_with_paddings[i] = query_lens[i]
     cu_q_lens = torch.cumsum(
-        torch.tensor([0] + q_lens_with_paddings, dtype=torch.int32),
+        torch.tensor([0] + query_lens, dtype=torch.int32),
         dim=0,
         dtype=torch.int32)
-    return queries, k_pages, v_pages, page_indices, cu_q_lens, kv_lens_
+    return queries, k_pages.permute(1, 2, 0, 3), v_pages.permute(1, 2, 0, 3), page_indices, cu_q_lens, kv_lens
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_add(self):
@@ -917,7 +917,7 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     dtype = torch.float32
     page_size = 16
-    num_pages = 32768
+    num_pages = 1000
     sm_scale = head_dim**-0.5
 
     self._verify_ragged_paged_attention_with_dynamo(
