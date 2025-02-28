@@ -1,7 +1,7 @@
 # torchax: Running PyTorch on TPU
 
 **torchax!** is a backend for PyTorch, allowing users to run
-PyTorch on Google CloudTPUs. **torchax!** is also a library for providing 
+PyTorch on Google CloudTPUs. **torchax!** is also a library for providing
 graph-level interoperability between PyTorch with Jax.
 
 This means, with **torchax** you can:
@@ -18,7 +18,7 @@ etc etc.
 ### On Google Cloud TPU:
 First install torch CPU:
 
-```bash 
+```bash
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
@@ -28,7 +28,7 @@ Then install jax TPU:
 pip install -U jax[tpu]
 ```
 
-Finally install torchax 
+Finally install torchax
 
 ```bash
 pip install torchax
@@ -37,7 +37,7 @@ pip install torchax
 ### On GPU machines:
 First install torch CPU:
 
-```bash 
+```bash
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
@@ -47,7 +47,7 @@ Then install jax CUDA:
 pip install -U jax[cuda12]
 ```
 
-Finally install torchax 
+Finally install torchax
 
 ```bash
 pip install torchax
@@ -56,7 +56,7 @@ pip install torchax
 ### On CPU machines (mac included)
 First install torch CPU:
 
-```bash 
+```bash
 # Linux
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 
@@ -70,13 +70,13 @@ Then install jax CPU:
 pip install -U jax
 ```
 
-Finally install torchax 
+Finally install torchax
 
 ```bash
 pip install torchax
 ```
 
-NOTE: if you like metal support for Apple devices then install the 
+NOTE: if you like metal support for Apple devices then install the
 metal version of jax: https://developer.apple.com/metal/jax/
 
 ### Installing `torchax` from source
@@ -127,7 +127,7 @@ To enable this, use:
 
 ```python
 import torchax
-torchax.enable_globally() 
+torchax.enable_globally()
 ```
 Then, a `jax` device will be available to use
 
@@ -146,12 +146,12 @@ a `jax.Array`. You can inspect that jax array with `res.jax()`
 
 We took the approach detailed in [new device](https://github.com/albanD/subclass_zoo/blob/main/new_device.py) recipe by Alban (@albanD); using `jax.Array` for the `raw_data`.
 
-In other words, When a torch op is executed inside of `env` context manager (which is enabled with `torchax.enable_globally()`), we can swap out the 
+In other words, When a torch op is executed inside of `env` context manager (which is enabled with `torchax.enable_globally()`), we can swap out the
 implementation of that op written in Jax.
 
 When a model's constructor runs, it will call some tensor constructor, such as
 `torch.rand`, `torch.ones` or `torch.zeros` etc to create its weights. The constructor
-will create an `torch.Tensor` subclass that contains a `jax.Array`. 
+will create an `torch.Tensor` subclass that contains a `jax.Array`.
 
 Then, each subsequent ops can unpack the `jax.Array`, call the op implementation,
 and wraps it back into `torch.Tensor` subclass.
@@ -161,8 +161,8 @@ See more at [how_it_works](docs/how_it_works.md) and [ops registry](docs/ops_reg
 
 ### Executing with jax.jit
 
-The above script will execute the model using eager mode Jax as backend. This 
-does allow executing torch models on TPU, but is often slower than what we can 
+The above script will execute the model using eager mode Jax as backend. This
+does allow executing torch models on TPU, but is often slower than what we can
 achieve with `jax.jit`.
 
 `jax.jit` is a function that takes a Jax function (i.e. a function that takes jax array
@@ -180,7 +180,7 @@ def model_func(param, inputs):
   return torch.func.functional_call(m, param, inputs)
 
 ```
-Here we use [torch.func.functional_call](https://pytorch.org/docs/stable/generated/torch.func.functional_call.html) 
+Here we use [torch.func.functional_call](https://pytorch.org/docs/stable/generated/torch.func.functional_call.html)
 from PyTorch to replace the model
 weights with `param`, then call the model. This is roughly equivalent to:
 
@@ -232,8 +232,8 @@ then the subsequent computation with inputs of same shape will be fast.
 
 This library is created and maintained by the PyTorch/XLA team at Google Cloud.
 
-However, it benefitted from many direct and indirect 
-contributions outside of the team. Many of them done by 
+However, it benefitted from many direct and indirect
+contributions outside of the team. Many of them done by
 fellow Googlers using [Google's 20% project policy](https://ebsedu.org/blog/google-tapping-workplace-actualization-20-time-rule), others by partner teams.
 
 Here is the full list of contributors by 2025-02-25.
