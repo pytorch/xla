@@ -4,25 +4,46 @@ build-backend = "hatchling.build"
 
 [project]
 name = "torchax"
-dependencies = [
-    "absl-py",
-    "immutabledict",
-    "pytest",
-    # Developers should install `dev-requirements.txt` first
-    "torch>=2.3.0",
-]
+dependencies = []
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
 dynamic = ["version"]
+authors = [
+    {name = "Han Qi", email = "qihan.dev@gmail.com"},
+    {name = "Pytorch/XLA team", email = "pytorchxla-dev@google.com"},
+]
+description = "torchax is a library for running PyTorch on TPU"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/pytorch/xla/tree/master/torchax"
+
 
 [tool.hatch.version]
 path = "torchax/__init__.py"
 
 [project.optional-dependencies]
-cpu = ["jax[cpu]>=0.4.30", "jax[cpu]", "tensorflow-cpu"]
+cpu = ["jax[cpu]>=0.4.30", "jax[cpu]"]
 # Add libtpu index `-f https://storage.googleapis.com/libtpu-releases/index.html`
-tpu = ["jax[cpu]>=0.4.30", "jax[tpu]", "tensorflow-cpu"]
-cuda = ["jax[cpu]>=0.4.30", "jax[cuda12]", "tensorflow-cpu"]
+tpu = ["jax[cpu]>=0.4.30", "jax[tpu]"]
+cuda = ["jax[cpu]>=0.4.30", "jax[cuda12]"]
 odml = ["jax[cpu]>=0.4.30", "jax[cpu]"]
 
 [tool.hatch.build.targets.wheel]
