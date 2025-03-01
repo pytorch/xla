@@ -1,5 +1,6 @@
 import functools
 import os
+import math
 import warnings
 
 import torch
@@ -20,7 +21,7 @@ def _shard_map(func, mesh, input_specs, output_specs):
 
     Note:
       ``shard_map`` is an experimental API, and still subject to change. For an
-      introduction to sharded data, refer to :ref:`sharded-computation`. For a more
+      introduction to sharded data. For a more
       in-depth look at using ``shard_map``, refer to 
       [SPMD multi-device parallelism with shard_map](https://docs.jax.dev/en/latest/notebooks/shard_map.html)
 
@@ -43,7 +44,7 @@ def _shard_map(func, mesh, input_specs, output_specs):
       the ``mesh`` and ``out_specs``.
 
     Reference:
-      This function is identical Jax's shard_map:
+      This function behaves identically Jax's shard_map:
       https://docs.jax.dev/en/latest/_autosummary/jax.experimental.shard_map.shard_map.html
     """
 
@@ -56,18 +57,14 @@ def _shard_map(func, mesh, input_specs, output_specs):
     result_shape = []
     for axis_size, axis_sharding in zip(a.shape, spec):
       if axis_sharding is None:
-        new_size = axis_size
-      else:
-        if isinstance(axis_sharding, (str, int)):
-          mesh_mult = mesh_name_to_size[axis_sharding]
-        else:
-          # tuple or list
-          mesh_mult = math.prod(mesh_name_to_size[a]
-                                for a in axis_sharding
-                                if mesh_name_to_size[a] is not None)
-
-        if mesh_mult is not None:
-          new_size = axis_size * mesh_mult
+        axis_sharding = ()
+      mesh_mult = []
+      if isinstance(axis_sharding, (str, int)):
+        axis_sharding = [axis_sharding]
+      for axis in axis_sharding:
+        size = mesh_name_to_size[axis] or 1
+        mesh_mult.append(size)
+      new_size = axis_size * math.prod(mesh_mult)
       result_shape.append(new_size)
     return tuple(result_shape)
 
@@ -76,7 +73,7 @@ def _shard_map(func, mesh, input_specs, output_specs):
         input_specs), f'args={len(args)}; input_specs={len(input_specs)}'
     new_args = []
     for i, (a, spec) in enumerate(zip(args, input_specs)):
-      if isinstance(a, torch.Tensor) and spec is not None:
+      if isinstance(a, torch.Tensor):
         assert (len(a.shape) == len(spec)
                ), f'{i}th input has wrong shape: {a.shape} for {spec}'
         new_a = xs.enable_manual_sharding(a, spec, mesh=mesh).global_tensor
@@ -87,22 +84,21 @@ def _shard_map(func, mesh, input_specs, output_specs):
     res = func(*new_args)
     if isinstance(res, tuple):
       res_updated = []
-      for i, r in enumerate(res):
-        if isinstance(r, torch.Tensor):
+      for i, (r, spec) in enumerate(zip(res, output_specs)):
+        if isinstance(r, torch.Tensor) and spec is not None:
           assert str(r.device).startswith('xla'), f'{i}th device is {r.device}'
           assert len(r.shape) == len(
-              output_specs[i]
-          ), f'{i}th shape is {r.shape}, sharding is {output_specs[i]}'
-      return tuple(
-          xs.disable_manual_sharding(a, spec, _full_shape(a, spec), mesh=mesh).
-          global_tensor
-          if isinstance(a, torch.Tensor) and spec is not None else a
-          for a, spec in zip(res, output_specs))
+              spec), f'{i}th shape is {r.shape}, sharding is {output_specs[i]}'
+          new_r = xs.disable_manual_sharding(
+              r, spec, _full_shape(r, spec), mesh=mesh).global_tensor
+        else:
+          new_r = r
+        res_updated.append(new_r)
+      return res_updated
     else:
       return xs.disable_manual_sharding(
           res, output_specs[0], _full_shape(res, output_specs[0]),
           mesh=mesh).global_tensor
-    return res
 
   return wrapped
 
@@ -309,6 +305,24 @@ def make_kernel_from_pallas(kernel: Callable, output_shape_dtype_fn: Callable):
   return functools.partial(wrapped_kernel, kernel, output_shape_dtype_fn)
 
 
+def _maybe_reshape_input_output_funcs(current_shape, non_batch_dims=3):
+  batch_dims = len(current_shape) - non_batch_dims
+  orig_batch_dims = current_shape[:batch_dims]
+  other_dims = current_shape[batch_dims:]
+
+  def reshape_input(tensor):
+    if tensor is None:
+      return None
+    return tensor.reshape(-1, *tensor.shape[batch_dims:])
+
+  def reshape_output(tensor):
+    if tensor is None:
+      return None
+    return tensor.reshape(*orig_batch_dims, *tensor.shape[1:])
+
+  return reshape_input, reshape_output
+
+
 def _fa_custom_forward_single_device(
     q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, causal: bool,
     q_segment_ids: torch.Tensor, kv_segment_ids: torch.Tensor, sm_scale: float,
@@ -318,20 +332,16 @@ def _fa_custom_forward_single_device(
 
   num_batches = None
   batch_size = None
-  if len(q.shape) == 5:
-    num_batches, batch_size, *rest = q.shape
-    q = q.reshape(-1, *rest)
-    k = k.reshape(-1, *rest)
-    v = v.reshape(-1, *rest)
-    if q_segment_ids is not None:
-      q_segment_ids = q_segment_ids.reshape(-1, *rest)
-    if kv_segment_ids is not None:
-      kv_segment_ids = kv_segment_ids.reshape(-1, *rest)
-    if ab is not None:
-      ab = ab.reshape(-1, *rest)
+  reshape_to_4d, undo_reshape = _maybe_reshape_input_output_funcs(q.shape, 3)
+  q = reshape_to_4d(q)
+  v = reshape_to_4d(v)
+  k = reshape_to_4d(k)
+  q_segment_ids = reshape_to_4d(q_segment_ids)
+  kv_segment_ids = reshape_to_4d(kv_segment_ids)
+  ab = reshape_to_4d(ab)
 
-  # Suprisingly, any tensor that is input to the custom_op decorated function will show
-  # requires_grad=False. Is this a bug or feature? We have to pass ctx_grad to record the
+  # Surprisingly, any tensor that is input to the custom_op decorated function will show
+  # requires_grad=False by design. We have to pass ctx_grad to record the
   # requires_grad for inputs.
   # Original we use save_residuals = q.requires_grad or k.requires_grad or v.requires_grad
   save_residuals = any(ctx_grad[:3])
@@ -401,12 +411,9 @@ def _fa_custom_forward_single_device(
       o, *aux = custom_call_output
       l, m = (v[..., 0] for v in aux[-2:])
 
-  if num_batches is not None:
-    o = o.reshape(num_batches, batch_size, *o.shape[1:])
-    if l is not None:
-      l = l.reshape(num_batches, batch_size, *l.shape[1:])
-    if m is not None:
-      m = m.reshape(num_batches, batch_size, *m.shape[1:])
+  o = undo_reshape(o)
+  l = undo_reshape(l)
+  m = undo_reshape(m)
 
   return o, l, m
 
@@ -518,21 +525,18 @@ def _fa_custom_backward_single_device(
 
   num_batches = None
   batch_size = None
-  if len(q.shape) == 5:
-    num_batches, batch_size, *rest = q.shape
-    grad_output = grad_output.reshape(-1, *rest)
-    q = q.reshape(-1, *rest)
-    k = k.reshape(-1, *rest)
-    v = v.reshape(-1, *rest)
-    o = o.reshape(-1, *rest)
-    l = l.reshape(-1, *rest)
-    m = m.reshape(-1, *rest)
-    if q_segment_ids is not None:
-      q_segment_ids = q_segment_ids.reshape(-1, *rest)
-    if kv_segment_ids is not None:
-      kv_segment_ids = kv_segment_ids.reshape(-1, *rest)
-    if ab is not none:
-      ab = ab.reshape(-1, *rest)
+  reshape_to_4d, undo_reshape = _maybe_reshape_input_output_funcs(q.shape, 3)
+
+  grad_output = reshape_to_4d(grad_output)
+  q = reshape_to_4d(q)
+  k = reshape_to_4d(k)
+  v = reshape_to_4d(v)
+  o = reshape_to_4d(o)
+  l = reshape_to_4d(l)
+  m = reshape_to_4d(m)
+  q_segment_ids = reshape_to_4d(q_segment_ids)
+  kv_segment_ids = reshape_to_4d(kv_segment_ids)
+  ab = reshape_to_4d(ab)
 
   require_grad_q, require_grad_k, require_grad_v, *rest = ctx_grad
   require_grad_ab = ctx_grad[-3]
@@ -646,17 +650,10 @@ def _fa_custom_backward_single_device(
   if require_grad_v:
     grad_v = grads[1]
 
-  if num_batches is not None:
-
-    def _reshape(x):
-      if x is not None:
-        return x.reshape(num_batches, batch_size, *x.shape[1:])
-      return None
-
-    grad_q = _reshape(grad_q)
-    grad_k = _reshape(grad_k)
-    grad_v = _reshape(grad_v)
-    grad_ab = _reshape(grad_ab)
+  grad_q = undo_reshape(grad_q)
+  grad_k = undo_reshape(grad_k)
+  grad_v = undo_reshape(grad_v)
+  grad_ab = undo_reshape(grad_ab)
 
   return grad_q, grad_k, grad_v, grad_ab
 

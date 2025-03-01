@@ -76,7 +76,8 @@ class PallasTest(unittest.TestCase):
         f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
 
     expected_o = self._attention(q, k, v)
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -100,7 +101,8 @@ class PallasTest(unittest.TestCase):
         f"{{devices=[{n_devices//2},2,1,1,1]{dev_ids}}}")
 
     expected_o = self._attention(q, k, v)
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -121,7 +123,8 @@ class PallasTest(unittest.TestCase):
         f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
 
     expected_o = self._attention(q, k, v, ab=ab)
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -172,7 +175,8 @@ class PallasTest(unittest.TestCase):
     xm.mark_step()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
-      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+      torch.testing.assert_close(
+          i[0].grad.cpu(), i[1].cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -216,7 +220,8 @@ class PallasTest(unittest.TestCase):
                 segment_ids=SegmentIds(jax_segment_ids, jax_segment_ids),
             )))
 
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -286,7 +291,8 @@ class PallasTest(unittest.TestCase):
     xm.mark_step()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
-      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+      torch.testing.assert_close(
+          i[0].grad.cpu(), i[1].cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -331,7 +337,8 @@ class PallasTest(unittest.TestCase):
                 segment_ids=SegmentIds(jax_q_segment_ids, jax_kv_segment_ids),
             )))
 
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -402,7 +409,8 @@ class PallasTest(unittest.TestCase):
     xm.mark_step()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
-      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+      torch.testing.assert_close(
+          i[0].grad.cpu(), i[1].cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
@@ -484,7 +492,8 @@ class PallasTest(unittest.TestCase):
     xm.mark_step()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad), (ab, ab_grad)]:
-      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-02))
+      torch.testing.assert_close(
+          i[0].grad.cpu(), i[1].cpu(), atol=1e-02, rtol=1e-05)
 
 
 if __name__ == '__main__':
