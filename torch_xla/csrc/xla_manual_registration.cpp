@@ -49,5 +49,10 @@ TORCH_LIBRARY_IMPL(torchvision, XLA, m) {
   m.impl(TORCH_SELECTIVE_NAME("torchvision::nms"), TORCH_FN(nms_kernel));
 }
 
+TORCH_LIBRARY_IMPL(aten, XLA, m) {
+  m.impl("aten::einsum", TORCH_FN(XLANativeFunctions::einsum));
+}
+
+
 }  // namespace manual
 }  // namespace torch_xla
