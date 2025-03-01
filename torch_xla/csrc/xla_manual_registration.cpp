@@ -3,6 +3,7 @@
 
 #include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/ops/nms.h"
 #include "torch_xla/csrc/ops/ops.h"
@@ -49,10 +50,10 @@ TORCH_LIBRARY_IMPL(torchvision, XLA, m) {
   m.impl(TORCH_SELECTIVE_NAME("torchvision::nms"), TORCH_FN(nms_kernel));
 }
 
+// Register generated XLANativeFunctions::einsum as aten::einsum for XLA key.
 TORCH_LIBRARY_IMPL(aten, XLA, m) {
   m.impl("aten::einsum", TORCH_FN(XLANativeFunctions::einsum));
 }
-
 
 }  // namespace manual
 }  // namespace torch_xla
