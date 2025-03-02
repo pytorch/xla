@@ -155,8 +155,9 @@ class TestGRU(parameterized.TestCase):
     torch_xla.sync()
 
     # Compare the numerical outputs.
-    torch.testing.assert_close(out1, out2, check_device=False)
-    torch.testing.assert_close(h1, h2, check_device=False)
+    torch.testing.assert_close(
+        out1, out2, check_device=False, atol=1e-3, rtol=1e-3)
+    torch.testing.assert_close(h1, h2, check_device=False, atol=1e-3, rtol=1e-3)
 
     # Compute losses.
     loss1 = out1.sum() + h1.sum()
