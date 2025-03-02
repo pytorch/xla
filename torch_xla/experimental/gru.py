@@ -129,6 +129,7 @@ class GRU(nn.Module):
       # Define the step function for scanning over time.
       # x_t: (batch, current_input_size)
       # h: (batch, hidden_size)
+      # carry: dictionary containing h and weights/biases.
       def step_fn(carry, x_t):
         h = carry['h']
         w_ih = carry['w_ih']
