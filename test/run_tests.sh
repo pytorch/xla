@@ -208,6 +208,7 @@ function run_xla_op_tests2 {
   run_test "$CDIR/eager/test_eager_spmd.py"
   run_test "$CDIR/test_callback.py"
   XLA_USE_SPMD=1 run_test "$CDIR/test_callback.py"
+  run_test "$CDIR/test_jax_interop.py"
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
