@@ -65,17 +65,44 @@ class PallasTest(unittest.TestCase):
     n_devices = xr.global_runtime_device_count()
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
-    q = torch.randn(4, 2, 128, 4).to("xla")
-    k = torch.randn(4, 2, 128, 4).to("xla")
-    v = torch.randn(4, 2, 128, 4).to("xla")
+    q = torch.randn(8, 2, 128, 8).to("xla")
+    k = torch.randn(8, 2, 128, 8).to("xla")
+    v = torch.randn(8, 2, 128, 8).to("xla")
 
-    o = flash_attention(q, k, v, partition_spec=range(n_devices))
+    o = flash_attention(q, k, v, partition_spec=(0, None, None, None))
+    dev_ids = ','.join(map(str, range(n_devices)))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(o),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
 
     expected_o = self._attention(q, k, v)
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
+                   "This test only works on TPUv3+.")
+  @with_jax_high_precision
+  def test_flash_attention_spmd_data_parallel_5d(self):
+    n_devices = xr.global_runtime_device_count()
+    xs.set_global_mesh(
+        xs.Mesh(
+            range(n_devices), (n_devices // 2, 2, 1, 1, 1),
+            ('fsdp', 'dp', 'a', 'b', 'c')))
+
+    q = torch.randn(4, 2, 2, 128, 4).to("xla")
+    k = torch.randn(4, 2, 2, 128, 4).to("xla")
+    v = torch.randn(4, 2, 2, 128, 4).to("xla")
+
+    o = flash_attention(
+        q, k, v, partition_spec=('fsdp', 'dp', None, None, None))
+    dev_ids = ','.join(map(str, range(n_devices)))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(o),
+        f"{{devices=[{n_devices//2},2,1,1,1]{dev_ids}}}")
+
+    expected_o = self._attention(q, k, v)
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -84,18 +111,20 @@ class PallasTest(unittest.TestCase):
     n_devices = xr.global_runtime_device_count()
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
-    q = torch.randn(4, 2, 513, 4).to("xla")
-    k = torch.randn(4, 2, 513, 4).to("xla")
-    v = torch.randn(4, 2, 513, 4).to("xla")
-    ab = torch.randn(4, 2, 513, 513).to("xla")
+    q = torch.randn(8, 2, 513, 4).to("xla")
+    k = torch.randn(8, 2, 513, 4).to("xla")
+    v = torch.randn(8, 2, 513, 4).to("xla")
+    ab = torch.randn(8, 2, 513, 513).to("xla")
 
-    o = flash_attention(q, k, v, ab=ab, partition_spec=range(n_devices))
+    o = flash_attention(q, k, v, ab=ab, partition_spec=(0, None, None, None))
+    dev_ids = ','.join(map(str, range(n_devices)))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(o),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
 
     expected_o = self._attention(q, k, v, ab=ab)
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -105,14 +134,14 @@ class PallasTest(unittest.TestCase):
     xs.set_global_mesh(xs.Mesh(range(n_devices), (n_devices, 1, 1, 1)))
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
 
-    o = flash_attention(q, k, v, partition_spec=range(n_devices))
+    o = flash_attention(q, k, v, partition_spec=(0, None, None, None))
     loss = o.sum()
     loss.backward()
     xm.mark_step()
@@ -120,20 +149,22 @@ class PallasTest(unittest.TestCase):
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
+
+    dev_ids = ','.join(map(str, range(n_devices)))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(q_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(k_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(v_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -144,7 +175,8 @@ class PallasTest(unittest.TestCase):
     xm.mark_step()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
-      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+      torch.testing.assert_close(
+          i[0].grad.cpu(), i[1].cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -154,10 +186,10 @@ class PallasTest(unittest.TestCase):
     from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention as jax_flash_attention, SegmentIds
     xs.set_global_mesh(xs.get_1d_mesh("data"))
 
-    q = torch.randn(3, 2, 128, 4)
-    k = torch.randn(3, 2, 128, 4)
-    v = torch.randn(3, 2, 128, 4)
-    zeros = torch.zeros(3, 32)
+    q = torch.randn(8, 2, 128, 4)
+    k = torch.randn(8, 2, 128, 4)
+    v = torch.randn(8, 2, 128, 4)
+    zeros = torch.zeros(8, 32)
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     segment_ids_xla = segment_ids.to("xla")
     # only shard data dimension
@@ -169,9 +201,11 @@ class PallasTest(unittest.TestCase):
         segment_ids_xla,
         segment_ids.to("xla"),
         partition_spec=("data", None, None, None))
+    n_devices = xr.global_runtime_device_count()
+    dev_ids = ','.join(map(str, range(n_devices)))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(o),
-        f"{{devices=[{xr.global_runtime_device_count()},1,1,1]0,1,2,3}}")
+        f"{{devices=[{xr.global_runtime_device_count()},1,1,1]{dev_ids}}}")
 
     jax_q = jnp.array(q.numpy(), dtype=jnp.float32)
     jax_k = jnp.array(k.numpy(), dtype=jnp.float32)
@@ -186,7 +220,8 @@ class PallasTest(unittest.TestCase):
                 segment_ids=SegmentIds(jax_segment_ids, jax_segment_ids),
             )))
 
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -197,10 +232,10 @@ class PallasTest(unittest.TestCase):
     xs.set_global_mesh(xs.get_1d_mesh("data"))
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    zeros = torch.zeros(4, 32).to("xla")
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    zeros = torch.zeros(8, 32).to("xla")
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     q.retain_grad()
     k.retain_grad()
@@ -219,25 +254,27 @@ class PallasTest(unittest.TestCase):
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
+
+    dev_ids = ','.join(map(str, range(n_devices)))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(o),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(q_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(k_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(v_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     torch_xla.sync()
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    zeros = torch.zeros(4, 32).to("xla")
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    zeros = torch.zeros(8, 32).to("xla")
     segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
     q.retain_grad()
     k.retain_grad()
@@ -254,7 +291,8 @@ class PallasTest(unittest.TestCase):
     xm.mark_step()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
-      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+      torch.testing.assert_close(
+          i[0].grad.cpu(), i[1].cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -264,12 +302,12 @@ class PallasTest(unittest.TestCase):
     from jax.experimental.pallas.ops.tpu.flash_attention import flash_attention as jax_flash_attention, SegmentIds
     xs.set_global_mesh(xs.get_1d_mesh("data"))
 
-    q = torch.randn(3, 2, 1024, 4)
-    k = torch.randn(3, 2, 128, 4)
-    v = torch.randn(3, 2, 128, 4)
-    zeros = torch.zeros(3, 32)
-    kv_segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
-    q_segment_ids = torch.ones(3, q.shape[2], dtype=torch.float32)
+    q = torch.randn(8, 2, 1024, 4)
+    k = torch.randn(8, 2, 128, 4)
+    v = torch.randn(8, 2, 128, 4)
+    zeros = torch.zeros(8, 32)
+    kv_segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 4], dim=1)
+    q_segment_ids = torch.ones(8, q.shape[2], dtype=torch.float32)
     # only shard data dimension
     o = flash_attention(
         q.to("xla"),
@@ -279,9 +317,11 @@ class PallasTest(unittest.TestCase):
         q_segment_ids.to("xla"),
         kv_segment_ids.to("xla"),
         partition_spec=("data", None, None, None))
+    n_devices = xr.global_runtime_device_count()
+    dev_ids = ','.join(map(str, range(n_devices)))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(o),
-        f"{{devices=[{xr.global_runtime_device_count()},1,1,1]0,1,2,3}}")
+        f"{{devices=[{xr.global_runtime_device_count()},1,1,1]{dev_ids}}}")
 
     jax_q = jnp.array(q.numpy(), dtype=jnp.float32)
     jax_k = jnp.array(k.numpy(), dtype=jnp.float32)
@@ -297,7 +337,8 @@ class PallasTest(unittest.TestCase):
                 segment_ids=SegmentIds(jax_q_segment_ids, jax_kv_segment_ids),
             )))
 
-    self.assertTrue(torch.allclose(o.cpu(), expected_o.cpu(), atol=1e-05))
+    torch.testing.assert_close(
+        o.cpu(), expected_o.cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 3,
                    "This test only works on TPUv3+.")
@@ -308,12 +349,12 @@ class PallasTest(unittest.TestCase):
     xs.set_global_mesh(xs.get_1d_mesh("data"))
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 1024, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    zeros = torch.zeros(4, 32).to("xla")
+    q = torch.randn(8, 2, 1024, 4, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 4, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 4, requires_grad=True).to("xla")
+    zeros = torch.zeros(8, 32).to("xla")
     kv_segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
-    q_segment_ids = torch.ones(4, q.shape[2], dtype=torch.float32).to("xla")
+    q_segment_ids = torch.ones(8, q.shape[2], dtype=torch.float32).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -331,27 +372,28 @@ class PallasTest(unittest.TestCase):
     q_grad = q.grad
     k_grad = k.grad
     v_grad = v.grad
+    dev_ids = ','.join(map(str, range(n_devices)))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(o),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(q_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(k_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(v_grad),
-        f"{{devices=[{n_devices},1,1,1]0,1,2,3}}")
+        f"{{devices=[{n_devices},1,1,1]{dev_ids}}}")
     torch_xla.sync()
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 1024, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    zeros = torch.zeros(4, 32).to("xla")
+    q = torch.randn(8, 2, 1024, 4, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 4, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 4, requires_grad=True).to("xla")
+    zeros = torch.zeros(8, 32).to("xla")
     kv_segment_ids = torch.cat([zeros, zeros + 1, zeros + 2, zeros + 3], dim=1)
-    q_segment_ids = torch.ones(4, q.shape[2], dtype=torch.float32).to("xla")
+    q_segment_ids = torch.ones(8, q.shape[2], dtype=torch.float32).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
@@ -367,7 +409,8 @@ class PallasTest(unittest.TestCase):
     xm.mark_step()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad)]:
-      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-05))
+      torch.testing.assert_close(
+          i[0].grad.cpu(), i[1].cpu(), atol=1e-05, rtol=1e-05)
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
@@ -406,15 +449,15 @@ class PallasTest(unittest.TestCase):
         flash_attention_wrapper, fw_compiler=compiler)
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
     B, N, SEQ, H = q.size()
-    mask = (torch.rand(4, 2, 128, 128) > 0.5).to("xla")
-    ab = torch.ones(4, 2, 128, 128).to("xla")
+    mask = (torch.rand(8, 2, 128, 128) > 0.5).to("xla")
+    ab = torch.ones(8, 2, 128, 128).to("xla")
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min).requires_grad_()
     ab.retain_grad()
 
@@ -433,13 +476,13 @@ class PallasTest(unittest.TestCase):
     ab_grad = ab.grad
 
     torch.manual_seed(42)
-    q = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    k = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
-    v = torch.randn(4, 2, 128, 8, requires_grad=True).to("xla")
+    q = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    k = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
+    v = torch.randn(8, 2, 128, 8, requires_grad=True).to("xla")
     q.retain_grad()
     k.retain_grad()
     v.retain_grad()
-    ab = torch.ones(4, 2, 128, 128).to("xla")
+    ab = torch.ones(8, 2, 128, 128).to("xla")
     ab = ab.masked_fill(mask, torch.finfo(ab.dtype).min).requires_grad_()
     ab.retain_grad()
 
@@ -449,7 +492,8 @@ class PallasTest(unittest.TestCase):
     xm.mark_step()
 
     for i in [(q, q_grad), (k, k_grad), (v, v_grad), (ab, ab_grad)]:
-      self.assertTrue(torch.allclose(i[0].grad.cpu(), i[1].cpu(), atol=1e-02))
+      torch.testing.assert_close(
+          i[0].grad.cpu(), i[1].cpu(), atol=1e-02, rtol=1e-05)
 
 
 if __name__ == '__main__':
