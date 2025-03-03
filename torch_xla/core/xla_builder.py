@@ -1,6 +1,6 @@
 import torch
 import torch_xla
-
+from torch.fx import _pytree as pytree
 
 class Type:
   F32 = 'f32'
@@ -799,3 +799,24 @@ def computation_from_module_proto(name, proto):
 
 def get_computation_hlo(computation):
   return torch_xla._XLAC._xla_computation_text(computation)
+
+def call_jax(jax_func, args, kwargs=None, name=None):
+  if name is None:
+    name = 'jax_func_' + jax_func.__name__
+  kwargs = kwargs or {}
+  import jax
+  import torchax.ops.mappings as mappings
+  
+  flattened, spec = pytree.tree_flatten((args, kwargs))
+  def fn_flattened_inputs(*flattened):
+    args, kwargs = pytree.tree_unflatten(flattened, spec)
+    return jax_func(*args, **kwargs)
+  
+  sample_input_shapes = tuple(
+    jax.ShapeDtypeStruct(a.shape, mappings.t2j_dtype(a.dtype))
+    for a in flattened
+  )
+  hlo_text = jax.jit(jax_func).lower(*sample_input_shapes).as_text('hlo')
+  hlo_proto = torch_xla._XLAC._xla_computation_text_to_proto(hlo_text)
+  computation = computation_from_module_proto(name, hlo_proto)
+  return Op.call(computation, flattened)
