@@ -168,8 +168,10 @@ class TestGRU(parameterized.TestCase):
     loss2.backward()
     torch_xla.sync()
 
+    # Gradient thresholds are relaxed because numerical differences between TPU
+    # and CPU adds up to a non-trivial impact over 2048 steps.
     self.check_gradients(
-        inp1, hx1, inp2, hx2, num_layers, gru, scan_gru, atol=1e-3, rtol=1e-3)
+        inp1, hx1, inp2, hx2, num_layers, gru, scan_gru, atol=0.05, rtol=0.05)
 
 
 if __name__ == "__main__":
