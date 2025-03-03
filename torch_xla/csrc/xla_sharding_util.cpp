@@ -375,6 +375,7 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
     std::cout << "Check device_index " << std::endl;
     for (const auto& pair : device_index) {
       std::cout << "Key: " << pair.first << ", Value: " << pair.second << std::endl;
+      device_index[pair.first%4] = pair.second;
     }
     std::vector<int64_t> tile_assignment_devices(
         sharding.tile_assignment_devices().begin(),
