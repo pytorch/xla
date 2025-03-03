@@ -104,6 +104,93 @@ def _shard_map(func, mesh, input_specs, output_specs):
   return wrapped
 
 
+def _shard_map(func, mesh, input_specs, output_specs):
+  """Map a function over shards of data.
+
+    Note:
+      ``shard_map`` is an experimental API, and still subject to change. For an
+      introduction to sharded data. For a more
+      in-depth look at using ``shard_map``, refer to 
+      [SPMD multi-device parallelism with shard_map](https://docs.jax.dev/en/latest/notebooks/shard_map.html)
+
+    Args:
+      func: callable to be mapped. Each application of ``f``, or "instance" of ``f``,
+        takes as input a shard of the mapped-over arguments and produces a shard
+        of the output.
+      mesh: a ``Mesh`` representing the array of devices over which
+        to shard the data and on which to execute instances of ``f``. The names of
+        the ``Mesh`` can be used in collective communication operations in ``f``.
+        This is typically created by a utility function like
+        :func:`jax.experimental.mesh_utils.create_device_mesh`.
+      in_specs: a tuple of tuples of str. Each is the partition spec of positional input
+        of func. kwarg is not supported yet
+      out_specs: a pytree with :class:`~tuple[tuple[str]]`, with the same length
+        as the number of outputs
+
+    Returns:
+      A callable that applies the input function ``f`` across data sharded according to
+      the ``mesh`` and ``out_specs``.
+
+    Reference:
+      This function behaves identically Jax's shard_map:
+      https://docs.jax.dev/en/latest/_autosummary/jax.experimental.shard_map.shard_map.html
+    """
+
+  def _full_shape(a, spec):
+    # a is local tensor
+    # spec is the sharding spec
+    # return logical shape of global tensor
+    mesh_name_to_size = mesh.shape()
+
+    result_shape = []
+    for axis_size, axis_sharding in zip(a.shape, spec):
+      if axis_sharding is None:
+        axis_sharding = ()
+      mesh_mult = []
+      if isinstance(axis_sharding, (str, int)):
+        axis_sharding = [axis_sharding]
+      for axis in axis_sharding:
+        size = mesh_name_to_size[axis] or 1
+        mesh_mult.append(size)
+      new_size = axis_size * math.prod(mesh_mult)
+      result_shape.append(new_size)
+    return tuple(result_shape)
+
+  def wrapped(*args):
+    assert len(args) == len(
+        input_specs), f'args={len(args)}; input_specs={len(input_specs)}'
+    new_args = []
+    for i, (a, spec) in enumerate(zip(args, input_specs)):
+      if isinstance(a, torch.Tensor):
+        assert (len(a.shape) == len(spec)
+               ), f'{i}th input has wrong shape: {a.shape} for {spec}'
+        new_a = xs.enable_manual_sharding(a, spec, mesh=mesh).global_tensor
+        new_args.append(new_a)
+      else:
+        new_args.append(a)
+
+    res = func(*new_args)
+    if isinstance(res, tuple):
+      res_updated = []
+      for i, (r, spec) in enumerate(zip(res, output_specs)):
+        if isinstance(r, torch.Tensor) and spec is not None:
+          assert str(r.device).startswith('xla'), f'{i}th device is {r.device}'
+          assert len(r.shape) == len(
+              spec), f'{i}th shape is {r.shape}, sharding is {output_specs[i]}'
+          new_r = xs.disable_manual_sharding(
+              r, spec, _full_shape(r, spec), mesh=mesh).global_tensor
+        else:
+          new_r = r
+        res_updated.append(new_r)
+      return res_updated
+    else:
+      return xs.disable_manual_sharding(
+          res, output_specs[0], _full_shape(res, output_specs[0]),
+          mesh=mesh).global_tensor
+
+  return wrapped
+
+
 def safe_empty_like(tensor: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
   """Returns empty tensor like input, or None if input is None."""
   return torch.empty_like(tensor) if tensor is not None else None
