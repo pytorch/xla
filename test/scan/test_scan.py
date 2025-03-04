@@ -613,6 +613,32 @@ class ValueAndGradPartitionedTest(TestBase):
     self.compare_pytree(grad_init, expected_grads['init'])
     self.compare_pytree(grad_x, expected_grads['x'])
 
+  def test_scan_tracing_does_not_allocate_device_memory(self):
+    """
+    When scan is tracing the function to obtain an HLO, it should not allocate
+    device memory.
+    """
+
+    def fn(carry, x):
+      carry = torch.sin(carry)
+      x = torch.sin(x)
+      return carry, x
+
+    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                      requires_grad=True,
+                      device=self.device)
+    torch_xla.sync(wait=True)
+    met.clear_all()
+    self.assertFalse(met.metric_data("TransferToDeviceTime"))
+    # Use `scan` to lower `fn` into HLO and run it. Doing so should not
+    # transfer anything from host to device since `init` and `xs` are
+    # already on the device.
+    # In practice, `carry` and `x` will be placeholder tensors in `fn`.
+    _ = scan(fn, init, xs)
+    torch_xla.sync(wait=True)
+    self.assertFalse(met.metric_data("TransferToDeviceTime"))
+
 
 if __name__ == '__main__':
   test = unittest.main()
