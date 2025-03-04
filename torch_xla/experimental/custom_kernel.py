@@ -777,8 +777,8 @@ def _ragged_paged_attention_nonkernel(
 @requires_jax
 def ragged_paged_attention(
     q,  # [num_tokens, num_q_heads, head_dim]
-    k_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
-    v_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
+    k_pages,  # [total_num_pages, page_size, num_kv_heads, head_dim]
+    v_pages,  # [total_num_pages, page_size, num_kv_heads, head_dim]
     kv_lens,  # i32[num_tokens]
     page_indices,  # i32[num_tokens, pages_per_sequence]
     cu_q_lens,  # i32[num_tokens + 1]
@@ -794,8 +794,8 @@ def ragged_paged_attention(
   if not use_kernel:
     return _ragged_paged_attention_nonkernel(
         q,
-        k_pages,
-        v_pages,
+        k_pages.permute(2, 0, 1, 3),
+        v_pages.permute(2, 0, 1, 3),
         kv_lens,
         page_indices,
         cu_q_lens,
@@ -807,8 +807,6 @@ def ragged_paged_attention(
   # in the global scope which could cause problems for xmp.spawn.
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as ragged_attention, make_sequence_metadata
   from torch_xla.experimental.pallas_kernels.ragged_paged_attn_v2 import ragged_paged_attention as ragged_paged_attention_v2
-  k_pages = k_pages.permute(1, 2, 0, 3)
-  v_pages = v_pages.permute(1, 2, 0, 3)
   payload, tensor_args = trace_pallas(
       ragged_paged_attention_v2,
       q,
