@@ -1070,6 +1070,152 @@ class PallasTest(parameterized.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
+  def test_ragged_paged_attention_wrapper_vllm_load_file_debug1(
+      self,
+  ):
+    # use the 2.5388254719491893e+38-tensors.pt dump file.
+    # dtype = torch.bfloat16
+
+    torch_tensors_file = "/ansible/600.0-tensors.pt"
+    inputs = torch.load(torch_tensors_file)
+    q = inputs['query']
+    k_pages = inputs['key_cache']
+    v_pages = inputs['value_cache']
+    kv_lens = inputs['attn_metadata.context_lens']
+    page_indices = inputs['attn_metadata.block_tables']
+    cu_q_lens = inputs['attn_metadata.query_start_loc']
+    num_seqs = inputs['attn_metadata.num_seqs']
+    num_kv_pages_per_block=inputs['NUM_KV_PAGES_PER_BLOCK']
+    num_queries_per_block=inputs['NUM_QUERIES_PER_BLOCK']
+
+    # Need to validate the q_len is always smaller or equal to kv_len
+    kv_lens_list = kv_lens.tolist()
+    cu_q_lens_list = cu_q_lens.tolist()
+    q_lens_list = [cu_q_lens_list[i+1]-cu_q_lens_list[i] for i in range(len(cu_q_lens_list)-1)]
+    assert len(q_lens_list) == len(kv_lens_list)
+    for (q_len, kv_len) in zip(q_lens_list, kv_lens_list):
+      assert q_len <= kv_len
+
+    q_xla = q.to("xla")
+    k_pages_xla = k_pages.to("xla")
+    v_pages_xla = v_pages.to("xla")
+    kv_lens_xla = kv_lens.to("xla")
+    page_indices_xla = page_indices.to("xla")
+    cu_q_lens_xla = cu_q_lens.to("xla")
+
+    def ragged_paged_attention_wrapper(q, k_pages, v_pages, kv_lens,
+                                       page_indices, cu_q_lens, num_seqs,
+                                       num_kv_pages_per_block,
+                                       num_queries_per_block, use_kernel):
+      return torch.ops.xla.ragged_paged_attention(
+          q,
+          k_pages,
+          v_pages,
+          kv_lens,
+          page_indices,
+          cu_q_lens,
+          num_seqs,
+          num_kv_pages_per_block,
+          num_queries_per_block,
+          use_kernel=use_kernel,
+      )
+
+    compiled_paged_attention = torch.compile(
+        ragged_paged_attention_wrapper, backend="openxla")
+
+    kernel_output = compiled_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_lens_xla,
+        page_indices_xla,
+        cu_q_lens_xla,
+        num_seqs=num_seqs,
+        num_kv_pages_per_block=num_kv_pages_per_block,
+        num_queries_per_block=num_queries_per_block,
+        use_kernel=True,
+    )
+
+    nonkernel_output = compiled_paged_attention(
+        q_xla,
+        k_pages_xla,
+        v_pages_xla,
+        kv_lens_xla,
+        page_indices_xla,
+        cu_q_lens_xla,
+        num_seqs=num_seqs,
+        num_kv_pages_per_block=num_kv_pages_per_block,
+        num_queries_per_block=num_queries_per_block,
+        use_kernel=False,
+    )
+
+    kernel_output_cpu = kernel_output.cpu()
+    nonkernel_output_cpu = nonkernel_output.cpu()
+    self.assertEqual(kernel_output_cpu.shape, nonkernel_output_cpu.shape)
+    self.assertEqual(kernel_output_cpu.dtype, nonkernel_output_cpu.dtype)
+
+    # q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
+    # k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
+    # v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    # kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
+    # page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
+    # cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
+
+    # from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as jax_ragged_paged_attention
+    # jax_kernel_output = torch.from_numpy(
+    #     np.array(
+    #         jax_ragged_paged_attention(
+    #             q_jax,
+    #             k_pages_jax,
+    #             v_pages_jax,
+    #             kv_lens_jax,
+    #             page_indices_jax,
+    #             cu_q_lens_jax,
+    #             num_seqs=num_seqs,
+    #             num_kv_pages_per_block=num_kv_pages_per_block,
+    #             num_queries_per_block=num_queries_per_block,
+    #         )[1]))
+    # jax_kernel_output_cpu = jax_kernel_output.cpu()
+
+    num_q_tokens = q.shape[0]
+    actual_num_q_tokens = cu_q_lens_list[num_seqs]
+    pad_num_q_tokens = actual_num_q_tokens < num_q_tokens
+    if pad_num_q_tokens:
+      actual_num_q_tokens = cu_q_lens[num_seqs]
+      expected = nonkernel_output_cpu[:actual_num_q_tokens]
+      actual = kernel_output_cpu[:actual_num_q_tokens]
+      print(
+          f'Output max diff: {torch.max(torch.abs(expected - actual))}')
+      print(
+          f'Output mean diff: {torch.mean(torch.abs(expected - actual))}')
+      self.assertTrue(
+          torch.allclose(
+              expected,
+              actual,
+              atol=2e-1,
+              rtol=1e-2))
+      # self.assertTrue(
+      #     torch.allclose(
+      #         kernel_output_cpu[:actual_num_q_tokens],
+      #         jax_kernel_output_cpu[:actual_num_q_tokens],
+      #         atol=2e-1,
+      #         rtol=1e-2))
+    else:
+      expected = nonkernel_output_cpu
+      actual = kernel_output_cpu
+      print(
+          f'Output max diff: {torch.max(torch.abs(expected - actual))}')
+      print(
+          f'Output mean diff: {torch.mean(torch.abs(expected - actual))}')
+      self.assertTrue(
+          torch.allclose(
+              expected, actual, atol=2e-1, rtol=1e-2))
+      # self.assertTrue(
+      #     torch.allclose(
+      #         kernel_output_cpu, jax_kernel_output_cpu, atol=2e-1, rtol=1e-2))
+
+  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
+                   "This test only works on TPUv4+.")
   def test_ragged_paged_attention_wrapper_with_query_padding_with_dynamo_debug_1(
       self,
   ):

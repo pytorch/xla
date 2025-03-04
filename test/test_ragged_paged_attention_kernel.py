@@ -468,6 +468,7 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
     actual_num_q_tokens = cu_q_lens_list[num_seqs]
     pad_num_q_tokens = actual_num_q_tokens < num_q_tokens
     if pad_num_q_tokens:
+      print('With padding')
       print(
           f'Output max diff pad_num_q_tokens: {jnp.max(jnp.abs(expected_output[:actual_num_q_tokens] - actual_output[:actual_num_q_tokens]))}')
       print(
