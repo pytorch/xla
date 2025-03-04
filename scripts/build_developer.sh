@@ -21,12 +21,16 @@ cd ..
 if [ -d "vision" ]; then
   cd vision
   python3 setup.py develop
+  cd .. 
 fi
 
 # Install torch_xla
-cd ..
 cd pytorch/xla
 pip uninstall torch_xla -y
+
+# Optional: build the wheel.
+python3 setup.py bdist_wheel
+
 python3 setup.py develop
 
 # libtpu is needed to talk to the TPUs. If TPUs are not present,
