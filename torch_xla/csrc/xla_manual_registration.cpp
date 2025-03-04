@@ -51,6 +51,7 @@ TORCH_LIBRARY_IMPL(torchvision, XLA, m) {
 }
 
 // Register generated XLANativeFunctions::einsum as aten::einsum for XLA key.
+// This utilizes the implementation from `xla/torch_xla/csrc/aten_xla_type.cpp`.
 TORCH_LIBRARY_IMPL(aten, XLA, m) {
   m.impl("aten::einsum", TORCH_FN(XLANativeFunctions::einsum));
 }
