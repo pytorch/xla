@@ -35,7 +35,7 @@ shift $(($OPTIND - 1))
 
 # func for test after ssh to VM, create container and execute in container
 function benchmarking_in_container {
-  sudo docker pull gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.8
+  sudo docker pull gcr.io/tpu-pytorch-releases/xla:nightly_3.8_cuda_11.8
   sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
   nvidia-smi
   distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
@@ -43,7 +43,7 @@ function benchmarking_in_container {
   curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
   sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
   sudo systemctl restart docker
-  sudo docker run --gpus all -it -d gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.8 bin/bash
+  sudo docker run --gpus all -it -d gcr.io/tpu-pytorch-releases/xla:nightly_3.8_cuda_11.8 bin/bash
   sudo docker exec -it $(sudo docker ps | awk 'NR==2 { print $1 }') /bin/bash
   # install torchbench
   cd ~
