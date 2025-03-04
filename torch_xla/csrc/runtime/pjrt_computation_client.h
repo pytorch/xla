@@ -191,6 +191,12 @@ class PjRtComputationClient : public ComputationClient {
           buffer(buffer) {}
 
     Handle GetHandle() override {
+      // If the data is a placeholder, use the address of this object as the
+      // handle.
+      if (buffer == nullptr) {
+        return reinterpret_cast<std::uintptr_t>(this);
+      }
+
       XLA_CHECK(HasValue())
           << "buffer with shape " << shape().ToString() << " on device "
           << device() << (buffer == nullptr ? " is null" : " is deleted");
