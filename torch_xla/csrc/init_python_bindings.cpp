@@ -2159,14 +2159,6 @@ void InitXlaModuleBindings(py::module m) {
           }
           return hlo_text;
         });
-  m.def("_xla_computation_text_to_proto",
-    [](const std::string& text) {
-      auto hlo_module = xla::ParseAndReturnUnverifiedModule(
-        text
-      );
-      return py::bytes(hlo_module.value()->ToProto().SerializeAsString());
-    }
-  );
   m.def("_xla_op_shape", [](op_builder::OpPtr op) {
     const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op->op);
     return op_builder::ShapeToPyShape(shape);
