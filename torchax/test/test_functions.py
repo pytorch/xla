@@ -66,6 +66,13 @@ class TestTorchFunctions(parameterized.TestCase):
       a = a.flatten(0, 1)
       self.assertEqual(tuple(a.shape), (6, 4))
 
+  def test_copy_(self):
+    with self.env:
+      a = torch.zeros((2, 3), device="cpu")
+      b = torch.ones((2, 3))
+      b.copy_(a)
+      self.assertTrue(torch.allclose(a, b.cpu()))
+
   def test_rnn(self):
     model = SeqModel()
     x = torch.randn((2, 100, 20))
