@@ -128,12 +128,9 @@ def kv_insertion(
 if __name__ == "__main__":
   total_num_pages = 10000
   page_size = 16
-  kv_hidden_size = 2048
-  k_pages = jnp.zeros((total_num_pages, page_size, kv_hidden_size), dtype=jnp.bfloat16)
+  kv_hidden_size = 1024
+  k_pages = jnp.zeros((total_num_pages * page_size, kv_hidden_size), dtype=jnp.bfloat16)
   k = jnp.ones((1024, kv_hidden_size), dtype=jnp.bfloat16)
-  slices = jnp.array([0, 1024])
+  slices = jnp.array([[0, 1024]])
   out = kv_insertion(k, slices, k_pages)
   print(out)
-
-
-  
