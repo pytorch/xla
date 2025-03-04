@@ -3,12 +3,12 @@
 
 #include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/ops/nms.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/XLANativeFunctions.h"
 
 namespace torch_xla {
 namespace manual {
