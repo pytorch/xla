@@ -1,6 +1,7 @@
 #include <ATen/ATen.h>
 #include <torch/library.h>
 
+#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
@@ -47,6 +48,12 @@ at::Tensor nms_kernel(const at::Tensor& boxes, const at::Tensor& scores,
 
 TORCH_LIBRARY_IMPL(torchvision, XLA, m) {
   m.impl(TORCH_SELECTIVE_NAME("torchvision::nms"), TORCH_FN(nms_kernel));
+}
+
+// Register generated XLANativeFunctions::einsum as aten::einsum for XLA key.
+// This utilizes the implementation from `xla/torch_xla/csrc/aten_xla_type.cpp`.
+TORCH_LIBRARY_IMPL(aten, XLA, m) {
+  m.impl("aten::einsum", TORCH_FN(XLANativeFunctions::einsum));
 }
 
 }  // namespace manual
