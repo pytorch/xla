@@ -1,5 +1,7 @@
 import torch
 import torch_xla
+from torch.utils._pytree import tree_flatten, tree_unflatten
+from torch_xla.experimental.custom_kernel import jax_import_guard
 
 
 class Type:
@@ -799,3 +801,48 @@ def computation_from_module_proto(name, proto):
 
 def get_computation_hlo(computation):
   return torch_xla._XLAC._xla_computation_text(computation)
+
+
+def call_jax(jax_func, args, kwargs=None, name=None):
+  """
+  Call a JAX function `jax_func` with the given `args` and `kwargs` that may contain
+  XLA tensors.
+  """
+
+  if name is None:
+    name = 'jax_func_' + jax_func.__name__
+  kwargs = kwargs or {}
+
+  # If we don't do this before calling jax, any torch_xla operation will hang.
+  jax_import_guard()
+
+  import jax
+  import torchax.ops.mappings as mappings
+
+  flattened, spec = tree_flatten((args, kwargs))
+
+  def fn_flattened_inputs(*flattened):
+    args, kwargs = tree_unflatten(flattened, spec)
+    return jax_func(*args, **kwargs)
+
+  sample_input_shapes = tuple(
+      jax.ShapeDtypeStruct(a.shape, mappings.t2j_dtype(a.dtype))
+      for a in flattened)
+  # `as_serialized_hlo_module_proto` is mentioned at
+  # https://github.com/jax-ml/jax/discussions/22266
+  hlo_module = jax.jit(fn_flattened_inputs).lower(
+      *sample_input_shapes).compiler_ir(
+          'hlo').as_serialized_hlo_module_proto()  # type: ignore
+  computation = computation_from_module_proto(name, hlo_module)
+
+  builder = create_builder(name)
+  params = []
+  for idx, val in enumerate(flattened):
+    params.append(mkparam(builder, idx, tensor_shape(val)))
+  call_op = Op.call(computation, params)
+  call_computation = call_op.build('call_jax')
+  result = torch_xla._XLAC._xla_user_computation(f'xla::call_jax_{name}',
+                                                 flattened, call_computation)
+  if isinstance(result, list) and len(result) == 1:
+    return result[0]
+  return result
