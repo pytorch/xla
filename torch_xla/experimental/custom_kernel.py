@@ -14,6 +14,7 @@ from typing import Any, List, Callable, Optional, Tuple, Dict
 from torch_xla.core.xla_model import XLA_LIB
 
 _XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0") == "1"
+DEFAULT_MASK_VALUE = -0.7 * float(torch.finfo(torch.float32).max)
 
 
 def _shard_map(func, mesh, input_specs, output_specs):
@@ -887,97 +888,131 @@ def flash_attention(
                               sm_scale, ab, partition_spec, mesh)
 
 
-def _ragged_paged_attention_nonkernel(
-    queries,  # [num_tokens, num_q_heads, head_dim]
-    k_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
-    v_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
-    kv_lens,  # i32[num_tokens]
-    page_indices,  # i32[num_tokens, pages_per_sequence]
-    cu_q_lens,  # i32[num_tokens + 1]
-    num_seqs,  # int
-    sm_scale,  # float
+def ceil_div(a, b):
+  assert b != 0
+  return (a + b - 1) // b
+
+
+def validate_ragged_paged_attention_inputs(
+    q,  # [max_num_batched_tokens, num_q_heads, head_dim]
+    k_pages,  # [total_num_pages, page_size, num_kv_heads, head_dim]
+    v_pages,  # [total_num_pages, page_size, num_kv_heads, head_dim]
+    kv_lens,  # i32[max_num_seqs]
+    page_indices,  # i32[max_num_seqs, pages_per_seq]
+    cu_q_lens,  # i32[max_num_seqs + 1]
+    num_seqs,  # i32
 ):
-  _, num_q_heads, head_dim = queries.shape
-  num_kv_heads, total_num_pages, page_size, _ = k_pages.shape
-  num_query_per_kv = num_q_heads // num_kv_heads
-  start_idx = 0
-  kv_lens = kv_lens.cpu()
-  page_indices = page_indices.cpu()
+  max_num_batched_tokens, num_q_heads, head_dim = q.shape
+  _, page_size, num_kv_heads, head_dim_k = k_pages.shape
+  max_num_seqs, pages_per_seq = page_indices.shape
+  if k_pages.shape != v_pages.shape:
+    raise ValueError(
+        f"{k_pages.shape=} and {v_pages.shape=} must have the same shape.")
+  if head_dim_k != head_dim:
+    raise ValueError(
+        f"Q head_dim {head_dim} must be the same as that of K/V {head_dim_k}.")
+  if kv_lens.shape != (max_num_seqs,):
+    raise ValueError(f"Expected {kv_lens.shape=} to be ({max_num_seqs},) where"
+                     " `max_num_seqs` is `page_indices.shape[0]`.")
+  if cu_q_lens.shape != (max_num_seqs + 1,):
+    raise ValueError(
+        f"Expected {cu_q_lens.shape=} to be ({max_num_seqs + 1},)  where"
+        " `max_num_seqs` is `page_indices.shape[0]`.")
+  if max_num_seqs > max_num_batched_tokens:
+    raise ValueError(
+        f"{max_num_seqs=} must be less or equal to {max_num_batched_tokens=}.")
+  if (kv_lens.dtype != torch.int32 or page_indices.dtype != torch.int32 or
+      cu_q_lens.dtype != torch.int32):
+    raise ValueError(
+        "The dtype of `kv_lens`, `page_indices`, and `cu_q_lens` must be"
+        f" int32. Got {kv_lens.dtype=}, {page_indices.dtype=},"
+        f" {cu_q_lens.dtype=}.")
+  if num_q_heads % num_kv_heads != 0:
+    raise ValueError(f"{num_q_heads=} must be divisible by {num_kv_heads=}")
 
-  outputs: List[torch.Tensor] = []
+  # Must check below on runtime!
+  if num_seqs > max_num_seqs:
+    raise ValueError(f"{num_seqs=} must be less or equal to {max_num_seqs=}")
+  max_kv_len = torch.max(kv_lens)
+  min_pages_per_seq = ceil_div(max_kv_len, page_size)
+  if pages_per_seq < min_pages_per_seq:
+    raise ValueError(
+        f"{pages_per_seq=} must be greater or equal to"
+        f" {min_pages_per_seq=} given {max_kv_len=} and {page_size=}.")
+  if cu_q_lens[num_seqs] > max_num_batched_tokens:
+    raise ValueError(
+        f"Total q tokens {cu_q_lens[num_seqs]} must be less or equal to"
+        f" {max_num_batched_tokens=}.")
   for i in range(num_seqs):
-    cur_q_len = cu_q_lens[i + 1] - cu_q_lens[i]
-    q = queries[start_idx:start_idx +
-                cur_q_len]  # [cur_q_len, num_q_heads, head_dim]
-    cur_kv_len = kv_lens[i]
-    num_pages = (cur_kv_len + page_size - 1) // page_size
-    page_indices_to_use = page_indices[i, :num_pages]
+    q_len = cu_q_lens[i + 1] - cu_q_lens[i]
+    kv_len = kv_lens[i]
+    if q_len > kv_len:
+      raise ValueError(
+          f"{q_len=} must be less or equal to {kv_len=} at sequence {i}.")
 
-    k = k_pages[:,
-                page_indices_to_use, :, :]  # [num_kv_heads, page_indices_to_use, page_size, head_dim]
-    k = k.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_dim]
-    k = k.reshape(num_pages * page_size, num_kv_heads, head_dim)
-    k = k[:cur_kv_len]  # [cur_kv_len, num_kv_heads, head_dim]
 
-    v = v_pages[:,
-                page_indices_to_use, :, :]  # [num_kv_heads, num_pages, page_size, head_dim]
-    v = v.permute(1, 2, 0, 3)  # [num_pages, page_size, num_kv_heads, head_dim]
-    v = v.reshape(num_pages * page_size, num_kv_heads, head_dim)
-    v = v[:cur_kv_len]  # [cur_kv_len, num_kv_heads, head_dim]
-
-    if num_query_per_kv != 1:
-      # GQA/MQA
-      k = torch.repeat_interleave(
-          k, num_query_per_kv, dim=1)  # [cur_kv_len, num_query_heads, head_dim]
-      v = torch.repeat_interleave(
-          v, num_query_per_kv, dim=1)  # [cur_kv_len, num_query_heads, head_dim]
-
-    # NOTE: To balance efficiency and performance, we use the original dtype (e.g., bfloat16 or float16)
-    # for matrix multiplications (i.e., q @ k and attn @ v) while using float32 for softmax.
-    # However, the kernel doesn't have to strictly follow the dtypes here.
-    # For example, it can use bfloat16 instead of float32 or vice versa for performance or simplicity.
-    attn = torch.einsum("qhd,khd->hqk", q,
-                        k)  # [num_query_heads, cur_q_len, kv_len]
-    attn = attn.float()
-    attn = attn * sm_scale
-    empty_mask = torch.ones(cur_q_len, cur_kv_len, device=attn.device)
-    mask = torch.triu(empty_mask, diagonal=cur_kv_len - cur_q_len + 1).bool()
-    attn.masked_fill_(mask, float("-inf"))
+def _ragged_paged_attention_nonkernel(
+    queries,  # [max_num_batched_tokens, num_q_heads, head_dim]
+    k_pages,  # [total_num_pages, page_size, num_kv_heads, head_dim]
+    v_pages,  # [total_num_pages, page_size, num_kv_heads, head_dim]
+    kv_lens,  # i32[max_num_seqs]
+    page_indices,  # i32[max_num_seqs, pages_per_seq]
+    cu_q_lens,  # i32[max_num_seqs + 1]
+    num_seqs,  # i32
+    *,
+    sm_scale=1.0,
+    mask_value=DEFAULT_MASK_VALUE,
+):
+  _, _, num_kv_heads, head_dim = k_pages.shape
+  num_q_heads = queries.shape[1]
+  assert num_q_heads % num_kv_heads == 0
+  num_query_per_kv = num_q_heads // num_kv_heads
+  outputs = []
+  for i in range(num_seqs):
+    q_start = cu_q_lens[i]
+    q_end = cu_q_lens[i + 1]
+    q_len = q_end - q_start
+    kv_len = kv_lens[i]
+    indices = page_indices[i]
+    q = queries[q_start:q_end]
+    k = k_pages[indices, :, :, :].reshape(-1, num_kv_heads, head_dim)[:kv_len]
+    v = v_pages[indices, :, :, :].reshape(-1, num_kv_heads, head_dim)[:kv_len]
+    k = torch.repeat_interleave(k, num_query_per_kv, dim=1)
+    v = torch.repeat_interleave(v, num_query_per_kv, dim=1)
+    attn = torch.einsum("qhd,khd->hqk", q, k)
+    attn *= sm_scale
+    empty_mask = torch.ones(q_len, kv_len, device=attn.device)
+    mask = torch.triu(empty_mask, diagonal=kv_len - q_len + 1).bool()
+    attn.masked_fill_(mask, mask_value)
     attn = torch.softmax(
         attn, dim=-1).to(v.dtype)  # [num_query_heads, cur_q_len, kv_len]
     out = torch.einsum("hqk,khd->qhd", attn,
                        v)  # [cur_q_len, num_query_heads, head_dim]
     outputs.append(out)
-    start_idx += cur_q_len
 
-  maybe_padded_num_q_tokens = queries.shape[0]
-  actual_num_tokens = cu_q_lens[num_seqs]
-  if actual_num_tokens < maybe_padded_num_q_tokens:
-    num_tokens_diff = maybe_padded_num_q_tokens - actual_num_tokens
-    outputs.append(
-        torch.zeros((num_tokens_diff, num_q_heads, head_dim),
-                    dtype=queries[0].dtype,
-                    device=queries.device))
-  return torch.cat(outputs, dim=0)  # [num_tokens, num_query_heads, head_dim]
+  return torch.cat(outputs, dim=0)
 
 
+# https://github.com/pytorch/xla/commit/98fb457870754b94da40bc0048d5f313beb41b44#diff-f1b29de5d1dc637995c3b84294a1ea594d2688e496d580476c002afa281cdd9a
 @requires_jax
 def ragged_paged_attention(
-    q,  # [num_tokens, num_q_heads, head_dim]
-    k_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
-    v_pages,  # [num_kv_heads, total_num_pages, page_size, head_dim]
-    kv_lens,  # i32[num_tokens]
-    page_indices,  # i32[num_tokens, pages_per_sequence]
-    cu_q_lens,  # i32[num_tokens + 1]
-    num_seqs,  # int
+    q,  # [max_num_batched_tokens, num_q_heads, head_dim]
+    k_pages,  # [total_num_pages, page_size, num_kv_heads, head_dim]
+    v_pages,  # [total_num_pages, page_size, num_kv_heads, head_dim]
+    kv_lens,  # i32[max_num_seqs]
+    page_indices,  # i32[max_num_seqs, pages_per_seq]
+    cu_q_lens,  # i32[max_num_seqs + 1]
+    num_seqs,  # i32
+    *,
+    sm_scale=1.0,
+    mask_value=DEFAULT_MASK_VALUE,
     num_kv_pages_per_block,
     num_queries_per_block,
+    vmem_limit_bytes=None,
     use_kernel=True,
-    sm_scale=1.0,
-    # TODO(jevinjiang, xiowei): add attn_logits_soft_cap.
-    # attn_logits_soft_cap: float | None = None,
-):  # [batch_size, query_len, num_heads, head_dim]:
-  assert len(q.shape) == 3, "q should have 3 dimensions."
+):
+  validate_ragged_paged_attention_inputs(q, k_pages, v_pages, kv_lens,
+                                         page_indices, cu_q_lens, num_seqs)
   if not use_kernel:
     return _ragged_paged_attention_nonkernel(
         q,
@@ -987,12 +1022,13 @@ def ragged_paged_attention(
         page_indices,
         cu_q_lens,
         num_seqs,
-        sm_scale,
+        sm_scale=sm_scale,
+        mask_value=mask_value,
     )
 
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
-  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention as ragged_attention, make_sequence_metadata
+  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_attention
   payload, tensor_args = trace_pallas(
       ragged_attention,
       q,
@@ -1001,84 +1037,40 @@ def ragged_paged_attention(
       kv_lens,
       page_indices,
       cu_q_lens,
-      num_seqs=num_seqs,
+      num_seqs,
+      sm_scale=sm_scale,
+      mask_value=mask_value,
       num_kv_pages_per_block=num_kv_pages_per_block,
       num_queries_per_block=num_queries_per_block,
-      sm_scale=sm_scale,
+      vmem_limit_bytes=vmem_limit_bytes,
       static_argnames=[
+          "sm_scale",
+          "mask_value",
           "num_kv_pages_per_block",
           "num_queries_per_block",
-          "mask_value",
-          "num_seqs",
-          "sm_scale",
+          "vmem_limit_bytes",
       ],
   )
 
-  sequence_metadata, num_logical_q_tiles = make_sequence_metadata(
-      cu_q_lens=cu_q_lens.cpu().numpy(),
-      m=q.shape[0],
-      tm=num_queries_per_block,
-      # TODO(jevinjiang, xiowei): pass start_sequence as input.
-      start_sequence=torch.tensor([0]).cpu().numpy(),
-      num_sequences=num_seqs,
-  )
-  assert len(sequence_metadata) == 2
-  sequence_ids = torch.tensor(
-      sequence_metadata[0].tolist(), dtype=torch.int32).to("xla")
-  m_tile_ids = torch.tensor(
-      sequence_metadata[1].tolist(), dtype=torch.int32).to("xla")
-  num_q_tiles = torch.tensor(
-      num_logical_q_tiles.tolist(), dtype=torch.int32).to("xla")
-
-  q_dtype_for_kernel_launch = q.dtype
-  page_indices_expanded = torch.unsqueeze(page_indices, 1)
-  buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
-  step = torch.zeros((1,), dtype=torch.int32).to("xla")
-  # The jax checkify in ragged paged attention kernel will insert several scalar refs to both inputs
-  # (end of prefetch) and outputs (begining of the original outputs).
-  # TODO(jevinjiang, xiowei): consider seperate checkify from kernel!
-  s1 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  s2 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  s3 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  s4 = torch.zeros((1, 1), dtype=torch.int32).to("xla")
-  q = q.permute(1, 0, 2)
-  MIN_BLOCK_SIZE = 128
-  output_shape = torch.Size(list(q.shape[:-1]) + [MIN_BLOCK_SIZE])
-  num_q_tiles_1d = torch.tensor([num_logical_q_tiles.tolist()],
-                                dtype=torch.int32).to("xla")
-
-  # TODO(jevinjiang, xiowei): check err returned by checkify! And add tests.
-  _, _, _, _, output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
+  seq_buf_idx = torch.zeros((2,), dtype=torch.int32).to("xla")
+  output = torch_xla._XLAC._xla_tpu_custom_call(
       [
-          num_q_tiles,
-          sequence_ids,
-          m_tile_ids,
-          # Need num_q_tiles_1d to work around a Mosaic internal error.
-          num_q_tiles_1d,
           kv_lens,
+          page_indices,
           cu_q_lens,
-          buffer_index,
-          step,
-          s1,
-          s2,
-          s3,
-          s4,
-          q.to(q_dtype_for_kernel_launch),
+          seq_buf_idx,
+          q,
           k_pages,
           v_pages,
-          page_indices_expanded,  # for the current iteration
-          page_indices_expanded,  # for the next iteration
       ],
       payload,
       [  # output shape
-          s1.shape, s2.shape, s3.shape, s4.shape, q.shape, output_shape,
-          output_shape
+          q.shape
       ],
       [  # output dtype
-          s1.dtype, s2.dtype, s3.dtype, s4.dtype, q_dtype_for_kernel_launch,
-          torch.float32, torch.float32
+          torch.float32,
       ])
-  return output.permute(1, 0, 2)
+  return output[0].to(q.dtype)
 
 
 def _multi_queries_paged_attention_nonkernel(
