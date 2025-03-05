@@ -676,11 +676,7 @@ class ShardingSpec:
 def _einsum_linear_forward(input: Tensor, weight: Tensor,
                            bias: Optional[Tensor]):
   with xp.Trace('einsum_linear_forward'):
-    # TODO(https://github.com/pytorch/xla/issues/8713): torch.einsum is getting
-    # decomposed when inside a custom op. This C++ op is an escape hatch to call
-    # XLA einsum without going through torch.einsum. We should remove this
-    # _einsum escape hatch when the linked bug is fixed.
-    product = torch_xla._XLAC._xla_einsum('...n,mn->...m', (input, weight))
+    product = torch.einsum('...n,mn->...m', (input, weight))
     if bias is not None:
       return product + bias
     return product
@@ -765,8 +761,8 @@ class XLAPatchedLinear(torch.autograd.Function):
   autocast context, when autocast is enabled.
   torch.get_autocast_dtype() fetches datatype for ops run in autocast [2], with the specified device (here, 'xla').
 
-  References: 
-  [1] https://pytorch.org/docs/stable/notes/amp_examples.html#functions-with-multiple-inputs-or-autocastable-ops 
+  References:
+  [1] https://pytorch.org/docs/stable/notes/amp_examples.html#functions-with-multiple-inputs-or-autocastable-ops
   [2] https://github.com/pytorch/pytorch/blob/2cc01cc6d3ad2aff47e8460667ba654b2e4c9f21/torch/amp/autocast_mode.py#L500
 
   TODO (alanwaketan): Let's patch it on the dispatcher level.
@@ -1260,8 +1256,8 @@ class MarkShardingFunction(torch.autograd.Function):
   Usage:
   new_tensor = MarkShardingFunction.apply(tensor, mesh, ('axis_1', 'axis_2'))
 
-  This is required to guide GSPMD sharding propagation better during the 
-  backward pass as during complicated workloads the compiler can introduce extra 
+  This is required to guide GSPMD sharding propagation better during the
+  backward pass as during complicated workloads the compiler can introduce extra
   collectives that can hurt performance.
   """
 
