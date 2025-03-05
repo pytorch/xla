@@ -619,25 +619,32 @@ class ValueAndGradPartitionedTest(TestBase):
     device memory.
     """
 
-    def fn(carry, x):
+    def fn1(carry, x):
       carry = torch.sin(carry)
       x = torch.sin(x)
       return carry, x
 
-    init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
-    xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
-                      requires_grad=True,
-                      device=self.device)
-    torch_xla.sync(wait=True)
-    met.clear_all()
-    self.assertFalse(met.metric_data("TransferToDeviceTime"))
-    # Use `scan` to lower `fn` into HLO and run it. Doing so should not
-    # transfer anything from host to device since `init` and `xs` are
-    # already on the device.
-    # In practice, `carry` and `x` will be placeholder tensors in `fn`.
-    _ = scan(fn, init, xs)
-    torch_xla.sync(wait=True)
-    self.assertFalse(met.metric_data("TransferToDeviceTime"))
+    def fn2(carry, x):
+      """
+      Test cases where input/outputs are aliased.
+      """
+      return carry, x
+
+    for fn in [fn1, fn2]:
+      init = torch.tensor([0.0, 0.0], requires_grad=True, device=self.device)
+      xs = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                        requires_grad=True,
+                        device=self.device)
+      torch_xla.sync(wait=True)
+      met.clear_all()
+      self.assertFalse(met.metric_data("TransferToDeviceTime"))
+      # Use `scan` to lower `fn` into HLO and run it. Doing so should not
+      # transfer anything from host to device since `init` and `xs` are
+      # already on the device.
+      # In practice, `carry` and `x` will be placeholder tensors in `fn`.
+      _ = scan(fn, init, xs)
+      torch_xla.sync(wait=True)
+      self.assertFalse(met.metric_data("TransferToDeviceTime"))
 
 
 if __name__ == '__main__':
