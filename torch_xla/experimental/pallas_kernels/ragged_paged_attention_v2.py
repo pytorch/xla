@@ -151,9 +151,6 @@ def check_inputs_shapes(
     raise ValueError(
         f"Expected {cu_q_lens.shape=} to be ({max_num_seqs + 1},)  where"
         " `max_num_seqs` is `page_indices.shape[0]`.")
-  if max_num_seqs > max_num_batched_tokens:
-    raise ValueError(
-        f"{max_num_seqs=} must be less or equal to {max_num_batched_tokens=}.")
   if (kv_lens.dtype != jnp.int32 or page_indices.dtype != jnp.int32 or
       cu_q_lens.dtype != jnp.int32):
     raise ValueError(
@@ -584,7 +581,7 @@ def ragged_paged_attention(
   Returns:
     The output of the attention.
   """
-  # check_inputs_shapes(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens)
+  check_inputs_shapes(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens)
   num_q, num_q_heads, head_dim = q.shape
   _, page_size, num_kv_heads, _ = k_pages.shape
   num_q_per_blk = num_queries_per_block

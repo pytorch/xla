@@ -900,11 +900,11 @@ def validate_ragged_paged_attention_inputs(
     kv_lens,  # i32[max_num_seqs]
     page_indices,  # i32[max_num_seqs, pages_per_seq]
     cu_q_lens,  # i32[max_num_seqs + 1]
-    num_seqs,  # i32
+    num_seqs,  # i32[1]
 ):
-  max_num_batched_tokens, num_q_heads, head_dim = q.shape
-  _, page_size, num_kv_heads, head_dim_k = k_pages.shape
-  max_num_seqs, pages_per_seq = page_indices.shape
+  _, num_q_heads, head_dim = q.shape
+  _, _, num_kv_heads, head_dim_k = k_pages.shape
+  max_num_seqs, _ = page_indices.shape
   if k_pages.shape != v_pages.shape:
     raise ValueError(
         f"{k_pages.shape=} and {v_pages.shape=} must have the same shape.")
@@ -918,9 +918,6 @@ def validate_ragged_paged_attention_inputs(
     raise ValueError(
         f"Expected {cu_q_lens.shape=} to be ({max_num_seqs + 1},)  where"
         " `max_num_seqs` is `page_indices.shape[0]`.")
-  if max_num_seqs > max_num_batched_tokens:
-    raise ValueError(
-        f"{max_num_seqs=} must be less or equal to {max_num_batched_tokens=}.")
   if (kv_lens.dtype != torch.int32 or page_indices.dtype != torch.int32 or
       cu_q_lens.dtype != torch.int32):
     raise ValueError(
@@ -931,24 +928,24 @@ def validate_ragged_paged_attention_inputs(
     raise ValueError(f"{num_q_heads=} must be divisible by {num_kv_heads=}")
 
   # Must check below on runtime!
-  if num_seqs > max_num_seqs:
-    raise ValueError(f"{num_seqs=} must be less or equal to {max_num_seqs=}")
-  max_kv_len = torch.max(kv_lens)
-  min_pages_per_seq = ceil_div(max_kv_len, page_size)
-  if pages_per_seq < min_pages_per_seq:
-    raise ValueError(
-        f"{pages_per_seq=} must be greater or equal to"
-        f" {min_pages_per_seq=} given {max_kv_len=} and {page_size=}.")
-  if cu_q_lens[num_seqs] > max_num_batched_tokens:
-    raise ValueError(
-        f"Total q tokens {cu_q_lens[num_seqs]} must be less or equal to"
-        f" {max_num_batched_tokens=}.")
-  for i in range(num_seqs):
-    q_len = cu_q_lens[i + 1] - cu_q_lens[i]
-    kv_len = kv_lens[i]
-    if q_len > kv_len:
-      raise ValueError(
-          f"{q_len=} must be less or equal to {kv_len=} at sequence {i}.")
+  # if num_seqs > max_num_seqs:
+  #   raise ValueError(f"{num_seqs=} must be less or equal to {max_num_seqs=}")
+  # max_kv_len = torch.max(kv_lens)
+  # min_pages_per_seq = ceil_div(max_kv_len, page_size)
+  # if pages_per_seq < min_pages_per_seq:
+  #   raise ValueError(
+  #       f"{pages_per_seq=} must be greater or equal to"
+  #       f" {min_pages_per_seq=} given {max_kv_len=} and {page_size=}.")
+  # if cu_q_lens[num_seqs] > max_num_batched_tokens:
+  #   raise ValueError(
+  #       f"Total q tokens {cu_q_lens[num_seqs]} must be less or equal to"
+  #       f" {max_num_batched_tokens=}.")
+  # for i in range(num_seqs):
+  #   q_len = cu_q_lens[i + 1] - cu_q_lens[i]
+  #   kv_len = kv_lens[i]
+  #   if q_len > kv_len:
+  #     raise ValueError(
+  #         f"{q_len=} must be less or equal to {kv_len=} at sequence {i}.")
 
 
 def _ragged_paged_attention_nonkernel(
