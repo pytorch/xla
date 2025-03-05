@@ -43,7 +43,7 @@ class TestJaxInterop(absltest.TestCase):
       import jax.numpy as jnp
       return jnp.sum(jnp.cos(a) + jnp.sin(b))
 
-    # TODO: JAX optimizes a's grad as constant directly and result in error in
+    # TODO: JAX optimizes a's grad as constant directly and results in error in
     # HLO. Test the following function f_fail_jax once
     # https://github.com/pytorch/xla/issues/8794 is fixed.
     # def f_fail_jax(a, b):
@@ -57,7 +57,7 @@ class TestJaxInterop(absltest.TestCase):
       grad_func = jax.grad(f_jax, argnums=(0, 1))
       return grad_func(a, b)
 
-    # TODO: pass (f_jax, a, b) as arguments instead hardcoding f_jax in
+    # TODO: pass (f_jax, a, b) as arguments instead of hardcoding f_jax in
     # grad_f_jax once https://github.com/pytorch/xla/issues/8795 is fixed.
     out_jax = xb.call_jax(f_jax, (a, b), {}, 'my_jax_test')
     out_grad_jax = xb.call_jax(grad_f_jax, (a, b), {}, 'my_jax_grad_test')
