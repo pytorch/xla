@@ -41,10 +41,10 @@ class PallasTest(parameterized.TestCase):
   # therefore we use != instead of ==.
   def _make_attention_mask_from_segment_ids(self, q_segment_ids,
                                             kv_segment_ids):
-    return q_segment_ids.view(q_segment_ids.shape[0], 1,
-                              q_segment_ids.shape[1], 1) != kv_segment_ids.view(
-                                  kv_segment_ids.shape[0], 1, 1,
-                                  kv_segment_ids.shape[1])
+    return q_segment_ids.view(q_segment_ids.shape[0], 1, q_segment_ids.shape[1],
+                              1) != kv_segment_ids.view(kv_segment_ids.shape[0],
+                                                        1, 1,
+                                                        kv_segment_ids.shape[1])
 
   def _attention(self, q, k, v, *, attn_mask=None, ab=None):
     attn_weight = q @ k.transpose(-2, -1)
@@ -904,10 +904,9 @@ class PallasTest(parameterized.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
-  def test_ragged_paged_attention_wrapper_with_query_padding_with_dynamo(
-      self):
-    seq_lens=[(1, 1328), (5, 18), (500, 563)]
-    num_queries_per_block=16
+  def test_ragged_paged_attention_wrapper_with_query_padding_with_dynamo(self):
+    seq_lens = [(1, 1328), (5, 18), (500, 563)]
+    num_queries_per_block = 16
     num_heads = (4, 4)
     head_dim = 128
     dtype = torch.float32
