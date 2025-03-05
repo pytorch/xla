@@ -1001,7 +1001,7 @@ def ragged_paged_attention(
     kv_lens,  # i32[max_num_seqs]
     page_indices,  # i32[max_num_seqs, pages_per_seq]
     cu_q_lens,  # i32[max_num_seqs + 1]
-    num_seqs,  # i32
+    num_seqs,  # i32[1]
     *,
     sm_scale=1.0,
     mask_value=None,
@@ -1022,7 +1022,7 @@ def ragged_paged_attention(
         kv_lens,
         page_indices,
         cu_q_lens,
-        num_seqs,
+        num_seqs.item(),
         sm_scale=sm_scale,
         mask_value=mask_value,
     )
@@ -1054,17 +1054,14 @@ def ragged_paged_attention(
       ],
   )
 
-  num_q_blks = ceil_div(cu_q_lens[num_seqs], num_queries_per_block)
   seq_buf_idx = torch.tensor([0, 0], dtype=torch.int32).to("xla")
-  num_seqs_ref = torch.tensor([num_seqs], dtype=torch.int32).to("xla")
   output = torch_xla._XLAC._xla_tpu_custom_call(
       [
-          num_q_blks,
           kv_lens,
           page_indices,
           cu_q_lens,
           seq_buf_idx,
-          num_seqs_ref,
+          num_seqs,
           q,
           k_pages,
           v_pages,
@@ -1733,7 +1730,7 @@ def multi_queries_paged_attention_non_xla(q: torch.Tensor,
 
 XLA_LIB.define(
     "ragged_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor kv_lens, Tensor page_indices, "
-    "Tensor cu_q_lens, int num_seqs, int num_kv_pages_per_block, int num_queries_per_block, bool use_kernel, "
+    "Tensor cu_q_lens, Tensor num_seqs, int num_kv_pages_per_block, int num_queries_per_block, bool use_kernel, "
     "float sm_scale=1.0, float? mask_value=None, int? vmem_limit_bytes=None) -> Tensor",
 )
 
@@ -1746,7 +1743,7 @@ def ragged_paged_attention_xla(
     kv_lens: torch.Tensor,
     page_indices: torch.Tensor,
     cu_q_lens: torch.Tensor,
-    num_seqs: int,
+    num_seqs: torch.Tensor,
     num_kv_pages_per_block: int,
     num_queries_per_block: int,
     use_kernel: bool,
@@ -1777,7 +1774,7 @@ def ragged_paged_attention_non_xla(q: torch.Tensor,
                                    kv_lens: torch.Tensor,
                                    page_indices: torch.Tensor,
                                    cu_q_lens: torch.Tensor,
-                                   num_seqs: int,
+                                   num_seqs: torch.Tensor,
                                    num_kv_pages_per_block: int,
                                    num_queries_per_block: int,
                                    use_kernel: bool,

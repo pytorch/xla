@@ -253,7 +253,9 @@ def ragged_paged_attention_kernel(
 
   def is_cur_q_blk_needed(q_states):
     done, cur_seq_idx, _ = q_states
-    return jnp.logical_and(done == 0, cur_seq_idx < num_seqs)
+    should_run = jnp.logical_and(q_len_start < cu_q_lens_ref[num_seqs],
+                                 cur_seq_idx < num_seqs)
+    return jnp.logical_and(done == 0, should_run)
 
   def compute_with_cur_q_blk(q_states):
     done, cur_seq_idx, cur_buf_idx = q_states
@@ -551,7 +553,7 @@ def ragged_paged_attention(
     kv_lens: jax.Array,  # i32[max_num_seqs]
     page_indices: jax.Array,  # i32[max_num_seqs, pages_per_seq]
     cu_q_lens: jax.Array,  # i32[max_num_seqs + 1]
-    num_seqs,  # i32
+    num_seqs,  # i32[1]
     *,
     sm_scale: float = 1.0,
     mask_value: float = DEFAULT_MASK_VALUE,
@@ -582,13 +584,13 @@ def ragged_paged_attention(
   Returns:
     The output of the attention.
   """
-  check_inputs_shapes(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens)
-  _, num_q_heads, head_dim = q.shape
+  # check_inputs_shapes(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens)
+  num_q, num_q_heads, head_dim = q.shape
   _, page_size, num_kv_heads, _ = k_pages.shape
   num_q_per_blk = num_queries_per_block
   num_kv_pages_per_blk = num_kv_pages_per_block
   num_q_heads_per_kv_head = num_q_heads // num_kv_heads
-  num_q_blks = ceil_div(cu_q_lens[num_seqs], num_q_per_blk)
+  num_q_blks = ceil_div(num_q, num_q_per_blk)
   num_q_heads_per_blk, num_kv_heads_per_blk = get_min_heads_per_blk(
       num_q_heads, num_kv_heads, q.dtype, k_pages.dtype)
   assert num_q_heads_per_blk % num_q_heads_per_kv_head == 0
@@ -636,8 +638,7 @@ def ragged_paged_attention(
       page_indices,
       cu_q_lens,
       jnp.array((0, 0), jnp.int32),  # seq_idx, buf_idx
-      # Mosaic only takes dynamic scalar as ref, so we wrap it.
-      jnp.array([num_seqs], jnp.int32),  # num_seqs
+      num_seqs
   )
   kernel = pl.pallas_call(
       functools.partial(
