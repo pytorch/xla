@@ -993,7 +993,6 @@ def _ragged_paged_attention_nonkernel(
   return torch.cat(outputs, dim=0)
 
 
-# https://github.com/pytorch/xla/commit/98fb457870754b94da40bc0048d5f313beb41b44#diff-f1b29de5d1dc637995c3b84294a1ea594d2688e496d580476c002afa281cdd9a
 @requires_jax
 def ragged_paged_attention(
     q,  # [max_num_batched_tokens, num_q_heads, head_dim]
@@ -1005,12 +1004,14 @@ def ragged_paged_attention(
     num_seqs,  # i32
     *,
     sm_scale=1.0,
-    mask_value=DEFAULT_MASK_VALUE,
+    mask_value=None,
     num_kv_pages_per_block,
     num_queries_per_block,
     vmem_limit_bytes=None,
     use_kernel=True,
 ):
+  if mask_value is None:
+    mask_value = DEFAULT_MASK_VALUE
   validate_ragged_paged_attention_inputs(q, k_pages, v_pages, kv_lens,
                                          page_indices, cu_q_lens, num_seqs)
   if not use_kernel:
@@ -1029,7 +1030,8 @@ def ragged_paged_attention(
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_attention
-  payload, tensor_args = trace_pallas(
+
+  payload, _ = trace_pallas(
       ragged_attention,
       q,
       k_pages,
@@ -1052,13 +1054,17 @@ def ragged_paged_attention(
       ],
   )
 
-  seq_buf_idx = torch.zeros((2,), dtype=torch.int32).to("xla")
+  num_q_blks = ceil_div(cu_q_lens[num_seqs], num_queries_per_block)
+  seq_buf_idx = torch.tensor([0, 0], dtype=torch.int32).to("xla")
+  num_seqs_ref = torch.tensor([num_seqs], dtype=torch.int32).to("xla")
   output = torch_xla._XLAC._xla_tpu_custom_call(
       [
+          num_q_blks,
           kv_lens,
           page_indices,
           cu_q_lens,
           seq_buf_idx,
+          num_seqs_ref,
           q,
           k_pages,
           v_pages,
@@ -1726,27 +1732,58 @@ def multi_queries_paged_attention_non_xla(q: torch.Tensor,
 
 
 XLA_LIB.define(
-    "ragged_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor kv_lens, Tensor page_indices, Tensor cu_q_lens, int num_seqs, int num_kv_pages_per_block, int num_queries_per_block, bool use_kernel, float sm_scale) -> Tensor",
+    "ragged_paged_attention(Tensor q, Tensor k_pages, Tensor v_pages, Tensor kv_lens, Tensor page_indices, "
+    "Tensor cu_q_lens, int num_seqs, int num_kv_pages_per_block, int num_queries_per_block, bool use_kernel, "
+    "float sm_scale=1.0, float? mask_value=None, int? vmem_limit_bytes=None) -> Tensor",
 )
 
 
 @impl(XLA_LIB, "ragged_paged_attention", "XLA")
 def ragged_paged_attention_xla(
-    q: torch.Tensor, k_pages: torch.Tensor, v_pages: torch.Tensor,
-    kv_lens: torch.Tensor, page_indices: torch.Tensor, cu_q_lens: torch.Tensor,
-    num_seqs: int, num_kv_pages_per_block: int, num_queries_per_block: int,
-    use_kernel: bool, sm_scale: float):
-  return ragged_paged_attention(q, k_pages, v_pages, kv_lens, page_indices,
-                                cu_q_lens, num_seqs, num_kv_pages_per_block,
-                                num_queries_per_block, use_kernel, sm_scale)
+    q: torch.Tensor,
+    k_pages: torch.Tensor,
+    v_pages: torch.Tensor,
+    kv_lens: torch.Tensor,
+    page_indices: torch.Tensor,
+    cu_q_lens: torch.Tensor,
+    num_seqs: int,
+    num_kv_pages_per_block: int,
+    num_queries_per_block: int,
+    use_kernel: bool,
+    sm_scale: float = 1.0,
+    mask_value: float | None = None,
+    vmem_limit_bytes: int | None = None,
+):
+  return ragged_paged_attention(
+      q,
+      k_pages,
+      v_pages,
+      kv_lens,
+      page_indices,
+      cu_q_lens,
+      num_seqs,
+      sm_scale=sm_scale,
+      mask_value=mask_value,
+      num_kv_pages_per_block=num_kv_pages_per_block,
+      num_queries_per_block=num_queries_per_block,
+      vmem_limit_bytes=vmem_limit_bytes,
+      use_kernel=use_kernel)
 
 
 @impl(XLA_LIB, "ragged_paged_attention", "CompositeExplicitAutograd")
-def ragged_paged_attention_non_xla(
-    q: torch.Tensor, k_pages: torch.Tensor, v_pages: torch.Tensor,
-    kv_lens: torch.Tensor, page_indices: torch.Tensor, cu_q_lens: torch.Tensor,
-    num_seqs: int, num_kv_pages_per_block: int, num_queries_per_block: int,
-    use_kernel: bool, sm_scale: float):
+def ragged_paged_attention_non_xla(q: torch.Tensor,
+                                   k_pages: torch.Tensor,
+                                   v_pages: torch.Tensor,
+                                   kv_lens: torch.Tensor,
+                                   page_indices: torch.Tensor,
+                                   cu_q_lens: torch.Tensor,
+                                   num_seqs: int,
+                                   num_kv_pages_per_block: int,
+                                   num_queries_per_block: int,
+                                   use_kernel: bool,
+                                   sm_scale: float = 1.0,
+                                   mask_value: float | None = None,
+                                   vmem_limit_bytes: int | None = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
 
 
