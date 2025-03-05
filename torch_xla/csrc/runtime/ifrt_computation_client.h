@@ -203,9 +203,11 @@ class IfrtComputationClient : public ComputationClient {
           sharding_(sharding) {}
 
     Handle GetHandle() override {
-      XLA_CHECK(HasValue())
-          << "buffer with shape " << shape().ToString() << " on device "
-          << device() << (buffer == nullptr ? " is null" : " is deleted");
+      // If the data is a placeholder, use the address of this object as the
+      // handle.
+      if (buffer == nullptr) {
+        return reinterpret_cast<std::uintptr_t>(this);
+      }
       return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
     void Assign(const torch::lazy::BackendData& data) override;

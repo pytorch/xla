@@ -79,7 +79,7 @@ absl::StatusOr<std::string> GetComputationHloText(
     const xla::XlaComputation& computation) {
   TF_ASSIGN_OR_RETURN(auto hlo_module,
                       CreateModuleFromProto(computation.proto()));
-  return hlo_module->ToString();
+  return hlo_module->ToString(xla::HloPrintOptions());
 }
 
 void ReportComputationError(

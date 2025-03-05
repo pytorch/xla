@@ -1866,6 +1866,18 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_optimization_barrier_",
         [](std::vector<at::Tensor>& inputs) { OptimizationBarrier_(inputs); });
+
+  // Creates a placeholder tensor that does not hold any device buffer.
+  // This is primarily useful for staging out the HLO of a user computation.
+  // Accessing the value of the tensor will panic.
+  m.def("_xla_create_placeholder_tensor", [](py::object py_shape) {
+    xla::Shape shape = op_builder::PyShapeToShape(py_shape);
+    auto xla_tensor = XLATensor::Create(
+        torch_xla::runtime::GetComputationClient()->CreateDataPlaceholder(
+            bridge::GetCurrentDevice().toString(), std::move(shape)));
+    return bridge::AtenFromXlaTensor(xla_tensor);
+  });
+
   m.def("_xla_set_default_device", [](const std::string& device) {
     return SetCurrentThreadDevice(device);
   });

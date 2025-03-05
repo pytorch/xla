@@ -161,7 +161,7 @@ xla::XlaOp Reshape(const BuilderPtr& builder,
       ArgOptional<py::tuple>(args, "dimensions");
   if (arg_dimensions) {
     std::vector<int64_t> dimensions = GetTupleVector<int64_t>(*arg_dimensions);
-    return xla::Reshape(operands.at(0)->op, dimensions, sizes);
+    return xla::Reshape(xla::Transpose(operands.at(0)->op, dimensions), sizes);
   }
   int64_t inferred_dimension =
       ArgOrDefault<int64_t>(args, "inferred_dimension", -1);

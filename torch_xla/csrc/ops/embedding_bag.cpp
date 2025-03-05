@@ -116,8 +116,7 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
     // Create a While node with computations for the condition and the body.
     auto init_tuple = xla::Tuple(
         offsets.builder(),
-        {xla::Reshape(start, {0}, {}), xla::Reshape(end, {0}, {}),
-         embeddings_weighted,
+        {xla::Reshape(start, {}), xla::Reshape(end, {}), embeddings_weighted,
          xla::ConvertElementType(
              xla::ConstantFromArray<float>(offsets.builder(), initial_vector),
              weight_shape.element_type())});
