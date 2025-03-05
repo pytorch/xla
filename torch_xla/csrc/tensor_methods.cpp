@@ -1229,17 +1229,18 @@ XLATensorPtr clamp(const XLATensorPtr& input,
       Clamp(input->GetIrValue(), min_max.min, min_max.max));
 }
 
-XLATensorPtr clone(const XLATensorPtr& input, bool is_conj) {
-  torch::lazy::Value ir = input->GetIrValue();
-  if (is_conj) {
-    ir = torch::lazy::Value(torch_xla::MakeNode<ConjCopy>(ir));
-  }
-  XLATensorPtr cloned = input->CreateFrom(ir);
+XLATensorPtr clone(const XLATensorPtr& input) {
+  XLATensorPtr cloned = input->CreateFrom(input->GetIrValue());
   if (input->sharding_spec() != nullptr) {
     cloned->SetShardingSpec(*input->sharding_spec());
   }
   cloned->data()->is_cloned = true;
   return cloned;
+}
+
+XLATensorPtr conj(const XLATensorPtr& input) {
+  auto ir = input->GetIrValue();
+  return input->CreateFrom(torch_xla::MakeNode<ConjCopy>(ir));
 }
 
 XLATensorPtr constant_pad_nd(const XLATensorPtr& input,
