@@ -638,8 +638,7 @@ def ragged_paged_attention(
       page_indices,
       cu_q_lens,
       jnp.array((0, 0), jnp.int32),  # seq_idx, buf_idx
-      num_seqs
-  )
+      num_seqs)
   kernel = pl.pallas_call(
       functools.partial(
           ragged_paged_attention_kernel,
