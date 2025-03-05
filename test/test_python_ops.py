@@ -28,7 +28,9 @@ class TestPythonOps(pytorch_test_base.XLATestBase):
       raise unittest.SkipTest("Dtype {0} is unsupported by XLA".format(
           str(dtype)))
     if dtype == torch.uint8:
-      raise unittest.SkipTest('Skip uint8 for testing')
+      raise unittest.SkipTest(
+          'TODO(https://github.com/pytorch/xla/issues/8799): Re-enable uint8 test'
+      )
 
     device = xm.xla_device()
     real_device_type = xm.xla_device_hw(str(xm.xla_device()))

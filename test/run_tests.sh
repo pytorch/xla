@@ -165,7 +165,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/pjrt/test_internal_tpu.py"
   run_test "$CDIR/pjrt/test_ddp.py"
   run_test "$CDIR/pjrt/test_mesh_service.py"
-  run_test "$CDIR/test_python_ops.py" -v
+  run_test "$CDIR/test_python_ops.py"
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
   if [ -f "/tmp/metrics.txt" ] ; then
