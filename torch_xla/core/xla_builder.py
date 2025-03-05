@@ -40,6 +40,24 @@ _XLA_PT_TYPE_MAP = {
     Type.PRED: torch.bool,
 }
 
+_PT_XLA_TYPE_MAP = {
+    torch.float32: Type.F32,
+    torch.float64: Type.F64,
+    torch.bfloat16: Type.BF16,
+    torch.float16: Type.F16,
+    torch.uint8: Type.U8,
+    torch.int8: Type.S8,
+    torch.uint16: Type.U16,
+    torch.int16: Type.S16,
+    torch.uint32: Type.U32,
+    torch.int32: Type.S32,
+    torch.uint64: Type.U64,
+    torch.int64: Type.S64,
+    torch.complex64: Type.C64,
+    torch.complex128: Type.C128,
+    torch.bool: Type.PRED,
+}
+
 
 class Shape(object):
   """Wraps a core XLA shape object to provide a more friendly API."""
@@ -751,6 +769,10 @@ class Op(object):
   def to_torch_type(cls, dtype):
     return _XLA_PT_TYPE_MAP[dtype] if dtype else torch.float32
 
+  @classmethod
+  def from_torch_type(cls, dtype):
+    return _PT_XLA_TYPE_MAP[dtype]
+
 
 def create_builder(name):
   return torch_xla._XLAC._xla_op_create_builder(name)
@@ -846,3 +868,14 @@ def call_jax(jax_func, args, kwargs=None, name=None):
   if isinstance(result, list) and len(result) == 1:
     return result[0]
   return result
+
+
+def create_placeholder_tensor(shape, dtype):
+  """
+  Creates a placeholder tensor that does not hold any device buffer.
+  This is primarily useful for staging out the HLO of a user computation.
+  Accessing the value of the tensor will panic.
+  """
+  dtype = Op.from_torch_type(dtype)
+  shape = mkshape(dtype, shape)
+  return torch_xla._XLAC._xla_create_placeholder_tensor(shape.shape)

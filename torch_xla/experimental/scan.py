@@ -558,8 +558,8 @@ def _scan_impl_flat(fn,
   # Abstractly trace and lower `fn`.
   # Later we will include `fn_computation` within the while loop body.
   def make_fake_tensor(v: torch.Tensor) -> torch.Tensor:
-    return torch.empty(
-        v.size(), dtype=v.dtype).to(device).requires_grad_(v.requires_grad)
+    t = xb.create_placeholder_tensor(v.shape, v.dtype)
+    return t.requires_grad_(v.requires_grad)
 
   device = torch_xla.device()
   fake_carry = tree_map(make_fake_tensor, init)
