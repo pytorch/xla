@@ -805,11 +805,11 @@ def get_computation_hlo(computation):
   
 class XlaComputation:
   
-  def __init__(self, name, hlo_proto, num_inputs):
-    self.num_inputs = num_inputs
+  def __init__(self, name, hlo_proto, flattened_inputs):
+    self.num_inputs = len(flattened_inputs)
     builder = create_builder(name)
     params = []
-    for idx, val in enumerate(flattened):
+    for idx, val in enumerate(flattened_inputs):
       params.append(mkparam(builder, idx, tensor_shape(val)))
     call_op = Op.call(computation, params)
     call_computation = call_op.build('call_jax')
@@ -850,7 +850,7 @@ def jax_func_to_xla_computation(jax_func, args, kwargs=None, name=None):
       *sample_input_shapes).compiler_ir(
           'hlo').as_serialized_hlo_module_proto()  # type: ignore
 
-  xla_computation = XlaComputation(name, hlo_module, len(flattened))
+  xla_computation = XlaComputation(name, hlo_module, flattened)
 
 
 def call_jax(jax_func, args, kwargs=None, name=None):
