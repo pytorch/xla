@@ -279,7 +279,10 @@ def ragged_paged_attention_kernel(
 
   def is_cur_q_blk_needed(q_states):
     done, cur_seq_idx, _ = q_states
-    return jnp.logical_and(done == 0, cur_seq_idx < num_seqs)
+    should_run = jnp.logical_and(
+        q_len_start < cu_q_lens_ref[num_seqs], cur_seq_idx < num_seqs
+    )
+    return jnp.logical_and(done == 0, should_run)
 
   def compute_with_cur_q_blk(q_states):
     done, cur_seq_idx, cur_buf_idx = q_states
