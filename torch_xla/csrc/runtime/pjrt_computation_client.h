@@ -197,9 +197,9 @@ class PjRtComputationClient : public ComputationClient {
         return reinterpret_cast<std::uintptr_t>(this);
       }
 
-      XLA_CHECK(HasValue())
+      XLA_CHECK(!buffer->IsDeleted())
           << "buffer with shape " << shape().ToString() << " on device "
-          << device() << (buffer == nullptr ? " is null" : " is deleted");
+          << device() << " is deleted";
       return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
     void Assign(const torch::lazy::BackendData& data) override;

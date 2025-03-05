@@ -865,3 +865,14 @@ def call_jax(jax_func, args, kwargs=None, name=None):
   if isinstance(result, list) and len(result) == 1:
     return result[0]
   return result
+
+
+def create_placeholder_tensor(shape, dtype):
+  """
+  Creates a placeholder tensor that does not hold any device buffer.
+  This is primarily useful for staging out the HLO of a user computation.
+  Accessing the value of the tensor will panic.
+  """
+  dtype = Op.from_torch_type(dtype)
+  shape = mkshape(dtype, shape)
+  return torch_xla._XLAC._xla_create_placeholder_tensor(shape.shape)
