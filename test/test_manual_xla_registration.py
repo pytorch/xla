@@ -30,12 +30,12 @@ class OperationLowered(unittest.TestCase):
     for f in [torch.einsum, custom_einsum]:
       self.assertTrue(
           is_einsum_lowered(lambda a, b: f('...n,mn->...m', a, b)),
-          "Operation not lowered as expected")
+          "Operation not lowered; expected operation to be lowered")
 
   def test_einsum_not_lowered(self):
     self.assertFalse(
         is_einsum_lowered(lambda a, b: torch.einsum('ab,bc->ab', a, b)),
-        "Operation lowered as expected")
+        "Operation lowered; expected operation to not be lowered")
 
 
 if __name__ == '__main__':
