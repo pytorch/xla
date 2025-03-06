@@ -242,8 +242,6 @@ def _attn_fwd(
   tl.store(O_block_ptr, acc.to(Out.type.element_ty))
 
 
-# Ref: https://github.com/pytorch/xla/pull/8593
-@skipIfCUDA("GPU CI is failing")
 class TritonTest(unittest.TestCase):
 
   @unittest.skipIf(xr.device_type() != 'CUDA', "This test only works on GPU.")

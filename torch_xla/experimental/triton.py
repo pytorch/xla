@@ -113,9 +113,9 @@ def get_or_create_triton_kernel(
   if (dump):
     print(ptx)
 
-  shared_mem_bytes = compiled_kernel.metadata["shared"]
-  kernel_name = compiled_kernel.metadata["name"]
-  cluster_dims = compiled_kernel.metadata["cluster_dims"]
+  shared_mem_bytes = compiled_kernel.metadata.shared
+  kernel_name = compiled_kernel.metadata.name
+  cluster_dims = compiled_kernel.metadata.cluster_dims
   compute_capability = lib_triton.get_compute_capability(0)
   kernel = lib_triton.TritonKernel(
       kernel_name,
@@ -127,8 +127,7 @@ def get_or_create_triton_kernel(
       *cluster_dims,
   )
 
-  specialization_attr = fn._get_config(*args)  # pylint: disable=protected-access
-  return kernel, specialization_attr
+  return kernel
 
 
 def triton_kernel_call_lowering(
@@ -140,6 +139,8 @@ def triton_kernel_call_lowering(
     debug,
     **metaparams,
 ):
+  from triton.backends.compiler import AttrsDescriptor
+
   args = list(array_args)
   arg_dtypes = list(map(get_triton_type, array_args))
   for idx, dtype, v in scalar_args:
@@ -159,7 +160,7 @@ def triton_kernel_call_lowering(
   config_metaparams = {**metaparams, **config.kwargs}
   config_grid = normalize_grid(grid, config_metaparams)
 
-  kernel, specialization_attr = get_or_create_triton_kernel(
+  kernel = get_or_create_triton_kernel(
       fn,
       compiled_kernel,
       args,
@@ -172,9 +173,9 @@ def triton_kernel_call_lowering(
       kernel_params.append(
           lib_triton.create_array_parameter(
               0,
-              16 if (i in specialization_attr.divisible_by_16) else 0,
+              16 if AttrsDescriptor.is_divisible_by_16(arg) else 0,
           ))
-    elif i not in specialization_attr.equal_to_1:
+    elif not AttrsDescriptor.is_equal_to_1(arg):
       kernel_params.append(lib_triton.create_scalar_parameter(arg, dtype))
 
   kernel_call = lib_triton.TritonKernelCall(
