@@ -249,11 +249,12 @@ function run_xla_op_tests3 {
   run_test "$CDIR/test_persistent_cache.py"
   run_test "$CDIR/test_devices.py"
   run_device_detection_test "$CDIR/test_gpu_device_detection.py"
+  run_test "$CDIR/test_manual_xla_registration.py"
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
   run_test "$CDIR/test_pallas.py"
   run_xla_ir_hlo_debug run_test "$CDIR/test_user_computation_debug_cache.py"
-  
+
   # Test examples
   run_test "$CDIR/../examples/scan/scan_examples.py"
 
