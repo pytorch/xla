@@ -20,21 +20,29 @@ def is_einsum_lowered(func):
 
   out = func(X, Y)
   ir = torch_xla._XLAC._get_xla_tensors_text([out])
-  return 'einsum' in ir
+  return ir
 
 
 class OperationLowered(unittest.TestCase):
 
   def test_einsum_lowered(self):
     for f in [torch.einsum, custom_einsum]:
-      self.assertTrue(
-          is_einsum_lowered(lambda a, b: f('...n,mn->...m', a, b)),
-          "Operation not lowered; expected operation to be lowered")
+      with self.subTest(f=f):
+        ir = is_einsum_lowered(lambda a, b: f('...n,mn->...m', a, b))
+
+        self.assertIn("einsum", ir,
+            "Expected einsum to be in ir from it being lowered")
+        self.assertNotIn("permute", ir,
+            "Expected no permute to be in ir from it being lowered")
 
   def test_einsum_not_lowered(self):
-    self.assertFalse(
-        is_einsum_lowered(lambda a, b: torch.einsum('ab,bc->ab', a, b)),
-        "Operation lowered; expected operation to not be lowered")
+    # 'ab,bc->ab' won't be lowered becaused it cannot be backpropagated
+    ir = is_einsum_lowered(lambda a, b: torch.einsum('ab,bc->ab', a, b))
+
+    self.assertNotIn("einsum", ir,
+          "Expected no einsum to be in ir from it not being lowered")
+    self.assertIn("permute", ir,
+          "Expected permute to be in ir from it not being lowered")
 
 
 if __name__ == '__main__':

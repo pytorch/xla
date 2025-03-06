@@ -691,16 +691,11 @@ def _einsum_linear_forward_fake(input: Tensor, weight: Tensor,
   return product
 
 
-@custom_op(
-    "xla::einsum_linear_backward",
-    schema="(Tensor grad_output, Tensor input, Tensor weight, Tensor? bias, bool needs_input_grad_input, bool needs_input_grad_weight, bool needs_input_grad_bias) -> (Tensor, Tensor, Tensor)",
-    mutates_args=())
-def _einsum_linear_backward(grad_output: Tensor, input: Tensor, weight: Tensor,
+def _einsum_linear_backward_operation(grad_output: Tensor, input: Tensor, weight: Tensor,
                             bias: Optional[Tensor],
                             needs_input_grad_input: bool,
                             needs_input_grad_weight: bool,
                             needs_input_grad_bias: bool):
-  with xp.Trace('einsum_linear_backward'):
     grad_input = grad_weight = grad_bias = None
 
     if needs_input_grad_input:
@@ -720,6 +715,20 @@ def _einsum_linear_backward(grad_output: Tensor, input: Tensor, weight: Tensor,
 
     return grad_input, grad_weight, grad_bias
 
+@custom_op(
+    "xla::einsum_linear_backward",
+    schema="(Tensor grad_output, Tensor input, Tensor weight, Tensor? bias, bool needs_input_grad_input, bool needs_input_grad_weight, bool needs_input_grad_bias) -> (Tensor, Tensor, Tensor)",
+    mutates_args=())
+def _einsum_linear_backward(grad_output: Tensor, input: Tensor, weight: Tensor,
+                            bias: Optional[Tensor],
+                            needs_input_grad_input: bool,
+                            needs_input_grad_weight: bool,
+                            needs_input_grad_bias: bool):
+  with xp.Trace('einsum_linear_backward'):
+    return _einsum_linear_backward_operation(grad_output, input, weight, bias,
+                            needs_input_grad_input, needs_input_grad_weight,
+                            needs_input_grad_bias)
+
 
 @_einsum_linear_backward.register_fake
 def _einsum_linear_backward_fake(grad_output: Tensor, input: Tensor,
@@ -727,24 +736,10 @@ def _einsum_linear_backward_fake(grad_output: Tensor, input: Tensor,
                                  needs_input_grad_input: bool,
                                  needs_input_grad_weight: bool,
                                  needs_input_grad_bias: bool):
-  grad_input = grad_weight = grad_bias = None
 
-  if needs_input_grad_input:
-    grad_input = torch.einsum('...m,mn->...n', grad_output, weight)
-  else:
-    grad_input = None
-
-  if needs_input_grad_weight:
-    grad_weight = torch.einsum('...m,...n->mn', grad_output, input)
-  else:
-    grad_weight = None
-
-  if bias is not None and needs_input_grad_bias:
-    grad_bias = torch.einsum('...m->m', grad_output)
-  else:
-    grad_bias = None
-
-  return grad_input, grad_weight, grad_bias
+  return _einsum_linear_backward_operation(grad_output, input, weight, bias,
+                            needs_input_grad_input, needs_input_grad_weight,
+                            needs_input_grad_bias)
 
 
 # Now define the XLAPatchedLinear function that uses the custom ops
