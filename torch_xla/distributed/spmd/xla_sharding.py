@@ -704,17 +704,17 @@ def _einsum_linear_backward(grad_output: Tensor, input: Tensor, weight: Tensor,
     grad_input = grad_weight = grad_bias = None
 
     if needs_input_grad_input:
-      grad_input = torch.einsum('...m,mn->...n', grad_output, weight)
+      grad_input = torch.einsum('...m,mn->...n', grad_output, weight).clone()
     else:
       grad_input = None
 
     if needs_input_grad_weight:
-      grad_weight = torch.einsum('...m,...n->mn', grad_output, input)
+      grad_weight = torch.einsum('...m,...n->mn', grad_output, input).clone()
     else:
       grad_weight = None
 
     if bias is not None and needs_input_grad_bias:
-      grad_bias = torch.einsum('...m->m', grad_output)
+      grad_bias = torch.einsum('...m->m', grad_output).clone()
     else:
       grad_bias = None
 
