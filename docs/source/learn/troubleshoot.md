@@ -380,6 +380,11 @@ We don't expect users to use tools in this section to debug their
 models. But we might ask for them when you submit a bug report since
 they provide additional information that metrics report doesn't have.
 
+### Debugging Tensor Operations
+
+The following tools are useful for gathering information on the execution
+of lowered operations.
+
 -   `print(torch_xla._XLAC._get_xla_tensors_text([res]))` where `res` is
     the result tensor prints out the IR.
 -   `print(torch_xla._XLAC._get_xla_tensors_hlo([res]))` where `res` is
