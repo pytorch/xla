@@ -14,6 +14,7 @@ import time
 def custom_einsum(function: str, input: Tensor, weight: Tensor):
   return torch.einsum(function, input, weight)
 
+
 def is_einsum_lowered(func):
   X = torch.zeros(3, 5, requires_grad=False, device='xla')
   Y = torch.zeros(5, 7, requires_grad=False, device='xla')
@@ -35,6 +36,7 @@ class OperationLowered(unittest.TestCase):
     self.assertFalse(
         is_einsum_lowered(lambda a, b: torch.einsum('ab,bc->ab', a, b)),
         "Operation lowered as expected")
+
 
 if __name__ == '__main__':
   test = unittest.main()
