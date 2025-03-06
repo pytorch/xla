@@ -4,7 +4,6 @@ import torch
 from torch import Tensor
 from torch.library import custom_op
 import torch_xla
-import time
 
 
 @custom_op(
