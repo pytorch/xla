@@ -13,6 +13,23 @@ class TestJaxInterop(absltest.TestCase):
     Test that we can call a JAX function from PyTorch/XLA lazy tensor tracing.
     """
     dev = xm.xla_device()
+    a = torch.ones((3, 3), device=dev)
+
+    def f(a, b):
+      import jax.numpy as jnp
+      return a + jnp.sin(b)
+
+    b = xb.call_jax(f, (a, a), {}, 'my_test')
+    torch_xla.sync()
+    torch.testing.assert_close(
+        b, torch.sin(torch.ones(3, 3)) + 1, check_device=False)
+
+  def test_call_jax_grad(self):
+    """
+    Test that we can call a JAX function and retrive grad from PyTorch/XLA lazy
+    tensor tracing.
+    """
+    dev = xm.xla_device()
     a = torch.randn((3, 3), device=dev, requires_grad=True)
     b = torch.randn((3, 3), device=dev, requires_grad=True)
 
