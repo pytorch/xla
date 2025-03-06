@@ -8,6 +8,8 @@ Here's an example of what you might see from the PyTorch/XLA debugging tool for 
 pt-xla-profiler: Op(s) not lowered: aten::_ctc_loss, aten::_ctc_loss_backward,  Please open a GitHub issue with the above op lowering requests.
 ```
 
+Furthermore, if possible, we want to lower operations to use `full_codegen` see our [Codegen migration guide](https://github.com/pytorch/xla/edit/document_xla_override/CODEGEN_MIGRATION_GUIDE.md) for more instructions.
+
 ## Before you start
 You should follow the instructions in [here](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md) to install required dependencies and build pytorch and pytorch/XLA from the source. You do not need access to TPU to implement the lowering. It is recommended to experiment on a workstation and configure it to use XLA:CPU. You can configure Pytorch/XLA to use XLA:CPU by running
 
