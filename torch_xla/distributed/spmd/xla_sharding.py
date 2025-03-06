@@ -676,11 +676,7 @@ class ShardingSpec:
 def _einsum_linear_forward(input: Tensor, weight: Tensor,
                            bias: Optional[Tensor]):
   with xp.Trace('einsum_linear_forward'):
-    # TODO(https://github.com/pytorch/xla/issues/8713): torch.einsum is getting
-    # decomposed when inside a custom op. This C++ op is an escape hatch to call
-    # XLA einsum without going through torch.einsum. We should remove this
-    # _einsum escape hatch when the linked bug is fixed.
-    product = torch.einsum('...n,mn->...m', (input, weight))
+    product = torch.einsum('...n,mn->...m', input, weight)
     if bias is not None:
       return product + bias
     return product
