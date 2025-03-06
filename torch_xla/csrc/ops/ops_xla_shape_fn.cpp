@@ -424,6 +424,10 @@ xla::Shape ClampMinTensorOutputShape(const torch::lazy::Value& input,
                           lower_for_shape_fn);
 }
 
+xla::Shape ConjCopyOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape CosOutputShape(const torch::lazy::Value& input) {
   xla::Shape result_shape = GetXlaShape(input);
   if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {

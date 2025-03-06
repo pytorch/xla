@@ -1238,6 +1238,11 @@ XLATensorPtr clone(const XLATensorPtr& input) {
   return cloned;
 }
 
+XLATensorPtr conj(const XLATensorPtr& input) {
+  auto ir = input->GetIrValue();
+  return input->CreateFrom(torch_xla::MakeNode<ConjCopy>(ir));
+}
+
 XLATensorPtr constant_pad_nd(const XLATensorPtr& input,
                              absl::Span<const int64_t> pad,
                              const at::Scalar& value) {

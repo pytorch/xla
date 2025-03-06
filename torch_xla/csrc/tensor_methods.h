@@ -327,6 +327,8 @@ XLATensorPtr clamp(const XLATensorPtr& input,
 
 XLATensorPtr clone(const XLATensorPtr& input);
 
+XLATensorPtr conj(const XLATensorPtr& input);
+
 // Pad with the given value and size specified by the given list of low and
 // high paddings.
 XLATensorPtr constant_pad_nd(const XLATensorPtr& input,
