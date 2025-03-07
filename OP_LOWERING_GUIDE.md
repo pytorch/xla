@@ -92,9 +92,9 @@ In general, if there is an operator in pytorch core that has both an out-of-plac
 
 For each node we need to pass an `ir::OpKind`. Here is an ([example](https://github.com/pytorch/xla/blob/5ce99bff336325feb41a982dc80299fb53166b29/torch_xla/csrc/ops/var_mean.cpp#L36)). You can find the `OpKind` definition in [interned_strings.h](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/core/interned_strings.h). If the aten symbol is missing, you can submit a PR like [this](https://github.com/pytorch/pytorch/pull/36851).
 
-## Overriding `XLA` Flag
+## Overriding `XLA` Dispatch Key
 In certain cases, it might be that we need to manually override the `XLA` key implementation of an operation. Ideally codegeneration would handle this, but it is useful to know how to handle an unfortunate edge case.
 
-If you need to override the `XLA` flag you can do this through macros in the [xla_manual_registration.cpp](https://github.com/pytorch/xla/blob/master/torch_xla/csrc/xla_manual_registration.cpp) file.
+If you need to override the `XLA` dispatch key you can do this through macros in the [xla_manual_registration.cpp](https://github.com/pytorch/xla/blob/master/torch_xla/csrc/xla_manual_registration.cpp) file.
 
 You can use the https://github.com/pytorch/xla/pull/8801 PR for reference on what files to change.
