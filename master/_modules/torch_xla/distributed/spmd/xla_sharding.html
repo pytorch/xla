@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git2c70a1c )
+                  master (2.7.0+git1db6c86 )
                 </div>
               
             
@@ -1108,11 +1108,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_einsum_linear_forward</span><span class="p">(</span><span class="nb">input</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">weight</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
                            <span class="n">bias</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]):</span>
   <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s1">&#39;einsum_linear_forward&#39;</span><span class="p">):</span>
-    <span class="c1"># TODO(https://github.com/pytorch/xla/issues/8713): torch.einsum is getting</span>
-    <span class="c1"># decomposed when inside a custom op. This C++ op is an escape hatch to call</span>
-    <span class="c1"># XLA einsum without going through torch.einsum. We should remove this</span>
-    <span class="c1"># _einsum escape hatch when the linked bug is fixed.</span>
-    <span class="n">product</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_einsum</span><span class="p">(</span><span class="s1">&#39;...n,mn-&gt;...m&#39;</span><span class="p">,</span> <span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">))</span>
+    <span class="n">product</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...n,mn-&gt;...m&#39;</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
       <span class="k">return</span> <span class="n">product</span> <span class="o">+</span> <span class="n">bias</span>
     <span class="k">return</span> <span class="n">product</span>
@@ -1127,6 +1123,31 @@
   <span class="k">return</span> <span class="n">product</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_einsum_linear_backward_operation</span><span class="p">(</span><span class="n">grad_output</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="nb">input</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+                                      <span class="n">weight</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">bias</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tensor</span><span class="p">],</span>
+                                      <span class="n">needs_input_grad_input</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                                      <span class="n">needs_input_grad_weight</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                                      <span class="n">needs_input_grad_bias</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+  <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">grad_bias</span> <span class="o">=</span> <span class="kc">None</span>
+
+  <span class="k">if</span> <span class="n">needs_input_grad_input</span><span class="p">:</span>
+    <span class="n">grad_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...m,mn-&gt;...n&#39;</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">grad_input</span> <span class="o">=</span> <span class="kc">None</span>
+
+  <span class="k">if</span> <span class="n">needs_input_grad_weight</span><span class="p">:</span>
+    <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...m,...n-&gt;mn&#39;</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">grad_weight</span> <span class="o">=</span> <span class="kc">None</span>
+
+  <span class="k">if</span> <span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">needs_input_grad_bias</span><span class="p">:</span>
+    <span class="n">grad_bias</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...m-&gt;m&#39;</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">grad_bias</span> <span class="o">=</span> <span class="kc">None</span>
+
+  <span class="k">return</span> <span class="n">grad_input</span><span class="p">,</span> <span class="n">grad_weight</span><span class="p">,</span> <span class="n">grad_bias</span>
+
+
 <span class="nd">@custom_op</span><span class="p">(</span>
     <span class="s2">&quot;xla::einsum_linear_backward&quot;</span><span class="p">,</span>
     <span class="n">schema</span><span class="o">=</span><span class="s2">&quot;(Tensor grad_output, Tensor input, Tensor weight, Tensor? bias, bool needs_input_grad_input, bool needs_input_grad_weight, bool needs_input_grad_bias) -&gt; (Tensor, Tensor, Tensor)&quot;</span><span class="p">,</span>
@@ -1137,26 +1158,10 @@
                             <span class="n">needs_input_grad_weight</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
                             <span class="n">needs_input_grad_bias</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
   <span class="k">with</span> <span class="n">xp</span><span class="o">.</span><span class="n">Trace</span><span class="p">(</span><span class="s1">&#39;einsum_linear_backward&#39;</span><span class="p">):</span>
-    <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">grad_bias</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">if</span> <span class="n">needs_input_grad_input</span><span class="p">:</span>
-      <span class="n">grad_input</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_einsum</span><span class="p">(</span><span class="s1">&#39;...m,mn-&gt;...n&#39;</span><span class="p">,</span>
-                                               <span class="p">(</span><span class="n">grad_output</span><span class="p">,</span> <span class="n">weight</span><span class="p">))</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="n">grad_input</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">if</span> <span class="n">needs_input_grad_weight</span><span class="p">:</span>
-      <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_einsum</span><span class="p">(</span><span class="s1">&#39;...m,...n-&gt;mn&#39;</span><span class="p">,</span>
-                                                <span class="p">(</span><span class="n">grad_output</span><span class="p">,</span> <span class="nb">input</span><span class="p">))</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="n">grad_weight</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">if</span> <span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">needs_input_grad_bias</span><span class="p">:</span>
-      <span class="n">grad_bias</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_einsum</span><span class="p">(</span><span class="s1">&#39;...m-&gt;m&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">grad_output</span><span class="p">,))</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="n">grad_bias</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">return</span> <span class="n">grad_input</span><span class="p">,</span> <span class="n">grad_weight</span><span class="p">,</span> <span class="n">grad_bias</span>
+    <span class="k">return</span> <span class="n">_einsum_linear_backward_operation</span><span class="p">(</span><span class="n">grad_output</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span>
+                                             <span class="n">needs_input_grad_input</span><span class="p">,</span>
+                                             <span class="n">needs_input_grad_weight</span><span class="p">,</span>
+                                             <span class="n">needs_input_grad_bias</span><span class="p">)</span>
 
 
 <span class="nd">@_einsum_linear_backward</span><span class="o">.</span><span class="n">register_fake</span>
@@ -1165,24 +1170,11 @@
                                  <span class="n">needs_input_grad_input</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
                                  <span class="n">needs_input_grad_weight</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
                                  <span class="n">needs_input_grad_bias</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
-  <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">grad_bias</span> <span class="o">=</span> <span class="kc">None</span>
 
-  <span class="k">if</span> <span class="n">needs_input_grad_input</span><span class="p">:</span>
-    <span class="n">grad_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...m,mn-&gt;...n&#39;</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">,</span> <span class="n">weight</span><span class="p">)</span>
-  <span class="k">else</span><span class="p">:</span>
-    <span class="n">grad_input</span> <span class="o">=</span> <span class="kc">None</span>
-
-  <span class="k">if</span> <span class="n">needs_input_grad_weight</span><span class="p">:</span>
-    <span class="n">grad_weight</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...m,...n-&gt;mn&#39;</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span>
-  <span class="k">else</span><span class="p">:</span>
-    <span class="n">grad_weight</span> <span class="o">=</span> <span class="kc">None</span>
-
-  <span class="k">if</span> <span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">needs_input_grad_bias</span><span class="p">:</span>
-    <span class="n">grad_bias</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;...m-&gt;m&#39;</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">)</span>
-  <span class="k">else</span><span class="p">:</span>
-    <span class="n">grad_bias</span> <span class="o">=</span> <span class="kc">None</span>
-
-  <span class="k">return</span> <span class="n">grad_input</span><span class="p">,</span> <span class="n">grad_weight</span><span class="p">,</span> <span class="n">grad_bias</span>
+  <span class="k">return</span> <span class="n">_einsum_linear_backward_operation</span><span class="p">(</span><span class="n">grad_output</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span>
+                                           <span class="n">needs_input_grad_input</span><span class="p">,</span>
+                                           <span class="n">needs_input_grad_weight</span><span class="p">,</span>
+                                           <span class="n">needs_input_grad_bias</span><span class="p">)</span>
 
 
 <span class="c1"># Now define the XLAPatchedLinear function that uses the custom ops</span>
@@ -1197,8 +1189,8 @@
 <span class="sd">  autocast context, when autocast is enabled.</span>
 <span class="sd">  torch.get_autocast_dtype() fetches datatype for ops run in autocast [2], with the specified device (here, &#39;xla&#39;).</span>
 
-<span class="sd">  References: </span>
-<span class="sd">  [1] https://pytorch.org/docs/stable/notes/amp_examples.html#functions-with-multiple-inputs-or-autocastable-ops </span>
+<span class="sd">  References:</span>
+<span class="sd">  [1] https://pytorch.org/docs/stable/notes/amp_examples.html#functions-with-multiple-inputs-or-autocastable-ops</span>
 <span class="sd">  [2] https://github.com/pytorch/pytorch/blob/2cc01cc6d3ad2aff47e8460667ba654b2e4c9f21/torch/amp/autocast_mode.py#L500</span>
 
 <span class="sd">  TODO (alanwaketan): Let&#39;s patch it on the dispatcher level.</span>
@@ -1692,8 +1684,8 @@
 <span class="sd">  Usage:</span>
 <span class="sd">  new_tensor = MarkShardingFunction.apply(tensor, mesh, (&#39;axis_1&#39;, &#39;axis_2&#39;))</span>
 
-<span class="sd">  This is required to guide GSPMD sharding propagation better during the </span>
-<span class="sd">  backward pass as during complicated workloads the compiler can introduce extra </span>
+<span class="sd">  This is required to guide GSPMD sharding propagation better during the</span>
+<span class="sd">  backward pass as during complicated workloads the compiler can introduce extra</span>
 <span class="sd">  collectives that can hurt performance.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
