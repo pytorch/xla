@@ -369,6 +369,9 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
     )
 
   def test_paged_attention_with_padding(self,):
+    # Test case from real workload in vLLM. num_q_tokens=160
+    # The actual num_q_tokens=cu_q_len[num_seq]=153.
+    # The 7 query tokens (160-153) are paddings.
     num_q_tokens = 160
     num_q_heads = 12
     head_dim = 128
