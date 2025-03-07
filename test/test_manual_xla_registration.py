@@ -39,11 +39,9 @@ class OperationLowered(unittest.TestCase):
     # 'ab,bc->ab' won't be lowered becaused it cannot be backpropagated
     ir = is_einsum_lowered(lambda a, b: torch.einsum('ab,bc->ab', a, b))
 
-    self.assertNotIn(
-                    "einsum", ir,
+    self.assertNotIn("einsum", ir,
                     "Expected no einsum to be in ir from it not being lowered")
-    self.assertIn(
-                  "permute", ir,
+    self.assertIn("permute", ir,
                   "Expected permute to be in ir from it not being lowered")
 
 

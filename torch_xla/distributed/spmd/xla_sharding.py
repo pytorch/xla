@@ -715,6 +715,7 @@ def _einsum_linear_backward_operation(grad_output: Tensor, input: Tensor,
 
   return grad_input, grad_weight, grad_bias
 
+
 @custom_op(
     "xla::einsum_linear_backward",
     schema="(Tensor grad_output, Tensor input, Tensor weight, Tensor? bias, bool needs_input_grad_input, bool needs_input_grad_weight, bool needs_input_grad_bias) -> (Tensor, Tensor, Tensor)",
@@ -726,9 +727,9 @@ def _einsum_linear_backward(grad_output: Tensor, input: Tensor, weight: Tensor,
                             needs_input_grad_bias: bool):
   with xp.Trace('einsum_linear_backward'):
     return _einsum_linear_backward_operation(grad_output, input, weight, bias,
-                                            needs_input_grad_input,
-                                            needs_input_grad_weight,
-                                            needs_input_grad_bias)
+                                             needs_input_grad_input,
+                                             needs_input_grad_weight,
+                                             needs_input_grad_bias)
 
 
 @_einsum_linear_backward.register_fake
@@ -739,9 +740,9 @@ def _einsum_linear_backward_fake(grad_output: Tensor, input: Tensor,
                                  needs_input_grad_bias: bool):
 
   return _einsum_linear_backward_operation(grad_output, input, weight, bias,
-                                          needs_input_grad_input,
-                                          needs_input_grad_weight,
-                                          needs_input_grad_bias)
+                                           needs_input_grad_input,
+                                           needs_input_grad_weight,
+                                           needs_input_grad_bias)
 
 
 # Now define the XLAPatchedLinear function that uses the custom ops
