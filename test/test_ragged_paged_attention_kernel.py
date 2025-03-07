@@ -351,9 +351,10 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
         num_pages,
     )
 
-  def test_paged_attention_extreme_all_tokens_belong_to_one_sequence(self,):
+  def test_paged_attention_mix_prefill_and_decode2(self,):
     # assuming q_blk_size=128
-    seq_lens = [(512, 1328)]  # [(q_len, kv_len),...]
+    seq_lens = [(1, 127), (120, 1328), (1, 64), (1, 64), (1, 64), (1, 64),
+                (256, 256), (131, 463)]  # [(q_len, kv_len),...]
     num_heads = (1, 1)
     head_dim = 128
     page_size = 16
@@ -368,6 +369,96 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
         dtype,
         num_pages,
     )
+
+  def test_paged_attention_with_padding(self,):
+    num_q_tokens = 160
+    num_q_heads = 12
+    head_dim = 128
+
+    num_kv_heads = 2
+    num_pages = 25284
+    page_size = 16
+    dtype = jnp.bfloat16
+
+    prng_key = jax.random.key(0)
+    k1, k2, k3, k4 = jax.random.split(prng_key, 4)
+    queries = jax.random.normal(
+        k1, (num_q_tokens, num_q_heads, head_dim), dtype=dtype)
+    k_pages = jax.random.normal(
+        k2, (num_kv_heads, num_pages, page_size, head_dim), dtype=dtype)
+    v_pages = jax.random.normal(
+        k3, (num_kv_heads, num_pages, page_size, head_dim), dtype=dtype)
+    kv_lens = jnp.array([
+        8, 15, 9, 11, 13, 9, 14, 12, 14, 12, 13, 14, 16, 26, 26, 26, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ],
+                        dtype=jnp.int32)
+    pages_per_seq = 128
+    page_indices = jax.random.randint(
+        k4,
+        (num_q_tokens, pages_per_seq),
+        0,
+        num_pages,
+        dtype=jnp.int32,
+    )
+    cu_q_lens = jnp.array([
+        0, 1, 16, 25, 36, 49, 58, 72, 84, 98, 110, 123, 137, 153, 20, 21, 22, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ],
+                          dtype=jnp.int32)
+    num_seqs = 13
+    num_kv_pages_per_block = 128
+    num_queries_per_block = 16
+    err, actual_output = ragged_paged_attention(
+        queries,
+        k_pages,
+        v_pages,
+        kv_lens,
+        page_indices,
+        cu_q_lens,
+        num_seqs,
+        num_kv_pages_per_block=num_kv_pages_per_block,
+        num_queries_per_block=num_queries_per_block,
+    )
+    err.throw()  # noop if there is not err.
+    actual_output = jax.block_until_ready(actual_output)
+
+    expected_output = _ref_ragged_paged_attention(
+        queries,
+        k_pages,
+        v_pages,
+        kv_lens,
+        page_indices,
+        cu_q_lens,
+        num_seqs,
+    )
+
+    self.assertEqual(actual_output.shape, expected_output.shape)
+    self.assertEqual(actual_output.dtype, expected_output.dtype)
+
+    print(
+        f'Output max diff: {jnp.max(jnp.abs(expected_output - actual_output))}')
+    print(
+        f'Output mean diff: {jnp.mean(jnp.abs(expected_output - actual_output))}'
+    )
+    atol = 1e-1
+    rtol = 1e-1
+
+    actual_num_q_tokens = cu_q_lens[num_seqs]
+    actual_output = actual_output[:actual_num_q_tokens]
+    expected_output = expected_output[:actual_num_q_tokens]
+    self.assertTrue(
+        jnp.allclose(actual_output, expected_output, atol=atol, rtol=rtol))
 
   def test_paged_attention_extreme_one_tokens_per_sequence_min(self,):
     seq_lens = []  # [(q_len, kv_len),...]
