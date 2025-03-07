@@ -807,7 +807,7 @@ def ragged_paged_attention(
 
   # num_logical_q_tiles is a zero-dimensional array.
   sequence_metadata, num_logical_q_tiles = make_sequence_metadata(
-      cu_q_lens=cu_q_lens,
+      cu_q_lens=cu_q_lens[:num_seqs + 1],
       m=num_tokens,
       tm=num_queries_per_block,
       start_sequence=jnp.array([0]),
