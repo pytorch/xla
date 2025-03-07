@@ -1867,17 +1867,6 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_optimization_barrier_",
         [](std::vector<at::Tensor>& inputs) { OptimizationBarrier_(inputs); });
 
-  // TODO(https://github.com/pytorch/xla/issues/8713): torch.einsum is getting
-  // decomposed when inside a custom op. This C++ op is an escape hatch to call
-  // XLA einsum without going through torch.einsum. We should remove this
-  // operation when the linked bug is fixed.
-  m.def("_xla_einsum",
-        [](const std::string& equation, const std::vector<at::Tensor>& inputs) {
-          std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(inputs);
-          XLATensorPtr output = tensor_methods::einsum(equation, xla_tensors);
-          return bridge::AtenFromXlaTensor(output);
-        });
-
   // Creates a placeholder tensor that does not hold any device buffer.
   // This is primarily useful for staging out the HLO of a user computation.
   // Accessing the value of the tensor will panic.
