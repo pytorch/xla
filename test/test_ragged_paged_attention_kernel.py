@@ -351,16 +351,14 @@ class RaggedPagedAttentionKernelTest(parameterized.TestCase):
         num_pages,
     )
 
-  def test_paged_attention_mix_prefill_and_decode2(self,):
+  def test_paged_attention_extreme_all_tokens_belong_to_one_sequence(self,):
     # assuming q_blk_size=128
-    seq_lens = [(1, 127), (120, 1328), (1, 64), (1, 64), (1, 64), (1, 64),
-                (256, 256), (131, 463)]  # [(q_len, kv_len),...]
+    seq_lens = [(512, 1328)]  # [(q_len, kv_len),...]
     num_heads = (1, 1)
     head_dim = 128
     page_size = 16
     dtype = jnp.float32
     num_pages = 65536
-
     self._verify_ragged_paged_attention(
         seq_lens,
         num_heads,
