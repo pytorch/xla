@@ -5,6 +5,10 @@ In this user guide, we discuss how
 and provide a design overview to illustrate how the SPMD sharding
 annotation API and its constructs work.
 
+For a conceptual guide of the SPMD model of computation, you may refer to the
+[Sharded Matrices and How to Multiply Them](https://jax-ml.github.io/scaling-book/sharding/)
+section of the _How to Scale Your Model_ book.
+
 ## What is PyTorch/XLA SPMD?
 
 [GSPMD](https://arxiv.org/abs/2105.04663) is an automatic
@@ -22,7 +26,7 @@ _<span style="text-decoration:underline;">Figure 1. Comparison of two different 
 
 Here is an simple example of using SPMD
 
-``` python
+```python
 import numpy as np
 import torch
 import torch_xla.core.xla_model as xm
@@ -61,56 +65,133 @@ SPMD with other distributed libraries.
 
 ### Mesh
 
-For a given cluster of devices, a physical mesh is a representation of
-the interconnect topology.
+The SPMD programming model is built around the concept of a device mesh, commonly
+referred to as a mesh. A device mesh is a logical N-dimensional arrangement of
+compute devices (e.g. TPU cores) where the axes are used as shorthands to
+define sharded computation. It is logical in the sense that the mesh shape does
+not necessarily have to reflect the physical network layout. You could create
+different kinds of device meshes over the same set of physical devices. For
+example, a 512-core TPU slice could be treated as a 3D mesh of 16×16×2, a 2D mesh
+of 32×16, or a 1D mesh of 512, depending on how we want to partition tensors. You
+may use the `Mesh` class to create a device mesh.
 
-1.  `mesh_shape` is a tuple that will be multiplied to the total number
-    of physical devices.
-2.  `device_ids` is almost always `np.array(range(num_devices))`.
-3.  Users are also encouraged to give each mesh dimension a name. In the
-    above example, the first mesh dimension is the `data` dimension and
-    the second mesh dimension is the `model` dimension.
+In the following snippet:
+
+```python
+mesh_shape = (num_devices, 1)
+device_ids = np.array(range(num_devices))
+mesh = Mesh(device_ids, mesh_shape, ('data', 'model'))
+```
+
+- `mesh_shape` is a tuple whose elements must multiply to the total number
+  of physical devices in the environment.
+- `device_ids` specifies the ordering of physical devices within the mesh in row
+  major order. It is always a flat numpy array of integers ranging from `0` to
+  `num_devices - 1`, where `num_devices` is the total number of devices in the
+  environment. Each ID indexes into the list of devices in
+  `xr.global_runtime_device_attributes()`.
+  The simplest ordering is `np.array(range(num_devices))`, but tuning the
+  device ordering and the mesh shape to utilize the underlying physical
+  interconnect can improve efficiency.
+- Users are also encouraged to give each mesh axis a name. Later we can
+  shard each dimension of tensors over specific mesh axes to achieve the
+  desired parallelization. In the above example, the first mesh dimension is the
+  `data` dimension and the second mesh dimension is the `model` dimension.
 
 You can also check more mesh info via
 
 ``` python
     >>> mesh.shape()
     OrderedDict([('data', 4), ('model', 1)])
+
+    >>> mesh.get_logical_mesh()
+    array([[0], [1], [2], [3]])
+
+    # Details about these 4 TPUs
+    >>> xr.global_runtime_device_attributes()
+    [{'core_on_chip': 0, 'num_cores': 1, 'coords': [0, 0, 0], 'name': 'TPU:0'},
+     {'core_on_chip': 0, 'num_cores': 1, 'coords': [1, 0, 0], 'name': 'TPU:1'},
+     {'core_on_chip': 0, 'num_cores': 1, 'coords': [0, 1, 0], 'name': 'TPU:2'},
+     {'core_on_chip': 0, 'num_cores': 1, 'coords': [1, 1, 0], 'name': 'TPU:3'}]
 ```
 
-### Partition Spec
-
-partition_spec has the same rank as the input tensor. Each dimension
-describes how the corresponding input tensor dimension is sharded across
-the device mesh. In the above example tensor `t`'s fist dimension is
-being sharded at `data` dimension and the second dimension is being
-sharded at `model` dimension.
-
-User can also shard tensor that has different dimensions from the mesh
-shape.
+If your workload is run on [multiple TPU slices][multislice] simultaneously, the
+device attributes will include a `slice_index` indicating the containing slice:
 
 ``` python
+    # Details about 8 TPUs allocated over 2 slices
+    >>> xr.global_runtime_device_attributes()
+    [{'num_cores': 1, 'core_on_chip': 0, 'slice_index': 0, 'coords': [0, 0, 0], 'name': 'TPU:0'},
+     {'num_cores': 1, 'core_on_chip': 0, 'slice_index': 0, 'coords': [1, 0, 0], 'name': 'TPU:1'},
+     {'num_cores': 1, 'core_on_chip': 0, 'slice_index': 0, 'coords': [0, 1, 0], 'name': 'TPU:2'},
+     {'num_cores': 1, 'core_on_chip': 0, 'slice_index': 0, 'coords': [1, 1, 0], 'name': 'TPU:3'},
+     {'num_cores': 1, 'core_on_chip': 0, 'slice_index': 1, 'coords': [0, 0, 0], 'name': 'TPU:4'},
+     {'num_cores': 1, 'core_on_chip': 0, 'slice_index': 1, 'coords': [1, 0, 0], 'name': 'TPU:5'},
+     {'num_cores': 1, 'core_on_chip': 0, 'slice_index': 1, 'coords': [0, 1, 0], 'name': 'TPU:6'},
+     {'num_cores': 1, 'core_on_chip': 0, 'slice_index': 1, 'coords': [1, 1, 0], 'name': 'TPU:7'}]
+```
+
+In this example, a device ID of `7` will refer to the TPU at coordinate
+`[1, 1, 0]` in the second slice.
+
+### Partition spec
+
+In the following snippet:
+
+```python
+partition_spec = ('data', 'model')
+xs.mark_sharding(t, mesh, partition_spec)
+```
+
+`partition_spec` has the same rank as the input tensor. Each dimension
+describes how the corresponding input tensor dimension is sharded across
+the device mesh. In the above example tensor `t`'s fist dimension is
+being sharded over the `data` dimension and the second dimension is being
+sharded over the `model` dimension.
+
+User can also shard tensor that has a different rank from the mesh shape.
+
+```python
 t1 = torch.randn(8, 8, 16).to(device)
 t2 = torch.randn(8).to(device)
 
 # First dimension is being replicated.
 xs.mark_sharding(t1, mesh, (None, 'data', 'model'))
 
-# First dimension is being sharded at data dimension. 
+# First dimension is being sharded at data dimension.
 # model dimension is used for replication when omitted.
 xs.mark_sharding(t2, mesh, ('data',))
 
 # First dimension is sharded across both mesh axes.
-xs.mark_sharding( t2, mesh, (('data', 'model'),))
+xs.mark_sharding(t2, mesh, (('data', 'model'),))
 ```
+
+### Which device holds which shard?
+
+Each dimension of a tensor passed to `mark_sharding` will be split over the
+devices identified by the corresponding element in the partition spec. For
+example, given a `[M, N]` shaped tensor `t`, a mesh of shape `[X, Y]`, and a
+partition spec of `('X', 'Y')`, the first dimension of the tensor will be sharded
+`X`-ways, and the second dimension will be sharded `Y`-ways. The device
+identified by `device_ids[i]` will hold a subset of data that is
+`t[a * M / X : (a + 1) * M / X, b * N / Y : (b + 1) * N / Y]`, where `a = i // Y`
+and `b = i % Y`.
+
+This assumes that `M` and `N` are divisible by `X` and `Y`, respectively. If not,
+the last device may hold some padding.
+
+You can also visualize how a tensor is sharded over devices with our
+[SPMD debugging tool][debug-tool].
 
 ## Further Reading
 
 1.  [Example](https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_spmd_data_parallel.py)
-    to use SPMD to express data parallism.
+    to use SPMD to express data parallelism.
 2.  [Example](https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py)
     to use SPMD to express FSDP(Fully Sharded Data Parallel).
-3.  [SPMD advanced
-    topics](https://github.com/pytorch/xla/blob/master/docs/spmd_advanced.rst)
-4.  [Spmd Distributed
-    Checkpoint](https://github.com/pytorch/xla/blob/master/docs/spmd_distributed_checkpoint.rst)
+3.  [SPMD advanced topics](./spmd_advanced.md)
+4.  [Spmd Distributed Checkpoint](./spmd_distributed_checkpoint.md)
+
+
+[multislice]: https://cloud.google.com/tpu/docs/multislice-introduction
+[debug-tool]: ./spmd_advanced.md#spmd-debugging-tool
