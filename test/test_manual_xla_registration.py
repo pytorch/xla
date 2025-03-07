@@ -30,19 +30,23 @@ class OperationLowered(unittest.TestCase):
       with self.subTest(f=f):
         ir = is_einsum_lowered(lambda a, b: f('...n,mn->...m', a, b))
 
-        self.assertIn("einsum", ir,
-                      "Expected einsum to be in ir from it being lowered")
-        self.assertNotIn("permute", ir,
-                      "Expected no permute to be in ir from it being lowered")
+        self.assertIn(
+            "einsum", ir,
+            "Expected einsum to be in ir from it being lowered")
+        self.assertNotIn(
+            "permute", ir,
+            "Expected no permute to be in ir from it being lowered")
 
   def test_einsum_not_lowered(self):
     # 'ab,bc->ab' won't be lowered becaused it cannot be backpropagated
     ir = is_einsum_lowered(lambda a, b: torch.einsum('ab,bc->ab', a, b))
 
-    self.assertNotIn("einsum", ir,
-                    "Expected no einsum to be in ir from it not being lowered")
-    self.assertIn("permute", ir,
-                  "Expected permute to be in ir from it not being lowered")
+    self.assertNotIn(
+        "einsum", ir,
+        "Expected no einsum to be in ir from it not being lowered")
+    self.assertIn(
+        "permute", ir,
+        "Expected permute to be in ir from it not being lowered")
 
 
 if __name__ == '__main__':
