@@ -55,6 +55,7 @@ mutation_ops_to_functional = {
   torch.ops.aten.log_normal_: torch.ops.aten.log_normal,
   torch.ops.aten.scatter_add_: torch.ops.aten.scatter_add,
   torch.ops.aten.scatter_reduce_.two: torch.ops.aten.scatter_reduce,
+  torch.ops.aten.scatter_: torch.ops.aten.scatter,
 }
 
 # Note: tuple comparisons work intuitively, e.g. `_jax_version >= (0, 4, 32)`.
@@ -440,6 +441,15 @@ def _aten_resize_as_(x, y):
 def repeat_interleave(repeats, dim=0):
   return jnp.repeat(jnp.arange(repeats.shape[dim]), repeats)
 
+@op(torch.ops.aten.repeat_interleave.self_int)
+@op(torch.ops.aten.repeat_interleave.self_Tensor)
+def repeat_interleave(self, repeats, dim=0):
+  total_repeat_length = None
+  if isinstance(repeats, int):
+    total_repeat_length = self.shape[dim] * repeats
+    repeats = np.array([repeats] * self.shape[dim])
+  return jnp.repeat(self, repeats, dim, total_repeat_length=total_repeat_length)
+
 
 # aten.upsample_bilinear2d
 @op(torch.ops.aten.upsample_bilinear2d)
@@ -462,6 +472,7 @@ def _aten_stack(tensors, dim=0):
 
 @op(torch.ops.aten._softmax)
 @op(torch.ops.aten.softmax)
+@op(torch.ops.aten.softmax.int)
 def _aten_softmax(x, dim, halftofloat = False):
   if x.shape == ():
     return jax.nn.softmax(x.reshape([1]), axis=0).reshape([])
@@ -932,6 +943,11 @@ def _aten_native_layer_norm(
   if bias is not None:
     norm_x += bias
   return norm_x, mean, rstd
+
+  
+@op(torch.ops.aten.matmul)
+def _aten_matmul(x, y):
+  return x @ y
 
 
 # - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
@@ -1742,10 +1758,9 @@ def _aten_atan(self):
   return res
 
 
-# aten.scatter_reduce
-@op(torch.ops.aten.scatter)
 @op(torch.ops.aten.scatter_reduce)
-def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
+@op(torch.ops.aten.scatter)
+def _aten_scatter_reduce(input, dim, index, src, reduce=None, *, include_self=True):
   if not isinstance(src, jnp.ndarray):
     src = jnp.array(src, dtype=input.dtype)
   input_indexes, source_indexes = _scatter_index(dim, index)
@@ -1781,7 +1796,7 @@ def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
   elif reduce == "amin":
     return input.at[input_indexes].min(src[source_indexes])
   else:
-    raise RuntimeError("Unknown reduction type: ", reduce)
+    return input.at[input_indexes].set(src[source_indexes])
 
 
 # aten.acos
