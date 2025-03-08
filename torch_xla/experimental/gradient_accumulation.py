@@ -156,20 +156,22 @@ def _gradient_accumulation_impl(context, body_fn, iterable_tensors, params,
 
   def _prepare_fake_tensors(
       iterable_tensors: Sequence[torch.Tensor],
-      carried_tensors: Sequence[torch.Tensor]
+      carried_tensors: Sequence[torch.Tensor],
   ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
-    fake_iterable_tensors = []
-    for iter_tensor in iterable_tensors:
-      original_size = iter_tensor.size()
-      fake_iterable_tensors.append(
-          torch.empty(original_size[1:],
-                      dtype=iter_tensor.dtype).to(iter_tensor.device))
 
-    fake_carried_tensors = []
-    for carried_input in carried_tensors:
-      fake_carried_tensors.append(
-          torch.empty(carried_input.size(), dtype=carried_input.dtype).to(
-              carried_input.device).requires_grad_(carried_input.requires_grad))
+    def __make_placeholder(tensor, is_iterable):
+      shape = tensor.shape[1:] if is_iterable else tensor.shape
+      return xb.create_placeholder_tensor(
+          shape=shape, dtype=tensor.dtype).requires_grad_(tensor.requires_grad)
+
+    fake_iterable_tensors = [
+        __make_placeholder(iter_tensor, True)
+        for iter_tensor in iterable_tensors
+    ]
+    fake_carried_tensors = [
+        __make_placeholder(carried_tensor, False)
+        for carried_tensor in carried_tensors
+    ]
     return fake_iterable_tensors, fake_carried_tensors
 
   # TODO - Fake the model once we are able to create placeholder tensors.
