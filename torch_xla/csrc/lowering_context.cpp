@@ -355,6 +355,9 @@ void LoweringContext::UpdateNumPartitions(const xla::XlaOp& op) {
   if (op_sharding.has_value()) {
     size_t curr_num_partitions =
         op_sharding.value().tile_assignment_devices().size();
+    if (curr_num_partitions == 0) {
+      return;
+    }
     if (num_computation_partitions_ != 1) {
       XLA_CHECK_EQ(curr_num_partitions, num_computation_partitions_)
           << "Number of partitions must be the same for all ops in a HLO "
