@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git5b7462c )
+                  master (2.7.0+git0407d6d )
                 </div>
               
             
@@ -601,8 +601,15 @@ mapping from op to IR.</p></li>
 <p>Find the op in <code class="docutils literal notranslate"><span class="pre">xla/codegen/xla_native_functions.yaml</span></code> and move it to
 the full_codegen column and run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code> under xla
 directory again. The build will fail (reason explained later in this
-guide) but you can still see the generated file. The code snippets below
-uses <code class="docutils literal notranslate"><span class="pre">abs</span></code> as an example. #### XLANativeFunctions.cpp</p>
+guide) but you can still see the generated file.</p>
+<p>If while generating the file you run into an error involving
+<cite>``shape_inference.h`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h">https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h</a>&gt;`_,
+you might be running into a problem with PyTorch not yet having the
+necessary implementation for the function to be generated. You can
+attempt to add the necessary function in
+<cite>``shape_inference.h`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h">https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h</a>&gt;`_
+to be unblocked.</p>
+<p>The code snippets below uses <code class="docutils literal notranslate"><span class="pre">abs</span></code> as an example. #### XLANativeFunctions.cpp</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="nf">XLANativeFunctions::abs</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="n">at</span><span class="o">::</span><span class="n">Tensor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">self</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="n">TORCH_LAZY_FN_COUNTER</span><span class="p">(</span><span class="s">&quot;xla::&quot;</span><span class="p">);</span>
 <span class="w">  </span><span class="k">auto</span><span class="w"> </span><span class="n">common_device</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">torch_xla</span><span class="o">::</span><span class="n">bridge</span><span class="o">::</span><span class="n">GetXlaDevice</span><span class="p">(</span><span class="n">self</span><span class="p">);</span>

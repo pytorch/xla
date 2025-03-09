@@ -133,8 +133,17 @@ at::Tensor XLANativeFunctions::abs(const at::Tensor& self) {
 Find the op in `xla/codegen/xla_native_functions.yaml` and move it to
 the full_codegen column and run `python setup.py install` under xla
 directory again. The build will fail (reason explained later in this
-guide) but you can still see the generated file. The code snippets below
-uses `abs` as an example. \#### XLANativeFunctions.cpp
+guide) but you can still see the generated file. 
+
+If while generating the file you run into an error involving
+[`shape_inference.h`](https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h),
+you might be running into a problem with PyTorch not yet having the
+necessary implementation for the function to be generated. You can
+attempt to add the necessary function in 
+[`shape_inference.h`](https://github.com/pytorch/pytorch/blob/main/torch/csrc/lazy/core/shape_inference.h)
+to be unblocked.
+
+The code snippets below uses `abs` as an example. \#### XLANativeFunctions.cpp
 
 ``` c++
 at::Tensor XLANativeFunctions::abs(const at::Tensor & self) {

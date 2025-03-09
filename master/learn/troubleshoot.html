@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git5b7462c )
+                  master (2.7.0+git0407d6d )
                 </div>
               
             
@@ -792,6 +792,10 @@ be made on the XLA device.</p></li>
 <p>We don’t expect users to use tools in this section to debug their
 models. But we might ask for them when you submit a bug report since
 they provide additional information that metrics report doesn’t have.</p>
+<div class="section" id="debugging-tensor-operations">
+<h3>Debugging Tensor Operations<a class="headerlink" href="#debugging-tensor-operations" title="Permalink to this heading">¶</a></h3>
+<p>The following tools are useful for gathering information on the execution
+of lowered operations.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">print(torch_xla._XLAC._get_xla_tensors_text([res]))</span></code> where <code class="docutils literal notranslate"><span class="pre">res</span></code> is
 the result tensor prints out the IR.</p></li>
@@ -800,6 +804,7 @@ the result tensor prints out the generated XLA HLO.</p></li>
 </ul>
 <p>Note these functions must be called prior to <code class="docutils literal notranslate"><span class="pre">mark_step()</span></code>, otherwise
 the tensor will already be materialized.</p>
+</div>
 <div class="section" id="environment-variables">
 <h3>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this heading">¶</a></h3>
 <p>There are also a number of environment variables which control the
@@ -955,6 +960,7 @@ the environment variable <code class="docutils literal notranslate"><span class=
 <li><a class="reference internal" href="#known-performance-caveats">Known Performance Caveats</a></li>
 <li><a class="reference internal" href="#xla-tensor-quirks">XLA Tensor Quirks</a></li>
 <li><a class="reference internal" href="#more-debugging-tools">More Debugging Tools</a><ul>
+<li><a class="reference internal" href="#debugging-tensor-operations">Debugging Tensor Operations</a></li>
 <li><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
 <li><a class="reference internal" href="#common-debugging-environment-variables-combinations">Common Debugging Environment Variables Combinations</a></li>
 <li><a class="reference internal" href="#reproducing-pytorch-xla-ci-cd-unit-test-failures">Reproducing PyTorch/XLA CI/CD unit test failures.</a></li>
