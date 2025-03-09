@@ -250,7 +250,7 @@ class ComputationClient {
     const xla::Shape* output_shape = nullptr;
     bool parameter_is_tupled_arguments;
     bool is_sharded;
-    size_t computation_num_partitions;
+    size_t computation_num_partitions = 1;
     bool allow_spmd_sharding_propagation_to_output;
     bool use_auto_spmd_partitioning;
     std::vector<int64_t> auto_spmd_mesh_shape;
