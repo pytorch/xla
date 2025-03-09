@@ -566,9 +566,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           .set_allow_spmd_sharding_propagation_to_output(
               {instance.allow_spmd_sharding_propagation_to_output});
 
-      int num_partitions = client_->device_count();
-      // num_partitions = 4;
-      num_partitions = static_cast<int>(instance.computation_num_partitions);
+      int num_partitions = GetNumGlobalDevices();
+      if (runtime::sys_util::GetEnvBool("XLA_USE_LOCAL_SPMD", false)) {
+        num_partitions = GetNumLocalDevices();
+      }
+      // num_partitions = static_cast<int>(instance.computation_num_partitions);
       std::cout << "num_partitions: " << num_partitions << std::endl;
       compile_options.executable_build_options.set_num_partitions(
           num_partitions);
