@@ -113,9 +113,17 @@ class LoweringContext : public torch::lazy::LoweringContext {
     return emitted_outputs_;
   }
 
+  size_t GetComputationNumPartitions() const {
+    return num_computation_partitions_;
+  }
+
   // Return stack frame id
   int64_t AddStackFrameLocation(const torch::lazy::SourceLocation& source,
                                 int64_t parent_id);
+
+ protected:
+  // Update the number of partitions from a XlaOp.
+  void UpdateNumPartitions(const xla::XlaOp& op);
 
  private:
   struct Parameter {
@@ -133,6 +141,8 @@ class LoweringContext : public torch::lazy::LoweringContext {
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
   std::string name_;
+  // Number of partitions of the lowered XLA computation.
+  size_t num_computation_partitions_;
 
   std::shared_ptr<StackFrameIndexBuilder> stack_frame_index_builder_;
 };  // namespace torch_xla

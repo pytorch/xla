@@ -57,7 +57,7 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
       return 0;
     }
 
-    return client->GetNumDevices();
+    return client->GetNumLocalDevices();
   }
 };
 
