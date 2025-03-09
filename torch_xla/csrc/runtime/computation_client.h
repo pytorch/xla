@@ -225,6 +225,7 @@ class ComputationClient {
         xla::XlaComputation computation, std::string compilation_device,
         std::vector<std::string> devices, const xla::Shape* output_shape,
         bool parameter_is_tupled_arguments = false, bool is_sharded = false,
+        size_t computation_num_partitions = 1,
         bool allow_spmd_sharding_propagation_to_output = true,
         bool use_auto_spmd_partitioning = false,
         std::vector<int64_t> auto_spmd_mesh_shape = {},
@@ -235,6 +236,7 @@ class ComputationClient {
           output_shape(output_shape),
           parameter_is_tupled_arguments(parameter_is_tupled_arguments),
           is_sharded(is_sharded),
+          computation_num_partitions(computation_num_partitions),
           allow_spmd_sharding_propagation_to_output(
               allow_spmd_sharding_propagation_to_output),
           use_auto_spmd_partitioning(use_auto_spmd_partitioning),
@@ -248,6 +250,7 @@ class ComputationClient {
     const xla::Shape* output_shape = nullptr;
     bool parameter_is_tupled_arguments;
     bool is_sharded;
+    size_t computation_num_partitions;
     bool allow_spmd_sharding_propagation_to_output;
     bool use_auto_spmd_partitioning;
     std::vector<int64_t> auto_spmd_mesh_shape;
@@ -374,7 +377,9 @@ class ComputationClient {
 
   virtual std::intptr_t GetCudaStreamForDevice(int local_device_id) const = 0;
 
-  virtual size_t GetNumDevices() const = 0;
+  virtual size_t GetNumLocalDevices() const = 0;
+
+  virtual size_t GetNumGlobalDevices() const = 0;
 
   virtual std::vector<std::string> GetLocalDevices() const = 0;
 

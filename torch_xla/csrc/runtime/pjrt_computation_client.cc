@@ -334,6 +334,7 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
 std::shared_ptr<PjRtComputationClient::PjRtData>
 PjRtComputationClient::ReplicateShardedData(
     const ComputationClient::DataPtr& handle) {
+  std::cout << "PjRtComputationClient::ReplicateShardedData" << std::endl;
   if (auto unsharded_data = std::dynamic_pointer_cast<PjRtData>(handle)) {
     return unsharded_data;
   } else if (auto sharded_data =
@@ -347,7 +348,9 @@ PjRtComputationClient::ReplicateShardedData(
     }
     xla::XlaBuilder builder("ReplicateShardedData");
     xla::Shape shape = sharded_data->shape();
-    builder.SetSharding(sharded_data->GetSharding());
+    xla::OpSharding sharding = sharded_data->GetSharding();
+    builder.SetSharding(sharding);
+    size_t num_partitions = sharding.tile_assignment_devices().size();
 
     // perform a simple identity calculation to reassemble the input as
     // replicated output.
@@ -371,6 +374,7 @@ PjRtComputationClient::ReplicateShardedData(
                          GetCompilationDevices(device, {}), &shape,
                          /*should_wrap_parameter=*/false,
                          /*is_sharded=*/true,
+                         /*computation_num_partitions*/ num_partitions,
                          /*allow_spmd_sharding_propagation_to_output=*/false});
     std::vector<
         std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
@@ -537,6 +541,7 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
 
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
+  std::cout << "in compile" << std::endl;
   auto metrics_fn = CompileMetric;
   if (instances[0].eager_mode) {
     metrics_fn = EagerCompileMetric;
@@ -546,7 +551,9 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
 
+  std::cout << "instances.size(): " << instances.size() << std::endl;
   for (auto& instance : instances) {
+    std::cout << "instance devices " << instance.devices << std::endl;
     xla::CompileOptions compile_options;
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
@@ -560,6 +567,9 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
               {instance.allow_spmd_sharding_propagation_to_output});
 
       int num_partitions = client_->device_count();
+      // num_partitions = 4;
+      num_partitions = static_cast<int>(instance.computation_num_partitions);
+      std::cout << "num_partitions: " << num_partitions << std::endl;
       compile_options.executable_build_options.set_num_partitions(
           num_partitions);
       compile_options.executable_build_options.set_num_replicas(1);
@@ -589,11 +599,20 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       }
 
       // TODO(244391366) verify this is correct for the collectives ops
-      xla::DeviceAssignment device_assignment(1, client_->device_count());
+      // xla::DeviceAssignment device_assignment(1, client_->device_count());
+      xla::DeviceAssignment device_assignment(1, num_partitions);
+      std::cout << "check client_->device_count(): " << client_->device_count()
+                << std::endl;
       // DeviceAssignment values must be the PjRtDevice ID, so we need to
       // unwind the global ordinal mapping.
-      for (const auto& [device_id, global_ordinal] : global_ordinals_) {
-        device_assignment(0, global_ordinal) = device_id;
+      // for (const auto& [device_id, global_ordinal] : global_ordinals_) {
+      //   std::cout << "device_id: " << device_id
+      //             << ", global_ordinal: " << global_ordinal << std::endl;
+      //   device_assignment(0, global_ordinal) = device_id;
+      // }
+      auto local_pjrt_devices = client_->addressable_devices();
+      for (int i = 0; i < local_pjrt_devices.size(); ++i) {
+        device_assignment(0, i) = local_pjrt_devices[i]->id();
       }
       compile_options.executable_build_options.set_device_assignment(
           device_assignment);
@@ -649,7 +668,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
     CreateCompileHandlesCounter()->AddValue(1);
   }
-
+  std::cout << "finish compile" << std::endl;
   return computations;
 }
 
@@ -701,6 +720,7 @@ PjRtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
+  std::cout << "in execute" << std::endl;
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
   // complete; a copy is held from the lambda that releases it when done.
@@ -768,6 +788,7 @@ PjRtComputationClient::ExecuteComputation(
   CreateDataHandlesCounter()->AddValue(datas.size());
 
   TF_VLOG(1) << "Returning " << datas.size() << " results";
+  std::cout << "finish execute" << std::endl;
   return datas;
 }
 
@@ -777,6 +798,10 @@ PjRtComputationClient::ExecuteReplicated(
     absl::Span<const ComputationClient::DataPtr> arguments,
     absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
+  std::cout << "in execute replicated" << std::endl;
+  for (auto d : devices) {
+    std::cout << "device: " << d << std::endl;
+  }
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteReplicated` and the async work in `Execute` are
   // complete; a copy is held from the lambda that releases it when done.
@@ -914,11 +939,16 @@ PjRtComputationClient::ExecuteReplicated(
   }
 
   TF_VLOG(1) << "Returning " << data_handles.size() << " sharded outputs.";
+  std::cout << "finish execute replicated" << std::endl;
   return data_handles;
 }
 
-size_t PjRtComputationClient::GetNumDevices() const {
+size_t PjRtComputationClient::GetNumLocalDevices() const {
   return client_->addressable_device_count();
+}
+
+size_t PjRtComputationClient::GetNumGlobalDevices() const {
+  return client_->device_count();
 }
 
 std::string PjRtComputationClient::GetDefaultDevice() const {
@@ -972,12 +1002,17 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
 
 void PjRtComputationClient::WaitDeviceOps(
     absl::Span<const std::string> devices) {
+  std::cout << "in wait device ops" << std::endl;
+  for (auto d : devices) {
+    std::cout << "device: " << d << std::endl;
+  }
   TF_VLOG(3) << "Waiting for " << absl::StrJoin(devices, ", ");
   operation_manager_.WaitForDevices(
       devices.empty()
           ? (UseVirtualDevice() ? std::vector<std::string>({spmd_device_str})
                                 : GetLocalDevices())
           : devices);
+  std::cout << "finish wait device ops" << std::endl;
 }
 
 std::map<std::string, Metric> PjRtComputationClient::GetMetrics() const {

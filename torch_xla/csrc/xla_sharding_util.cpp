@@ -85,10 +85,11 @@ std::vector<int64_t> TileAssignmentDimensions(
 // order of the output corresponds to the order of the `devices`, which can be
 // arbitrarily set by the caller.
 std::unordered_map<int, int> build_index_map(
-    const std::vector<std::string>& devices) {
+    const std::vector<std::string>& devices, size_t num_mesh_devices) {
   std::unordered_map<int, int> device_index;
   for (int i = 0; i < devices.size(); ++i) {
-    int global_ordinal = ParseDeviceString(devices[i]).ordinal();
+    int global_ordinal =
+        ParseDeviceString(devices[i]).ordinal() % num_mesh_devices;
     device_index[global_ordinal] = i;
   }
   return device_index;
@@ -191,6 +192,9 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
         XlaBuilderFriend::GetInstruction(elem.second);
     const std::shared_ptr<xla::OpSharding> sharding =
         xla_node->GetSharding(elem.first.index);
+    if (sharding != nullptr) {
+      std::cout << "check opsharding " << sharding->DebugString() << std::endl;
+    }
     if (sharding != nullptr && sharding->type() != xla::OpSharding::UNKNOWN) {
       *instruction->mutable_sharding() = *sharding;
       is_sharded = true;
@@ -371,10 +375,25 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
       shard_indices[i] = std::make_pair(global_ordinal, indices);
     }
   } else if (sharding.type() == xla::OpSharding::OTHER) {
-    auto device_index = build_index_map(devices);
     std::vector<int64_t> tile_assignment_devices(
         sharding.tile_assignment_devices().begin(),
         sharding.tile_assignment_devices().end());
+    size_t num_local_devices =
+        runtime::GetComputationClient()->GetNumLocalDevices();
+    size_t num_global_devices =
+        runtime::GetComputationClient()->GetNumGlobalDevices();
+    XLA_CHECK(tile_assignment_devices.size() == num_global_devices ||
+              tile_assignment_devices.size() == num_local_devices)
+        << "Number of tile_assignment_devices must be the number of global "
+           "devices or local devices";
+    std::cout << "Num local devices " << num_local_devices << std::endl;
+    std::unordered_map<int, int> device_index =
+        build_index_map(devices, tile_assignment_devices.size());
+    std::cout << "Check device_index " << std::endl;
+    for (const auto& pair : device_index) {
+      std::cout << "Key: " << pair.first << ", Value: " << pair.second
+                << std::endl;
+    }
     if (!sharding.iota_reshape_dims().empty()) {
       auto tileAssignment = xla::TileAssignment(
           sharding.tile_assignment_dimensions(), sharding.iota_reshape_dims(),
@@ -384,7 +403,10 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
     }
     for (size_t i = 0; i < tile_assignment_devices.size(); i++) {
       int64_t core = tile_assignment_devices[i];
+      std::cout << "Check core " << core << std::endl;
       if (device_index.find(core) == device_index.end()) {
+        std::cout << "current core " << core << " is not in device_index"
+                  << std::endl;
         // Skip any shards whose device is not part of the `devices` list.
         continue;
       }
@@ -434,6 +456,8 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
     const std::vector<std::string>& devices, bool padded) {
+  std::cout << "ShardingUtil::ShardTensor check devices " << devices
+            << std::endl;
   xla::OpSharding sharding;
   bool minibatch = false;
   if (shardings != nullptr) {
@@ -442,7 +466,7 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
   }
   TF_VLOG(5) << "ShardTensor with sharding type(" << sharding.type()
              << ")... and minibatch = " << minibatch << std::endl;
-  auto device_index = build_index_map(devices);
+  // auto device_index = build_index_map(devices);
   std::vector<at::Tensor> shards(devices.size());
   if (shardings == nullptr || sharding.type() == xla::OpSharding::REPLICATED ||
       sharding.type() == xla::OpSharding::UNKNOWN) {
@@ -464,6 +488,8 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
                      std::back_inserter(shard_indices),
                      [](auto& pair) { return pair.second; });
     }
+    std::cout << "ShardingUtil::ShardTensor check shard_indices: "
+              << shard_indices << std::endl;
 
     for (size_t i = 0; i < shard_indices.size(); i++) {
       at::Tensor shard = tensor.index(
