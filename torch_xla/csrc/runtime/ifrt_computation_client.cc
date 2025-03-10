@@ -613,8 +613,12 @@ IfrtComputationClient::ExecuteReplicated(
   return data_handles;
 }
 
-size_t IfrtComputationClient::GetNumDevices() const {
+size_t IfrtComputationClient::GetNumLocalDevices() const {
   return client_->addressable_device_count();
+}
+
+size_t IfrtComputationClient::GetNumGlobalDevices() const {
+  return client_->device_count();
 }
 
 std::string IfrtComputationClient::GetDefaultDevice() const {

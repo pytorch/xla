@@ -68,7 +68,7 @@ class Mesh:
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    assert all(d < self.size() for d in device_ids)
+    # assert all(d < self.size() for d in device_ids)
 
   def size(self):
     return np.prod(self.mesh_shape)
@@ -127,6 +127,10 @@ class Mesh:
 
     tile_assignment, group_assignment, replication_groups, sharding_type = self._get_op_sharding_args(
         partition_spec)
+    print(f"check tile_assignment: {tile_assignment}")
+    print(f"check group_assignment: {group_assignment}")
+    print(f"check replication_groups: {replication_groups}")
+    print(f"check sharding_type: {sharding_type}")
     return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
                                       replication_groups, sharding_type)
 
@@ -377,6 +381,11 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
   return sharding_type
 
 
+def _normalize_logical_mesh(device_mesh: np.ndarray) -> np.ndarray:
+  device_id_min = np.min(device_mesh)
+  return device_mesh.copy() - device_id_min
+
+
 def _get_tile_assignment(
     mesh: Mesh, partition_spec: Tuple[Union[Tuple[int], int,
                                             None]]) -> np.ndarray:
@@ -393,8 +402,8 @@ def _get_tile_assignment(
   tiled_dims = [x for x in partition_spec if x is not None]
   permutation = np.hstack(tiled_dims).tolist() if tiled_dims else []
   missing_axes = sorted(set(range(len(mesh.shape()))) - set(permutation))
-  tile_assignment = mesh.get_logical_mesh().transpose(permutation +
-                                                      missing_axes)
+  tile_assignment = _normalize_logical_mesh(
+      mesh.get_logical_mesh()).transpose(permutation + missing_axes)
 
   # For any tuples in the partition_spec, the grouped axes will be adjacent
   # after the permutation. Combine these dimensions into a single axis.
@@ -548,8 +557,9 @@ def mark_sharding(
       >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
   num_devices = xr.global_runtime_device_count()
+  num_local_devices = xr.addressable_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
-  assert mesh.size() == num_devices, \
+  assert mesh.size() == num_devices or mesh.size() == num_local_devices, \
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   # We only allow fully specified `partition_spec` to be applicable, as opposed
   # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
