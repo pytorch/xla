@@ -130,10 +130,6 @@ class Mesh:
 
     tile_assignment, group_assignment, replication_groups, sharding_type = self._get_op_sharding_args(
         partition_spec)
-    print(f"check tile_assignment: {tile_assignment}")
-    print(f"check group_assignment: {group_assignment}")
-    print(f"check replication_groups: {replication_groups}")
-    print(f"check sharding_type: {sharding_type}")
     return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
                                       replication_groups, sharding_type)
 

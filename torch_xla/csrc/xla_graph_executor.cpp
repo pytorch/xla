@@ -1391,16 +1391,12 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   // Always execute sharded when running in SPMD mode
   bool is_sharded = (coll.device == GetVirtualDevice()) || UseVirtualDevice();
   // Annotate HLO sharding selectively in the compuation.
-  bool is_sharded_2 = ShardingUtil::SetHloSharding(&lowering_ctx);
-
-  std::cout << "is_sharded_2: " << is_sharded_2 << std::endl;
+  ShardingUtil::SetHloSharding(&lowering_ctx);
 
   SetBufferDonors(&lowering_ctx, buffer_donor_indices);
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  size_t computation_num_partitions =
-      lowering_ctx.GetComputationNumPartitions();
 
   // TODO(yeounoh) enable wrapping with auto-sharding.
   bool should_wrap_parameter =
@@ -1426,15 +1422,11 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
   std::vector<runtime::ComputationClient::CompileInstance> instances;
-  std::cout << "computation_num_partitions: " << computation_num_partitions
-            << std::endl;
   instances.emplace_back(std::move(computation), coll.device.toString(),
                          runtime::GetComputationClient()->GetCompilationDevices(
                              coll.device.toString(), devices),
-                         &shape, should_wrap_parameter, is_sharded,
-                         computation_num_partitions);
+                         &shape, should_wrap_parameter, is_sharded);
   instances.front().eager_mode = UseEagerMode();
-  instances.front().computation_num_partitions = computation_num_partitions;
   if (use_autosharding) {
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
     TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
@@ -1463,8 +1455,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " ...";
-  std::cout << "check instance num partitions"
-            << instances.front().computation_num_partitions << std::endl;
   std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
       computations =
           runtime::GetComputationClient()->Compile(std::move(instances));

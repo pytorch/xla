@@ -93,7 +93,6 @@ LoweringContext::LoweringContext(const std::string& name,
                                  torch::lazy::BackendDevice device)
     : torch::lazy::LoweringContext(name, device),
       builder_(name),
-      num_computation_partitions_(1),
       stack_frame_index_builder_(std::make_shared<StackFrameIndexBuilder>()) {}
 
 LoweringContext::LoweringContext(
@@ -102,7 +101,6 @@ LoweringContext::LoweringContext(
     torch::lazy::Util::EmissionMap emit_status)
     : torch::lazy::LoweringContext(name, device, {}, emit_status),
       builder_(name),
-      num_computation_partitions_(1),
       stack_frame_index_builder_(std::make_shared<StackFrameIndexBuilder>()) {
   for (auto node : post_order) {
     LowerNode(node);
@@ -133,7 +131,6 @@ xla::XlaOp LoweringContext::GetParameter(
       xla::OpSharding sharding = data->GetSharding();
       xla::XlaScopedShardingAssignment scoped_sharding(builder(), sharding);
       param = xla::Parameter(builder(), param_index, shape, param_name);
-      UpdateNumPartitions(param);
     } else {
       param = xla::Parameter(builder(), param_index, shape, param_name);
     }
@@ -257,28 +254,6 @@ XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node* node) {
         mutable_dims->Set(dim, kUnboundedSize);
       }
     }
-    std::for_each(result_ops.begin(), result_ops.end(),
-                  [this](xla::XlaOp xla_op) {
-                    UpdateNumPartitions(xla_op);  // Calling the member function
-                  });
-    // for (auto xla_op : result_ops) {
-    //   UpdateNumPartitions(xla_op);
-    //   // std::optional<OpSharding> op_sharding =
-    //   //   ConsumeValue(builder()->GetOpSharding(xla_op));
-    //   // if (op_sharding.has_value()) {
-    //   //   size_t curr_num_partitions =
-    //   //     op_sharding.value().tile_assignment_devices().size();
-    //   //   if (num_computation_partitions_ != 1) {
-    //   //     XLA_CHECK_EQ(curr_num_partitions, num_computation_partitions_)
-    //   <<
-    //   //       "Number of partitions must be the same for all ops in a HLO
-    //   graph.";
-    //   //     continue;
-    //   //   }
-    //   //   num_computation_partitions_ =
-    //   op_sharding.value().tile_assignment_devices().size();
-    //   // }
-    // }
   } catch (const std::exception& ex) {
     ReportBuilderError(node, ex.what());
   }
@@ -347,26 +322,6 @@ torch::lazy::ComputationPtr LoweringContext::Build() {
 
   return std::make_shared<runtime::ComputationClient::Computation>(
       builder_.name(), std::move(xla_computation), device_);
-}
-
-void LoweringContext::UpdateNumPartitions(const xla::XlaOp& op) {
-  std::optional<xla::OpSharding> op_sharding =
-      ConsumeValue(builder()->GetOpSharding(op));
-  if (op_sharding.has_value()) {
-    size_t curr_num_partitions =
-        op_sharding.value().tile_assignment_devices().size();
-    if (curr_num_partitions == 0) {
-      return;
-    }
-    if (num_computation_partitions_ != 1) {
-      XLA_CHECK_EQ(curr_num_partitions, num_computation_partitions_)
-          << "Number of partitions must be the same for all ops in a HLO "
-             "graph.";
-      return;
-    }
-    std::cout << "curr_num_partitions: " << curr_num_partitions << std::endl;
-    num_computation_partitions_ = curr_num_partitions;
-  }
 }
 
 }  // namespace torch_xla
