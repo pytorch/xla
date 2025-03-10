@@ -34,9 +34,6 @@ skiplist = {
     "nn.functional.embedding_bag",
     "nn.functional.fractional_max_pool2d",
     "nn.functional.fractional_max_pool3d",
-    "nn.functional.max_pool1d",
-    "nn.functional.max_pool2d",
-    "nn.functional.max_pool3d",
     "nn.functional.multi_head_attention_forward",
     "normal",
     "ormqr",
@@ -207,7 +204,7 @@ class TestOpInfo(TestCase):
         continue
       check_output = op.name not in random_ops
 
-      #print("[DEBUG] sample_input: ", sample_input)
+      # print("[DEBUG] sample_input: ", sample_input)
 
       # TODO: this is a workaround to skip int64 cast for linspace
       # reference: https://github.com/pytorch/xla/issues/7505#issuecomment-2400895692 and subsequent comments
