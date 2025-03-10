@@ -448,7 +448,6 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
   }
   TF_VLOG(5) << "ShardTensor with sharding type(" << sharding.type()
              << ")... and minibatch = " << minibatch << std::endl;
-  // auto device_index = build_index_map(devices);
   std::vector<at::Tensor> shards(devices.size());
   if (shardings == nullptr || sharding.type() == xla::OpSharding::REPLICATED ||
       sharding.type() == xla::OpSharding::UNKNOWN) {
