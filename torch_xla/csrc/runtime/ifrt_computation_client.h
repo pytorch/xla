@@ -79,7 +79,9 @@ class IfrtComputationClient : public ComputationClient {
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
 
-  size_t GetNumDevices() const override;
+  size_t GetNumLocalDevices() const override;
+
+  size_t GetNumGlobalDevices() const override;
 
   std::string GetDefaultDevice() const override;
 

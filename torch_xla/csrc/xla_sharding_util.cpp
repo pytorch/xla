@@ -85,10 +85,11 @@ std::vector<int64_t> TileAssignmentDimensions(
 // order of the output corresponds to the order of the `devices`, which can be
 // arbitrarily set by the caller.
 std::unordered_map<int, int> build_index_map(
-    const std::vector<std::string>& devices) {
+    const std::vector<std::string>& devices, size_t num_mesh_devices) {
   std::unordered_map<int, int> device_index;
   for (int i = 0; i < devices.size(); ++i) {
-    int global_ordinal = ParseDeviceString(devices[i]).ordinal();
+    int global_ordinal =
+        ParseDeviceString(devices[i]).ordinal() % num_mesh_devices;
     device_index[global_ordinal] = i;
   }
   return device_index;
@@ -371,7 +372,12 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
       shard_indices[i] = std::make_pair(global_ordinal, indices);
     }
   } else if (sharding.type() == xla::OpSharding::OTHER) {
-    auto device_index = build_index_map(devices);
+    size_t num_tiles =
+        std::accumulate(sharding.tile_assignment_dimensions().begin(),
+                        sharding.tile_assignment_dimensions().end(), 1,
+                        [](int a, int b) { return a * b; });
+    std::unordered_map<int, int> device_index =
+        build_index_map(devices, num_tiles);
     std::vector<int64_t> tile_assignment_devices(
         sharding.tile_assignment_devices().begin(),
         sharding.tile_assignment_devices().end());
@@ -442,7 +448,6 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
   }
   TF_VLOG(5) << "ShardTensor with sharding type(" << sharding.type()
              << ")... and minibatch = " << minibatch << std::endl;
-  auto device_index = build_index_map(devices);
   std::vector<at::Tensor> shards(devices.size());
   if (shardings == nullptr || sharding.type() == xla::OpSharding::REPLICATED ||
       sharding.type() == xla::OpSharding::UNKNOWN) {
