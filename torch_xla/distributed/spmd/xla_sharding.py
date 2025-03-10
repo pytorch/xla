@@ -63,12 +63,15 @@ class Mesh:
       device_ids = np.array(device_ids)
     assert (axis_names is None) or (len(mesh_shape) == len(axis_names))
     assert axis_names is None or (len(set(axis_names)) == len(axis_names))
+    # size of device_ids matches mesh_shape
     assert (len(device_ids) == np.prod(mesh_shape))
+    # device ids are unique
     assert len(device_ids) == len(np.unique(device_ids))
+    # device ids are continous
+    assert all(d < self.size() for d in device_ids - np.min(device_ids))
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    # assert all(d < self.size() for d in device_ids)
 
   def size(self):
     return np.prod(self.mesh_shape)
@@ -382,6 +385,15 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
 
 
 def _normalize_logical_mesh(device_mesh: np.ndarray) -> np.ndarray:
+  """
+  Normalize the device mesh to start from 0.
+  
+  This is needed when mesh doesn't include all global devices
+  (e.g. In multi-host setup, each host has a mesh containing local devices).
+  Because HLO graph always use logical device ids in the sharding annotation,
+  we need to normalize the physical device ids to generate the correct HLO
+  sharding annotation.
+  """
   device_id_min = np.min(device_mesh)
   return device_mesh.copy() - device_id_min
 
