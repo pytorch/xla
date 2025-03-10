@@ -67,11 +67,11 @@ class Mesh:
     assert (len(device_ids) == np.prod(mesh_shape))
     # device ids are unique
     assert len(device_ids) == len(np.unique(device_ids))
-    # device ids are continous
-    assert all(d < self.size() for d in device_ids - np.min(device_ids))
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
+    # device ids are continous
+    assert all(d < self.size() for d in device_ids - np.min(device_ids))
 
   def size(self):
     return np.prod(self.mesh_shape)
