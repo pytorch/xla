@@ -21,13 +21,20 @@ from enum import IntEnum
 
 from torch.amp import custom_fwd, custom_bwd
 
+PartitionSpec = Tuple[Union[Tuple[Union[int, str], ...], int, str, None], ...]
+"""
+A partition spec is a tuple where each element describes how the corresponding
+input tensor dimension is sharded across the device mesh.
+"""
+
 
 class Mesh:
   """Describe the logical XLA device topology mesh and the underlying resources.
 
   Args:
-    device_ids (Union[np.ndarray, List]): A raveled list of devices (IDs) in a custom order. The list is reshaped
-        to an `mesh_shape` array, filling the elements using C-like index order.
+    device_ids (Union[np.ndarray, List[int]]): A raveled list of devices (IDs) in a custom order.
+        The list is reshaped to an `mesh_shape` array, filling the elements using C-like index order.
+        Each ID indexes into the list of devices returned by `xr.global_runtime_device_attributes()`.
 
     mesh_shape (Tuple[int, ...]): A int tuple describing the logical topology shape
         of the device mesh, and each element describes the number of devices in
@@ -53,12 +60,12 @@ class Mesh:
 
   device_ids: np.ndarray
   mesh_shape: Tuple[int, ...]
-  axis_names: Tuple[str, ...]
+  axis_names: Optional[Tuple[str, ...]]
 
   def __init__(self,
-               device_ids: Union[np.ndarray, List],
+               device_ids: Union[np.ndarray, List[int]],
                mesh_shape: Tuple[int, ...],
-               axis_names: Tuple[str, ...] = None):
+               axis_names: Optional[Tuple[str, ...]] = None):
     if not isinstance(device_ids, np.ndarray):
       device_ids = np.array(device_ids)
     assert (axis_names is None) or (len(mesh_shape) == len(axis_names))
@@ -89,7 +96,7 @@ class Mesh:
     return self.axis_names.index(name)
 
   @functools.lru_cache(maxsize=None)
-  def _get_op_sharding_args(self, partition_spec: Tuple):
+  def _get_op_sharding_args(self, partition_spec: PartitionSpec):
     partition_spec = _translate_named_partition_spec(self, partition_spec)
     flat_specs = np.hstack([d for d in partition_spec])
     specs = [d for d in flat_specs if d is not None]
@@ -113,8 +120,8 @@ class Mesh:
     return tile_assignment, group_assignment, replication_groups, sharding_type
 
   @functools.lru_cache(maxsize=None)
-  def get_op_sharding(self,
-                      partition_spec: Tuple) -> torch_xla._XLAC.OpSharding:
+  def get_op_sharding(
+      self, partition_spec: PartitionSpec) -> torch_xla._XLAC.OpSharding:
     """
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
@@ -152,7 +159,7 @@ class Mesh:
       return None
 
 
-_GLOBAL_MESH: Mesh = None
+_GLOBAL_MESH: Optional[Mesh] = None
 
 
 def set_global_mesh(mesh: Mesh):
@@ -243,8 +250,8 @@ class HybridMesh(Mesh):
   def __init__(self,
                *,
                ici_mesh_shape: Tuple[int, ...],
-               dcn_mesh_shape: Tuple[int, ...] = None,
-               axis_names: Tuple[str, ...] = None):
+               dcn_mesh_shape: Optional[Tuple[int, ...]] = None,
+               axis_names: Optional[Tuple[str, ...]] = None):
     if dcn_mesh_shape == None:
       dcn_mesh_shape = tuple([1] * len(ici_mesh_shape))
     assert len(ici_mesh_shape) == len(dcn_mesh_shape)
@@ -365,7 +372,7 @@ class ShardingType(IntEnum):
   UNKNOWN = 6  # implicit replication. TODO(yeounoh) wait for auto-sharding support
 
 
-def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
+def _get_sharding_type(partition_spec: PartitionSpec,
                        num_devices: int) -> ShardingType:
   sharding_type = ShardingType.TILED
   if num_devices == 1:
@@ -377,9 +384,8 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
   return sharding_type
 
 
-def _get_tile_assignment(
-    mesh: Mesh, partition_spec: Tuple[Union[Tuple[int], int,
-                                            None]]) -> np.ndarray:
+def _get_tile_assignment(mesh: Mesh,
+                         partition_spec: PartitionSpec) -> np.ndarray:
   """
   Permute the given mesh to create the tile assignment based on the partition
   spec. Returns the tiling assignment as a numpy ndarray.
@@ -445,7 +451,7 @@ def _get_group_assignment(sharding_type: ShardingType,
   return group_assignment, replication_groups
 
 
-def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
+def _translate_named_partition_spec(mesh: Mesh, partition_spec: PartitionSpec):
   _partition_spec = list()
   for p in partition_spec:
     if type(p) is tuple:
@@ -478,9 +484,9 @@ def _mark_manual_sharding(
 
 
 def enable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
-                           partition_spec: Tuple[Union[Tuple, int, str, None]],
+                           partition_spec: PartitionSpec,
                            *,
-                           mesh: Mesh = None) -> XLAShardedTensor:
+                           mesh: Optional[Mesh] = None) -> XLAShardedTensor:
   """
   This API enables manual sharding for the given tensor. Manual sharding disables SPMD sharding proporgation and auto
   partition for the given tensor and all subsequential tensors that produced by an op that uses the given tensor as
@@ -495,10 +501,10 @@ def enable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
 
 
 def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
-                            partition_spec: Tuple[Union[Tuple, int, str, None]],
+                            partition_spec: PartitionSpec,
                             full_shape: torch.Size,
                             *,
-                            mesh: Mesh = None) -> XLAShardedTensor:
+                            mesh: Optional[Mesh] = None) -> XLAShardedTensor:
   """
   This API disables manual sharding for the given tensor. The partition_spec and full_shape are used to construct the
   output tensor as if the input tensor has not been manual sharded.
@@ -511,10 +517,8 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   return wrap_as_sharded_tensor(t)
 
 
-def mark_sharding(
-    t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: Tuple[Union[Tuple, int, str, None],
-                          ...]) -> XLAShardedTensor:
+def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
+                  partition_spec: PartitionSpec) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
@@ -524,7 +528,7 @@ def mark_sharding(
 
         mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.
 
-        partition_spec (Tuple[Tuple, int, str, None]): A tuple of device_mesh dimension index or
+        partition_spec (PartitionSpec): A tuple of device_mesh dimension index or
             `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.
             This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
             When a tuple is specified, the corresponding input tensor axis will be sharded along all
@@ -619,7 +623,7 @@ def wrap_if_sharded(x: Any) -> Any:
 @dataclass
 class ShardingSpec:
   mesh: Mesh
-  partition_spec: Tuple[Union[int, None]]
+  partition_spec: PartitionSpec
   minibatch: Optional[bool] = False
 
   # Derived fields
@@ -1259,7 +1263,7 @@ class MarkShardingFunction(torch.autograd.Function):
 
   @staticmethod
   def forward(ctx, torch_tensor: torch.Tensor, mesh: Mesh,
-              partition_spec: Tuple) -> torch.Tensor:
+              partition_spec: PartitionSpec) -> torch.Tensor:
     mark_sharding(torch_tensor, mesh, partition_spec)
     ctx.partition_spec = partition_spec
     ctx.mesh = mesh
