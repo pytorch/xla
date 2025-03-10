@@ -601,20 +601,18 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       }
 
       // TODO(244391366) verify this is correct for the collectives ops
-      // xla::DeviceAssignment device_assignment(1, client_->device_count());
       xla::DeviceAssignment device_assignment(1, num_partitions);
-      std::cout << "check client_->device_count(): " << client_->device_count()
-                << std::endl;
       // DeviceAssignment values must be the PjRtDevice ID, so we need to
       // unwind the global ordinal mapping.
-      // for (const auto& [device_id, global_ordinal] : global_ordinals_) {
-      //   std::cout << "device_id: " << device_id
-      //             << ", global_ordinal: " << global_ordinal << std::endl;
-      //   device_assignment(0, global_ordinal) = device_id;
-      // }
-      auto local_pjrt_devices = client_->addressable_devices();
-      for (int i = 0; i < local_pjrt_devices.size(); ++i) {
-        device_assignment(0, i) = local_pjrt_devices[i]->id();
+      if (runtime::sys_util::GetEnvBool("XLA_USE_LOCAL_SPMD", false)) {
+        auto local_pjrt_devices = client_->addressable_devices();
+        for (int i = 0; i < local_pjrt_devices.size(); ++i) {
+          device_assignment(0, i) = local_pjrt_devices[i]->id();
+        }
+      } else {
+        for (const auto& [device_id, global_ordinal] : global_ordinals_) {
+          device_assignment(0, global_ordinal) = device_id;
+        }
       }
       compile_options.executable_build_options.set_device_assignment(
           device_assignment);
