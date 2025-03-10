@@ -388,12 +388,13 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
     //     << "Number of tile_assignment_devices must be the number of global "
     //        "devices or local devices, or 0, got unexpected size of "
     //     << tile_assignment_devices.size();
-    size_t num_tiles = std::accumulate(
-      sharding.tile_assignment_dimensions().begin(),
-      sharding.tile_assignment_dimensions().end(), 1, 
-        [](int a, int b) { return a * b; });
+    size_t num_tiles =
+        std::accumulate(sharding.tile_assignment_dimensions().begin(),
+                        sharding.tile_assignment_dimensions().end(), 1,
+                        [](int a, int b) { return a * b; });
     std::cout << "Num local devices " << num_local_devices << std::endl;
-    std::cout << "Num tile assignment size " << tile_assignment_devices.size() << std::endl;
+    std::cout << "Num tile assignment size " << tile_assignment_devices.size()
+              << std::endl;
     std::unordered_map<int, int> device_index =
         build_index_map(devices, num_tiles);
     std::cout << "Check device_index " << std::endl;
