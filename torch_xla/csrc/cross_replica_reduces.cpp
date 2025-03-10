@@ -396,7 +396,11 @@ ReduceScatterResult BuildReduceScatter(
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   TokenHandler token_handler(token);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  // DISABLE_NUMERIC_CC_TOKEN
   xla::XlaOp reduce_result;
+  xla::ChannelHandle channel_handle;
+  channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+  channel_handle.set_handle(4);
   if (pin_layout) {
     torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
@@ -412,7 +416,8 @@ ReduceScatterResult BuildReduceScatter(
     reduce_result = xla::ReduceScatter(
         token_handler.GetInput(input, &input_shape),
         GetReduceComutation(reduce_type, input_shape.element_type()),
-        scatter_dim, shard_count, reduce_groups);
+        scatter_dim, shard_count, reduce_groups, channel_handle, std::nullopt,
+        true);
   }
 
   if (scale != 1.0) {
