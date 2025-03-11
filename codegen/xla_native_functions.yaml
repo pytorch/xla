@@ -97,6 +97,8 @@ full_codegen:
   - tril
   - triu
   - trunc
+# ir_gen, only IR non_native is used to register kernels not declared from
+# this file
 ir_gen:
   - _adaptive_avg_pool2d
   - _adaptive_avg_pool2d_backward
