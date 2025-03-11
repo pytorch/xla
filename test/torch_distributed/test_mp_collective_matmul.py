@@ -14,6 +14,9 @@ import torch_xla.debug.profiler as xp
 intermediate_size = 28672
 hidden_size = 8192
 token_size = 1024
+state_dict_path = "ffn_state_dict.pt"
+input_path = "ffn_input.pt"
+xla_out_path = "ffn_xla_out.pt"
 
 class FFN(nn.Module):
 
@@ -33,35 +36,77 @@ class FFN(nn.Module):
     return x
 
 
+def load_state_dict_shard(model, state_dict, index, world_size):
+  fc1_full = state_dict['fc1.weight']
+  fc2_full = state_dict['fc2.weight']
+
+  per_chip_col_size = intermediate_size // world_size
+  per_chip_row_size = intermediate_size // world_size
+
+  col_parallel_start_idx = index * per_chip_col_size
+  col_parallel_end_idx = col_parallel_start_idx + per_chip_col_size
+  row_parallel_start_idx = index * per_chip_row_size
+  row_parallel_end_idx = row_parallel_start_idx + per_chip_row_size
+  model.fc1.weight.data = fc1_full[
+      col_parallel_start_idx:col_parallel_end_idx, :]
+  model.fc2.weight.data = fc2_full[:,
+                                  row_parallel_start_idx:row_parallel_end_idx]
+  return model
+
+
+def master_print(*msg):
+  index = xr.global_ordinal()
+  if index == 0:
+    print(*msg)
+
+
+def load_input(input_full, index, world_size):
+  total_seq_len = input_full.shape[0]
+  local_seq_len = total_seq_len // world_size
+  idx_start = index * local_seq_len
+  idx_end = idx_start + local_seq_len
+  return input_full[idx_start:idx_end]
+
+
 def _mp_fn(index):
   device = xm.xla_device()
   world_size = xr.world_size()
-  rank = xr.global_ordinal()
-  # server = xp.start_server(9012)  # noqa: F841
+  index = xr.global_ordinal()
+  server = xp.start_server(9012)  # noqa: F841
 
   # Profile
   profile_dir = "profiles"
-  print(f"Profiling (results will be saved to '{profile_dir}')...")
+  master_print(f"Profiling (results will be saved to '{profile_dir}')...")
   # Enable tracing on server
-  # xp.trace_detached("localhost:9012",
-  #                   profile_dir,
-  #                   delay_ms=0,
-  #                   duration_ms=10000)
-  # time.sleep(1.0)
+  xp.trace_detached("localhost:9012",
+                    profile_dir,
+                    delay_ms=0,
+                    duration_ms=10000)
+  time.sleep(1.0)
 
   dist.init_process_group('xla', init_method='xla://')
 
-  with torch.device(device):
-    model = FFN(world_size, hidden_size, intermediate_size)
-    input = torch.randn((token_size // world_size, hidden_size), dtype=torch.bfloat16)
+  model = FFN(world_size, hidden_size, intermediate_size)
+  model = load_state_dict_shard(model, torch.load(state_dict_path), index, world_size)
+  model = model.to(device)
+  input = torch.load(input_path)
+  input = load_input(input, index, world_size)
+  input = input.to(device)
   xm.mark_step()
-  # compiled_model = torch.compile(model, backend="openxla", fullgraph=True, dynamic=False)
 
-  for _ in range(16):
-    output = model(input)
-    xm.mark_step()
+  with torch.no_grad():
+    for _ in range(16):
+      collective_matmul_output = model(input)
+      xm.mark_step()
+      xm.wait_device_ops()
 
-  xm.wait_device_ops()
+  collective_matmul_output = collective_matmul_output.cpu()
+  expected_xla_out = torch.load(xla_out_path)
+  expected_xla_local_shard = load_input(expected_xla_out, index, world_size)
+  master_print(f"expected_xla_out shape: {expected_xla_local_shard.shape}")
+  master_print(f"collective_matmul_output shape: {collective_matmul_output.shape}")
+  master_print(torch.allclose(collective_matmul_output, expected_xla_local_shard, rtol=2e-2, atol=2e-2))
+
 
 if __name__ == '__main__':
   torch_xla.launch(_mp_fn, args=())

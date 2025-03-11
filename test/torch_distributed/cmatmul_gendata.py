@@ -1,14 +1,15 @@
 import torch
 import torch_xla
 from torch import nn
+import torch.nn.init as init
 
 # intermediate_size = 28672
 # hidden_size = 8192
 # token_size = 1024
 
-intermediate_size = 16
-hidden_size = 8
-token_size = 8
+intermediate_size = 28672
+hidden_size = 8192
+token_size = 1024
 
 torch.manual_seed(123)
 
@@ -25,11 +26,13 @@ class FFN(nn.Module):
     x = self.fc2(x)
     return x
 
-# input = torch.randn((token_size, hidden_size), dtype=torch.bfloat16)
-input = torch.ones((token_size, hidden_size), dtype=torch.bfloat16)
+def init_weights(m):
+  if isinstance(m, nn.Linear):
+    init.xavier_uniform_(m.weight)
+
+input = torch.randn((token_size, hidden_size), dtype=torch.bfloat16)
 m = FFN(hidden_size, intermediate_size)
-# m.fc1.weight.data = (torch.arange(hidden_size * intermediate_size) - 64).reshape(intermediate_size, hidden_size).to(torch.bfloat16)
-# m.fc2.weight.data = (torch.arange(hidden_size * intermediate_size) - 64).reshape(hidden_size, intermediate_size).to(torch.bfloat16)
+m.apply(init_weights)
 torch.save(m.state_dict(), "ffn_state_dict.pt")
 torch.save(input, "ffn_input.pt")
 
