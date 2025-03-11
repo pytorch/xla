@@ -824,10 +824,10 @@ def computation_from_module_proto(name, proto):
 def get_computation_hlo(computation):
   return torch_xla._XLAC._xla_computation_text(computation)
 
-  
+
 class XlaComputation:
-  
-  def __init__(self, name, hlo_proto, flattened_inputs):
+
+  def __init__(self, name, hlo_module, flattened_inputs):
     self.num_inputs = len(flattened_inputs)
     builder = create_builder(name)
     computation = computation_from_module_proto(name, hlo_module)
@@ -841,7 +841,8 @@ class XlaComputation:
 
   def __call__(self, input_list):
     result = torch_xla._XLAC._xla_user_computation(f'xla::call_jax_{self.name}',
-                                                  input_list, self.call_computation)
+                                                   input_list,
+                                                   self.call_computation)
     if isinstance(result, list) and len(result) == 1:
       return result[0]
     return result
