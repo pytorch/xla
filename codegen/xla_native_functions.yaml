@@ -1,5 +1,9 @@
 backend: XLA
 cpp_namespace: torch_xla
+# full_codegen is the prefered method of codegenration. Through this config
+# ops get implementations (and IR classes) generated. See
+# https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md
+# for more details on differences on what gets generated or not.
 full_codegen:
   - acos
   - acosh
@@ -104,6 +108,11 @@ ir_gen:
   - bitwise_or.Tensor
   - bitwise_xor.Tensor
   - leaky_relu_backward
+# supported requires the ops to have hand-implementations but still get
+# codegenned declarations and registrations. This follows closer the
+# instructions from docs/source/contribute/op_lowering.md and the codegen
+# pattern from https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md#pytorchxla-old-op-lowering-files.
+# Prefer using codegen.
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -398,7 +407,7 @@ supported:
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
   # Note: [Disabling functionalization]
-  # The ops below are no longer needed when functionalization is enabled. 
+  # The ops below are no longer needed when functionalization is enabled.
   # However, we sometimes may want to disable functionalization (A/B testing,
   # debugging, etc). The ops below exist only to disable functionalization,
   # new features/functionalities should not depend on these ops.
