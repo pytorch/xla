@@ -34,19 +34,6 @@
 
 namespace torch_xla {
 
-// Macro for defining a function that will be run at static initialization time
-// to define a library of operators in the namespace. Used to define a new set
-// of custom operators that do not already exist in PyTorch.
-TORCH_LIBRARY_FRAGMENT(xla, m) {
-  m.def(
-      "xla_mark_sharding_dynamo_custom_op(Tensor input, int[][] "
-      "tile_assignment, int[][] group_assignment, int[][] replication_groups, "
-      "int sharding_type) -> ()",
-      torch::dispatch(
-          c10::DispatchKey::XLA,
-          TORCH_FN(torch_xla::ShardingUtil::XlaMarkShardingDynamoCustomOp)));
-}
-
 namespace {
 
 using xla::internal::XlaBuilderFriend;
@@ -844,44 +831,6 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
 
   // Register sharded tensor data.
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
-}
-
-void ShardingUtil::XlaMarkShardingDynamoCustomOp(
-    const at::Tensor& input, c10::List<at::IntArrayRef> tile_assignment,
-    c10::List<at::IntArrayRef> group_assignment,
-    c10::List<at::IntArrayRef> replication_groups, int64_t sharding_type) {
-  py::list tile_assignment_py = py::list();
-  for (int i = 0; i < tile_assignment.size(); i++) {
-    py::list pylist = py::list();
-    for (int64_t t : tile_assignment[i].get().toIntList()) {
-      pylist.append(t);
-    }
-    tile_assignment_py.append(pylist);
-  }
-
-  py::list group_assignment_py = py::list();
-  for (int i = 0; i < group_assignment.size(); i++) {
-    py::list pylist = py::list();
-    for (int64_t t : group_assignment[i].get().toIntList()) {
-      pylist.append(t);
-    }
-    group_assignment_py.append(pylist);
-  }
-
-  py::list replication_groups_py = py::list();
-  for (int i = 0; i < replication_groups.size(); i++) {
-    py::list pylist = py::list();
-    for (int64_t t : replication_groups[i].get().toIntList()) {
-      pylist.append(t);
-    }
-    replication_groups_py.append(pylist);
-  }
-
-  xla::OpSharding op_sharding = ShardingUtil::CreateOpSharding(
-      tile_assignment_py, group_assignment_py, replication_groups_py,
-      ShardingUtil::ShardingType(sharding_type));
-
-  ShardingUtil::XlaMarkSharding(input, op_sharding);
 }
 
 void ShardingUtil::SetAutoSharding() {
