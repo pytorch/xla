@@ -825,15 +825,32 @@ def get_computation_hlo(computation):
   return torch_xla._XLAC._xla_computation_text(computation)
 
 
-def call_jax(jax_func, args, kwargs=None, name=None):
-  """
-  Call a JAX function `jax_func` with the given `args` and `kwargs` that may contain
-  XLA tensors.
-  """
+class XlaComputation:
 
+  def __init__(self, name, hlo_module, flattened_inputs):
+    self.num_inputs = len(flattened_inputs)
+    builder = create_builder(name)
+    computation = computation_from_module_proto(name, hlo_module)
+    params = []
+    for idx, val in enumerate(flattened_inputs):
+      params.append(mkparam(builder, idx, tensor_shape(val)))
+    call_op = Op.call(computation, params)
+    call_computation = call_op.build('call_jax')
+    self.call_computation = call_computation
+    self.name = name
+
+  def __call__(self, input_list):
+    result = torch_xla._XLAC._xla_user_computation(f'xla::call_jax_{self.name}',
+                                                   input_list,
+                                                   self.call_computation)
+    if isinstance(result, list) and len(result) == 1:
+      return result[0]
+    return result
+
+
+def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
   if name is None:
     name = 'jax_func_' + jax_func.__name__
-  kwargs = kwargs or {}
 
   # If we don't do this before calling jax, any torch_xla operation will hang.
   jax_import_guard()
@@ -855,19 +872,20 @@ def call_jax(jax_func, args, kwargs=None, name=None):
   hlo_module = jax.jit(fn_flattened_inputs).lower(
       *sample_input_shapes).compiler_ir(
           'hlo').as_serialized_hlo_module_proto()  # type: ignore
-  computation = computation_from_module_proto(name, hlo_module)
 
-  builder = create_builder(name)
-  params = []
-  for idx, val in enumerate(flattened):
-    params.append(mkparam(builder, idx, tensor_shape(val)))
-  call_op = Op.call(computation, params)
-  call_computation = call_op.build('call_jax')
-  result = torch_xla._XLAC._xla_user_computation(f'xla::call_jax_{name}',
-                                                 flattened, call_computation)
-  if isinstance(result, list) and len(result) == 1:
-    return result[0]
-  return result
+  return XlaComputation(name, hlo_module, flattened)
+
+
+def call_jax(jax_func, args, kwargs=None, name=None):
+  """
+  Call a JAX function `jax_func` with the given `args` and `kwargs` that may contain
+  XLA tensors.
+  """
+
+  kwargs = kwargs or {}
+  flattened, _spec = tree_flatten((args, kwargs))
+  xla_computation = jax_func_to_xla_computation(jax_func, args, kwargs, name)
+  return xla_computation(flattened)
 
 
 def create_placeholder_tensor(shape, dtype):
