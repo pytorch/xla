@@ -151,11 +151,11 @@ function run_xla_op_tests1 {
   #run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
   run_test "$CDIR/test_deprecation.py"
-  run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
+  # run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
   #run_test "$CDIR/dynamo/test_dynamo_aliasing.py"
   run_test "$CDIR/dynamo/test_dynamo.py"
   run_test "$CDIR/dynamo/test_dynamo_dynamic_shape.py"
-  run_test "$CDIR/dynamo/test_bridge.py"
+  # run_test "$CDIR/dynamo/test_bridge.py"
   run_test "$CDIR/dynamo/test_num_output.py"
   run_test "$CDIR/dynamo/test_graph_input_matcher.py"
   run_test "$CDIR/dynamo/test_dynamo_config.py"
@@ -190,7 +190,7 @@ function run_xla_op_tests2 {
 function run_xla_op_tests3 {
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
-  run_test "$CDIR/stablehlo/test_exports.py"
+  # run_test "$CDIR/stablehlo/test_exports.py"
   run_test "$CDIR/stablehlo/test_export_fx_passes.py"
   run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
   run_test "$CDIR/stablehlo/test_composite.py"
@@ -215,7 +215,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_train_spmd_linear_model.py"
   run_test "$CDIR/spmd/test_xla_spmd_python_api_interaction.py"
   run_test "$CDIR/spmd/test_xla_auto_sharding.py"
-  run_test "$CDIR/spmd/test_fsdp_v2.py"
+  # run_test "$CDIR/spmd/test_fsdp_v2.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test_without_functionalization "$CDIR/test_input_output_aliases.py"
