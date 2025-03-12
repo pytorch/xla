@@ -161,7 +161,8 @@ def _extract_backend_config(
 @contextmanager
 def _jax_env_context():
   try:
-    previous_skip_megascale_env = os.environ.get('SKIP_MEGASCALE_PJRT_CLIENT', None)
+    previous_skip_megascale_env = os.environ.get('SKIP_MEGASCALE_PJRT_CLIENT',
+                                                 None)
     os.environ['SKIP_MEGASCALE_PJRT_CLIENT'] = 'true'
     yield
   finally:
