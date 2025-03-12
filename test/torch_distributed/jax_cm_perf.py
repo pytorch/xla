@@ -15,9 +15,9 @@ import time
 
 
 class RandomTensorDataset:
-    def __init__(self, bs, num_tokens, input_dim, output_dim, element_count, seed=0, sharding=None):
-        self.tensor_shape = (bs, num_tokens, input_dim)
-        self.label_shape = (bs, num_tokens, output_dim)
+    def __init__(self, num_tokens, input_dim, output_dim, element_count, seed=0, sharding=None):
+        self.tensor_shape = (num_tokens, input_dim)
+        self.label_shape = (num_tokens, output_dim)
         self.element_count = element_count
         self.sharding = sharding
         
@@ -43,6 +43,7 @@ class FeedForwardNetwork(nn.Module):
     output_dim: int
     mesh: Mesh
     use_bias: bool = False
+    use_cm: bool = True
     
     def setup(self):
         self.dense1 = nn.Dense(
@@ -59,20 +60,22 @@ class FeedForwardNetwork(nn.Module):
             dtype=jnp.bfloat16,
         )
         
-        self.dense3 = nn.Dense(
-            features=self.hidden_dim,
-            use_bias=self.use_bias,
-            kernel_init=nn.initializers.normal(stddev=0.02),
-            dtype=jnp.bfloat16,
-        )
+        # self.dense3 = nn.Dense(
+        #     features=self.hidden_dim,
+        #     use_bias=self.use_bias,
+        #     kernel_init=nn.initializers.normal(stddev=0.02),
+        #     dtype=jnp.bfloat16,
+        # )
         
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         h1 = self.dense1(x)
-        h3 = self.dense3(x)
-        h = jax.nn.silu(h1 * h3)
-        # h = jax.lax.with_sharding_constraint(h, NamedSharding(self.mesh, P('batch', None, 'model')))
+        # h3 = self.dense3(x)
+        h = jax.nn.silu(h1)
+        if self.use_cm:
+            h = jax.lax.with_sharding_constraint(h, NamedSharding(self.mesh, P(None, 'x')))
         h = self.dense2(h)
-        # h = jax.lax.with_sharding_constraint(h, NamedSharding(self.mesh, P('batch', None, None)))
+        if self.use_cm:
+            h = jax.lax.with_sharding_constraint(h, NamedSharding(self.mesh, P('x', None)))
         return h
 
 class StackedFFN(nn.Module):
@@ -81,6 +84,7 @@ class StackedFFN(nn.Module):
     output_dim: int
     mesh: Mesh
     use_bias: bool = False
+    use_cm: bool = True
     
     def setup(self):
         self.layers = [
@@ -89,20 +93,14 @@ class StackedFFN(nn.Module):
                 output_dim=self.output_dim,
                 use_bias=self.use_bias,
                 mesh=self.mesh,
+                use_cm=self.use_cm,
             )
             for _ in range(self.num_layers)
         ]
-        # self.out_proj = nn.Dense(
-        #     features=self.out_channels,
-        #     use_bias=self.use_bias,
-        #     kernel_init=nn.initializers.normal(stddev=0.02),
-        # )
     
     def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
         for layer in self.layers:
             x = layer(x)
-        # x = self.out_proj(x)
-        # x = jax.lax.with_sharding_constraint(x, NamedSharding(self.mesh, P('batch', None, None)))
         return x
 
 
@@ -112,33 +110,30 @@ def print_hlo(f, args, post_opt=False):
     else:
         print(f.lower(*args).as_text("hlo"))
 
-def main(num_layers=5, profile_path="profiles"):
+def main(num_layers=4, profile_path="profiles", use_cm = True):
     # Model configuration
     # model_axis = 4
-    batch_size = 128
-    seq_length = 512
+    seq_length = 1024
     feature_dim = 8192
     hidden_dim = 28672
     # feature_dim = 512
     # hidden_dim = 1024
     num_layers = num_layers
-    num_steps = 10
+    num_steps = 5
 
     # Mesh
-    mesh = jax.make_mesh((jax.device_count(), 1), ('x', 'y'))
-    
-    # data_parallel_sharding = NamedSharding(mesh, P('batch', None, None))
-    
+    mesh = jax.make_mesh((jax.device_count(), ), ('x', ))
+        
     # Create model
     model = StackedFFN(
         num_layers=num_layers,
         hidden_dim=hidden_dim,
         output_dim=feature_dim,
-        mesh=mesh
+        mesh=mesh,
+        use_cm=use_cm,
     )
     
-    dataset = RandomTensorDataset(batch_size,
-                                  seq_length,
+    dataset = RandomTensorDataset(seq_length,
                                   feature_dim,
                                   feature_dim,
                                   element_count=num_steps*2, # Init more data
@@ -156,35 +151,31 @@ def main(num_layers=5, profile_path="profiles"):
         layer_name = 'layers_' + str(i)
         print(params['params'][layer_name]['dense1']['kernel'].shape)
         print(params['params'][layer_name]['dense2']['kernel'].shape)
-        print(params['params'][layer_name]['dense3']['kernel'].shape)
+        # print(params['params'][layer_name]['dense3']['kernel'].shape)
         k1 = params['params'][layer_name]['dense1']['kernel']
         params['params'][layer_name]['dense1']['kernel'] = jax.device_put(k1, NamedSharding(mesh, P(None, 'x')))
         k2 = params['params'][layer_name]['dense2']['kernel']
         params['params'][layer_name]['dense2']['kernel'] = jax.device_put(k2, NamedSharding(mesh, P('x', None)))
-        k3 = params['params'][layer_name]['dense3']['kernel']
-        params['params'][layer_name]['dense3']['kernel'] = jax.device_put(k3, NamedSharding(mesh, P(None, 'x')))
+        # k3 = params['params'][layer_name]['dense3']['kernel']
+        # params['params'][layer_name]['dense3']['kernel'] = jax.device_put(k3, NamedSharding(mesh, P(None, 'x')))
     
     @jax.jit
     def run_model(params, x):
         predictions = model.apply(params, x)
         return predictions
     
-    print_hlo(run_model, (params, dummy_x), post_opt=True)
+    # print_hlo(run_model, (params, dummy_x), post_opt=True)
     dummy_inputs = []
     for i in range(num_steps):
         x, _ = next(dataset_iter)
-        x = jax.device_put(x, NamedSharding(mesh, P(None, 'x', None)))
+        # delete the following line to disable collective matmul optimization
+        if use_cm:
+            x = jax.device_put(x, NamedSharding(mesh, P('x', None)))
         dummy_inputs.append(x)
-    # dummy_x = jax.device_put(dummy_x, NamedSharding(mesh, P('x', None, None)))
     with jax.profiler.trace(profile_path):
         for i in range(num_steps):
             start = time.time()
-            # x, y = next(dataset_iter)
-            # x, y = (dummy_x, dummy_y)
             output = run_model(params, dummy_inputs[i])
-            # params, opt_state = train_step(params, x, y, opt_state)
-            # print(params['params']['layers_0']['dense1']['kernel'].sharding)
-            # print(grads['params']['layers_0']['dense1']['kernel'].sharding)
             jax.block_until_ready(output)
             print(f"Step {i}: step time {time.time() - start}")
 
