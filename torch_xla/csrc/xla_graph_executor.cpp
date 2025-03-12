@@ -213,7 +213,9 @@ void XLAGraphExecutor::DeviceContextArena::SaveOutputShapes(
 }
 
 size_t XLAGraphExecutor::DeviceContextArena::GetNumGraphHash() const {
-  return XLAGraphExecutor::Get()->GetComputationCache()->GetInMemoryCacheSize();
+  return XLAGraphExecutor::Get()
+      ->GetComputationCache()
+      ->GetNumInMemoryCachedGraph();
 }
 
 std::string XLAGraphExecutor::DeviceContextArena::GetGraphByHash(

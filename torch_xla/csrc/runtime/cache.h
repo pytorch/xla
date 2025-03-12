@@ -25,7 +25,7 @@ class AbstractCache {
   using TypePtr = std::shared_ptr<T>;
   virtual TypePtr Add(K key, TypePtr object) = 0;
   virtual TypePtr Get(const K& key) = 0;
-  virtual size_t GetInMemoryCacheSize() const = 0;
+  virtual size_t GetNumInMemoryCachedGraph() const = 0;
   virtual bool Erase(const K& key) = 0;
   virtual void Clear() = 0;
 };
@@ -74,7 +74,9 @@ class Cache : public AbstractCache<K, T, H, E> {
     return it->second->second;
   }
 
-  size_t GetInMemoryCacheSize() const override { return element_list_.size(); }
+  size_t GetNumInMemoryCachedGraph() const override {
+    return element_list_.size();
+  }
 
   bool Erase(const K& key) override {
     std::lock_guard<std::mutex> slock(lock_);
@@ -194,8 +196,8 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
     return memory_cache_.Add(key, val);
   }
 
-  size_t GetInMemoryCacheSize() const override {
-    return memory_cache_.GetInMemoryCacheSize();
+  size_t GetNumInMemoryCachedGraph() const override {
+    return memory_cache_.GetNumInMemoryCachedGraph();
   }
 
   void Clear() override {
