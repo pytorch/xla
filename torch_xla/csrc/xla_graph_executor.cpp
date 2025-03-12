@@ -196,26 +196,30 @@ void XLAGraphExecutor::DeviceContextArena::SaveGraphAsString(
           "XLA_SAVE_TENSORS_FILE", "", bridge::GetCurrentDevice().ordinal()) !=
       "";
   if (should_save_graph &&
-      hash_to_graph_map.find(hash) == hash_to_graph_map.end()) {
+      hash_to_graph_map_.find(hash) == hash_to_graph_map_.end()) {
     std::stringstream ss;
     ss << DebugUtil::GetTensorsGraphInfo(tensors, indices, format);
     ss << "Graph Hash: " << torch::lazy::HashToString(hash)
        << "\n\n## END_GRAPH\n\n";
-    hash_to_graph_map[hash] = ss.str();
+    hash_to_graph_map_[hash] = ss.str();
   }
 }
 
 void XLAGraphExecutor::DeviceContextArena::SaveOutputShapes(
     torch::lazy::hash_t hash, std::vector<xla::Shape> output_shapes) {
-  if (hash_to_output_shape_map.find(hash) == hash_to_output_shape_map.end()) {
-    hash_to_output_shape_map[hash] = std::move(output_shapes);
+  if (hash_to_output_shape_map_.find(hash) == hash_to_output_shape_map_.end()) {
+    hash_to_output_shape_map_[hash] = std::move(output_shapes);
   }
+}
+
+size_t XLAGraphExecutor::DeviceContextArena::GetNumGraphHash() const {
+  return XLAGraphExecutor::Get()->GetComputationCache()->GetInMemoryCacheSize();
 }
 
 std::string XLAGraphExecutor::DeviceContextArena::GetGraphByHash(
     torch::lazy::hash_t hash) {
-  auto iter = hash_to_graph_map.find(hash);
-  if (iter == hash_to_graph_map.end()) {
+  auto iter = hash_to_graph_map_.find(hash);
+  if (iter == hash_to_graph_map_.end()) {
     TF_LOG(INFO) << "Trying to dump graph with an invalid hash";
     return "";
   }
@@ -225,8 +229,8 @@ std::string XLAGraphExecutor::DeviceContextArena::GetGraphByHash(
 std::vector<xla::Shape>*
 XLAGraphExecutor::DeviceContextArena::GetOutputShapesByHash(
     torch::lazy::hash_t hash) {
-  auto iter = hash_to_output_shape_map.find(hash);
-  XLA_CHECK(iter != hash_to_output_shape_map.end())
+  auto iter = hash_to_output_shape_map_.find(hash);
+  XLA_CHECK(iter != hash_to_output_shape_map_.end())
       << "Hash not found, can't retrive output shape";
   return &(iter->second);
 }
@@ -495,6 +499,10 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
                       async != nullptr ? &async->indices : nullptr);
 }
 
+size_t XLAGraphExecutor::GetNumGraphHash() const {
+  return DeviceContextArena::Get()->GetNumGraphHash();
+}
+
 torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
     const std::vector<XLATensorPtr>& tensors) {
   SyncTensorsConfig config;
@@ -741,7 +749,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       /*program_shape=*/&(cachedComputation->computation->program_shape()));
 
   // Create DataPlaceHolder that will get filled in async executions.
-  std::vector<xla::Shape>* output_shapes =
+  const std::vector<xla::Shape>* output_shapes =
       DeviceContextArena::Get()->GetOutputShapesByHash(hash);
   std::vector<torch::lazy::BackendDataPtr> placeholders;
 

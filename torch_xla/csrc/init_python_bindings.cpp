@@ -1892,6 +1892,8 @@ void InitXlaModuleBindings(py::module m) {
         []() { return runtime::GetComputationClient()->GetProcessIndex(); });
   m.def("_xla_get_num_processes",
         []() { return runtime::GetComputationClient()->GetNumProcesses(); });
+  m.def("_xla_get_num_cached_compilation_graph",
+        []() -> int64_t { return XLAGraphExecutor::Get()->GetNumGraphHash(); });
   m.def("_xla_get_device_ordinal", [](const std::string& device_str) {
     return bridge::AtenDeviceToXlaDevice(device_str).ordinal();
   });
