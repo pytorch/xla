@@ -1,3 +1,4 @@
+import weakref
 from absl.testing import absltest
 
 import torch
@@ -51,6 +52,43 @@ class TestJaxInterop(absltest.TestCase):
             dtype=torch.float32,
         ),
         check_device=False)
+
+  def test_call_jax_avoid_repeated_tracing(self):
+    """
+    Test that repeatedly calling `call_jax` with the same function does
+    not lead to repeated tracing and jitting, which would be detrimental
+    to performance.
+    """
+
+    dev = xm.xla_device()
+    a = torch.ones((3, 3), device=dev)
+
+    def f(a, b):
+      return a + b
+
+    # See documentation on `_fn_flattened_inputs` for this attribute.
+    starting_trace_count = getattr(xb._fn_flattened_inputs, '_num_traces', 0)
+    starting_cached_hlo_count = len(xb._JAX_HLO_CACHE)
+    for _ in range(10):
+      a = xb.call_jax(f, (a, a))
+      torch_xla.sync()
+    ending_trace_count = getattr(xb._fn_flattened_inputs, '_num_traces', 0)
+    ending_cached_hlo_count = len(xb._JAX_HLO_CACHE)
+
+    # `f` is only traced once.
+    self.assertEqual(starting_trace_count + 1, ending_trace_count)
+    self.assertEqual(starting_cached_hlo_count + 1, ending_cached_hlo_count)
+
+    # Now let's define a different function and trace that.
+    def g(a, b):
+      return a * b
+
+    a = xb.call_jax(g, (a, a))
+    torch_xla.sync()
+    new_trace_count = getattr(xb._fn_flattened_inputs, '_num_traces', 0)
+    new_cached_hlo_count = len(xb._JAX_HLO_CACHE)
+    self.assertEqual(starting_trace_count + 2, new_trace_count)
+    self.assertEqual(starting_cached_hlo_count + 2, new_cached_hlo_count)
 
 
 if __name__ == "__main__":

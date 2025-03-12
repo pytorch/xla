@@ -1,6 +1,7 @@
+import weakref
 import torch
 import torch_xla
-from torch.utils._pytree import tree_flatten, tree_unflatten
+from torch.utils._pytree import tree_iter
 from torch_xla.experimental.custom_kernel import jax_import_guard
 
 
@@ -856,22 +857,30 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
   jax_import_guard()
 
   import jax
+  from jax.tree_util import tree_flatten
   import torchax.ops.mappings as mappings
 
   flattened, spec = tree_flatten((args, kwargs))
-
-  def fn_flattened_inputs(*flattened):
-    args, kwargs = tree_unflatten(flattened, spec)
-    return jax_func(*args, **kwargs)
-
   sample_input_shapes = tuple(
       jax.ShapeDtypeStruct(a.shape, mappings.t2j_dtype(a.dtype))
       for a in flattened)
-  # `as_serialized_hlo_module_proto` is mentioned at
-  # https://github.com/jax-ml/jax/discussions/22266
-  hlo_module = jax.jit(fn_flattened_inputs).lower(
-      *sample_input_shapes).compiler_ir(
-          'hlo').as_serialized_hlo_module_proto()  # type: ignore
+
+  # TODO: this will leak `jax_func` due to https://github.com/jax-ml/jax/issues/16226.
+  # This won't be a big problem if people define their `jax_func` in module scope,
+  # but may cause OOMs if their `jax_func` is local and captures tensors by closure.
+  # If we would like to fix this leak, we'll need our own jit cache where a weak ref
+  # to `jax_func` is used as the key.
+  traced = jax.jit(
+      _fn_flattened_inputs, static_argnames=['jax_func', 'spec']).trace(
+          *sample_input_shapes, jax_func=jax_func, spec=spec)
+
+  hlo_module = _JAX_HLO_CACHE.get(traced, None)
+  if hlo_module is None:
+    # `as_serialized_hlo_module_proto` is mentioned at
+    # https://github.com/jax-ml/jax/discussions/22266
+    hlo_module = traced.lower().compiler_ir(
+        'hlo').as_serialized_hlo_module_proto()  # type: ignore
+    _JAX_HLO_CACHE[traced] = hlo_module
 
   return XlaComputation(name, hlo_module, flattened)
 
@@ -883,9 +892,23 @@ def call_jax(jax_func, args, kwargs=None, name=None):
   """
 
   kwargs = kwargs or {}
-  flattened, _spec = tree_flatten((args, kwargs))
   xla_computation = jax_func_to_xla_computation(jax_func, args, kwargs, name)
-  return xla_computation(flattened)
+  return xla_computation(list(tree_iter((args, kwargs))))
+
+
+def _fn_flattened_inputs(*flattened, jax_func, spec):
+  # Debugging: we can read this counter to check how many times
+  # `jax.jit` traced this function.
+  num_traces = getattr(_fn_flattened_inputs, '_num_traces', 0)
+  num_traces += 1
+  setattr(_fn_flattened_inputs, '_num_traces', num_traces)
+
+  from jax.tree_util import tree_unflatten
+  args, kwargs = tree_unflatten(spec, flattened)
+  return jax_func(*args, **kwargs)
+
+
+_JAX_HLO_CACHE = weakref.WeakKeyDictionary()
 
 
 def create_placeholder_tensor(shape, dtype):
