@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git53b3ab8 )
+                  master (2.7.0+gitbdf30f6 )
                 </div>
               
             
@@ -727,6 +727,18 @@
   <span class="c1"># the cache.</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;XLA_PERSISTENT_CACHE_PATH&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;XLA_PERSISTENT_CACHE_READ_ONLY&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1&#39;</span> <span class="k">if</span> <span class="n">readonly</span> <span class="k">else</span> <span class="s1">&#39;0&#39;</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_num_cached_compilation_graph</span><span class="p">():</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the number of cached compilation graph hash.</span>
+<span class="sd">  </span>
+<span class="sd">  When persistent cache is used, returns the number of in-memory cached</span>
+<span class="sd">  compilation graph hash. When there is a look up in the persistent cache,</span>
+<span class="sd">  it will look up the in-memory cache first, and if it is not found, it will</span>
+<span class="sd">  look up the on-disk cache. If there is a cache hit in the on-disk cache,</span>
+<span class="sd">  the compilation graph will be fetched into the in-memory cache.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_num_cached_compilation_graph</span><span class="p">()</span>
 </pre></div>
 
              </article>
