@@ -252,7 +252,7 @@ function run_op_tests {
 function run_mp_op_tests {
   run_test "$CDIR/test_mp_replication.py"
   #run_test "$CDIR/test_mp_all_to_all.py"
-  run_test "$CDIR/test_mp_collective_permute.py"
+  PJRT_DEVICE=NEURON NEURONCORE_NUM_DEVICES=8 run_test "$CDIR/test_mp_collective_permute.py"
   #run_test "$CDIR/test_mp_all_gather.py"  # "wrong reductions"?
   run_test "$CDIR/test_mp_reduce_scatter.py"
   run_test "$CDIR/test_zero1.py"
