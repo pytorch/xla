@@ -2265,7 +2265,7 @@ void InitXlaModuleBindings(py::module m) {
         output->SetShardingSpec(XLATensor::ShardingSpec(sharding, full_shape));
         return bridge::AtenFromXlaTensor(output);
       });
-  m.def("_xla_clear_sharding", [](const at::Tensor& input2) {
+  m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xtensor->ClearShardingSpec();
   });
