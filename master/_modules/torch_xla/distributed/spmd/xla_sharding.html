@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+gitbdf30f6 )
+                  master (2.7.0+gitc969276 )
                 </div>
               
             
@@ -1682,27 +1682,59 @@
 <span class="sd">  of the intermediate tensors during backward pass.</span>
 
 <span class="sd">  Usage:</span>
-<span class="sd">  new_tensor = MarkShardingFunction.apply(tensor, mesh, (&#39;axis_1&#39;, &#39;axis_2&#39;))</span>
+
+<span class="sd">  &gt;&gt;&gt; new_tensor = MarkShardingFunction.apply(tensor, mesh, (&#39;axis_1&#39;, &#39;axis_2&#39;))</span>
 
 <span class="sd">  This is required to guide GSPMD sharding propagation better during the</span>
 <span class="sd">  backward pass as during complicated workloads the compiler can introduce extra</span>
 <span class="sd">  collectives that can hurt performance.</span>
+
+<span class="sd">  Compared to `mark_sharding`, this version will not in-place shard input tensors.</span>
+<span class="sd">  Instead it takes in an unsharded tensor and returns a new tensor that is sharded.</span>
+<span class="sd">  After GSPMD sharding propagation in the compiler, both tensors will become sharded.</span>
+
+<span class="sd">  This version can also be used in AOTAutograd.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="nd">@staticmethod</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">torch_tensor</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
-              <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-    <span class="n">mark_sharding</span><span class="p">(</span><span class="n">torch_tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+              <span class="n">partition_spec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="n">o</span> <span class="o">=</span> <span class="n">_aot_mark_sharding</span><span class="p">(</span><span class="n">torch_tensor</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">mesh</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">))</span>
     <span class="n">ctx</span><span class="o">.</span><span class="n">partition_spec</span> <span class="o">=</span> <span class="n">partition_spec</span>
     <span class="n">ctx</span><span class="o">.</span><span class="n">mesh</span> <span class="o">=</span> <span class="n">mesh</span>
-    <span class="k">return</span> <span class="n">torch_tensor</span>
+    <span class="k">return</span> <span class="n">o</span>
 
   <span class="nd">@staticmethod</span>
-  <span class="k">def</span><span class="w"> </span><span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">backward</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>  <span class="c1"># type: ignore</span>
     <span class="n">partition_spec</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">partition_spec</span>
     <span class="n">mesh</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">mesh</span>
-    <span class="n">mark_sharding</span><span class="p">(</span><span class="n">grad_output</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">grad_output</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="n">o</span> <span class="o">=</span> <span class="n">_aot_mark_sharding</span><span class="p">(</span><span class="n">grad_output</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">mesh</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">o</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+
+<span class="nd">@torch</span><span class="o">.</span><span class="n">library</span><span class="o">.</span><span class="n">custom_op</span><span class="p">(</span><span class="s2">&quot;xla::aot_mark_sharding&quot;</span><span class="p">,</span> <span class="n">mutates_args</span><span class="o">=</span><span class="p">())</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_aot_mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="n">partition_spec</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+  <span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+  <span class="kn">import</span><span class="w"> </span><span class="nn">ast</span>
+
+  <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xs</span>
+
+  <span class="n">the_mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="o">.</span><span class="n">from_str</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">the_mesh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+  <span class="n">partition_spec_eval</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">literal_eval</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">clone</span><span class="p">(),</span> <span class="n">the_mesh</span><span class="p">,</span>
+                          <span class="n">partition_spec_eval</span><span class="p">)</span><span class="o">.</span><span class="n">global_tensor</span>
+
+
+<span class="nd">@_aot_mark_sharding</span><span class="o">.</span><span class="n">register_fake</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">aot_mark_sharding_fake</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">partition_spec</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+  <span class="k">if</span> <span class="n">t</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="kc">None</span>
+  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
 </pre></div>
 
              </article>
