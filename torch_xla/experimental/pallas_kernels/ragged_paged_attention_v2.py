@@ -32,13 +32,20 @@ class MultiPageAsyncCopyDescriptor:
   ):
     self._vmem_buf = vmem_buf
     seq_id, kv_pages_start = offset
-    self._async_copies = [
-        pltpu.make_async_copy(
-            pages_hbm_ref.at[page_indices_ref[seq_id, kv_pages_start + i]],
-            vmem_buf.at[i],
-            sem,
-        ) for i in range(vmem_buf.shape[0])
-    ]
+    pages_per_seq = page_indices_ref.shape[1]
+    self._async_copies = []
+    # TODO(jevinjiang): Only fetch dynamic shape in need! This will insert
+    # a bunch of if-ops. Check the performance when we have benchmarking setup.
+    for i in range(vmem_buf.shape[0]):
+      page_idx = kv_pages_start + i
+      page_idx = jax.lax.select(page_idx < pages_per_seq, page_idx,
+                                pages_per_seq - 1)
+      self._async_copies.append(
+          pltpu.make_async_copy(
+              pages_hbm_ref.at[page_indices_ref[seq_id, page_idx]],
+              vmem_buf.at[i],
+              sem,
+          ))
 
   def start(self):
     """Starts the async copies."""
@@ -240,6 +247,15 @@ def ragged_paged_attention_kernel(
     b = jnp.right_shift(b, bw * b_offset)
     b = jnp.left_shift(b, bw * (packing - 1))
     return pltpu.bitcast(b, jnp.float32).astype(jnp.bfloat16)
+
+  def fold_on_2nd_minor(vec):
+    assert vec.dtype == jnp.bfloat16 or vec.dtype == jnp.float32
+    assert len(vec.shape) >= 2
+    last_dim = vec.shape[-1]
+    packing = get_dtype_packing(vec.dtype)
+    if vec.shape[-2] % packing != 0:
+      vec = vec.astype(jnp.float32)
+    return vec.reshape(-1, last_dim)
 
   @pl.when(heads_blk_idx + q_blk_idx == 0)
   def prefetch_first_kv_blk():
@@ -453,9 +469,8 @@ def ragged_paged_attention_kernel(
         q_head_idx = kv_head_idx * num_q_heads_per_kv_head
         # TODO(jevinjiang): extra handlig for packed type that can start at
         # unaligned position!
-        q = q_ref[:,
-                  q_head_idx:q_head_idx + num_q_heads_per_kv_head, :].reshape(
-                      -1, head_dim)
+        q = fold_on_2nd_minor(q_ref[:, q_head_idx:q_head_idx +
+                                    num_q_heads_per_kv_head, :])
         k = strided_load_kv(k_ref, kv_head_idx, num_kv_heads_per_blk)
         v = strided_load_kv(v_ref, kv_head_idx, num_kv_heads_per_blk)
         flash_attention(
