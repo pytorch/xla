@@ -1,6 +1,6 @@
 from .xla_sharded_tensor import XLAShard, XLAShardedTensor
 from .xla_sharding import (Mesh, HybridMesh, ShardingType, ShardingSpec,
-                           XLAPatchedLinear, mark_sharding, clear_sharding,
+                           XLAPatchedLinear, mark_sharding, mark_sharding_with_gradients, clear_sharding,
                            get_1d_mesh, wrap_if_sharded,
                            xla_patched_nn_linear_forward, set_global_mesh,
                            get_global_mesh, _mark_manual_sharding,
@@ -19,6 +19,7 @@ __all__ = [
     "XLAPatchedLinear",
     "MarkShardingFunction"
     "mark_sharding",
+    "mark_sharding_with_gradients",
     "clear_sharding",
     "get_1d_mesh",
     "wrap_if_sharded",
