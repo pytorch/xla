@@ -1250,24 +1250,56 @@ class MarkShardingFunction(torch.autograd.Function):
   of the intermediate tensors during backward pass.
 
   Usage:
-  new_tensor = MarkShardingFunction.apply(tensor, mesh, ('axis_1', 'axis_2'))
+
+  >>> new_tensor = MarkShardingFunction.apply(tensor, mesh, ('axis_1', 'axis_2'))
 
   This is required to guide GSPMD sharding propagation better during the
   backward pass as during complicated workloads the compiler can introduce extra
   collectives that can hurt performance.
+
+  Compared to `mark_sharding`, this version will not in-place shard input tensors.
+  Instead it takes in an unsharded tensor and returns a new tensor that is sharded.
+  After GSPMD sharding propagation in the compiler, both tensors will become sharded.
+
+  This version can also be used in AOTAutograd.
   """
 
   @staticmethod
   def forward(ctx, torch_tensor: torch.Tensor, mesh: Mesh,
-              partition_spec: Tuple) -> torch.Tensor:
-    mark_sharding(torch_tensor, mesh, partition_spec)
+              partition_spec) -> torch.Tensor:
+    o = _aot_mark_sharding(torch_tensor, str(mesh), str(partition_spec))
     ctx.partition_spec = partition_spec
     ctx.mesh = mesh
-    return torch_tensor
+    return o
 
   @staticmethod
-  def backward(ctx, grad_output: torch.Tensor) -> torch.Tensor:
+  def backward(ctx, grad_output: torch.Tensor):  # type: ignore
     partition_spec = ctx.partition_spec
     mesh = ctx.mesh
-    mark_sharding(grad_output, mesh, partition_spec)
-    return grad_output, None, None
+    o = _aot_mark_sharding(grad_output, str(mesh), str(partition_spec))
+    return o, None, None
+
+
+@torch.library.custom_op("xla::aot_mark_sharding", mutates_args=())
+def _aot_mark_sharding(t: torch.Tensor, mesh: str,
+                       partition_spec: str) -> torch.Tensor:
+  if t is None:
+    return None
+
+  import ast
+
+  import torch_xla.distributed.spmd as xs
+
+  the_mesh = xs.Mesh.from_str(mesh)
+  assert the_mesh is not None
+  partition_spec_eval = ast.literal_eval(partition_spec)
+  return xs.mark_sharding(t.clone(), the_mesh,
+                          partition_spec_eval).global_tensor
+
+
+@_aot_mark_sharding.register_fake
+def aot_mark_sharding_fake(t: torch.Tensor, mesh: str,
+                           partition_spec: str) -> torch.Tensor:
+  if t is None:
+    return None
+  return torch.empty_like(t)
