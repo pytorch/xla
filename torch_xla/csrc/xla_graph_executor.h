@@ -89,13 +89,17 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // Override to use our own DeviceContextArena.
   torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device) final;
+
   void SetRngSeed(const torch::lazy::BackendDevice& device,
                   uint64_t seed) final;
+
   uint64_t GetRunningSeed(const torch::lazy::BackendDevice& device) final;
+
   torch::lazy::BackendDataPtr GetBaseSeedData(
       const torch::lazy::BackendDevice& device);
 
   void SetAliasWithBufferDonorConfig(bool enable_alias);
+
   bool GetAliasWithBufferDonorConfig();
 
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
@@ -143,6 +147,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // Retrieves the PyTorch CPU tensors behind the XLA tensors IR operations.
   // All the tensors must be on the same device.
   std::vector<at::Tensor> GetTensors(std::vector<XLATensorPtr>* tensors);
+
+  size_t GetNumGraphHash() const;
 
   // We don't use the upstream GetGraphHash as XLATensorPtr is used instead.
   torch::lazy::hash_t GetGraphHash(const std::vector<XLATensorPtr>& tensors);
@@ -239,18 +245,11 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::BackendDataPtr GetBaseSeedData(
         const torch::lazy::BackendDevice& device);
 
-    void SetAliasWithBufferDonorConfig(bool enable_alias) {
-      enable_user_config_aliasing = enable_alias;
+    bool GetAliasWithBufferDonorConfig() {
+      return enable_user_config_aliasing_;
     }
-    bool GetAliasWithBufferDonorConfig() { return enable_user_config_aliasing; }
 
-    void SaveGraphAsString(
-        torch::lazy::hash_t hash, absl::Span<const XLATensorPtr> tensors,
-        const std::vector<size_t>* indices,
-        DebugUtil::GraphFormat format = DebugUtil::GetDefaultGraphFormat());
-
-    void SaveOutputShapes(torch::lazy::hash_t hash,
-                          std::vector<xla::Shape> outptu_shapes);
+    size_t GetNumGraphHash() const;
 
     std::string GetGraphByHash(torch::lazy::hash_t hash);
 
@@ -260,19 +259,32 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     // signle threaded.
     std::vector<xla::Shape>* GetOutputShapesByHash(torch::lazy::hash_t hash);
 
+    void SetAliasWithBufferDonorConfig(bool enable_alias) {
+      enable_user_config_aliasing_ = enable_alias;
+    }
+
+    void SaveGraphAsString(
+        torch::lazy::hash_t hash, absl::Span<const XLATensorPtr> tensors,
+        const std::vector<size_t>* indices,
+        DebugUtil::GraphFormat format = DebugUtil::GetDefaultGraphFormat());
+
+    void SaveOutputShapes(torch::lazy::hash_t hash,
+                          std::vector<xla::Shape> outptu_shapes);
+
    private:
-    // Below two maps are used for dynamo integration.
-    std::unordered_map<torch::lazy::hash_t, std::string,
-                       torch::lazy::HashReducer>
-        hash_to_graph_map;
-    std::unordered_map<torch::lazy::hash_t, std::vector<xla::Shape>,
-                       torch::lazy::HashReducer>
-        hash_to_output_shape_map;
     // We override this to use TensorToXlaData().
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,
         const torch::lazy::BackendDevice& device) final;
-    bool enable_user_config_aliasing = false;
+
+    // Below two maps are used for dynamo integration.
+    std::unordered_map<torch::lazy::hash_t, std::string,
+                       torch::lazy::HashReducer>
+        hash_to_graph_map_;
+    std::unordered_map<torch::lazy::hash_t, std::vector<xla::Shape>,
+                       torch::lazy::HashReducer>
+        hash_to_output_shape_map_;
+    bool enable_user_config_aliasing_ = false;
   };
 
   XLAGraphExecutor() = default;

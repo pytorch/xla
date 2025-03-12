@@ -246,6 +246,7 @@ function run_xla_op_tests3 {
   run_test_without_functionalization "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
   run_torchrun "$CDIR/pjrt/test_torchrun.py"
+  run_test "$CDIR/test_compilation_cache_utils.py"
   run_test "$CDIR/test_persistent_cache.py"
   run_test "$CDIR/test_devices.py"
   run_device_detection_test "$CDIR/test_gpu_device_detection.py"

@@ -53,6 +53,7 @@ python3 "$TEST_CDIR/torch_distributed/test_torch_distributed_reduce_scatter_xla_
 python3 "$TEST_CDIR/quantized_ops/test_dot_general.py"
 run_xla_ir_hlo_debug python3 "$TEST_CDIR/test_user_computation_debug_cache.py"
 python3 "$TEST_CDIR/test_data_type.py"
+python3 "$TEST_CDIR/test_compilation_cache_utils.py"
 
 # run examples, each test should takes <2 minutes
 python3 "$TEST_CDIR/../examples/data_parallel/train_resnet_spmd_data_parallel.py"

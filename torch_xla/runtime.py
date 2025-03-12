@@ -295,3 +295,15 @@ def initialize_cache(path: str, readonly: bool = False):
   # the cache.
   os.environ['XLA_PERSISTENT_CACHE_PATH'] = path
   os.environ['XLA_PERSISTENT_CACHE_READ_ONLY'] = '1' if readonly else '0'
+
+
+def get_num_cached_compilation_graph():
+  """Returns the number of cached compilation graph hash.
+  
+  When persistent cache is used, returns the number of in-memory cached
+  compilation graph hash. When there is a look up in the persistent cache,
+  it will look up the in-memory cache first, and if it is not found, it will
+  look up the on-disk cache. If there is a cache hit in the on-disk cache,
+  the compilation graph will be fetched into the in-memory cache.
+  """
+  return torch_xla._XLAC._xla_get_num_cached_compilation_graph()
