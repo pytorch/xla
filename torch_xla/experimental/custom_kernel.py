@@ -161,10 +161,15 @@ def _extract_backend_config(
 @contextmanager
 def _jax_env_context():
   try:
+    previous_skip_megascale_env = os.environ.get('SKIP_MEGASCALE_PJRT_CLIENT',
+                                                 None)
     os.environ['SKIP_MEGASCALE_PJRT_CLIENT'] = 'true'
     yield
   finally:
-    os.environ.pop('SKIP_MEGASCALE_PJRT_CLIENT', None)
+    if previous_skip_megascale_env:
+      os.environ['SKIP_MEGASCALE_PJRT_CLIENT'] = previous_skip_megascale_env
+    else:
+      os.environ.pop('SKIP_MEGASCALE_PJRT_CLIENT', None)
 
 
 def requires_jax(func: Callable) -> Callable:
