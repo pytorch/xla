@@ -848,10 +848,9 @@ class XlaComputation:
     return result
 
 
-def jax_func_to_xla_computation(jax_func, args, kwargs=None, name=None):
+def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
   if name is None:
     name = 'jax_func_' + jax_func.__name__
-  kwargs = kwargs or {}
 
   # If we don't do this before calling jax, any torch_xla operation will hang.
   jax_import_guard()
@@ -874,7 +873,7 @@ def jax_func_to_xla_computation(jax_func, args, kwargs=None, name=None):
       *sample_input_shapes).compiler_ir(
           'hlo').as_serialized_hlo_module_proto()  # type: ignore
 
-  xla_computation = XlaComputation(name, hlo_module, flattened)
+  return XlaComputation(name, hlo_module, flattened)
 
 
 def call_jax(jax_func, args, kwargs=None, name=None):
@@ -883,6 +882,8 @@ def call_jax(jax_func, args, kwargs=None, name=None):
   XLA tensors.
   """
 
+  kwargs = kwargs or {}
+  flattened, _spec = tree_flatten((args, kwargs))
   xla_computation = jax_func_to_xla_computation(jax_func, args, kwargs, name)
   return xla_computation(flattened)
 
