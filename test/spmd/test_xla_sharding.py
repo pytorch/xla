@@ -836,6 +836,10 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
 
+  def _check_sharding_annotation(self, tensor, sharding_annotation):
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
+    self.assertIn(sharding_annotation, hlo)
+
   @unittest.skipUnless(xr.global_runtime_device_count() > 1,
                        "Multiple devices required for autograd sharding test")
   def test_mark_sharding_autograd(self):
@@ -849,9 +853,56 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     t = y.sum()
     # Backward pass
     t.backward()
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo([z.grad])
-    sharding_annotation = 'sharding={devices=[1,%d]' % self.n_devices
-    self.assertIn(sharding_annotation, hlo)
+    self._check_sharding_annotation(z.grad,
+                                    'sharding={devices=[1,%d]' % self.n_devices)
+
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for autograd sharding test")
+  def test_mark_sharding_aot_compile(self):
+    mesh = self._get_mesh((self.n_devices,))
+
+    def my_fn(x):
+      z = torch.sin(x)
+      y = MarkShardingFunction.apply(z, mesh, (0,))
+      return y + 42
+
+    from functorch.compile import aot_function, make_boxed_func  # type: ignore
+
+    x = torch.randn(8)
+    x = x.to('xla').requires_grad_(True)
+
+    graphs = []
+
+    def get_graph(gm: torch.fx.GraphModule, _):
+      graphs.append(gm)
+      return make_boxed_func(gm)
+
+    y = aot_function(my_fn, get_graph)(x)
+    t = y.sum()
+    t.backward()
+    torch_xla.sync()
+
+    sharding_spec = '{devices=[%d]' % self.n_devices
+
+    # Check that the output has sharding.
+    self.assertIn(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(y))
+
+    # Check that the gradient has sharding.
+    self.assertIsNotNone(x.grad)
+    self.assertIn(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(x.grad))
+
+    # Check that the AOTAutograd captured graphs also each contains a mark_sharding.
+    fwd, bwd = graphs
+
+    inp = torch.randn(8).to('xla').requires_grad_(False)
+    out, *residuals = fwd(inp)
+    self._check_sharding_annotation(out,
+                                    'sharding={devices=[%d]' % self.n_devices)
+
+    tangents = torch.randn(8).to('xla').requires_grad_(False)
+    out, = bwd(*residuals, tangents)
+    self._check_sharding_annotation(out,
+                                    'sharding={devices=[%d]' % self.n_devices)
 
   def test_sharded_tensor_aliasing(self):
     met.clear_all()
