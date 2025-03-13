@@ -144,13 +144,6 @@ class ShardingUtil {
 
   static void SetAutoSharding();
   static bool GetAutoSharding();
-
-  //////////////////////////// Dynamo Integration ////////////////////////////
-
-  static void XlaMarkShardingDynamoCustomOp(
-      const at::Tensor& input, c10::List<at::IntArrayRef> tile_assignment,
-      c10::List<at::IntArrayRef> group_assignment,
-      c10::List<at::IntArrayRef> replication_groups, int64_t sharding_type);
 };
 
 }  // namespace torch_xla
