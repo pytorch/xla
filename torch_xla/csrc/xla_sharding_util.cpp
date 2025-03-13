@@ -88,6 +88,11 @@ std::unordered_map<int, int> build_index_map(
     const std::vector<std::string>& devices, size_t num_mesh_devices) {
   std::unordered_map<int, int> device_index;
   for (int i = 0; i < devices.size(); ++i) {
+    // The global ordianl here is the device's ordinal in the mesh, which is
+    // can be different from the physical device index.
+    // We only support 2 cases here:
+    // 1. Mesh contains all global devices.
+    // 2. Mesh contains only local devices. (in multi-host scenario)
     int global_ordinal =
         ParseDeviceString(devices[i]).ordinal() % num_mesh_devices;
     device_index[global_ordinal] = i;
