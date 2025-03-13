@@ -4,8 +4,19 @@ As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean
 up the existing stub code (which spans over 6+ files) that were used to
 do the op lowering. The complete process and file structure for the old
 op lowering can be found in the op lowering guide :ref:\'op-lowering\'.
-Replacing the supported op with the codegen SHOULD NOT introduce any new
-behavior, it is purely for the clean up purpose.
+
+Information on the different configurations for operations can be found in
+[`codegen/xla_native_functions.yaml`](https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml).
+Replacing a supported op(under the `supported` config) with an codegen
+equivalent(under the `full_codegen` config) SHOULD NOT introduce any new
+behavior, it is purely for the clean up purpose. Operations under other
+configurations might have different behavior. See
+[`codegen/xla_native_functions.yaml`](https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml)
+for info on other configs.
+
+Understanding dispatching in PyTorch is quite important for codegen.
+[Exyang's Blog post](https://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/)
+is a great source to catch-up on the topic.
 
 ## Before you start
 
@@ -131,7 +142,7 @@ at::Tensor XLANativeFunctions::abs(const at::Tensor& self) {
 ### 2. Codegen the op and inspect the generated file
 
 Find the op in `xla/codegen/xla_native_functions.yaml` and move it to
-the full_codegen column and run `python setup.py install` under xla
+the `full_codegen` column and run `python setup.py install` under xla
 directory again. The build will fail (reason explained later in this
 guide) but you can still see the generated file. 
 
