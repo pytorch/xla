@@ -869,8 +869,9 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
       for a in flattened)
   # `as_serialized_hlo_module_proto` is mentioned at
   # https://github.com/jax-ml/jax/discussions/22266
-  hlo_module = jax.jit(fn_flattened_inputs).lower(
-      *sample_input_shapes).compiler_ir(
+  hlo_module = jax.jit(
+      fn_flattened_inputs,
+      keep_unused=True).lower(*sample_input_shapes).compiler_ir(
           'hlo').as_serialized_hlo_module_proto()  # type: ignore
 
   return XlaComputation(name, hlo_module, flattened)
