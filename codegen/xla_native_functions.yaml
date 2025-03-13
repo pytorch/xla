@@ -97,8 +97,8 @@ full_codegen:
   - tril
   - triu
   - trunc
-# ir_gen, only IR non_native is used to register kernels not declared from
-# this file
+# ir_gen: Operations in ir_gen generate only the declaration of their respective
+# lazy IR node classes. Their native functions are not generated.
 ir_gen:
   - _adaptive_avg_pool2d
   - _adaptive_avg_pool2d_backward
@@ -110,8 +110,8 @@ ir_gen:
   - bitwise_or.Tensor
   - bitwise_xor.Tensor
   - leaky_relu_backward
-# supported requires the ops to have hand-implementations but still get
-# codegenned declarations and registrations. This follows closer the
+# supported requires the ops to have hand-implemented everything but the native
+# function's declaration and registration. This follows closer the
 # instructions from docs/source/contribute/op_lowering.md and the codegen
 # pattern from https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md#pytorchxla-old-op-lowering-files.
 # Prefer using codegen.
