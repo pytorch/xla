@@ -1220,6 +1220,7 @@ def _ceil_mode_padding(
     input_shape: list[int],
     kernel_size: list[int],
     stride: list[int],
+    dilation: list[int],
     ceil_mode: bool,
 ):
   """Creates low and high padding specification for the given padding (which is symmetric) and ceil mode.
@@ -1232,9 +1233,12 @@ def _ceil_mode_padding(
     right_padding = left_padding
 
     input_size = input_shape[2 + i]
-    output_size_rem = (input_size + 2 * left_padding - kernel_size[i]) % stride[
-        i
-    ]
+    output_size_rem = (
+        input_size
+        + 2 * left_padding
+        - (kernel_size[i]-1) * dilation[i]
+        - 1
+    ) % stride[i]
     if ceil_mode and output_size_rem != 0:
       extra_padding = stride[i] - output_size_rem
       new_output_size = (
@@ -1242,7 +1246,7 @@ def _ceil_mode_padding(
           + left_padding
           + right_padding
           + extra_padding
-          - kernel_size[i]
+          - (kernel_size[i]-1) * dilation[i] - 1
           + stride[i]
           - 1
       ) // stride[i] + 1
@@ -1259,29 +1263,35 @@ def _ceil_mode_padding(
 @op(torch.ops.aten.max_pool2d_with_indices)
 @op(torch.ops.aten.max_pool3d_with_indices)
 def _aten_max_pool2d_with_indices(
-  inputs, kernel_size, strides, padding=0, dilation=1, ceil_mode=False
+  inputs, kernel_size, strides=None, padding=0, dilation=1, ceil_mode=False
 ):
   num_batch_dims = len(inputs.shape) - len(kernel_size) - 1
   kernel_size = tuple(kernel_size)
-  strides = tuple(strides)
+  # Default stride is kernel_size
+  strides = tuple(strides) if strides else kernel_size
   if isinstance(padding, int):
     padding = [padding for _ in range(len(kernel_size))]
+  if isinstance(dilation, int):
+    dilation = tuple(dilation for _ in range(len(kernel_size)))
+  elif isinstance(dilation, list):
+    dilation = tuple(dilation)
 
   input_shape = inputs.shape
   if num_batch_dims == 0:
     input_shape = [1, *input_shape]
   padding = _ceil_mode_padding(
-      padding, input_shape, kernel_size, strides, ceil_mode
+      padding, input_shape, kernel_size, strides, dilation, ceil_mode
   )
 
-  window_shape = kernel_size
-  num_batch_dims = inputs.ndim - (len(window_shape) + 1)
-  strides = strides or (1,) * len(window_shape)
-  assert len(window_shape) == len(
+  assert len(kernel_size) == len(
     strides
-  ), f"len({window_shape}) must equal len({strides})"
+  ), f"len({kernel_size=}) must equal len({strides=})"
+  assert len(kernel_size) == len(
+    dilation
+  ), f"len({kernel_size=}) must equal len({dilation=})"
   strides = (1,) * (1 + num_batch_dims) + strides
-  dims = (1,) * (1 + num_batch_dims) + window_shape
+  dims = (1,) * (1 + num_batch_dims) + kernel_size
+  dilation = (1,) * (1 + num_batch_dims) + dilation
 
   is_single_input = False
   if num_batch_dims == 0:
@@ -1290,26 +1300,29 @@ def _aten_max_pool2d_with_indices(
     inputs = inputs[None]
     strides = (1,) + strides
     dims = (1,) + dims
+    dilation = (1,) + dilation
     is_single_input = True
 
   assert inputs.ndim == len(dims), f"len({inputs.shape}) != len({dims})"
   if not isinstance(padding, str):
     padding = tuple(map(tuple, padding))
-    assert len(padding) == len(window_shape), (
+    assert len(padding) == len(kernel_size), (
       f"padding {padding} must specify pads for same number of dims as "
-      f"window_shape {window_shape}"
+      f"kernel_size {kernel_size}"
     )
     assert all(
       [len(x) == 2 for x in padding]
     ), f"each entry in padding {padding} must be length 2"
     padding = ((0, 0), (0, 0)) + padding
 
-  indices = jnp.arange(np.prod(inputs.shape)).reshape(inputs.shape)
+  indices = jnp.arange(np.prod(inputs.shape[-len(kernel_size):]))
+  indices = indices.reshape(inputs.shape[-len(kernel_size):])
+  indices = jnp.broadcast_to(indices, inputs.shape)
 
   def reduce_fn(a, b):
     ai, av = a
     bi, bv = b
-    which = av > bv
+    which = av >= bv  # torch breaks ties in favor of later indices
     return jnp.where(which, ai, bi), jnp.where(which, av, bv)
 
   init_val = -jnp.inf
@@ -1321,10 +1334,16 @@ def _aten_max_pool2d_with_indices(
   # the indices tensor is usually unused in inference, separating the two 
   # can help DCE computations for argmax.
   y = jax.lax.reduce_window(
-      inputs, init_val, jax.lax.max, dims, strides, padding
+      inputs, init_val, jax.lax.max, dims, strides, padding, window_dilation=dilation
   )
   indices, _ = jax.lax.reduce_window(
-      (indices, inputs), (0, init_val), reduce_fn, dims, strides, padding
+      (indices, inputs),
+      (0, init_val),
+      reduce_fn,
+      dims,
+      strides,
+      padding,
+      window_dilation=dilation,
   )
   if is_single_input:
     indices = jnp.squeeze(indices, axis=0)
@@ -2060,7 +2079,7 @@ def _aten_avg_pool(
   if num_batch_dims == 0:
     input_shape = [1, *input_shape]
   padding = _ceil_mode_padding(padding, input_shape, kernel_size, strides,
-                               ceil_mode)
+                               [1] * len(kernel_size), ceil_mode)
 
   y = pool(inputs, 0.0, jax.lax.add, kernel_size, strides, padding)
   if divisor_override is not None:

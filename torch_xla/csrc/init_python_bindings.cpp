@@ -2267,35 +2267,6 @@ void InitXlaModuleBindings(py::module m) {
         output->SetShardingSpec(XLATensor::ShardingSpec(sharding, full_shape));
         return bridge::AtenFromXlaTensor(output);
       });
-  m.def("_xla_mark_sharding_dynamo_custom_op",
-        [](const at::Tensor& input, const py::list& tile_assignment,
-           const py::list& group_assignment, const py::list& replication_groups,
-           int sharding_type) {
-          c10::List<at::IntArrayRef> tile_assignment_list =
-              c10::List<at::IntArrayRef>();
-          for (auto t : tile_assignment) {
-            tile_assignment_list.push_back(
-                at::IntArrayRef(t.cast<std::vector<int64_t>>()));
-          }
-
-          c10::List<at::IntArrayRef> group_assignment_list =
-              c10::List<at::IntArrayRef>();
-          for (auto t : group_assignment) {
-            group_assignment_list.push_back(
-                at::IntArrayRef(t.cast<std::vector<int64_t>>()));
-          }
-
-          c10::List<at::IntArrayRef> replication_groups_list =
-              c10::List<at::IntArrayRef>();
-          for (auto t : replication_groups) {
-            replication_groups_list.push_back(
-                at::IntArrayRef(t.cast<std::vector<int64_t>>()));
-          }
-
-          ShardingUtil::XlaMarkShardingDynamoCustomOp(
-              input, tile_assignment_list, group_assignment_list,
-              replication_groups_list, sharding_type);
-        });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xtensor->ClearShardingSpec();
