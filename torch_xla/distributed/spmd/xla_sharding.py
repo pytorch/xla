@@ -1,25 +1,25 @@
 import collections
-from collections.abc import Generator, MutableMapping
-import math
-from collections import OrderedDict, defaultdict
-from dataclasses import dataclass, field
-import torch
-from torch import Tensor
-from torch.library import custom_op
-import torch_xla
-import torch_xla.core.xla_model as xm
-import torch_xla._internal.utils as _utils
-from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
-import torch_xla.runtime as xr
-import torch_xla.debug.profiler as xp
-
-import numpy as np
 import functools
 import itertools
-from typing import Tuple, Union, List, Sequence, Any, Optional, Set
+import math
+import os
+from collections import OrderedDict, defaultdict
+from collections.abc import Generator, MutableMapping
+from dataclasses import dataclass, field
 from enum import IntEnum
+from typing import Any, List, Optional, Sequence, Set, Tuple, Union
 
-from torch.amp import custom_fwd, custom_bwd
+import numpy as np
+import torch
+import torch_xla
+import torch_xla._internal.utils as _utils
+import torch_xla.core.xla_model as xm
+import torch_xla.debug.profiler as xp
+import torch_xla.runtime as xr
+from torch import Tensor
+from torch.amp import custom_bwd, custom_fwd
+from torch.library import custom_op
+from torch_xla.distributed.spmd import XLAShard, XLAShardedTensor
 
 
 class Mesh:
@@ -71,15 +71,16 @@ class Mesh:
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
     # device ids are continous
-    if min(device_ids) != 0:
-      # Mesh doesn't contain all global devices. Only creating a mesh with local
-      # devices is supported.
+    if os.environ['XLA_USE_LOCAL_SPMD'] == '1':
+      # In local SPMD mesh only contains local devices.
       min_device_idx = xr.process_index() * xr.addressable_runtime_device_count(
       )
-      assert min_device_idx == min(
+      assert min_device_idx == np.min(
           device_ids
       ), "If not creating a mesh with all global devices, must use local devices."
-    assert all(d < self.size() for d in device_ids)
+      assert all(d < self.size() for d in device_ids - np.min(device_ids))
+    else:
+      assert all(d < self.size() for d in device_ids)
 
   def size(self):
     return np.prod(self.mesh_shape)
@@ -151,6 +152,7 @@ class Mesh:
   def from_str(cls, mesh_str: str) -> Optional["Mesh"]:
     """Create Mesh from string representation."""
     import ast
+
     import numpy as np
     try:
       dict_str = mesh_str.replace('Mesh', '')
