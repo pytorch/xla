@@ -1547,12 +1547,13 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                        device=xm.xla_device(),
                        requires_grad=True)
     mesh = self._get_mesh((1, self.n_devices))
+    # Notice that the function does not modify in-place.
     xst1 = xs.mark_sharding_with_gradients(xt1, mesh, partition_spec)
     output = xst1.sum()
     output.backward()
     self.assertTrue(xt1.grad is not None)
-    hlo_t = torch_xla._XLAC._get_xla_tensors_hlo([xt1])
-    hlo_grad = torch_xla._XLAC._get_xla_tensors_hlo([xt1.grad])
+    hlo_t = torch_xla._XLAC._get_xla_tensors_hlo([xst1])
+    hlo_grad = torch_xla._XLAC._get_xla_tensors_hlo([xst1.grad])
     sharding_annotation_pattern = r"sharding={([^}]*)}"
     sharding_annotation_t = re.search(sharding_annotation_pattern,
                                       hlo_t).group(1)
