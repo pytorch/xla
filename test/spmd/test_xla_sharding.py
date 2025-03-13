@@ -1527,12 +1527,12 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     torch.testing.assert_close(wg1, wg2)
     torch.testing.assert_close(bg1, bg2)
 
-
   def test_mark_sharding_with_gradients_basic(self):
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
-                        dtype=torch.float,
-                        device=xm.xla_device(), requires_grad=True)
+                       dtype=torch.float,
+                       device=xm.xla_device(),
+                       requires_grad=True)
     mesh = self._get_mesh((1, self.n_devices))
     xst1 = xs.mark_sharding_with_gradients(xt1, mesh, partition_spec)
     output = xst1.sum()
@@ -1543,8 +1543,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
   def test_mark_sharding_with_gradients_annotation(self):
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
-                        dtype=torch.float,
-                        device=xm.xla_device(), requires_grad=True)
+                       dtype=torch.float,
+                       device=xm.xla_device(),
+                       requires_grad=True)
     mesh = self._get_mesh((1, self.n_devices))
     xst1 = xs.mark_sharding_with_gradients(xt1, mesh, partition_spec)
     output = xst1.sum()
@@ -1553,10 +1554,12 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     hlo_t = torch_xla._XLAC._get_xla_tensors_hlo([xt1])
     hlo_grad = torch_xla._XLAC._get_xla_tensors_hlo([xt1.grad])
     sharding_annotation_pattern = r"sharding={([^}]*)}"
-    sharding_annotation_t = re.search(sharding_annotation_pattern, hlo_t).group(1)
-    sharding_annotation_grad = re.search(sharding_annotation_pattern, hlo_grad).group(1)
+    sharding_annotation_t = re.search(sharding_annotation_pattern,
+                                      hlo_t).group(1)
+    sharding_annotation_grad = re.search(sharding_annotation_pattern,
+                                         hlo_grad).group(1)
     self.assertEqual(sharding_annotation_t, sharding_annotation_grad)
-    
+
 
 if __name__ == '__main__':
   test = unittest.main()
