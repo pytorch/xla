@@ -432,6 +432,8 @@ symint:
   # See Note: [Disabling functionalization]
   - expand
   - view
+# autograd adds the operation at the "AutogradXLA" dispatch key level. This is
+# important for functions that do not have backpropagation implemented at the
 autograd:
   - einsum
   - max_pool2d
