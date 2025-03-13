@@ -71,7 +71,15 @@ class Mesh:
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
     # device ids are continous
-    assert all(d < self.size() for d in device_ids - np.min(device_ids))
+    if min(device_ids) != 0:
+      # Mesh doesn't contain all global devices. Only creating a mesh with local
+      # devices is supported.
+      min_device_idx = xr.process_index() * xr.addressable_runtime_device_count(
+      )
+      assert min_device_idx == min(
+          device_ids
+      ), "If not creating a mesh with all global devices, must use local devices."
+    assert all(d < self.size() for d in device_ids)
 
   def size(self):
     return np.prod(self.mesh_shape)
