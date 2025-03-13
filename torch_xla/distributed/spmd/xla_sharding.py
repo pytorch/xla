@@ -1,25 +1,25 @@
 import collections
-from collections.abc import Generator, MutableMapping
-import math
-from collections import OrderedDict, defaultdict
-from dataclasses import dataclass, field
-import torch
-from torch import Tensor
-from torch.library import custom_op
-import torch_xla
-import torch_xla.core.xla_model as xm
-import torch_xla._internal.utils as _utils
-from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
-import torch_xla.runtime as xr
-import torch_xla.debug.profiler as xp
-
-import numpy as np
 import functools
 import itertools
-from typing import Tuple, Union, List, Sequence, Any, Optional, Set
+import math
+import os
+from collections import OrderedDict, defaultdict
+from collections.abc import Generator, MutableMapping
+from dataclasses import dataclass, field
 from enum import IntEnum
+from typing import Any, List, Optional, Sequence, Set, Tuple, Union
 
-from torch.amp import custom_fwd, custom_bwd
+import numpy as np
+import torch
+import torch_xla
+import torch_xla._internal.utils as _utils
+import torch_xla.core.xla_model as xm
+import torch_xla.debug.profiler as xp
+import torch_xla.runtime as xr
+from torch import Tensor
+from torch.amp import custom_bwd, custom_fwd
+from torch.library import custom_op
+from torch_xla.distributed.spmd import XLAShard, XLAShardedTensor
 
 
 class Mesh:
@@ -63,12 +63,24 @@ class Mesh:
       device_ids = np.array(device_ids)
     assert (axis_names is None) or (len(mesh_shape) == len(axis_names))
     assert axis_names is None or (len(set(axis_names)) == len(axis_names))
+    # size of device_ids matches mesh_shape
     assert (len(device_ids) == np.prod(mesh_shape))
+    # device ids are unique
     assert len(device_ids) == len(np.unique(device_ids))
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    assert all(d < self.size() for d in device_ids)
+    # device ids are continous
+    if os.environ['XLA_USE_LOCAL_SPMD'] == '1':
+      # In local SPMD mesh only contains local devices.
+      min_device_idx = xr.process_index() * xr.addressable_runtime_device_count(
+      )
+      assert min_device_idx == np.min(
+          device_ids
+      ), "If not creating a mesh with all global devices, must use local devices."
+      assert all(d < self.size() for d in device_ids - np.min(device_ids))
+    else:
+      assert all(d < self.size() for d in device_ids)
 
   def size(self):
     return np.prod(self.mesh_shape)
@@ -140,6 +152,7 @@ class Mesh:
   def from_str(cls, mesh_str: str) -> Optional["Mesh"]:
     """Create Mesh from string representation."""
     import ast
+
     import numpy as np
     try:
       dict_str = mesh_str.replace('Mesh', '')
@@ -377,6 +390,20 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
   return sharding_type
 
 
+def _normalize_logical_mesh(device_mesh: np.ndarray) -> np.ndarray:
+  """
+  Normalize the device mesh to start from 0.
+  
+  This is needed when mesh doesn't include all global devices
+  (e.g. In multi-host setup, each host has a mesh containing local devices).
+  Because HLO graph always use logical device ids in the sharding annotation,
+  we need to normalize the physical device ids to generate the correct HLO
+  sharding annotation.
+  """
+  device_id_min = np.min(device_mesh)
+  return device_mesh.copy() - device_id_min
+
+
 def _get_tile_assignment(
     mesh: Mesh, partition_spec: Tuple[Union[Tuple[int], int,
                                             None]]) -> np.ndarray:
@@ -393,8 +420,8 @@ def _get_tile_assignment(
   tiled_dims = [x for x in partition_spec if x is not None]
   permutation = np.hstack(tiled_dims).tolist() if tiled_dims else []
   missing_axes = sorted(set(range(len(mesh.shape()))) - set(permutation))
-  tile_assignment = mesh.get_logical_mesh().transpose(permutation +
-                                                      missing_axes)
+  tile_assignment = _normalize_logical_mesh(
+      mesh.get_logical_mesh()).transpose(permutation + missing_axes)
 
   # For any tuples in the partition_spec, the grouped axes will be adjacent
   # after the permutation. Combine these dimensions into a single axis.
@@ -548,8 +575,9 @@ def mark_sharding(
       >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
   num_devices = xr.global_runtime_device_count()
+  num_local_devices = xr.addressable_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
-  assert mesh.size() == num_devices, \
+  assert mesh.size() == num_devices or mesh.size() == num_local_devices, \
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   # We only allow fully specified `partition_spec` to be applicable, as opposed
   # to filling in the unspecified replicated dims. Fully specified `partiion_spec`

@@ -559,7 +559,10 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           .set_allow_spmd_sharding_propagation_to_output(
               {instance.allow_spmd_sharding_propagation_to_output});
 
-      int num_partitions = client_->device_count();
+      int num_partitions = GetNumGlobalDevices();
+      if (runtime::sys_util::GetEnvBool("XLA_USE_LOCAL_SPMD", false)) {
+        num_partitions = GetNumLocalDevices();
+      }
       compile_options.executable_build_options.set_num_partitions(
           num_partitions);
       compile_options.executable_build_options.set_num_replicas(1);
@@ -589,11 +592,18 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       }
 
       // TODO(244391366) verify this is correct for the collectives ops
-      xla::DeviceAssignment device_assignment(1, client_->device_count());
+      xla::DeviceAssignment device_assignment(1, num_partitions);
       // DeviceAssignment values must be the PjRtDevice ID, so we need to
       // unwind the global ordinal mapping.
-      for (const auto& [device_id, global_ordinal] : global_ordinals_) {
-        device_assignment(0, global_ordinal) = device_id;
+      if (runtime::sys_util::GetEnvBool("XLA_USE_LOCAL_SPMD", false)) {
+        auto local_pjrt_devices = client_->addressable_devices();
+        for (int i = 0; i < local_pjrt_devices.size(); ++i) {
+          device_assignment(0, i) = local_pjrt_devices[i]->id();
+        }
+      } else {
+        for (const auto& [device_id, global_ordinal] : global_ordinals_) {
+          device_assignment(0, global_ordinal) = device_id;
+        }
       }
       compile_options.executable_build_options.set_device_assignment(
           device_assignment);
@@ -649,7 +659,6 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
     CreateCompileHandlesCounter()->AddValue(1);
   }
-
   return computations;
 }
 
@@ -917,8 +926,12 @@ PjRtComputationClient::ExecuteReplicated(
   return data_handles;
 }
 
-size_t PjRtComputationClient::GetNumDevices() const {
+size_t PjRtComputationClient::GetNumLocalDevices() const {
   return client_->addressable_device_count();
+}
+
+size_t PjRtComputationClient::GetNumGlobalDevices() const {
+  return client_->device_count();
 }
 
 std::string PjRtComputationClient::GetDefaultDevice() const {

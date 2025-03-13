@@ -1432,10 +1432,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
   std::vector<runtime::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(computation), coll.device.toString(),
-                       runtime::GetComputationClient()->GetCompilationDevices(
-                           coll.device.toString(), devices),
-                       &shape, should_wrap_parameter, is_sharded});
+  instances.emplace_back(std::move(computation), coll.device.toString(),
+                         runtime::GetComputationClient()->GetCompilationDevices(
+                             coll.device.toString(), devices),
+                         &shape, should_wrap_parameter, is_sharded);
   instances.front().eager_mode = UseEagerMode();
   if (use_autosharding) {
     TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
