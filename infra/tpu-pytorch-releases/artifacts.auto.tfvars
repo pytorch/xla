@@ -1,167 +1,7 @@
 nightly_package_version = "2.8.0"
 
-# Built once a day from master.
-nightly_builds = [
-  {
-    accelerator    = "tpu"
-    python_version = "3.9"
-    cxx11_abi      = "0"
-  },
-  {
-    accelerator    = "tpu"
-    python_version = "3.10"
-    cxx11_abi      = "0"
-  },
-  {
-    accelerator    = "tpu"
-    python_version = "3.11"
-    cxx11_abi      = "0"
-  },
-  {
-    accelerator    = "tpu"
-    python_version = "3.9"
-    cxx11_abi      = "1"
-  },
-  {
-    accelerator    = "tpu"
-    python_version = "3.10"
-    cxx11_abi      = "1"
-  },
-  {
-    accelerator    = "tpu"
-    python_version = "3.11"
-    cxx11_abi      = "1"
-  },
-  {
-    accelerator  = "cuda"
-    cuda_version = "12.1"
-  },
-  {
-    accelerator  = "cuda"
-    cuda_version = "12.1"
-    python_version = "3.10"
-  },
-  {
-    accelerator  = "cuda"
-    cuda_version = "12.1"
-    python_version = "3.11"
-  },
-]
-
-# Built on push to specific tag.
-versioned_builds = [
-  # Remove libtpu from PyPI builds, pre-C++11 ABI builds
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "tpu"
-    python_version  = "3.9"
-    bundle_libtpu   = "0"
-  },
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "tpu"
-    python_version  = "3.10"
-    bundle_libtpu   = "0"
-  },
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "tpu"
-    python_version  = "3.11"
-    bundle_libtpu   = "0"
-  },
-  # Remove libtpu from PyPI builds, C++11 ABI builds
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "tpu"
-    python_version  = "3.9"
-    bundle_libtpu   = "0"
-    cxx11_abi       = "1"
-  },
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "tpu"
-    python_version  = "3.10"
-    bundle_libtpu   = "0"
-    cxx11_abi       = "1"
-  },
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "tpu"
-    python_version  = "3.11"
-    bundle_libtpu   = "0"
-    cxx11_abi       = "1"
-  }, 
-  # Bundle libtpu for Kaggle
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1+libtpu"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "tpu"
-    python_version  = "3.10"
-    bundle_libtpu   = "1"
-  },
-  # CUDA 12.4
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "cuda"
-    cuda_version    = "12.4"
-    python_version  = "3.9"
-  },
-  {
-    git_tag         = "v2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    accelerator     = "cuda"
-    cuda_version    = "12.4"
-    python_version  = "3.10"
-  },
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "cuda"
-    cuda_version    = "12.4"
-    python_version  = "3.11"
-  },
-  # CUDA 12.6
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "cuda"
-    cuda_version    = "12.6"
-    python_version  = "3.9"
-  },
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "cuda"
-    cuda_version    = "12.6"
-    python_version  = "3.10"
-  },
-  {
-    git_tag         = "v2.7.0-rc1"
-    package_version = "2.7.0-rc1"
-    pytorch_git_rev = "v2.7.0-rc1"
-    accelerator     = "cuda"
-    cuda_version    = "12.6"
-    python_version  = "3.11"
-  },
+#### Historical builds for releases before r2.7
+fixed_versioned_builds = [
   # Remove libtpu from PyPI builds, pre-C++11 ABI builds
   {
     git_tag         = "v2.6.0"
@@ -633,7 +473,7 @@ versioned_builds = [
   {
     git_tag         = "v2.1.0"
     pytorch_git_rev = "v2.1.0"
-    package_version = "2.1.0",
+    package_version = "2.1.0"
     accelerator     = "cuda"
     cuda_version    = "12.0"
   },
@@ -682,7 +522,7 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.0.0"
-    package_version = "2.0",
+    package_version = "2.0"
     accelerator     = "cuda"
     cuda_version    = "11.7"
   },
