@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+gitbd46c0e )
+                  master (2.7.0+git5beb651 )
                 </div>
               
             
@@ -439,6 +439,9 @@
 <a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is integrated in PyTorch/XLA,
 and provide a design overview to illustrate how the SPMD sharding
 annotation API and its constructs work.</p>
+<p>For a conceptual guide of the SPMD model of computation, you may refer to the
+<a class="reference external" href="https://jax-ml.github.io/scaling-book/sharding/">Sharded Matrices and How to Multiply Them</a>
+section of the <em>How to Scale Your Model</em> book.</p>
 <div class="section" id="what-is-pytorch-xla-spmd">
 <h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this heading">¶</a></h2>
 <p><a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is an automatic
@@ -491,31 +494,83 @@ SPMD with other distributed libraries.</p>
 </div>
 <div class="section" id="mesh">
 <h3>Mesh<a class="headerlink" href="#mesh" title="Permalink to this heading">¶</a></h3>
-<p>For a given cluster of devices, a physical mesh is a representation of
-the interconnect topology.</p>
-<ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">mesh_shape</span></code> is a tuple that will be multiplied to the total number
-of physical devices.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">device_ids</span></code> is almost always <code class="docutils literal notranslate"><span class="pre">np.array(range(num_devices))</span></code>.</p></li>
-<li><p>Users are also encouraged to give each mesh dimension a name. In the
-above example, the first mesh dimension is the <code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and
-the second mesh dimension is the <code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p></li>
-</ol>
+<p>The SPMD programming model is built around the concept of a device mesh,
+commonly referred to as a mesh. A device mesh is a logical N-dimensional
+arrangement of compute devices (e.g. TPU cores) where MPI-style collective
+operations may be requested for devices along an axis. The device mesh shape
+shape does not necessarily reflect the physical network layout. You
+can create differently shaped device meshes over the same set of physical
+devices. For example, a 512-core TPU slice could be treated as a 3D mesh of
+16×16×2, a 2D mesh of 32×16, or a 1D mesh of 512, depending on how you want to
+partition tensors. You can use the <code class="docutils literal notranslate"><span class="pre">Mesh</span></code> class to create a device mesh.</p>
+<p>In the following snippet:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mesh_shape</span></code> is a tuple whose elements describe the size of each axis of the
+device mesh. When you multiply the elements of the tuple together, it should
+equal to the total number of physical devices in the environment.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">device_ids</span></code> specifies the ordering of physical devices within the mesh in row
+major order. It is always a flat numpy array of integers ranging from <code class="docutils literal notranslate"><span class="pre">0</span></code> to
+<code class="docutils literal notranslate"><span class="pre">num_devices</span> <span class="pre">-</span> <span class="pre">1</span></code>, where <code class="docutils literal notranslate"><span class="pre">num_devices</span></code> is the total number of devices in the
+environment. Each ID indexes into the list of devices in
+<code class="docutils literal notranslate"><span class="pre">xr.global_runtime_device_attributes()</span></code>.
+The simplest ordering is <code class="docutils literal notranslate"><span class="pre">np.array(range(num_devices))</span></code>, but tuning the
+device ordering and the mesh shape to utilize the underlying physical
+interconnect can improve efficiency.</p></li>
+<li><p>Best practice is to give each mesh axis a name. You can then shard each
+dimension of tensors over specific mesh axes to achieve the desired
+parallelization. In the previous example, the first mesh dimension is the
+<code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and the second mesh dimension is the <code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p></li>
+</ul>
 <p>You can also check more mesh info via</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
 <span class="go">OrderedDict([(&#39;data&#39;, 4), (&#39;model&#39;, 1)])</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mesh</span><span class="o">.</span><span class="n">get_logical_mesh</span><span class="p">()</span>
+<span class="go">array([[0], [1], [2], [3]])</span>
+
+<span class="go"># Details about these 4 TPUs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
+<span class="go">[{&#39;core_on_chip&#39;: 0, &#39;num_cores&#39;: 1, &#39;coords&#39;: [0, 0, 0], &#39;name&#39;: &#39;TPU:0&#39;},</span>
+<span class="go"> {&#39;core_on_chip&#39;: 0, &#39;num_cores&#39;: 1, &#39;coords&#39;: [1, 0, 0], &#39;name&#39;: &#39;TPU:1&#39;},</span>
+<span class="go"> {&#39;core_on_chip&#39;: 0, &#39;num_cores&#39;: 1, &#39;coords&#39;: [0, 1, 0], &#39;name&#39;: &#39;TPU:2&#39;},</span>
+<span class="go"> {&#39;core_on_chip&#39;: 0, &#39;num_cores&#39;: 1, &#39;coords&#39;: [1, 1, 0], &#39;name&#39;: &#39;TPU:3&#39;}]</span>
 </pre></div>
 </div>
+<p>If your workload is run on <a class="reference external" href="https://cloud.google.com/tpu/docs/multislice-introduction">multiple TPU slices</a> simultaneously, the
+device attributes will include a <code class="docutils literal notranslate"><span class="pre">slice_index</span></code> indicating the containing slice:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Details about 8 TPUs allocated over 2 slices</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_attributes</span><span class="p">()</span>
+<span class="p">[{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:0&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:1&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:2&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:3&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:4&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:5&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:6&#39;</span><span class="p">},</span>
+ <span class="p">{</span><span class="s1">&#39;num_cores&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;core_on_chip&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;slice_index&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;coords&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;TPU:7&#39;</span><span class="p">}]</span>
+</pre></div>
+</div>
+<p>In this example, a device ID of <code class="docutils literal notranslate"><span class="pre">7</span></code> will refer to the TPU at coordinate
+<code class="docutils literal notranslate"><span class="pre">[1,</span> <span class="pre">1,</span> <span class="pre">0]</span></code> in the second slice.</p>
 </div>
 <div class="section" id="partition-spec">
-<h3>Partition Spec<a class="headerlink" href="#partition-spec" title="Permalink to this heading">¶</a></h3>
-<p>partition_spec has the same rank as the input tensor. Each dimension
+<h3>Partition spec<a class="headerlink" href="#partition-spec" title="Permalink to this heading">¶</a></h3>
+<p>In the following snippet:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">partition_spec</span></code> has the same rank as the input tensor. Each dimension
 describes how the corresponding input tensor dimension is sharded across
-the device mesh. In the above example tensor <code class="docutils literal notranslate"><span class="pre">t</span></code>‘s fist dimension is
-being sharded at <code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and the second dimension is being
-sharded at <code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p>
-<p>User can also shard tensor that has different dimensions from the mesh
-shape.</p>
+the device mesh. In the above example, the first dimension of tensor <code class="docutils literal notranslate"><span class="pre">t</span></code> is
+sharded over the <code class="docutils literal notranslate"><span class="pre">data</span></code> dimension and the second dimension is sharded over the
+<code class="docutils literal notranslate"><span class="pre">model</span></code> dimension.</p>
+<p>User can also shard tensor that has a different rank from the mesh shape.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">t1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 <span class="n">t2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
@@ -527,22 +582,35 @@ shape.</p>
 <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,))</span>
 
 <span class="c1"># First dimension is sharded across both mesh axes.</span>
-<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span> <span class="n">t2</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">((</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">),))</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">((</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">),))</span>
 </pre></div>
 </div>
+</div>
+<div class="section" id="which-device-holds-which-shard">
+<h3>Which device holds which shard?<a class="headerlink" href="#which-device-holds-which-shard" title="Permalink to this heading">¶</a></h3>
+<p>Each dimension of a tensor passed to <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> will be split over the
+devices identified by the corresponding element in the partition spec. For
+example, given a <code class="docutils literal notranslate"><span class="pre">[M,</span> <span class="pre">N]</span></code> shaped tensor <code class="docutils literal notranslate"><span class="pre">t</span></code>, a mesh of shape <code class="docutils literal notranslate"><span class="pre">[X,</span> <span class="pre">Y]</span></code>, and a
+partition spec of <code class="docutils literal notranslate"><span class="pre">('X',</span> <span class="pre">'Y')</span></code>, the first dimension of the tensor will be sharded
+<code class="docutils literal notranslate"><span class="pre">X</span></code>-ways, and the second dimension will be sharded <code class="docutils literal notranslate"><span class="pre">Y</span></code>-ways. The device
+identified by <code class="docutils literal notranslate"><span class="pre">device_ids[i]</span></code> will hold a subset of data that is
+<code class="docutils literal notranslate"><span class="pre">t[a</span> <span class="pre">*</span> <span class="pre">M</span> <span class="pre">/</span> <span class="pre">X</span> <span class="pre">:</span> <span class="pre">(a</span> <span class="pre">+</span> <span class="pre">1)</span> <span class="pre">*</span> <span class="pre">M</span> <span class="pre">/</span> <span class="pre">X,</span> <span class="pre">b</span> <span class="pre">*</span> <span class="pre">N</span> <span class="pre">/</span> <span class="pre">Y</span> <span class="pre">:</span> <span class="pre">(b</span> <span class="pre">+</span> <span class="pre">1)</span> <span class="pre">*</span> <span class="pre">N</span> <span class="pre">/</span> <span class="pre">Y]</span></code>, where <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">=</span> <span class="pre">i</span> <span class="pre">//</span> <span class="pre">Y</span></code>
+and <code class="docutils literal notranslate"><span class="pre">b</span> <span class="pre">=</span> <span class="pre">i</span> <span class="pre">%</span> <span class="pre">Y</span></code>.</p>
+<p>This assumes that <code class="docutils literal notranslate"><span class="pre">M</span></code> and <code class="docutils literal notranslate"><span class="pre">N</span></code> are divisible by <code class="docutils literal notranslate"><span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">Y</span></code>, respectively. If not,
+the last device may hold some padding.</p>
+<p>You can also visualize how a tensor is sharded over devices with our
+<a class="reference external" href="./spmd_advanced.md#spmd-debugging-tool">SPMD debugging tool</a>.</p>
 </div>
 </div>
 <div class="section" id="further-reading">
 <h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this heading">¶</a></h2>
 <ol class="arabic simple">
 <li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/data_parallel/train_resnet_spmd_data_parallel.py">Example</a>
-to use SPMD to express data parallism.</p></li>
+to use SPMD to express data parallelism.</p></li>
 <li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/examples/fsdp/train_decoder_only_fsdp_v2.py">Example</a>
 to use SPMD to express FSDP(Fully Sharded Data Parallel).</p></li>
-<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/spmd_advanced.rst">SPMD advanced
-topics</a></p></li>
-<li><p><a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/spmd_distributed_checkpoint.rst">Spmd Distributed
-Checkpoint</a></p></li>
+<li><p><a class="reference external" href="./spmd_advanced.md">SPMD advanced topics</a></p></li>
+<li><p><a class="reference external" href="./spmd_distributed_checkpoint.md">Spmd Distributed Checkpoint</a></p></li>
 </ol>
 </div>
 </div>
@@ -595,7 +663,8 @@ Checkpoint</a></p></li>
 <li><a class="reference internal" href="#how-to-use-pytorch-xla-spmd">How to use PyTorch/XLA SPMD?</a><ul>
 <li><a class="reference internal" href="#spmd-mode">SPMD Mode</a></li>
 <li><a class="reference internal" href="#mesh">Mesh</a></li>
-<li><a class="reference internal" href="#partition-spec">Partition Spec</a></li>
+<li><a class="reference internal" href="#partition-spec">Partition spec</a></li>
+<li><a class="reference internal" href="#which-device-holds-which-shard">Which device holds which shard?</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#further-reading">Further Reading</a></li>
