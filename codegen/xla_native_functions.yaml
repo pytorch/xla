@@ -1,6 +1,6 @@
 backend: XLA
 cpp_namespace: torch_xla
-# full_codegen is the prefered method of codegenration. Through this config
+# full_codegen is the prefered method of code generation. Through this config
 # ops get implementations (and IR classes) generated. See
 # https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md
 # for more details on differences on what gets generated or not.
@@ -112,9 +112,9 @@ ir_gen:
   - leaky_relu_backward
 # supported requires the ops to have hand-implemented everything but the native
 # function's declaration and registration. This follows closer the
-# instructions from docs/source/contribute/op_lowering.md and the codegen
-# pattern from https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md#pytorchxla-old-op-lowering-files.
-# Prefer using codegen.
+# instructions from https://github.com/pytorch/xla/blob/master/docs/source/contribute/op_lowering.md
+# and the codegen pattern from https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md#pytorchxla-old-op-lowering-files.
+# Prefer using full_codegen.
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -434,6 +434,8 @@ symint:
   - view
 # autograd adds the operation at the "AutogradXLA" dispatch key level. This is
 # important for functions that do not have backpropagation implemented at the
+# Autograd dispatch key level, or that the implementation provided by PyTorch
+# upstream at the Autograd dispatch key level is sub-optimal for our use cases
 autograd:
   - einsum
   - max_pool2d
