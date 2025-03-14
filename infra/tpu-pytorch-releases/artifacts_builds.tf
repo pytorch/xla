@@ -1,5 +1,11 @@
 ########## Begin section for release and nightly ########
 # Define common configuration parameters for 2.7 release and nightly
+variable "nightly_package_version" {
+  type        = string
+  description = "Version number for nightly PyTorch/XLA packages"
+  default     = "2.8.0" 
+}
+
 locals {
   tpu_python_versions = ["3.9", "3.10", "3.11"]
   cxx11_abi_options = ["1"]
@@ -99,10 +105,6 @@ variable "manual_versioned_builds" {
   default = []
 }
 
-
-variable "nightly_package_version" {
-  type = string
-}
 
 variable "manual_nightly_builds" {
   type = list(
