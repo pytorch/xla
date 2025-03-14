@@ -19,6 +19,7 @@ locals {
       for py_ver in local.tpu_python_versions : {
         accelerator    = "tpu"
         python_version = py_ver
+        bundle_libtpu  = "0"
         cxx11_abi      = "1"
       }
     ],
@@ -28,6 +29,7 @@ locals {
         accelerator     = "cuda"
         cuda_version    = pair[1]
         python_version  = pair[0]
+        bundle_libtpu  = "0"
         cxx11_abi       = "1"
       }
     ]
@@ -57,6 +59,7 @@ locals {
         accelerator     = "tpu"
         python_version  = "3.10"
         bundle_libtpu   = "1"
+        cxx11_abi      = "1"
       }
     ],
 
@@ -69,6 +72,7 @@ locals {
       accelerator     = "cuda"
       cuda_version    = pair[1]
       python_version  = pair[0]
+      bundle_libtpu   = "0"
       cxx11_abi       = "1"
     }
     ]
