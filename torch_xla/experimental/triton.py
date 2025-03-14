@@ -137,7 +137,7 @@ def _spec_and_divisible_by_16(fn, i, arg):
     return False
 
   if hasattr(arg, "data_ptr"):
-    return arg.data_ptr % 16 == 0
+    return arg.data_ptr() % 16 == 0
   if isinstance(arg, int):
     return arg % 16 == 0
 
