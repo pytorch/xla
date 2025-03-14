@@ -147,8 +147,9 @@ def _spec_and_divisible_by_16(fn, i, arg):
 # Taken from: https://github.com/triton-lang/triton/blob/da40a1e984bf57c4708daf603eb427442025f99b/python/triton/runtime/jit.py#L187-L198
 # Newer triton versions removed this function.
 def _spec_and_equals_1(fn, i, arg):
-  return (i in fn.do_not_specialize and not isinstance(arg, bool) and
-          isinstance(arg, int) and arg == 1)
+  if i in fn.do_not_specialize:
+    return False
+  return not isinstance(arg, bool) and isinstance(arg, int) and arg == 1
 
 
 def triton_kernel_call_lowering(
