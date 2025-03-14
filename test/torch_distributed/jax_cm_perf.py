@@ -10,6 +10,8 @@ from typing import Tuple, Dict, Any
 from jax.sharding import Mesh
 from jax.sharding import PartitionSpec as P
 from jax.sharding import NamedSharding
+from jax._src import xla_bridge as xb
+from jax._src import mesh as mesh_lib
 from functools import partial
 import time
 
@@ -110,7 +112,7 @@ def print_hlo(f, args, post_opt=False):
     else:
         print(f.lower(*args).as_text("hlo"))
 
-def main(num_layers=4, profile_path="profiles", use_cm = True):
+def main(num_layers=4, profile_path="profiles", use_cm = True, customize_ring = False):
     # Model configuration
     # model_axis = 4
     seq_length = 1024
@@ -122,7 +124,12 @@ def main(num_layers=4, profile_path="profiles", use_cm = True):
     num_steps = 5
 
     # Mesh
-    mesh = jax.make_mesh((jax.device_count(), ), ('x', ))
+    if customize_ring:
+        devices = xb.devices()
+        new_mesh_devices = np.asarray([devices[0], devices[2], devices[4], devices[6], devices[7], devices[5], devices[3], devices[1]])
+        mesh = mesh_lib.Mesh(new_mesh_devices, "x", axis_types=None)
+    else:
+        mesh = jax.make_mesh((jax.device_count(), ), ('x', ))
         
     # Create model
     model = StackedFFN(
