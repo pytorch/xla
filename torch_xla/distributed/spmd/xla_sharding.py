@@ -24,9 +24,9 @@ from torch.amp import custom_fwd, custom_bwd
 PartitionSpec = tuple[Union[tuple[Union[int, str], ...], int, str, None], ...]
 """PartitionSpec describes the sharding of a tensor.
 
-Specifically, it is a tuple where each element references one or more device mesh
-axes, and instructs to shard the corresponding dimension of the input tensor over
-those mesh axes.
+Specifically, it is a tuple of one or more device mesh axes that describes how to
+shard the input tensor. For example, the first dimension of the tensor is sharded
+across the axis/axes described in the first element of this tuple and so on.
 """
 
 
@@ -34,16 +34,15 @@ class Mesh:
   """Describe the logical XLA device topology mesh and the underlying resources.
 
   Args:
-    device_ids: A raveled list of devices (IDs) in a custom order.
-        The list is reshaped to an `mesh_shape` array, filling the elements using C-like index order.
-        Each ID indexes into the list of devices returned by `xr.global_runtime_device_attributes()`.
+    device_ids: A flattened list of devices (IDs).
+        The list is reshaped to an array of shape `mesh_shape`, filling the elements using
+        row-major order. Each ID indexes into the list of devices returned by
+        `xr.global_runtime_device_attributes()`.
 
-    mesh_shape: A int tuple describing the logical topology shape
-        of the device mesh, and each element describes the number of devices in
-        the corresponding axis.
+    mesh_shape: A int tuple describing the shape of the device mesh. Each element
+        describes the number of devices in the corresponding axis.
 
-    axis_names: A sequence of resource axis names to be assigned to the dimensions
-        of the `devices` argument. Its length should match the rank of `devices`.
+    axis_names: A sequence of mesh axis names. Its length should match the length of `mesh_shape`.
 
   Example:
 
@@ -509,7 +508,7 @@ def disable_manual_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                             mesh: Optional[Mesh] = None) -> XLAShardedTensor:
   """
   This API disables manual sharding for the given tensor. The partition_spec and full_shape are used to construct the
-  output tensor as if the input tensor has not been manual sharded.
+  output tensor as if the input tensor has not been manually sharded.
   """
   mesh = get_global_mesh() if mesh is None else mesh
   t = _mark_manual_sharding(unwrap_sharded_tensor(t))
@@ -530,15 +529,18 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
 
         mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.
 
-        partition_spec (PartitionSpec): A tuple of device_mesh dimension index or
-            `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.
+        partition_spec (PartitionSpec): A tuple of one or more device mesh axes that describes how
+            to shard the input tensor. Each element can be:
+
+            - an int: refer to a mesh axis by index
+            - str: refer to a mesh axis by name
+            - a tuple of the above: refer to multiple mesh axes
+            - None: the corresponding tensor dimension will be replicated over all devices
+
             This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
             When a tuple is specified, the corresponding input tensor axis will be sharded along all
-            logical axes in the tuple. Note that the order the mesh axes are specified in the tuple
+            mesh axes in the tuple. Note that the order the mesh axes are specified in the tuple
             will impact the resulting sharding.
-
-        dynamo_custom_op (bool): if set to True, it calls the dynamo custom op variant of mark_sharding
-          to make itself recognizeable and traceable by dynamo.
 
     Example:
 

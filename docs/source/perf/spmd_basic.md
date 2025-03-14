@@ -65,15 +65,15 @@ SPMD with other distributed libraries.
 
 ### Mesh
 
-The SPMD programming model is built around the concept of a device mesh, commonly
-referred to as a mesh. A device mesh is a logical N-dimensional arrangement of
-compute devices (e.g. TPU cores) where the axes are used as shorthands to
-define sharded computation. It is logical in the sense that the mesh shape does
-not necessarily have to reflect the physical network layout. You could create
-different kinds of device meshes over the same set of physical devices. For
-example, a 512-core TPU slice could be treated as a 3D mesh of 16×16×2, a 2D mesh
-of 32×16, or a 1D mesh of 512, depending on how we want to partition tensors. You
-may use the `Mesh` class to create a device mesh.
+The SPMD programming model is built around the concept of a device mesh,
+commonly referred to as a mesh. A device mesh is a logical N-dimensional
+arrangement of compute devices (e.g. TPU cores) where the axes are used as
+shorthands to define the devices that participate in a sharded computation. The
+device mesh shape does not necessarily reflect the physical network layout. You
+can create differently shaped device meshes over the same set of physical
+devices. For example, a 512-core TPU slice could be treated as a 3D mesh of
+16×16×2, a 2D mesh of 32×16, or a 1D mesh of 512, depending on how you want to
+partition tensors. You can use the `Mesh` class to create a device mesh.
 
 In the following snippet:
 
@@ -83,8 +83,9 @@ device_ids = np.array(range(num_devices))
 mesh = Mesh(device_ids, mesh_shape, ('data', 'model'))
 ```
 
-- `mesh_shape` is a tuple whose elements must multiply to the total number
-  of physical devices in the environment.
+- `mesh_shape` is a tuple whose elements describe the size of each axis of the
+  device mesh. When you multiply the elements of the tuple together, it should
+  equal to the total number of physical devices in the environment.
 - `device_ids` specifies the ordering of physical devices within the mesh in row
   major order. It is always a flat numpy array of integers ranging from `0` to
   `num_devices - 1`, where `num_devices` is the total number of devices in the
@@ -93,9 +94,9 @@ mesh = Mesh(device_ids, mesh_shape, ('data', 'model'))
   The simplest ordering is `np.array(range(num_devices))`, but tuning the
   device ordering and the mesh shape to utilize the underlying physical
   interconnect can improve efficiency.
-- Users are also encouraged to give each mesh axis a name. Later we can
-  shard each dimension of tensors over specific mesh axes to achieve the
-  desired parallelization. In the above example, the first mesh dimension is the
+- Best practice is to give each mesh axis a name. You can then shard each
+  dimension of tensors over specific mesh axes to achieve the desired
+  parallelization. In the previous example, the first mesh dimension is the
   `data` dimension and the second mesh dimension is the `model` dimension.
 
 You can also check more mesh info via
@@ -145,9 +146,9 @@ xs.mark_sharding(t, mesh, partition_spec)
 
 `partition_spec` has the same rank as the input tensor. Each dimension
 describes how the corresponding input tensor dimension is sharded across
-the device mesh. In the above example tensor `t`'s fist dimension is
-being sharded over the `data` dimension and the second dimension is being
-sharded over the `model` dimension.
+the device mesh. In the above example, the first dimension of tensor `t` is
+sharded over the `data` dimension and the second dimension is sharded over the
+`model` dimension.
 
 User can also shard tensor that has a different rank from the mesh shape.
 
