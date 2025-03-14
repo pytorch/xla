@@ -67,9 +67,9 @@ SPMD with other distributed libraries.
 
 The SPMD programming model is built around the concept of a device mesh,
 commonly referred to as a mesh. A device mesh is a logical N-dimensional
-arrangement of compute devices (e.g. TPU cores) where the axes are used as
-shorthands to define the devices that participate in a sharded computation. The
-device mesh shape does not necessarily reflect the physical network layout. You
+arrangement of compute devices (e.g. TPU cores) where MPI-style collective
+operations may be requested for devices along an axis. The device mesh shape
+shape does not necessarily reflect the physical network layout. You
 can create differently shaped device meshes over the same set of physical
 devices. For example, a 512-core TPU slice could be treated as a 3D mesh of
 16×16×2, a 2D mesh of 32×16, or a 1D mesh of 512, depending on how you want to
