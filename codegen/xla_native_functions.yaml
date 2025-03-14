@@ -418,6 +418,8 @@ supported:
   - diagonal
   - expand
   - view
+# symint is use with supported or full_codegen. It overloads operations to
+# take SymInts rather than plain integers.
 symint:
   - embedding
   - empty.memory_format
