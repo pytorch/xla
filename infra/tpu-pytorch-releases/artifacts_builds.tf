@@ -1,17 +1,12 @@
 ########## Begin section for release and nightly ########
 # Define common configuration parameters for 2.7 release and nightly
-variable "nightly_package_version" {
-  type        = string
-  description = "Version number for nightly PyTorch/XLA packages"
-  default     = "2.8.0" 
-}
-
 locals {
   tpu_python_versions = ["3.9", "3.10", "3.11"]
   cxx11_abi_options = ["1"]
   r2_7_git_tag         = "v2.7.0-rc1"
   r2_7_package_version = "2.7.0-rc1"
   r2_7_pytorch_git_rev = "v2.7.0-rc1"
+  nightly_package_version = "2.8.0"
   cuda_versions = {
     "nightly": ["12.1", "12.6"],
     "r2.7": ["11.8", "12.6", "12.8"] # align with PyTorch 2.7 release
@@ -97,7 +92,7 @@ variable "manual_versioned_builds" {
       pytorch_git_rev = optional(string, "")
       python_version  = optional(string, "3.8")
       cuda_version    = optional(string, "11.8")
-      arch            = optional(string, "amd64") 
+      arch            = optional(string, "amd64")
       bundle_libtpu   = optional(string, "0")
       cxx11_abi       = optional(string, "0")
     })
@@ -148,7 +143,7 @@ module "nightly_builds" {
   for_each = local.nightly_builds_dict
 
   ansible_vars = merge(each.value, {
-    package_version = var.nightly_package_version
+    package_version = local.nightly_package_version
     nightly_release = true
     pytorch_git_rev = "main"
     xla_git_rev     = "$COMMIT_SHA"
