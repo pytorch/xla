@@ -8,7 +8,6 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 import torch.distributed as dist
 from torch import nn
-import torch_xla.debug.profiler as xp
 
 
 intermediate_size = 28672
@@ -27,6 +26,7 @@ class FFN(nn.Module):
     self.relu = nn.ReLU()
     self.world_size = world_size
     self.groups = [[i for i in range(world_size)]]
+    self.groups = [[6, 4, 2, 0, 1, 3, 5, 7]]
 
   def forward(self, x):
     x = xm.all_gather(x, dim=0, groups=self.groups, pin_layout=False)
@@ -72,17 +72,6 @@ def _mp_fn(index):
   device = xm.xla_device()
   world_size = xr.world_size()
   index = xr.global_ordinal()
-  server = xp.start_server(9012)  # noqa: F841
-
-  # Profile
-  profile_dir = "profiles"
-  master_print(f"Profiling (results will be saved to '{profile_dir}')...")
-  # Enable tracing on server
-  xp.trace_detached("localhost:9012",
-                    profile_dir,
-                    delay_ms=0,
-                    duration_ms=10000)
-  time.sleep(1.0)
 
   dist.init_process_group('xla', init_method='xla://')
 

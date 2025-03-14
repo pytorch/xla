@@ -9,6 +9,7 @@ import torch_xla.distributed.xla_backend
 import torch.distributed as dist
 from torch import nn
 import torch_xla.debug.profiler as xp
+import itertools
 
 
 intermediate_size = 28672
@@ -23,14 +24,12 @@ class FFN(nn.Module):
     self.fc2 = nn.Linear(intermediate_dim // world_size, hidden_dim, dtype=dtype, bias=False)
     self.relu = nn.ReLU()
     self.world_size = world_size
-    self.groups = [[6, 4, 2, 0, 1, 3, 5, 7]]
-    # self.groups = [[i for i in range(world_size)]]
 
-  def forward(self, x):
-    x = xm.all_gather(x, dim=0, groups=self.groups, pin_layout=False)
+  def forward(self, x, groups):
+    x = xm.all_gather(x, dim=0, groups=groups, pin_layout=False)
     x = self.relu(self.fc1(x))
     x = self.fc2(x)
-    x = xm.reduce_scatter(xm.REDUCE_SUM, x, scale=1.0, scatter_dim=0, shard_count=self.world_size, groups=self.groups, pin_layout=False)
+    x = xm.reduce_scatter(xm.REDUCE_SUM, x, scale=1.0, scatter_dim=0, shard_count=self.world_size, groups=groups, pin_layout=False)
     return x
   
 class Model(nn.Module):
@@ -40,9 +39,9 @@ class Model(nn.Module):
     for _ in range(layer_num):
       self.layers.append(FFN(world_size, hidden_dim, intermediate_dim))
 
-  def forward(self, x):
+  def forward(self, x, groups):
     for layer in self.layers:
-      x = layer(x)
+      x = layer(x, groups)
     return x
 
 
@@ -56,15 +55,6 @@ def _mp_fn(index):
   device = xm.xla_device()
   world_size = xr.world_size()
   index = xr.global_ordinal()
-  if index == 0:
-    server = xp.start_server(9012)  # noqa: F841
-
-  # Profile
-  profile_dir = "profiles"
-  master_print(f"Profiling (results will be saved to '{profile_dir}')...")
-  # Enable tracing on server
-  if index == 0:
-    xp.start_trace(profile_dir)
 
   dist.init_process_group('xla', init_method='xla://')
 
@@ -73,14 +63,40 @@ def _mp_fn(index):
     input = torch.ones((token_size // world_size, hidden_size), dtype=torch.bfloat16)
   xm.mark_step()
 
-  with torch.no_grad():
-    for _ in range(16):
-      collective_matmul_output = model(input)
-      xm.mark_step()
-      xm.wait_device_ops()
 
-  if index == 0:
-    xp.stop_trace()
+  def permutations_0_to_6():
+    """Generates all permutations of the numbers 0 through 6."""
+    numbers = list(range(7))  # Creates a list [0, 1, 2, 3, 4, 5, 6]
+    for permutation in itertools.permutations(numbers):
+      yield permutation
+
+  perm2time = {}
+  for i, perm in enumerate(permutations_0_to_6()):
+    groups = [list(perm) + [7]]
+    print("========== groups: ", i, groups)
+
+    with torch.no_grad():
+      for _ in range(16):
+        collective_matmul_output = model(input, groups)
+        xm.mark_step()
+    xm.wait_device_ops()
+
+    start_time = time.perf_counter()
+    with torch.no_grad():
+      for _ in range(16):
+        collective_matmul_output = model(input, groups)
+        xm.mark_step()
+    xm.wait_device_ops()
+    end_time = time.perf_counter()
+
+    perm2time[tuple(groups[0])] = (end_time - start_time) * 1000
+  
+  kv = list(perm2time.items())
+  kv.sort(key=lambda pair: pair[1])
+  with open("perf.txt", 'w') as f:
+    for pair in kv:
+      f.write(f"{pair[0]}, {pair[1]}\n")
+
 
 
 if __name__ == '__main__':
