@@ -1,7 +1,10 @@
 nightly_package_version = "2.8.0"
 
 #### Historical builds for releases before r2.7
-fixed_versioned_builds = [
+manual_nightly_builds = [
+]
+
+manual_versioned_builds = [
   # Remove libtpu from PyPI builds, pre-C++11 ABI builds
   {
     git_tag         = "v2.6.0"
