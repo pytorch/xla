@@ -1,5 +1,13 @@
+# For information on what needs to be added to do the lowering for each mode,
+# check:
+# - https://github.com/pytorch/xla/blob/master/docs/source/contribute/op_lowering.md
+# - https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md
 backend: XLA
 cpp_namespace: torch_xla
+# full_codegen is the prefered method of code generation. Through this config
+# ops get implementations (and IR classes) generated. See
+# https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md
+# for more details on differences on what gets generated or not.
 full_codegen:
   - acos
   - acosh
@@ -93,6 +101,10 @@ full_codegen:
   - tril
   - triu
   - trunc
+# ir_gen: Operations in ir_gen generate only the declaration of their respective
+# lazy IR node classes. Their native functions are not generated. ir_gen
+# generates the lazy IR node class declaration. Some of the class' functions
+# still have to be manually written (e.g. XXX::Lower()).
 ir_gen:
   - _adaptive_avg_pool2d
   - _adaptive_avg_pool2d_backward
@@ -104,6 +116,13 @@ ir_gen:
   - bitwise_or.Tensor
   - bitwise_xor.Tensor
   - leaky_relu_backward
+# supported requires the ops to have hand-implemented everything but the native
+# function's declaration and registration. This follows closer the
+# instructions from https://github.com/pytorch/xla/blob/master/docs/source/contribute/op_lowering.md
+# and the codegen pattern from https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md#pytorchxla-old-op-lowering-files.
+# Prefer using full_codegen. supported generates the XLANativeFunction::
+# declaration and the registration to the XLA dispatch-key. We still have to
+# manually write the definition of that function.
 supported:
   - __ilshift__.Scalar
   - __ilshift__.Tensor
@@ -398,7 +417,7 @@ supported:
   # The same applies to these ops, but we already have direct lowerings for them
   # - logsumexp.out
   # Note: [Disabling functionalization]
-  # The ops below are no longer needed when functionalization is enabled. 
+  # The ops below are no longer needed when functionalization is enabled.
   # However, we sometimes may want to disable functionalization (A/B testing,
   # debugging, etc). The ops below exist only to disable functionalization,
   # new features/functionalities should not depend on these ops.
@@ -407,6 +426,8 @@ supported:
   - diagonal
   - expand
   - view
+# symint is used with supported or full_codegen. It overloads operations to
+# take SymInts rather than plain integers.
 symint:
   - embedding
   - empty.memory_format
@@ -421,6 +442,11 @@ symint:
   # See Note: [Disabling functionalization]
   - expand
   - view
+# autograd declares XLANativeFunction:: function and registers it to the
+# AutogradXLA dispatch-key. This is important for functions that do not have
+# backpropagation implemented at the Autograd dispatch key level, or that the
+# implementation provided by PyTorch upstream at the Autograd dispatch key level
+# is sub-optimal for our use cases
 autograd:
   - einsum
   - max_pool2d
