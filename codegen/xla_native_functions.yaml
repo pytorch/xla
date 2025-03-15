@@ -1,3 +1,7 @@
+# For information on what needs to be added to do the lowering for each mode,
+# check:
+# - https://github.com/pytorch/xla/blob/master/docs/source/contribute/op_lowering.md
+# - https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md
 backend: XLA
 cpp_namespace: torch_xla
 # full_codegen is the prefered method of code generation. Through this config
@@ -117,7 +121,7 @@ ir_gen:
 # instructions from https://github.com/pytorch/xla/blob/master/docs/source/contribute/op_lowering.md
 # and the codegen pattern from https://github.com/pytorch/xla/blob/master/docs/source/contribute/codegen_migration.md#pytorchxla-old-op-lowering-files.
 # Prefer using full_codegen. supported generates the XLANativeFunction::
-#  declaration and the registration to the XLA dispatch-key. We still have to
+# declaration and the registration to the XLA dispatch-key. We still have to
 # manually write the definition of that function.
 supported:
   - __ilshift__.Scalar
