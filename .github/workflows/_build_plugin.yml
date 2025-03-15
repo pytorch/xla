@@ -24,7 +24,9 @@ jobs:
     env:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       BAZEL_JOBS: 16
-      BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+      # TODO: Enable remote cache once https://github.com/pytorch/xla/issues/8839 is fixed.
+      # BAZEL_REMOTE_CACHE: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+      BAZEL_REMOTE_CACHE: "0"
     steps:
       - name: Checkout actions
         uses: actions/checkout@v4
