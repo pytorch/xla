@@ -577,20 +577,31 @@ def mark_sharding_with_gradients(
     partition_spec: Tuple[Union[Tuple, int, str, None],
                           ...]) -> XLAShardedTensor:
   """
-    Annotates the tensor provided and the gradient computed with XLA partition spec. Internally,  
-    it calls mark_sharding on both given tensor and its gradent with the same mesh setting and partition spec.
+    A function to add sharding annotations on intermediate tensors (not in-place) and the gradient
+    of the intermediate tensors during backward pass.
 
     Args:
         t (Union[torch.Tensor, XLAShardedTensor]): input tensor to be annotated with partition_spec.
 
         mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.
 
-        partition_spec (Tuple[Tuple, int, str, None]): A tuple of device_mesh dimension index or
-            `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.
-            This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
-            When a tuple is specified, the corresponding input tensor axis will be sharded along all
-            logical axes in the tuple. Note that the order the mesh axes are specified in the tuple
-            will impact the resulting sharding.
+        partition_spec (PartitionSpec): A tuple of one or more device mesh axes that describes how
+            to shard the input tensor. Each element can be:
+
+    Usage:
+
+    >>> new_tensor = MarkShardingFunction.apply(tensor, mesh, ('axis_1', 'axis_2'))
+    sharding annotations are added to `new_tensor` and `tensor.grad`.
+
+    This is required to guide GSPMD sharding propagation better during the
+    backward pass as during complicated workloads the compiler can introduce extra
+    collectives that can hurt performance.
+
+    Compared to `mark_sharding`, this version will not in-place shard input tensors.
+    Instead it takes in an unsharded tensor and returns a new tensor that is sharded.
+    After GSPMD sharding propagation in the compiler, both tensors will become sharded.
+
+    This version can also be used in AOTAutograd.
     """
   num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
