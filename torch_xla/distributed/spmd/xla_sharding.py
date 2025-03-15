@@ -574,7 +574,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
 
 def mark_sharding_with_gradients(
     t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: Tuple[Union[Tuple, int, str, None],
+    partition_spec: tuple[Union[tuple, int, str, None],
                           ...]) -> XLAShardedTensor:
   """
     A function to add sharding annotations on intermediate tensors (not in-place) and the gradient

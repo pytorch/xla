@@ -1539,11 +1539,9 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(xt1.grad, torch.ones_like(xt1)))
 
   def test_mark_sharding_with_gradients_annotation(self):
-    self.n_devices = 6
-    self.device_ids = list(range(self.n_devices))
     mesh = self._get_mesh((self.n_devices,))
     partition_spec = (0,)
-    x = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+    x = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
                      dtype=torch.float,
                      device=xm.xla_device(),
                      requires_grad=True)
