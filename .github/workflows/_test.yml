@@ -128,12 +128,6 @@ jobs:
           set -x
 
           pip install expecttest unittest-xml-reporting
-          pip install torch_xla[pallas] \
-            -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
-            -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-          
-          # Install torchax
-          pip install pytorch/xla/torchax
 
           if [[ ! -z "$RUN_BENCHMARK_TESTS" ]]; then
             pip install -r pytorch/xla/benchmarks/requirements.txt

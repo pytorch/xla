@@ -87,6 +87,13 @@ function install_deps_pytorch_xla() {
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
   sudo npm install -g @bazel/bazelisk
+
+  # Install JAX dependency since a few tests depend on it.
+  pip install 'torch_xla[pallas]' \
+  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
+  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+  pip install xla/torchax
+
   # Only unlink if file exists
   if [[ -e /usr/bin/bazel ]]; then
     sudo unlink /usr/bin/bazel
