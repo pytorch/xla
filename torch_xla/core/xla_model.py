@@ -20,6 +20,7 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 from torch_xla.distributed.spmd.xla_sharding import ShardingSpec
+from torch_xla.distributed.xla_multiprocessing import create_optimized_replica_groups
 import os
 from torch_xla.experimental.deprecation import deprecated
 import torch_xla._internal.utils as _utils
@@ -534,7 +535,8 @@ def all_gather(value: torch.Tensor,
                output: Optional[torch.Tensor] = None,
                pin_layout: bool = True,
                channel_id = None,
-               use_global_device_ids = None) -> torch.Tensor:
+               use_global_device_ids = None,
+               use_optimized_replica_groups = False) -> torch.Tensor:
   """Performs an all-gather operation along a given dimension.
 
   Args:
@@ -571,6 +573,8 @@ def all_gather(value: torch.Tensor,
     assert all(len(group) == shard_count for group in groups), \
       "Replica groups must have the same number of replicas/shards."
   else:
+    if use_optimized_replica_groups:
+      groups = create_optimized_replica_groups()
     # All replicas belong to a single group
     shard_count = runtime.world_size()
 
@@ -874,7 +878,8 @@ def reduce_scatter(reduce_type: str,
                                           List[torch.Tensor]]] = None,
                    pin_layout: bool = True,
                    channel_id = None,
-                   use_global_device_ids = None) -> torch.Tensor:
+                   use_global_device_ids = None,
+                   use_optimized_replica_groups = False) -> torch.Tensor:
   """Performs a XLA `ReduceScatter()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
@@ -907,6 +912,9 @@ def reduce_scatter(reduce_type: str,
     the same as the input.
   """
   token, devctx = _get_all_reduce_token()
+
+  if groups is None and use_optimized_replica_groups is True:
+    groups = create_optimized_replica_groups()
 
   if isinstance(input, torch.Tensor):
     if output != None:
