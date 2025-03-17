@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git818c92d )
+                  master (2.8.0+git76b0ce5 )
                 </div>
               
             
@@ -1002,6 +1002,51 @@
   <span class="n">annotate_func</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_mark_sharding</span>
   <span class="n">annotate_func</span><span class="p">(</span><span class="n">unwrap_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">op_sharding</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">wrap_as_sharded_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">mark_sharding_with_gradients</span><span class="p">(</span>
+    <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
+    <span class="n">partition_spec</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+                          <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A function to add sharding annotations on intermediate tensors (not in-place) and the gradient</span>
+<span class="sd">    of the intermediate tensors during backward pass.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        t (Union[torch.Tensor, XLAShardedTensor]): input tensor to be annotated with partition_spec.</span>
+
+<span class="sd">        mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.</span>
+
+<span class="sd">        partition_spec (PartitionSpec): A tuple of one or more device mesh axes that describes how</span>
+<span class="sd">            to shard the input tensor. Each element can be:</span>
+
+<span class="sd">    Usage:</span>
+
+<span class="sd">    &gt;&gt;&gt; new_tensor = MarkShardingFunction.apply(tensor, mesh, (&#39;axis_1&#39;, &#39;axis_2&#39;))</span>
+<span class="sd">    sharding annotations are added to `new_tensor` and `tensor.grad`.</span>
+
+<span class="sd">    This is required to guide GSPMD sharding propagation better during the</span>
+<span class="sd">    backward pass as during complicated workloads the compiler can introduce extra</span>
+<span class="sd">    collectives that can hurt performance.</span>
+
+<span class="sd">    Compared to `mark_sharding`, this version will not in-place shard input tensors.</span>
+<span class="sd">    Instead it takes in an unsharded tensor and returns a new tensor that is sharded.</span>
+<span class="sd">    After GSPMD sharding propagation in the compiler, both tensors will become sharded.</span>
+
+<span class="sd">    This version can also be used in AOTAutograd.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+  <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;This requires XLA supported device(s).&quot;</span>
+  <span class="k">assert</span> <span class="n">mesh</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">==</span> <span class="n">num_devices</span><span class="p">,</span> \
+    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s2"> is not mappable over </span><span class="si">{</span><span class="n">num_devices</span><span class="si">}</span><span class="s2"> devices.&quot;</span>
+  <span class="c1"># We only allow fully specified `partition_spec` to be applicable, as opposed</span>
+  <span class="c1"># to filling in the unspecified replicated dims. Fully specified `partiion_spec`</span>
+  <span class="c1"># should be of the same rank as `t`. This is to support partial replication</span>
+  <span class="c1"># where the group assignment may vary with different input ranks.</span>
+  <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span> \
+    <span class="sa">f</span><span class="s2">&quot;Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">).&quot;</span>
+
+  <span class="k">return</span> <span class="n">MarkShardingFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="clear_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.clear_sharding">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">clear_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
