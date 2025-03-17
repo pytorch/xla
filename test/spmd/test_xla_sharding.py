@@ -4,7 +4,6 @@ import unittest
 from unittest.mock import patch
 import math
 import numpy as np
-import os
 import sys
 
 import torch
@@ -1525,6 +1524,46 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     torch.testing.assert_close(xg1, xg2)
     torch.testing.assert_close(wg1, wg2)
     torch.testing.assert_close(bg1, bg2)
+
+  def test_mark_sharding_with_gradients_basic(self):
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device(),
+                       requires_grad=True)
+    mesh = self._get_mesh((1, self.n_devices))
+    xst1 = xs.mark_sharding_with_gradients(xt1, mesh, partition_spec)
+    output = xst1.sum()
+    output.backward()
+    self.assertTrue(xt1.grad is not None)
+    self.assertTrue(torch.allclose(xt1.grad, torch.ones_like(xt1)))
+
+  def test_mark_sharding_with_gradients_annotation(self):
+    mesh = self._get_mesh((self.n_devices,))
+    partition_spec = (0,)
+    x = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
+                     dtype=torch.float,
+                     device=xm.xla_device(),
+                     requires_grad=True)
+    # Notice that the function does not modify in-place.
+    y = xs.mark_sharding_with_gradients(x, mesh, partition_spec)
+    z = y.sum()
+    z.backward()
+
+    y_sharding = torch_xla._XLAC._get_xla_sharding_spec(y)
+    x_grad_sharding = torch_xla._XLAC._get_xla_sharding_spec(x.grad)
+    self.assertEqual(y_sharding, x_grad_sharding)
+    if self.n_devices > 1:
+      # FORWARD:
+      # x(sharding=None) ---- MarkShardingFunction.forward -----> y(sharding={user_defined_sharding})
+      # BACKWARD:
+      # x.grad(sharding={user_defined_sharding}) <---- MarkShardingFunction.backward ---- y.grad(sharding=None)
+      sharding_spec = '{devices=[%d]' % self.n_devices
+      # Check that the output has sharding.
+      self.assertIn(sharding_spec, y_sharding)
+
+      # Check that the gradient has sharding.
+      self.assertIn(sharding_spec, x_grad_sharding)
 
 
 if __name__ == '__main__':

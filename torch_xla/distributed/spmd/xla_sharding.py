@@ -572,6 +572,51 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   return wrap_as_sharded_tensor(t)
 
 
+def mark_sharding_with_gradients(
+    t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
+    partition_spec: tuple[Union[tuple, int, str, None],
+                          ...]) -> XLAShardedTensor:
+  """
+    A function to add sharding annotations on intermediate tensors (not in-place) and the gradient
+    of the intermediate tensors during backward pass.
+
+    Args:
+        t (Union[torch.Tensor, XLAShardedTensor]): input tensor to be annotated with partition_spec.
+
+        mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.
+
+        partition_spec (PartitionSpec): A tuple of one or more device mesh axes that describes how
+            to shard the input tensor. Each element can be:
+
+    Usage:
+
+    >>> new_tensor = MarkShardingFunction.apply(tensor, mesh, ('axis_1', 'axis_2'))
+    sharding annotations are added to `new_tensor` and `tensor.grad`.
+
+    This is required to guide GSPMD sharding propagation better during the
+    backward pass as during complicated workloads the compiler can introduce extra
+    collectives that can hurt performance.
+
+    Compared to `mark_sharding`, this version will not in-place shard input tensors.
+    Instead it takes in an unsharded tensor and returns a new tensor that is sharded.
+    After GSPMD sharding propagation in the compiler, both tensors will become sharded.
+
+    This version can also be used in AOTAutograd.
+    """
+  num_devices = xr.global_runtime_device_count()
+  assert num_devices > 0, "This requires XLA supported device(s)."
+  assert mesh.size() == num_devices, \
+    f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
+  # We only allow fully specified `partition_spec` to be applicable, as opposed
+  # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
+  # should be of the same rank as `t`. This is to support partial replication
+  # where the group assignment may vary with different input ranks.
+  assert len(t.shape) == len(partition_spec), \
+    f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
+
+  return MarkShardingFunction.apply(t, mesh, partition_spec)
+
+
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   """
   Clear sharding annotation from the input tensor and return a `cpu` casted tensor. This
