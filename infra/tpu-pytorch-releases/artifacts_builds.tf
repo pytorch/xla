@@ -36,7 +36,7 @@ locals {
 
   # Built on push to specific tag.
   generated_versioned_builds = concat(
-    # Regular TPU builds (non-libtpu, pre-C++11 ABI)
+    # Regular TPU builds (non-libtpu, C++11 ABI)
     [
       for py_ver in local.tpu_python_versions : {
         git_tag         = local.release_git_tag

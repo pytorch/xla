@@ -51,7 +51,8 @@ pip install 'torch_xla[pallas]' \
 ```
 
 ### C++11 ABI builds
-**Note: As of 03/18/2025 and starting from Pytorch/XLA 2.7 release, we make C++11 ABI enable by default and stop building wheels with the flag turned off. Wheels with the flag turned off will append `_precxx11` in the naming.**
+**As of 03/18/2025 and starting from Pytorch/XLA 2.7 release, C++11 ABI builds
+are the default and we no longer provide wheels built with pre-C++11 ABI.**
 
 In Pytorch/XLA 2.6, we'll provide wheels and docker images built with
 two C++ ABI flavors: C++11 and pre-C++11. Pre-C++11 is the default to align with
