@@ -11,7 +11,9 @@ class ReduceScatter : public XlaNode {
   ReduceScatter(AllReduceType reduce_type, const torch::lazy::Value& input,
                 const torch::lazy::Value& token, double scale,
                 int64_t scatter_dim, int64_t shard_count,
-                std::vector<std::vector<int64_t>> groups, bool pin_layout);
+                std::vector<std::vector<int64_t>> groups, bool pin_layout,
+                std::optional<int> channel_id = std::nullopt,
+                std::optional<bool> use_global_device_ids = std::nullopt);
   ReduceScatter(AllReduceType reduce_type, const torch::lazy::Value& input,
                 double scale, int64_t scatter_dim, int64_t shard_count,
                 std::vector<std::vector<int64_t>> groups);
@@ -38,6 +40,8 @@ class ReduceScatter : public XlaNode {
   std::vector<std::vector<int64_t>> groups_;
   bool pin_layout_;
   bool has_token_{true};
+  std::optional<int> channel_id_;
+  std::optional<bool> use_global_device_ids_;
 };
 
 class ReduceScatterCoalesced : public XlaNode {
