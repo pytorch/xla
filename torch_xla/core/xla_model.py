@@ -532,7 +532,9 @@ def all_gather(value: torch.Tensor,
                dim: int = 0,
                groups: Optional[List[List[int]]] = None,
                output: Optional[torch.Tensor] = None,
-               pin_layout: bool = True) -> torch.Tensor:
+               pin_layout: bool = True,
+               channel_id = None,
+               use_global_device_ids = None) -> torch.Tensor:
   """Performs an all-gather operation along a given dimension.
 
   Args:
@@ -584,7 +586,7 @@ def all_gather(value: torch.Tensor,
       return output
 
     result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count, groups or
-                                             [], pin_layout)
+                                             [], pin_layout, channel_id, use_global_device_ids)
     return result
 
   # Now the input should be a list of Tensors.
@@ -870,7 +872,9 @@ def reduce_scatter(reduce_type: str,
                    groups: Optional[List[List[int]]] = None,
                    output: Optional[Union[torch.Tensor,
                                           List[torch.Tensor]]] = None,
-                   pin_layout: bool = True) -> torch.Tensor:
+                   pin_layout: bool = True,
+                   channel_id = None,
+                   use_global_device_ids = None) -> torch.Tensor:
   """Performs a XLA `ReduceScatter()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
@@ -916,7 +920,8 @@ def reduce_scatter(reduce_type: str,
     result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token,
                                                  scale, scatter_dim,
                                                  shard_count, groups or [],
-                                                 pin_layout)
+                                                 pin_layout, channel_id,
+                                                 use_global_device_ids)
     torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
     return result[0]
 
