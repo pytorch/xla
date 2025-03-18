@@ -1,8 +1,107 @@
-variable "nightly_package_version" {
-  type = string
+########## Begin section for release and nightly ########
+# Define common configuration parameters for 2.7 release and nightly
+locals {
+  tpu_python_versions = ["3.9", "3.10", "3.11"]
+  release_git_tag         = "v2.7.0-rc1"
+  release_package_version = "2.7.0-rc1"
+  release_pytorch_git_rev = "v2.7.0-rc1"
+  nightly_package_version = "2.8.0"
+  cuda_versions = {
+    "nightly": ["11.8", "12.1", "12.6", "12.8"],
+    "r2.7": ["11.8", "12.6", "12.8"] # align with PyTorch 2.7 release
+  }
+
+  # Built once a day from master
+  generated_nightly_builds = concat(
+    # TPU builds
+    [
+      for py_ver in local.tpu_python_versions : {
+        accelerator    = "tpu"
+        python_version = py_ver
+        bundle_libtpu  = "0"
+        cxx11_abi      = "1"
+      }
+    ],
+    # CUDA builds
+    [
+      for pair in setproduct(local.tpu_python_versions, local.cuda_versions["nightly"]) : {
+        accelerator     = "cuda"
+        cuda_version    = pair[1]
+        python_version  = pair[0]
+        bundle_libtpu  = "0"
+        cxx11_abi       = "1"
+      }
+    ]
+  )
+
+  # Built on push to specific tag.
+  generated_versioned_builds = concat(
+    # Regular TPU builds (non-libtpu, C++11 ABI)
+    [
+      for py_ver in local.tpu_python_versions : {
+        git_tag         = local.release_git_tag
+        package_version = local.release_package_version
+        pytorch_git_rev = local.release_pytorch_git_rev
+        accelerator     = "tpu"
+        python_version  = py_ver
+        bundle_libtpu   = "0"
+      }
+    ],
+    
+    # Special Kaggle build with libtpu
+    [
+      {
+        git_tag         = local.release_git_tag
+        package_version = "${local.release_package_version}+libtpu"
+        pytorch_git_rev = local.release_pytorch_git_rev
+        accelerator     = "tpu"
+        python_version  = "3.10"
+        bundle_libtpu   = "1"
+      }
+    ],
+
+    # cuda build for latest release
+    [
+    for pair in setproduct(local.tpu_python_versions, local.cuda_versions["r2.7"]) : {
+      git_tag         = local.release_git_tag
+      package_version = local.release_package_version
+      pytorch_git_rev = local.release_pytorch_git_rev
+      accelerator     = "cuda"
+      cuda_version    = pair[1]
+      python_version  = pair[0]
+      bundle_libtpu   = "0"
+    }
+    ]
+  )
+  versioned_builds = concat(local.generated_versioned_builds, var.manual_versioned_builds)
+  nightly_builds = concat(local.generated_nightly_builds, var.manual_nightly_builds)
 }
 
-variable "nightly_builds" {
+
+########## End section for release and nightly ########
+
+
+# Add this variable declaration
+variable "manual_versioned_builds" {
+  description = "Historical build configurations provided via tfvars"
+  type = list(
+    object({
+      git_tag         = string
+      package_version = string
+      accelerator     = string
+      pytorch_git_rev = optional(string, "")
+      python_version  = optional(string, "3.8")
+      cuda_version    = optional(string, "11.8")
+      arch            = optional(string, "amd64")
+      bundle_libtpu   = optional(string, "0")
+      cxx11_abi       = optional(string, "1")
+    })
+  )
+  default = []
+}
+
+
+variable "manual_nightly_builds" {
   type = list(
     object({
       accelerator    = string
@@ -10,42 +109,7 @@ variable "nightly_builds" {
       python_version = optional(string, "3.8")
       arch           = optional(string, "amd64")
       bundle_libtpu  = optional(string, "0")
-      cxx11_abi      = optional(string, "0")
-    })
-  )
-
-  default = []
-}
-
-// TODO: Remove this after the 2.1 release
-variable "xrt_versioned_builds" {
-  type = list(
-    object({
-      package_version = string
-      accelerator    = string
-      pytorch_git_rev = optional(string, "")
-      cuda_version   = optional(string, "11.8")
-      python_version = optional(string, "3.8")
-      arch           = optional(string, "amd64")
-    })
-  )
-
-  default = []
-}
-
-variable "versioned_builds" {
-  type = list(
-    object({
-      git_tag         = string
-      package_version = string
-      accelerator     = string
-      # Fetch PyTorch at a given revision (e.g. git tag), otherwise use git_tag.
-      pytorch_git_rev = optional(string, "")
-      python_version  = optional(string, "3.8")
-      cuda_version    = optional(string, "11.8")
-      arch            = optional(string, "amd64")
-      bundle_libtpu   = optional(string, "0")
-      cxx11_abi       = optional(string, "0")
+      cxx11_abi      = optional(string, "1")
     })
   )
 
@@ -54,11 +118,12 @@ variable "versioned_builds" {
 
 locals {
   nightly_builds_dict = {
-    for b in var.nightly_builds :
-    format("%s_%s%s",
+    for b in local.nightly_builds :
+    format("%s_%s%s%s",
       b.python_version,
       b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version),
-      b.cxx11_abi == "1" ? "_cxx11" : ""
+      try(b.cxx11_abi == "0", false) ? "_precxx11" : "",
+      try(b.bundle_libtpu == "1", false) ? "_libtpu" : ""
     ) => b
   }
 
@@ -73,12 +138,13 @@ locals {
   }
 
   versioned_builds_dict = {
-    for b in var.versioned_builds :
-    format("r%s_%s_%s%s",
+    for b in local.versioned_builds :
+    format("r%s_%s_%s%s%s",
       replace(b.package_version, "+", "_"),
       b.python_version,
       b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version),
-      b.cxx11_abi == "1" ? "_cxx11" : ""
+      try(b.cxx11_abi == "0", false) ? "_precxx11" : "",
+      try(b.bundle_libtpu == "1", false) ? "_libtpu" : ""
     ) => b
   }
 }
@@ -183,7 +249,8 @@ module "versioned_builds" {
     // if it's left empty.
     pytorch_git_rev = coalesce(each.value.pytorch_git_rev, each.value.git_tag)
     xla_git_rev     = each.value.git_tag,
-    cxx11_abi       = each.value.cxx11_abi
+    cxx11_abi       = lookup(each.value, "cxx11_abi", "1")
+    arch            = lookup(each.value, "arch", "amd64")
   })
 
   # Use Ansible setup from master branch for versioned release, because source

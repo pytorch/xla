@@ -133,7 +133,7 @@
     chdir: "/tmp/staging-wheels"
   when: nightly_release
 
-- name: Add cxx11 suffix to wheels built with C++11 ABI
+- name: Add precxx11 suffix to wheels built without C++11 ABI
   ansible.builtin.shell: |
     # Given names like
     #
@@ -151,14 +151,14 @@
     #
     # essentially adding +cxx11 before the -cp39, -cp310, -cp311 etc identifiers.
     if [[ "$f" == *"+libtpu"* ]]; then
-      rename -v "s/^(.+?)(-cp\d+)/\1.cxx11\2/" *.whl
+      rename -v "s/^(.+?)(-cp\d+)/\1.precxx11\2/" *.whl
     else
-      rename -v "s/^(.+?)(-cp\d+)/\1+cxx11\2/" *.whl
+      rename -v "s/^(.+?)(-cp\d+)/\1+precxx11\2/" *.whl
     fi
   args:
     executable: /bin/bash
     chdir: "/tmp/staging-wheels"
-  when: cxx11_abi | int > 0
+  when: cxx11_abi | int == 0
 
 - name: Copy wheels to /dist
   ansible.builtin.shell: "mv /tmp/staging-wheels/* /dist/"
@@ -197,13 +197,13 @@
     chdir: /dist
   environment: "{{ env_vars }}"
 
-- name: Add cxx11 suffix to Torchvision wheels built with C++11 ABI
+- name: Add precxx11 suffix to Torchvision wheels built without C++11 ABI
   ansible.builtin.shell: |
-    rename -v "s/^torchvision(.+?)(-cp\d+)/torchvision\1.cxx11\2/" *.whl
+    rename -v "s/^torchvision(.+?)(-cp\d+)/torchvision\1.precxx11\2/" *.whl
   args:
     executable: /bin/bash
     chdir: "/dist"
-  when: cxx11_abi | int > 0
+  when: cxx11_abi | int == 0
 
 - name: Find Torchvision *.whl files in /dist
   ansible.builtin.find:

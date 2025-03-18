@@ -51,8 +51,10 @@ pip install 'torch_xla[pallas]' \
 ```
 
 ### C++11 ABI builds
+**As of 03/18/2025 and starting from Pytorch/XLA 2.7 release, C++11 ABI builds
+are the default and we no longer provide wheels built with pre-C++11 ABI.**
 
-Starting from Pytorch/XLA 2.6, we'll provide wheels and docker images built with
+In Pytorch/XLA 2.6, we'll provide wheels and docker images built with
 two C++ ABI flavors: C++11 and pre-C++11. Pre-C++11 is the default to align with
 PyTorch upstream, but C++11 ABI wheels and docker images have better lazy tensor
 tracing performance.
@@ -233,15 +235,15 @@ GPU and nightly builds are available in our public GCS bucket.
 
 #### Use nightly build
 
-You can also add `yyyymmdd` like `torch_xla-2.7.0.devyyyymmdd+cxx11` (or the latest dev version)
+You can also add `yyyymmdd` like `torch_xla-2.8.0.devyyyymmdd` (or the latest dev version)
 to get the nightly wheel of a specified date. Here is an example:
 
 ```
-pip3 install torch==2.7.0.dev20250124+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
-pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev20250124+cxx11-cp310-cp310-linux_x86_64.whl
+pip3 install torch==2.8.0.dev20250124+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev20250318-cp310-cp310-linux_x86_64.whl
 ```
 
-The torch wheel version `2.7.0.dev20250124+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
+The torch wheel version `2.8.0.dev20250318+cpu` can be found at https://download.pytorch.org/whl/nightly/torch/.
 
 <details>
 
@@ -249,6 +251,7 @@ The torch wheel version `2.7.0.dev20250124+cpu` can be found at https://download
 
 | Version | Cloud TPU VMs Wheel |
 |---------|-------------------|
+| 2.6 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.6.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.5 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.5.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.4 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.4.0-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | 2.3 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.3.0-cp310-cp310-manylinux_2_28_x86_64.whl` |

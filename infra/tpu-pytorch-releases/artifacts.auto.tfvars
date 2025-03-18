@@ -58,6 +58,7 @@ versioned_builds = [
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
+    cxx11_abi       = "0"
   },
   {
     git_tag         = "v2.6.0"
@@ -66,6 +67,7 @@ versioned_builds = [
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
+    cxx11_abi       = "0"
   },
   {
     git_tag         = "v2.6.0"
@@ -74,6 +76,7 @@ versioned_builds = [
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
+    cxx11_abi       = "0"
   },
   # Remove libtpu from PyPI builds, C++11 ABI builds
   {
