@@ -1,4 +1,4 @@
-name: build-cuda-plugin
+name: build-torch-xla
 on:
   workflow_call:
     inputs:

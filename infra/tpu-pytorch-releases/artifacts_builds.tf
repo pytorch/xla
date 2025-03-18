@@ -2,13 +2,12 @@
 # Define common configuration parameters for 2.7 release and nightly
 locals {
   tpu_python_versions = ["3.9", "3.10", "3.11"]
-  cxx11_abi_options = ["1"]
-  r2_7_git_tag         = "v2.7.0-rc1"
-  r2_7_package_version = "2.7.0-rc1"
-  r2_7_pytorch_git_rev = "v2.7.0-rc1"
+  release_git_tag         = "v2.7.0-rc1"
+  release_package_version = "2.7.0-rc1"
+  release_pytorch_git_rev = "v2.7.0-rc1"
   nightly_package_version = "2.8.0"
   cuda_versions = {
-    "nightly": ["12.1", "12.6"],
+    "nightly": ["11.8", "12.1", "12.6", "12.8"],
     "r2.7": ["11.8", "12.6", "12.8"] # align with PyTorch 2.7 release
   }
 
@@ -37,43 +36,40 @@ locals {
 
   # Built on push to specific tag.
   generated_versioned_builds = concat(
-    # Regular TPU builds (non-libtpu, pre-C++11 ABI)
+    # Regular TPU builds (non-libtpu, C++11 ABI)
     [
       for py_ver in local.tpu_python_versions : {
-        git_tag         = local.r2_7_git_tag
-        package_version = local.r2_7_package_version
-        pytorch_git_rev = local.r2_7_pytorch_git_rev
+        git_tag         = local.release_git_tag
+        package_version = local.release_package_version
+        pytorch_git_rev = local.release_pytorch_git_rev
         accelerator     = "tpu"
         python_version  = py_ver
         bundle_libtpu   = "0"
-        cxx11_abi      = "1"
       }
     ],
     
     # Special Kaggle build with libtpu
     [
       {
-        git_tag         = local.r2_7_git_tag
-        package_version = "${local.r2_7_package_version}+libtpu"
-        pytorch_git_rev = local.r2_7_pytorch_git_rev
+        git_tag         = local.release_git_tag
+        package_version = "${local.release_package_version}+libtpu"
+        pytorch_git_rev = local.release_pytorch_git_rev
         accelerator     = "tpu"
         python_version  = "3.10"
         bundle_libtpu   = "1"
-        cxx11_abi      = "1"
       }
     ],
 
     # cuda build for latest release
     [
     for pair in setproduct(local.tpu_python_versions, local.cuda_versions["r2.7"]) : {
-      git_tag         = local.r2_7_git_tag
-      package_version = local.r2_7_package_version
-      pytorch_git_rev = local.r2_7_pytorch_git_rev
+      git_tag         = local.release_git_tag
+      package_version = local.release_package_version
+      pytorch_git_rev = local.release_pytorch_git_rev
       accelerator     = "cuda"
       cuda_version    = pair[1]
       python_version  = pair[0]
       bundle_libtpu   = "0"
-      cxx11_abi       = "1"
     }
     ]
   )
@@ -98,7 +94,7 @@ variable "manual_versioned_builds" {
       cuda_version    = optional(string, "11.8")
       arch            = optional(string, "amd64")
       bundle_libtpu   = optional(string, "0")
-      cxx11_abi       = optional(string, "0")
+      cxx11_abi       = optional(string, "1")
     })
   )
   default = []
@@ -113,7 +109,7 @@ variable "manual_nightly_builds" {
       python_version = optional(string, "3.8")
       arch           = optional(string, "amd64")
       bundle_libtpu  = optional(string, "0")
-      cxx11_abi      = optional(string, "0")
+      cxx11_abi      = optional(string, "1")
     })
   )
 
@@ -123,21 +119,23 @@ variable "manual_nightly_builds" {
 locals {
   nightly_builds_dict = {
     for b in local.nightly_builds :
-    format("%s_%s%s",
+    format("%s_%s%s%s",
       b.python_version,
       b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version),
-      try(b.cxx11_abi == "1", false) ? "_cxx11" : ""
+      try(b.cxx11_abi == "0", false) ? "_precxx11" : "",
+      try(b.bundle_libtpu == "1", false) ? "_libtpu" : ""
     ) => b
   }
 
 
   versioned_builds_dict = {
     for b in local.versioned_builds :
-    format("r%s_%s_%s%s",
+    format("r%s_%s_%s%s%s",
       replace(b.package_version, "+", "_"),
       b.python_version,
       b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version),
-      try(b.cxx11_abi == "1", false) ? "_cxx11" : ""
+      try(b.cxx11_abi == "0", false) ? "_precxx11" : "",
+      try(b.bundle_libtpu == "1", false) ? "_libtpu" : ""
     ) => b
   }
 }
@@ -199,7 +197,7 @@ module "versioned_builds" {
     // if it's left empty.
     pytorch_git_rev = coalesce(each.value.pytorch_git_rev, each.value.git_tag)
     xla_git_rev     = each.value.git_tag,
-    cxx11_abi       = lookup(each.value, "cxx11_abi", "0")
+    cxx11_abi       = lookup(each.value, "cxx11_abi", "1")
     arch            = lookup(each.value, "arch", "amd64")
   })
 
