@@ -238,7 +238,7 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   TokenHandler token_handler(token);
   std::optional<xla::ChannelHandle> channel_handle = std::nullopt;
-  if (channel_id) {
+  if (channel_id.has_value()) {
     xla::ChannelHandle channel_handle_value;
     channel_handle_value.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
     channel_handle_value.set_handle(channel_id.value());
@@ -406,7 +406,7 @@ ReduceScatterResult BuildReduceScatter(
   TokenHandler token_handler(token);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   std::optional<xla::ChannelHandle> channel_handle = std::nullopt;
-  if (channel_id) {
+  if (channel_id.has_value()) {
     xla::ChannelHandle channel_handle_value;
     channel_handle_value.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
     channel_handle_value.set_handle(channel_id.value());
