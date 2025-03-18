@@ -595,7 +595,7 @@ def ragged_paged_attention(
   """
   check_inputs_shapes(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens,
                       num_seqs)
-  _, num_q_heads, head_dim = q.shape
+  num_q, num_q_heads, head_dim = q.shape
   _, page_size, kv_model_dim = k_pages.shape
   num_kv_heads = kv_model_dim // head_dim
   num_q_per_blk = num_queries_per_block
