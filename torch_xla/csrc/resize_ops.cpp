@@ -8,6 +8,7 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/tf_image_resize_ops.h"
 #include "xla/client/lib/constants.h"
 #include "xla/shape_util.h"
 #include "xla/util.h"
@@ -291,6 +292,63 @@ xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
   return xla::Transpose(resized, inv_transpose_permute);
 }
 
+xla::XlaOp LowerBilinear2dGrad(xla::XlaOp grad, const xla::Shape& output_shape, const xla::Shape& input_shape, bool align_corners) {
+  // Code copied from
+  // https://github.com/tensorflow/tensorflow/blob/e51d6ab5730092775d516b18fa4ee85d49602cd8/tensorflow/compiler/tf2xla/kernels/image_resize_ops.cc#L477-L672
+
+  xla::XlaBuilder* b = grad.builder();
+  XLA_CHECK_EQ(input_shape.rank(), 4) << "input must be 4-dimensional, got " << input_shape.rank();
+
+  const int64_t batch = input_shape.dimensions(0);
+  std::vector<int64_t> in_size = {input_shape.dimensions(1),
+                                  input_shape.dimensions(2)};
+  const int64_t channels = input_shape.dimensions(3);
+  XLA_CHECK(in_size[0] > 0 && in_size[1] > 0) << "input size must be positive, got [" << in_size[0] <<  ", " << in_size[1] << "]";
+
+  const xla::Shape& grad_shape = ShapeHelper::ShapeOfXlaOp(grad);
+  XLA_CHECK_EQ(grad_shape.rank(), 4) << "gradient must be 4-dimensional, got " << grad_shape.rank();
+  const int64_t grad_batch = grad_shape.dimensions(0);
+  const std::vector<int64_t> grad_size = {grad_shape.dimensions(1),
+                                          grad_shape.dimensions(2)};
+  const int64_t grad_channels = grad_shape.dimensions(3);
+  XLA_CHECK_EQ(batch, grad_batch) << "activations and gradients must have the same batch size (" << batch << " vs. " << grad_batch << ")";
+  XLA_CHECK(grad_size[0] > 0 && grad_size[1] > 0) << "gradient size must be positive, got [" << grad_size[0] << ", " << grad_size[1] << "]";
+  XLA_CHECK_EQ(channels, grad_channels) << "activations and gradients must have the same number of channels (" << channels << " vs. " << grad_channels << ")";
+
+  const int num_spatial_dims = 2;
+
+  xla::XlaOp output = grad;
+  while (in_size != grad_size) {
+    if (in_size[0] != 1 && in_size[1] != 1) {
+      std::vector<float> k = {
+          (static_cast<float>(grad_size[0]) - 1) / ((in_size[0] - 1) * 2),
+          (static_cast<float>(grad_size[1]) - 1) / ((in_size[1] - 1) * 2)};
+      if ((k[0] == std::floor(k[0])) && (k[1] == std::floor(k[1])) &&
+          k[0] > 1 && k[1] > 1) {
+        std::vector<int64_t> next_grad_size = {(in_size[0] - 1) * 2 + 1,
+                                               (in_size[1] - 1) * 2 + 1};
+        output = tf::ResizeUsingDilationAndConvolutionGradOp(
+            b, grad, xla::F32, num_spatial_dims, in_size, next_grad_size,
+            channels, align_corners, true);
+        grad = output;
+        in_size = next_grad_size;
+      } else {
+        output = tf::ResizeUsingDilationAndConvolutionGradOp(
+            b, grad, xla::F32, num_spatial_dims, in_size, grad_size, channels,
+            align_corners, true);
+        in_size = grad_size;
+      }
+    } else {
+      output = tf::ResizeUsingDilationAndConvolutionGradOp(
+          b, grad, xla::F32, num_spatial_dims, in_size, grad_size, channels,
+          align_corners, true);
+      in_size = grad_size;
+    }
+  }
+
+  return output;
+}
+
 xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
                            const xla::Shape& output_shape, bool align_corners,
                            bool half_pixel_centers) {
@@ -308,21 +366,29 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
   auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
   xla::Shape resized_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);
-  xla::XlaOp tinput = xla::Transpose(input, transpose_permute);
-  std::string backend_config =
-      GetBackendConfig(align_corners, half_pixel_centers);
-  if (ResizeFactor(input_shape, output_shape, 2) > resiple_split_factor &&
-      ResizeFactor(input_shape, output_shape, 3) > resiple_split_factor) {
-    // If the resize is too large, do one dimension at a time.
-    xla::Shape partial_shape = resized_shape;
-    // Partial shape is in NHWC, while input shape is in NCHW.
-    partial_shape.mutable_dimensions()[1] = input_shape.dimensions(2);
-    tinput = xla::CustomCall(input.builder(), target, {tinput}, partial_shape,
-                             backend_config);
+  xla::XlaOp transposed_input = xla::Transpose(input, transpose_permute);
+  xla::XlaOp output;
+
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
+  if (CheckTpuDevice(hw_type)) {
+    std::string backend_config =
+        GetBackendConfig(align_corners, half_pixel_centers);
+    if (ResizeFactor(input_shape, output_shape, 2) > resiple_split_factor &&
+        ResizeFactor(input_shape, output_shape, 3) > resiple_split_factor) {
+      // If the resize is too large, do one dimension at a time.
+      xla::Shape partial_shape = resized_shape;
+      // Partial shape is in NHWC, while input shape is in NCHW.
+      partial_shape.mutable_dimensions()[1] = input_shape.dimensions(2);
+      transposed_input = xla::CustomCall(input.builder(), target, {transposed_input}, partial_shape,
+                               backend_config);
+    }
+    output = xla::CustomCall(input.builder(), target, {transposed_input},
+                                         resized_shape, backend_config);
+  } else {
+    output = LowerBilinear2dGrad(transposed_input, output_shape, input_shape, align_corners);
   }
-  xla::XlaOp resised = xla::CustomCall(input.builder(), target, {tinput},
-                                       resized_shape, backend_config);
-  return xla::Transpose(resised, inv_transpose_permute);
+  return xla::Transpose(output, inv_transpose_permute);
 }
 
 }  // namespace resize
