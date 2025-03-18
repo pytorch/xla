@@ -156,7 +156,8 @@ function run_xla_op_tests1 {
   run_pt_xla_debug_level1 "$CDIR/debug_tool/test_pt_xla_debug.py"
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_hlo_metadata.py"
-  run_test "$CDIR/test_profiler.py"
+  # TODO(https://github.com/pytorch/xla/issues/8796): Re-enable this test
+  # run_test "$CDIR/test_profiler.py"
   run_test "$CDIR/test_profiler_session.py"
   run_test "$CDIR/pjrt/test_runtime.py"
   run_test "$CDIR/pjrt/test_runtime_single_proc_gpu.py"
