@@ -55,7 +55,7 @@ function checkout_torch_pin_if_available() {
   git submodule update --init --recursive
 }
 
-function install_deps_pytorch_xla() {
+function install_pre_deps_pytorch_xla() {
   XLA_DIR=$1
   USE_CACHE="${2:-0}"
 
@@ -76,13 +76,6 @@ function install_deps_pytorch_xla() {
 
   # Using the Ninja generator requires CMake version 3.13 or greater
   pip install "cmake>=3.13" --upgrade
-
-  # Install JAX dependency since a few tests depend on it.
-  pip install 'torch_xla[pallas]' \
-  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
-  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-
-  pip install xla/torchax
 
   sudo apt-get -qq update
 
@@ -110,6 +103,20 @@ function install_deps_pytorch_xla() {
   if ls $CUBLAS_PATTERN 1> /dev/null 2>&1; then
     sudo ln -s $CUBLAS_PATTERN /usr/local/cuda/include
   fi
+}
+
+
+function install_post_deps_pytorch_xla() {
+  # Install dependencies after we built torch_xla. This is due to installing
+  # those packages can potentially trigger `pip install torch_xla` if torch_xla
+  # is not detected in the system.
+
+  # Install JAX dependency since a few tests depend on it.
+  pip install 'torch_xla[pallas]' \
+  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
+  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+
+  pip install xla/torchax
 }
 
 function build_torch_xla() {
