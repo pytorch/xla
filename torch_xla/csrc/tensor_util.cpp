@@ -548,6 +548,7 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
 torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
+  std::cout << "in TensorToXlaData1 " << std::endl;
   TORCH_LAZY_TIMED("TensorToData");
   if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
     // The tensor is bypassing the virtual device, so it should be replicated
@@ -559,14 +560,23 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     return ShardingUtil::CreateShardedData(replicated_data, local_devices,
                                            nullptr);
   }
-
+  auto start = std::chrono::high_resolution_clock::now();
   std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   source_tensors.push_back(
       std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
-
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+  std::cout << "333 Time taken: " << duration.count() << " microseconds"
+            << std::endl;
+  // start = end;
   auto handles =
       runtime::GetComputationClient()->TransferToDevice(source_tensors);
   XLA_CHECK_EQ(handles.size(), 1);
+  // end = std::chrono::high_resolution_clock::now();
+  // duration = std::chrono::duration_cast<std::chrono::microseconds>(end -
+  // start); std::cout << "333 Time taken: " << duration.count() << "
+  // microseconds" << std::endl;
   return handles.front();
 }
 
@@ -786,6 +796,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<std::string>& devices) {
+  std::cout << "in CreateTensorsData " << std::endl;
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), devices.size());
 
@@ -829,6 +840,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& shardings,
     const std::vector<std::string>& devices) {
+  std::cout << "in CreateTensorsData2 " << std::endl;
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), shardings.size());
   XLA_CHECK_EQ(tensors.size(), devices.size());
