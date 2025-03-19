@@ -200,7 +200,7 @@ def get_tpu_type() -> str:
     env = get_tpu_env()
   except requests.HTTPError as e:
     raise EnvironmentError('Failed to get TPU metadata') from e
-  
+
   match = re.search(r"^([^-]*)-", env[xenv.ACCELERATOR_TYPE])
   if match:
     return match.group(1)

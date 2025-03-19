@@ -29,8 +29,14 @@ def _mp_fn(index):
     assert res.cpu().allclose(expected)
     xm.rendezvous('test_reduce_scatter')
 
-    res = xm.reduce_scatter(xm.REDUCE_SUM, xrand, scale, scatter_dim,
-                            world_size, channel_id=0, use_global_device_ids=True)
+    res = xm.reduce_scatter(
+        xm.REDUCE_SUM,
+        xrand,
+        scale,
+        scatter_dim,
+        world_size,
+        channel_id=0,
+        use_global_device_ids=True)
     expected_world = xm.all_reduce(xm.REDUCE_SUM, xrand, scale)
     xm.mark_step()
 

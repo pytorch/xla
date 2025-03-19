@@ -123,13 +123,13 @@ class MpSerialExecutor(object):
     """
     with self._lock:
       return fn()
-    
+
+
 ###############################################################################
 #
 # The following is modified from JAX: https://github.com/jax-ml/jax/blob/main/jax/_src/mesh_utils.py
 #
 ###############################################################################
-    
 
 _TPU_V5P = "v5p"
 _TPU_V6E = "v6e"
@@ -174,10 +174,7 @@ def _v6e_create_replica_groups() -> List | None:
   return None
 
 
-device_kind_handler_dict: dict[
-    str,
-    Callable[..., List | None],
-] = {
+device_kind_handler_dict: dict[str, Callable[..., List | None],] = {
     _TPU_V5P: _v5p_create_replica_groups,
     _TPU_V6E: _v6e_create_replica_groups
 }

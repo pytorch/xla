@@ -43,7 +43,8 @@ def _mp_fn(index):
 
     # Testing with a single replica group, channel_id and use_global_device_ids
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
-    result = xm.all_gather(ordinal_tensor, dim=0, channel_id=0, use_global_device_ids=True)
+    result = xm.all_gather(
+        ordinal_tensor, dim=0, channel_id=0, use_global_device_ids=True)
     xm.mark_step()
 
     cpu_result = result.cpu()

@@ -534,8 +534,8 @@ def all_gather(value: torch.Tensor,
                groups: Optional[List[List[int]]] = None,
                output: Optional[torch.Tensor] = None,
                pin_layout: bool = True,
-               channel_id = None,
-               use_global_device_ids = None) -> torch.Tensor:
+               channel_id=None,
+               use_global_device_ids=None) -> torch.Tensor:
   """Performs an all-gather operation along a given dimension.
 
   Args:
@@ -588,7 +588,8 @@ def all_gather(value: torch.Tensor,
       return output
 
     result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count, groups or
-                                             [], pin_layout, channel_id, use_global_device_ids)
+                                             [], pin_layout, channel_id,
+                                             use_global_device_ids)
     return result
 
   # Now the input should be a list of Tensors.
@@ -875,8 +876,8 @@ def reduce_scatter(reduce_type: str,
                    output: Optional[Union[torch.Tensor,
                                           List[torch.Tensor]]] = None,
                    pin_layout: bool = True,
-                   channel_id = None,
-                   use_global_device_ids = None) -> torch.Tensor:
+                   channel_id=None,
+                   use_global_device_ids=None) -> torch.Tensor:
   """Performs a XLA `ReduceScatter()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
