@@ -232,10 +232,19 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
 AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
                                int64_t shard_count,
                                const std::vector<std::vector<int64_t>>& groups,
-                               bool pin_layout) {
+                               bool pin_layout, std::optional<int64_t> channel_id,
+                               std::optional<bool> use_global_device_ids) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   TokenHandler token_handler(token);
+  std::optional<xla::ChannelHandle> channel_handle = std::nullopt;
+  if (channel_id.has_value()) {
+    xla::ChannelHandle channel_handle_value;
+    channel_handle_value.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+    channel_handle_value.set_handle(channel_id.value());
+    channel_handle = channel_handle_value;
+  }
+
   xla::XlaOp all_gather_result;
   if (pin_layout) {
     torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
@@ -245,12 +254,13 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
         static_cast<XlaDeviceType>(xla_device.type()));
     all_gather_result =
         xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
-                       shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
-                       /*layout=*/reduce_shape.layout());
+                       shard_count, reduce_groups, channel_handle,
+                       /*layout=*/reduce_shape.layout(), use_global_device_ids);
   } else {
     all_gather_result =
         xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
-                       shard_count, reduce_groups);
+                       shard_count, reduce_groups, channel_handle,
+                       /*layout=*/std::nullopt, use_global_device_ids);
   }
   return {all_gather_result, token_handler.GetNewToken(all_gather_result)};
 }
@@ -389,10 +399,19 @@ RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,
 ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
     int64_t scatter_dim, int64_t shard_count,
-    const std::vector<std::vector<int64_t>>& groups, bool pin_layout) {
+    const std::vector<std::vector<int64_t>>& groups, bool pin_layout,
+    std::optional<int64_t> channel_id,
+    std::optional<bool> use_global_device_ids) {
   std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
   TokenHandler token_handler(token);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  std::optional<xla::ChannelHandle> channel_handle = std::nullopt;
+  if (channel_id.has_value()) {
+    xla::ChannelHandle channel_handle_value;
+    channel_handle_value.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+    channel_handle_value.set_handle(channel_id.value());
+    channel_handle = channel_handle_value;
+  }
   xla::XlaOp reduce_result;
   if (pin_layout) {
     torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
@@ -403,13 +422,14 @@ ReduceScatterResult BuildReduceScatter(
     reduce_result = xla::ReduceScatter(
         token_handler.GetInput(input, &input_shape),
         GetReduceComutation(reduce_type, input_shape.element_type()),
-        scatter_dim, shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
-        /*layout=*/reduce_shape.layout());
+        scatter_dim, shard_count, reduce_groups, channel_handle,
+        /*layout=*/reduce_shape.layout(), use_global_device_ids);
   } else {
     reduce_result = xla::ReduceScatter(
         token_handler.GetInput(input, &input_shape),
         GetReduceComutation(reduce_type, input_shape.element_type()),
-        scatter_dim, shard_count, reduce_groups);
+        scatter_dim, shard_count, reduce_groups, channel_handle,
+        /*layout=*/std::nullopt, use_global_device_ids);
   }
 
   if (scale != 1.0) {

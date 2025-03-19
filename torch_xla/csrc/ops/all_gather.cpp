@@ -47,7 +47,9 @@ xla::Shape NodeOutputShapeCoalesced(
 AllGather::AllGather(const torch::lazy::Value& input,
                      const torch::lazy::Value& token, int64_t dim,
                      int64_t shard_count,
-                     std::vector<std::vector<int64_t>> groups, bool pin_layout)
+                     std::vector<std::vector<int64_t>> groups, bool pin_layout,
+                     std::optional<int> channel_id,
+                     std::optional<bool> use_global_device_ids)
     : XlaNode(
           xla_all_gather, {input, token},
           [&]() {
@@ -59,7 +61,9 @@ AllGather::AllGather(const torch::lazy::Value& input,
       dim_(dim),
       shard_count_(shard_count),
       groups_(std::move(groups)),
-      pin_layout_(pin_layout) {}
+      pin_layout_(pin_layout),
+      channel_id_(channel_id),
+      use_global_device_ids_(use_global_device_ids) {}
 
 AllGatherCoalesced::AllGatherCoalesced(c10::ArrayRef<torch::lazy::Value> inputs,
                                        const torch::lazy::Value& token,
@@ -95,7 +99,7 @@ XlaOpVector AllGather::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp token = loctx->GetOutputOp(operand(1));
   AllGatherResult result =
-      BuildAllGather(input, token, dim_, shard_count_, groups_, pin_layout_);
+      BuildAllGather(input, token, dim_, shard_count_, groups_, pin_layout_, channel_id_, use_global_device_ids_);
   return ReturnOps({result.result, result.token}, loctx);
 }
 

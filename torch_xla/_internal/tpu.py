@@ -192,6 +192,22 @@ def version() -> int:
   return int(match.groups()[0])
 
 
+def get_tpu_type() -> str:
+  """
+  Return the tpu type. E.g. "v6e-8" returns "v6e"
+  """
+  try:
+    env = get_tpu_env()
+  except requests.HTTPError as e:
+    raise EnvironmentError('Failed to get TPU metadata') from e
+  
+  match = re.search(r"^([^-]*)-", env[xenv.ACCELERATOR_TYPE])
+  if match:
+    return match.group(1)
+  else:
+    return env[xenv.ACCELERATOR_TYPE]
+
+
 def get_worker_ips() -> List[str]:
   """Returns ordered list of TPU worker IPs from TPU metadata."""
   if _using_env_vars():
