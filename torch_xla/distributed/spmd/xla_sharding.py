@@ -62,6 +62,16 @@ class Mesh:
   mesh_shape: Tuple[int, ...]
   axis_names: Optional[Tuple[str, ...]]
 
+  @property
+  def jax_mesh(self) -> "jax.mesh_lib.Mesh":
+    """Returns a Jax device mesh with equivalent structure and device ordering."""
+    # TODO: unit test `a + b` under 2D mesh
+    # Compare torch_xla shmap output against JAX shmap
+    from jax._src import mesh as mesh_lib
+    assert self.axis_names is not None, "Omitting axis names is not yet supported"
+    return mesh_lib.Mesh(
+        self.device_ids.reshape(*self.mesh_shape), axis_names=self.axis_names)
+
   def __init__(self,
                device_ids: Union[np.ndarray, List[int]],
                mesh_shape: Tuple[int, ...],
@@ -551,6 +561,15 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
       >>> linear = nn.Linear(32, 10).to(xm.xla_device())
       >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
+
+  import torchax
+  if isinstance(t, torchax.tensor.Tensor):
+    from jax.lax import with_sharding_constraint
+    from jax.sharding import PartitionSpec as P
+    jax_mesh = mesh.jax_mesh
+    jax_partition_spec = P(*partition_spec)
+    return t.apply_jax_(with_sharding_constraint)
+
   num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
   assert mesh.size() == num_devices, \
