@@ -83,8 +83,8 @@ def ref_ragged_paged_attention(
   check_inputs_shapes(queries, k_pages, v_pages, kv_lens, page_indices,
                       cu_q_lens, num_seqs)
   _, num_q_heads, head_dim = queries.shape
-  _, _, kv_model_dim = k_pages.shape
-  num_kv_heads = kv_model_dim // head_dim
+  _, _, kv_hidden_size = k_pages.shape
+  num_kv_heads = kv_hidden_size // head_dim
   assert num_q_heads % num_kv_heads == 0
   num_query_per_kv = num_q_heads // num_kv_heads
   outputs = []
@@ -163,13 +163,13 @@ def check_inputs_shapes(
   if k_pages.shape != v_pages.shape:
     raise ValueError(
         f"Expected {k_pages.shape=} to be equal to {v_pages.shape=}.")
-  _, page_size, kv_model_dim = k_pages.shape
+  _, page_size, kv_hidden_size = k_pages.shape
   kv_packing = get_dtype_packing(k_pages.dtype)
   if page_size % kv_packing != 0:
     raise ValueError(f"Expected {page_size=} is divisible by {kv_packing=}")
-  if kv_model_dim % head_dim != 0:
-    raise ValueError(f"Expected {kv_model_dim=} is divisible by {head_dim=}.")
-  num_kv_heads = kv_model_dim // head_dim
+  if kv_hidden_size % head_dim != 0:
+    raise ValueError(f"Expected {kv_hidden_size=} is divisible by {head_dim=}.")
+  num_kv_heads = kv_hidden_size // head_dim
   if num_q_heads % num_kv_heads != 0:
     raise ValueError(f"Expected {num_q_heads=} is divisible by {num_kv_heads=}")
   max_num_seqs, _ = page_indices.shape
@@ -596,8 +596,8 @@ def ragged_paged_attention(
   check_inputs_shapes(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens,
                       num_seqs)
   num_q, num_q_heads, head_dim = q.shape
-  _, page_size, kv_model_dim = k_pages.shape
-  num_kv_heads = kv_model_dim // head_dim
+  _, page_size, kv_hidden_size = k_pages.shape
+  num_kv_heads = kv_hidden_size // head_dim
   num_q_per_blk = num_queries_per_block
   num_kv_pages_per_blk = num_kv_pages_per_block
   num_q_heads_per_kv_head = num_q_heads // num_kv_heads
