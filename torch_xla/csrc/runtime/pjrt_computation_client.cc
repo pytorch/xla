@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 
 #include <algorithm>
-#include <chrono>
 #include <future>
 #include <unordered_set>
 #include <vector>
@@ -257,8 +256,6 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
-  std::cout << "transfer to device start" << std::endl;
-  auto start = std::chrono::high_resolution_clock::now();
   metrics::TimedSection timed(TransferToDeviceMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -288,12 +285,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
   }
   OutboundDataMetric()->AddSample(total_size);
   CreateDataHandlesCounter()->AddValue(datas.size());
-  auto end = std::chrono::high_resolution_clock::now();
-  auto duration =
-      std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-  std::cout << "Time taken: " << duration.count() << " microseconds"
-            << std::endl;
-  std::cout << "transfer to device end" << std::endl;
+
   return datas;
 }
 

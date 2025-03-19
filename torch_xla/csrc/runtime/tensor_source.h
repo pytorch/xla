@@ -4,7 +4,6 @@
 #include <ATen/Tensor.h>
 #include <torch/csrc/lazy/core/metrics.h>
 
-#include <chrono>
 #include <vector>
 
 #include "torch_xla/csrc/dtype.h"
@@ -55,8 +54,9 @@ class AtenSource : public TensorSource {
     if (target_torch_type != tensor.type().scalarType()) {
       TORCH_LAZY_COUNTER("AtenSourceDowncasts", 1);
     }
-    auto start = std::chrono::high_resolution_clock::now();
     bool need_copy = true;
+    // The purpose of copy is to ensure the memory is contiguous, which is
+    // expected by PJRT.
     if (tensor.device() == at::kCPU && tensor.is_contiguous()) {
       need_copy = false;
     }
@@ -67,11 +67,6 @@ class AtenSource : public TensorSource {
         tensor.to(at::TensorOptions().device(at::kCPU).dtype(target_torch_type),
                   /*non_blocking=*/false,
                   /*copy=*/need_copy, at::MemoryFormat::Contiguous));
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "tensor constructor Time taken: " << duration.count()
-              << " microseconds" << std::endl;
   }
 
   const void* data() const override { return tensor_.const_data_ptr(); }

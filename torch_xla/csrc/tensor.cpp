@@ -10,7 +10,6 @@
 #include <torch/csrc/lazy/core/util.h>
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <condition_variable>
 #include <exception>
@@ -241,7 +240,6 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
       ApplyPendingGraph();
     }
   } else {
-    std::cout << "in GetXlaData" << std::endl;
     XLA_CHECK(data()->tensor_data);
     data()->handle = TensorToXlaData(*data()->tensor_data, GetDevice());
   }
@@ -433,19 +431,10 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
     data = XLAGraphExecutor::Get()->GetDeviceData(tensor.cpu(), device);
     read_only = true;
   } else {
-    std::cout << "in GetIrValueForTensor" << std::endl;
     TORCH_LAZY_TIMED("IrValueTensorToXlaData");
-    auto start = std::chrono::high_resolution_clock::now();
     data = TensorToXlaData(tensor, device);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "222 Time taken: " << duration.count() << " microseconds"
-              << std::endl;
   }
-  std::cout << "before CreateTensorNode" << std::endl;
-  auto node = CreateTensorNode(std::move(data), read_only);
-  return node;
+  return CreateTensorNode(std::move(data), read_only);
 }
 
 View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
@@ -569,24 +558,10 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
   torch::lazy::BackendDevice device = GetDevice();
   if (sync) {
-    auto start = std::chrono::high_resolution_clock::now();
-    std::cout << "In sync UpdateFromTensor" << std::endl;
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    start = end;
-    std::cout << "111 Time taken: " << duration.count() << " microseconds"
-              << std::endl;
-    auto irv = GetIrValueForTensor(typed_tensor, device);
-    end = std::chrono::high_resolution_clock::now();
-    duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "111 Time taken: " << duration.count() << " microseconds"
-              << std::endl;
-    SetIrValue(irv, /*inplace=*/true);
-    std::cout << "In sync UpdateFromTensor end" << std::endl;
+    SetIrValue(GetIrValueForTensor(typed_tensor, device),
+               /*inplace=*/true);
   } else {
     at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
     SetTensorData(coyped_tensor);
