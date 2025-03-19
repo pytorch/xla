@@ -18,6 +18,11 @@ variable "tpu_nodepool_name" {
   type        = string
 }
 
+variable "min_tpu_nodes" {
+  description = "Minimum number of TPU nodes and runners"
+  type        = number
+}
+
 variable "max_tpu_nodes" {
   description = "Maximum number of TPU nodes and runners"
   type        = number
