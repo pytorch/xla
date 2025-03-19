@@ -322,6 +322,7 @@ def value_and_grad_partitioned(
     with xp.Trace('aot_backward'):
       out = bwd_graph(*activations, *grad_new_carry, *grad_y)
     grad_carry, grad_x = unflatten_bwd_out(out)
+    # TODO: these need to be sharded like carry and x.
     return grad_carry, grad_x
 
   return forward, alias_input, backward

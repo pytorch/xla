@@ -3,13 +3,14 @@ import sys
 import re
 import unittest
 
+import numpy as np
 import torch
 import torch_xla
 import torch.nn as nn
-from torch_xla.distributed.spmd.xla_sharding import apply_xla_patch_to_nn_linear
+from torch_xla.distributed.spmd.xla_sharding import apply_xla_patch_to_nn_linear, Mesh
 from torch_xla.experimental.scan import scan
 from torch_xla.experimental.scan_layers import scan_layers
-from torch_xla.distributed.spmd import mark_sharding, set_global_mesh, get_1d_mesh
+from torch_xla.distributed.spmd import mark_sharding, mark_sharding_with_gradients, set_global_mesh, get_1d_mesh, get_global_mesh
 import torch_xla.runtime as xr
 
 
@@ -58,6 +59,82 @@ class ScanSpmdTest(unittest.TestCase):
       self.assertIn('OpSharding: {'
                     f'devices=[1,{N}]0,',
                     torch_xla._XLAC._get_xla_tensor_debug_info(tensor))
+
+  @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
+                       "Multiple devices required")
+  def test_scan_2d_sharding(self):
+    """
+    Test the sharding propagation of gradients when scanning 2D sharded layers.
+
+    Specifically, we scan over a group of simple MLP blocks found in transformers.
+
+    Inputs:
+      A: [B_x, S, H_y]
+      W1: [F_y, H_x]
+      W2: [H_x, F_y]
+
+    Outputs:
+      B: [B_x, S, H_y]
+
+    B = A @ W1.T @ W2.T
+
+    Under 2D sharding, the gradient of loss w.r.t. (A @ W1.T) is 2D sharded.
+    A is also 2D sharded. GSPMD need to figure out that the gradient of loss w.r.t.
+    W1 should also be 2D sharded.
+    """
+
+    def get_2d_mesh() -> Mesh:
+      mesh_shape = (2, xr.global_runtime_device_count() // 2)
+      mesh_axis_names = ("fsdp", "tensor")
+      return Mesh(
+          np.arange(xr.global_runtime_device_count()), mesh_shape,
+          mesh_axis_names)
+
+    mesh = get_2d_mesh()
+
+    class MLPBlock(nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        self.up_proj = nn.Linear(128, 256)
+        self.down_proj = nn.Linear(256, 128)
+
+      def forward(self, hidden_states):
+        hidden_states = mark_sharding_with_gradients(hidden_states, mesh,
+                                                     ("fsdp", None, "tensor"))
+        hidden_states = self.up_proj(hidden_states)
+        hidden_states = mark_sharding_with_gradients(hidden_states, mesh,
+                                                     ("fsdp", None, "tensor"))
+        hidden_states = torch.sin(hidden_states)
+        hidden_states = mark_sharding_with_gradients(hidden_states, mesh,
+                                                     ("fsdp", None, "tensor"))
+        hidden_states = self.down_proj(hidden_states)
+        hidden_states = mark_sharding_with_gradients(hidden_states, mesh,
+                                                     ("fsdp", None, "tensor"))
+        return hidden_states
+
+    class MyModel(nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        self.layers = nn.Sequential(*[MLPBlock() for _ in range(4)])
+
+      def forward(self, hidden_states: torch.Tensor):
+        hidden_states = mark_sharding_with_gradients(hidden_states, mesh,
+                                                     ("fsdp", None, "tensor"))
+        return scan_layers(self.layers, hidden_states)
+
+    torch.manual_seed(42)
+    torch_xla.manual_seed(42)
+    model = MyModel().to('xla')
+    model = apply_xla_patch_to_nn_linear(model)
+    # Batch, Seq, Hidden
+    hidden_states = torch.randn((3, 50, 128), device='xla')
+    torch_xla.sync()
+
+    # Run the model
+    out = model(hidden_states)
+    torch_xla.sync(wait=True)
 
   @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
                        "Multiple devices required")
