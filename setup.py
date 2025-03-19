@@ -81,7 +81,10 @@ if USE_NIGHTLY:
   _libtpu_wheel_name += f".dev{_date}+nightly"
   _libtpu_storage_directory = 'libtpu-nightly-releases'
 
-_libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_x86_64.whl'
+import platform
+platform_machine = platform.machine()
+
+_libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_{platform_machine}.whl'
 
 
 def _get_build_mode():
