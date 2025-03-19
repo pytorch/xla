@@ -59,8 +59,7 @@ class AtenSource : public TensorSource {
     // 2. Move CUDA tensor to CPU since we cannot pass CUDA memory to PJRT now.
     // 3. Cast data type.
     // We can avoid if copy is not needed.
-    if (tensor.device() == at::kCPU && tensor.is_contiguous() &&
-        tensor.dtype() == target_torch_type) {
+    if (tensor.device() == at::kCPU && tensor.is_contiguous()) {
       tensor_ = std::move(tensor);
     } else {
       // TODO(ysiraichi): check, first, if tensor lives in a device that the
