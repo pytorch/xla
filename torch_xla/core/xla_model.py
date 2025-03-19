@@ -553,7 +553,8 @@ def all_gather(value: torch.Tensor,
       participate in the communication has slightly different program, but it might
       cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
-
+    channel_id (int, optional): Optional channel ID for cross-module communication
+    use_global_device_ids(bool, optional): If true, interprets ids in ReplicaGroup as global device ids
   Returns:
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
@@ -901,6 +902,8 @@ def reduce_scatter(reduce_type: str,
       participate in the communication has slightly different program, but it might
       cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
+    channel_id (int, optional): Optional channel ID for cross-module communication
+    use_global_device_ids(bool, optional): If true, interprets ids in ReplicaGroup as global device ids
 
   Returns:
     A `torch.Tensor` with all the values reduced across replicas. Each process

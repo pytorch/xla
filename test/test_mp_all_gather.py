@@ -18,6 +18,7 @@ def _mp_fn(index):
     # Testing with a single replica group
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(ordinal_tensor, dim=0)
+    xm.mark_step()
 
     cpu_result = result.cpu()
     expected = torch.arange(0, world_size, dtype=torch.float)
@@ -37,6 +38,18 @@ def _mp_fn(index):
       print(
           'xm.all_gather() produced wrong reductions (torch.compile)',
           file=sys.stderr)
+      print(f'[{index}] {cpu_result}', file=sys.stderr)
+      sys.exit(1)
+
+    # Testing with a single replica group, channel_id and use_global_device_ids
+    ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
+    result = xm.all_gather(ordinal_tensor, dim=0, channel_id=0, use_global_device_ids=True)
+    xm.mark_step()
+
+    cpu_result = result.cpu()
+    expected = torch.arange(0, world_size, dtype=torch.float)
+    if not cpu_result.allclose(expected):
+      print('xm.all_gather() produced wrong reductions', file=sys.stderr)
       print(f'[{index}] {cpu_result}', file=sys.stderr)
       sys.exit(1)
 

@@ -29,6 +29,18 @@ def _mp_fn(index):
     assert res.cpu().allclose(expected)
     xm.rendezvous('test_reduce_scatter')
 
+    res = xm.reduce_scatter(xm.REDUCE_SUM, xrand, scale, scatter_dim,
+                            world_size, channel_id=0, use_global_device_ids=True)
+    expected_world = xm.all_reduce(xm.REDUCE_SUM, xrand, scale)
+    xm.mark_step()
+
+    slice_idx = torch.tensor(
+        list(range(index * shard_size, (index + 1) * shard_size)))
+    expected = expected_world.cpu().index_select(scatter_dim, slice_idx)
+
+    assert res.cpu().allclose(expected)
+    xm.rendezvous('test_reduce_scatter_with_channel_id')
+
     # Testing reduce-scatter with list input
     rand_list = [
         torch.rand((32, shard_size * world_size, 32))
