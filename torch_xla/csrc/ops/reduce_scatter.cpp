@@ -153,10 +153,9 @@ XlaOpVector ReduceScatter::Lower(LoweringContext* loctx) const {
     return ReturnOp(result, loctx);
   }
   xla::XlaOp token = loctx->GetOutputOp(operand(1));
-  ReduceScatterResult result =
-      BuildReduceScatter(reduce_type_, input, token, scale_, scatter_dim_,
-                         shard_count_, groups_, pin_layout_, channel_id_,
-                         use_global_device_ids_);
+  ReduceScatterResult result = BuildReduceScatter(
+      reduce_type_, input, token, scale_, scatter_dim_, shard_count_, groups_,
+      pin_layout_, channel_id_, use_global_device_ids_);
   return ReturnOps({result.result, result.token}, loctx);
 }
 

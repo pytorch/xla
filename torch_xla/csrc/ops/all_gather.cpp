@@ -99,7 +99,8 @@ XlaOpVector AllGather::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp token = loctx->GetOutputOp(operand(1));
   AllGatherResult result =
-      BuildAllGather(input, token, dim_, shard_count_, groups_, pin_layout_, channel_id_, use_global_device_ids_);
+      BuildAllGather(input, token, dim_, shard_count_, groups_, pin_layout_,
+                     channel_id_, use_global_device_ids_);
   return ReturnOps({result.result, result.token}, loctx);
 }
 

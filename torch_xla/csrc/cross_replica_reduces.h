@@ -75,12 +75,11 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
                              const std::vector<std::vector<int64_t>>& groups,
                              bool pin_layout);
 
-AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
-                               int64_t shard_count,
-                               const std::vector<std::vector<int64_t>>& groups,
-                               bool pin_layout,
-                               std::optional<int64_t> channel_id = std::nullopt,
-                               std::optional<bool> use_global_device_ids = std::nullopt);
+AllGatherResult BuildAllGather(
+    xla::XlaOp input, xla::XlaOp token, int64_t dim, int64_t shard_count,
+    const std::vector<std::vector<int64_t>>& groups, bool pin_layout,
+    std::optional<int64_t> channel_id = std::nullopt,
+    std::optional<bool> use_global_device_ids = std::nullopt);
 
 AllGatherResultCoalesced BuildAllGatherCoalesced(
     absl::Span<const xla::XlaOp> inputs, xla::XlaOp token, int64_t dim,

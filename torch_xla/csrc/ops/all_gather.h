@@ -11,7 +11,7 @@ class AllGather : public XlaNode {
   AllGather(const torch::lazy::Value& input, const torch::lazy::Value& token,
             int64_t dim, int64_t shard_count,
             std::vector<std::vector<int64_t>> groups, bool pin_layout,
-            std::optional<int> channel_id=std::nullopt,
+            std::optional<int> channel_id = std::nullopt,
             std::optional<bool> use_global_device_ids = std::nullopt);
 
   std::string ToString() const override;
@@ -35,7 +35,6 @@ class AllGather : public XlaNode {
   bool pin_layout_;
   std::optional<int> channel_id_;
   std::optional<bool> use_global_device_ids_;
-
 };
 
 class AllGatherCoalesced : public XlaNode {

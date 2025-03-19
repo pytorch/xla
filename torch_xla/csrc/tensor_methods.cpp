@@ -500,7 +500,8 @@ XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
                         std::optional<bool> use_global_device_ids) {
   torch::lazy::NodePtr node = torch_xla::MakeNode<AllGather>(
       input->GetIrValue(), GetAllReduceToken(input->GetDevice()), dim,
-      shard_count, std::move(groups), pin_layout, channel_id, use_global_device_ids);
+      shard_count, std::move(groups), pin_layout, channel_id,
+      use_global_device_ids);
   SetAllReduceToken(input->GetDevice(),
                     std::make_shared<torch::lazy::Value>(node, 1));
   return input->CreateFrom(torch::lazy::Value(node, 0));
