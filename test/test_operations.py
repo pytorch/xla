@@ -2404,14 +2404,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(
         actual, expected.cpu(), message="XLA results should match CPU results.")
 
-  def test_conj(self):
-    # Leave the factory out of the fallback count.
+  def test_conj_no_fallback(self):
     tensor = torch.rand(2, 2, dtype=torch.complex64)
     self._test_no_fallback(torch.conj, (tensor,))
 
   def test_bitwise_left_shift_no_fallback(self):
     t1 = torch.randint(0, 10, (2, 2))
-    t2 = torch.randint(0, 10, (2, 2))
+    t2 = torch.randint(0, 10, (2,))
     self._test_no_fallback(torch.bitwise_left_shift, (t1, t2))
 
 
