@@ -28,6 +28,8 @@ class TestDataTransfer(absltest.TestCase):
   @absltest.skipUnless(xr.device_type() == 'CUDA',
                        "This test only runs on CUDA.")
   def test_h2d_tensor_cuda(self):
+    # If a torch tensor is on cuda, now it will be copied to CPU
+    # before sending to GPU via PJRT.
     t = torch.zeros(10, 10).to('cuda')
     t = t.to('xla')
     self.assertIn('AtenSourceTensorCopy', met.counter_names())
