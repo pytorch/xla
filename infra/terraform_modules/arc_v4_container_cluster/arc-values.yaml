@@ -1,6 +1,6 @@
 githubConfigUrl: ${github_repo_url}
 githubConfigSecret: github-pat
-minRunners: 1
+minRunners: ${min_tpu_nodes}
 maxRunners: ${max_tpu_nodes}
 template:
   spec:

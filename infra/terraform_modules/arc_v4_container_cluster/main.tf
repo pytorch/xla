@@ -17,7 +17,7 @@ resource "google_container_cluster" "arc_v4_cluster" {
   location = "us-central2"
 
   remove_default_node_pool = true
-  initial_node_count       = 1
+  initial_node_count       = var.min_tpu_nodes
 
   release_channel {
     channel = "RAPID"
@@ -53,7 +53,7 @@ resource "google_container_node_pool" "arc_v4_tpu_nodes" {
   cluster            = google_container_cluster.arc_v4_cluster.name
   initial_node_count = 1
   autoscaling {
-    total_min_node_count = 1
+    total_min_node_count = var.min_tpu_nodes
     total_max_node_count = var.max_tpu_nodes
     location_policy      = "ANY"
   }
