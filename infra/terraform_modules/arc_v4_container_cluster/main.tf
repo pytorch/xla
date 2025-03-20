@@ -92,6 +92,7 @@ resource "helm_release" "arc_runner_set" {
   values = [
     templatefile("../terraform_modules/arc_v4_container_cluster/arc-values.yaml", {
       github_repo_url = var.github_repo_url
+      min_tpu_nodes   = var.min_tpu_nodes
       max_tpu_nodes   = var.max_tpu_nodes
       runner_image    = var.runner_image
     })
