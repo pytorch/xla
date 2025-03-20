@@ -17,7 +17,7 @@ resource "google_container_cluster" "arc_v4_cluster" {
   location = "us-central2"
 
   remove_default_node_pool = true
-  initial_node_count       = var.min_tpu_nodes
+  initial_node_count       = 1
 
   release_channel {
     channel = "RAPID"
