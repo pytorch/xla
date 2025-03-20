@@ -6,7 +6,6 @@ from torch_xla import runtime as xr
 import torch_xla.core.xla_model as xm
 
 
-
 def _mp_fn(index):
   os.environ["ENABLE_COLLECTIVE_MATMUL_IN_MP"] = "1"
   device = xm.xla_device()
@@ -15,12 +14,16 @@ def _mp_fn(index):
   scale = 1 / world_size
   scatter_dim = 1
   shard_size = 2
-  
-  if xm.xla_device_hw(device) in ('TPU', ):
+
+  if xm.xla_device_hw(device) in ('TPU',):
     # Testing with a single replica group, channel_id and use_global_device_ids
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(
-        ordinal_tensor, dim=0, groups=groups, channel_id=1, use_global_device_ids=True)
+        ordinal_tensor,
+        dim=0,
+        groups=groups,
+        channel_id=1,
+        use_global_device_ids=True)
     xm.mark_step()
 
     cpu_result = result.cpu()
@@ -47,7 +50,6 @@ def _mp_fn(index):
     expected = expected_world.cpu().index_select(scatter_dim, slice_idx)
 
     assert res.cpu().allclose(expected)
-
 
 
 if __name__ == '__main__':
