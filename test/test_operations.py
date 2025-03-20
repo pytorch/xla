@@ -2411,6 +2411,11 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t2 = torch.randint(0, 10, (2,))
     self._test_no_fallback(torch.bitwise_left_shift, (t1, t2))
 
+  def test_bitwise_right_shift_no_fallback(self):
+    t1 = torch.randint(0, 10, (2, 2))
+    t2 = torch.randint(0, 10, (2,))
+    self._test_no_fallback(torch.bitwise_right_shift, (t1, t2))
+
 
 class MNISTComparator(nn.Module):
 
