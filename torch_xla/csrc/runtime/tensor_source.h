@@ -61,8 +61,10 @@ class AtenSource : public TensorSource {
     // We can avoid if copy is not needed.
     if (tensor.device() == at::kCPU && tensor.is_contiguous() &&
         tensor.dtype() == target_torch_type) {
+      // Skip copying a CPU tensor to CPU.
       tensor_ = std::move(tensor);
     } else {
+      TORCH_LAZY_COUNTER("AtenSourceTensorCopy", 1);
       // TODO(ysiraichi): check, first, if tensor lives in a device that the
       // current PjRt client has access. If so, we don't need to go through the
       // CPU.
