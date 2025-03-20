@@ -1,4 +1,3 @@
-from copy import deepcopy
 import sys
 import re
 import unittest
@@ -96,8 +95,8 @@ class ScanSpmdTest(unittest.TestCase):
 
       def __init__(self):
         super().__init__()
-        self.up_proj = nn.Linear(128, 256)
-        self.down_proj = nn.Linear(256, 128)
+        self.up_proj = nn.Linear(128, 256, bias=False)
+        self.down_proj = nn.Linear(256, 128, bias=False)
 
       def forward(self, hidden_states):
         hidden_states = mark_sharding_with_gradients(hidden_states, mesh,
@@ -128,13 +127,29 @@ class ScanSpmdTest(unittest.TestCase):
     torch_xla.manual_seed(42)
     model = MyModel().to('xla')
     model = apply_xla_patch_to_nn_linear(model)
+    for name, param in model.named_parameters():
+      if 'up_proj' in name:
+        mark_sharding(param, mesh, ("tensor", "fsdp"))
+      if 'down_proj' in name:
+        mark_sharding(param, mesh, ("fsdp", "tensor"))
+
     # Batch, Seq, Hidden
     hidden_states = torch.randn((3, 50, 128), device='xla')
     torch_xla.sync()
 
     # Run the model
+    model.zero_grad()
     out = model(hidden_states)
+    # Prepare to check the gradient of W1
+    for layer in model.layers.children():
+      layer.up_proj.weight.retain_grad()
+    out.sum().backward()
     torch_xla.sync(wait=True)
+    # Check the gradient of W1
+    for layer in model.layers.children():
+      # Right: {devices=[2,2]0,1,2,3}
+      # Wrong: {devices=[2,1,2]0,2,1,3 last_tile_dim_replicate}
+      print(torch_xla._XLAC._get_xla_sharding_spec(layer.up_proj.weight.grad))
 
   @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
                        "Multiple devices required")
