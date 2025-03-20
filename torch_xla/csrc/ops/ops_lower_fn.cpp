@@ -277,6 +277,19 @@ torch_xla::XlaOpVector BitwiseXorTensor::Lower(LoweringContext* loctx) const {
                   loctx);
 }
 
+torch_xla::XlaOpVector BitwiseLeftShiftTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other_input = loctx->GetOutputOp(operand(1));
+  return ReturnOp(XlaHelpers::PromotedBinaryOp(
+                      xla_input, xla_other_input,
+                      [](xla::XlaOp one, xla::XlaOp two) {
+                        return xla::ShiftLeft(
+                            one, two,
+                            XlaHelpers::getBroadcastDimensions(one, two));
+                      }),
+                  loctx);
+}
+
 torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
