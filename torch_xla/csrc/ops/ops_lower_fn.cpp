@@ -277,7 +277,8 @@ torch_xla::XlaOpVector BitwiseXorTensor::Lower(LoweringContext* loctx) const {
                   loctx);
 }
 
-torch_xla::XlaOpVector BitwiseLeftShiftTensor::Lower(LoweringContext* loctx) const {
+torch_xla::XlaOpVector BitwiseLeftShiftTensor::Lower(
+    LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other_input = loctx->GetOutputOp(operand(1));
   return ReturnOp(XlaHelpers::PromotedBinaryOp(
