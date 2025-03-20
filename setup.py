@@ -68,8 +68,8 @@ USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
 
 _date = '20250320'
 _libtpu_version = '0.0.12'
-_jax_version = '0.5.3'
-_jaxlib_version = '0.5.3'
+_jax_version = '0.5.4'
+_jaxlib_version = '0.5.4'
 
 _libtpu_wheel_name = f'libtpu-{_libtpu_version}'
 _libtpu_storage_directory = 'libtpu-lts-releases'
