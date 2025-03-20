@@ -30,6 +30,7 @@ full_codegen:
   - binary_cross_entropy_backward
   - bitwise_not
   - bitwise_left_shift.Tensor
+  - bitwise_right_shift.Tensor
   - ceil
   - cholesky
   - clamp.Tensor

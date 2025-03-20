@@ -291,6 +291,25 @@ torch_xla::XlaOpVector BitwiseLeftShiftTensor::Lower(
                   loctx);
 }
 
+torch_xla::XlaOpVector BitwiseRightShiftTensor::Lower(
+    LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp xla_other_input = loctx->GetOutputOp(operand(1));
+  return ReturnOp(
+      XlaHelpers::PromotedBinaryOp(
+          xla_input, xla_other_input,
+          [](xla::XlaOp one, xla::XlaOp two) {
+            auto broadcast_dims = XlaHelpers::getBroadcastDimensions(one, two);
+            if (xla::primitive_util::IsSignedIntegralType(
+                    XlaHelpers::TypeOfXlaOp(one))) {
+              return xla::ShiftRightArithmetic(one, two, broadcast_dims);
+            } else {
+              return xla::ShiftRightLogical(one, two, broadcast_dims);
+            }
+          }),
+      loctx);
+}
+
 torch_xla::XlaOpVector Ceil::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
