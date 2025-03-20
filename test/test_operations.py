@@ -2389,18 +2389,16 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     met.clear_all()
 
     def run(device):
-      args_ = pytree.tree_map_only(
-              torch.Tensor,
-              lambda t: t.clone().detach().to(device),
-              args)
+      args_ = pytree.tree_map_only(torch.Tensor,
+                                   lambda t: t.clone().detach().to(device),
+                                   args)
       return runf(*args_)
 
     actual = run("cpu")
     expected = run(xm.xla_device())
 
     self.assertFalse(
-        met.executed_fallback_ops(),
-        msg="expected no fallback operations.")
+        met.executed_fallback_ops(), msg="expected no fallback operations.")
     self.assertEqual(
         actual, expected.cpu(), message="XLA results should match CPU results.")
 
