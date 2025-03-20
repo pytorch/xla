@@ -292,10 +292,10 @@ xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
   return xla::Transpose(resized, inv_transpose_permute);
 }
 
-xla::XlaOp LowerBilinear2dGrad(xla::XlaOp grad, const xla::Shape& output_shape, const xla::Shape& input_shape, bool align_corners) {
+xla::XlaOp LowerBilinear2dGrad(xla::XlaOp grad, const xla::Shape& input_shape, bool align_corners) {
   // Code copied from
   // https://github.com/tensorflow/tensorflow/blob/e51d6ab5730092775d516b18fa4ee85d49602cd8/tensorflow/compiler/tf2xla/kernels/image_resize_ops.cc#L477-L672
-
+  //
   xla::XlaBuilder* b = grad.builder();
   XLA_CHECK_EQ(input_shape.rank(), 4) << "input must be 4-dimensional, got " << input_shape.rank();
 
@@ -364,7 +364,7 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
   // call the kernel, and transpose back.
   std::vector<int64_t> transpose_permute({0, 3, 2, 1});
   auto inv_transpose_permute = xla::InversePermutation(transpose_permute);
-  xla::Shape resized_shape =
+  xla::Shape transporsed_output_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permute, output_shape);
   xla::XlaOp transposed_input = xla::Transpose(input, transpose_permute);
   xla::XlaOp output;
@@ -377,16 +377,16 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
     if (ResizeFactor(input_shape, output_shape, 2) > resiple_split_factor &&
         ResizeFactor(input_shape, output_shape, 3) > resiple_split_factor) {
       // If the resize is too large, do one dimension at a time.
-      xla::Shape partial_shape = resized_shape;
+      xla::Shape partial_shape = transporsed_output_shape;
       // Partial shape is in NHWC, while input shape is in NCHW.
       partial_shape.mutable_dimensions()[1] = input_shape.dimensions(2);
       transposed_input = xla::CustomCall(input.builder(), target, {transposed_input}, partial_shape,
                                backend_config);
     }
     output = xla::CustomCall(input.builder(), target, {transposed_input},
-                                         resized_shape, backend_config);
+                                         transporsed_output_shape, backend_config);
   } else {
-    output = LowerBilinear2dGrad(transposed_input, output_shape, input_shape, align_corners);
+    output = LowerBilinear2dGrad(transposed_input, transporsed_output_shape, align_corners);
   }
   return xla::Transpose(output, inv_transpose_permute);
 }
