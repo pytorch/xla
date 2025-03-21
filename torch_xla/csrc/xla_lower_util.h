@@ -20,6 +20,9 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k, int64_t dim,
 std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
                                    bool largest, bool stable);
 
+xla::XlaOp CreateTopPMask(const torch::lazy::BackendDevice& device,
+                          xla::XlaOp input, float p, int64_t dim, bool stable);
+
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs);
 
 xla::XlaOp BuildMatMul(xla::XlaOp lhs, xla::XlaOp rhs, xla::XlaOp bias);

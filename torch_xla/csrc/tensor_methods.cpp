@@ -132,6 +132,7 @@
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
+#include "torch_xla/csrc/ops/topp_mask.h"
 #include "torch_xla/csrc/ops/tpu_custom_call.h"
 #include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/uniform.h"
@@ -3436,6 +3437,14 @@ std::tuple<XLATensorPtr, XLATensorPtr> topk(const XLATensorPtr& input,
     graph_executor->ApplyEagerSync(tensors_to_sync);
   }
   return std::make_tuple(t1, t2);
+}
+
+XLATensorPtr topp_mask(const XLATensorPtr& input, float p, int64_t dim,
+                       bool stable) {
+  return input->CreateFrom(torch_xla::MakeNode<TopPMask>(
+      input->GetIrValue(), p,
+      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank()),
+      stable));
 }
 
 XLATensorPtr trace(const XLATensorPtr& input) {

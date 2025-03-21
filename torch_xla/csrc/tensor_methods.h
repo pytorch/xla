@@ -973,6 +973,9 @@ std::tuple<XLATensorPtr, XLATensorPtr> topk(const XLATensorPtr& input,
                                             bool largest, bool sorted,
                                             bool stable);
 
+XLATensorPtr topp_mask(const XLATensorPtr& input, float p, int64_t dim,
+                       bool stable);
+
 // Returns the sum of the elements of the diagonal of the input 2-D matrix.
 XLATensorPtr trace(const XLATensorPtr& input);
 

@@ -40,5 +40,6 @@ const OpKindWrapper xla_update_slice("xla::update_slice");
 const OpKindWrapper xla_custom_sharding("xla::custom_sharding");
 const OpKindWrapper xla_tpu_custom_call("xla::tpu_custom_call");
 const OpKindWrapper xla_gpu_custom_call("xla::gpu_custom_call");
+const OpKindWrapper xla_topp_mask("xla::topp_mask");
 
 }  // namespace torch_xla
