@@ -40,7 +40,7 @@ To install PyTorch/XLA nightly build in a new TPU VM:
 
 ```sh
 pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.7.0.dev+cxx11-cp310-cp310-linux_x86_64.whl' \
+pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev-cp310-cp310-linux_x86_64.whl' \
   -f https://storage.googleapis.com/libtpu-releases/index.html \
   -f https://storage.googleapis.com/libtpu-wheels/index.html
 
@@ -239,7 +239,7 @@ You can also add `yyyymmdd` like `torch_xla-2.8.0.devyyyymmdd` (or the latest de
 to get the nightly wheel of a specified date. Here is an example:
 
 ```
-pip3 install torch==2.8.0.dev20250124+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install torch==2.8.0.dev20250318+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
 pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev20250318-cp310-cp310-linux_x86_64.whl
 ```
 
