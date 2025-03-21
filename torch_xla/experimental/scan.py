@@ -35,6 +35,7 @@ The `Scan.backward` method scans the backward graph over the gradients and
 activations.
 """
 
+from functools import partial
 import itertools
 from typing import Callable, Dict, Sequence, TypeVar, Tuple, List, Optional, overload
 
@@ -46,6 +47,7 @@ from functorch.compile import aot_function, make_boxed_func, default_partition  
 import torch_xla
 import torch_xla.core.xla_builder as xb
 from torch_xla.distributed.spmd.xla_sharding import shard_as
+from torch_xla.experimental.custom_kernel import _jax_env_context
 from torch_xla.experimental.pytreeify import pytreeify
 import torch_xla.debug.profiler as xp
 import torch_xla.runtime
@@ -391,20 +393,67 @@ def broken_shard_as(source, target):
                         a_spec), tree_unflatten(b_sharded_flat, b_spec)
 
 
+def hashify(a):
+  xb.jax_import_guard()
+  import jax
+  import torchax.ops.mappings as mappings
+  if a is None:
+    return None
+  if isinstance(a, dict):
+    return frozenset((k, hashify(v)) for k, v in a.items())
+  return jax.ShapeDtypeStruct(a.shape, mappings.t2j_dtype(a.dtype))
+
+
+def my_caching_call_jax(jax_func, args, kwargs=None, name=None):
+  """
+  Call a JAX function `jax_func` with the given `args` and `kwargs` that may contain
+  XLA tensors.
+  """
+
+  kwargs = kwargs or {}
+  flattened, spec = tree_flatten((args, kwargs))
+
+  things_to_hash = (id(jax_func), hash(str(spec)),
+                    tuple(hashify(f) for f in flattened))
+  xla_computation = _CACHED_STUFF.get(things_to_hash, None)
+  if xla_computation is None:
+    xla_computation = xb.jax_func_to_xla_computation(jax_func, args, kwargs,
+                                                     name)
+    _CACHED_STUFF[things_to_hash] = xla_computation
+  return xla_computation(flattened)
+
+
+_CACHED_STUFF = {}
+
+
 def call_jax_shard_as(source, target):
   a_flat, a_spec = tree_flatten(source)
   b_flat, b_spec = tree_flatten(target)
   assert a_spec == b_spec, f"a and b must have the same structure. got {a_spec} and {b_spec}"
   a_sharded_flat = []
   b_sharded_flat = []
-  from jax.experimental.shard_alike import shard_alike
-  for x, y in zip(a_flat, b_flat):
-    # TODO: improve caching here
-    x, y = xb.call_jax(shard_alike, (x, y))
-    a_sharded_flat.append(x)
-    b_sharded_flat.append(y)
-  return tree_unflatten(a_sharded_flat,
-                        a_spec), tree_unflatten(b_sharded_flat, b_spec)
+  # TODO: xb.call_jax should do this
+  with _jax_env_context():
+    from jax.experimental.shard_alike import shard_alike
+    for x, y in zip(a_flat, b_flat):
+      # TODO: wat?
+      if x is None or y is None:
+        x, y = x, y
+      else:
+        # TODO: improve caching here
+        x, y = my_caching_call_jax(shard_alike, (x, y))
+      a_sharded_flat.append(x)
+      b_sharded_flat.append(y)
+    return tree_unflatten(a_sharded_flat,
+                          a_spec), tree_unflatten(b_sharded_flat, b_spec)
+
+
+def backward_shard_alike(carry, x, backward, init, xs):
+  grad_carry, grad_x = backward(carry, x)
+  # Propagate sharding between forward inputs and backward outputs.
+  _, grad_carry = call_jax_shard_as(init, grad_carry)
+  _, grad_x = call_jax_shard_as(tree_map(lambda v: v[0], xs), grad_x)
+  return grad_carry, grad_x
 
 
 @pytreeify
@@ -412,29 +461,38 @@ class Scan(torch.autograd.Function):
 
   @staticmethod
   def forward(ctx, forward, alias_input, backward, init, xs):
-
-    def backward_shard_alike(carry, x):
-      grad_carry, grad_x = backward(carry, x)
-      # Propagate sharding between forward inputs and backward outputs.
-      _, grad_carry = call_jax_shard_as(init, grad_carry)
-      _, grad_x = call_jax_shard_as(tree_map(lambda v: v[0], xs), grad_x)
-      return grad_carry, grad_x
-
-    if torch_xla.runtime.is_spmd():
-      ctx._backward = backward_shard_alike
-    else:
-      ctx._backward = backward
     with torch.no_grad():
       carry, ys = _scan_impl_pytree(forward, init, xs)
       ys, partial_activations = ys
     activations = alias_input(partial_activations, xs)
-    ctx.save_for_backward(*activations)
+    ctx._backward = backward
+
+    if torch_xla.runtime.is_spmd():
+      flat_init, carry_spec = tree_flatten(init)
+      flat_xs, xs_spec = tree_flatten(xs)
+      ctx._carry_spec = carry_spec
+      ctx._xs_spec = xs_spec
+      ctx._flat_init_len = len(flat_init)
+      ctx._flat_xs_len = len(flat_xs)
+      ctx.save_for_backward(*flat_init, *flat_xs, *activations)
+    else:
+      ctx.save_for_backward(*activations)
+
     return carry, ys
 
   @staticmethod
   def backward(ctx, grad_carry, grad_ys):  # type: ignore
-    activations = ctx.saved_tensors
-    backward = ctx._backward
+    if torch_xla.runtime.is_spmd():
+      stuff = ctx.saved_tensors
+      flat_init, flat_xs, activations = split(stuff, ctx._flat_init_len,
+                                              ctx._flat_xs_len)
+      init = tree_unflatten(flat_init, ctx._carry_spec)
+      xs = tree_unflatten(flat_xs, ctx._xs_spec)
+      backward = partial(
+          backward_shard_alike, backward=ctx._backward, init=init, xs=xs)
+    else:
+      activations = ctx.saved_tensors
+      backward = ctx._backward
     with torch.no_grad():
       # Reverse loop to propagate gradients from last iteration to first.
       grad_init, grad_xs = _scan_impl_pytree(

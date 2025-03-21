@@ -864,9 +864,12 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
     args, kwargs = tree_unflatten(flattened, spec)
     return jax_func(*args, **kwargs)
 
-  sample_input_shapes = tuple(
-      jax.ShapeDtypeStruct(a.shape, mappings.t2j_dtype(a.dtype))
-      for a in flattened)
+  def abstractify(a):
+    if a is None:
+      return None
+    return jax.ShapeDtypeStruct(a.shape, mappings.t2j_dtype(a.dtype))
+
+  sample_input_shapes = tuple(abstractify(a) for a in flattened)
   # `as_serialized_hlo_module_proto` is mentioned at
   # https://github.com/jax-ml/jax/discussions/22266
   hlo_module = jax.jit(
