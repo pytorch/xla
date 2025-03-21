@@ -2520,6 +2520,26 @@ void InitXlaModuleBindings(py::module m) {
         ShardingUtil::CreateShardedData(shards, devices, sharding_spec);
     xtensor->SetXlaData(xla_data);
   });
+
+  // Wrappers to create grouped sharding constraints c.f.
+  // https://github.com/openxla/xla/blob/a47c789c1632799c340f20b84ec9728d63bd781e/xla/xla_data.proto#L983
+  enum class ShardGroupType : int { AS = 0, LIKE = 1 };
+  py::enum_<ShardGroupType>(m, "ShardGroupType", py::arithmetic())
+      .value("As", ShardGroupType::AS)
+      .value("Like", ShardGroupType::LIKE);
+  m.def("_xla_create_shard_group", [](int64_t shard_group_id,
+                                      ShardGroupType shard_group_type) {
+    xla::HloSharding::ShardGroup shard_group = [=] {
+      switch (shard_group_type) {
+        case ShardGroupType::AS:
+          return xla::HloSharding::ShardAs(shard_group_id);
+        case ShardGroupType::LIKE:
+          return xla::HloSharding::ShardLike(shard_group_id);
+      }
+    }();
+    return xla::HloSharding::Unknown().SetShardGroup(shard_group).ToProto();
+  });
+
   // Initialize the XlaCoordinator in the runtime if not already initialized.
   m.def(
       "_ensure_xla_coordinator_initialized",

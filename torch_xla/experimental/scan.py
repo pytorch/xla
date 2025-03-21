@@ -45,8 +45,10 @@ from functorch.compile import aot_function, make_boxed_func, default_partition  
 
 import torch_xla
 import torch_xla.core.xla_builder as xb
+from torch_xla.distributed.spmd.xla_sharding import shard_as
 from torch_xla.experimental.pytreeify import pytreeify
 import torch_xla.debug.profiler as xp
+import torch_xla.runtime
 
 Carry = TypeVar('Carry')
 X = TypeVar('X')
@@ -263,7 +265,7 @@ def value_and_grad_partitioned(
   fwd_graph = get_fwd()
   bwd_graph = get_bwd()
 
-  # Figure out which activations are alises to the inputs. We don't need to
+  # Figure out which activations are aliases to the inputs. We don't need to
   # pass them through the scan logic unchanged. That would use more memory.
   input_activation_aliases = _find_input_activation_aliases(
       fake_carry_pytree, fake_x_pytree, num_out, fwd_graph)
@@ -322,7 +324,6 @@ def value_and_grad_partitioned(
     with xp.Trace('aot_backward'):
       out = bwd_graph(*activations, *grad_new_carry, *grad_y)
     grad_carry, grad_x = unflatten_bwd_out(out)
-    # TODO: these need to be sharded like carry and x.
     return grad_carry, grad_x
 
   return forward, alias_input, backward
@@ -335,7 +336,7 @@ def _find_input_activation_aliases(fake_carry_pytree, fake_x_pytree, num_out,
 
   Returns:
 
-    A mapping from index into the flatttened
+    A mapping from index into the flattened
     input pytree to the index into the list of intermediate activations.
 
   """
@@ -372,12 +373,57 @@ def _make_get_graph_compiler():
   return forward_comp, get_graph
 
 
+def broken_shard_as(source, target):
+  """
+  TODO: this uses element-wise add as the sharding edge. This is not ideal
+  and only a proof of concept.
+  """
+  a_flat, a_spec = tree_flatten(source)
+  b_flat, b_spec = tree_flatten(target)
+  assert a_spec == b_spec, f"a and b must have the same structure. got {a_spec} and {b_spec}"
+  a_sharded_flat = []
+  b_sharded_flat = []
+  for x, y in zip(a_flat, b_flat):
+    x, y = (x, y + x * 1e-11)
+    a_sharded_flat.append(x)
+    b_sharded_flat.append(y)
+  return tree_unflatten(a_sharded_flat,
+                        a_spec), tree_unflatten(b_sharded_flat, b_spec)
+
+
+def call_jax_shard_as(source, target):
+  a_flat, a_spec = tree_flatten(source)
+  b_flat, b_spec = tree_flatten(target)
+  assert a_spec == b_spec, f"a and b must have the same structure. got {a_spec} and {b_spec}"
+  a_sharded_flat = []
+  b_sharded_flat = []
+  from jax.experimental.shard_alike import shard_alike
+  for x, y in zip(a_flat, b_flat):
+    # TODO: improve caching here
+    x, y = xb.call_jax(shard_alike, (x, y))
+    a_sharded_flat.append(x)
+    b_sharded_flat.append(y)
+  return tree_unflatten(a_sharded_flat,
+                        a_spec), tree_unflatten(b_sharded_flat, b_spec)
+
+
 @pytreeify
 class Scan(torch.autograd.Function):
 
   @staticmethod
   def forward(ctx, forward, alias_input, backward, init, xs):
-    ctx._backward = backward
+
+    def backward_shard_alike(carry, x):
+      grad_carry, grad_x = backward(carry, x)
+      # Propagate sharding between forward inputs and backward outputs.
+      _, grad_carry = call_jax_shard_as(init, grad_carry)
+      _, grad_x = call_jax_shard_as(tree_map(lambda v: v[0], xs), grad_x)
+      return grad_carry, grad_x
+
+    if torch_xla.runtime.is_spmd():
+      ctx._backward = backward_shard_alike
+    else:
+      ctx._backward = backward
     with torch.no_grad():
       carry, ys = _scan_impl_pytree(forward, init, xs)
       ys, partial_activations = ys

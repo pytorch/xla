@@ -82,14 +82,11 @@ class ScanSpmdTest(unittest.TestCase):
     W1 should also be 2D sharded.
     """
 
-    def get_2d_mesh() -> Mesh:
-      mesh_shape = (2, xr.global_runtime_device_count() // 2)
-      mesh_axis_names = ("fsdp", "tensor")
-      return Mesh(
-          np.arange(xr.global_runtime_device_count()), mesh_shape,
-          mesh_axis_names)
-
-    mesh = get_2d_mesh()
+    mesh_shape = (2, xr.global_runtime_device_count() // 2)
+    mesh_axis_names = ("fsdp", "tensor")
+    mesh = Mesh(
+        np.arange(xr.global_runtime_device_count()), mesh_shape,
+        mesh_axis_names)
 
     class MLPBlock(nn.Module):
 
@@ -141,15 +138,18 @@ class ScanSpmdTest(unittest.TestCase):
     model.zero_grad()
     out = model(hidden_states)
     # Prepare to check the gradient of W1
-    for layer in model.layers.children():
-      layer.up_proj.weight.retain_grad()
+    for layer in model.layers.children():  # type: ignore
+      layer.up_proj.weight.retain_grad()  # type: ignore
     out.sum().backward()
     torch_xla.sync(wait=True)
     # Check the gradient of W1
-    for layer in model.layers.children():
-      # Right: {devices=[2,2]0,1,2,3}
-      # Wrong: {devices=[2,1,2]0,2,1,3 last_tile_dim_replicate}
-      print(torch_xla._XLAC._get_xla_sharding_spec(layer.up_proj.weight.grad))
+    for layer in model.layers.children():  # type: ignore
+      # Right: {devices=[2,2]0,2,1,3} or similar
+      # Wrong: {devices=[2,1,2]0,2,1,3 last_tile_dim_replicate} or similar
+      sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(
+          layer.up_proj.weight.grad)  # type: ignore
+      self.assertIn(f'devices=[2,{mesh_shape[1]}]0', sharding_spec)
+      self.assertNotIn('last_tile_dim_replicate', sharding_spec)
 
   @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
                        "Multiple devices required")

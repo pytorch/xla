@@ -16,10 +16,11 @@ import torch_xla.debug.profiler as xp
 import numpy as np
 import functools
 import itertools
-from typing import Union, Sequence, Any, Optional
+from typing import TypeVar, Union, Sequence, Any, Optional
 from enum import IntEnum
 
 from torch.amp import custom_fwd, custom_bwd
+from torch.utils._pytree import tree_flatten, tree_unflatten
 
 PartitionSpec = tuple[Union[tuple[Union[int, str], ...], int, str, None], ...]
 """PartitionSpec describes the sharding of a tensor.
@@ -560,7 +561,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert mesh.size() == num_devices, \
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   # We only allow fully specified `partition_spec` to be applicable, as opposed
-  # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
+  # to filling in the unspecified replicated dims. Fully specified `partition_spec`
   # should be of the same rank as `t`. This is to support partial replication
   # where the group assignment may vary with different input ranks.
   assert len(t.shape) == len(partition_spec), \
@@ -574,8 +575,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
 
 def mark_sharding_with_gradients(
     t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: tuple[Union[tuple, int, str, None],
-                          ...]) -> XLAShardedTensor:
+    partition_spec: tuple[Union[tuple, int, str, None], ...]) -> torch.Tensor:
   """
     A function to add sharding annotations on intermediate tensors (not in-place) and the gradient
     of the intermediate tensors during backward pass.
@@ -614,7 +614,54 @@ def mark_sharding_with_gradients(
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  return MarkShardingFunction.apply(t, mesh, partition_spec)
+  r = MarkShardingFunction.apply(t, mesh, partition_spec)
+  assert isinstance(r, torch.Tensor)
+  return r
+
+
+PyTreeA = TypeVar('PyTreeA')
+PyTreeB = TypeVar('PyTreeB')
+
+_next_shard_group_id = itertools.count()
+
+
+def shard_as(a: PyTreeA, b: PyTreeB) -> tuple[PyTreeA, PyTreeB]:
+  shard_group_id = next(_next_shard_group_id)
+  a_flat, a_spec = tree_flatten(a)
+  b_flat, b_spec = tree_flatten(b)
+  assert a_spec == b_spec, f"a and b must have the same structure. got {a_spec} and {b_spec}"
+  a_sharded_flat = []
+  b_sharded_flat = []
+  for x, y in zip(a_flat, b_flat):
+    x, y = _aot_shard_as(x, y, shard_group_id)
+    a_sharded_flat.append(x)
+    b_sharded_flat.append(y)
+  return tree_unflatten(a_sharded_flat,
+                        a_spec), tree_unflatten(b_sharded_flat, b_spec)
+
+
+def shard_like(a: PyTreeA, b: PyTreeB) -> tuple[PyTreeA, PyTreeB]:
+  raise NotImplementedError("shard_like is not implemented yet.")
+
+
+@torch.library.custom_op("xla::aot_shard_as", mutates_args=())
+def _aot_shard_as(x: torch.Tensor, y: torch.Tensor,
+                  shard_group_id: int) -> tuple[torch.Tensor, torch.Tensor]:
+  shard_group_type = torch_xla._XLAC.ShardGroupType.As
+  op_sharding = torch_xla._XLAC._xla_create_shard_group(shard_group_id,
+                                                        shard_group_type)
+  x = unwrap_sharded_tensor(x).clone()
+  torch_xla._XLAC._xla_mark_sharding(x, op_sharding)
+  y = unwrap_sharded_tensor(y).clone()
+  torch_xla._XLAC._xla_mark_sharding(y, op_sharding)
+  return x, y
+
+
+@_aot_shard_as.register_fake
+def _aot_shard_as_fake(
+    x: torch.Tensor, y: torch.Tensor,
+    shard_group_id: int) -> tuple[torch.Tensor, torch.Tensor]:
+  return torch.empty_like(x), torch.empty_like(y)
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
