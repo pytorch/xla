@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git760675a )
+                  master (2.8.0+git2ad5b5d )
                 </div>
               
             
@@ -452,6 +452,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.utils.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xu</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.utils.closures</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xc</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd.xla_sharding</span><span class="w"> </span><span class="kn">import</span> <span class="n">ShardingSpec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.xla_multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_optimized_replica_groups</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.experimental.deprecation</span><span class="w"> </span><span class="kn">import</span> <span class="n">deprecated</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla._internal.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_utils</span>
@@ -964,7 +965,9 @@
                <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                <span class="n">groups</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-               <span class="n">pin_layout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+               <span class="n">pin_layout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+               <span class="n">channel_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">use_global_device_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an all-gather operation along a given dimension.</span>
 
 <span class="sd">  Args:</span>
@@ -982,7 +985,8 @@
 <span class="sd">      participate in the communication has slightly different program, but it might</span>
 <span class="sd">      cause some xla compilation to fail. Unpin the layout when you see error message</span>
 <span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
-
+<span class="sd">    channel_id (int, optional): Optional channel ID for cross-module communication</span>
+<span class="sd">    use_global_device_ids(bool, optional): If true, interprets ids in ReplicaGroup as global device ids</span>
 <span class="sd">  Returns:</span>
 <span class="sd">    A tensor which has, in the ``dim`` dimension, all the values from the</span>
 <span class="sd">    participating replicas.</span>
@@ -1016,7 +1020,8 @@
       <span class="k">return</span> <span class="n">output</span>
 
     <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span>
-                                             <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
+                                             <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">,</span>
+                                             <span class="n">use_global_device_ids</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span>
 
   <span class="c1"># Now the input should be a list of Tensors.</span>
@@ -1302,7 +1307,9 @@
                    <span class="n">groups</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                    <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
                                           <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                   <span class="n">pin_layout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+                   <span class="n">pin_layout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                   <span class="n">channel_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">use_global_device_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs a XLA `ReduceScatter()` operation on the input tensor.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter</span>
@@ -1328,6 +1335,8 @@
 <span class="sd">      participate in the communication has slightly different program, but it might</span>
 <span class="sd">      cause some xla compilation to fail. Unpin the layout when you see error message</span>
 <span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
+<span class="sd">    channel_id (int, optional): Optional channel ID for cross-module communication</span>
+<span class="sd">    use_global_device_ids(bool, optional): If true, interprets ids in ReplicaGroup as global device ids</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    A `torch.Tensor` with all the values reduced across replicas. Each process</span>
@@ -1348,7 +1357,8 @@
     <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_reduce_scatter</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span>
                                                  <span class="n">scale</span><span class="p">,</span> <span class="n">scatter_dim</span><span class="p">,</span>
                                                  <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span>
-                                                 <span class="n">pin_layout</span><span class="p">)</span>
+                                                 <span class="n">pin_layout</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">,</span>
+                                                 <span class="n">use_global_device_ids</span><span class="p">)</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
