@@ -1,4 +1,8 @@
-# Usage: python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention-with-torch-xla-dynamo
+# For benchmarking prefill without dynamo: python test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged_paged_attention-v2 --case decode
+# For benchmarking decode without dynamo: python test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged_paged_attention-v2 --case decode
+
+# Usage: python test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention-with-torch-xla-dynamo
+# Usage: python test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged_paged_attention-v2
 # python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention-with-torch-xla-nondynamo
 # python pytorch/xla/test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention
 
@@ -23,6 +27,8 @@ if xr.device_type() == 'TPU':
   import jax.numpy as jnp
   from jax.experimental import pallas as pl
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_kernel import ragged_paged_attention, make_sequence_metadata, DEFAULT_MASK_VALUE
+  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_paged_attention_v2
+  from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import validate_inputs_on_runtime
 
 
 def _ref_ragged_paged_attention(
@@ -93,8 +99,7 @@ def _get_closest_of_multiple(x, base):
 def _run_with_torch_xla(kernel):
   return "torch-xla" in kernel
 
-
-def benchmark(args):
+def _get_common_kernel_input(num_kv_pages_per_block):
   seq_lens = [
       (1, 1328),
       (5, 18),
@@ -113,8 +118,6 @@ def benchmark(args):
   dtype = jnp.float32
   page_size = 16
   num_pages = 32768
-  num_queries_per_block = args.num_queries_per_block
-  num_kv_pages_per_block = args.num_kv_pages_per_block
 
   num_seqs = len(seq_lens)
   for i in range(num_seqs):
@@ -134,9 +137,9 @@ def benchmark(args):
   queries = jax.random.normal(
       k1, (num_q_tokens, num_q_heads, head_dim), dtype=dtype)
   k_pages = jax.random.normal(
-      k2, (num_kv_heads, num_pages, page_size, head_dim), dtype=dtype)
+      k2, (num_pages, page_size, num_kv_heads * head_dim), dtype=dtype)
   v_pages = jax.random.normal(
-      k3, (num_kv_heads, num_pages, page_size, head_dim), dtype=dtype)
+      k3, (num_pages, page_size, num_kv_heads *head_dim), dtype=dtype)
 
   # Create a kv_lens: i32[num_tokens]
   kv_lens_with_paddings = [0] * num_q_tokens
@@ -158,17 +161,92 @@ def benchmark(args):
   for i in range(num_seqs):
     q_lens_with_paddings[i] = query_lens[i]
   cu_q_lens = jnp.cumsum(jnp.array([0] + q_lens_with_paddings))
+  return queries, k_pages, v_pages, kv_lens_np, page_indices, cu_q_lens, num_seqs
+
+def _get_prefill_kernel_input():
+  prng_key = jax.random.key(0)
+  k1, k2, k3, k4 = jax.random.split(prng_key, 4)
+  num_q_tokens = 512
+  max_num_seqs = 512
+  num_q_heads = 32
+  head_dim = 128
+  # torch.from_numpy cannot convert bf16
+  dtype = jnp.float32
+  queries = jax.random.normal(
+      k1, (num_q_tokens, num_q_heads, head_dim), dtype=dtype)
+  
+  num_kv_heads = 8
+  num_pages = 6140
+  page_size = 16
+  k_pages = jax.random.normal(
+      k2, (num_pages, page_size, num_kv_heads * head_dim), dtype=dtype)
+  v_pages = jax.random.normal(
+      k3, (num_pages, page_size, num_kv_heads *head_dim), dtype=dtype)
+
+  kv_lens = jnp.array([1845, 1831, 1826, 1833, 1832, 1794, 1808, 1780, 1791, 1781, 1820, 1750, 1799, 1815, 1319,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0], dtype=jnp.int32)
+  pages_per_seq = 128
+  page_indices = jax.random.randint(
+      k4, (max_num_seqs, pages_per_seq), 0, num_pages, dtype=jnp.int32)
+  cu_q_lens=jnp.array([  0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13, 14, 512,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1, 1,   1,   1,   1,   1,   1,   1,   1,   1], dtype=jnp.int32)
+  num_seqs = 15
+  return queries, k_pages, v_pages, kv_lens, page_indices, cu_q_lens, num_seqs
+
+def _get_decode_kernel_input():
+  prng_key = jax.random.key(0)
+  k1, k2, k3, k4 = jax.random.split(prng_key, 4)
+  num_q_tokens = 16
+  max_num_seqs = 512
+  num_q_heads = 32
+  head_dim = 128
+  # torch.from_numpy cannot convert bf16
+  dtype = jnp.float32
+  queries = jax.random.normal(
+      k1, (num_q_tokens, num_q_heads, head_dim), dtype=dtype)
+  
+  num_kv_heads = 8
+  num_pages = 6088
+  page_size = 16
+  k_pages = jax.random.normal(
+      k2, (num_pages, page_size, num_kv_heads * head_dim), dtype=dtype)
+  v_pages = jax.random.normal(
+      k3, (num_pages, page_size, num_kv_heads *head_dim), dtype=dtype)
+
+  kv_lens = jnp.array([1877, 1894, 1924, 1883, 1909, 1914, 1895, 1887, 1913, 1894, 1884, 1876, 1879, 1942, 1908, 1920, 1911, 1915, 1876, 1912, 1910, 1901, 1910, 1895, 1881, 1888, 1895, 1880, 1881, 1875, 1833, 1864, 1853, 1854, 1871, 1835, 1042,   22,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 0,    0,    0,    0,    0,    0,    0,    0], dtype=jnp.int32)
+  pages_per_seq = 128
+  # NB, the randint upper bound `num_pages` need to align with kv_cache.shape[0] (aka num_pages). Otherwise, kernel will fail with `jaxlib.xla_extension.XlaRuntimeError: FAILED_PRECONDITION: The program continuator has halted unexpectedly` meaning a out-of-bound indexing error.
+  page_indices = jax.random.randint(
+      k4, (max_num_seqs, pages_per_seq), 0, num_pages, dtype=jnp.int32)
+  cu_q_lens=jnp.array([ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1,  1,  1,  1,  1,  1,  1,  1,  1], dtype=jnp.int32)
+  num_seqs = 11
+  return queries, k_pages, v_pages, kv_lens, page_indices, cu_q_lens, num_seqs
+
+def benchmark(args):
+  print(f'Running benchmark on {args.kernel=}, {args.case=}')
+  num_queries_per_block = args.num_queries_per_block
+  num_kv_pages_per_block = args.num_kv_pages_per_block
+  if args.case == "prefill":
+    queries, k_pages, v_pages, kv_lens_np, page_indices, cu_q_lens, num_seqs = _get_prefill_kernel_input()
+  elif args.case == "decode":
+    queries, k_pages, v_pages, kv_lens_np, page_indices, cu_q_lens, num_seqs = _get_decode_kernel_input()
+  else:
+    queries, k_pages, v_pages, kv_lens_np, page_indices, cu_q_lens, num_seqs = _get_common_kernel_input(num_kv_pages_per_block)
+
+  validate_inputs_on_runtime(queries, k_pages, v_pages, kv_lens_np, page_indices, cu_q_lens, jnp.array([  num_seqs]))
+  
+  target_jax_dtype = jnp.bfloat16
+  target_torch_dtype = torch.bfloat16
 
   if _run_with_torch_xla(args.kernel):
     queries_xla = torch.from_numpy(np.array(queries)).to(
-        torch.bfloat16).to("xla")
+        target_torch_dtype).to("xla")
     k_pages_xla = torch.from_numpy(np.array(k_pages)).to(
-        torch.bfloat16).to("xla")
+        target_torch_dtype).to("xla")
     v_pages_xla = torch.from_numpy(np.array(v_pages)).to(
-        torch.bfloat16).to("xla")
+        target_torch_dtype).to("xla")
     kv_lens_xla = torch.from_numpy(np.array(kv_lens_np)).to("xla")
     page_indices_xla = torch.from_numpy(np.array(page_indices)).to("xla")
     cu_q_lens_xla = torch.from_numpy(np.array(cu_q_lens)).to("xla")
+    num_seqs_xla = torch.tensor([num_seqs], dtype=torch.int32).to("xla")
 
     def ragged_paged_attention_wrapper(q, k_pages, v_pages, kv_lens,
                                        page_indices, cu_q_lens, num_seqs,
@@ -190,6 +268,11 @@ def benchmark(args):
     compiled_paged_attention = torch.compile(
         ragged_paged_attention_wrapper, backend="openxla")
 
+  queries.astype(target_jax_dtype)
+  k_pages.astype(target_jax_dtype)
+  v_pages.astype(target_jax_dtype)
+  # print(f'{queries.shape=}, {k_pages.shape=}, {v_pages.shape=}, {kv_lens_np.shape=}, {page_indices.shape=}, {cu_q_lens.shape=}, {num_seqs=}, {queries.dtype=}, {k_pages.dtype=}, {v_pages.dtype=}, {page_indices=}')
+
   def run_benchmark(num_iters: int) -> float:
     start_time = time.perf_counter()
 
@@ -202,7 +285,7 @@ def benchmark(args):
             kv_lens_xla,
             page_indices_xla,
             cu_q_lens_xla,
-            num_seqs,
+            num_seqs_xla,
             num_queries_per_block=num_queries_per_block,
             num_kv_pages_per_block=num_kv_pages_per_block,
             use_kernel=True,
@@ -215,7 +298,7 @@ def benchmark(args):
             kv_lens_xla,
             page_indices_xla,
             cu_q_lens_xla,
-            num_seqs,
+            num_seqs_xla,
             num_queries_per_block=num_queries_per_block,
             num_kv_pages_per_block=num_kv_pages_per_block,
             use_kernel=True,
@@ -233,6 +316,18 @@ def benchmark(args):
             num_kv_pages_per_block=num_kv_pages_per_block,
         )
         err.throw()
+      elif args.kernel == "ragged_paged_attention-v2":
+        actual_output = ragged_paged_attention_v2(
+            queries,
+            k_pages,
+            v_pages,
+            kv_lens_np,
+            page_indices,
+            cu_q_lens,
+            jnp.array([num_seqs]),
+            num_queries_per_block=num_queries_per_block,
+            num_kv_pages_per_block=num_kv_pages_per_block,
+        )
       elif args.kernel == "ragged-paged-attention-ref-impl":
         actual_output = _ref_ragged_paged_attention(
             queries,
@@ -273,6 +368,7 @@ if __name__ == "__main__":
       type=str,
       choices=[
           "ragged-paged-attention",
+          "ragged_paged_attention-v2",
           "ragged-paged-attention-with-torch-xla-dynamo",
           "ragged-paged-attention-with-torch-xla-nondynamo",
           "ragged-paged-attention-ref-impl",
@@ -280,6 +376,13 @@ if __name__ == "__main__":
       default="multi-queries-paged-attn")
   parser.add_argument("--num-queries-per-block", type=int, default=128)
   parser.add_argument("--num-kv-pages-per-block", type=int, default=128)
+  parser.add_argument("--case",
+                      type=str,
+                      choices=[
+                        "prefill",
+                        "decode",
+                      ],
+                      default="")
   args = parser.parse_args()
 
   benchmark(args)
