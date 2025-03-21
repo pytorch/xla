@@ -20,6 +20,7 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 from torch_xla.distributed.spmd.xla_sharding import ShardingSpec
+from torch_xla.distributed.xla_multiprocessing import create_optimized_replica_groups
 import os
 from torch_xla.experimental.deprecation import deprecated
 import torch_xla._internal.utils as _utils
@@ -532,7 +533,9 @@ def all_gather(value: torch.Tensor,
                dim: int = 0,
                groups: Optional[List[List[int]]] = None,
                output: Optional[torch.Tensor] = None,
-               pin_layout: bool = True) -> torch.Tensor:
+               pin_layout: bool = True,
+               channel_id=None,
+               use_global_device_ids=None) -> torch.Tensor:
   """Performs an all-gather operation along a given dimension.
 
   Args:
@@ -550,7 +553,8 @@ def all_gather(value: torch.Tensor,
       participate in the communication has slightly different program, but it might
       cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
-
+    channel_id (int, optional): Optional channel ID for cross-module communication
+    use_global_device_ids(bool, optional): If true, interprets ids in ReplicaGroup as global device ids
   Returns:
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
@@ -584,7 +588,8 @@ def all_gather(value: torch.Tensor,
       return output
 
     result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count, groups or
-                                             [], pin_layout)
+                                             [], pin_layout, channel_id,
+                                             use_global_device_ids)
     return result
 
   # Now the input should be a list of Tensors.
@@ -870,7 +875,9 @@ def reduce_scatter(reduce_type: str,
                    groups: Optional[List[List[int]]] = None,
                    output: Optional[Union[torch.Tensor,
                                           List[torch.Tensor]]] = None,
-                   pin_layout: bool = True) -> torch.Tensor:
+                   pin_layout: bool = True,
+                   channel_id=None,
+                   use_global_device_ids=None) -> torch.Tensor:
   """Performs a XLA `ReduceScatter()` operation on the input tensor.
 
   See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
@@ -896,6 +903,8 @@ def reduce_scatter(reduce_type: str,
       participate in the communication has slightly different program, but it might
       cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
+    channel_id (int, optional): Optional channel ID for cross-module communication
+    use_global_device_ids(bool, optional): If true, interprets ids in ReplicaGroup as global device ids
 
   Returns:
     A `torch.Tensor` with all the values reduced across replicas. Each process
@@ -916,7 +925,8 @@ def reduce_scatter(reduce_type: str,
     result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token,
                                                  scale, scatter_dim,
                                                  shard_count, groups or [],
-                                                 pin_layout)
+                                                 pin_layout, channel_id,
+                                                 use_global_device_ids)
     torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
     return result[0]
 

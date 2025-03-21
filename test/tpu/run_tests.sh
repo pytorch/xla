@@ -10,6 +10,7 @@ python3 "$TEST_CDIR/test_operations.py" -v
 python3 "$TEST_CDIR/pjrt/test_runtime_tpu.py"
 python3 "$TEST_CDIR/pjrt/test_collective_ops_tpu.py"
 python3 "$TEST_CDIR/spmd/test_mp_input_sharding.py"
+python3 "$TEST_CDIR/test_mp_collective_matmul.py"
 run_save_tensor_hlo python3 "$TEST_CDIR/spmd/test_spmd_lowering_context.py"
 python3 "$TEST_CDIR/spmd/test_xla_sharding.py"
 python3 "$TEST_CDIR/spmd/test_xla_virtual_device.py"
