@@ -818,6 +818,12 @@ xla::Shape GetTensorShape(const at::Tensor& tensor,
   return CreateComputationShapeFromTensor(tensor, &device);
 }
 
+at::Tensor TopPMask(const at::Tensor& input, float p, int64_t dim) {
+  auto result = tensor_methods::topp_mask(bridge::GetXlaTensor(input), p, dim,
+                                          /*stable=*/false);
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
 py::dict GetMemoryInfo(const std::string& device_str) {
   runtime::ComputationClient::MemoryInfo mem_info;
   {
@@ -3008,6 +3014,9 @@ void InitXlaModuleBindings(py::module m) {
       [](std::string name, std::shared_ptr<const runtime::PjRtPlugin> plugin) {
         runtime::RegisterPjRtPlugin(name, plugin);
       });
+  m.def("_xla_topp_mask", [](const at::Tensor& input, float p, int64_t dim) {
+    return TopPMask(input, p, dim);
+  });
   py::class_<runtime::PjRtPlugin, PyPjRtPlugin,
              std::shared_ptr<runtime::PjRtPlugin>>(m, "PjRtPlugin")
       .def(py::init<>())

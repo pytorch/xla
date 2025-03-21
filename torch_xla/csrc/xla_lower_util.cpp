@@ -390,6 +390,11 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
                                                xla::PrimitiveType::S64))};
 }
 
+xla::XlaOp CreateTopPMask(xla::XlaOp input, float p, int64_t dim, bool stable) {
+  // TODO: implement
+  return input;
+}
+
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
   // Expand cases in https://pytorch.org/docs/stable/torch.html#torch.matmul
   xla::Shape lhs_shape = ShapeHelper::ShapeOfXlaOp(lhs);
