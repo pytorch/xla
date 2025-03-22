@@ -330,6 +330,7 @@ being incremented correctly.
 
 ## Sample PRs
 
+-   Lowering of `bitwise_left_shift` <https://github.com/pytorch/xla/pull/8865>
 -   Unary/Binary OP -\> Codegen erf, erfc, erfinv, and exp
     (<https://github.com/pytorch/xla/pull/3659>)
 -   OP with optional -\> Codegen binary_cross_entropy/backward
