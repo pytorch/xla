@@ -22,9 +22,7 @@ skiplist = {
     "histogramdd", # TypeError: histogram requires ndarray or scalar arguments, got <class 'list'> at position 1.
     "index_reduce",
     "kthvalue",
-    "linalg.det",
     "linalg.ldl_solve",
-    "linalg.lu_solve",
     "max_pool2d_with_indices_backward",
     "nn.functional.adaptive_max_pool1d",
     "nn.functional.adaptive_max_pool2d",
