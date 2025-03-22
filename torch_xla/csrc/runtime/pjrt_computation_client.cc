@@ -644,7 +644,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       xla::CompiledMemoryStats memory_stats = memory_stats_status_or.value();
       TF_VLOG(3) << "memory usage detail = " << memory_stats.DebugString();
     } else {
-      TF_VLOG(3) << "memory usage is not available";
+      TF_VLOG(3) << "memory usage is not availiable";
     }
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());

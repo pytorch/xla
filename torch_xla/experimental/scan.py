@@ -46,7 +46,6 @@ from functorch.compile import aot_function, make_boxed_func, default_partition  
 
 import torch_xla
 import torch_xla.core.xla_builder as xb
-from torch_xla.distributed.spmd.xla_sharding import shard_as
 from torch_xla.experimental.custom_kernel import _jax_env_context
 from torch_xla.experimental.pytreeify import pytreeify
 import torch_xla.debug.profiler as xp
