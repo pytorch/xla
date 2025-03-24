@@ -118,25 +118,31 @@ This tutorial does not dive into SPMD. For more on that, check our
 To update your exisitng training loop, make the following changes:
 
 ```diff
--import torch.multiprocessing as mp
 +import torch_xla as xla
 +import torch_xla.core.xla_model as xm
 
- def _mp_fn(index):
+ def train(model, training_data, ...):
    ...
-
-+  # Move the model paramters to your XLA device
-+  model.to(xla.device())
-
    for inputs, labels in train_loader:
 +    with xla.step():
+       inputs, labels = training_data[i]
 +      # Transfer data to the XLA device. This happens asynchronously.
-+      inputs, labels = inputs.to(xla.device()), labels.to(xla.device())
++      inputs, labels = training_data.to(inputs.xla.device()), labels.to(xla.device())
        optimizer.zero_grad()
        outputs = model(inputs)
        loss = loss_fn(outputs, labels)
        loss.backward()
        optimizer.step()
+
++  xm.mark_step()
+   ...
+
+ if __name__ == '__main__':
+   ...
++  # Move the model paramters to your XLA device
++  model.to(xla.device())
+   train(model, training_data, ...)
+   ...
 ```
 
 The changes above should get your model to train on the TPU.
