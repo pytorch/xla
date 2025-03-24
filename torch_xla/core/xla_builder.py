@@ -925,6 +925,7 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
 
 def _jax_to_hlo_cache_get_or_insert(jax_func, sample_inputs: tuple[Any, ...],
                                     input_tree_spec, get_hlo):
+  global _JAX_TO_HLO_CACHE
   # Use two layers of dictionary lookup.
   # The first layer uses the `jax_func`, which is only weakly referenced.
   # The second layer uses the sample inputs and the tree spec, which is strongly referenced.
