@@ -360,6 +360,14 @@ xla::Shape BitwiseXorTensorOutputShape(const torch::lazy::Value& input,
   });
 }
 
+xla::Shape BitwiseLeftShiftTensorOutputShape(const torch::lazy::Value& input,
+                                             const torch::lazy::Value& other) {
+  return InferBinaryOpShape(input, other, [](xla::XlaOp one, xla::XlaOp two) {
+    return xla::ShiftLeft(one, two,
+                          XlaHelpers::getBroadcastDimensions(one, two));
+  });
+}
+
 xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
