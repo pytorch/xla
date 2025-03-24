@@ -10,3 +10,4 @@ assignees: ''
 ## 📚 Documentation
 
 <!-- A clear and concise description of what content is an issue. -->
+<!-- If you create new docs, consider adding them to https://github.com/pytorch/xla/blob/master/README.md#github-doc-map -->
