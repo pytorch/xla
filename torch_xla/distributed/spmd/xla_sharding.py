@@ -7,19 +7,23 @@ import torch
 from torch import Tensor
 from torch.library import custom_op
 import torch_xla
+import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_model as xm
 import torch_xla._internal.utils as _utils
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
+from torch_xla._internal.jax_workarounds import requires_jax
 
 import numpy as np
 import functools
 import itertools
-from typing import Union, Sequence, Any, Optional
+from typing import TypeVar, Union, Any, Optional
+from collections.abc import Sequence
 from enum import IntEnum
 
 from torch.amp import custom_fwd, custom_bwd
+from torch.utils._pytree import tree_flatten, tree_unflatten
 
 PartitionSpec = tuple[Union[tuple[Union[int, str], ...], int, str, None], ...]
 """PartitionSpec describes the sharding of a tensor.
@@ -574,7 +578,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
       >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
   # We only allow fully specified `partition_spec` to be applicable, as opposed
-  # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
+  # to filling in the unspecified replicated dims. Fully specified `partition_spec`
   # should be of the same rank as `t`. This is to support partial replication
   # where the group assignment may vary with different input ranks.
   assert len(t.shape) == len(partition_spec), \
@@ -588,8 +592,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
 
 def mark_sharding_with_gradients(
     t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: tuple[Union[tuple, int, str, None],
-                          ...]) -> XLAShardedTensor:
+    partition_spec: tuple[Union[tuple, int, str, None], ...]) -> torch.Tensor:
   """
     A function to add sharding annotations on intermediate tensors (not in-place) and the gradient
     of the intermediate tensors during backward pass.
@@ -618,13 +621,39 @@ def mark_sharding_with_gradients(
     This version can also be used in AOTAutograd.
     """
   # We only allow fully specified `partition_spec` to be applicable, as opposed
-  # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
+  # to filling in the unspecified replicated dims. Fully specified `partition_spec`
   # should be of the same rank as `t`. This is to support partial replication
   # where the group assignment may vary with different input ranks.
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  return MarkShardingFunction.apply(t, mesh, partition_spec)
+  r = MarkShardingFunction.apply(t, mesh, partition_spec)
+  assert isinstance(r, torch.Tensor)
+  return r
+
+
+PyTreeA = TypeVar('PyTreeA')
+PyTreeB = TypeVar('PyTreeB')
+
+
+@requires_jax
+def shard_as(source: PyTreeA, target: PyTreeB) -> tuple[PyTreeA, PyTreeB]:
+  a_flat, a_spec = tree_flatten(source)
+  b_flat, b_spec = tree_flatten(target)
+  assert a_spec == b_spec, f"a and b must have the same structure. got {a_spec} and {b_spec}"
+  a_sharded_flat = []
+  b_sharded_flat = []
+  from jax.experimental.shard_alike import shard_alike
+  for x, y in zip(a_flat, b_flat):
+    # TODO: wat?
+    if x is None or y is None:
+      x, y = x, y
+    else:
+      x, y = xb.call_jax(shard_alike, (x, y))
+    a_sharded_flat.append(x)
+    b_sharded_flat.append(y)
+  return tree_unflatten(a_sharded_flat,
+                        a_spec), tree_unflatten(b_sharded_flat, b_spec)
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:

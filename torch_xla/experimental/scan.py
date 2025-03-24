@@ -35,8 +35,10 @@ The `Scan.backward` method scans the backward graph over the gradients and
 activations.
 """
 
+from functools import partial
 import itertools
-from typing import Callable, Dict, Sequence, TypeVar, Tuple, List, Optional, overload
+from typing import Callable, Dict, TypeVar, Tuple, List, Optional, overload
+from collections.abc import Sequence
 
 import torch
 import torch.autograd
@@ -46,7 +48,9 @@ from functorch.compile import aot_function, make_boxed_func, default_partition  
 import torch_xla
 import torch_xla.core.xla_builder as xb
 from torch_xla.experimental.pytreeify import pytreeify
+from torch_xla.distributed.spmd.xla_sharding import shard_as
 import torch_xla.debug.profiler as xp
+import torch_xla.runtime
 
 Carry = TypeVar('Carry')
 X = TypeVar('X')
@@ -263,7 +267,7 @@ def value_and_grad_partitioned(
   fwd_graph = get_fwd()
   bwd_graph = get_bwd()
 
-  # Figure out which activations are alises to the inputs. We don't need to
+  # Figure out which activations are aliases to the inputs. We don't need to
   # pass them through the scan logic unchanged. That would use more memory.
   input_activation_aliases = _find_input_activation_aliases(
       fake_carry_pytree, fake_x_pytree, num_out, fwd_graph)
@@ -334,7 +338,7 @@ def _find_input_activation_aliases(fake_carry_pytree, fake_x_pytree, num_out,
 
   Returns:
 
-    A mapping from index into the flatttened
+    A mapping from index into the flattened
     input pytree to the index into the list of intermediate activations.
 
   """
@@ -371,23 +375,51 @@ def _make_get_graph_compiler():
   return forward_comp, get_graph
 
 
+def _backward_shard_alike(carry, x, backward, init, xs):
+  grad_carry, grad_x = backward(carry, x)
+  # Propagate sharding between forward inputs and backward outputs.
+  _, grad_carry = shard_as(init, grad_carry)
+  _, grad_x = shard_as(tree_map(lambda v: v[0], xs), grad_x)
+  return grad_carry, grad_x
+
+
 @pytreeify
 class Scan(torch.autograd.Function):
 
   @staticmethod
   def forward(ctx, forward, alias_input, backward, init, xs):
-    ctx._backward = backward
     with torch.no_grad():
       carry, ys = _scan_impl_pytree(forward, init, xs)
       ys, partial_activations = ys
     activations = alias_input(partial_activations, xs)
-    ctx.save_for_backward(*activations)
+    ctx._backward = backward
+
+    if torch_xla.runtime.is_spmd():
+      flat_init, carry_spec = tree_flatten(init)
+      flat_xs, xs_spec = tree_flatten(xs)
+      ctx._carry_spec = carry_spec
+      ctx._xs_spec = xs_spec
+      ctx._flat_init_len = len(flat_init)
+      ctx._flat_xs_len = len(flat_xs)
+      ctx.save_for_backward(*flat_init, *flat_xs, *activations)
+    else:
+      ctx.save_for_backward(*activations)
+
     return carry, ys
 
   @staticmethod
   def backward(ctx, grad_carry, grad_ys):  # type: ignore
-    activations = ctx.saved_tensors
-    backward = ctx._backward
+    if torch_xla.runtime.is_spmd():
+      stuff = ctx.saved_tensors
+      flat_init, flat_xs, activations = split(stuff, ctx._flat_init_len,
+                                              ctx._flat_xs_len)
+      init = tree_unflatten(flat_init, ctx._carry_spec)
+      xs = tree_unflatten(flat_xs, ctx._xs_spec)
+      backward = partial(
+          _backward_shard_alike, backward=ctx._backward, init=init, xs=xs)
+    else:
+      activations = ctx.saved_tensors
+      backward = ctx._backward
     with torch.no_grad():
       # Reverse loop to propagate gradients from last iteration to first.
       grad_init, grad_xs = _scan_impl_pytree(
