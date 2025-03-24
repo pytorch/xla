@@ -3,8 +3,8 @@ from typing import Any, Optional
 from weakref import WeakKeyDictionary
 import torch
 import torch_xla
-from torch.utils._pytree import tree_flatten, tree_unflatten
-from torch_xla.experimental.custom_kernel import _jax_env_context, jax_import_guard
+from torch.utils._pytree import tree_flatten
+from torch_xla._internal.jax_workarounds import jax_env_context, jax_import_guard
 
 
 class Type:
@@ -862,7 +862,7 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
 
   # Prevent JAX from discovering MegaScale devices a second time. If we don't do this,
   # then the MegaScale device discovery will hang.
-  with _jax_env_context():
+  with jax_env_context():
     import jax
     import torchax.ops.mappings as mappings
 

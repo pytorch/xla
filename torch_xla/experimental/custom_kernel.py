@@ -8,8 +8,8 @@ from torch.library import impl, custom_op
 import torch_xla
 from torch_xla.distributed.spmd import Mesh
 import torch_xla.distributed.spmd as xs
+from torch_xla._internal.jax_workarounds import requires_jax
 
-from contextlib import contextmanager
 from typing import Any, List, Callable, Optional, Tuple, Dict
 from torch_xla.core.xla_model import XLA_LIB
 
@@ -109,11 +109,6 @@ def safe_empty_like(tensor: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
   return torch.empty_like(tensor) if tensor is not None else None
 
 
-def jax_import_guard():
-  # Somehow, we need to grab the TPU before JAX locks it. Otherwise, any pt-xla TPU operations will hang.
-  torch_xla._XLAC._init_computation_client()
-
-
 def generate_ctx_need_grad(*args):
   ctx_need_grad = [False for _ in range(len(args))]
   for i, arg in enumerate(args):
@@ -156,37 +151,6 @@ def _extract_backend_config(
       if op.name == "stablehlo.custom_call":
         return op.backend_config.value
   return None
-
-
-@contextmanager
-def _jax_env_context():
-  # TODO(b/374631442): Get rid of this hack.
-  try:
-    previous_skip_megascale_env = os.environ.get('SKIP_MEGASCALE_PJRT_CLIENT',
-                                                 None)
-    os.environ['SKIP_MEGASCALE_PJRT_CLIENT'] = 'true'
-    yield
-  finally:
-    if previous_skip_megascale_env:
-      os.environ['SKIP_MEGASCALE_PJRT_CLIENT'] = previous_skip_megascale_env
-    else:
-      os.environ.pop('SKIP_MEGASCALE_PJRT_CLIENT', None)
-
-
-def requires_jax(func: Callable) -> Callable:
-  """Decorator that ensures JAX is safely imported before function execution"""
-
-  @functools.wraps(func)
-  def wrapper(*args, **kwargs) -> Any:
-    try:
-      jax_import_guard()
-    except ImportError as e:
-      raise ImportError(
-          "JAX import guard fail due to PJRT client is unavailable.") from e
-    with _jax_env_context():
-      return func(*args, **kwargs)
-
-  return wrapper
 
 
 @requires_jax

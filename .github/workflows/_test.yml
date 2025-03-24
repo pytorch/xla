@@ -133,6 +133,7 @@ jobs:
             -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
           
           # Install torchax
+          # TODO(https://github.com/pytorch/xla/issues/8831): Remove this when torchax is part of torch_xla.
           pip install pytorch/xla/torchax
 
           if [[ ! -z "$RUN_BENCHMARK_TESTS" ]]; then
