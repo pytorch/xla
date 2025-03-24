@@ -14,7 +14,7 @@ namespace {
 static const std::string XLA_FLAG_PREFIX = "--xla";
 
 // Taken from JAX:
-// https://github.com/google/jax/blob/8ee5811/jax/_src/cache_key.py#L325-L346
+// https://github.com/jax-ml/jax/blob/4ca97ad7165453816bc543e941b357407283a59e/jax/_src/cache_key.py#L241
 static const std::unordered_set<std::string> FlagsToExclude = {
     "--xla_dump_compress_protos",
     "--xla_dump_module_metadata",
@@ -36,6 +36,10 @@ static const std::unordered_set<std::string> FlagsToExclude = {
     "--xla_dump_hlo_pipeline_re",
     "--xla_tpu_sdc_checker_streamz_metric",
     "--xla_tpu_sdc_checker_enable_sdc_event_callbacks",
+    "--xla_tpu_sdc_checker_enable_coresweep_ng_callbacks",
+    "--xla_tpu_sdc_checker_no_logging_if_callbacks_are_present",
+    "--xla_gpu_cuda_data_dir",
+    "--xla_gpu_experimental_autotune_cache_mode",
 };
 
 torch::lazy::hash_t hash_xla_flags(std::string env_var_name) {

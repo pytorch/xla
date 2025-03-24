@@ -434,6 +434,7 @@ def call_jax_shard_as(source, target):
   # TODO: xb.call_jax should do this
   with _jax_env_context():
     from jax.experimental.shard_alike import shard_alike
+    from torch_xla.experimental.shard_like import shard_like
     for x, y in zip(a_flat, b_flat):
       # TODO: wat?
       if x is None or y is None:
