@@ -96,6 +96,9 @@ xla::Shape BitwiseXorTensorOutputShape(const torch::lazy::Value& input,
 xla::Shape BitwiseLeftShiftTensorOutputShape(const torch::lazy::Value& input,
                                              const torch::lazy::Value& other);
 
+xla::Shape BitwiseRightShiftTensorOutputShape(const torch::lazy::Value& input,
+                                              const torch::lazy::Value& other);
+
 xla::Shape CeilOutputShape(const torch::lazy::Value& input);
 
 xla::Shape CholeskyOutputShape(const torch::lazy::Value& input,
