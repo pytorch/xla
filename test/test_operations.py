@@ -2632,6 +2632,11 @@ class TestOpBuilder(test_utils.XlaTestCase):
             'transpose_a': False
         })
 
+  def test_type_conversion(self):
+    for xla_type in xb._XLA_PT_TYPE_MAP:
+      pt_type = xb.Op.to_torch_type(xla_type)
+      self.assertEqual(xla_type, xb.Op.from_torch_type(pt_type))
+
 
 class MpDecoratorTest(test_utils.XlaTestCase):
 
