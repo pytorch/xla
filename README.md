@@ -108,6 +108,41 @@ with the [contributors guide](https://github.com/pytorch/xla/blob/master/CONTRIB
 
 ## Getting Started
 
+Following here are guides for a simple single process, and multi process application.
+Multi processing is more complex, and is not compatible with SPMD.
+This tutorial does not dive into SPMD. For more on that, check our
+[SPMD guide](https://github.com/pytorch/xla/blob/master/docs/source/perf/spmd_basic.md).
+
+### Simple single process
+
+To update your exisitng training loop, make the following changes:
+
+```diff
+-import torch.multiprocessing as mp
++import torch_xla as xla
++import torch_xla.core.xla_model as xm
+
+ def _mp_fn(index):
+   ...
+
++  # Move the model paramters to your XLA device
++  model.to(xla.device())
+
+   for inputs, labels in train_loader:
++    with xla.step():
++      # Transfer data to the XLA device. This happens asynchronously.
++      inputs, labels = inputs.to(xla.device()), labels.to(xla.device())
+       optimizer.zero_grad()
+       outputs = model(inputs)
+       loss = loss_fn(outputs, labels)
+       loss.backward()
+       optimizer.step()
+```
+
+The changes above should get your model to train on the TPU.
+
+### Multi processing
+
 To update your existing training loop, make the following changes:
 
 ```diff
