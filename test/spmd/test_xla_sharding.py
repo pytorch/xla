@@ -1,9 +1,10 @@
 import copy
 
-import unittest
-from unittest.mock import patch
+from collections import OrderedDict
 import math
 import numpy as np
+import unittest
+from unittest.mock import patch
 import sys
 
 import torch
@@ -762,9 +763,12 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                    "Crash on TPU v2")
   @patch('torch_xla.runtime.global_runtime_device_attributes')
   @patch('torch_xla.core.xla_model.xla_device_hw')
-  def test_hybrid_mesh(self, xla_device_mock, device_attributes_mock):
+  @patch('torch_xla.runtime.global_runtime_device_count')
+  def test_hybrid_mesh(self, device_count_mock, xla_device_mock,
+                       device_attributes_mock):
     # mock device attributes for 2 slices of v4-8
     num_slices = 2
+    device_count_mock.return_value = 8
     xla_device_mock.return_value = "TPU"
     device_attributes_mock.return_value = [{
         'coords': [0, 0, 0],
@@ -1564,6 +1568,97 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
       # Check that the gradient has sharding.
       self.assertIn(sharding_spec, x_grad_sharding)
+
+  def test_valid_mesh_creation(self):
+    mesh_shape = (1, self.n_devices)
+    axis_names = ('data', 'model')
+    mesh = xs.Mesh(self.device_ids, mesh_shape, axis_names)
+
+    self.assertEqual(mesh.device_ids.tolist(), list(range(self.n_devices)))
+    self.assertEqual(mesh.mesh_shape, mesh_shape)
+    self.assertEqual(mesh.axis_names, axis_names)
+
+  def test_valid_mesh_without_axis_names(self):
+    mesh_shape = (1, self.n_devices)
+    mesh = xs.Mesh(self.device_ids, mesh_shape)
+
+    self.assertEqual(mesh.device_ids.tolist(), list(range(self.n_devices)))
+    self.assertEqual(mesh.mesh_shape, mesh_shape)
+    self.assertIsNone(mesh.axis_names)
+
+  def test_invalid_axis_names_length(self):
+    mesh_shape = (1, self.n_devices)
+    axis_names = ('data', 'model', 'extra')
+
+    with self.assertRaisesRegex(
+        AssertionError, "Number of axis names .* must match mesh dimensions"):
+      xs.Mesh(self.device_ids, mesh_shape, axis_names)
+
+  def test_duplicate_axis_names(self):
+    mesh_shape = (1, self.n_devices)
+    axis_names = ('data', 'data')
+
+    with self.assertRaisesRegex(AssertionError, "Axis names must be unique"):
+      xs.Mesh(self.device_ids, mesh_shape, axis_names)
+
+  def test_invalid_device_count(self):
+    mesh_shape = (2, self.n_devices)
+
+    with self.assertRaisesRegex(AssertionError,
+                                "Number of device IDs .* must match mesh size"):
+      xs.Mesh(self.device_ids, mesh_shape)
+
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
+                   "Multiple devices needed for duplicated device IDs")
+  def test_duplicate_device_ids(self):
+    mesh_shape = (1, self.n_devices)
+    duplicate_ids = np.array([0] * self.n_devices)
+
+    with self.assertRaisesRegex(AssertionError, "Device IDs must be unique"):
+      xs.Mesh(duplicate_ids, mesh_shape)
+
+  def test_device_ids_out_of_bounds(self):
+    mesh_shape = (1, self.n_devices)
+    invalid_ids = np.arange(self.n_devices + 1, self.n_devices * 2 + 1)
+
+    with self.assertRaisesRegex(AssertionError,
+                                "Device IDs must be less than mesh size"):
+      xs.Mesh(invalid_ids, mesh_shape)
+
+  def test_mesh_size(self):
+    mesh_shape = (1, self.n_devices)
+    mesh = xs.Mesh(self.device_ids, mesh_shape)
+    self.assertEqual(mesh.size(), self.n_devices)
+
+  def test_mesh_shape_method(self):
+    mesh_shape = (1, self.n_devices)
+    axis_names = ('data', 'model')
+    mesh = xs.Mesh(self.device_ids, mesh_shape, axis_names)
+
+    expected_shape = OrderedDict([('data', 1), ('model', self.n_devices)])
+    self.assertEqual(mesh.shape(), expected_shape)
+
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
+                   "Multiple devices needed")
+  def test_mismatch_global_devices(self):
+    partial_num_devices = self.n_devices // 2
+    device_ids = np.arange(partial_num_devices)
+    mesh_shape = (1, partial_num_devices)
+    with self.assertRaisesRegex(
+        AssertionError,
+        "Number of device IDs .* must match the global number of devices"):
+      xs.Mesh(device_ids, mesh_shape)
+
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
+                   "Multiple devices needed")
+  def test_get_logical_mesh(self):
+    device_ids = np.arange(self.n_devices)
+    mesh_shape = (2, self.n_devices // 2)
+    mesh = xs.Mesh(device_ids, mesh_shape)
+
+    logical_mesh = mesh.get_logical_mesh()
+    self.assertEqual(logical_mesh.shape, mesh_shape)
+    np.testing.assert_array_equal(np.sort(logical_mesh.flatten()), device_ids)
 
 
 if __name__ == '__main__':
