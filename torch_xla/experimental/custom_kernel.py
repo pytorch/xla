@@ -10,6 +10,9 @@ from torch_xla.distributed.spmd import Mesh
 import torch_xla.distributed.spmd as xs
 from torch_xla._internal.jax_workarounds import requires_jax
 
+# Re-expose this API used that is referenced by docs
+from torch_xla._internal.jax_workarounds import jax_import_guard  # noqa: F401, pylint: disable=unused-import
+
 from typing import Any, List, Callable, Optional, Tuple, Dict
 from torch_xla.core.xla_model import XLA_LIB
 
