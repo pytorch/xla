@@ -54,25 +54,15 @@ class AtenSource : public TensorSource {
     if (target_torch_type != tensor.type().scalarType()) {
       TORCH_LAZY_COUNTER("AtenSourceDowncasts", 1);
     }
-    // The purposes of copy are:
-    // 1. Ensure the memory is contiguous, which is expected by PJRT.
-    // 2. Move CUDA tensor to CPU since we cannot pass CUDA memory to PJRT now.
-    // 3. Cast data type.
-    // We can avoid if copy is not needed.
-    if (tensor.device() == at::kCPU && tensor.is_contiguous() &&
-        tensor.dtype() == target_torch_type) {
-      // Skip copying a CPU tensor to CPU.
-      tensor_ = std::move(tensor);
-    } else {
-      TORCH_LAZY_COUNTER("AtenSourceTensorCopy", 1);
-      // TODO(ysiraichi): check, first, if tensor lives in a device that the
-      // current PjRt client has access. If so, we don't need to go through the
-      // CPU.
-      tensor_ = std::move(tensor.to(
-          at::TensorOptions().device(at::kCPU).dtype(target_torch_type),
-          /*non_blocking=*/false,
-          /*copy=*/true, at::MemoryFormat::Contiguous));
-    }
+    // TODO(ysiraichi): check, first, if tensor lives in a device that the
+    // current PjRt client has access. If so, we don't need to go through the
+    // CPU.
+    // Set `copy` to false becuase torch can figure out if it needs to copy the
+    // data or not.
+    tensor_ = std::move(
+        tensor.to(at::TensorOptions().device(at::kCPU).dtype(target_torch_type),
+                  /*non_blocking=*/false,
+                  /*copy=*/false, at::MemoryFormat::Contiguous));
   }
 
   const void* data() const override { return tensor_.const_data_ptr(); }
