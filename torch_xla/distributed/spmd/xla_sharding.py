@@ -637,17 +637,26 @@ PyTreeB = TypeVar('PyTreeB')
 
 
 @requires_jax
-def shard_as(source: PyTreeA, target: PyTreeB) -> tuple[PyTreeA, PyTreeB]:
-  a_flat, a_spec = tree_flatten(source)
-  b_flat, b_spec = tree_flatten(target)
+def shard_as(a: PyTreeA, b: PyTreeB) -> tuple[PyTreeA, PyTreeB]:
+  """Ensure that `a` and `b` are sharded the same way without specifying
+  a particular sharding constraint.
+
+  shard_as takes two PyTrees of matching structure and returns
+  two PyTrees of that same structure. As long as you use at least one
+  of the outputs, then corresponding tensors in all four PyTrees
+  (a, b, out[0], out[1]) will be sharded the same way.
+  """
+
+  a_flat, a_spec = tree_flatten(a)
+  b_flat, b_spec = tree_flatten(b)
   assert a_spec == b_spec, f"a and b must have the same structure. got {a_spec} and {b_spec}"
   a_sharded_flat = []
   b_sharded_flat = []
   from jax.experimental.shard_alike import shard_alike
   for x, y in zip(a_flat, b_flat):
-    # TODO: wat?
     if x is None or y is None:
-      x, y = x, y
+      # If there are None leaves, then it should be None in both PyTrees.
+      assert x is None and y is None
     else:
       x, y = xb.call_jax(shard_alike, (x, y))
     a_sharded_flat.append(x)
