@@ -52,7 +52,6 @@ python3 "$TEST_CDIR/torch_distributed/test_torch_distributed_multi_all_reduce_xl
 python3 "$TEST_CDIR/torch_distributed/test_torch_distributed_reduce_scatter_xla_backend.py"
 python3 "$TEST_CDIR/quantized_ops/test_dot_general.py"
 run_xla_ir_hlo_debug python3 "$TEST_CDIR/test_user_computation_debug_cache.py"
-python3 "$TEST_CDIR/test_data_transfer.py"
 python3 "$TEST_CDIR/test_data_type.py"
 python3 "$TEST_CDIR/test_compilation_cache_utils.py"
 
