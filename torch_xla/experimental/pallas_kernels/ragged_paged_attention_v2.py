@@ -79,6 +79,7 @@ def ref_ragged_paged_attention(
     *,
     sm_scale: float = 1.0,
     sliding_window: int | None = None,
+    soft_cap: float | None = None,
     mask_value: float = DEFAULT_MASK_VALUE,
 ):
   check_inputs_shapes(queries, k_pages, v_pages, kv_lens, page_indices,
@@ -108,6 +109,8 @@ def ref_ragged_paged_attention(
     mask = q_span < kv_span
     if sliding_window is not None:
       mask = jnp.logical_or(mask, q_span - sliding_window >= kv_span)
+    if soft_cap is not None:
+      attn = soft_cap * jnp.tanh(attn / soft_cap)
     attn += jnp.where(mask, mask_value, 0.0)
     attn = jax.nn.softmax(attn, axis=-1).astype(v.dtype)
     out = jnp.einsum("hqk,khd->qhd", attn, v).astype(queries.dtype)
@@ -126,6 +129,7 @@ def validate_inputs_on_runtime(
     cu_q_lens: jax.Array,  # i32[max_num_seqs + 1]
     num_seqs,  # i32[1]
     sliding_window: int | None = None,
+    soft_cap: float | None = None,
 ):
   check_inputs_shapes(q, k_pages, v_pages, kv_lens, page_indices, cu_q_lens,
                       num_seqs)
@@ -152,6 +156,8 @@ def validate_inputs_on_runtime(
           f"{q_len=} must be less or equal to {kv_len=} at sequence {i}.")
   if sliding_window is not None and sliding_window <= 0:
     raise ValueError(f"{sliding_window=} must be positive.")
+  if soft_cap is not None and soft_cap == 0.0:
+    raise ValueError(f"{soft_cap=} must not be 0.0.")
 
 
 # Expect to run these checks during compile time.
@@ -220,6 +226,7 @@ def ragged_paged_attention_kernel(
     *,
     sm_scale: float,
     sliding_window: int | None = None,
+    soft_cap: float | None = None,
     mask_value: float,
 ):
   num_q_per_blk, num_q_heads_per_blk, head_dim = q_ref.shape
@@ -403,6 +410,8 @@ def ragged_paged_attention_kernel(
       if sliding_window is not None:
         causal_mask = jnp.logical_or(causal_mask,
                                      row_ids - sliding_window>=col_ids)
+      if soft_cap is not None:
+        qk = soft_cap * jnp.tanh(qk / soft_cap)
       qk += jnp.where(causal_mask, mask_value, 0.0)
       m_curr = jnp.max(qk, axis=1, keepdims=True)
       s_curr = jnp.exp(qk - m_curr)
@@ -565,6 +574,7 @@ def get_min_q_heads_per_blk(num_q_heads, q_dtype, num_q_heads_per_kv_head):
         "num_queries_per_block",
         "vmem_limit_bytes",
         "sliding_window",
+        "soft_cap",
     ],
 )
 def ragged_paged_attention(
@@ -578,6 +588,7 @@ def ragged_paged_attention(
     *,
     sm_scale: float = 1.0,
     sliding_window: int | None = None,
+    soft_cap: float | None = None,
     mask_value: float = DEFAULT_MASK_VALUE,
     num_kv_pages_per_block: int = 16,
     num_queries_per_block: int = 128,
@@ -670,6 +681,7 @@ def ragged_paged_attention(
           ragged_paged_attention_kernel,
           sm_scale=sm_scale,
           sliding_window=sliding_window,
+          soft_cap=soft_cap,
           mask_value=mask_value,
       ),
       grid_spec=pltpu.PrefetchScalarGridSpec(

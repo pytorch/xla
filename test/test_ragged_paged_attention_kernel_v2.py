@@ -23,7 +23,7 @@ def ceil_div(x, a):
 @jtu.with_config(jax_numpy_dtype_promotion="standard")
 class PagedAttentionKernelTest(jtu.JaxTestCase):
 
-  def _test_ragged_paged_attention(
+  def test_ragged_paged_attention(
       self,
       seq_lens,  # List[(q_len, kv_len)]
       num_heads,  # [num_q_heads, num_kv_heads]
@@ -68,12 +68,12 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     )
     k_pages = jax.random.normal(
         k1,
-        (num_pages, page_size, num_kv_heads, head_dim),
+        (num_pages, page_size, num_kv_heads * head_dim),
         dtype=dtype,
     )
     v_pages = jax.random.normal(
         k2,
-        (num_pages, page_size, num_kv_heads, head_dim),
+        (num_pages, page_size, num_kv_heads * head_dim),
         dtype=dtype,
     )
     page_indices = jax.random.randint(
