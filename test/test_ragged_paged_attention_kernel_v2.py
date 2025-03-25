@@ -22,7 +22,7 @@ def ceil_div(x, a):
 @jtu.with_config(jax_numpy_dtype_promotion="standard")
 class PagedAttentionKernelTest(jtu.JaxTestCase):
 
-  def test_ragged_paged_attention(
+  def _test_ragged_paged_attention(
       self,
       seq_lens,  # List[(q_len, kv_len)]
       num_heads,  # [num_q_heads, num_kv_heads]
