@@ -376,10 +376,26 @@ def _make_get_graph_compiler():
 
 
 def _backward_shard_alike(carry, x, backward, init, xs):
+  """
+  A wrapper on top of `backward` that ensures forward inputs and
+  backward outputs are sharded the same way.
+  """
+
   grad_carry, grad_x = backward(carry, x)
-  # Propagate sharding between forward inputs and backward outputs.
+
+  def maybe_put_none(val_with_none, val_full):
+    return None if val_with_none is None else val_full
+
+  def maybe_get_first(v):
+    return v[0] if v is not None else None
+
+  # The input gradient may be None if there is no gradient. In that case,
+  # we just put a None for the corresponding input so as to not constrain
+  # the input's sharding.
+  init = tree_map(maybe_put_none, grad_carry, init)
+  xs = tree_map(maybe_put_none, grad_x, xs)
   _, grad_carry = shard_as(init, grad_carry)
-  _, grad_x = shard_as(tree_map(lambda v: v[0], xs), grad_x)
+  _, grad_x = shard_as(tree_map(maybe_get_first, xs), grad_x)
   return grad_carry, grad_x
 
 
