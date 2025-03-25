@@ -11,7 +11,6 @@ from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import (
 )
 import jax.numpy as jnp
 
-
 jax.config.parse_flags_with_absl()
 
 
@@ -77,8 +76,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         dtype=dtype,
     )
     page_indices = jax.random.randint(
-        k3, (max_num_seq, pages_per_seq), 0, num_pages, dtype=jnp.int32
-    )
+        k3, (max_num_seq, pages_per_seq), 0, num_pages, dtype=jnp.int32)
 
     num_seqs = jnp.array([len(seq_lens)], dtype=jnp.int32)
 
@@ -108,7 +106,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
         vmem_limit_bytes=vmem_limit_bytes,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
-    )[: actual_num_q_tokens]
+    )[:actual_num_q_tokens]
 
     expected = ref_ragged_paged_attention(
         q,
@@ -129,8 +127,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     self.assertAllClose(output, expected, atol=tol, rtol=tol)
 
   @parameterized.product(
-      dtype=[jnp.float32, jnp.bfloat16],
-  )
+      dtype=[jnp.float32, jnp.bfloat16],)
   def test_ragged_paged_attention_basic(self, dtype):
     seq_lens = [(192, 328), (128, 180), (64, 255)]
     num_heads = (32, 8)
@@ -148,8 +145,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     )
 
   @parameterized.product(
-      dtype=[jnp.float32, jnp.bfloat16],
-  )
+      dtype=[jnp.float32, jnp.bfloat16],)
   def test_ragged_paged_attention_decode_only(self, dtype):
     seq_lens = [
         (1, 18),
@@ -184,8 +180,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     )
 
   @parameterized.product(
-      dtype=[jnp.float32, jnp.bfloat16],
-  )
+      dtype=[jnp.float32, jnp.bfloat16],)
   def test_ragged_paged_attention_prefill_only(self, dtype):
     seq_lens = [
         (5, 18),
@@ -220,8 +215,7 @@ class PagedAttentionKernelTest(jtu.JaxTestCase):
     )
 
   @parameterized.product(
-      dtype=[jnp.float32, jnp.bfloat16],
-  )
+      dtype=[jnp.float32, jnp.bfloat16],)
   def test_ragged_paged_attention_mixed(self, dtype):
     seq_lens = [
         (5, 18),
