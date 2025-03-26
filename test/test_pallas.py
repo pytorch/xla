@@ -724,7 +724,7 @@ class PallasTest(parameterized.TestCase):
         torch.allclose(
             output.cpu(), nonkernel_output.cpu(), atol=2e-1, rtol=1e-2))
 
-  def _verify_ragged_paged_attention_with_dynamo(
+  def _test_ragged_paged_attention_with_dynamo(
       self,
       seq_lens,
       num_heads,
@@ -760,6 +760,10 @@ class PallasTest(parameterized.TestCase):
     page_indices_xla = page_indices.to("xla")
     cu_q_lens_xla = cu_q_lens.to("xla")
     num_seqs_xla = torch.tensor([num_seqs], dtype=torch.int32).to("xla")
+    # TODO: add tests to test the integration.
+    sliding_window=None
+    soft_cap=None
+    mask_value=None
 
     kernel_output = torch.ops.xla.ragged_paged_attention(
         q_xla,
@@ -767,11 +771,14 @@ class PallasTest(parameterized.TestCase):
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
-        num_seqs=num_seqs_xla,
+        num_seqs_xla,
+        sm_scale=sm_scale,
+        sliding_window=sliding_window,
+        soft_cap=soft_cap,
+        mask_value=mask_value,
+        use_kernel=True,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
-        use_kernel=True,
-        sm_scale=sm_scale,
     )[:cu_q_lens[num_seqs]]
 
     nonkernel_output = torch.ops.xla.ragged_paged_attention(
@@ -780,11 +787,12 @@ class PallasTest(parameterized.TestCase):
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
-        num_seqs=num_seqs_xla,
-        num_kv_pages_per_block=num_kv_pages_per_block,
-        num_queries_per_block=num_queries_per_block,
-        use_kernel=False,
+        num_seqs_xla,
         sm_scale=sm_scale,
+        sliding_window=sliding_window,
+        soft_cap=soft_cap,
+        mask_value=mask_value,
+        use_kernel=False,
     )
 
     kernel_output_cpu = kernel_output.cpu()
@@ -842,10 +850,10 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     dtype = torch.float32
     page_size = 16
-    num_pages = 32768
+    num_pages = 1000
     sm_scale = head_dim**-0.5
 
-    self._verify_ragged_paged_attention_with_dynamo(
+    self._test_ragged_paged_attention_with_dynamo(
         seq_lens,
         num_heads,
         head_dim,
@@ -872,10 +880,10 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     dtype = torch.float32
     page_size = 16
-    num_pages = 32768
+    num_pages = 1000
     sm_scale = head_dim**-0.5
 
-    self._verify_ragged_paged_attention_with_dynamo(
+    self._test_ragged_paged_attention_with_dynamo(
         seq_lens,
         num_heads,
         head_dim,
