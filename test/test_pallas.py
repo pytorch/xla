@@ -652,7 +652,7 @@ class PallasTest(parameterized.TestCase):
     head_dim = 128
     dtype = torch.float32
     page_size = 16
-    num_pages = 32768
+    num_pages = 1000
     num_seqs = len(seq_lens)
     num_kv_pages_per_block = 16
     num_queries_per_block = 8
@@ -732,10 +732,13 @@ class PallasTest(parameterized.TestCase):
       page_size,
       num_pages,
       dtype,
-      num_kv_pages_per_block,
-      num_queries_per_block,
-      pad_tokens_and_seqs=False,
+      *,
       sm_scale=1.0,
+      sliding_window=None,
+      soft_cap=None,
+      num_kv_pages_per_block=16,
+      num_queries_per_block=128,
+      pad_tokens_and_seqs=False,
   ):
     num_seqs = len(seq_lens)
     max_num_batched_tokens = None
@@ -760,9 +763,9 @@ class PallasTest(parameterized.TestCase):
     page_indices_xla = page_indices.to("xla")
     cu_q_lens_xla = cu_q_lens.to("xla")
     num_seqs_xla = torch.tensor([num_seqs], dtype=torch.int32).to("xla")
-    # TODO: add tests to test the integration.
-    sliding_window=None
-    soft_cap=None
+    sliding_window=sliding_window
+    soft_cap=soft_cap
+    # Test mask_value
     mask_value=None
 
     kernel_output = torch.ops.xla.ragged_paged_attention(
@@ -775,7 +778,6 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
-        mask_value=mask_value,
         use_kernel=True,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
@@ -800,8 +802,16 @@ class PallasTest(parameterized.TestCase):
     self.assertEqual(kernel_output_cpu.shape, nonkernel_output_cpu.shape)
     self.assertEqual(kernel_output_cpu.dtype, nonkernel_output_cpu.dtype)
 
-    q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
-    kv_pages_jax = jnp.array(kv_pages.numpy(), dtype=jnp.float32)
+    assert dtype == torch.float32 or dtype == torch.bfloat16
+    jnp_dtype = jnp.float32
+    tol = 0.15
+    if dtype == torch.bfloat16:
+      jnp_dtype = jnp.bfloat16
+      tol = 0.3
+    
+    # Numpy does not support bfloat16 directly. So we convert f32 first.
+    q_jax = jnp.array(q.to(torch.float32).numpy(), dtype=jnp_dtype)
+    kv_pages_jax = jnp.array(kv_pages.to(torch.float32).numpy(), dtype=jnp_dtype)
     kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
     page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
     cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
@@ -820,81 +830,54 @@ class PallasTest(parameterized.TestCase):
                 num_kv_pages_per_block=num_kv_pages_per_block,
                 num_queries_per_block=num_queries_per_block,
                 sm_scale=sm_scale,
-            )[:cu_q_lens[num_seqs]]))
+                sliding_window=sliding_window,
+                soft_cap=soft_cap,
+                mask_value=mask_value,
+            )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(dtype)
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 
-    self.assertTrue(
-        torch.allclose(
-            kernel_output_cpu, nonkernel_output_cpu, atol=2e-2, rtol=1e-2))
-    self.assertTrue(
-        torch.allclose(
-            kernel_output_cpu, jax_kernel_output_cpu, atol=2e-2, rtol=1e-2))
-
-  @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
-                   "This test only works on TPUv4+.")
-  def test_ragged_paged_attention_wrapper_no_padding_with_dynamo(self):
-    seq_lens = [
-        (1, 1328),
-        (5, 18),
-        (1, 129),
-        (120, 229),
-        (1, 122),  # first physical q block
-        (1, 64),
-        (32, 100),
-        (250, 463),
-        (1, 18),
-        (1, 17),
-        (99, 123)
-    ]  # last 3 physical q blocks [(q_len, kv_len),...]
-    num_heads = (32, 8)
-    head_dim = 128
-    dtype = torch.float32
-    page_size = 16
-    num_pages = 1000
-    sm_scale = head_dim**-0.5
-
-    self._test_ragged_paged_attention_with_dynamo(
-        seq_lens,
-        num_heads,
-        head_dim,
-        page_size,
-        num_pages,
-        dtype,
-        num_kv_pages_per_block=16,
-        num_queries_per_block=8,
-        sm_scale=sm_scale,
-    )
+    torch.testing.assert_close(
+            kernel_output_cpu, nonkernel_output_cpu, atol=tol, rtol=tol)
+    torch.testing.assert_close(
+            kernel_output_cpu, jax_kernel_output_cpu, atol=tol, rtol=tol)
 
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
-      num_queries_per_block=[16, 32],
+      num_heads=[(32, 8), (8, 1)],
+      dtype=[torch.float32, torch.bfloat16],
+      sm_scale=[1.0, 0.5],
+      sliding_window=[None, 128],
+      soft_cap=[None, 10.0],
+      pad_tokens_and_seqs=[False, True],
   )
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
-  def test_ragged_paged_attention_wrapper_with_padding_with_dynamo(
+  def test_ragged_paged_attention_wrapper_with_dynamo(
       self,
       seq_lens,
-      num_queries_per_block,
+      num_heads,
+      dtype,
+      sm_scale,
+      sliding_window,
+      soft_cap,
+      pad_tokens_and_seqs,
   ):
-    num_heads = (32, 8)
     head_dim = 128
-    dtype = torch.float32
     page_size = 16
     num_pages = 1000
-    sm_scale = head_dim**-0.5
 
     self._test_ragged_paged_attention_with_dynamo(
-        seq_lens,
-        num_heads,
-        head_dim,
-        page_size,
-        num_pages,
-        dtype,
-        num_kv_pages_per_block=16,
-        num_queries_per_block=num_queries_per_block,
-        pad_tokens_and_seqs=True,
-        sm_scale=sm_scale,
-    )
+      seq_lens,
+      num_heads,
+      head_dim,
+      page_size,
+      num_pages,
+      dtype,
+      sm_scale=sm_scale,
+      sliding_window=sliding_window,
+      soft_cap=soft_cap,
+      pad_tokens_and_seqs=pad_tokens_and_seqs,
+   )
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")

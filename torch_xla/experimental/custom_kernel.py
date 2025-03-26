@@ -931,6 +931,14 @@ def _ragged_paged_attention_nonkernel(
     attn *= sm_scale
     empty_mask = torch.ones(q_len, kv_len, device=attn.device)
     mask = torch.triu(empty_mask, diagonal=kv_len - q_len + 1).bool()
+    if sliding_window is not None:
+      sliding_window_mask = torch.triu(empty_mask,
+                                             diagonal=kv_len -
+                                                      (q_len + sliding_window) +
+                                                      1).bool().logical_not()
+      mask |= sliding_window_mask
+    if soft_cap is not None:
+      attn = soft_cap * torch.tanh(attn / soft_cap)
     attn.masked_fill_(mask, mask_value)
     attn = torch.softmax(
         attn, dim=-1).to(v.dtype)  # [num_query_heads, cur_q_len, kv_len]
