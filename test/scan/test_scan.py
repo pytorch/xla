@@ -475,7 +475,9 @@ class ScanTest(TestBase):
 
     # Find the input that is stored in the context object.
     stored_xs = None
-    for s in storage:
+    # Dedupe the tensors because the autograd context may save the same tensor twice.
+    # Saving a tensor twice won't use extra storage though thanks to ref-counting.
+    for s in set(storage):
       if s.shape == xs.shape:
         assert stored_xs is None
         stored_xs = s
