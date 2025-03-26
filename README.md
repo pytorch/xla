@@ -108,9 +108,14 @@ with the [contributors guide](https://github.com/pytorch/xla/blob/master/CONTRIB
 
 ## Getting Started
 
-Following here are guides for a simple single process, and multi process application.
-Multi processing is more complex, and is not compatible with SPMD.
-This tutorial does not dive into SPMD. For more on that, check our
+Following here are guides for two modes:
+- Single process: one Python interpreter controlling a single GPU/TPU at a time
+- Multi process: N Python interpreters are launched, corresponding to N GPU/TPUs
+found on the system
+
+Relevant to the different modes is SPMD, a process in which one Python interpreter
+controls all N GPU/TPUs found on the system. Multi processing is more complex, and
+is not compatible with SPMD. This tutorial does not dive into SPMD. For more on that, check our
 [SPMD guide](https://github.com/pytorch/xla/blob/master/docs/source/perf/spmd_basic.md).
 
 ### Simple single process
@@ -118,29 +123,27 @@ This tutorial does not dive into SPMD. For more on that, check our
 To update your exisitng training loop, make the following changes:
 
 ```diff
-+import torch_xla as xla
-+import torch_xla.core.xla_model as xm
++import torch_xla
 
  def train(model, training_data, ...):
    ...
    for inputs, labels in train_loader:
-+    with xla.step():
++    with torch_xla.step():
        inputs, labels = training_data[i]
-+      # Transfer data to the XLA device. This happens asynchronously.
-+      inputs, labels = training_data.to(inputs.xla.device()), labels.to(xla.device())
++      inputs, labels = inputs.to('xla'), labels.to('xla')
        optimizer.zero_grad()
        outputs = model(inputs)
        loss = loss_fn(outputs, labels)
        loss.backward()
        optimizer.step()
 
-+  xm.mark_step()
++  torch_xla.sync()
    ...
 
  if __name__ == '__main__':
    ...
 +  # Move the model paramters to your XLA device
-+  model.to(xla.device())
++  model.to('xla')
    train(model, training_data, ...)
    ...
 ```
@@ -153,19 +156,19 @@ To update your existing training loop, make the following changes:
 
 ```diff
 -import torch.multiprocessing as mp
-+import torch_xla as xla
++import torch_xla
 +import torch_xla.core.xla_model as xm
 
  def _mp_fn(index):
    ...
 
 +  # Move the model paramters to your XLA device
-+  model.to(xla.device())
++  model.to(torch_xla.device())
 
    for inputs, labels in train_loader:
-+    with xla.step():
++    with torch_xla.step():
 +      # Transfer data to the XLA device. This happens asynchronously.
-+      inputs, labels = inputs.to(xla.device()), labels.to(xla.device())
++      inputs, labels = inputs.to(torch_xla.device()), labels.to(torch_xla.device())
        optimizer.zero_grad()
        outputs = model(inputs)
        loss = loss_fn(outputs, labels)
@@ -176,8 +179,8 @@ To update your existing training loop, make the following changes:
 
  if __name__ == '__main__':
 -  mp.spawn(_mp_fn, args=(), nprocs=world_size)
-+  # xla.launch automatically selects the correct world size
-+  xla.launch(_mp_fn, args=())
++  # torch_xla.launch automatically selects the correct world size
++  torch_xla.launch(_mp_fn, args=())
 ```
 
 If you're using `DistributedDataParallel`, make the following changes:
