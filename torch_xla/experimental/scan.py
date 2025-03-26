@@ -399,6 +399,16 @@ def _backward_shard_alike(carry, x, backward, init, xs):
   return grad_carry, grad_x
 
 
+def _save_for_backward(ctx, pytree) -> None:
+  flat, tree_spec = tree_flatten(pytree)
+  ctx._saved_tensors_spec = tree_spec
+  ctx.save_for_backward(*flat)
+
+
+def _load_from_context(ctx):
+  return tree_unflatten(ctx.saved_tensors, ctx._saved_tensors_spec)
+
+
 @pytreeify
 class Scan(torch.autograd.Function):
 
@@ -409,37 +419,28 @@ class Scan(torch.autograd.Function):
       ys, partial_activations = ys
     activations = alias_input(partial_activations, xs)
     ctx._backward = backward
-
-    if torch_xla.runtime.is_spmd():
-      flat_init, carry_spec = tree_flatten(init)
-      flat_xs, xs_spec = tree_flatten(xs)
-      ctx._carry_spec = carry_spec
-      ctx._xs_spec = xs_spec
-      ctx._flat_init_len = len(flat_init)
-      ctx._flat_xs_len = len(flat_xs)
-      ctx.save_for_backward(*flat_init, *flat_xs, *activations)
-    else:
-      ctx.save_for_backward(*activations)
-
+    _save_for_backward(ctx, {
+        "init": init,
+        "xs": xs,
+        "activations": activations
+    })
     return carry, ys
 
   @staticmethod
   def backward(ctx, grad_carry, grad_ys):  # type: ignore
+    saved = _load_from_context(ctx)
     if torch_xla.runtime.is_spmd():
-      stuff = ctx.saved_tensors
-      flat_init, flat_xs, activations = split(stuff, ctx._flat_init_len,
-                                              ctx._flat_xs_len)
-      init = tree_unflatten(flat_init, ctx._carry_spec)
-      xs = tree_unflatten(flat_xs, ctx._xs_spec)
       backward = partial(
-          _backward_shard_alike, backward=ctx._backward, init=init, xs=xs)
+          _backward_shard_alike,
+          backward=ctx._backward,
+          init=saved["init"],
+          xs=saved["xs"])
     else:
-      activations = ctx.saved_tensors
       backward = ctx._backward
     with torch.no_grad():
       # Reverse loop to propagate gradients from last iteration to first.
       grad_init, grad_xs = _scan_impl_pytree(
-          backward, grad_carry, (grad_ys, activations), reverse=True)
+          backward, grad_carry, (grad_ys, saved["activations"]), reverse=True)
     return None, None, None, grad_init, grad_xs
 
 
