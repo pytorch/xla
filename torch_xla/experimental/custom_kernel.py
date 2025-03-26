@@ -932,10 +932,9 @@ def _ragged_paged_attention_nonkernel(
     empty_mask = torch.ones(q_len, kv_len, device=attn.device)
     mask = torch.triu(empty_mask, diagonal=kv_len - q_len + 1).bool()
     if sliding_window is not None:
-      sliding_window_mask = torch.triu(empty_mask,
-                                             diagonal=kv_len -
-                                                      (q_len + sliding_window) +
-                                                      1).bool().logical_not()
+      sliding_window_mask = torch.triu(
+          empty_mask,
+          diagonal=kv_len - (q_len + sliding_window) + 1).bool().logical_not()
       mask |= sliding_window_mask
     if soft_cap is not None:
       attn = soft_cap * torch.tanh(attn / soft_cap)
@@ -1017,7 +1016,8 @@ def ragged_paged_attention(
 
   seq_buf_idx = torch.tensor([0, 0], dtype=torch.int32).to("xla")
   num_q_blks = torch.tensor(
-      [(cu_q_lens[num_seqs[0]] + num_queries_per_block - 1) // num_queries_per_block],
+      [(cu_q_lens[num_seqs[0]] + num_queries_per_block - 1) //
+       num_queries_per_block],
       dtype=torch.int32).to("xla")
 
   output = torch_xla._XLAC._xla_tpu_custom_call(

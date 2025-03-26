@@ -135,8 +135,8 @@ class PallasTest(parameterized.TestCase):
                                       "constant", 0)
     q = torch.randn((max_num_batched_tokens, num_q_heads, head_dim),
                     dtype=dtype)
-    kv_pages = torch.randn((num_pages, page_size, num_kv_heads * 2,  head_dim),
-                          dtype=dtype)
+    kv_pages = torch.randn((num_pages, page_size, num_kv_heads * 2, head_dim),
+                           dtype=dtype)
     page_indices = torch.randint(
         0, num_pages, (max_num_seqs, pages_per_seq), dtype=torch.int32)
     return q, kv_pages, kv_lens, page_indices, cu_q_lens
@@ -669,10 +669,10 @@ class PallasTest(parameterized.TestCase):
     page_indices_xla = page_indices.to("xla")
     cu_q_lens_xla = cu_q_lens.to("xla")
     num_seqs_xla = torch.tensor([num_seqs], dtype=torch.int32).to("xla")
-    sliding_window=sliding_window
-    soft_cap=soft_cap
+    sliding_window = sliding_window
+    soft_cap = soft_cap
     # Test mask_value
-    mask_value=None
+    mask_value = None
 
     if use_dynamo:
       attn = torch.ops.xla.ragged_paged_attention
@@ -720,10 +720,11 @@ class PallasTest(parameterized.TestCase):
     if dtype == torch.bfloat16:
       jnp_dtype = jnp.bfloat16
       tol = 0.3
-    
+
     # Numpy does not support bfloat16 directly. So we convert f32 first.
     q_jax = jnp.array(q.to(torch.float32).numpy(), dtype=jnp_dtype)
-    kv_pages_jax = jnp.array(kv_pages.to(torch.float32).numpy(), dtype=jnp_dtype)
+    kv_pages_jax = jnp.array(
+        kv_pages.to(torch.float32).numpy(), dtype=jnp_dtype)
     kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
     page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
     cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
@@ -749,9 +750,9 @@ class PallasTest(parameterized.TestCase):
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 
     torch.testing.assert_close(
-            kernel_output_cpu, nonkernel_output_cpu, atol=tol, rtol=tol)
+        kernel_output_cpu, nonkernel_output_cpu, atol=tol, rtol=tol)
     torch.testing.assert_close(
-            kernel_output_cpu, jax_kernel_output_cpu, atol=tol, rtol=tol)
+        kernel_output_cpu, jax_kernel_output_cpu, atol=tol, rtol=tol)
 
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
@@ -779,20 +780,19 @@ class PallasTest(parameterized.TestCase):
     num_pages = 1000
 
     self._test_ragged_paged_attention(
-      seq_lens,
-      num_heads,
-      head_dim,
-      page_size,
-      num_pages,
-      dtype,
-      sm_scale=sm_scale,
-      sliding_window=sliding_window,
-      soft_cap=soft_cap,
-      pad_tokens_and_seqs=pad_tokens_and_seqs,
-      use_dynamo=True,
-   )
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype,
+        sm_scale=sm_scale,
+        sliding_window=sliding_window,
+        soft_cap=soft_cap,
+        pad_tokens_and_seqs=pad_tokens_and_seqs,
+        use_dynamo=True,
+    )
 
-  
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
       num_heads=[(32, 8), (8, 1)],
@@ -819,19 +819,18 @@ class PallasTest(parameterized.TestCase):
     num_pages = 1000
 
     self._test_ragged_paged_attention(
-      seq_lens,
-      num_heads,
-      head_dim,
-      page_size,
-      num_pages,
-      dtype,
-      sm_scale=sm_scale,
-      sliding_window=sliding_window,
-      soft_cap=soft_cap,
-      pad_tokens_and_seqs=pad_tokens_and_seqs,
-      use_dynamo=False,
-   )
-
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype,
+        sm_scale=sm_scale,
+        sliding_window=sliding_window,
+        soft_cap=soft_cap,
+        pad_tokens_and_seqs=pad_tokens_and_seqs,
+        use_dynamo=False,
+    )
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
                    "This test only works on TPUv4+.")
