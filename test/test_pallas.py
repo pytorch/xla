@@ -135,13 +135,11 @@ class PallasTest(parameterized.TestCase):
                                       "constant", 0)
     q = torch.randn((max_num_batched_tokens, num_q_heads, head_dim),
                     dtype=dtype)
-    k_pages = torch.randn((num_pages, page_size, num_kv_heads * head_dim),
-                          dtype=dtype)
-    v_pages = torch.randn((num_pages, page_size, num_kv_heads * head_dim),
+    kv_pages = torch.randn((num_pages, page_size, num_kv_heads * 2,  head_dim),
                           dtype=dtype)
     page_indices = torch.randint(
         0, num_pages, (max_num_seqs, pages_per_seq), dtype=torch.int32)
-    return q, k_pages, v_pages, page_indices, cu_q_lens, kv_lens
+    return q, kv_pages, kv_lens, page_indices, cu_q_lens
 
   @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
   def test_tpu_custom_call_pallas_add(self):
@@ -659,7 +657,7 @@ class PallasTest(parameterized.TestCase):
     num_kv_pages_per_block = 16
     num_queries_per_block = 8
 
-    q, k_pages, v_pages, page_indices, cu_q_lens, kv_lens = self._ragged_pagedattention_generate_qkv(
+    q, kv_pages, kv_lens, page_indices, cu_q_lens = self._ragged_pagedattention_generate_qkv(
         seq_lens,
         num_heads,
         head_dim,
@@ -671,8 +669,7 @@ class PallasTest(parameterized.TestCase):
         max_num_seqs=16)
 
     q_xla = q.to("xla")
-    k_pages_xla = k_pages.to("xla")
-    v_pages_xla = v_pages.to("xla")
+    kv_pages_xla = kv_pages.to("xla")
     kv_lens_xla = kv_lens.to("xla")
     page_indices_xla = page_indices.to("xla")
     cu_q_lens_xla = cu_q_lens.to("xla")
@@ -680,8 +677,7 @@ class PallasTest(parameterized.TestCase):
 
     output = ragged_paged_attention(
         q_xla,
-        k_pages_xla,
-        v_pages_xla,
+        kv_pages_xla,
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
@@ -692,8 +688,7 @@ class PallasTest(parameterized.TestCase):
 
     nonkernel_output = ragged_paged_attention(
         q_xla,
-        k_pages_xla,
-        v_pages_xla,
+        kv_pages_xla,
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
@@ -703,8 +698,7 @@ class PallasTest(parameterized.TestCase):
         use_kernel=False)
 
     q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
-    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
-    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    kv_pages_jax = jnp.array(kv_pages.numpy(), dtype=jnp.float32)
     kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
     page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
     cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
@@ -714,8 +708,7 @@ class PallasTest(parameterized.TestCase):
         np.array(
             jax_ragged_paged_attention(
                 q_jax,
-                k_pages_jax,
-                v_pages_jax,
+                kv_pages_jax,
                 kv_lens_jax,
                 page_indices_jax,
                 cu_q_lens_jax,
@@ -750,7 +743,7 @@ class PallasTest(parameterized.TestCase):
     if pad_tokens_and_seqs:
       max_num_batched_tokens = 1024
       max_num_seqs = 16
-    q, k_pages, v_pages, page_indices, cu_q_lens, kv_lens = self._ragged_pagedattention_generate_qkv(
+    q, kv_pages, kv_lens, page_indices, cu_q_lens = self._ragged_pagedattention_generate_qkv(
         seq_lens,
         num_heads,
         head_dim,
@@ -762,8 +755,7 @@ class PallasTest(parameterized.TestCase):
         max_num_seqs=max_num_seqs)
 
     q_xla = q.to("xla")
-    k_pages_xla = k_pages.to("xla")
-    v_pages_xla = v_pages.to("xla")
+    kv_pages_xla = kv_pages.to("xla")
     kv_lens_xla = kv_lens.to("xla")
     page_indices_xla = page_indices.to("xla")
     cu_q_lens_xla = cu_q_lens.to("xla")
@@ -771,8 +763,7 @@ class PallasTest(parameterized.TestCase):
 
     kernel_output = torch.ops.xla.ragged_paged_attention(
         q_xla,
-        k_pages_xla,
-        v_pages_xla,
+        kv_pages_xla,
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
@@ -785,8 +776,7 @@ class PallasTest(parameterized.TestCase):
 
     nonkernel_output = torch.ops.xla.ragged_paged_attention(
         q_xla,
-        k_pages_xla,
-        v_pages_xla,
+        kv_pages_xla,
         kv_lens_xla,
         page_indices_xla,
         cu_q_lens_xla,
@@ -803,8 +793,7 @@ class PallasTest(parameterized.TestCase):
     self.assertEqual(kernel_output_cpu.dtype, nonkernel_output_cpu.dtype)
 
     q_jax = jnp.array(q.numpy(), dtype=jnp.float32)
-    k_pages_jax = jnp.array(k_pages.numpy(), dtype=jnp.float32)
-    v_pages_jax = jnp.array(v_pages.numpy(), dtype=jnp.float32)
+    kv_pages_jax = jnp.array(kv_pages.numpy(), dtype=jnp.float32)
     kv_lens_jax = jnp.array(kv_lens.numpy(), dtype=jnp.int32)
     page_indices_jax = jnp.array(page_indices.numpy(), dtype=jnp.int32)
     cu_q_lens_jax = jnp.array(cu_q_lens.numpy(), dtype=jnp.int32)
@@ -815,8 +804,7 @@ class PallasTest(parameterized.TestCase):
         np.array(
             jax_ragged_paged_attention(
                 q_jax,
-                k_pages_jax,
-                v_pages_jax,
+                kv_pages_jax,
                 kv_lens_jax,
                 page_indices_jax,
                 cu_q_lens_jax,

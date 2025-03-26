@@ -966,8 +966,7 @@ def ragged_paged_attention(
   if not use_kernel:
     return _ragged_paged_attention_nonkernel(
         q,
-        k_pages,
-        v_pages,
+        kv_pages,
         kv_lens,
         page_indices,
         cu_q_lens,
@@ -1010,7 +1009,7 @@ def ragged_paged_attention(
 
   seq_buf_idx = torch.tensor([0, 0], dtype=torch.int32).to("xla")
   num_q_blks = torch.tensor(
-      [(cu_q_lens[num_seqs[0]] + num_q_per_blk - 1) // num_q_per_blk],
+      [(cu_q_lens[num_seqs[0]] + num_queries_per_block - 1) // num_queries_per_block],
       dtype=torch.int32).to("xla")
 
   output = torch_xla._XLAC._xla_tpu_custom_call(
