@@ -896,7 +896,7 @@ def flash_attention(
 
 def _ragged_paged_attention_nonkernel(
     queries,  # [max_num_batched_tokens, num_q_heads, head_dim]
-    kv_pages, # [total_num_pages, page_size, num_combined_kv_heads, head_dim]
+    kv_pages,  # [total_num_pages, page_size, num_combined_kv_heads, head_dim]
     kv_lens,  # i32[max_num_seqs]
     page_indices,  # i32[max_num_seqs, pages_per_seq]
     cu_q_lens,  # i32[max_num_seqs + 1]
@@ -921,12 +921,10 @@ def _ragged_paged_attention_nonkernel(
     kv_len = kv_lens[i]
     indices = page_indices[i]
     q = queries[q_start:q_end]
-    k = kv_pages[indices, :, 0::2, :].reshape(-1, num_kv_heads, head_dim)[
-        :kv_len
-    ]
-    v = kv_pages[indices, :, 1::2, :].reshape(-1, num_kv_heads, head_dim)[
-        :kv_len
-    ]
+    k = kv_pages[indices, :, 0::2, :].reshape(-1, num_kv_heads,
+                                              head_dim)[:kv_len]
+    v = kv_pages[indices, :, 1::2, :].reshape(-1, num_kv_heads,
+                                              head_dim)[:kv_len]
     k = torch.repeat_interleave(k, num_query_per_kv, dim=1)
     v = torch.repeat_interleave(v, num_query_per_kv, dim=1)
     attn = torch.einsum("qhd,khd->hqk", q, k)
@@ -1011,11 +1009,13 @@ def ragged_paged_attention(
   )
 
   seq_buf_idx = torch.tensor([0, 0], dtype=torch.int32).to("xla")
-  num_q_blks = torch.tensor([(cu_q_lens[num_seqs[0]] + num_q_per_blk - 1) // num_q_per_blk], dtype=torch.int32).to("xla")
+  num_q_blks = torch.tensor(
+      [(cu_q_lens[num_seqs[0]] + num_q_per_blk - 1) // num_q_per_blk],
+      dtype=torch.int32).to("xla")
 
   output = torch_xla._XLAC._xla_tpu_custom_call(
       [
-          num_q_blks, # dynamic grid
+          num_q_blks,  # dynamic grid
           kv_lens,
           page_indices,
           cu_q_lens,
@@ -1590,7 +1590,7 @@ def non_xla_attetion(q, k, v, attention_type):
     )
 
   # Return orignal shape of q.
-  return torch.empty_like(q)v
+  return torch.empty_like(q)
 
 
 XLA_LIB.define(
@@ -1612,7 +1612,6 @@ def flash_attention_non_xla(q: torch.Tensor,
                             v: torch.Tensor,
                             causal: bool = False):
   return non_xla_attetion(q, k, v, "flash")
-
 
 
 XLA_LIB.define(
@@ -1685,7 +1684,6 @@ def multi_queries_paged_attention_non_xla(q: torch.Tensor,
                                           attn_logits_soft_cap: float |
                                           None = None):
   return non_xla_attetion(q, k_pages, v_pages, "paged")
-
 
 
 def non_xla_ragged_paged_attention(q, kv, attention_type):
@@ -1762,8 +1760,8 @@ def ragged_paged_attention_non_xla(
     num_kv_pages_per_block=16,
     num_queries_per_block=128,
     vmem_limit_bytes=None,
-):  
-    return non_xla_ragged_paged_attention(q, kv_pages, "paged")
+):
+  return non_xla_ragged_paged_attention(q, kv_pages, "paged")
 
 
 XLA_LIB.define(
