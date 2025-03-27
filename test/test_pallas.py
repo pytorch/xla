@@ -675,7 +675,39 @@ class PallasTest(parameterized.TestCase):
     mask_value = None
 
     if use_dynamo:
-      attn = torch.ops.xla.ragged_paged_attention
+
+      def ragged_paged_attention_wrapper(
+          q,
+          kv_pages,
+          kv_lens,
+          page_indices,
+          cu_q_lens,
+          num_seqs,
+          sm_scale=sm_scale,
+          sliding_window=sliding_window,
+          soft_cap=soft_cap,
+          mask_value=mask_value,
+          use_kernel=True,
+          num_kv_pages_per_block=num_kv_pages_per_block,
+          num_queries_per_block=num_queries_per_block,
+      ):
+        return torch.ops.xla.ragged_paged_attention(
+            q,
+            kv_pages,
+            kv_lens,
+            page_indices,
+            cu_q_lens,
+            num_seqs,
+            sm_scale=sm_scale,
+            sliding_window=sliding_window,
+            soft_cap=soft_cap,
+            mask_value=mask_value,
+            use_kernel=use_kernel,
+            num_kv_pages_per_block=num_kv_pages_per_block,
+            num_queries_per_block=num_queries_per_block,
+        )
+
+      attn = torch.compile(ragged_paged_attention_wrapper, backend="openxla")
     else:
       from torch_xla.experimental.custom_kernel import ragged_paged_attention
       attn = ragged_paged_attention
@@ -690,6 +722,7 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
+        mask_value=mask_value,
         use_kernel=True,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
