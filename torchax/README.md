@@ -1,7 +1,7 @@
 # torchax: Running PyTorch on TPU
 
-**torchax!** is a backend for PyTorch, allowing users to run
-PyTorch on Google CloudTPUs. **torchax!** is also a library for providing
+**torchax** is a backend for PyTorch, allowing users to run
+PyTorch on Google CloudTPUs. **torchax** is also a library for providing
 graph-level interoperability between PyTorch and Jax.
 
 This means, with **torchax** you can:
@@ -133,7 +133,7 @@ Then, a `jax` device will be available to use
 
 ```python
 inputs = torch.randn(3, 3, 28, 28, device='jax')
-m = MyModel()
+m = MyModel().to('jax')
 res = m(inputs)
 print(type(res))  # outputs torchax.tensor.Tensor
 ```
@@ -220,6 +220,7 @@ then the subsequent computation with inputs of same shape will be fast.
 
 # Citation:
 
+```
 @software{torchax,
   author = {Han Qi, Chun-nien Chan, Will Cromar, Manfei Bai, Kevin Gleanson},
   title = {torchax: PyTorch on TPU and Jax interoperability},
@@ -227,6 +228,7 @@ then the subsequent computation with inputs of same shape will be fast.
   version = {0.0.4},
   date = {2025-02-24},
 }
+```
 
 # Maintainers & Contributors:
 
@@ -238,6 +240,7 @@ fellow Googlers using [Google's 20% project policy](https://ebsedu.org/blog/goog
 
 Here is the full list of contributors by 2025-02-25.
 
+```
 Han Qi (qihqi), Pytorch / XLA
 Manfei Bai (manfeibai), Pytorch / XLA
 Will Cromar (will-cromar), Meta
@@ -274,3 +277,4 @@ Jim Lin (jimlinntu), Google(20%)
 Fanhai Lu (FanhaiLu1), Google Cloud
 DeWitt Clinton (dewitt), Google PyTorch
 Aman Gupta (aman2930) , Google(20%)
+```
