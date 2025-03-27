@@ -21,7 +21,7 @@ cd ..
 if [ -d "vision" ]; then
   cd vision
   python3 setup.py develop
-  cd .. 
+  cd ..
 fi
 
 # Install torch_xla
@@ -46,4 +46,4 @@ pip install torch_xla[pallas] \
   -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 
 # Test that the library is installed correctly.
-python3 -c 'import torch_xla; import torchax; print(torch_xla.device())'
+python3 -c 'import torch_xla; print(torch_xla.devices()); import torchax; torchax.enable_globally()'
