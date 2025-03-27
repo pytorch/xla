@@ -669,10 +669,6 @@ class PallasTest(parameterized.TestCase):
     page_indices_xla = page_indices.to("xla")
     cu_q_lens_xla = cu_q_lens.to("xla")
     num_seqs_xla = torch.tensor([num_seqs], dtype=torch.int32).to("xla")
-    sliding_window = sliding_window
-    soft_cap = soft_cap
-    # Test mask_value
-    mask_value = None
 
     if use_dynamo:
 
@@ -686,7 +682,6 @@ class PallasTest(parameterized.TestCase):
           sm_scale=sm_scale,
           sliding_window=sliding_window,
           soft_cap=soft_cap,
-          mask_value=mask_value,
           use_kernel=True,
           num_kv_pages_per_block=num_kv_pages_per_block,
           num_queries_per_block=num_queries_per_block,
@@ -701,7 +696,6 @@ class PallasTest(parameterized.TestCase):
             sm_scale=sm_scale,
             sliding_window=sliding_window,
             soft_cap=soft_cap,
-            mask_value=mask_value,
             use_kernel=use_kernel,
             num_kv_pages_per_block=num_kv_pages_per_block,
             num_queries_per_block=num_queries_per_block,
@@ -722,7 +716,6 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
-        mask_value=mask_value,
         use_kernel=True,
         num_kv_pages_per_block=num_kv_pages_per_block,
         num_queries_per_block=num_queries_per_block,
@@ -738,7 +731,6 @@ class PallasTest(parameterized.TestCase):
         sm_scale=sm_scale,
         sliding_window=sliding_window,
         soft_cap=soft_cap,
-        mask_value=mask_value,
         use_kernel=False,
     )
 
@@ -778,7 +770,6 @@ class PallasTest(parameterized.TestCase):
                 sm_scale=sm_scale,
                 sliding_window=sliding_window,
                 soft_cap=soft_cap,
-                mask_value=mask_value,
             )[:cu_q_lens[num_seqs]].astype(jnp.float32))).to(dtype)
     jax_kernel_output_cpu = jax_kernel_output.cpu()
 
