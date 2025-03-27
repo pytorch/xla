@@ -272,6 +272,16 @@ cwd = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
   long_description = f.read()
 
+# Finds torch_xla and its subpackages
+packages_to_include = find_packages(include=['torch_xla*'])
+# Explicitly add torchax
+packages_to_include.append('torchax')
+
+# Map the top-level 'torchax' package name to its source location
+torchax_dir = os.path.join(cwd, 'torchax')
+package_dir_mapping = {'torch_xla': os.path.join(cwd, 'torch_xla')}
+package_dir_mapping['torchax'] = os.path.join(torchax_dir, 'torchax')
+
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
@@ -297,7 +307,8 @@ setup(
         "Programming Language :: Python :: 3",
     ],
     python_requires=">=3.8.0",
-    packages=find_packages(include=['torch_xla*']),
+    packages=packages_to_include,
+    package_dir=package_dir_mapping,
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
         BazelExtension('//:_XLAC_cuda_functions.so'),
