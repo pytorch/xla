@@ -69,14 +69,32 @@ class Mesh:
                axis_names: Optional[tuple[str, ...]] = None):
     if not isinstance(device_ids, np.ndarray):
       device_ids = np.array(device_ids)
-    assert (axis_names is None) or (len(mesh_shape) == len(axis_names))
-    assert axis_names is None or (len(set(axis_names)) == len(axis_names))
-    assert (len(device_ids) == np.prod(mesh_shape))
-    assert len(device_ids) == len(np.unique(device_ids))
+
+    # At the moment, XLA requires that the Mesh uses the global number of
+    # devices.
+    num_devices = xr.global_runtime_device_count()
+    assert num_devices > 0, "This requires XLA supported device(s)."
+    assert num_devices == len(
+        device_ids
+    ), f"Number of device IDs ({len(device_ids)}) must match the global number of devices ({num_devices})"
+
+    if axis_names is not None:
+      assert len(mesh_shape) == len(axis_names), \
+          f"Number of axis names ({len(axis_names)}) must match mesh dimensions ({len(mesh_shape)})"
+      assert len(set(axis_names)) == len(axis_names), \
+          f"Axis names must be unique, got: {axis_names}"
+
+    expected_devices = np.prod(mesh_shape)
+    assert len(device_ids) == expected_devices, \
+        f"Number of device IDs ({len(device_ids)}) must match mesh size ({expected_devices})"
+    assert len(device_ids) == len(np.unique(device_ids)), \
+        f"Device IDs must be unique, got: {device_ids}"
+
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    assert all(d < self.size() for d in device_ids)
+    assert all(d < self.size() for d in device_ids), \
+        f"Device IDs must be less than mesh size ({self.size()}), got: {device_ids}"
 
   def size(self):
     return np.prod(self.mesh_shape)
@@ -555,10 +573,6 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
       >>> linear = nn.Linear(32, 10).to(xm.xla_device())
       >>> xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel
   """
-  num_devices = xr.global_runtime_device_count()
-  assert num_devices > 0, "This requires XLA supported device(s)."
-  assert mesh.size() == num_devices, \
-    f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   # We only allow fully specified `partition_spec` to be applicable, as opposed
   # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
   # should be of the same rank as `t`. This is to support partial replication
@@ -603,10 +617,6 @@ def mark_sharding_with_gradients(
 
     This version can also be used in AOTAutograd.
     """
-  num_devices = xr.global_runtime_device_count()
-  assert num_devices > 0, "This requires XLA supported device(s)."
-  assert mesh.size() == num_devices, \
-    f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   # We only allow fully specified `partition_spec` to be applicable, as opposed
   # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
   # should be of the same rank as `t`. This is to support partial replication
