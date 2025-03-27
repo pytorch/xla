@@ -55,7 +55,7 @@ function checkout_torch_pin_if_available() {
   git submodule update --init --recursive
 }
 
-function install_deps_pytorch_xla() {
+function install_pre_deps_pytorch_xla() {
   XLA_DIR=$1
   USE_CACHE="${2:-0}"
 
@@ -86,11 +86,15 @@ function install_deps_pytorch_xla() {
 
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
+  # Check and remove any existing bazel symlinks first
+  for bazel_path in /usr/bin/bazel /usr/local/bin/bazel; do
+    if [[ -e "$bazel_path" ]]; then
+      sudo rm -f "$bazel_path"
+    fi
+  done
+  
+  # Install bazelisk
   sudo npm install -g @bazel/bazelisk
-  # Only unlink if file exists
-  if [[ -e /usr/bin/bazel ]]; then
-    sudo unlink /usr/bin/bazel
-  fi
 
   sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
 
@@ -99,6 +103,20 @@ function install_deps_pytorch_xla() {
   if ls $CUBLAS_PATTERN 1> /dev/null 2>&1; then
     sudo ln -s $CUBLAS_PATTERN /usr/local/cuda/include
   fi
+}
+
+
+function install_post_deps_pytorch_xla() {
+  # Install dependencies after we built torch_xla. This is due to installing
+  # those packages can potentially trigger `pip install torch_xla` if torch_xla
+  # is not detected in the system.
+
+  # Install JAX dependency since a few tests depend on it.
+  pip install 'torch_xla[pallas]' \
+  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
+  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+
+  pip install xla/torchax
 }
 
 function build_torch_xla() {
