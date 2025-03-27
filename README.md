@@ -113,9 +113,9 @@ Following here are guides for two modes:
 - Multi process: N Python interpreters are launched, corresponding to N GPU/TPUs
 found on the system
 
-Relevant to the different modes is SPMD, a process in which one Python interpreter
-controls all N GPU/TPUs found on the system. Multi processing is more complex, and
-is not compatible with SPMD. This tutorial does not dive into SPMD. For more on that, check our
+Another mode is SPMD, where one Python interpreter controls all N GPU/TPUs found on 
+the system. Multi processing is more complex, and is not compatible with SPMD. This
+tutorial does not dive into SPMD. For more on that, check our
 [SPMD guide](https://github.com/pytorch/xla/blob/master/docs/source/perf/spmd_basic.md).
 
 ### Simple single process
