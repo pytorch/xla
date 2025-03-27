@@ -26,11 +26,12 @@ fi
 
 # Install torch_xla
 cd pytorch/xla
-pip uninstall torch_xla -y
+pip uninstall torch_xla torchax torch_xla2 -y
 
-# Optional: build the wheel.
+# Build the wheel too, which is useful for other testing purposes.
 python3 setup.py bdist_wheel
 
+# Link the source files for local development.
 python3 setup.py develop
 
 # libtpu is needed to talk to the TPUs. If TPUs are not present,
@@ -45,4 +46,4 @@ pip install torch_xla[pallas] \
   -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 
 # Test that the library is installed correctly.
-python3 -c 'import torch_xla as xla; print(xla.device())'
+python3 -c 'import torch_xla; import torchax; print(torch_xla.device())'
