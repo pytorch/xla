@@ -30,7 +30,7 @@ jobs:
       - id: commit
         name: Get latest torch commit
         run: |
-          echo "torch_commit=$(git ls-remote https://github.com/pytorch/pytorch.git HEAD | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "torch_commit=$(git ls-remote https://github.com/pytorch/pytorch.git refs/heads/release/2.7 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
   build-torch-xla:
     name: "Build PyTorch/XLA"
