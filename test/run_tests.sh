@@ -261,6 +261,9 @@ function run_xla_op_tests3 {
 
   # Test examples
   run_test "$_TEST_DIR/../examples/scan/scan_examples.py"
+
+  # Experimental sparse
+  run_test "$_TEST_DIR/test_sparse_embedding.py"
 }
 
 #######################################################################################
