@@ -160,6 +160,7 @@ def _extract_backend_config(
 
 @contextmanager
 def _jax_env_context():
+  # TODO(b/374631442): Get rid of this hack.
   try:
     previous_skip_megascale_env = os.environ.get('SKIP_MEGASCALE_PJRT_CLIENT',
                                                  None)
