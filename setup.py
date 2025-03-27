@@ -64,12 +64,12 @@ import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
+USE_NIGHTLY = False  # whether to use nightly or stable libtpu and jax
 
 _date = '20250303'
-_libtpu_version = '0.0.11'
-_jax_version = '0.5.2'
-_jaxlib_version = '0.5.2'
+_libtpu_version = '0.0.11.1'
+_jax_version = '0.5.3'
+_jaxlib_version = '0.5.3'
 
 _libtpu_wheel_name = f'libtpu-{_libtpu_version}'
 _libtpu_storage_directory = 'libtpu-lts-releases'
