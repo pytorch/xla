@@ -195,6 +195,7 @@ supported:
   - count_nonzero.dim_IntList
   - cross
   - cummax
+  - cummin
   - cumprod
   - cumsum
   - detach_copy
