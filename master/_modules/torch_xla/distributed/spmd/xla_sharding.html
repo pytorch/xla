@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+git8dc5b49 )
+                  master (2.8.0+git96ad8f5 )
                 </div>
               
             
@@ -501,14 +501,32 @@
                <span class="n">axis_names</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
       <span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="p">(</span><span class="n">axis_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">axis_names</span><span class="p">))</span>
-    <span class="k">assert</span> <span class="n">axis_names</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">axis_names</span><span class="p">))</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">axis_names</span><span class="p">))</span>
-    <span class="k">assert</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">))</span>
-    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">device_ids</span><span class="p">))</span>
+
+    <span class="c1"># At the moment, XLA requires that the Mesh uses the global number of</span>
+    <span class="c1"># devices.</span>
+    <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;This requires XLA supported device(s).&quot;</span>
+    <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span>
+        <span class="n">device_ids</span>
+    <span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;Number of device IDs (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match the global number of devices (</span><span class="si">{</span><span class="n">num_devices</span><span class="si">}</span><span class="s2">)&quot;</span>
+
+    <span class="k">if</span> <span class="n">axis_names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">axis_names</span><span class="p">),</span> \
+          <span class="sa">f</span><span class="s2">&quot;Number of axis names (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">axis_names</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match mesh dimensions (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+      <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">axis_names</span><span class="p">))</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">axis_names</span><span class="p">),</span> \
+          <span class="sa">f</span><span class="s2">&quot;Axis names must be unique, got: </span><span class="si">{</span><span class="n">axis_names</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="n">expected_devices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">mesh_shape</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span> <span class="o">==</span> <span class="n">expected_devices</span><span class="p">,</span> \
+        <span class="sa">f</span><span class="s2">&quot;Number of device IDs (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match mesh size (</span><span class="si">{</span><span class="n">expected_devices</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">device_ids</span><span class="p">)),</span> \
+        <span class="sa">f</span><span class="s2">&quot;Device IDs must be unique, got: </span><span class="si">{</span><span class="n">device_ids</span><span class="si">}</span><span class="s2">&quot;</span>
+
     <span class="bp">self</span><span class="o">.</span><span class="n">device_ids</span> <span class="o">=</span> <span class="n">device_ids</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span> <span class="o">=</span> <span class="n">mesh_shape</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">axis_names</span> <span class="o">=</span> <span class="n">axis_names</span>
-    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">d</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">device_ids</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">d</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">device_ids</span><span class="p">),</span> \
+        <span class="sa">f</span><span class="s2">&quot;Device IDs must be less than mesh size (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="si">}</span><span class="s2">), got: </span><span class="si">{</span><span class="n">device_ids</span><span class="si">}</span><span class="s2">&quot;</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mesh_shape</span><span class="p">)</span>
@@ -987,10 +1005,6 @@
 <span class="sd">      &gt;&gt;&gt; linear = nn.Linear(32, 10).to(xm.xla_device())</span>
 <span class="sd">      &gt;&gt;&gt; xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
-  <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;This requires XLA supported device(s).&quot;</span>
-  <span class="k">assert</span> <span class="n">mesh</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">==</span> <span class="n">num_devices</span><span class="p">,</span> \
-    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s2"> is not mappable over </span><span class="si">{</span><span class="n">num_devices</span><span class="si">}</span><span class="s2"> devices.&quot;</span>
   <span class="c1"># We only allow fully specified `partition_spec` to be applicable, as opposed</span>
   <span class="c1"># to filling in the unspecified replicated dims. Fully specified `partiion_spec`</span>
   <span class="c1"># should be of the same rank as `t`. This is to support partial replication</span>
@@ -1035,10 +1049,6 @@
 
 <span class="sd">    This version can also be used in AOTAutograd.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-  <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
-  <span class="k">assert</span> <span class="n">num_devices</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;This requires XLA supported device(s).&quot;</span>
-  <span class="k">assert</span> <span class="n">mesh</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="o">==</span> <span class="n">num_devices</span><span class="p">,</span> \
-    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mesh</span><span class="o">.</span><span class="n">mesh_shape</span><span class="si">}</span><span class="s2"> is not mappable over </span><span class="si">{</span><span class="n">num_devices</span><span class="si">}</span><span class="s2"> devices.&quot;</span>
   <span class="c1"># We only allow fully specified `partition_spec` to be applicable, as opposed</span>
   <span class="c1"># to filling in the unspecified replicated dims. Fully specified `partiion_spec`</span>
   <span class="c1"># should be of the same rank as `t`. This is to support partial replication</span>
