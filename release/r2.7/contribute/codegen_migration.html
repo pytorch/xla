@@ -285,7 +285,7 @@
               
               
                 <div class="version">
-                  master (2.7.0+git4e04435 )
+                  master (2.7.0+git99fecc1 )
                 </div>
               
             
@@ -438,17 +438,9 @@
 <p>As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean
 up the existing stub code (which spans over 6+ files) that were used to
 do the op lowering. The complete process and file structure for the old
-op lowering can be found in the op lowering guide :ref:'op-lowering'.</p>
-<p>For more information on different operation configurations, see
-<cite>``codegen/xla_native_functions.yaml`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml">https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml</a>&gt;`_.
-Replacing a supported op (under the <code class="docutils literal notranslate"><span class="pre">supported</span></code> config) with an codegen
-equivalent (under the <code class="docutils literal notranslate"><span class="pre">full_codegen</span></code> config) SHOULD NOT introduce any new
-behavior, it is purely for the clean up purpose. Operations under other
-configurations might have different behavior. See
-<cite>``codegen/xla_native_functions.yaml`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml">https://github.com/pytorch/xla/blob/master/codegen/xla_native_functions.yaml</a>&gt;`_
-for info on other configs.</p>
-<p>For more information about dispatching in PyTorch, see
-<a class="reference external" href="https://blog.ezyang.com/2020/09/lets-talk-about-the-pytorch-dispatcher/">Exyang’s Blog post</a>.</p>
+op lowering can be found in the op lowering guide :ref:'op-lowering'.
+Replacing the supported op with the codegen SHOULD NOT introduce any new
+behavior, it is purely for the clean up purpose.</p>
 <div class="section" id="before-you-start">
 <h2>Before you start<a class="headerlink" href="#before-you-start" title="Permalink to this heading">¶</a></h2>
 <p>You should follow the instructions in
@@ -607,7 +599,7 @@ mapping from op to IR.</p></li>
 <div class="section" id="codegen-the-op-and-inspect-the-generated-file">
 <h3>2. Codegen the op and inspect the generated file<a class="headerlink" href="#codegen-the-op-and-inspect-the-generated-file" title="Permalink to this heading">¶</a></h3>
 <p>Find the op in <code class="docutils literal notranslate"><span class="pre">xla/codegen/xla_native_functions.yaml</span></code> and move it to
-the <code class="docutils literal notranslate"><span class="pre">full_codegen</span></code> column and run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code> under the xla
+the full_codegen column and run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code> under xla
 directory again. The build will fail (reason explained later in this
 guide) but you can still see the generated file.</p>
 <p>If while generating the file you run into an error involving
