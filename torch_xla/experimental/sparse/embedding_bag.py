@@ -3,10 +3,13 @@ from typing import Optional, Tuple
 import warnings
 import torch
 from torch import Tensor
-from torch.nn.modules.sparse import EmbeddingBag as UpstreamEmbeddingBag
 from torch.nn import functional as F
+from torch.nn.modules import sparse
 from torch.autograd import Function
 from .coo import SparseCOOTensor
+
+_NativeEmbeddingModule = sparse.Embedding
+_NativeEmbeddingBagModule = sparse.EmbeddingBag
 
 
 class _EmbeddingBagMode(IntEnum):
@@ -132,6 +135,31 @@ def _apply_bag_size_backward(mode: _EmbeddingBagMode, index_grad: Tensor,
   return index_grad
 
 
+def _sparse_embedding_backward(grad: Tensor, indices: Tensor, num_weights: int,
+                               padding_idx: int):
+  if padding_idx != -1:
+    c = indices != padding_idx
+    indices = indices.index(c)
+    grad = grad.index(c)
+
+  num_features = grad.size(-1)
+  weight_size = (num_weights, num_features)
+  dense_options = _tensor_factory_kwargs(grad)
+
+  if grad.numel() == 0:
+    sparse_index = torch.empty((1, 0),
+                               **_tensor_factory_kwargs(indices),
+                               dtype=torch.int64)
+    sparse_values = torch.empty((0, num_features), **dense_options),
+  else:
+    sparse_index = indices.reshape(1, -1)
+    sparse_values = grad.reshape((-1, num_features))
+
+  grad_weight = SparseCOOTensor(sparse_index, sparse_values, weight_size)
+
+  return grad_weight
+
+
 class SparseEmbeddingBag(Function):
   """Alternate embeding bag implementation. Produces sparse gradients using an XLA compatible tensor subclass
   """
@@ -173,7 +201,7 @@ class SparseEmbeddingBag(Function):
                                   bool, Optional[Tensor], bool, Optional[int]],
                     outputs: Tuple[Tensor, Tensor, Tensor, Tensor]):
     weight, indices, offsets, _, _, mode, _, per_sample_weights, _, padding_idx = inputs
-    output, offset2bag, bag_size, max_indices = outputs
+    _, offset2bag, bag_size, max_indices = outputs
     # for completness, not technically required as integer dtype will make this automatic
     ctx.mark_non_differentiable(offset2bag, bag_size, max_indices)
     ctx.set_materialize_grads(False)
@@ -200,27 +228,40 @@ class SparseEmbeddingBag(Function):
         torch._check(ctx.mode == _EmbeddingBagMode.SUM)
         index_grad.mul_(per_sample_weights.unsqueeze(1))
 
-      if ctx.padding_idx != -1:
-        c = indices != ctx.padding_idx
-        indices = indices.index(c)
-        grad_ = grad_.index(c)
+      grad_weight = _sparse_embedding_backward(index_grad, indices,
+                                               ctx.num_weights, ctx.padding_idx)
+      return grad_weight, grad_indices, grad_offsets, grad_per_sample_weights
 
-      num_features = grad_.size(-1)
-      weight_size = (ctx.num_weights, num_features)
-      dense_options = _tensor_factory_kwargs(grad_)
 
-      if grad_.numel() == 0:
-        sparse_index = torch.empty((1, 0),
-                                   **_tensor_factory_kwargs(indices),
-                                   dtype=torch.int64)
-        sparse_values = torch.empty((0, num_features), **dense_options),
-      else:
-        sparse_index = indices.reshape(1, -1)
-        sparse_values = grad_.reshape((-1, num_features))
+class SparseEmbedding(Function):
 
-    grad_weight = SparseCOOTensor(sparse_index, sparse_values, weight_size)
+  @staticmethod
+  def forward(input: Tensor,
+              weight: Tensor,
+              padding_idx: Optional[int],
+              scale_grad_by_freq: bool = False,
+              sparse: bool = False) -> Tensor:
+    return torch.embedding(weight, input, padding_idx, scale_grad_by_freq,
+                           sparse)
 
-    return grad_weight, grad_indices, grad_offsets, grad_per_sample_weights
+  @staticmethod
+  def setup_context(ctx, inputs, output):
+    indices, weight, padding_idx, scale_grad_by_freq, sparse = inputs
+    ctx.mark_non_differentiable(indices)
+    ctx.set_materialize_grads(False)
+    ctx.save_for_backward(indices)
+    ctx.num_weights = weight.size(0)
+    ctx.padding_idx = padding_idx
+
+  @staticmethod
+  def backward(ctx, grad_: Tensor):
+    grad_input = grad_weight = None
+    indices = ctx.saved_tensors
+    if grad_ is not None:
+      grad_weight = _sparse_embedding_backward(grad_, indices, ctx.num_weights,
+                                               ctx.padding_idx)
+
+    return grad_input, grad_weight
 
 
 def embedding_bag(
@@ -336,7 +377,44 @@ def embedding_bag(
   return ret
 
 
-class EmbeddingBag(UpstreamEmbeddingBag):
+def embedding(input: Tensor,
+              weight: Tensor,
+              padding_idx: Optional[int] = None,
+              max_norm: Optional[float] = None,
+              norm_type: float = 2.0,
+              scale_grad_by_freq: bool = False,
+              sparse: bool = False) -> Tensor:
+  f"""This is the equivalant API for F.embedding_bag, but where sparse gradients for :attr:`weight` would be produced a custom path is taken.
+  {F.embedding.__doc__}
+  """
+  if padding_idx is not None:
+    if padding_idx > 0:
+      assert padding_idx < weight.size(
+          0), "Padding_idx must be within num_embeddings"
+    elif padding_idx < 0:
+      assert padding_idx >= -weight.size(
+          0), "Padding_idx must be within num_embeddings"
+      padding_idx = weight.size(0) + padding_idx
+  else:
+    padding_idx = -1
+  if max_norm is not None:
+    # Note [embedding_renorm contiguous]
+    # `embedding_renorm_` will call .contiguous() on input anyways, so we
+    # call it here and take advantage of the improved locality in the
+    # `embedding` call below too.
+    input = input.contiguous()
+    # Note [embedding_renorm set_grad_enabled]
+    # Note [Modified from F.embedding]
+    # We do't need to support torch-script so we can just do what they say this is equivalant to, original below
+    #_no_grad_embedding_renorm_(weight, input, max_norm, norm_type)
+    with torch.no_grad():
+      torch.embedding_renorm_(weight, input, max_norm, norm_type)
+
+  impl = SparseEmbedding.apply if sparse and weight.requires_grad else torch.embedding
+  return impl(weight, input, padding_idx, scale_grad_by_freq, sparse)
+
+
+class EmbeddingBag(_NativeEmbeddingBagModule):
   f"""Torch-XLA backend compatible Embedding Bag
   
   This implementation modifies the forward function when :attr:`sparse` is ``True``.
@@ -345,11 +423,8 @@ class EmbeddingBag(UpstreamEmbeddingBag):
   ``torch.sparse_coo`` layout. If :attr:`sparse` is ``False`` this is identical
   to :class:`~torch.nn.EmbedingBag`.
 
-  {UpstreamEmbeddingBag.__doc__}
+  {_NativeEmbeddingBagModule.__doc__}
   """
-
-  def __init__(self, *args, **kwargs):
-    super().__init__(*args, **kwargs)
 
   def forward(self,
               input: Tensor,
@@ -362,3 +437,22 @@ class EmbeddingBag(UpstreamEmbeddingBag):
                            self.sparse, per_sample_weights,
                            self.include_last_offset, self.padding_idx)
     return super().forward(input, offsets, per_sample_weights)
+
+
+class Embedding(_NativeEmbeddingModule):
+  f"""Torch-XLA backend compatible Embedding 
+  
+  This implementation modifies the forward function when :attr:`sparse` is ``True``.
+  The alternate implementation has a backward which will produce sparse
+  gradients w.r.t :attr:`weight` as a tensor subclass implemention of the
+  ``torch.sparse_coo`` layout. If :attr:`sparse` is ``False`` this is identical
+  to :class:`~torch.nn.Embeding`.
+
+  {_NativeEmbeddingBagModule.__doc__}
+  """
+
+  def forward(self, input: Tensor) -> Tensor:
+    if self.weight.requires_grad() and self.sparse:
+      return embedding(input, self.weight, self.padding_idx, self.max_norm,
+                       self.norm_type, self.scale_grad_by_freq, self.sparse)
+    return super().forward(input)
