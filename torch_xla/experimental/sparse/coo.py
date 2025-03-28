@@ -13,6 +13,8 @@ from _coo_ops import (
     coo_nnz,
 )
 
+__all__ = ["SparseCOOTensor"]
+
 aten = torch.ops.aten
 
 
