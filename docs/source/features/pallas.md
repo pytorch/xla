@@ -110,3 +110,7 @@ the proper JAX:
 ``` bash
 pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 ```
+
+## Write your own Pallas kernels
+
+You can find the authoritative guide on how to write a Pallas kernel at https://docs.jax.dev/en/latest/pallas/index.html.
