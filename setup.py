@@ -369,6 +369,9 @@ setup(
         # importlib.metadata backport required for PJRT plugin discovery prior
         # to Python 3.10
         'importlib_metadata>=4.6;python_version<"3.10"',
+        # Some torch operations are lowered to HLO via JAX.
+        f'jaxlib=={_jaxlib_version}',
+        f'jax=={_jax_version}',
     ],
     package_data={
         'torch_xla': ['lib/*.so*',],
@@ -390,6 +393,8 @@ setup(
             f'libtpu=={_libtpu_version}',
             'tpu-info',
         ],
+        # As of https://github.com/pytorch/xla/pull/8895, jax is always a dependency of torch_xla.
+        # However, this no-op extras_require entrypoint is left here for backwards compatibility.
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
         'pallas': [f'jaxlib=={_jaxlib_version}', f'jax=={_jax_version}'],
     },

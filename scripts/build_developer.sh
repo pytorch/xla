@@ -40,10 +40,5 @@ pip install torch_xla[tpu] \
   -f https://storage.googleapis.com/libtpu-wheels/index.html \
   -f https://storage.googleapis.com/libtpu-releases/index.html
 
-# Install Pallas dependencies
-pip install torch_xla[pallas] \
-  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
-  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-
 # Test that the library is installed correctly.
 python3 -c 'import torch_xla; print(torch_xla.devices()); import torchax; torchax.enable_globally()'

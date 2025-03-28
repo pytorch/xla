@@ -110,11 +110,6 @@ function install_post_deps_pytorch_xla() {
   # Install dependencies after we built torch_xla. This is due to installing
   # those packages can potentially trigger `pip install torch_xla` if torch_xla
   # is not detected in the system.
-
-  # Install JAX dependency since a few tests depend on it.
-  pip install 'torch_xla[pallas]' \
-  -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
-  -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 }
 
 function build_torch_xla() {
