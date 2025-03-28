@@ -6,7 +6,7 @@ pip:
       - astunparse
       - cffi
       - cloud-tpu-client
-      - cmake
+      - cmake==3.31.6
       - coverage
       - dataclasses
       - expecttest==0.1.3
