@@ -246,6 +246,10 @@ def _sparse_mm(mat1, mat2, reduce='sum'):
 def _aten_isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
   return jnp.isclose(input, other, rtol, atol, equal_nan)
 
+@register_function(torch.linalg.det)
+def linalg_det(input):
+  return jnp.linalg.det(input)
+
 
 @register_function(torch.ones)
 def _ones(*size: int, dtype=None, **kwargs):

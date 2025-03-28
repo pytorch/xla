@@ -2829,6 +2829,21 @@ def _aten_linalg_lu_factor_ex(A, pivot=True, check_errors=False):
   return lu, pivots, info
 
 
+@op(torch.ops.aten.linalg_lu_solve)
+def _aten_linalg_lu_solve(LU, pivots, B, left=True, adjoint=False):
+  # JAX pivots are offset by 1 compared to torch
+  pivots = pivots - 1
+  if not left:
+    # XA = B is same as A'X = B'
+    trans = 0 if adjoint else 2
+    x = jax.scipy.linalg.lu_solve((LU, pivots), jnp.matrix_transpose(B), trans)
+    x = jnp.matrix_transpose(x)
+  else:
+    trans = 2 if adjoint else 0
+    x = jax.scipy.linalg.lu_solve((LU, pivots), B, trans)
+  return x
+
+
 @op(torch.ops.aten.gcd)
 def _aten_gcd(input, other):
   return jnp.gcd(input, other)
