@@ -1,5 +1,5 @@
 # For benchmarking prefill without dynamo: python test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged_paged_attention-v2 --case decode
-# For benchmarking decode without dynamo: python test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged_paged_attention-v2 --case decode
+# For benchmarking decode without dynamo: python test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged_paged_attention-v2 --case prefill
 
 # Usage: python test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged-paged-attention-with-torch-xla-dynamo
 # Usage: python test/benchmarks/test_ragged_paged_attention_benchmark.py --kernel ragged_paged_attention-v2
