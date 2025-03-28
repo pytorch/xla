@@ -23,14 +23,9 @@ jobs:
           pip install --upgrade pip
           pip install fsspec
           pip install rich
-          # Jax nightly is needed for pallas tests.
-          pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+          # libtpu is needed for pallas tests.
           pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
           pip install --upgrade protobuf
-
-          # torchax is needed for call_jax tests.
-          # TODO(https://github.com/pytorch/xla/issues/8831): Remove this when torchax is part of torch_xla.
-          pip install pytorch/xla/torchax
       - name: Run Tests
         env:
           PJRT_DEVICE: TPU
