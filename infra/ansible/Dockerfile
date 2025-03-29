@@ -9,18 +9,6 @@ COPY . /ansible
 
 ARG ansible_vars
 
-# Add NVIDIA repository and update
-RUN apt-get update && \
-    apt-get install -y gnupg curl ca-certificates && \
-    apt-get clean && \
-    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/cuda-keyring_1.0-1_all.deb -o cuda-keyring.deb && \
-    dpkg -i cuda-keyring.deb && \
-    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/debian11/x86_64/ /" > /etc/apt/sources.list.d/cuda.list && \
-    apt-get update
-
-RUN apt list -a libcudnn8 && \
-    apt list -a libcudnn9-cuda-12
-
 # HACK: install build dependencies only, but skip build step
 RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}" --tags "bazel,configure_env,install_deps"
 RUN ansible-playbook -vvv playbook.yaml -e "stage=build_plugin" -e "${ansible_vars}" 
