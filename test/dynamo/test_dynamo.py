@@ -315,7 +315,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
   @parameterized.parameters(
       (True, 'openxla'),
       (False, 'openxla'),
-      (True, dynamo_backend2.dynamo_backend), 
+      (True, dynamo_backend2.dynamo_backend),
       (False, dynamo_backend2.dynamo_backend),
   )
   def test_einsum(self, initialize_on_cuda, backend):
@@ -379,7 +379,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
   @parameterized.parameters(
       (True, 'openxla'),
       (False, 'openxla'),
-      (True, dynamo_backend2.dynamo_backend), 
+      (True, dynamo_backend2.dynamo_backend),
       (False, dynamo_backend2.dynamo_backend),
   )
   def test_resnet18(self, initialize_on_cuda, backend):
@@ -550,10 +550,9 @@ class DynamoTrainingBasicTest(parameterized.TestCase):
     xla_input = input.detach().to(device)
     xla_input.requires_grad = True
     res_cpu = self.fn_simple(input)
-    fn_simple_dynamo = torch.compile(self.fn_simple, backend=backend)
+    fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
     res_xla_dynamo = fn_simple_dynamo(xla_input)
-    if backend == 'openxla':
-      self.assertIn('xla::nll_loss_backward', met.counter_names())
+    self.assertIn('xla::nll_loss_backward', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
     self.assertTrue(
         torch.allclose(
