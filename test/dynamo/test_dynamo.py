@@ -10,6 +10,7 @@ import torch_xla.debug.metrics as met
 import torch_xla.core.xla_env_vars as xenv
 from torch_xla import runtime as xr
 import torch_xla.debug.profiler as xp
+from torch_xla._dynamo import dynamo_backend2
 import torch.optim as optim
 import torch.nn as nn
 import torch._dynamo as dynamo
@@ -38,31 +39,33 @@ skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
 skipOnNeuron = unittest.skipIf(_is_on_neuron(), 'Not supported on NEURON')
 
 
-class DynamoInPlaceTest(unittest.TestCase):
+class DynamoInPlaceTest(parameterized.TestCase):
 
   def inplace_update(self, a):
     a += 1
     return a
 
-  def test_inplace_update_correctness(self):
+  @parameterized.parameters(['openxla', dynamo_backend2.dynamo_backend])
+  def test_inplace_update_correctness(self, backend):
     dynamo_inplace = torch.compile(
-        self.inplace_update, backend="openxla", fullgraph=True)
+        self.inplace_update, backend=backend, fullgraph=True)
     t = torch.tensor([0, 1, 2], device=xm.xla_device())
     for i in range(10):
       t = dynamo_inplace(t)
     self.assertTrue(torch.all(torch.eq(t.cpu(), torch.tensor([10, 11, 12]))))
 
 
-class DynamRandomOpTest(unittest.TestCase):
+class DynamRandomOpTest(parameterized.TestCase):
 
   def random_op(self, a):
     return torch.randn(5, 5, device=a.device) + a
 
-  def test_random_op_different_result_each_run(self):
+  @parameterized.parameters(['openxla', dynamo_backend2.dynamo_backend])
+  def test_random_op_different_result_each_run(self, backend):
     xm.wait_device_ops()
     met.clear_all()
     dynamo_random_op = torch.compile(
-        self.random_op, backend="openxla", fullgraph=True)
+        self.random_op, backend=backend, fullgraph=True)
     t = torch.randn(5, 5).to(xm.xla_device())
     dynamo_res_1 = dynamo_random_op(t)
     dynamo_res_2 = dynamo_random_op(t)
@@ -75,7 +78,7 @@ class DynamRandomOpTest(unittest.TestCase):
     self.assertFalse(torch.allclose(dynamo_res_2, dynamo_res_3))
 
 
-class DynamoLTCInteractionTest(unittest.TestCase):
+class DynamoLTCInteractionTest(parameterized.TestCase):
 
   def index_copy_inplace(self, cache, update_indices, xk):
     cache.index_copy_(0, update_indices, xk)
@@ -104,21 +107,22 @@ class DynamoLTCInteractionTest(unittest.TestCase):
       xm.wait_device_ops()
       self.assertEqual(current_execute_time, met.metric_data('ExecuteTime')[0])
 
-  def test_copy_op(self):
+  @parameterized.parameters(['openxla', dynamo_backend2.dynamo_backend])
+  def test_copy_op(self, backend):
 
     def copy_a_to_b(a):
       res = a.cos()
-      copy = torch.ops.aten.copy.default(a, res)
+      copy = torch.ops.aten.copy_.default(a, res)
       return copy
 
     device = torch_xla.device()
-    compiled_copy = torch.compile(copy_a_to_b, backend="openxla")
+    compiled_copy = torch.compile(copy_a_to_b, backend=backend)
     a = torch.randn(2, 9).to(device)
     res = compiled_copy(a)
     self.assertTrue(torch.allclose(res, a))
 
 
-class DynamoProfilerTest(unittest.TestCase):
+class DynamoProfilerTest(parameterized.TestCase):
 
   def dummy_fn(self, a):
     return torch.sin(a) + a
@@ -254,10 +258,12 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
 
   @parameterized.parameters(
-      True,
-      False,
+      (True, 'openxla'),
+      (False, 'openxla'),
+      (True, dynamo_backend2.dynamo_backend),
+      (False, dynamo_backend2.dynamo_backend),
   )
-  def test_simple_model_with_in_place_ops(self, initialize_on_cuda):
+  def test_simple_model_with_in_place_ops(self, initialize_on_cuda, backend):
 
     class TestModel(nn.Module):
 
@@ -286,7 +292,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
 
     cpu_model = TestModel()
     device_model = TestModel(device).to(device)
-    compiled_model = torch.compile(device_model, backend='openxla')
+    compiled_model = torch.compile(device_model, backend=backend)
 
     input_tensor = torch.ones(3)
     copy_tensor = torch.rand(5, 3)
@@ -307,10 +313,12 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
       self.assertTrue(torch.allclose(res_cpu, res_device_dynamo.cpu()))
 
   @parameterized.parameters(
-      True,
-      False,
+      (True, 'openxla'),
+      (False, 'openxla'),
+      (True, dynamo_backend2.dynamo_backend), 
+      (False, dynamo_backend2.dynamo_backend),
   )
-  def test_einsum(self, initialize_on_cuda):
+  def test_einsum(self, initialize_on_cuda, backend):
     # einsum currently does not have meta function to compute the shape hence
     # will fallback to XLA with FakeTensor as input to infer the output shape.
     def einsum_mm(a, b):
@@ -321,7 +329,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     b = torch.randn(4, 4, 4, 4).to(device)
     xm.mark_step()
 
-    dynamo_einsum_mm = torch.compile(einsum_mm, backend="openxla")
+    dynamo_einsum_mm = torch.compile(einsum_mm, backend=backend)
     res_device_dynamo = dynamo_einsum_mm(a, b)
     res_device_non_dynamo = einsum_mm(a, b)
     self.assertTrue(
@@ -369,10 +377,14 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
   @skipOnTpu
   @skipOnNeuron
   @parameterized.parameters(
-      True,
-      False,
+      (True, 'openxla'),
+      (False, 'openxla'),
+      (True, dynamo_backend2.dynamo_backend), 
+      (False, dynamo_backend2.dynamo_backend),
   )
-  def test_resnet18(self, initialize_on_cuda):
+  def test_resnet18(self, initialize_on_cuda, backend):
+    import torchax
+    torchax.default_env().config.debug_print_each_op = True
     device = self._choose_proper_device(initialize_on_cuda)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = self.get_loader(device, sample_count, batch_size=4)
@@ -386,19 +398,21 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     xm.mark_step()
     xm.wait_device_ops()
     met.clear_all()
-    dynamo_resnet18 = torch.compile(device_resnet18, backend='openxla')
+    dynamo_resnet18 = torch.compile(device_resnet18, backend=backend)
     for data, _ in loader:
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
           torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
     # We only expect one graph for the resnet18 inference.
-    self.assertEqual(met.metric_data('CompileTime')[0], 1)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count)
-    self.assertEqual(
-        met.metric_data('RunCachedGraphInputData')[0], sample_count)
-    self.assertEqual(
-        met.metric_data('RunCachedGraphOutputData')[0], sample_count)
+    if backend == 'openxla':
+      # backend2 doesnt populate metrics
+      self.assertEqual(met.metric_data('CompileTime')[0], 1)
+      self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count)
+      self.assertEqual(
+          met.metric_data('RunCachedGraphInputData')[0], sample_count)
+      self.assertEqual(
+          met.metric_data('RunCachedGraphOutputData')[0], sample_count)
 
   @skipOnNeuron
   def test_resnet18_lazy_vs_dynamo(self):
@@ -428,7 +442,7 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
       # mess up the counter check.
 
 
-class DynamoCpuFallbackTest(unittest.TestCase):
+class DynamoCpuFallbackTest(parameterized.TestCase):
 
   def test_operator_fallback(self):
 
@@ -509,7 +523,7 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     self.assertEqual(met.metric_data('ExecuteTime')[0], 3)
 
 
-class DynamoTrainingBasicTest(unittest.TestCase):
+class DynamoTrainingBasicTest(parameterized.TestCase):
 
   @classmethod
   def setUpClass(self):
@@ -536,9 +550,10 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     xla_input = input.detach().to(device)
     xla_input.requires_grad = True
     res_cpu = self.fn_simple(input)
-    fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
+    fn_simple_dynamo = torch.compile(self.fn_simple, backend=backend)
     res_xla_dynamo = fn_simple_dynamo(xla_input)
-    self.assertIn('xla::nll_loss_backward', met.counter_names())
+    if backend == 'openxla':
+      self.assertIn('xla::nll_loss_backward', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
     self.assertTrue(
         torch.allclose(
@@ -613,7 +628,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
         met.metric_data('RunCachedGraphOutputData')[0], sample_count * 2)
 
 
-class DynamoTrainingOptimizerTest(unittest.TestCase):
+class DynamoTrainingOptimizerTest(parameterized.TestCase):
 
   @classmethod
   def setUpClass(self):
@@ -719,7 +734,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
         met.metric_data('RunCachedGraphOutputData')[0], sample_count * 3)
 
 
-class DynamoErrorMessageTest(unittest.TestCase):
+class DynamoErrorMessageTest(parameterized.TestCase):
 
   def test_mixed_cpu_tensor(self):
     device = xm.xla_device()
@@ -758,9 +773,10 @@ class DynamoErrorMessageTest(unittest.TestCase):
     self.assertLessEqual(len(met.counter_names()), 1)
 
 
-class DynamoOperationsTests(test_utils.XlaTestCase):
+class DynamoOperationsTest(test_utils.XlaTestCase, parameterized.TestCase):
 
-  def test_new_with_sizes(self):
+  @parameterized.parameters(['openxla', dynamo_backend2.dynamo_backend])
+  def test_new_with_sizes(self, backend):
 
     # The addition operation is needed here, since the error only occurs when FakeTensorMode
     # checks the device of the arguments of some operation. If there's no operation using the
@@ -768,7 +784,7 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
     def foo(x):
       return x.new(*x.size()) + x
 
-    optfoo = torch.compile(backend="openxla")(foo)
+    optfoo = torch.compile(backend=backend)(foo)
 
     t = torch.arange(9)
     Xt = t.to(xm.xla_device())
@@ -782,12 +798,13 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
     self.assertEqual(expected.dtype, actual.dtype)
     self.assertEqual(expected.device, actual.device)
 
-  def test_return_expand(self):
+  @parameterized.parameters(['openxla', dynamo_backend2.dynamo_backend])
+  def test_return_expand(self, backend):
 
     def foo(x):
       return x.expand(2, -1)
 
-    optfoo = torch.compile(backend="openxla")(foo)
+    optfoo = torch.compile(backend=backend)(foo)
 
     t = torch.arange(10)
     Xt = t.to(xm.xla_device())

@@ -268,7 +268,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
       if isinstance(func, torch._ops.OpOverloadPacket):
         with self:
           return func(*args, **kwargs)
-      if func.namespace not in ('aten', '_c10d_functional', 'torchvision'):
+      if func.namespace not in ('aten', '_c10d_functional', 'torchvision', 'xla'):
         return func(*args, **kwargs)
       return self.env.dispatch(func, types, args, kwargs)
 
@@ -340,7 +340,7 @@ class Environment(contextlib.ContextDecorator):
       if self.config.treat_cuda_as_jax_device and device.startswith('cuda'):
         return jax.local_devices()[0]
 
-      if device.startswith('jax'):
+      if device.startswith('jax') or device.startswith('xla'):
         return jax.local_devices()[0]
 
       return None # fallback to torch
@@ -394,12 +394,9 @@ class Environment(contextlib.ContextDecorator):
       
 
     def get_and_rotate_prng_key(self, generator: Optional[torch.Generator]=None):
-      # Always use the default `randint` to get the next seed
-      with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
-        next_key = torch.randint(
-            0, 2**32, (), dtype=torch.uint32, generator=generator).numpy()
+      self._prng_key, next_key = jax.random.split(self._prng_key)
+      return next_key
 
-      return jax.random.key(next_key)
 
     def _handle_tensor_constructor(self, func, args, kwargs):
       device = kwargs.get('device')

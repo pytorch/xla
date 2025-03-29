@@ -911,8 +911,9 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
       import torch_xla.debug.profiler as xp
       # If we see this trace span in the profiler, we'll know that there's a cache miss.
       with xp.Trace('jax_to_hlo'):
-        hlo_ir = jax.jit(
-            fn, keep_unused=True).lower(*sample_tensor_args).compiler_ir('hlo')
+        lowered = jax.jit(
+            fn, keep_unused=True).lower(*sample_tensor_args)
+        hlo_ir = lowered.compiler_ir('hlo')
 
         # Get a protobuf representation of the HLO. `as_serialized_hlo_module_proto` is
         # mentioned at https://github.com/jax-ml/jax/discussions/22266
