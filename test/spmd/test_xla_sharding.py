@@ -1660,6 +1660,29 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(logical_mesh.shape, mesh_shape)
     np.testing.assert_array_equal(np.sort(logical_mesh.flatten()), device_ids)
 
+  @unittest.skipIf(xr.device_type() == 'CPU',
+                   "sharding will be the same for both tensors on single device"
+                  )
+  def test_shard_as(self):
+    mesh = self._get_mesh((self.n_devices,))
+    partition_spec = (0,)
+    x = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
+                     dtype=torch.float,
+                     device=xm.xla_device())
+    x = xs.mark_sharding_with_gradients(x, mesh, partition_spec)
+    y = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8],
+                     dtype=torch.float,
+                     device=xm.xla_device())
+
+    x, y = xs.shard_as(x, y)
+    torch_xla.sync()
+
+    sharding_spec = '{devices=[%d]' % self.n_devices
+    x_sharding = torch_xla._XLAC._get_xla_sharding_spec(x)
+    y_sharding = torch_xla._XLAC._get_xla_sharding_spec(y)
+    self.assertIn(sharding_spec, x_sharding)
+    self.assertEqual(x_sharding, y_sharding)
+
 
 if __name__ == '__main__':
   test = unittest.main()

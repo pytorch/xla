@@ -116,6 +116,7 @@ function install_post_deps_pytorch_xla() {
   -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html \
   -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
 
+  # TODO(https://github.com/pytorch/xla/issues/8831): Remove this when torchax is part of torch_xla.
   pip install xla/torchax
 }
 
