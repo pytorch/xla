@@ -283,7 +283,7 @@
               
               
                 <div class="version">
-                  master (2.8.0+gitfe3bb7f )
+                  master (2.8.0+git6d88c08 )
                 </div>
               
             
@@ -439,19 +439,23 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch.library</span><span class="w"> </span><span class="kn">import</span> <span class="n">custom_op</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_builder</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xb</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.core.xla_model</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xm</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla._internal.utils</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_utils</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla.distributed.spmd</span><span class="w"> </span><span class="kn">import</span> <span class="n">XLAShardedTensor</span><span class="p">,</span> <span class="n">XLAShard</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.runtime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch_xla.debug.profiler</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch_xla._internal.jax_workarounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">requires_jax</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntEnum</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch.amp</span><span class="w"> </span><span class="kn">import</span> <span class="n">custom_fwd</span><span class="p">,</span> <span class="n">custom_bwd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.utils._pytree</span><span class="w"> </span><span class="kn">import</span> <span class="n">tree_flatten</span><span class="p">,</span> <span class="n">tree_unflatten</span>
 
 <span class="n">PartitionSpec</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="o">...</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span>
 <span class="sd">&quot;&quot;&quot;PartitionSpec describes the sharding of a tensor.</span>
@@ -1006,7 +1010,7 @@
 <span class="sd">      &gt;&gt;&gt; xs.mark_sharding(linear.weight, mesh, (None, 1)) # 2-way model parallel</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="c1"># We only allow fully specified `partition_spec` to be applicable, as opposed</span>
-  <span class="c1"># to filling in the unspecified replicated dims. Fully specified `partiion_spec`</span>
+  <span class="c1"># to filling in the unspecified replicated dims. Fully specified `partition_spec`</span>
   <span class="c1"># should be of the same rank as `t`. This is to support partial replication</span>
   <span class="c1"># where the group assignment may vary with different input ranks.</span>
   <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span> \
@@ -1020,8 +1024,7 @@
 
 <span class="k">def</span><span class="w"> </span><span class="nf">mark_sharding_with_gradients</span><span class="p">(</span>
     <span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span>
-    <span class="n">partition_spec</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
-                          <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span><span class="p">:</span>
+    <span class="n">partition_spec</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="o">...</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A function to add sharding annotations on intermediate tensors (not in-place) and the gradient</span>
 <span class="sd">    of the intermediate tensors during backward pass.</span>
@@ -1050,13 +1053,48 @@
 <span class="sd">    This version can also be used in AOTAutograd.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
   <span class="c1"># We only allow fully specified `partition_spec` to be applicable, as opposed</span>
-  <span class="c1"># to filling in the unspecified replicated dims. Fully specified `partiion_spec`</span>
+  <span class="c1"># to filling in the unspecified replicated dims. Fully specified `partition_spec`</span>
   <span class="c1"># should be of the same rank as `t`. This is to support partial replication</span>
   <span class="c1"># where the group assignment may vary with different input ranks.</span>
   <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">),</span> \
     <span class="sa">f</span><span class="s2">&quot;Partition spec length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition_spec</span><span class="p">)</span><span class="si">}</span><span class="s2">) should be equal to the input rank (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">).&quot;</span>
 
-  <span class="k">return</span> <span class="n">MarkShardingFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+  <span class="n">r</span> <span class="o">=</span> <span class="n">MarkShardingFunction</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">r</span>
+
+
+<span class="n">PyTreeA</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;PyTreeA&#39;</span><span class="p">)</span>
+<span class="n">PyTreeB</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;PyTreeB&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@requires_jax</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">shard_as</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">PyTreeA</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">PyTreeB</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PyTreeA</span><span class="p">,</span> <span class="n">PyTreeB</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Ensure that `a` and `b` are sharded the same way without specifying</span>
+<span class="sd">  a particular sharding constraint.</span>
+
+<span class="sd">  shard_as takes two PyTrees of matching structure and returns</span>
+<span class="sd">  two PyTrees of that same structure. As long as you use at least one</span>
+<span class="sd">  of the outputs, then corresponding tensors in all four PyTrees</span>
+<span class="sd">  (a, b, out[0], out[1]) will be sharded the same way.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">a_flat</span><span class="p">,</span> <span class="n">a_spec</span> <span class="o">=</span> <span class="n">tree_flatten</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+  <span class="n">b_flat</span><span class="p">,</span> <span class="n">b_spec</span> <span class="o">=</span> <span class="n">tree_flatten</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+  <span class="k">assert</span> <span class="n">a_spec</span> <span class="o">==</span> <span class="n">b_spec</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;a and b must have the same structure. got </span><span class="si">{</span><span class="n">a_spec</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">b_spec</span><span class="si">}</span><span class="s2">&quot;</span>
+  <span class="n">a_sharded_flat</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">b_sharded_flat</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="kn">from</span><span class="w"> </span><span class="nn">jax.experimental.shard_alike</span><span class="w"> </span><span class="kn">import</span> <span class="n">shard_alike</span>
+  <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">a_flat</span><span class="p">,</span> <span class="n">b_flat</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="c1"># If there are None leaves, then it should be None in both PyTrees.</span>
+      <span class="k">assert</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">y</span> <span class="ow">is</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">xb</span><span class="o">.</span><span class="n">call_jax</span><span class="p">(</span><span class="n">shard_alike</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+    <span class="n">a_sharded_flat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">b_sharded_flat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">tree_unflatten</span><span class="p">(</span><span class="n">a_sharded_flat</span><span class="p">,</span>
+                        <span class="n">a_spec</span><span class="p">),</span> <span class="n">tree_unflatten</span><span class="p">(</span><span class="n">b_sharded_flat</span><span class="p">,</span> <span class="n">b_spec</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="clear_sharding"><a class="viewcode-back" href="../../../../learn/api-guide.html#torch_xla.distributed.spmd.clear_sharding">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">clear_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
