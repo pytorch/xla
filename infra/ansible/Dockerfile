@@ -8,6 +8,10 @@ RUN pip install ansible
 COPY . /ansible
 
 ARG ansible_vars
+
+RUN apt list -a libcudnn8 && \
+    apt list -a libcudnn9-cuda-12
+
 # HACK: install build dependencies only, but skip build step
 RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}" --tags "bazel,configure_env,install_deps"
 RUN ansible-playbook -vvv playbook.yaml -e "stage=build_plugin" -e "${ansible_vars}" 
