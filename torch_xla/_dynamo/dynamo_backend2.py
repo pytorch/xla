@@ -9,7 +9,19 @@ from torch._dynamo.backends.common import aot_autograd
 from functorch.compile import make_boxed_func
 
 def _dynamo_backend(model: torch.fx.GraphModule, sample_args: Any):
-  """Takes fx graph as input, returns a callable."""
+  """A dynamo backend that compiles a FX graph to HLO using JAX and torchax.
+
+  It takes FX graph as input and returns a compiled PyTorch function. The FX graph
+  is traced into a JAX function using torchax, and the JAX function is lowered to HLO.
+
+  Args:
+    model: the graph to be compiled
+    sample_args: a tuple or list of sample inputs. I.e. model(*sample_args) produces
+      the model output
+
+  Returns:
+    Another callable f such that f(*sample_inputs) computes the same thing as model.
+  """
 
   try:
     import torchax.interop
