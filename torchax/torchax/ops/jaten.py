@@ -1351,6 +1351,13 @@ def _aten_max_pool2d_with_indices(
     
   return y, indices
 
+try:
+  @op(torch.ops.xla.max_pool2d_forward)
+  def _xla_max_pool2d_foward(*args, **kwargs):
+    return _aten_max_pool2d_with_indices(*args, **kwargs)[0]
+except AttributeError:
+  pass
+
 
 # TODO add more ops
 
