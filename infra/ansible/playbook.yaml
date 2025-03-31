@@ -35,21 +35,6 @@
         - env.yaml
       tags: always # Execute this task even with `--skip-tags` or `--tags` is used.
 
-    # Add this new task
-    - name: "List available cuDNN packages for reference"
-      ansible.builtin.shell: |
-        apt list -a libcudnn8
-        apt list -a libcudnn9-cuda-12
-      register: cudnn_packages
-      when: accelerator == "cuda"
-      tags: always
-    - name: "Display available cuDNN packages"
-      ansible.builtin.debug:
-        var: cudnn_packages.stdout_lines
-      when: accelerator == "cuda"
-      tags: always
-
-
   roles:
     - role: bazel
       tags: bazel
