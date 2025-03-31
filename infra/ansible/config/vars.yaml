@@ -4,7 +4,7 @@ cuda_version: "11.8"
 # Determines supported GPUs. See https://developer.nvidia.com/cuda-gpus
 cuda_compute_capabilities: 5.2,7.0,7.5,8.0,9.0
 # Used for fetching clang from the right repo, see apt.yaml.
-llvm_debian_repo: bullseye
+llvm_debian_repo: bookworm
 clang_version: 17
 # PyTorch and PyTorch/XLA wheel versions.
 package_version: 2.8.0
