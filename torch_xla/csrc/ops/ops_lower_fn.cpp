@@ -567,8 +567,9 @@ torch_xla::XlaOpVector Isnan::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Isneginf::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  /*return ReturnOp(xla::Eq(input, xla::MinValue(input.builder(), XlaHelpers::TypeOfXlaOp(input))), loctx);*/
-  return ReturnOp(input, loctx);
+  return ReturnOp(xla::Eq(input, xla::MinValue(input.builder(),
+                                               XlaHelpers::TypeOfXlaOp(input))),
+                  loctx);
 }
 
 torch_xla::XlaOpVector LeakyRelu::Lower(LoweringContext* loctx) const {
