@@ -6,9 +6,9 @@ cuda_deps:
     "12.8": libcudnn9-cuda-12=9.8.0.87-1
     "12.6": libcudnn9-cuda-12=9.8.0.87-1
     "12.4": libcudnn9-cuda-12=9.8.0.87-1
-    "12.3": libcudnn9-cuda-12=9.1.1.17-1
-    "12.1": libcudnn9-cuda-12=9.1.1.17-1
-    "12.0": libcudnn9-cuda-12=9.1.1.17-1
+    "12.3": libcudnn9-cuda-12=9.1.0.70-1
+    "12.1": libcudnn9-cuda-12=9.1.0.70-1
+    "12.0": libcudnn9-cuda-12=9.1.0.70-1
     "11.8": libcudnn9-cuda-11=9.8.0.87-1
     "11.7": libcudnn9-cuda-11=9.8.0.87-1
     "11.2": libcudnn9-cuda-11=9.8.0.87-1
@@ -16,9 +16,9 @@ cuda_deps:
     "12.8": libcudnn9-dev-cuda-12=9.8.0.87-1
     "12.6": libcudnn9-dev-cuda-12=9.8.0.87-1
     "12.4": libcudnn9-dev-cuda-12=9.8.0.87-1
-    "12.3": libcudnn9-dev-cuda-12=9.1.1.17-1
-    "12.1": libcudnn9-dev-cuda-12=9.1.1.17-1
-    "12.0": libcudnn9-dev-cuda-12=9.1.1.17-1
+    "12.3": libcudnn9-dev-cuda-12=9.1.0.70-1
+    "12.1": libcudnn9-dev-cuda-12=9.1.0.70-1
+    "12.0": libcudnn9-dev-cuda-12=9.1.0.70-1
     "11.8": libcudnn9-dev-cuda-11=9.8.0.87-1
     "11.7": libcudnn9-dev-cuda-11=9.8.0.87-1
     "11.2": libcudnn9-dev-cuda-11=9.8.0.87-1
