@@ -632,11 +632,13 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       mlir::ModuleOp mlir_module =
           mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
       ConvertHloToStableHlo(instance.computation.mutable_proto(), &mlir_module);
-      executable = client_->Compile(mlir_module, compile_options).value();
+      executable =
+          client_->CompileAndLoad(mlir_module, compile_options).value();
       StableHloCompileCounter()->AddValue(1);
     } else {
       executable =
-          client_->Compile(instance.computation, compile_options).value();
+          client_->CompileAndLoad(instance.computation, compile_options)
+              .value();
     }
 
     auto memory_stats_status_or = executable->GetCompiledMemoryStats();
@@ -672,15 +674,19 @@ std::string PjRtComputationClient::SerializeComputation(
 
 ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
     const std::string& serialized) {
-  auto executable_or = client_->DeserializeExecutable(serialized, std::nullopt);
+  absl::StatusOr<std::unique_ptr<xla::PjRtExecutable>> executable_or =
+      client_->DeserializeExecutable(serialized, std::nullopt);
   if (!executable_or.ok()) {
     TF_LOG(WARNING) << "Failed to deserialize executable: "
                     << executable_or.status();
     return nullptr;
   }
-  auto executable = std::move(*executable_or);
+  std::unique_ptr<xla::PjRtExecutable> executable =
+      std::move(executable_or.value());
+  std::unique_ptr<xla::PjRtLoadedExecutable> loaded_executable =
+      client_->Load(std::move(executable), xla::LoadOptions()).value();
 
-  auto hlo_modules = executable->GetHloModules();
+  auto hlo_modules = loaded_executable->GetHloModules();
   if (!hlo_modules.ok()) {
     TF_LOG(WARNING)
         << "Failed to retrieve HLO modules from deserialized executable";
@@ -695,7 +701,7 @@ ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
   std::vector<std::string> devices = {UseVirtualDevice() ? spmd_device_str
                                                          : GetDefaultDevice()};
   return std::make_shared<PjRtComputation>(std::move(computation), devices,
-                                           std::move(executable));
+                                           std::move(loaded_executable));
 }
 
 torch::lazy::hash_t PjRtComputationClient::HashCompilationEnv() {

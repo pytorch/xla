@@ -108,7 +108,7 @@ struct BatchInput {
 // dimension.
 BatchInput CreateBatchInput(xla::XlaOp input, int64_t spatial_dim_count) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  int64_t rank = input_shape.rank();
+  int64_t rank = input_shape.dimensions_size();
   XLA_CHECK(rank == spatial_dim_count + 1 || rank == spatial_dim_count + 2)
       << "Input must be a " << spatial_dim_count + 1 << "-D or "
       << spatial_dim_count + 2 << "-D tensor";
@@ -201,7 +201,7 @@ xla::PaddingConfig MakeXlaPaddingConfig(
 xla::XlaOp CreatePoolIndicesIota(const xla::Shape& input_shape,
                                  xla::XlaBuilder* builder) {
   int64_t spatial_input_elements = 1;
-  for (int64_t i = 2; i < input_shape.rank(); ++i) {
+  for (int64_t i = 2; i < input_shape.dimensions_size(); ++i) {
     spatial_input_elements *= input_shape.dimensions(i);
   }
   xla::XlaOp iota = xla::Iota(
@@ -425,7 +425,7 @@ xla::XlaOp BuildAdaptiveMaxPoolNdBackward(xla::XlaOp out_backprop,
       CreateBatchInput(/*input=*/out_backprop, /*spatial_dim_count=*/pool_dim);
   const xla::Shape& out_backprop_shape =
       ShapeHelper::ShapeOfXlaOp(batch_out_backprop_info.batch_input);
-  XLA_CHECK_EQ(out_backprop_shape.rank(), pool_dim + 2)
+  XLA_CHECK_EQ(out_backprop_shape.dimensions_size(), pool_dim + 2)
       << "Invalid rank of gradient output";
   std::vector<int64_t> output_size(out_backprop_shape.dimensions().begin() + 2,
                                    out_backprop_shape.dimensions().end());
@@ -531,7 +531,7 @@ xla::XlaOp BuildMaxUnpoolNd(const torch::lazy::BackendDevice& device,
                             xla::XlaOp input, xla::XlaOp indices,
                             absl::Span<const int64_t> output_size) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK_EQ(input_shape.rank(), 2 + output_size.size());
+  XLA_CHECK_EQ(input_shape.dimensions_size(), 2 + output_size.size());
 
   xla::Shape zeros_shape = xla::ShapeUtil::MakeShape(
       input_shape.element_type(),
@@ -672,7 +672,8 @@ xla::XlaOp BuildAdaptiveAvgPool3d(xla::XlaOp input,
                                   absl::Span<const int64_t> output_size) {
   XLA_CHECK_EQ(output_size.size(), 3) << "Invalid output size rank";
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK(input_shape.rank() == 4 || input_shape.rank() == 5)
+  XLA_CHECK(input_shape.dimensions_size() == 4 ||
+            input_shape.dimensions_size() == 5)
       << "Only 4D or 5D tensors supported";
   return BuildAdaptiveAvgPool(input, output_size, /*pool_dim=*/3);
 }
@@ -681,7 +682,8 @@ xla::XlaOp BuildAdaptiveAvgPool2d(xla::XlaOp input,
                                   absl::Span<const int64_t> output_size) {
   XLA_CHECK_EQ(output_size.size(), 2) << "Invalid output size rank";
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK(input_shape.rank() == 4 || input_shape.rank() == 3)
+  XLA_CHECK(input_shape.dimensions_size() == 4 ||
+            input_shape.dimensions_size() == 3)
       << "Only 4D or 3D tensors supported";
   return BuildAdaptiveAvgPool(input, output_size, /*pool_dim=*/2);
 }
@@ -692,7 +694,7 @@ xla::XlaOp BuildAdaptiveAvgPoolBackward(xla::XlaOp out_backprop,
       CreateBatchInput(/*input=*/out_backprop, /*spatial_dim_count=*/pool_dim);
   const xla::Shape& out_backprop_shape =
       ShapeHelper::ShapeOfXlaOp(batch_out_backprop_info.batch_input);
-  XLA_CHECK_EQ(out_backprop_shape.rank(), pool_dim + 2)
+  XLA_CHECK_EQ(out_backprop_shape.dimensions_size(), pool_dim + 2)
       << "Invalid rank of gradient output";
   std::vector<int64_t> output_size(out_backprop_shape.dimensions().begin() + 2,
                                    out_backprop_shape.dimensions().end());
@@ -720,7 +722,8 @@ xla::XlaOp BuildAdaptiveAvgPoolBackward(xla::XlaOp out_backprop,
 xla::XlaOp BuildAdaptiveAvgPool3dBackward(xla::XlaOp out_backprop,
                                           xla::XlaOp input) {
   const xla::Shape& gradients_shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK(gradients_shape.rank() == 4 || gradients_shape.rank() == 5)
+  XLA_CHECK(gradients_shape.dimensions_size() == 4 ||
+            gradients_shape.dimensions_size() == 5)
       << "Only 4D or 5D tensors supported";
   return BuildAdaptiveAvgPoolBackward(out_backprop, input,
                                       /*pool_dim=*/3);
@@ -729,7 +732,8 @@ xla::XlaOp BuildAdaptiveAvgPool3dBackward(xla::XlaOp out_backprop,
 xla::XlaOp BuildAdaptiveAvgPool2dBackward(xla::XlaOp out_backprop,
                                           xla::XlaOp input) {
   const xla::Shape& gradients_shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK(gradients_shape.rank() == 4 || gradients_shape.rank() == 3)
+  XLA_CHECK(gradients_shape.dimensions_size() == 4 ||
+            gradients_shape.dimensions_size() == 3)
       << "Only 4D or 3D tensors supported";
   return BuildAdaptiveAvgPoolBackward(out_backprop, input,
                                       /*pool_dim=*/2);

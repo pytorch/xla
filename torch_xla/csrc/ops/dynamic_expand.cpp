@@ -56,7 +56,7 @@ XlaOpVector DynamicExpand::Lower(LoweringContext* loctx) const {
 
   std::vector<xla::XlaOp> dynamic_dim_tensor;
   xla::Shape input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  for (size_t i = 0; i < input_shape.rank(); ++i) {
+  for (size_t i = 0; i < input_shape.dimensions_size(); ++i) {
     if (i == target_index_) {
       dynamic_dim_tensor.push_back(
           xla::Reshape(xla::GetDimensionSize(src_tensor, src_index_), {1}));

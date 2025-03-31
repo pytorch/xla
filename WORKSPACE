@@ -46,7 +46,7 @@ new_local_repository(
 
 # To build PyTorch/XLA with OpenXLA to a new revision, update following xla_hash to
 # the openxla git commit hash.
-xla_hash = '0622372b580e16fd84930c2f6a184a7559428309'
+xla_hash = '93360b5329638cda0e913635536b7dab72d9e0cd'
 
 http_archive(
     name = "xla",
@@ -133,7 +133,17 @@ load("@xla//:workspace0.bzl", "xla_workspace0")
 
 xla_workspace0()
 
-load("@tsl//third_party/gpus:cuda_configure.bzl", "cuda_configure")
+
+load(
+    "@xla//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
+    "cuda_configure",
+)
+
 cuda_configure(name = "local_config_cuda")
-load("@tsl//third_party/nccl:nccl_configure.bzl", "nccl_configure")
+
+load(
+    "@xla//third_party/nccl/hermetic:nccl_configure.bzl",
+    "nccl_configure",
+)
+
 nccl_configure(name = "local_config_nccl")

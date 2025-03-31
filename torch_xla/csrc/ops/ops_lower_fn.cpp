@@ -83,8 +83,8 @@ torch_xla::XlaOpVector Addcmul::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector All::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  std::vector<int64_t> dimensions =
-      torch::lazy::Iota<int64_t>(ShapeHelper::ShapeOfXlaOp(input).rank());
+  std::vector<int64_t> dimensions = torch::lazy::Iota<int64_t>(
+      ShapeHelper::ShapeOfXlaOp(input).dimensions_size());
   return ReturnOp(BuildAll(input, dimensions, false), loctx);
 }
 
@@ -105,8 +105,8 @@ torch_xla::XlaOpVector Amin::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Any::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  std::vector<int64_t> dimensions =
-      torch::lazy::Iota<int64_t>(ShapeHelper::ShapeOfXlaOp(input).rank());
+  std::vector<int64_t> dimensions = torch::lazy::Iota<int64_t>(
+      ShapeHelper::ShapeOfXlaOp(input).dimensions_size());
   return ReturnOp(BuildAny(input, dimensions, false), loctx);
 }
 
@@ -120,7 +120,7 @@ torch_xla::XlaOpVector Argmax::Lower(LoweringContext* loctx) const {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   if (dim.has_value()) {
     int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
-        dim.value(), input_shape.rank());
+        dim.value(), input_shape.dimensions_size());
     return ReturnOp(torch_xla::BuildArgMax(input, canonical_dim, keepdim),
                     loctx);
   } else {
@@ -133,7 +133,7 @@ torch_xla::XlaOpVector Argmin::Lower(LoweringContext* loctx) const {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   if (dim.has_value()) {
     int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
-        dim.value(), input_shape.rank());
+        dim.value(), input_shape.dimensions_size());
     return ReturnOp(torch_xla::BuildArgMin(input, canonical_dim, keepdim),
                     loctx);
   } else {
@@ -486,7 +486,7 @@ torch_xla::XlaOpVector Glu::Lower(LoweringContext* loctx) const {
   // Calculate half input shape on target dim - since input must be sliced in 2
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(xla_input);
   int64_t ldim = dim;
-  if (ldim < 0) ldim += input_shape.rank();
+  if (ldim < 0) ldim += input_shape.dimensions_size();
   absl::Span<const int64_t> inp_dimensions = input_shape.dimensions();
   int64_t split_size = inp_dimensions[ldim] / 2;
 

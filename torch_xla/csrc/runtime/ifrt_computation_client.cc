@@ -255,8 +255,10 @@ ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
   tsl::RCReference<xla::ifrt::Array> sharded_array =
       client_
           ->AssembleArrayFromSingleDeviceArrays(
-              ifrt_shape, std::move(ifrt_sharding), absl::MakeSpan(arrays),
-              xla::ifrt::ArrayCopySemantics::kAlwaysCopy)
+              arrays.at(0)->dtype(), ifrt_shape, std::move(ifrt_sharding),
+              absl::MakeSpan(arrays),
+              xla::ifrt::ArrayCopySemantics::kAlwaysCopy,
+              xla::ifrt::SingleDeviceShardSemantics::kAddressableShards)
           .value();
   return std::make_shared<IfrtData>(device, shape, sharded_array, sharding);
 }
@@ -292,7 +294,8 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToDevice(
                     ifrt_device, xla::ifrt::MemoryKind()),
                 xla::ifrt::Client::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
-                [tensor, timed]() { /* frees tensor and timer */ })
+                [tensor, timed]() { /* frees tensor and timer */ },
+                client_->CreateUserContext())
             .value();
 
     ComputationClient::DataPtr data =
@@ -341,8 +344,10 @@ ComputationClient::DataPtr IfrtComputationClient::TransferShardsToDevice(
   tsl::RCReference<xla::ifrt::Array> sharded_array =
       client_
           ->AssembleArrayFromSingleDeviceArrays(
-              ifrt_shape, std::move(ifrt_sharding), absl::MakeSpan(arrays),
-              xla::ifrt::ArrayCopySemantics::kAlwaysCopy)
+              arrays.at(0)->dtype(), ifrt_shape, std::move(ifrt_sharding),
+              absl::MakeSpan(arrays),
+              xla::ifrt::ArrayCopySemantics::kAlwaysCopy,
+              xla::ifrt::SingleDeviceShardSemantics::kAddressableShards)
           .value();
   return std::make_shared<IfrtData>(device, shape, sharded_array, sharding);
 }

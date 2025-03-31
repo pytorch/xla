@@ -34,7 +34,7 @@ xla::Shape ShapeBuilder::Build() const {
     }
   }
   xla::Shape shape = xla::ShapeUtil::MakeShape(type_, dimensions);
-  for (int64_t i = 0; i < shape.rank(); ++i) {
+  for (int64_t i = 0; i < shape.dimensions_size(); ++i) {
     const ShapeDim& sdim = dims_[i];
     if (sdim.shape != nullptr) {
       shape.set_dynamic_dimension(

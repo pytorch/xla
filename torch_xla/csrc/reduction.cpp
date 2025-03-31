@@ -37,7 +37,7 @@ ReductionInfo GetReductionInfo(xla::XlaOp input, const xla::Shape& shape,
   ReductionInfo rinfo;
   std::unordered_set<int64_t> reduced_dimensions(dimensions.begin(),
                                                  dimensions.end());
-  for (int64_t i = 0; i < shape.rank(); ++i) {
+  for (int64_t i = 0; i < shape.dimensions_size(); ++i) {
     if (reduced_dimensions.count(i) > 0) {
       if (keep_reduced_dimensions) {
         rinfo.new_dimensions.push_back(1);
@@ -274,10 +274,11 @@ xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, int64_t dim,
                                       const xla::XlaComputation& reducer,
                                       xla::XlaOp init) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  std::vector<int64_t> window_strides(input_shape.rank(), 1);
-  std::vector<int64_t> window_dims(input_shape.rank(), 1);
+  std::vector<int64_t> window_strides(input_shape.dimensions_size(), 1);
+  std::vector<int64_t> window_dims(input_shape.dimensions_size(), 1);
   window_dims[dim] = input_shape.dimensions(dim);
-  std::vector<std::pair<int64_t, int64_t>> padding(input_shape.rank());
+  std::vector<std::pair<int64_t, int64_t>> padding(
+      input_shape.dimensions_size());
   padding[dim].first = input_shape.dimensions(dim) - 1;
   return xla::ReduceWindowWithGeneralPadding(
       input, init, reducer, window_dims, window_strides,
@@ -289,10 +290,11 @@ xla::XlaOp BuildCumulativeComputationWithIndices(
     const xla::XlaComputation& reducer, xla::XlaOp value_init,
     xla::XlaOp index_init) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(value_input);
-  std::vector<int64_t> window_strides(input_shape.rank(), 1);
-  std::vector<int64_t> window_dims(input_shape.rank(), 1);
+  std::vector<int64_t> window_strides(input_shape.dimensions_size(), 1);
+  std::vector<int64_t> window_dims(input_shape.dimensions_size(), 1);
   window_dims[dim] = input_shape.dimensions(dim);
-  std::vector<std::pair<int64_t, int64_t>> padding(input_shape.rank());
+  std::vector<std::pair<int64_t, int64_t>> padding(
+      input_shape.dimensions_size());
   padding[dim].first = input_shape.dimensions(dim) - 1;
   return xla::ReduceWindowWithGeneralPadding(
       {value_input, index_input}, {value_init, index_init}, reducer,
@@ -331,9 +333,9 @@ xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
         input, mean, input_shape);
     bcast_mean = promoted.second;
   } else {
-    bcast_mean =
-        xla::BroadcastInDim(mean, input_shape.dimensions(),
-                            torch::lazy::Iota<int64_t>(input_shape.rank()));
+    bcast_mean = xla::BroadcastInDim(
+        mean, input_shape.dimensions(),
+        torch::lazy::Iota<int64_t>(input_shape.dimensions_size()));
   }
   xla::XlaOp input_mean_diff = input - bcast_mean;
   xla::XlaOp diff2 = input_mean_diff * input_mean_diff;
@@ -382,7 +384,8 @@ xla::XlaOp BuildMaxInDims(xla::XlaOp input,
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          runtime::util::ToVector<int64_t>(dimensions), shape.rank());
+          runtime::util::ToVector<int64_t>(dimensions),
+          shape.dimensions_size());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
   ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
@@ -413,7 +416,8 @@ xla::XlaOp BuildMinInDims(xla::XlaOp input,
 
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          runtime::util::ToVector<int64_t>(dimensions), shape.rank());
+          runtime::util::ToVector<int64_t>(dimensions),
+          shape.dimensions_size());
 
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
@@ -497,7 +501,8 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          runtime::util::ToVector<int64_t>(dimensions), shape.rank());
+          runtime::util::ToVector<int64_t>(dimensions),
+          shape.dimensions_size());
   ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
                                          keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
@@ -522,7 +527,8 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          runtime::util::ToVector<int64_t>(dimensions), shape.rank());
+          runtime::util::ToVector<int64_t>(dimensions),
+          shape.dimensions_size());
   ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
                                          keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(

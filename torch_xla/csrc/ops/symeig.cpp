@@ -27,10 +27,10 @@ std::vector<xla::XlaOp> LowerSymEig(xla::XlaOp input, bool eigenvectors,
 xla::Shape NodeOutputShape(const torch::lazy::Value& input, bool eigenvectors,
                            bool lower) {
   const xla::Shape& input_shape = GetXlaShape(input);
-  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  XLA_CHECK_GE(input_shape.dimensions_size(), 2) << input_shape;
   // W is ..., M
   xla::Shape wshape(input_shape);
-  wshape.DeleteDimension(input_shape.rank() - 1);
+  wshape.DeleteDimension(input_shape.dimensions_size() - 1);
   xla::Shape vshape;
   if (eigenvectors) {
     // V is ..., M, M

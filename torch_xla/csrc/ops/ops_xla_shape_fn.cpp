@@ -134,7 +134,7 @@ xla::Shape AddcmulOutputShape(const torch::lazy::Value& input,
 
 xla::Shape AllOutputShape(const torch::lazy::Value& input) {
   std::vector<int64_t> dimensions =
-      torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
+      torch::lazy::Iota<int64_t>(GetXlaShape(input).dimensions_size());
   auto lower_for_shape_fn =
       [dimensions](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildAll(operands[0], dimensions, false);
@@ -174,7 +174,7 @@ xla::Shape AminOutputShape(const torch::lazy::Value& input,
 
 xla::Shape AnyOutputShape(const torch::lazy::Value& input) {
   std::vector<int64_t> dimensions =
-      torch::lazy::Iota<int64_t>(GetXlaShape(input).rank());
+      torch::lazy::Iota<int64_t>(GetXlaShape(input).dimensions_size());
   auto lower_for_shape_fn =
       [dimensions](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildAny(operands[0], dimensions, false);
@@ -198,7 +198,7 @@ xla::Shape ArgmaxOutputShape(const torch::lazy::Value& input,
     if (dim.has_value()) {
       const xla::Shape& input_shape = GetXlaShape(input);
       int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
-          dim.value(), input_shape.rank());
+          dim.value(), input_shape.dimensions_size());
       return BuildArgMax(operands[0], {canonical_dim}, keepdim);
     } else {
       return BuildArgMax(operands[0], {-1}, keepdim);
@@ -214,7 +214,7 @@ xla::Shape ArgminOutputShape(const torch::lazy::Value& input,
     if (dim.has_value()) {
       const xla::Shape& input_shape = GetXlaShape(input);
       int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
-          dim.value(), input_shape.rank());
+          dim.value(), input_shape.dimensions_size());
       return BuildArgMin(operands[0], {canonical_dim}, keepdim);
     } else {
       return BuildArgMin(operands[0], {-1}, keepdim);
@@ -540,7 +540,7 @@ xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
 xla::Shape GluOutputShape(const torch::lazy::Value& input, int64_t dim) {
   const xla::Shape& input_shape = GetXlaShape(input);
 
-  if (dim < 0) dim += input_shape.rank();
+  if (dim < 0) dim += input_shape.dimensions_size();
 
   absl::Span<const int64_t> inp_dimensions = input_shape.dimensions();
   std::vector<int64_t> output_sizes(std::begin(inp_dimensions),
@@ -662,11 +662,11 @@ xla::Shape LtTensorOutputShape(const torch::lazy::Value& self,
 
 xla::Shape LogdetOutputShape(const torch::lazy::Value& input) {
   const xla::Shape& input_shape = GetXlaShape(input);
-  XLA_CHECK_GE(input_shape.rank(), 2) << input_shape;
+  XLA_CHECK_GE(input_shape.dimensions_size(), 2) << input_shape;
   // The input tensor is ...,N,N
   xla::Shape logdet_shape(input_shape);
-  logdet_shape.DeleteDimension(input_shape.rank() - 1);
-  logdet_shape.DeleteDimension(input_shape.rank() - 2);
+  logdet_shape.DeleteDimension(input_shape.dimensions_size() - 1);
+  logdet_shape.DeleteDimension(input_shape.dimensions_size() - 2);
   return logdet_shape;
 }
 

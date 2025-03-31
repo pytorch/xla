@@ -35,18 +35,18 @@ XlaOpVector Select::Lower(LoweringContext* loctx) const {
   } else {
     // When input has unbounded dynamic dim and target dim is the unbounded
     // dim, slice full range along the dynamic dim. We will assert now.
-    std::vector<int32_t> start_vec(input_shape.rank(), 0);
+    std::vector<int32_t> start_vec(input_shape.dimensions_size(), 0);
     start_vec[dim_] = start_;
     xla::XlaOp starts =
         xla::ConstantR1(input.builder(), absl::Span<const int32_t>(start_vec));
-    std::vector<int32_t> stride_vec(input_shape.rank(), 1);
+    std::vector<int32_t> stride_vec(input_shape.dimensions_size(), 1);
     stride_vec[dim_] = GetStride(start_, end_, stride_);
     xla::XlaOp strides =
         xla::ConstantR1(input.builder(), absl::Span<const int32_t>(stride_vec));
     xla::Shape final_shape =
         MakeSelectShape(input_shape, dim_, start_, end_, stride_);
     std::vector<xla::XlaOp> limit_ops;
-    for (int i = 0; i < input_shape.rank(); ++i) {
+    for (int i = 0; i < input_shape.dimensions_size(); ++i) {
       if (input_shape.is_unbounded_dynamic_dimension(i)) {
         limit_ops.push_back(xla::Reshape(xla::GetDimensionSize(input, i), {1}));
         final_shape.set_unbounded_dynamic_dimension(i);

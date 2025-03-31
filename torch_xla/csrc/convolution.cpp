@@ -98,7 +98,7 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
                                   absl::Span<const int64_t> output_padding,
                                   bool unpad = false) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  int64_t num_spatial = input_shape.rank() - 2;
+  int64_t num_spatial = input_shape.dimensions_size() - 2;
   // No padding for batch dimension and features dimension.
   std::vector<int64_t> expected_input_sizes{input_shape.dimensions(0),
                                             input_shape.dimensions(1)};
@@ -215,8 +215,8 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
                                   int64_t groups) {
   ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
-  xla::XlaOp kernel_transposed =
-      xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
+  xla::XlaOp kernel_transposed = xla::Transpose(
+      kernel, FilterTransposePermutation(input_shape.dimensions_size()));
   return ConsumeValue(MakeXlaBackpropInputConvOp("conv_backward_input",
                                                  input_shape, kernel_transposed,
                                                  grad_output, conv_op_attrs));
@@ -231,7 +231,8 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
                                    int64_t groups) {
   ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
-  auto transpose_permutation = FilterTransposePermutation(kernel_shape.rank());
+  auto transpose_permutation =
+      FilterTransposePermutation(kernel_shape.dimensions_size());
   auto inv_transpose_permutation =
       xla::InversePermutation(transpose_permutation);
   xla::Shape transposed_weight_shape =
@@ -255,7 +256,7 @@ xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
       grad_output,
       xla::Zero(grad_output.builder(), grad_output_shape.element_type()),
       XlaHelpers::CreateAddComputation(grad_output_shape.element_type()),
-      BiasReduceDimensions(grad_output_shape.rank()));
+      BiasReduceDimensions(grad_output_shape.dimensions_size()));
 }
 
 xla::XlaOp BuildTransposedConvolution(xla::XlaOp input, xla::XlaOp kernel,
@@ -266,7 +267,7 @@ xla::XlaOp BuildTransposedConvolution(xla::XlaOp input, xla::XlaOp kernel,
                                       int64_t groups) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   const xla::Shape& kernel_shape = ShapeHelper::ShapeOfXlaOp(kernel);
-  int64_t num_spatial = input_shape.rank() - 2;
+  int64_t num_spatial = input_shape.dimensions_size() - 2;
   // We only support 2D or 3D convolution.
   XLA_CHECK(num_spatial == 2 || num_spatial == 3) << num_spatial;
   // Fold group into output_size feature dimension

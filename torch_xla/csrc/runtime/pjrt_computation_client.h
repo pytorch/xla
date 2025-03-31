@@ -187,7 +187,7 @@ class PjRtComputationClient : public ComputationClient {
     PjRtData(std::string device, std::shared_ptr<xla::PjRtBuffer> buffer)
         : Data(std::move(device),
                xla::Shape(buffer->element_type(), buffer->dimensions(),
-                          buffer->is_dynamic_dimension(), {})),
+                          buffer->is_dynamic_dimension())),
           buffer(buffer) {}
 
     Handle GetHandle() override {

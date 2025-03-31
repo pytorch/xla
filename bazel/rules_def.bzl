@@ -1,7 +1,7 @@
 """Rules that simplify deps and compiler configuration for PyTorch/XLA."""
 
 load(
-    "@xla//xla:xla.bzl",
+    "@xla//xla:xla.default.bzl",
     "xla_cc_test",
 )
 

@@ -194,15 +194,15 @@ tsl::Status ConvBackpropComputeDimensionsV2(
     absl::Span<const int64_t> explicit_paddings) {
   // The + 2 in the following line is for the batch and feature dimensions.
   const int num_dims = num_spatial_dims + 2;
-  if (input_shape.rank() != num_dims) {
+  if (input_shape.dimensions_size() != num_dims) {
     return tsl::errors::InvalidArgument(label, ": input must be ", num_dims,
                                         "-dimensional");
   }
-  if (filter_shape.rank() != num_dims) {
+  if (filter_shape.dimensions_size() != num_dims) {
     return tsl::errors::InvalidArgument(label, ": filter must be ", num_dims,
                                         "-dimensional");
   }
-  if (out_backprop_shape.rank() != num_dims) {
+  if (out_backprop_shape.dimensions_size() != num_dims) {
     return tsl::errors::InvalidArgument(label, ": out_backprop must be ",
                                         num_dims, "-dimensional");
   }

@@ -13,7 +13,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
   int64_t index_elements = xla::ShapeUtil::ElementsIn(input_shape);
   xla::PrimitiveType size_type = GetShapeDimensionType(/*device=*/nullptr);
   xla::Shape result_shape = xla::ShapeUtil::MakeShape(
-      size_type, {index_elements, input_shape.rank()});
+      size_type, {index_elements, input_shape.dimensions_size()});
   result_shape.set_dynamic_dimension(0, true);
   return xla::ShapeUtil::MakeTupleShape(
       {result_shape, xla::ShapeUtil::MakeShape(size_type, {})});

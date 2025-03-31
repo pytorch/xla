@@ -16,12 +16,12 @@ namespace {
 std::pair<xla::Shape, xla::Shape> InferTriangularSolveShape(
     const xla::Shape& rhs_shape, const xla::Shape& lhs_shape) {
   // Obtain the number of right-hand sides, and dimension of the square matrix.
-  int64_t nrhs = rhs_shape.dimensions(rhs_shape.rank() - 1);
-  int64_t n = lhs_shape.dimensions(lhs_shape.rank() - 1);
+  int64_t nrhs = rhs_shape.dimensions(rhs_shape.dimensions_size() - 1);
+  int64_t n = lhs_shape.dimensions(lhs_shape.dimensions_size() - 1);
   xla::Shape rhs_batch_shape(rhs_shape);
   xla::Shape lhs_batch_shape(lhs_shape);
-  rhs_batch_shape.DeleteDimension(rhs_batch_shape.rank() - 1);
-  lhs_batch_shape.DeleteDimension(lhs_batch_shape.rank() - 1);
+  rhs_batch_shape.DeleteDimension(rhs_batch_shape.dimensions_size() - 1);
+  lhs_batch_shape.DeleteDimension(lhs_batch_shape.dimensions_size() - 1);
   // If the shapes match in the batch dimensions, then we don't need to get
   // the promoted shape, and can directly add the trailing dimension.
   if (xla::ShapeUtil::Compatible(lhs_batch_shape, rhs_batch_shape)) {

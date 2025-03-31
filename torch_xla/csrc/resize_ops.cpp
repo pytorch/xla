@@ -32,7 +32,7 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
   // sum for each output pixel. We do this with a DotGeneral op.
   xla::XlaBuilder* builder = input.builder();
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  XLA_CHECK_EQ(input_shape.rank(), 4)
+  XLA_CHECK_EQ(input_shape.dimensions_size(), 4)
       << "input must be 4-dimensional, got " << input_shape;
 
   // First dimension always assumed to be batch
