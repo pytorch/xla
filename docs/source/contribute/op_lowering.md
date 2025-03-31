@@ -199,7 +199,7 @@ ran by:
    scripts/build_developer.sh
    ```
 
-2. Run the offending script or notebook with the
+2. Run the problematic script or notebook with the
    `TORCH_SHOW_DISPATCH_TRACE=1` environment variable.
 
 3. Then whenever the PyTorch dispatcher encounters an operation, we'll
