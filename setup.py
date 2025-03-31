@@ -330,6 +330,24 @@ class Develop(develop.develop):
         f.write(path + "\n")
 
 
+def _get_jax_install_requirements():
+  if not USE_NIGHTLY:
+    # Stable versions of JAX can be directly installed from PyPI.
+    return [
+        f'jaxlib=={_jaxlib_version}',
+        f'jax=={_jax_version}',
+    ]
+
+  # Install nightly JAX libraries from the JAX package registries.
+  jax = f'jax @ https://storage.googleapis.com/jax-releases/nightly/jax/jax-{_jax_version}-py3-none-any.whl'
+  jaxlib = []
+  for python_minor_version in [9, 10, 11]:
+    jaxlib.append(
+        f'jaxlib @ https://storage.googleapis.com/jax-releases/nightly/nocuda/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
+    )
+  return [jax] + jaxlib
+
+
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
@@ -370,8 +388,7 @@ setup(
         # to Python 3.10
         'importlib_metadata>=4.6;python_version<"3.10"',
         # Some torch operations are lowered to HLO via JAX.
-        f'jaxlib=={_jaxlib_version}',
-        f'jax=={_jax_version}',
+        *_get_jax_install_requirements(),
     ],
     package_data={
         'torch_xla': ['lib/*.so*',],
