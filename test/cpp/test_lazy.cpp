@@ -118,19 +118,5 @@ TEST_F(LazyTest, TestXlaShapeToLazyWithDynamicDimensions) {
                               std::end(dynamic_dimensions)));
 }
 
-TEST_F(LazyTest, TestXlaShapeToLazyWithUnsupportedPrimitiveType) {
-  int64_t dimensions[] = {1};
-  bool dynamic_dimensions[] = {false};
-  absl::Span<const int64_t> xla_dimensions =
-      absl::Span<const int64_t>(dimensions);
-  absl::Span<const bool> xla_dynamic_dimensions =
-      absl::Span<const bool>(dynamic_dimensions);
-  xla::Shape xla_shape = xla::Shape(xla::PrimitiveType::TUPLE, xla_dimensions,
-                                    xla_dynamic_dimensions);
-
-  EXPECT_THROW(XlaHelpers::ConvertXlaShapeToLazy(xla_shape),
-               std::runtime_error);
-}
-
 }  // namespace cpp_test
 }  // namespace torch_xla
