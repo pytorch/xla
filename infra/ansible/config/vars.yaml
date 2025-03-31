@@ -1,5 +1,5 @@
 # Used for fetching cuda from the right repo, see apt.yaml.
-cuda_repo: debian11
+cuda_repo: debian12
 cuda_version: "11.8"
 # Determines supported GPUs. See https://developer.nvidia.com/cuda-gpus
 cuda_compute_capabilities: 5.2,7.0,7.5,8.0,9.0
