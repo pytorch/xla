@@ -15,6 +15,7 @@ dtype_parameters = [
 
 torch.manual_seed(123456)
 
+
 class Fp8Test(parameterized.TestCase):
 
   @parameterized.parameters(*dtype_parameters)
