@@ -13,6 +13,7 @@ dtype_parameters = [
     torch.float8_e4m3fn,
 ]
 
+torch.manual_seed(123456)
 
 class Fp8Test(parameterized.TestCase):
 
