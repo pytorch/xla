@@ -91,6 +91,7 @@ jobs:
         shell: bash
         run: |
           set -x
+          # TODO: Add these in setup.py. In fact, add this to setup.py of plugins/cuda first.
           pip install -U --pre jax jaxlib "jax-cuda12-plugin[with_cuda]" jax-cuda12-pjrt -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
         if: ${{ matrix.run_triton_tests }}
       - name: Install Triton
