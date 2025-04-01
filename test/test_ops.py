@@ -127,6 +127,7 @@ allowed_opinfo = get_allowed_ops_map(
     AllowedOpInfoEntry('imag'),
     AllowedOpInfoEntry('inverse'),
     AllowedOpInfoEntry('isin'),
+    AllowedOpInfoEntry('isneginf'),
     AllowedOpInfoEntry('le'),
     AllowedOpInfoEntry('linalg.cholesky'),
     AllowedOpInfoEntry('linalg.cholesky_ex'),
