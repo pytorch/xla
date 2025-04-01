@@ -29,7 +29,7 @@ locals {
         cuda_version    = pair[1]
         python_version  = pair[0]
         bundle_libtpu  = "0"
-        cxx11_abi       = "1"
+        cxx11_abi       =  pair[1] == "11.8" ? "0" : "1"  # special case for 11.8
       }
     ]
   )
