@@ -13,6 +13,7 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 #include "xla/client/lib/math.h"
 #include "xla/client/lib/matrix.h"
+#include "xla/hlo/builder/lib/constants.h"
 #include "xla/hlo/builder/lib/logdet.h"
 
 namespace torch_xla {
@@ -524,6 +525,13 @@ torch_xla::XlaOpVector Isnan::Lower(LoweringContext* loctx) const {
     xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
   }
   return ReturnOp(xla::IsNan(xla_input), loctx);
+}
+
+torch_xla::XlaOpVector Isneginf::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(xla::Eq(input, xla::MinValue(input.builder(),
+                                               XlaHelpers::TypeOfXlaOp(input))),
+                  loctx);
 }
 
 torch_xla::XlaOpVector LeakyRelu::Lower(LoweringContext* loctx) const {

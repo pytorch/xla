@@ -2370,6 +2370,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertEqual(out.dtype, out_xla.dtype)
     self.assertEqual(out.cpu(), out_xla.cpu(), prec=1e-4)
 
+  def test_isneginf_no_fallback(self):
+    t = torch.rand(10)
+    # Scale the tensor elements.
+    t = t * 100_000
+    # Convert to a lower precision data-type so as to get a few infs.
+    t = t.to(torch.float16)
+    self._test_no_fallback(torch.isneginf, (t,))
+
 
 class MNISTComparator(nn.Module):
 
