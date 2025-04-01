@@ -1,5 +1,6 @@
 #include "torch_xla/csrc/tf_image_resize_ops.h"
 
+#include "torch_xla/csrc/shape_helper.h"
 #include "xla/client/lib/constants.h"
 #include "xla/tsl/lib/math/math_util.h"
 
@@ -10,7 +11,7 @@ namespace torch_xla::tf {
 //
 //    1. S := (N - 1) /  gcd(N-1, R-1)
 //    2. k := (R - 1) /  gcd(N-1, R-1)
-//    3. Convolution((2k-1)x(2k-1), stride=S, lhs_dilation=k, padding=k-1)
+//    3. Convolution((2k-1)x(2k-1), stride=k, lhs_dilation=S, padding=k-1)
 //
 // For example, to Scale from 7x7 -> 15x15:
 //
@@ -56,6 +57,15 @@ struct ResizeConvolutionDims {
   std::vector<int64_t> stride;  // S
 };
 
+template <class T>
+static void pv(const std::vector<T>& v, std::string s = "") {
+    std::cout << s << " [ ";
+    for (auto i : v) {
+        std::cout << i << " ";
+    }
+    std::cout << "]" << std::endl;
+}
+
 ResizeConvolutionDims ComputeResizeConvolutionParameters(
     absl::Span<const int64_t> in_size, absl::Span<const int64_t> out_size,
     bool align_corners) {
@@ -86,6 +96,8 @@ ResizeConvolutionDims ComputeResizeConvolutionParameters(
       dims.kernel_size[i] = out_size_factor / gcd;
     }
   }
+  pv(dims.kernel_size, "kernel_size:");
+  pv(dims.stride, "stride:");
   return dims;
 }
 
@@ -212,6 +224,7 @@ xla::XlaOp ResizeUsingDilationAndConvolutionGradOp(
   dimension_numbers.set_kernel_output_feature_dimension(num_spatial_dims);
   xla::XlaOp output;
   if (dims.kernel_size[0] * dims.kernel_size[1] < kMax2DKernelSize) {
+    std::cout << "dims.kernel_size[0] * dims.kernel_size[1] < kMax2DKernelSize :: " << dims.kernel_size[0] << " * " << dims.kernel_size[1] << " < " << kMax2DKernelSize << std::endl;
     xla::XlaOp kernel = MakeGeneralResizeKernel(builder, type, dims.kernel_size,
                                                 channels, is_kernel_bilinear);
 
@@ -230,6 +243,7 @@ xla::XlaOp ResizeUsingDilationAndConvolutionGradOp(
         /*rhs_dilation=*/{1, 1}, dimension_numbers,
         /*feature_group_count=*/channels);
   } else {
+    std::cout << "dims.kernel_size[0] * dims.kernel_size[1] >= kMax2DKernelSize :: " << dims.kernel_size[0] << " * " << dims.kernel_size[1] << " >= " << kMax2DKernelSize << std::endl;
     xla::XlaOp kernel0 = MakeGeneralResizeKernelInDim(
         builder, type, dims.kernel_size, channels, 0, is_kernel_bilinear);
     xla::XlaOp kernel1 = MakeGeneralResizeKernelInDim(
@@ -265,6 +279,8 @@ xla::XlaOp ResizeUsingDilationAndConvolutionGradOp(
         /*rhs_dilation=*/{1, 1}, dimension_numbers,
         /*feature_group_count=*/channels);
   }
+
+  std::cout << "Output: " << ShapeHelper::ShapeOfXlaOp(output).ToString() << std::endl;
 
   // If in_size[i] > 1 and grad_size[i] == 1, pad the output in dimension i.
   // Opposite of the slice performed by the forward op.
