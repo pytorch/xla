@@ -56,70 +56,20 @@ import os
 import re
 import requests
 import shutil
-import subprocess
 import sys
 import tempfile
 import zipfile
 
 import build_util
 
-import platform
-
-platform_machine = platform.machine()
-
 base_dir = os.path.dirname(os.path.abspath(__file__))
-
-USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
-
-_date = '20250424'
-
-_libtpu_version = '0.0.14'
-_jax_version = '0.6.1'
-_jaxlib_version = '0.6.1'
-
-if USE_NIGHTLY:
-  _libtpu_version += f".dev{_date}"
-  _jax_version += f'.dev{_date}'
-  _jaxlib_version += f'.dev{_date}'
-  _libtpu_wheel_name = f'libtpu-{_libtpu_version}.dev{_date}+nightly-py3-none-manylinux_2_31_{platform_machine}'
-  _libtpu_storage_directory = 'libtpu-nightly-releases'
-else:
-  # The postfix can be changed when the version is updated. Check
-  # https://storage.googleapis.com/libtpu-wheels/index.html for correct
-  # versioning.
-  _libtpu_wheel_name = f'libtpu-{_libtpu_version}-py3-none-manylinux_2_31_{platform_machine}'
-  _libtpu_storage_directory = 'libtpu-lts-releases'
-
-_libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}.whl'
+pinned_packages = build_util.get_pinned_packages()
 
 
 def _get_build_mode():
   for i in range(1, len(sys.argv)):
     if not sys.argv[i].startswith('-'):
       return sys.argv[i]
-
-
-def get_git_head_sha(base_dir):
-  xla_git_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
-                                        cwd=base_dir).decode('ascii').strip()
-  if os.path.isdir(os.path.join(base_dir, '..', '.git')):
-    torch_git_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
-                                            cwd=os.path.join(
-                                                base_dir,
-                                                '..')).decode('ascii').strip()
-  else:
-    torch_git_sha = ''
-  return xla_git_sha, torch_git_sha
-
-
-def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.8.0')
-  if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
-    try:
-      version += '+git' + xla_git_sha[:7]
-    except Exception:
-      pass
-  return version
 
 
 def create_version_files(base_dir, version, xla_git_sha, torch_git_sha):
@@ -160,7 +110,7 @@ def maybe_bundle_libtpu(base_dir):
     print('No installed libtpu found. Downloading...')
 
     with tempfile.NamedTemporaryFile('wb') as whl:
-      resp = requests.get(_libtpu_storage_path)
+      resp = requests.get(pinned_packages.libtpu_storage_path)
       resp.raise_for_status()
 
       whl.write(resp.content)
@@ -203,8 +153,8 @@ class Clean(distutils.command.clean.clean):
     distutils.command.clean.clean.run(self)
 
 
-xla_git_sha, torch_git_sha = get_git_head_sha(base_dir)
-version = get_build_version(xla_git_sha)
+xla_git_sha, torch_git_sha = build_util.get_git_head_sha(base_dir)
+version = build_util.get_build_version()
 
 build_mode = _get_build_mode()
 if build_mode not in ['clean']:
@@ -353,24 +303,6 @@ class Develop(develop.develop):
         f.write(path + "\n")
 
 
-def _get_jax_install_requirements():
-  if not USE_NIGHTLY:
-    # Stable versions of JAX can be directly installed from PyPI.
-    return [
-        f'jaxlib=={_jaxlib_version}',
-        f'jax=={_jax_version}',
-    ]
-
-  # Install nightly JAX libraries from the JAX package registries.
-  jax = f'jax @ https://storage.googleapis.com/jax-releases/nightly/jax/jax-{_jax_version}-py3-none-any.whl'
-  jaxlib = []
-  for python_minor_version in [9, 10, 11]:
-    jaxlib.append(
-        f'jaxlib @ https://storage.googleapis.com/jax-releases/nightly/nocuda/jaxlib-{_jaxlib_version}-cp3{python_minor_version}-cp3{python_minor_version}-manylinux2014_x86_64.whl ; python_version == "3.{python_minor_version}"'
-    )
-  return [jax] + jaxlib
-
-
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
@@ -411,7 +343,7 @@ setup(
         # to Python 3.10
         'importlib_metadata>=4.6;python_version<"3.10"',
         # Some torch operations are lowered to HLO via JAX.
-        *_get_jax_install_requirements(),
+        *build_util.get_jax_install_requirements(),
     ],
     package_data={
         'torch_xla': ['lib/*.so*',],
@@ -430,13 +362,16 @@ setup(
         # On Cloud TPU VM install with:
         # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
         'tpu': [
-            f'libtpu=={_libtpu_version}',
+            f'libtpu=={pinned_packages.libtpu_version}',
             'tpu-info',
         ],
         # As of https://github.com/pytorch/xla/pull/8895, jax is always a dependency of torch_xla.
         # However, this no-op extras_require entrypoint is left here for backwards compatibility.
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-        'pallas': [f'jaxlib=={_jaxlib_version}', f'jax=={_jax_version}'],
+        'pallas': [
+            f'jaxlib=={pinned_packages.jaxlib_version}',
+            f'jax=={pinned_packages.jax_version}'
+        ],
     },
     cmdclass={
         'build_ext': BuildBazelExtension,
