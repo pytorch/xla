@@ -8,7 +8,7 @@ locals {
   nightly_package_version = "2.8.0"
   cuda_versions = {
     "nightly": ["11.8", "12.1", "12.6", "12.8"],
-    "r2.7": ["11.8", "12.6", "12.8"] # align with PyTorch 2.7 release
+    "r2.7": ["11.8", "12.1", "12.6", "12.8"] # PyTorch 2.7 release only needs 11.8, 12.6, 12.8
   }
 
   # Built once a day from master
@@ -28,7 +28,7 @@ locals {
         accelerator     = "cuda"
         cuda_version    = pair[1]
         python_version  = pair[0]
-        bundle_libtpu  = "0"
+        bundle_libtpu   = "0"
         cxx11_abi       = "1"
       }
     ]
