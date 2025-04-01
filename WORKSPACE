@@ -135,14 +135,14 @@ xla_workspace0()
 
 
 load(
-    "@xla//third_party/gpus/cuda/hermetic:cuda_configure.bzl",
+    "@xla//third_party/gpus:cuda_configure.bzl",
     "cuda_configure",
 )
 
 cuda_configure(name = "local_config_cuda")
 
 load(
-    "@xla//third_party/nccl/hermetic:nccl_configure.bzl",
+    "@xla//third_party/nccl:nccl_configure.bzl",
     "nccl_configure",
 )
 
