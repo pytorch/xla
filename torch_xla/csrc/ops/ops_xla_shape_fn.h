@@ -174,6 +174,8 @@ xla::Shape InverseOutputShape(const torch::lazy::Value& input);
 
 xla::Shape IsnanOutputShape(const torch::lazy::Value& input);
 
+xla::Shape IsneginfOutputShape(const torch::lazy::Value& input);
+
 xla::Shape LeakyReluOutputShape(const torch::lazy::Value& input,
                                 const torch::lazy::Value& negative_slope);
 
