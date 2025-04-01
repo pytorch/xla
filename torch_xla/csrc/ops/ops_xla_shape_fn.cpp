@@ -606,6 +606,12 @@ xla::Shape IsnanOutputShape(const torch::lazy::Value& input) {
   return isnan_shape;
 }
 
+xla::Shape IsneginfOutputShape(const torch::lazy::Value& input) {
+  xla::Shape shape(GetXlaShape(input));
+  shape.set_element_type(xla::PRED);
+  return shape;
+}
+
 xla::Shape LeakyReluOutputShape(const torch::lazy::Value& input,
                                 const torch::lazy::Value& negative_slope) {
   auto lower_for_shape_fn =
