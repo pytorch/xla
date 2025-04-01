@@ -55,7 +55,6 @@ import distutils.command.clean
 import os
 import requests
 import shutil
-import subprocess
 import sys
 import tempfile
 import zipfile
@@ -63,54 +62,13 @@ import zipfile
 import build_util
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-
-USE_NIGHTLY = True  # whether to use nightly or stable libtpu and jax
-
-_date = '20250320'
-_libtpu_version = '0.0.12'
-_jax_version = '0.5.4'
-_jaxlib_version = '0.5.4'
-
-_libtpu_wheel_name = f'libtpu-{_libtpu_version}'
-_libtpu_storage_directory = 'libtpu-lts-releases'
-
-if USE_NIGHTLY:
-  _libtpu_version += f".dev{_date}"
-  _jax_version += f".dev{_date}"
-  _jaxlib_version += f".dev{_date}"
-  _libtpu_wheel_name += f".dev{_date}+nightly"
-  _libtpu_storage_directory = 'libtpu-nightly-releases'
-
-_libtpu_storage_path = f'https://storage.googleapis.com/{_libtpu_storage_directory}/wheels/libtpu/{_libtpu_wheel_name}-py3-none-linux_x86_64.whl'
+pinned_packages = build_util.get_pinned_packages()
 
 
 def _get_build_mode():
   for i in range(1, len(sys.argv)):
     if not sys.argv[i].startswith('-'):
       return sys.argv[i]
-
-
-def get_git_head_sha(base_dir):
-  xla_git_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
-                                        cwd=base_dir).decode('ascii').strip()
-  if os.path.isdir(os.path.join(base_dir, '..', '.git')):
-    torch_git_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
-                                            cwd=os.path.join(
-                                                base_dir,
-                                                '..')).decode('ascii').strip()
-  else:
-    torch_git_sha = ''
-  return xla_git_sha, torch_git_sha
-
-
-def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.8.0')
-  if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
-    try:
-      version += '+git' + xla_git_sha[:7]
-    except Exception:
-      pass
-  return version
 
 
 def create_version_files(base_dir, version, xla_git_sha, torch_git_sha):
@@ -151,7 +109,7 @@ def maybe_bundle_libtpu(base_dir):
     print('No installed libtpu found. Downloading...')
 
     with tempfile.NamedTemporaryFile('wb') as whl:
-      resp = requests.get(_libtpu_storage_path)
+      resp = requests.get(pinned_packages.libtpu_storage_path)
       resp.raise_for_status()
 
       whl.write(resp.content)
@@ -194,8 +152,8 @@ class Clean(distutils.command.clean.clean):
     distutils.command.clean.clean.run(self)
 
 
-xla_git_sha, torch_git_sha = get_git_head_sha(base_dir)
-version = get_build_version(xla_git_sha)
+xla_git_sha, torch_git_sha = build_util.get_git_head_sha(base_dir)
+version = build_util.get_build_version()
 
 build_mode = _get_build_mode()
 if build_mode not in ['clean']:
@@ -226,7 +184,7 @@ class BuildBazelExtension(build_ext.build_ext):
   def run(self):
     for ext in self.extensions:
       self.bazel_build(ext)
-    command.build_ext.build_ext.run(self)
+    command.build_ext.build_ext.run(self)  # type: ignore
 
   def bazel_build(self, ext):
     if not os.path.exists(self.build_temp):
@@ -328,11 +286,14 @@ setup(
         # On Cloud TPU VM install with:
         # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-wheels/index.html -f https://storage.googleapis.com/libtpu-releases/index.html
         'tpu': [
-            f'libtpu=={_libtpu_version}',
+            f'libtpu=={pinned_packages.libtpu_version}',
             'tpu-info',
         ],
         # pip install torch_xla[pallas] -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-        'pallas': [f'jaxlib=={_jaxlib_version}', f'jax=={_jax_version}'],
+        'pallas': [
+            f'jaxlib=={pinned_packages.jaxlib_version}',
+            f'jax=={pinned_packages.jax_version}'
+        ],
     },
     cmdclass={
         'build_ext': BuildBazelExtension,
