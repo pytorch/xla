@@ -75,7 +75,7 @@ function install_pre_deps_pytorch_xla() {
   pip install --upgrade numba
 
   # Using the Ninja generator requires CMake version 3.13 or greater
-  pip install "cmake>=3.13" --upgrade
+  pip install "cmake>=3.20" --upgrade
 
   sudo apt-get -qq update
 
