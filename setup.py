@@ -269,7 +269,7 @@ with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
 # Finds torch_xla and its subpackages
 packages_to_include = find_packages(include=['torch_xla*'])
 # Explicitly add torchax
-packages_to_include.append('torchax')
+packages_to_include.extend(find_packages(where='torchax', include=['torchax*']))
 
 # Map the top-level 'torchax' package name to its source location
 torchax_dir = os.path.join(cwd, 'torchax')
