@@ -91,9 +91,7 @@ jobs:
         shell: bash
         run: |
           set -x
-          pip install -U --pre jaxlib -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
-          pip install -U --pre jax-cuda12-pjrt jax-cuda12-plugin -f https://storage.googleapis.com/jax-releases/jax_cuda_plugin_nightly_releases.html
-          pip install -U --pre jax -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
+          pip install -U --pre jax jaxlib "jax-cuda12-plugin[with_cuda]" jax-cuda12-pjrt -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
         if: ${{ matrix.run_triton_tests }}
       - name: Install Triton
         shell: bash
