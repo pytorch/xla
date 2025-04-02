@@ -105,6 +105,7 @@ def _jax2torch(fn):
           else:
             # This input leaf did not require grad
             final_grads.append(None)
+            grad = next(input_grad_iter)
 
         return tuple(final_grads)
 
