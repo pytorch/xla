@@ -830,7 +830,8 @@ def get_computation_hlo(computation):
 
 class XlaComputation:
 
-  def __init__(self, name, hlo_module, flattened_inputs, pick_tensor_args):
+  def __init__(self, name, hlo_module, flattened_inputs, pick_tensor_args,
+               out_spec):
     self.num_inputs = len(flattened_inputs)
     builder = create_builder(name)
     computation = computation_from_module_proto(name, hlo_module)
@@ -842,15 +843,16 @@ class XlaComputation:
     self.call_computation = call_computation
     self.name = name
     self.pick_tensor_args = pick_tensor_args
+    self.out_spec = out_spec
 
   def __call__(self, input_list):
     input_tensors = self.pick_tensor_args(input_list)
     result = torch_xla._XLAC._xla_user_computation(f'xla::call_jax_{self.name}',
                                                    input_tensors,
                                                    self.call_computation)
-    if isinstance(result, list) and len(result) == 1:
-      return result[0]
-    return result
+    assert isinstance(result, list)
+    import jax.tree_util
+    return jax.tree_util.tree_unflatten(self.out_spec, result)
 
 
 def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
@@ -892,6 +894,7 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
 
     sample_tensor_args = pick_tensor_args(sample_inputs)
     tensor_args = pick_tensor_args(flattened_inputs)
+    traced_out_spec = []
 
     # This function only takes in tensor arguments because its signature must
     # match the signature of the HLO module lowered from JAX, allowing us to
@@ -905,7 +908,12 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
         if isinstance(sample_inputs[i], jax.ShapeDtypeStruct):
           new_flattened[i] = next(tensor_args_iter)
       args, kwargs = jax.tree.unflatten(spec, new_flattened)
-      return jax_func(*args, **kwargs)
+      # This could be a pytree.
+      out = jax_func(*args, **kwargs)
+      assert len(traced_out_spec) == 0
+      out_flat, out_spec = jax.tree_flatten(out)
+      traced_out_spec.append(out_spec)
+      return out_flat
 
     def get_hlo():
       import torch_xla.debug.profiler as xp
@@ -914,13 +922,16 @@ def jax_func_to_xla_computation(jax_func, args, kwargs, name=None):
         hlo_ir = jax.jit(
             fn, keep_unused=True).lower(*sample_tensor_args).compiler_ir('hlo')
 
+        assert len(traced_out_spec) == 1
         # Get a protobuf representation of the HLO. `as_serialized_hlo_module_proto` is
         # mentioned at https://github.com/jax-ml/jax/discussions/22266
-        return hlo_ir.as_serialized_hlo_module_proto()  # type: ignore
+        return hlo_ir.as_serialized_hlo_module_proto(), traced_out_spec[
+            0]  # type: ignore
 
-    hlo_module = _jax_to_hlo_cache_get_or_insert(jax_func, sample_inputs, spec,
-                                                 get_hlo)
-    return XlaComputation(name, hlo_module, tensor_args, pick_tensor_args)
+    hlo_module, out_spec = _jax_to_hlo_cache_get_or_insert(
+        jax_func, sample_inputs, spec, get_hlo)
+    return XlaComputation(name, hlo_module, tensor_args, pick_tensor_args,
+                          out_spec)
 
 
 def _jax_to_hlo_cache_get_or_insert(jax_func, sample_inputs: tuple[Any, ...],
