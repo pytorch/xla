@@ -930,8 +930,8 @@ def ragged_paged_attention(
     mask_value=None,
     use_kernel=True,
     # kernel tuning parameters
-    num_kv_pages_per_block=16,
-    num_queries_per_block=128,
+    num_kv_pages_per_block=None,
+    num_queries_per_block=None,
     vmem_limit_bytes=None,
 ):
   if mask_value is None:
@@ -954,6 +954,28 @@ def ragged_paged_attention(
   # Import JAX within the function such that we don't need to call the jax_import_guard()
   # in the global scope which could cause problems for xmp.spawn.
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_attention
+
+  if num_kv_pages_per_block is None and num_queries_per_block is None:
+    token_num = q.shape[0]
+    # This heristic is based on the initial kernel micro benchmarking:
+    # When the token_num is small, there's no long request of prefill.
+    # While when it's larger, the block size is adjusted for it.
+    if token_num <= 128:
+      num_kv_pages_per_block = 128
+      num_queries_per_block = 32
+    else:
+      num_kv_pages_per_block = 128
+      num_queries_per_block = 96
+
+  if vmem_limit_bytes is None:
+    tpu_version = torch_xla.tpu.version()
+    if tpu_version < 4:
+        raise NotImplementedError("TPU version must be 4 or higher.")
+    # NOTE: the TPU v4's vmem capacity is 16MB
+    if tpu_version == 4:
+        vmem_limit_bytes = 16 * 1024 * 1024
+    else:
+        vmem_limit_bytes = 64 * 1024 * 1024
 
   payload, _ = trace_pallas(
       ragged_attention,

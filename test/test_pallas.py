@@ -100,7 +100,6 @@ class PallasTest(parameterized.TestCase):
       num_pages,
       dtype,
       *,
-      num_kv_pages_per_block=None,
       max_num_batched_tokens=None,
       max_num_seqs=16,
   ):
@@ -121,10 +120,7 @@ class PallasTest(parameterized.TestCase):
       max_num_seqs = max(len(seq_lens), max_num_seqs)
     max_kv_len = max(kv_lens)
     pages_per_seq = self._ceil_div(max_kv_len, page_size)
-    pages_per_seq = (
-        self._ceil_div(pages_per_seq, num_kv_pages_per_block) *
-        num_kv_pages_per_block)
-
+    
     num_q_heads, num_kv_heads = num_heads
     cu_q_lens = torch.tensor(cu_q_lens, dtype=torch.int32)
     kv_lens = torch.tensor(kv_lens, dtype=torch.int32)
@@ -659,7 +655,6 @@ class PallasTest(parameterized.TestCase):
         page_size,
         num_pages,
         dtype,
-        num_kv_pages_per_block=num_kv_pages_per_block,
         max_num_batched_tokens=max_num_batched_tokens,
         max_num_seqs=max_num_seqs)
 
@@ -817,6 +812,22 @@ class PallasTest(parameterized.TestCase):
         use_dynamo=True,
     )
 
+    self._test_ragged_paged_attention(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype,
+        sm_scale=sm_scale,
+        sliding_window=sliding_window,
+        soft_cap=soft_cap,
+        pad_tokens_and_seqs=pad_tokens_and_seqs,
+        use_dynamo=True,
+        num_kv_pages_per_block=None,
+        num_queries_per_block=None,
+    )
+
   @parameterized.product(
       seq_lens=[[(1, 1328), (5, 18), (500, 563)]],
       num_heads=[(32, 8), (8, 1)],
@@ -854,6 +865,22 @@ class PallasTest(parameterized.TestCase):
         soft_cap=soft_cap,
         pad_tokens_and_seqs=pad_tokens_and_seqs,
         use_dynamo=False,
+    )
+
+    self._test_ragged_paged_attention(
+        seq_lens,
+        num_heads,
+        head_dim,
+        page_size,
+        num_pages,
+        dtype,
+        sm_scale=sm_scale,
+        sliding_window=sliding_window,
+        soft_cap=soft_cap,
+        pad_tokens_and_seqs=pad_tokens_and_seqs,
+        use_dynamo=False,
+        num_kv_pages_per_block=None,
+        num_queries_per_block=None,
     )
 
   @unittest.skipIf(xr.device_type() != 'TPU' or tpu.version() < 4,
