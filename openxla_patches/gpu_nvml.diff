@@ -1,0 +1,26 @@
+iff --git a/xla/service/gpu/model/gpu_collective_performance_model.cc b/xla/service/gpu/model/gpu_collective_performance_model.cc
+index 496969f545..2d9f73ee36 100644
+--- a/xla/service/gpu/model/gpu_collective_performance_model.cc
++++ b/xla/service/gpu/model/gpu_collective_performance_model.cc
+@@ -34,7 +34,7 @@ limitations under the License.
+
+ #if GOOGLE_CUDA
+ #include "third_party/gpus/cuda/include/cuda.h"
+-#include "third_party/gpus/cuda/nvml/include/nvml.h"
++#include "third_party/gpus/cuda/include/nvml.h"
+ #endif  // GOOGLE_CUDA
+ namespace xla {
+ namespace gpu {
+diff --git a/xla/service/gpu/model/gpu_collective_performance_model.h b/xla/service/gpu/model/gpu_collective_performance_model.h
+index 01c3f3eb45..f44057602b 100644
+--- a/xla/service/gpu/model/gpu_collective_performance_model.h
++++ b/xla/service/gpu/model/gpu_collective_performance_model.h
+@@ -32,7 +32,7 @@ limitations under the License.
+ #include <dlfcn.h>
+ #endif
+
+-#include "third_party/gpus/cuda/nvml/include/nvml.h"
++#include "third_party/gpus/cuda/include/nvml.h"
+ // Below is a list of function pointers to be used
+ // for querying device properties through nvml library.
+ #define NVML_FUNCTOR(name, rettype, args) \
