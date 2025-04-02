@@ -923,7 +923,7 @@ def _get_default_ragged_paged_attention_block_size(token_num):
     # This default block size is not tuned, only make sure there's no
     # OOM in vmem
     num_kv_pages_per_block = 16
-    num_queries_per_block = 32
+    num_queries_per_block = 16
 
   # This heristic is based on the initial kernel micro benchmarking:
   # When the token_num is small, there's no long request of prefill.
