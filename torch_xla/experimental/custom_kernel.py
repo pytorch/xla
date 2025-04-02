@@ -915,6 +915,28 @@ def _ragged_paged_attention_nonkernel(
   return torch.cat(outputs, dim=0)
 
 
+def _get_default_ragged_paged_attention_block_size(token_num):
+  tpu_version = torch_xla.tpu.version()
+  if tpu_version < 4:
+    raise NotImplementedError("TPU version must be 4 or higher.")
+  if tpu_version == 4:
+    # This default block size is not tuned, only make sure there's no
+    # OOM in vmem
+    num_kv_pages_per_block = 16
+    num_queries_per_block = 128
+
+  # This heristic is based on the initial kernel micro benchmarking:
+  # When the token_num is small, there's no long request of prefill.
+  # While when it's larger, the block size is adjusted for it.
+  if token_num <= 128:
+    num_kv_pages_per_block = 128
+    num_queries_per_block = 32
+  else:
+    num_kv_pages_per_block = 128
+    num_queries_per_block = 96
+  return num_kv_pages_per_block, num_queries_per_block
+
+
 @requires_jax
 def ragged_paged_attention(
     q,  # [max_num_batched_tokens, num_q_heads, head_dim]
@@ -955,27 +977,14 @@ def ragged_paged_attention(
   # in the global scope which could cause problems for xmp.spawn.
   from torch_xla.experimental.pallas_kernels.ragged_paged_attention_v2 import ragged_paged_attention as ragged_attention
 
-  if num_kv_pages_per_block is None and num_queries_per_block is None:
+  if num_kv_pages_per_block is None:
+    assert num_queries_per_block is None
     token_num = q.shape[0]
-    # This heristic is based on the initial kernel micro benchmarking:
-    # When the token_num is small, there's no long request of prefill.
-    # While when it's larger, the block size is adjusted for it.
-    if token_num <= 128:
-      num_kv_pages_per_block = 128
-      num_queries_per_block = 32
-    else:
-      num_kv_pages_per_block = 128
-      num_queries_per_block = 96
+    num_kv_pages_per_block, num_queries_per_block = _get_default_ragged_paged_attention_block_size(
+        token_num)
 
   if vmem_limit_bytes is None:
-    tpu_version = torch_xla.tpu.version()
-    if tpu_version < 4:
-        raise NotImplementedError("TPU version must be 4 or higher.")
-    # NOTE: the TPU v4's vmem capacity is 16MB
-    if tpu_version == 4:
-        vmem_limit_bytes = 16 * 1024 * 1024
-    else:
-        vmem_limit_bytes = 64 * 1024 * 1024
+    vmem_limit_bytes = 64 * 1024 * 1024
 
   payload, _ = trace_pallas(
       ragged_attention,
