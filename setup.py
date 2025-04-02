@@ -280,18 +280,35 @@ package_dir_mapping['torchax'] = os.path.join(torchax_dir, 'torchax')
 class Develop(develop.develop):
 
   def run(self):
-    # Build C++ extension
+    # Build the C++ extension
     self.run_command("build_ext")
 
     # Run the standard develop process first
     # This installs dependencies, scripts, and importantly, creates an `.egg-link` file
     super().run()
 
-    # Now, undo the problematic part and apply our fix
-    self.ensure_finalized()  # Ensure paths like self.install_dir are set
-    target_dir = self.install_dir  # The site-packages directory
+    # Replace the `.egg-link` with a `.pth` file.
+    self.link_packages()
 
-    # --- Remove the standard .egg-link file ---
+  def link_packages(self):
+    """
+    There are two mechanisms to install an "editable" package in Python: `.egg-link`
+    and `.pth` files. setuptools uses `.egg-link` by default. However, `.egg-link`
+    only supports linking a single directory containg one editable package.
+    This function removes the `.egg-link` file and generates a `.pth` file that can
+    be used to link multiple packages, in particular, `torch_xla` and `torchax`.
+
+    Note that this function is only relevant in the editable package development path
+    (`python setup.py develop`). Nightly and release wheel builds work out of the box
+    without egg-link/pth.
+    """
+    # Ensure paths like self.install_dir are set
+    self.ensure_finalized()
+
+    # Get the site-packages directory
+    target_dir = self.install_dir
+
+    # Remove the standard .egg-link file
     # It's usually named based on the distribution name
     dist_name = self.distribution.get_name()
     egg_link_file = os.path.join(target_dir, dist_name + '.egg-link')
@@ -302,9 +319,8 @@ class Develop(develop.develop):
       except OSError as e:
         print(f"Warning: Could not remove {egg_link_file}: {e}")
 
-    # --- Create our custom .pth file with specific paths ---
-    cwd = os.path.dirname(__file__)  # Assuming setup.py is in ROOT
-
+    # Create our custom .pth file with specific paths
+    cwd = os.path.dirname(__file__)
     # Path containing 'torch_xla' package source: ROOT
     path_for_torch_xla = os.path.abspath(cwd)
     # Path containing 'torchax' package source: ROOT/torchax
@@ -320,9 +336,8 @@ class Develop(develop.develop):
     pth_filename = os.path.join(
         target_dir, f"__editable_{sanitized_name}_{sanitized_version}.pth")
 
-    print(f"Creating custom .pth file for editable install: {pth_filename}")
-    print(f"Adding paths: {paths_to_add}")
-    os.makedirs(target_dir, exist_ok=True)  # Ensure site-packages exists
+    # Ensure site-packages exists
+    os.makedirs(target_dir, exist_ok=True)
 
     # Write the paths to the .pth file, one per line
     with open(pth_filename, "w", encoding='utf-8') as f:
