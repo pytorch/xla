@@ -1,3 +1,4 @@
+import random
 import logging
 import sys
 import contextlib
@@ -326,8 +327,7 @@ class Environment(contextlib.ContextDecorator):
         self._manually_entered = False 
         self.enabled = False
         self._jax_devices = set(['jax', 'jax_cpu', 'xla'])
-        self.prng_key = jax.random.key(
-          torch.randint(0, 2**31, (), dtype=torch.uint32).item())
+        self.prng_key = jax.random.key(random.randint(0, 2**31))
 
     def get_as_jax_device(self, device: Any):
       if device is None:

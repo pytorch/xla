@@ -258,7 +258,8 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
 
   @parameterized.product(
-      initialize_on_cuda=[True, False], backend=['openxla', dynamo_backend])
+      initialize_on_cuda=[True, False],
+      backend=['openxla', dynamo_backend2.dynamo_backend])
   def test_simple_model_with_in_place_ops(self, initialize_on_cuda, backend):
 
     class TestModel(nn.Module):
@@ -309,7 +310,8 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
       self.assertTrue(torch.allclose(res_cpu, res_device_dynamo.cpu()))
 
   @parameterized.product(
-      initialize_on_cuda=[True, False], backend=['openxla', dynamo_backend])
+      initialize_on_cuda=[True, False],
+      backend=['openxla', dynamo_backend2.dynamo_backend])
   def test_einsum(self, initialize_on_cuda, backend):
     # einsum currently does not have meta function to compute the shape hence
     # will fallback to XLA with FakeTensor as input to infer the output shape.
@@ -369,7 +371,8 @@ class DynamoInferenceBasicTest(parameterized.TestCase):
   @skipOnTpu
   @skipOnNeuron
   @parameterized.product(
-      initialize_on_cuda=[True, False], backend=['openxla', dynamo_backend])
+      initialize_on_cuda=[True, False],
+      backend=['openxla', dynamo_backend2.dynamo_backend])
   def test_resnet18(self, initialize_on_cuda, backend):
     device = self._choose_proper_device(initialize_on_cuda)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
