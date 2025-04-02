@@ -1,9 +1,11 @@
 from absl.testing import absltest
 
 import torch
+import torch.nn as nn
 import torch_xla  # Required for XLA device and sync
 from torch_xla.experimental.assume_pure import assume_pure
 import torch_xla.core.xla_model as xm  # For xm.xla_device() and xm.mark_step() / sync()
+import torch_xla.core.xla_builder as xb
 from torch_xla._internal.jax_workarounds import jax_import_guard
 
 
@@ -40,13 +42,53 @@ class TestJaxInterop(absltest.TestCase):
       return torch.sin(a @ b)
 
     a = torch.ones((3, 3), device='xla', requires_grad=True)
-    b = torch.ones((3, 3), device='xla', requires_grad=True)
-    o = simple_torch_function(a, b)
+    o = simple_torch_function(a, a)
     o.sum().backward()
 
     torch_xla.sync()
     torch.testing.assert_close(
         o, torch.sin(torch.ones(3, 3) @ torch.ones(3, 3)), check_device=False)
+
+  def test_assume_pure_module(self):
+    model = nn.Linear(3, 3).to('xla')
+
+    @assume_pure
+    def simple_torch_function(params, x):
+      return torch.func.functional_call(model, params, x)
+
+    a = torch.ones((3, 3), device='xla', requires_grad=True)
+    o = simple_torch_function(dict(model.named_parameters()), a)
+    o.sum().backward()
+
+    torch_xla.sync()
+
+    torch.testing.assert_close(
+        o, model(torch.ones(3, 3).to('xla')), check_device=False)
+
+  def test_assume_pure_avoid_retracing_avoid_rejit(self):
+    starting_lowerings = xb._jax_to_hlo_cache_num_misses()
+    trace_counter = 0
+
+    @assume_pure
+    def simple_torch_function(a, b):
+      nonlocal trace_counter
+      trace_counter += 1
+      return torch.sin(a @ b)
+
+    # Simulate a training loop.
+    for _ in range(5):
+      a = torch.ones((3, 3), device='xla', requires_grad=True)
+      o = simple_torch_function(a, a)
+      o.sum().backward()
+      torch_xla.sync()
+
+    ending_lowerings = xb._jax_to_hlo_cache_num_misses()
+
+    # Check that we only trace once.
+    self.assertEqual(trace_counter, 1)
+
+    # Check that we only lower to HLO twice (once for forward, once for backward).
+    self.assertEqual(ending_lowerings - starting_lowerings, 2)
 
   def test_assume_pure_matmul_grads(self):
     """Tests matmul with all inputs requiring gradients."""
