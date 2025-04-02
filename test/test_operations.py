@@ -2413,6 +2413,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t = t.to(torch.float16)
     self._test_no_fallback(torch.isneginf, (t,))
 
+
 class MNISTComparator(nn.Module):
 
   def __init__(self):
