@@ -9,6 +9,7 @@ import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 from torch_xla._internal import tpu
 from torch_xla.distributed.spmd import Mesh
+from torch_xla.experimental.custom_kernel import flash_attention
 
 from torch_xla.experimental.custom_kernel_from_jax import (
     SplashAttentionConfig,
@@ -37,6 +38,7 @@ def with_jax_high_precision(func):
 
 class SplashAttentionTest(unittest.TestCase):
 
+  @with_jax_high_precision
   def setUp(self):
     # Common dimensions for all tests. Spalsh attention kernel requires
     # NUM_HEADS, SEQ_LEN, HEAD_DIM must >= 128.
@@ -54,6 +56,33 @@ class SplashAttentionTest(unittest.TestCase):
         qkv_partition_spec=self.partition_spec,
         segment_ids_partition_spec=segment_ids_partition_spec,
     )
+    self.q, self.k, self.v, self.q_sa, self.k_sa, self.v_sa = self.ab_comparsion_input_generation(
+    )
+    segment_ids = torch.zeros(self.BATCH_SIZE, self.SEQ_LEN).to("xla")
+    for i in range(self.BATCH_SIZE):
+      segment_ids[i, :] = i
+    self.segment_ids_sa = segment_ids.clone().detach()
+
+    self.o = flash_attention(
+        self.q,
+        self.k,
+        self.v,
+        True,
+        segment_ids.to("xla"),
+        segment_ids.to("xla"),
+        partition_spec=self.partition_spec,
+        mesh=xs.get_global_mesh(),
+    )
+    torch_xla.sync()
+    for i in [self.q, self.k, self.v]:
+      i.retain_grad()
+    loss = torch.sum(self.o)
+    loss.backward()
+    torch_xla.sync()
+    self.q_grad, k_grad, v_grad = self.q.grad, self.k.grad, self.v.grad
+    with torch.no_grad():
+      self.k_grad = self.maybe_reduce_kv_grad(k_grad)
+      self.v_grad = self.maybe_reduce_kv_grad(v_grad)
 
   def maybe_expend_kv(self, hidden_state):
     if hidden_state.size(1) == self.NUM_Q_HEADS:
@@ -185,52 +214,25 @@ class SplashAttentionTest(unittest.TestCase):
   @with_jax_high_precision
   def test_splash_attention_segment_id(self):
     # test the segment id in splash attention against the flash attention kernel
-    from torch_xla.experimental.custom_kernel import flash_attention
-
-    q, k, v, q_sa, k_sa, v_sa = self.ab_comparsion_input_generation()
-    # make sure query.shape[2] == decoder_segment_ids.q.shape[1]
-    segment_ids = torch.zeros(self.BATCH_SIZE, self.SEQ_LEN).to("xla")
-    for i in range(self.BATCH_SIZE):
-      segment_ids[i, :] = i  # each batch item is in its own segment
-    segment_ids_sa = segment_ids.clone().detach()
-    o = flash_attention(
-        q,
-        k,
-        v,
-        True,
-        segment_ids.to("xla"),
-        segment_ids.to("xla"),
-        partition_spec=self.partition_spec,
-        mesh=xs.get_global_mesh(),
-    )
-    torch_xla.sync()
-    for i in [q, k, v]:
-      i.retain_grad()
-    loss = torch.sum(o)
-    loss.backward()
-    torch_xla.sync()
-    q_grad, k_grad, v_grad = q.grad, k.grad, v.grad
-
+    q_sa = self.q_sa.clone().detach().requires_grad_(True)
+    k_sa = self.k_sa.clone().detach().requires_grad_(True)
+    v_sa = self.v_sa.clone().detach().requires_grad_(True)
+    segment_ids_sa = self.segment_ids_sa.clone().detach()
     o_sa = splash_attention(
         q_sa,
         k_sa,
         v_sa,
         self.config.to_json(),
-        decoder_segment_ids=segment_ids_sa)
+        decoder_segment_ids=segment_ids_sa.to("xla"))
     torch_xla.sync()
-    [i.retain_grad() for i in [q_sa, k_sa, v_sa]]
+    for i in [q_sa, k_sa, v_sa]:
+      i.retain_grad()
     loss_sa = torch.sum(o_sa)
     loss_sa.backward()
     torch_xla.sync()
     q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad, k_sa.grad, v_sa.grad
-
-    with torch.no_grad():
-      k_grad = self.maybe_reduce_kv_grad(k_grad)
-      v_grad = self.maybe_reduce_kv_grad(v_grad)
-
-    torch.testing.assert_close(o.cpu(), o_sa.cpu(), rtol=1e-3, atol=1e-5)
-
-    for org_grad, sa_grad in zip([q_grad, k_grad, v_grad],
+    torch.testing.assert_close(self.o.cpu(), o_sa.cpu(), rtol=1e-3, atol=1e-5)
+    for org_grad, sa_grad in zip([self.q_grad, self.k_grad, self.v_grad],
                                  [q_grad_sa, k_grad_sa, v_grad_sa],
                                  strict=False):
       torch.testing.assert_close(
@@ -241,38 +243,17 @@ class SplashAttentionTest(unittest.TestCase):
   @with_jax_high_precision
   def test_splash_attention_aot_traceable(self):
     from functorch.compile import aot_function, make_boxed_func
-    from torch_xla.experimental.custom_kernel import flash_attention
 
     def compiler(gm, _):
       return make_boxed_func(gm)
 
     compiled_splash_attention = aot_function(
         splash_attention, fw_compiler=compiler)
-    q, k, v, q_sa, k_sa, v_sa = self.ab_comparsion_input_generation()
 
-    segment_ids = torch.zeros(self.BATCH_SIZE, self.SEQ_LEN).to("xla")
-    for i in range(self.BATCH_SIZE):
-      segment_ids[i, :] = i
-    segment_ids_sa = segment_ids.clone().detach()
-
-    o = flash_attention(
-        q,
-        k,
-        v,
-        True,
-        segment_ids.to("xla"),
-        segment_ids.to("xla"),
-        partition_spec=self.partition_spec,
-        mesh=xs.get_global_mesh(),
-    )
-    torch_xla.sync()
-    for i in [q, k, v]:
-      i.retain_grad()
-    loss = torch.sum(o)
-    loss.backward()
-    torch_xla.sync()
-    q_grad, k_grad, v_grad = q.grad, k.grad, v.grad
-
+    q_sa = self.q_sa.clone().detach().requires_grad_(True)
+    k_sa = self.k_sa.clone().detach().requires_grad_(True)
+    v_sa = self.v_sa.clone().detach().requires_grad_(True)
+    segment_ids_sa = self.segment_ids_sa.clone().detach()
     o_sa = compiled_splash_attention(
         q_sa,
         k_sa,
@@ -280,18 +261,15 @@ class SplashAttentionTest(unittest.TestCase):
         self.config.to_json(),
         decoder_segment_ids=segment_ids_sa)
     torch_xla.sync()
-    [i.retain_grad() for i in [q_sa, k_sa, v_sa]]
+    for i in [q_sa, k_sa, v_sa]:
+      i.retain_grad()
     loss_sa = torch.sum(o_sa)
     loss_sa.backward()
     torch_xla.sync()
     q_grad_sa, k_grad_sa, v_grad_sa = q_sa.grad, k_sa.grad, v_sa.grad
 
-    with torch.no_grad():
-      k_grad = self.maybe_reduce_kv_grad(k_grad)
-      v_grad = self.maybe_reduce_kv_grad(v_grad)
-
-    torch.testing.assert_close(o.cpu(), o_sa.cpu(), rtol=1e-3, atol=1e-5)
-    for org_grad, sa_grad in zip([q_grad, k_grad, v_grad],
+    torch.testing.assert_close(self.o.cpu(), o_sa.cpu(), rtol=1e-3, atol=1e-5)
+    for org_grad, sa_grad in zip([self.q_grad, self.k_grad, self.v_grad],
                                  [q_grad_sa, k_grad_sa, v_grad_sa],
                                  strict=False):
       torch.testing.assert_close(
