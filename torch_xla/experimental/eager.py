@@ -30,11 +30,3 @@ def eager_mode_context(enable: bool):
     yield saved_eager_mode
   finally:
     eager_mode(saved_eager_mode)
-
-
-def compile(func):
-  # can's use deprecated wrapper at import time due to circular dependency
-  logging.warning(
-      'torch_xla.experimental.compile is deprecated. Use torch_xla.compile instead.'
-  )
-  return torch_xla.compile(func)
