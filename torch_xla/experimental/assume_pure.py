@@ -31,33 +31,87 @@ def _jax2torch(fn):
     class JaxFun(torch.autograd.Function):
 
       @staticmethod
-      def forward(ctx, *args):
+      def forward(ctx, tree_def, *flat_args_kwargs_values):
+        # Note: flat_args_kwargs_values contains the *values* from the flattened structure
 
-        def jax_func(fn, *args):
-          return jax.vjp(fn, *args)
+        # Reconstruct the original args and kwargs inside forward
+        args_rec, kwargs_rec = tree_unflatten(tree_def, flat_args_kwargs_values)
 
-        y_, fun_vjp = xb.call_jax(jax_func, args=(fn, *args))
-        residuals, ctx.vjp_spec = tree_flatten(fun_vjp)
-        ctx.save_for_backward(residuals)
+        # Prepare the function call for jax.vjp
+        # jax.vjp expects positional primals. We wrap fn to accept args, kwargs.
+        def fn_wrapper(a, kw):
+          return fn(*a, **kw)
+
+        # Define the JAX function to compute value and vjp
+        def jax_vjp_func(primals):
+          # primals will be (args_rec, kwargs_rec)
+          return jax.vjp(fn_wrapper, *primals)  # Unpack primals here
+
+        # Execute the JAX computation
+        # Pass the reconstructed args/kwargs tuple as the primal
+        y_, fun_vjp = xb.call_jax(jax_vjp_func, args=((args_rec, kwargs_rec),))
+
+        # Save necessary information for backward
+        # Flatten the vjp function (may contain tensors/non-tensors)
+        residuals, vjp_spec = tree_flatten(fun_vjp)
+
+        # Save only tensors needed for backward (the residuals)
+        # Autograd automatically gives None gradients for non-tensor inputs.
+        # We need the vjp_spec (non-tensor) and tree_def for reconstruction.
+        ctx.vjp_spec = vjp_spec
+        ctx.tree_def = tree_def  # Need tree_def to structure gradients in backward
+        # Save residuals which might be tensors needed by the VJP function
+        ctx.save_for_backward(*residuals)
+
+        # Return the results (potentially nested structure)
+        # The user expects the original output structure of fn
         return y_
 
       @staticmethod
       def backward(ctx, *grad_args):
-        fun_vjp = tree_unflatten(ctx.vjp_spec, ctx.saved_tensors)
         assert len(grad_args) > 0
         grad_args = grad_args if len(grad_args) > 1 else grad_args[0]
 
-        def jax_func(fun_vjp, grad_args):
+        def jax_func(grad_args, saved_tensors):
+          fun_vjp = tree_unflatten(ctx.vjp_spec, saved_tensors)
           return fun_vjp(grad_args)
 
-        grads = xb.call_jax(jax_func, args=(fun_vjp, grad_args))
-        grads = tuple(
-            (t if isinstance(t, torch.Tensor) else None for t in grads))
-        return grads
+        input_grads_structured = xb.call_jax(
+            jax_func, args=(grad_args, ctx.saved_tensors))
+
+        # Flatten the gradients to match the flat inputs to forward
+        flat_input_grads, _ = tree_flatten(input_grads_structured)
+
+        # Construct the gradient tuple for autograd.
+        # It needs to match the inputs to forward: (tree_def, *flat_args_kwargs_values)
+        # The first gradient (for tree_def) is None.
+        # The following gradients correspond to flat_args_kwargs_values.
+        # We need to return None for inputs that did not require gradients.
+        final_grads = [None]  # Gradient for tree_def is None
+        input_grad_iter = iter(flat_input_grads)
+        for i, needs_grad in enumerate(
+            ctx.needs_input_grad[1:]):  # Skip ctx for tree_def
+          if needs_grad:
+            # This input leaf required grad, so JAX should have computed one
+            try:
+              grad = next(input_grad_iter)
+              final_grads.append(grad)
+            except StopIteration:
+              # Should not happen if JAX computed grads for all required inputs
+              print(
+                  "Warning: Mismatch between required grads and JAX output grads."
+              )
+              final_grads.append(None)
+          else:
+            # This input leaf did not require grad
+            final_grads.append(None)
+
+        return tuple(final_grads)
 
     sig = signature(fn)
     bound = sig.bind(*args, **kwargs)
     bound.apply_defaults()
-    return JaxFun.apply(*bound.arguments.values())
+    flat_args_kwargs, tree_def = tree_flatten((bound.args, bound.kwargs))
+    return JaxFun.apply(tree_def, *flat_args_kwargs)
 
   return inner
