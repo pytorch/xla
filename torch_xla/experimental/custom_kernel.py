@@ -997,9 +997,9 @@ def ragged_paged_attention(
           q.shape
       ],
       [  # output dtype
-          torch.float32,
+          q.dtype,
       ])
-  return output[0].to(q.dtype)
+  return output[0]
 
 
 def _multi_queries_paged_attention_nonkernel(
