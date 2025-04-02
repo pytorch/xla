@@ -268,6 +268,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
       if isinstance(func, torch._ops.OpOverloadPacket):
         with self:
           return func(*args, **kwargs)
+      # Only functions under these namespaces will be intercepted
       if func.namespace not in ('aten', '_c10d_functional', 'torchvision', 'xla'):
         return func(*args, **kwargs)
       return self.env.dispatch(func, types, args, kwargs)
@@ -325,6 +326,8 @@ class Environment(contextlib.ContextDecorator):
         self._manually_entered = False 
         self.enabled = False
         self._jax_devices = set(['jax', 'jax_cpu', 'xla'])
+        self.prng_key = jax.random.key(
+          torch.randint(0, 2**31, (), dtype=torch.uint32).item())
 
     def get_as_jax_device(self, device: Any):
       if device is None:
@@ -394,8 +397,9 @@ class Environment(contextlib.ContextDecorator):
       
 
     def get_and_rotate_prng_key(self, generator: Optional[torch.Generator]=None):
-      self._prng_key, next_key = jax.random.split(self._prng_key)
+      self.prng_key, next_key = jax.random.split(self.prng_key)
       return next_key
+
 
 
     def _handle_tensor_constructor(self, func, args, kwargs):
