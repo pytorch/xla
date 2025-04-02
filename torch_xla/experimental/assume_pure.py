@@ -21,11 +21,29 @@ def assume_pure(fn):
   return _jax2torch(jax_view(fn))
 
 
+# Define the JAX function to compute value and vjp
+def _jax_forward(fn, primals):
+  import jax
+
+  # Prepare the function call for jax.vjp
+  # jax.vjp expects positional primals. We wrap fn to accept args, kwargs.
+  def fn_wrapper(a, kw):
+    return fn(*a, **kw)
+
+  # primals will be (args_rec, kwargs_rec)
+  return jax.vjp(fn_wrapper, *primals)  # Unpack primals here
+
+
+def _jax_backward(vjp_spec, saved_tensors, grad_args):
+  from jax.tree_util import tree_unflatten
+  fun_vjp = tree_unflatten(vjp_spec, saved_tensors)
+  return fun_vjp(grad_args)
+
+
 def _jax2torch(fn):
 
   @wraps(fn)
   def inner(*args, **kwargs):
-    import jax
     from jax.tree_util import tree_flatten, tree_unflatten
 
     class JaxFun(torch.autograd.Function):
@@ -37,19 +55,13 @@ def _jax2torch(fn):
         # Reconstruct the original args and kwargs inside forward
         args_rec, kwargs_rec = tree_unflatten(tree_def, flat_args_kwargs_values)
 
-        # Prepare the function call for jax.vjp
-        # jax.vjp expects positional primals. We wrap fn to accept args, kwargs.
-        def fn_wrapper(a, kw):
-          return fn(*a, **kw)
-
-        # Define the JAX function to compute value and vjp
-        def jax_vjp_func(primals):
-          # primals will be (args_rec, kwargs_rec)
-          return jax.vjp(fn_wrapper, *primals)  # Unpack primals here
-
         # Execute the JAX computation
         # Pass the reconstructed args/kwargs tuple as the primal
-        y_, fun_vjp = xb.call_jax(jax_vjp_func, args=((args_rec, kwargs_rec),))
+        y_, fun_vjp = xb.call_jax(
+            _jax_forward, args=(
+                fn,
+                (args_rec, kwargs_rec),
+            ))
 
         # Save necessary information for backward
         # Flatten the vjp function (may contain tensors/non-tensors)
@@ -72,12 +84,8 @@ def _jax2torch(fn):
         assert len(grad_args) > 0
         grad_args = grad_args if len(grad_args) > 1 else grad_args[0]
 
-        def jax_func(vjp_spec, saved_tensors, grad_args):
-          fun_vjp = tree_unflatten(vjp_spec, saved_tensors)
-          return fun_vjp(grad_args)
-
         input_grads_structured = xb.call_jax(
-            jax_func, args=(ctx.vjp_spec, ctx.saved_tensors, grad_args))
+            _jax_backward, args=(ctx.vjp_spec, ctx.saved_tensors, grad_args))
 
         # Flatten the gradients to match the flat inputs to forward
         flat_input_grads, _ = tree_flatten(input_grads_structured)
@@ -98,10 +106,9 @@ def _jax2torch(fn):
               final_grads.append(grad)
             except StopIteration:
               # Should not happen if JAX computed grads for all required inputs
-              print(
+              raise ValueError(
                   "Warning: Mismatch between required grads and JAX output grads."
-              )
-              final_grads.append(None)
+              ) from None
           else:
             # This input leaf did not require grad
             final_grads.append(None)
