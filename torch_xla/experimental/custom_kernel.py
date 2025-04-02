@@ -919,7 +919,7 @@ def _get_default_ragged_paged_attention_block_size(token_num):
   tpu_version = torch_xla.tpu.version()
   if tpu_version < 4:
     raise NotImplementedError("TPU version must be 4 or higher.")
-  if tpu_version == 4:
+  if tpu_version < 6:
     # This default block size is not tuned, only make sure there's no
     # OOM in vmem
     num_kv_pages_per_block = 16
