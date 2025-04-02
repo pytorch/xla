@@ -72,12 +72,12 @@ def _jax2torch(fn):
         assert len(grad_args) > 0
         grad_args = grad_args if len(grad_args) > 1 else grad_args[0]
 
-        def jax_func(grad_args, saved_tensors):
-          fun_vjp = tree_unflatten(ctx.vjp_spec, saved_tensors)
+        def jax_func(vjp_spec, saved_tensors, grad_args):
+          fun_vjp = tree_unflatten(vjp_spec, saved_tensors)
           return fun_vjp(grad_args)
 
         input_grads_structured = xb.call_jax(
-            jax_func, args=(grad_args, ctx.saved_tensors))
+            jax_func, args=(ctx.vjp_spec, ctx.saved_tensors, grad_args))
 
         # Flatten the gradients to match the flat inputs to forward
         flat_input_grads, _ = tree_flatten(input_grads_structured)
