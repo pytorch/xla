@@ -45,7 +45,7 @@ XlaOpVector CustomCall::Lower(LoweringContext* loctx) const {
   xla::Shape output_shape = this->xla_shape();
   const int n_outputs = output_shape.tuple_shapes_size();
   if (n_outputs == 1) {
-    output_shape = output_shape.tuple_shapes(0);
+    output_shape = xla::Shape(output_shape.tuple_shapes(0));
   }
   XLA_CHECK(api_version_ >= 0 && api_version_ < 5);
 
