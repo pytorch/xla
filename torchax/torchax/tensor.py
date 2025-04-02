@@ -292,7 +292,21 @@ TENSOR_CONSTRUCTORS = {
   torch.randint,
   torch.full,
   torch.as_tensor,
+  torch.ops.aten.empty,
+  torch.ops.aten.empty_permuted,
 }
+
+    
+def _is_tensor_constructor(func):
+  if func in TENSOR_CONSTRUCTORS:
+    return True
+  
+  if isinstance(func, torch._ops.OpOverload):
+    if func.overloadpacket in TENSOR_CONSTRUCTORS:
+      return True
+
+  if isinstance(func, torch._ops.OpOverloadPacket):
+    return getattr(func, 'default') in TENSOR_CONSTRUCTORS
 
 
 class Environment(contextlib.ContextDecorator):
@@ -325,6 +339,7 @@ class Environment(contextlib.ContextDecorator):
         self._manually_entered = False 
         self.enabled = False
         self._jax_devices = set(['jax', 'jax_cpu', 'xla'])
+        self._recursion_guards = set()
 
     def get_as_jax_device(self, device: Any):
       if device is None:
@@ -437,62 +452,76 @@ class Environment(contextlib.ContextDecorator):
         device = args[0]
       return self._to_copy(the_tensor, dtype, device)
 
+    @contextlib.contextmanager
+    def _with_call_key(self, key):
+      print(key)
+      yield
+      pass
+      #self._recursion_guards.remove(key)
+
+
 
     def dispatch(self, func, types, args, kwargs):
-
       kwargs = kwargs or {}
-      if func in TENSOR_CONSTRUCTORS:
-        return self._handle_tensor_constructor(func, args, kwargs)
-      if func in (torch.Tensor.to, torch.ops.aten.lift_fresh.default ,torch.ops.aten._to_copy, torch.ops.aten._to_copy.default):
-        return self._torch_Tensor_to(args, kwargs)
 
-      # If the func doesn't act on Tensor, and is not a tensor constructor,
-      # We should skip and let torch handle it.
-      
-      tensor_args = [t for t in torch_pytree.tree_flatten(args)[0] if isinstance(t, torch.Tensor)]
-      if tensor_args and all(not isinstance(t, Tensor) for t in tensor_args):
-        return func(*args, **kwargs)
+      call_key = id(func)
 
-      with jax.named_scope(_name_of_func(func)):
-        op = self._ops.get(func)
+      with self._with_call_key(call_key):
+        if _is_tensor_constructor(func):
+          return self._handle_tensor_constructor(func, args, kwargs)
+        if func in (torch.Tensor.to, torch.ops.aten.lift_fresh.default ,torch.ops.aten._to_copy, torch.ops.aten._to_copy.default):
+          return self._torch_Tensor_to(args, kwargs)
 
-        if op is None and isinstance(func, torch._ops.OpOverloadPacket):
-          op = self._ops.get(func.default)
+        # If the func doesn't act on Tensor, and is not a tensor constructor,
+        # We should skip and let torch handle it.
+        
+        tensor_args = [t for t in torch_pytree.tree_flatten(args)[0] if isinstance(t, torch.Tensor)]
+        if not tensor_args:
+          return func(*args, **kwargs)
 
-        if op is None and isinstance(func, torch._ops.OpOverload):
-          op = self._ops.get(func.overloadpacket)
+        if tensor_args and not all(isinstance(t, Tensor) for t in tensor_args):
+          return func(*args, **kwargs)
 
-        if op is None:
-          raise OperatorNotFound(
-            f'Operator with name {_name_of_func(func)} has no lowering')
+        with jax.named_scope(_name_of_func(func)):
+          op = self._ops.get(func)
 
-        old_args, old_kwargs = args, kwargs
-        args, kwargs = torch_pytree.tree_map_only(
-            torch.distributed._functional_collectives.AsyncCollectiveTensor,
-            torch.distributed._functional_collectives.wait_tensor,
-            (args, kwargs))
-        try:
+          if op is None and isinstance(func, torch._ops.OpOverloadPacket):
+            op = self._ops.get(func.default)
+
+          if op is None and isinstance(func, torch._ops.OpOverload):
+            op = self._ops.get(func.overloadpacket)
+
+          if op is None:
+            raise OperatorNotFound(
+              f'Operator with name {_name_of_func(func)} has no lowering')
+
+          old_args, old_kwargs = args, kwargs
+          args, kwargs = torch_pytree.tree_map_only(
+              torch.distributed._functional_collectives.AsyncCollectiveTensor,
+              torch.distributed._functional_collectives.wait_tensor,
+              (args, kwargs))
+          try:
+            if op.is_jax_function:
+              args, kwargs = self.t2j_iso((args, kwargs))
+          except AssertionError:
+            if self.config.debug_mixed_tensor:
+              import pdb; pdb.set_trace()
+            else:
+              raise
+
+
+          if op.needs_env:
+            kwargs['env'] = self
+
+          with self:
+            res = op.func(*args, **kwargs)
+
           if op.is_jax_function:
-            args, kwargs = self.t2j_iso((args, kwargs))
-        except AssertionError:
-          if self.config.debug_mixed_tensor:
-            import pdb; pdb.set_trace()
-          else:
-            raise
+            res = self.j2t_iso(res)
 
-
-        if op.needs_env:
-          kwargs['env'] = self
-
-        with self:
-          res = op.func(*args, **kwargs)
-
-        if op.is_jax_function:
-          res = self.j2t_iso(res)
-
-        if self.config.debug_accuracy_for_each_op:
-          debug_accuracy(func, old_args, old_kwargs, res)
-        return res
+          if self.config.debug_accuracy_for_each_op:
+            debug_accuracy(func, old_args, old_kwargs, res)
+          return res
 
     def enable_torch_modes(self):
       self._dispatch_mode.__enter__()
