@@ -923,7 +923,7 @@ def _get_default_ragged_paged_attention_block_size(token_num):
     # This default block size is not tuned, only make sure there's no
     # OOM in vmem
     num_kv_pages_per_block = 16
-    num_queries_per_block = 128
+    num_queries_per_block = 64
 
   # This heristic is based on the initial kernel micro benchmarking:
   # When the token_num is small, there's no long request of prefill.
@@ -1701,7 +1701,7 @@ XLA_LIB.define(
     "ragged_paged_attention(Tensor q, Tensor kv_pages, Tensor kv_lens, Tensor page_indices, "
     "Tensor cu_q_lens, Tensor num_seqs, float sm_scale=1, int? sliding_window=None, "
     "float? soft_cap=None, float? mask_value=None, bool use_kernel=True, "
-    "int num_kv_pages_per_block=16, int num_queries_per_block=128, int? vmem_limit_bytes=None) -> Tensor",
+    "int? num_kv_pages_per_block=None, int? num_queries_per_block=None, int? vmem_limit_bytes=None) -> Tensor",
 )
 
 
@@ -1719,8 +1719,8 @@ def ragged_paged_attention_xla(
     mask_value=None,
     use_kernel=True,
     # kernel tuning parameters
-    num_kv_pages_per_block=16,
-    num_queries_per_block=128,
+    num_kv_pages_per_block=None,
+    num_queries_per_block=None,
     vmem_limit_bytes=None,
 ):
   return ragged_paged_attention(
@@ -1754,8 +1754,8 @@ def ragged_paged_attention_non_xla(
     mask_value=None,
     use_kernel=True,
     # kernel tuning parameters
-    num_kv_pages_per_block=16,
-    num_queries_per_block=128,
+    num_kv_pages_per_block=None,
+    num_queries_per_block=None,
     vmem_limit_bytes=None,
 ):
   return non_xla_ragged_paged_attention(q, kv_pages, "paged")
