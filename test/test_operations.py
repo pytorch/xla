@@ -35,6 +35,7 @@ from torch.testing._internal.common_dtype import (
     all_types_and_complex_and,
     all_types_and,
 )
+import torch.utils._pytree as pytree
 import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
