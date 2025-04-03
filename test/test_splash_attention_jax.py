@@ -74,8 +74,6 @@ class SplashAttentionTest(unittest.TestCase):
         mesh=xs.get_global_mesh(),
     )
     torch_xla.sync()
-    for i in [self.q, self.k, self.v]:
-      i.retain_grad()
     loss = torch.sum(self.o)
     loss.backward()
     torch_xla.sync()
@@ -127,9 +125,15 @@ class SplashAttentionTest(unittest.TestCase):
         self.HEAD_DIM,
         requires_grad=True,
     ).to("xla")
+    q.retain_grad()
+    k.retain_grad()
+    v.retain_grad()
     q_sa = q.clone().detach().requires_grad_(True)
     k_sa = k.clone().detach().requires_grad_(True)
     v_sa = v.clone().detach().requires_grad_(True)
+    q_sa.retain_grad()
+    k_sa.retain_grad()
+    v_sa.retain_grad()
 
     # Repeat the kv tensors to match the q tensor heads. This is required for flash
     k = self.maybe_expend_kv(k)
