@@ -1177,7 +1177,7 @@ def paged_attention(q,
 
   page_indices_reshaped = page_indices.reshape(-1)
   buffer_index = torch.zeros((1,), dtype=torch.int32).to("xla")
-  step = torch.zeros((1,), dtype=torch.int32).to("xla")
+  step = torch.ones((1,), dtype=torch.int32).to("xla")
   output_shape = torch.Size(list(q.shape[:-1]) + [1])
 
   output, _, _ = torch_xla._XLAC._xla_tpu_custom_call(
