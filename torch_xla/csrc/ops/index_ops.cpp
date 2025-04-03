@@ -365,8 +365,10 @@ torch::lazy::Value IndexPutByTensors(
 torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
                                const XLATensorPtr& index,
                                const at::Scalar& value) {
-  XLA_CHECK_EQ(index->dtype(), at::ScalarType::Long)
-      << "Fill index is expected to be of scalar type Long, but it is "
+  XLA_CHECK(index->dtype() == at::ScalarType::Long ||
+            index->dtype() == at::ScalarType::Int)
+      << "Fill index is expected to be of scalar type Long or scalar type Int, "
+         "but it is "
       << index->dtype();
   XLA_CHECK_LE(index->shape().get().rank(), 1)
       << "Fill index is supposed to be a vector";
@@ -379,10 +381,10 @@ torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
 torch::lazy::NodePtr IndexFill(const XLATensorPtr& base, int64_t dim,
                                const XLATensorPtr& index,
                                const XLATensorPtr& value) {
-  XLA_CHECK_EQ(index->dtype(), at::ScalarType::Long)
-      << "Fill index is expected to be of scalar type Long, but it is "
-      << index->dtype();
-  XLA_CHECK_LE(index->shape().get().rank(), 1)
+  XLA_CHECK(index->dtype() == at::ScalarType::Long ||
+            index->dtype() == at::ScalarType::Int)
+      << "Fill index is expected to be of scalar type Long or scalar type Int, "
+         "but it is " XLA_CHECK_LE(index->shape().get().rank(), 1)
       << "Fill index is supposed to be a vector";
   XLA_CHECK_EQ(value->shape().get().rank(), 0)
       << "Fill only supports a 0-dimensional value tensor";
@@ -407,10 +409,10 @@ torch::lazy::Value IndexAdd(const XLATensorPtr& base, int64_t dim,
 torch::lazy::Value IndexCopy(const XLATensorPtr& base, int64_t dim,
                              const XLATensorPtr& index,
                              const XLATensorPtr& source) {
-  XLA_CHECK_EQ(index->dtype(), at::ScalarType::Long)
-      << "Copy index is expected to be of scalar type Long, but it is "
-      << index->dtype();
-  XLA_CHECK_LE(index->shape().get().rank(), 1)
+  XLA_CHECK(index->dtype() == at::ScalarType::Long ||
+            index->dtype() == at::ScalarType::Int)
+      << "Add index is expected to be of scalar type Long or scalar type Int, "
+         "but it is " XLA_CHECK_LE(index->shape().get().rank(), 1)
       << "Copy index is supposed to be a vector";
   return IndexCopyOp(base->GetIrValue(), dim, index->GetIrValue(),
                      source->GetIrValue());
