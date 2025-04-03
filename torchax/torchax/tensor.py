@@ -310,9 +310,6 @@ class Environment(contextlib.ContextDecorator):
     Also helper functions to manipulate those.
     """
 
-    _prng_key: jax.random.PRNGKey
-
-
     def __init__(self, configuration=None):
         self._function_mode = XLAFunctionMode(self)
         self._dispatch_mode = XLADispatchMode(self)
@@ -327,7 +324,10 @@ class Environment(contextlib.ContextDecorator):
         self._manually_entered = False 
         self.enabled = False
         self._jax_devices = set(['jax', 'jax_cpu', 'xla'])
-        self.prng_key = jax.random.key(random.randint(0, 2**31))
+        self.prng_key = jax.random.key(torch.initial_seed() % (1<<63))
+
+    def manual_seed(self, key):
+      self.prng_key = jax.random.key(key)
 
     def get_as_jax_device(self, device: Any):
       if device is None:
@@ -397,6 +397,9 @@ class Environment(contextlib.ContextDecorator):
       
 
     def get_and_rotate_prng_key(self, generator: Optional[torch.Generator]=None):
+      if generator is not None:
+        with mode_utils.no_dispatch(), torch._C.DisableTorchFunction():
+          self.prng_key = jax.random.key(generator.initial_seed() % (2**63))
       self.prng_key, next_key = jax.random.split(self.prng_key)
       return next_key
 
