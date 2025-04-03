@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/softmax_builder.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "xla/client/lib/arithmetic.h"
 #include "xla/client/lib/comparators.h"
@@ -388,6 +389,52 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
   return {values,
           xla::ConvertElementType(indices, GetXlaPrimitiveTypeForCurrentDevice(
                                                xla::PrimitiveType::S64))};
+}
+
+xla::XlaOp CreateTopPMask(const torch::lazy::BackendDevice& device,
+                          xla::XlaOp logits, float p, int64_t dim,
+                          bool stable) {
+  // Convert logits to probabilities.
+  xla::XlaOp probs = BuildSoftmax(logits, dim);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(probs);
+
+  // Sort the probabilities in ascending order and keep track of the sorted
+  // indices.
+  xla::Shape iota_shape =
+      xla::ShapeUtil::MakeShape(xla::PrimitiveType::S32, shape.dimensions());
+  xla::XlaOp iota = xla::Iota(probs.builder(), iota_shape, dim);
+  xla::XlaComputation comparator = xla::CreateScalarLtComputation(
+      {shape.element_type(), xla::PrimitiveType::S32}, probs.builder());
+  xla::XlaOp sort_result = xla::Sort({probs, iota}, comparator, dim, stable);
+
+  // Compute cumulative probabilities.
+  xla::XlaOp zero = xla::Zero(probs.builder(), shape.element_type());
+  xla::XlaComputation reducer =
+      XlaHelpers::CreateAddComputation(shape.element_type());
+  xla::XlaOp cumprobs = BuildCumulativeComputation(
+      xla::GetTupleElement(sort_result, 0), dim, reducer, zero);
+
+  // Create a mask for the "p-set" elements.
+  xla::XlaOp one = xla::One(probs.builder(), shape.element_type());
+  xla::XlaOp p_mask = BuildThreshold(cumprobs, one, 1 - p, 0);
+
+  // The largest element should always be included.
+  std::vector<int64_t> sizes = XlaHelpers::SizesOfXlaOp(p_mask);
+  sizes[dim] = 1;
+  xla::XlaOp ones = xla::Broadcast(one, sizes);
+  std::vector<int64_t> index_to_update = XlaHelpers::SizesOfXlaOp(p_mask);
+  for (int i = 0; i < index_to_update.size(); ++i) {
+    if (i != dim) index_to_update[i] = 0;
+  }
+  xla::XlaOp p_mask_updated = BuildUpdateSlice(p_mask, ones, index_to_update);
+
+  // Re-order the mask back to pre-sorted order.
+  xla::XlaOp sorted_indices = xla::GetTupleElement(sort_result, 1);
+  ScatterOptions options(/*combiner=*/nullptr);
+  xla::XlaOp p_mask_reordered = CreateScatter(
+      device, p_mask_updated, sorted_indices, p_mask_updated, dim, options);
+
+  return p_mask_reordered;
 }
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
