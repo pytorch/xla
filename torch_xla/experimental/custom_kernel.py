@@ -924,6 +924,7 @@ def _get_default_ragged_paged_attention_block_size(token_num):
     # OOM in vmem
     num_kv_pages_per_block = 16
     num_queries_per_block = 128
+    return num_kv_pages_per_block, num_queries_per_block
 
   # This heristic is based on the initial kernel micro benchmarking:
   # When the token_num is small, there's no long request of prefill.
@@ -984,12 +985,7 @@ def ragged_paged_attention(
         token_num)
 
   if vmem_limit_bytes is None:
-    # NOTE(chengjiyao): the TPU v4's vmem capacity is 16MB
-    tpu_version = torch_xla.tpu.version()
-    if tpu_version == 4:
-      vmem_limit_bytes = 16 * 1024 * 1024
-    else:
-      vmem_limit_bytes = 64 * 1024 * 1024
+    vmem_limit_bytes = 64 * 1024 * 1024
 
   payload, _ = trace_pallas(
       ragged_attention,
