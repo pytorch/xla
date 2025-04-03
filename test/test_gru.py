@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch_xla
+import inspect
 from torch_xla.experimental.gru import GRU
 
 from absl.testing import absltest, parameterized
@@ -79,6 +80,49 @@ class TestGRU(parameterized.TestCase):
             check_device=False,
             atol=atol,
             rtol=rtol)
+
+  def test_scan_gru_and_upstream_gru_interchangeability(self):
+    """
+    Ensures that the scan-based GRU and upstream GRU are interchangeable.
+    """
+    nn_gru = nn.GRU
+    scan_gru = GRU
+    nn_gru_members = dict(inspect.getmembers(nn_gru, inspect.isroutine))
+    scan_gru_members = dict(inspect.getmembers(scan_gru, inspect.isroutine))
+
+    nn_gru_names = set(nn_gru_members.keys())
+    scan_gru_names = set(scan_gru_members.keys())
+
+    # Check that the methods of the GRU and scan-based GRU are the same.
+    unique_nn_gru_methods = nn_gru_names - scan_gru_names
+    unique_scan_gru_methods = scan_gru_names - nn_gru_names
+    if unique_nn_gru_methods or unique_scan_gru_methods:
+      raise AssertionError(
+          f"GRU and scan-based GRU have different methods. "
+          f"Unique to GRU: {unique_nn_gru_methods}. "
+          f"Unique to scan-based GRU: {unique_scan_gru_methods}.")
+
+    # Check that the methods of the GRU and scan-based GRU have the same signature.
+    common_methods = nn_gru_names & scan_gru_names
+    for method_name in common_methods:
+      try:
+        nn_gru_method = nn_gru_members[method_name]
+        scan_gru_method = scan_gru_members[method_name]
+
+        nn_gru_signature = inspect.signature(nn_gru_method)
+        scan_gru_signature = inspect.signature(scan_gru_method)
+
+        if str(nn_gru_signature) != str(scan_gru_signature):
+          raise AssertionError(
+              f"GRU and scan-based GRU have different signatures for method {method_name}. "
+              f"GRU signature: {nn_gru_signature}. "
+              f"Scan-based GRU signature: {scan_gru_signature}.")
+      except ValueError as e:
+        # skip builtin methods
+        if 'builtin' in str(e):
+          continue
+        else:
+          raise e
 
   def test_scan_gru_and_upstream_gru_parameter_independency(self):
     """
