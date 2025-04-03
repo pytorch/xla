@@ -123,7 +123,6 @@ def ref_ragged_paged_attention(
   return jnp.concatenate(outputs, axis=0)
 
 
-
 # Expect to run these checks during runtime.
 def validate_dynamic_inputs(
     q: jax.Array,  # [max_num_batched_tokens, num_q_heads, head_dim]
