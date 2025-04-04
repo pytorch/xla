@@ -613,6 +613,25 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 
+
+runtime::ComputationClient::DataPtr ShardingUtil::CreateGlobalShardedData(
+    const std::vector<at::Tensor>& local_shards,
+    const std::vector<std::string>& devices,
+    const XLATensor::ShardingSpecPtr& sharding_spec,
+    const xla::Shape local_shape) {
+  std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
+
+  for (int64_t j = 0; j < devices.size(); ++j) {
+    auto shard_device = ParseDeviceString(devices[j]);
+    auto shard_shape =
+        CreateComputationShapeFromTensor(local_shards[j], &shard_device);
+    source_tensors.push_back(std::make_shared<runtime::AtenSource>(
+        local_shards[j], shard_shape, devices[j]));
+  }
+  return runtime::GetComputationClient()->TransferShardsToDevice(
+      source_tensors, GetVirtualDevice().toString(), local_shape, sharding_spec->sharding);
+}
+
 std::vector<int64_t> ShardingUtil::GetAutoShardingMesh() {
   // Auto-sharding uses mesh_shape = {n_devices, 1} if XLA_AUTO_SPMD_MESH
   // is not set. XLA_AUTO_SPMD_MESH takes a form of string, "2,2" which
